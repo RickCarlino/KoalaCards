@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "npx ts-node src/exam.ts",
+    "reset": "rm -rf node_modules && rm -rf package-lock.json && npm install && npx prisma migrate dev && npx ts-node seeds/ingest.ts"
   },
   "keywords": [],
   "author": "",
@@ -22,8 +24,6 @@
     "@google-cloud/translate": "^7.2.0",
     "@prisma/client": "^4.10.1",
     "dotenv": "^16.0.3",
-    "enquirer": "^2.3.6",
-    "kleur": "^4.1.5",
     "openai": "^3.1.0",
     "radash": "^10.7.0"
   }

@@ -20,7 +20,7 @@ async function main() {
         next_quiz_type: "dictation",
       };
       const x = await prisma.phrase.create({ data });
-      console.log(`  Inserted ${ko} into DB`);
+      console.log(`OK`);
     } else {
       console.log(`Already have ${ko} in DB`);
     }

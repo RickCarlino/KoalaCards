@@ -61,10 +61,8 @@ The project is in a semi-public alpha phase. If you don't understand the instruc
 1. Make sure the Google Cloud service account can access Cloud Speech API and Cloud Text-to-Speech APIs.
 1. Copy `example.env` to `.env`.
 1. Fill out the ENV vars to match your OpenAI / GCS credentials.
-1. Run `npm install`
-1. Initialize the database probably. Please raise an issue if you get stuck with database errors.
-1. Run `npx ts-node seeds/ingest.ts` to seed the database with example sentences
-1. Run `npx ts-node src/exam.ts`
+1. Run `npm reset`.
+1. Run `npm start`.
 
 ## Contribution Guidelines 🤝
 
