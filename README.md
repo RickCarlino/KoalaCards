@@ -10,11 +10,11 @@ Hey there! Welcome to KoalaSRS, a fun and friendly Korean-only [spaced repetitio
 
 - [Features](#features)
 - [Why Another SRS?](#why-another-srs)
-- [Better Name Needed](#better-name-needed)
 - [Developer Setup](#developer-setup)
 - [Contribution Guidelines](#contribution-guidelines)
 - [Project Status and Limitations](#project-status-and-limitations)
 - [Costs (April 2023)](#costs-april-2023)
+- [Better Name Needed](#better-name-needed)
 
 ## Features 💡
 
@@ -48,10 +48,6 @@ I studied Korean at university and did self-study for many years before that. I 
 
 Check out the [whitepaper](https://github.com/RickCarlino/gpt-language-learning-experiments) I wrote that explains the main idea. I also wrote a [blog article back in 2019](https://rickcarlino.com/2019/problems-and-solutions-for-spaced-repetition-software.html) about some problems and solutions with SRS systems.
 
-## Better Name Needed 📛
-
-I picked this name in a snap because it starts with the letter "K" just like "Korean." Maybe we can think of something better? Oh, and if you're a graphic designer, I really need a logo. I can pay you with Taco Bell gift cards. 🌮
-
 ## Developer Setup 🛠️
 
 **Prerequisites:** This app only works on Linux (tested on a recent Xubuntu version). The app needs access to a soundcard, so keep that in mind if you want to run it in a virtualized environment like Docker or WSL. NodeJS is required. I've tested it on v18 of node, and newer versions will probably work too.
@@ -78,7 +74,11 @@ The source code is permissively licensed and open for review by software develop
 - The app currently runs only on Linux because I needed a quick solution for audio playback.
 - By design, the app won't quiz on reading or writing. This is a speaking/listening app.
 - The target user is English speakers trying to learn Korean. I can add other language pairs later, but the main focus right now is EN/KO.
-
+- **The scheduling algorithm is on hold.** I had a simple heuristic-based scheduling algorithm, but the app currently just does a simple shuffle of all sentences at start time. This is adequate for my study needs right now and allows me to focus on other parts of the app's development. Getting a real scheduling algorithm (like SM-2) is planned.
 ## Costs (April 2023) 💰
 
 The app uses Google Cloud and OpenAI APIs, and neither of these services is free. I can review about 2.5 phrases/minute, and a 15-minute session costs roughly $0.11. That means reviewing a single sentence on the app costs less than half a cent USD.
+
+## Better Name Needed 📛
+
+I picked this name in a snap because it starts with the letter "K" just like "Korean." Maybe we can think of something better? Oh, and if you're a graphic designer, I really need a logo. I can pay you with Taco Bell gift cards. 🌮
