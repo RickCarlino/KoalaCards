@@ -1,0 +1,38 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Word {
+  id       Int     @id @default(autoincrement())
+  ko       String  @unique
+  en       String
+  known    Boolean @default(false)
+  reviewed Boolean @default(false)
+}
+
+model Phrase {
+  id             Int       @id @default(autoincrement())
+  ko             String    @unique
+  en             String
+  next_quiz_type String?
+  last_win_at    DateTime?
+  total_attempts Int       @default(0)
+  loss_count     Int       @default(0)
+  win_count      Int       @default(0)
+  win_percentage Float     @default(0)
+}
+
+model Note {
+  id          Int    @id @default(autoincrement())
+  value       String
+  sourceTable String
+  sourceId    Int
+}
