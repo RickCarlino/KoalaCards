@@ -172,9 +172,10 @@ async function listeningTest(phrase: Phrase) {
   const results = await transcribeSpeech({ lang: "en" });
   transcript = results.transcript;
   const p = translationPrompt(phrase.ko, transcript);
-  console.log(p);
   const [answer] = await ask(p);
   const grade = gradeResp(answer, phrase);
+  console.log(p);
+  console.log(answer);
   await speak(ssml(en(phrase.en)));
   await inspectResult(transcript, answer, phrase);
   return grade;

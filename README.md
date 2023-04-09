@@ -81,4 +81,4 @@ The app uses Google Cloud and OpenAI APIs, and neither of these services is free
 
 ## Better Name Needed 📛
 
-I picked this name in a snap because it starts with the letter "K" just like "Korean." Maybe we can think of something better? Oh, and if you're a graphic designer, I really need a logo. I can pay you with Taco Bell gift cards. 🌮
+I picked this name in a snap because it starts with the letter "K" just like "Korean." Maybe we can think of something better?

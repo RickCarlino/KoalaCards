@@ -7667,11 +7667,6 @@ export const GRAMMAR = [
     "length": 7
   },
   {
-    "ko": "오래간만에 갔더니 고향이 많이 달라졌더라고요.",
-    "en": "It's been a while since I went, and my hometown has changed a lot.",
-    "length": 5
-  },
-  {
     "ko": "왜 집을 요새처럼 만들었어요?",
     "en": "Why did you make your house look like a fortress?",
     "length": 4
@@ -9338,7 +9333,7 @@ export const GRAMMAR = [
   },
   {
     "ko": "오천 원짜리밖에 없는데 큰일 났군요.",
-    "en": "It's only 5,000 won, but it's a big deal.",
+    "en": " It's a big problem because I only have a 5,000 won bill.",
     "length": 5
   },
   {
