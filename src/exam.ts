@@ -144,6 +144,7 @@ async function gradeResp(answer: string = "", phrase: Phrase) {
 }
 
 async function dictationTest(phrase: Phrase) {
+  console.log("Repeat the phrase");
   await speak(ssml(en("Repeat after me: "), pause(250), phrase.ko, pause(250), slow(phrase.ko)));
   const { transcript } = await transcribeSpeech();
   const [answer] = await ask(
@@ -154,6 +155,8 @@ async function dictationTest(phrase: Phrase) {
   Slight variations in spacing and punctuation are acceptable.
   The meanings of the two sentences must express the exact same idea.
   Punctuation and word choice do not need to be exact.
+  Reply "YES" if it is correct.
+  Reply "NO" if it is incorrect, then provide a reason why it is wrong
   (YES/NO)
   `,
     { best_of: 1, temperature: 0.2 }
@@ -167,6 +170,7 @@ async function dictationTest(phrase: Phrase) {
 }
 
 async function listeningTest(phrase: Phrase) {
+  console.log("Say it in English");
   let transcript = "";
   await speak(ssml(en("Say this in English"), pause(250), phrase.ko));
   const results = await transcribeSpeech({ lang: "en" });
@@ -182,6 +186,7 @@ async function listeningTest(phrase: Phrase) {
 }
 
 async function speakingTest(phrase: Phrase) {
+  console.log("Say it in Korean");
   await speak(ssml(en("Say this in Korean: "), pause(250), en(phrase.en)));
   const { transcript } = await transcribeSpeech();
   const [answer] = await ask(
@@ -192,7 +197,9 @@ async function speakingTest(phrase: Phrase) {
     Slight variations in spacing and punctuation are acceptable.
     The meanings of the two sentences must express the exact same idea.
     Punctuation and word choice do not need to be exact.
-    (YES/NO)`,
+    Reply "YES" if it is correct.
+    Reply "NO" if it is incorrect, then provide a reason why it is wrong
+    `,
     { best_of: 1, temperature: 0.2 }
   );
   const grade = gradeResp(answer, phrase);
