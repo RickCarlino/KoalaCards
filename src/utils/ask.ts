@@ -16,5 +16,5 @@ export async function ask(prompt: string, opts: AskOpts = {}) {
   });
   return resp.data.choices
     .filter((x) => x.finish_reason === "stop")
-    .map((x) => x.message);
+    .map((x) => x.message?.content ?? "");
 }

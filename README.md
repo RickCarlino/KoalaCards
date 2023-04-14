@@ -77,7 +77,7 @@ The source code is permissively licensed and open for review by software develop
 - **The scheduling algorithm is on hold.** I had a simple heuristic-based scheduling algorithm, but the app currently just does a simple shuffle of all sentences at start time. This is adequate for my study needs right now and allows me to focus on other parts of the app's development. Getting a real scheduling algorithm (like SM-2) is planned.
 ## Costs (April 2023) 💰
 
-The app uses Google Cloud and OpenAI APIs, and neither of these services is free. I can review about 2.5 phrases/minute, and a 15-minute session costs roughly $0.11. That means reviewing a single sentence on the app costs less than half a cent USD.
+The app uses Google Cloud and OpenAI APIs, and neither of these services is free. A 15 minute session on the app costs about $0.01 USD for GPT-3.5 access, while the cost of Speech-to-text/Text-to-speech for a much longer session is 1 cent USD / session. Because of caching mechanisms, the app becomes cheaper to operate over time.
 
 ## Better Name Needed 📛
 
