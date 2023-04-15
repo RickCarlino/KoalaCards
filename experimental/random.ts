@@ -1,6 +1,6 @@
-import "../src/utils/env";
+import "../old_src/utils/env";
 import { draw, shuffle, zip } from "radash";
-import { ask } from "../src/utils/ask";
+import { ask } from "../old_src/utils/ask";
 import { koreanGrammar } from "./korean-grammar";
 import { scenarios } from "./scenarios";
 
@@ -19,11 +19,16 @@ Return JSON in the format of:
 [{"ko": "...", "en": "..."}, ...]
 
 `;
+type KoEn = {
+  ko: string;
+  en: string;
+};
+type RandomExample = Partial<KoEn>;
 
-(async () => {
+export async function createRandomGrammar() {
   const grammars = draw(shuffle(Object.entries(koreanGrammar)));
   const scenario = shuffle(scenarios).slice(0, 5);
-  
+
   if (!grammars || !scenario) {
     throw new Error("Could not draw from grammars or scenarios");
   }
@@ -35,5 +40,14 @@ Return JSON in the format of:
   const p = PROMPT + prompt2;
   console.log(p);
   const [r] = await ask(p, { temperature });
-  console.log(JSON.parse(r));
-})();
+  return JSON.parse(r)
+    .map((x: RandomExample) => {
+      return {
+        ko: x.ko,
+        en: x.en,
+      };
+    })
+    .filter((k: RandomExample) => {
+      return k.ko && k.en;
+    }) as KoEn[];
+}

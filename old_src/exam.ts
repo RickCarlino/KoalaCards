@@ -7,6 +7,7 @@ import { map, shuffle } from "radash";
 import { speak } from "./utils/speak";
 import { play } from "./utils/play";
 import { keyboardInput } from "./utils/keyboard-input";
+// import { createRandomGrammar } from "../experimental/random";
 
 const ssml = (...text: string[]) => {
   return `<speak>${text.join(" ")}</speak>`;
@@ -44,9 +45,13 @@ const inspectResult = async (
     Student Response: ${userSaid}`;
     console.log(hmm);
     console.log(`GPT Says: ${gptSaid}`);
-    const resp = await keyboardInput("Why did you fail? Ask for help, or press enter to skip:");
+    const resp = await keyboardInput("Enter: retry, d: delete forever, or type out a request for help.");
     if (resp.length < 4) {
       return
+    }
+    if (resp === "d") {
+      await prismaClient.phrase.delete({ where: { id: phrase.id } });
+      return;
     }
     const [x] = await ask(`
     A Korean language learning student uses a voice-only speaking/listening
@@ -59,6 +64,8 @@ const inspectResult = async (
     ${resp}
 
     Can you please provide them some help to improve?
+    Please be specific to the question and only provide answers as it relates
+    to the question.
     `);
 
     console.log("GPT Says: ");
@@ -209,7 +216,33 @@ async function speakingTest(phrase: Phrase) {
   return grade;
 }
 
+// Waiting on GTP-4 availability to do this:
+// async function cleanupOnStart() {
+//   // SELECT * FROM Phrase WHERE total_attempts > 3 AND win_percentage > 0.8 ORDER BY total_attempts DESC;
+//   const result = await prismaClient.phrase.deleteMany({
+//     where: {
+//       total_attempts: { gt: 3 },
+//       win_percentage: { gt: 0.8 },
+//     }
+//   });
+//   const { count } = result;
+//   if (count > 0) {
+//     console.log(`Deleted ${count} old phrases. Adding new stuff..`);
+//     const nextPhrases = (await createRandomGrammar()).slice(0, count);
+//     map(nextPhrases, async (p) => {
+//       console.log(`Adding ${p.ko} - ${p.en}`);
+//       await prismaClient.phrase.create({
+//         data: {
+//           ko: p.ko,
+//           en: p.en,
+//         }
+//       });
+//     })
+//   }
+// }
+
 export async function runExam() {
+  // await cleanupOnStart();
   const results = await prismaClient.phrase.findMany({
     orderBy: { win_percentage: "asc" },
   });
@@ -223,9 +256,10 @@ export async function runExam() {
     // };
     const quiz = shuffle([dictationTest, listeningTest, speakingTest])[0] || dictationTest;
     // Call quiz(phrase) until it returns true:
+    let i = 0;
     while (true) {
       const result = await quiz(phrase);
-      if (result) {
+      if (result || i++ > 3) {
         break;
       }
     }
@@ -233,4 +267,5 @@ export async function runExam() {
 
   console.log("Well done! You've completed the exam.");
 }
+console.log("TODO: Delete phrase #1774");
 runExam();

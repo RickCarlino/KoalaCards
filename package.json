@@ -3,10 +3,15 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "npx ts-node src/exam.ts",
-    "reset": "rm -rf node_modules && rm -rf package-lock.json && npm install && npx prisma migrate dev && npx ts-node seeds/ingest.ts"
+    "build": "next build",
+    "dev": "next dev",
+    "lint": "next lint",
+    "old-start": "npx ts-node src/exam.ts",
+    "reset": "rm -rf node_modules && rm -rf package-lock.json && npm install && npx prisma migrate dev && npx ts-node seeds/ingest.ts",
+    "start": "next start",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
@@ -18,13 +23,35 @@
     "typescript": "^4.9.5"
   },
   "dependencies": {
+    "@emotion/react": "^11.10.6",
+    "@emotion/server": "^11.10.0",
     "@google-cloud/language": "^5.2.1",
     "@google-cloud/speech": "^5.3.1",
     "@google-cloud/text-to-speech": "^4.2.1",
     "@google-cloud/translate": "^7.2.0",
+    "@mantine/core": "^6.0.6",
+    "@mantine/ds": "^6.0.6",
+    "@mantine/hooks": "^6.0.6",
+    "@mantine/next": "^6.0.6",
     "@prisma/client": "^4.10.1",
+    "@tabler/icons-react": "^2.14.0",
+    "@tanstack/react-query": "^4.29.1",
+    "@trpc/client": "^10.20.0",
+    "@trpc/next": "^10.20.0",
+    "@trpc/react-query": "^10.20.0",
+    "@trpc/server": "^10.20.0",
+    "@types/node": "18.15.11",
+    "@types/react-dom": "18.0.11",
+    "@types/react": "18.0.32",
     "dotenv": "^16.0.3",
+    "eslint-config-next": "13.2.4",
+    "eslint": "8.37.0",
+    "next": "13.2.4",
     "openai": "^3.1.0",
-    "radash": "^10.7.0"
+    "radash": "^10.7.0",
+    "react-dom": "18.2.0",
+    "react": "18.2.0",
+    "typescript": "5.0.3",
+    "zod": "^3.21.4"
   }
 }
