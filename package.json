@@ -3,12 +3,11 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "type": "module",
   "scripts": {
     "build": "next build",
     "dev": "next dev",
     "lint": "next lint",
-    "old-start": "npx ts-node src/exam.ts",
+    "old-start": "npx ts-node old_src/exam.ts",
     "reset": "rm -rf node_modules && rm -rf package-lock.json && npm install && npx prisma migrate dev && npx ts-node seeds/ingest.ts",
     "start": "next start",
     "test": "echo \"Error: no test specified\" && exit 1"

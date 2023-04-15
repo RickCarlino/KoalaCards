@@ -99,16 +99,36 @@ function blobToBase64(blob: Blob) {
 
 const Recorder: React.FC = () => {
   const performExam = trpc.performExam.useMutation();
+  const getPhrase = trpc.getNextPhrase.useMutation();
+  const [phrase, setPhrase] = React.useState<typeof getPhrase["data"]>({
+    id: 0,
+    en: "Loading",
+    ko: "Loading",
+    win_percentage: 0,
+  });
+  React.useEffect(() => {
+    phrase && phrase.id === 0 && getPhrase.mutateAsync({}).then((res) => {
+      setPhrase(res);
+    });
+  }, []);
   const [records, updateRecords] = React.useState<string[]>([]);
   const { isRecording, stop, start } = useVoiceRecorder(async (data) => {
     performExam.mutateAsync({ audio: await blobToBase64(data), phraseID: 1 });
     updateRecords([...records, window.URL.createObjectURL(data)]);
   });
+  const p = JSON.stringify(phrase, null, 2);
   return (
     <div>
-      <h1>Voices:</h1>
       <div>
-        <h3>On air: {isRecording ? "on" : "off"}</h3>
+        <pre>
+          { p }
+        </pre>
+        <h3>Mic is {isRecording ? "on" : "off"}</h3>
+        <button onClick={() => {
+          getPhrase.mutateAsync({}).then((res) => {
+            setPhrase(res);
+          });
+        }}>Get Phrase</button>
         <button onClick={start}>Start</button>
         <button onClick={stop}>Stop</button>
       </div>
