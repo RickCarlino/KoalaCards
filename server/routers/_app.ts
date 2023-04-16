@@ -5,8 +5,6 @@ import { transcribeB64 } from "@/utils/transcribe";
 import { en, ko, pause, ssml } from "@/utils/ssml";
 import { speak } from "@/old_src/utils/speak";
 
-console.log(process.env.DATABASE_URL ?? "? NO UL");
-
 export const appRouter = router({
   speak: procedure
     .input(
@@ -80,9 +78,8 @@ export const appRouter = router({
       })
     )
     .mutation(async (params) => {
-      console.log(params.input.audio);
       console.log(await transcribeB64(params.input.audio));
-      return { result: "success", score: 100 };
+      return { result: "success" };
     }),
 });
 // export type definition of API
