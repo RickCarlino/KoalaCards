@@ -18,5 +18,9 @@ return new Promise(async (resolve, reject) => {
   const result = response.results ?? [];
   const firstResult = result[0];
   const alternative = firstResult?.alternatives?.[0];
-  resolve(alternative?.transcript ?? '');
+  if (alternative?.transcript) {
+    resolve(alternative.transcript);
+  } else {
+    resolve(JSON.stringify(response, null, 2));
+  }
 })}

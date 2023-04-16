@@ -80,7 +80,8 @@ export const appRouter = router({
       })
     )
     .mutation(async (params) => {
-      console.log(transcribeB64(params.input.audio));
+      console.log(params.input.audio);
+      console.log(await transcribeB64(params.input.audio));
       return { result: "success", score: 100 };
     }),
 });

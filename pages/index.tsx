@@ -1,15 +1,7 @@
 import { PlayButton } from "@/components/play-button";
-import { useVoiceRecorder } from "@/hooks/use-recorder";
+import { RecordButton } from "@/components/record-button";
 import { trpc } from "@/utils/trpc";
 import * as React from "react";
-
-function blobToBase64(blob: Blob): Promise<string> {
-  return new Promise((resolve, _) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result as string);
-    reader.readAsDataURL(blob);
-  });
-}
 
 const Recorder: React.FC = () => {
   const performExam = trpc.performExam.useMutation();
@@ -28,31 +20,19 @@ const Recorder: React.FC = () => {
         setPhrase(res);
       });
   }, []);
-  const [records, updateRecords] = React.useState<string[]>([]);
-  const { isRecording, stop, start } = useVoiceRecorder(async (data) => {
+  const sendAudio = (audio: string) => {
     performExam.mutateAsync({
       id: 1,
-      audio: await blobToBase64(data),
+      audio,
       quizType: "listening",
     });
-    updateRecords([...records, window.URL.createObjectURL(data)]);
-  });
-  const p = JSON.stringify(phrase, null, 2);
-  const speak = trpc.speak.useMutation();
+  };
   return (
     <div>
+      <pre>{JSON.stringify(phrase, null, 2)}</pre>
       <div>
-        <pre>{p}</pre>
         <PlayButton phrase={phrase} />
-        {isRecording ? <button onClick={stop}>Stop</button> : <button onClick={start}>Start</button>}
-      </div>
-      <div>
-        <h1>Records:</h1>
-        {records.map((data, idx) => (
-          <div key={idx}>
-            <audio src={data} controls preload={"metadata"} />
-          </div>
-        ))}
+        <RecordButton onRecord={sendAudio} />
       </div>
     </div>
   );
