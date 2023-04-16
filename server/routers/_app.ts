@@ -1,18 +1,48 @@
 import { z } from "zod";
 import { procedure, router } from "../trpc";
-import { dataURItoBlob } from "@/utils/from-data-url";
 import { prismaClient } from "@/old_src/prisma-client";
 import { transcribeB64 } from "@/utils/transcribe";
+import { en, ko, pause, ssml } from "@/utils/ssml";
+import { speak } from "@/old_src/utils/speak";
+
 console.log(process.env.DATABASE_URL ?? "? NO UL");
+
 export const appRouter = router({
+  speak: procedure
+    .input(
+      z.object({
+        text: z.array(
+          z.union([
+            z.object({ kind: z.literal("ko"), value: z.string() }),
+            z.object({ kind: z.literal("en"), value: z.string() }),
+            z.object({ kind: z.literal("pause"), value: z.number() }),
+          ])
+        ),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const ssmlBody = input.text.map((item) => {
+        switch (item.kind) {
+          case "ko":
+            return ko(item.value);
+          case "en":
+            return en(item.value);
+          case "pause":
+            return pause(item.value);
+        }
+      });
+      await speak(ssml(...ssmlBody));
+    }),
   getNextPhrase: procedure
     .input(z.object({}))
-    .output(z.object({
-      id: z.number(),
-      en: z.string(),
-      ko: z.string(),
-      win_percentage: z.number(),
-    }))
+    .output(
+      z.object({
+        id: z.number(),
+        en: z.string(),
+        ko: z.string(),
+        win_percentage: z.number(),
+      })
+    )
     .mutation(async () => {
       // SELECT * FROM Phrase ORDER BY win_percentage ASC, total_attempts ASC;
       const phrase = await prismaClient.phrase.findFirst({
@@ -21,8 +51,8 @@ export const appRouter = router({
       if (phrase) {
         return {
           id: phrase.id,
-          en: phrase.en ?? 'wow',
-          ko: phrase.ko ?? 'nooo',
+          en: phrase.en ?? "",
+          ko: phrase.ko ?? "",
           win_percentage: phrase.win_percentage,
         };
       } else {
@@ -37,8 +67,16 @@ export const appRouter = router({
   performExam: procedure
     .input(
       z.object({
-        audio: z.any(),
-        phraseID: z.number(),
+        /** quizType represents what type of quiz was administered.
+         * It is one of the following values:
+         * "dictation", "listening", "speaking" */
+        quizType: z.union([
+          z.literal("dictation"),
+          z.literal("listening"),
+          z.literal("speaking"),
+        ]),
+        audio: z.string(),
+        id: z.number(),
       })
     )
     .mutation(async (params) => {
