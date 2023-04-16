@@ -78,7 +78,15 @@ export const appRouter = router({
       })
     )
     .mutation(async (params) => {
-      console.log(await transcribeB64(params.input.audio));
+      switch (params.input.quizType) {
+        case "dictation":
+        case "speaking":
+          console.log(await transcribeB64("ko", params.input.audio));
+          break;
+        case "listening":
+          console.log(await transcribeB64("en-US", params.input.audio));
+          break;
+      }
       return { result: "success" };
     }),
 });
