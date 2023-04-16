@@ -2,6 +2,7 @@ import { z } from "zod";
 import { procedure, router } from "../trpc";
 import { dataURItoBlob } from "@/utils/from-data-url";
 import { prismaClient } from "@/old_src/prisma-client";
+import { transcribeB64 } from "@/utils/transcribe";
 console.log(process.env.DATABASE_URL ?? "? NO UL");
 export const appRouter = router({
   getNextPhrase: procedure
@@ -41,12 +42,8 @@ export const appRouter = router({
       })
     )
     .mutation(async (params) => {
-      console.log(dataURItoBlob(params.input.audio));
-      debugger;
-      return {
-        result: "success",
-        score: 100,
-      };
+      console.log(transcribeB64(params.input.audio));
+      return { result: "success", score: 100 };
     }),
 });
 // export type definition of API

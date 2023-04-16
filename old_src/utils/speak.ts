@@ -8,17 +8,22 @@ import { play } from "./play";
 const CLIENT = new textToSpeech.TextToSpeechClient();
 
 const VOICES = [
-  "ko-KR-Standard-D",
-  "ko-KR-Wavenet-A",
+  // "ko-KR-Neural2-A",
+  "ko-KR-Neural2-B",
+  "ko-KR-Neural2-C",
+  // "ko-KR-Standard-B",
+  // "ko-KR-Standard-C",
+  // "ko-KR-Standard-D",
+  // "ko-KR-Wavenet-A",
   "ko-KR-Wavenet-B",
   "ko-KR-Wavenet-C",
-  "ko-KR-Wavenet-D",
+  // "ko-KR-Wavenet-D",
 ];
 
 /** My main focus is Korean, so I randomly pick
  * one of Google's Korean voices if no voice is
  * explicitly provided. */
-const randomVoice = () => draw(VOICES) || VOICES[4];
+const randomVoice = () => draw(VOICES) || VOICES[0];
 
 /** Generates a file path for where to store the MP3
  * file. The path is combination of the language code
