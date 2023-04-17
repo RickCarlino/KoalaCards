@@ -56,9 +56,13 @@ export const useVoiceRecorder = (cb: (result: Blob) => void): ReturnedSig => {
       dispatch({ type: "start" });
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);
+      recorder.addEventListener("dataavailable", finishRecording);
+      recorder.addEventListener("error", (e) => {
+        alert("Audio Error (?)");
+        console.dir(e);
+      });
       dispatch({ type: "startRecording", payload: { recorder } });
       recorder.start();
-      recorder.addEventListener("dataavailable", finishRecording);
       if (state.error) dispatch({ type: "hasError", payload: { error: null } });
     } catch (err) {
       dispatch({ type: "hasError", payload: { error: err } } as any);
