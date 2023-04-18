@@ -2,8 +2,15 @@ import { z } from "zod";
 import { procedure, router } from "../trpc";
 import { prismaClient } from "@/old_src/prisma-client";
 import { transcribeB64 } from "@/utils/transcribe";
-import { en, ko, pause, ssml } from "@/utils/ssml";
+import { en, ko, pause, slow, ssml } from "@/utils/ssml";
 import { speak } from "@/old_src/utils/speak";
+import { draw } from "radash";
+
+const quizType = z.union([
+  z.literal("dictation"),
+  z.literal("listening"),
+  z.literal("speaking"),
+]);
 
 export const appRouter = router({
   speak: procedure
@@ -12,6 +19,7 @@ export const appRouter = router({
         text: z.array(
           z.union([
             z.object({ kind: z.literal("ko"), value: z.string() }),
+            z.object({ kind: z.literal("slow"), value: z.string() }), // Only supports Korean.
             z.object({ kind: z.literal("en"), value: z.string() }),
             z.object({ kind: z.literal("pause"), value: z.number() }),
           ])
@@ -27,17 +35,22 @@ export const appRouter = router({
             return en(item.value);
           case "pause":
             return pause(item.value);
+          case "slow":
+            return slow(item.value);
         }
       });
       await speak(ssml(...ssmlBody));
     }),
   getNextPhrase: procedure
-    .input(z.object({}))
+    .input(
+      z.object({})
+    )
     .output(
       z.object({
         id: z.number(),
         en: z.string(),
         ko: z.string(),
+        quizType,
         win_percentage: z.number(),
       })
     )
@@ -52,6 +65,7 @@ export const appRouter = router({
           en: phrase.en ?? "",
           ko: phrase.ko ?? "",
           win_percentage: phrase.win_percentage,
+          quizType: draw(["dictation", "listening", "speaking"]) ?? "dictation",
         };
       } else {
         return {
@@ -59,6 +73,7 @@ export const appRouter = router({
           en: "You must add more phrases",
           ko: "더 많은 문장을 추가해야 합니다.",
           win_percentage: 0,
+          quizType: "dictation",
         };
       }
     }),
@@ -68,11 +83,7 @@ export const appRouter = router({
         /** quizType represents what type of quiz was administered.
          * It is one of the following values:
          * "dictation", "listening", "speaking" */
-        quizType: z.union([
-          z.literal("dictation"),
-          z.literal("listening"),
-          z.literal("speaking"),
-        ]),
+        quizType,
         audio: z.string(),
         id: z.number(),
       })

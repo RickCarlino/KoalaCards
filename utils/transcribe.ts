@@ -7,7 +7,7 @@ const ENCODING_TABLE: Record<string, string> = {
   "Audio/amr": "AMR",
   "audio/flac": "FLAC",
   "audio/l16": "LINEAR16",
-  "audio/ogg": "OGG_OPUS",
+  "audio/ogg": "WEBM_OPUS", // Might need to change to "OGG_OPUS" if it doesn't work
   "audio/webm": "WEBM_OPUS",
   "audio/x-mulaw": "MULAW",
   "audio/x-speex-with-header-byte": "SPEEX_WITH_HEADER_BYTE",

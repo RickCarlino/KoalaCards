@@ -44,7 +44,7 @@ export async function speak(txt: string, voice: string = randomVoice()) {
     const [response] = await CLIENT.synthesizeSpeech({
       input: { ssml: txt },
       voice: {
-        languageCode: "ko",
+        languageCode: "ko-kr",
         name: voice,
       },
       audioConfig: {
