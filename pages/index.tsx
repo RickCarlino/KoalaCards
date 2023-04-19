@@ -1,11 +1,13 @@
-import { PlayButton } from "@/components/play-button";
+import { PlayButton, createQuizText } from "@/components/play-button";
 import { RecordButton } from "@/components/record-button";
 import { trpc } from "@/utils/trpc";
+import { Button, Center, Group } from "@mantine/core";
 import * as React from "react";
 
 const Recorder: React.FC = () => {
   const performExam = trpc.performExam.useMutation();
   const getPhrase = trpc.getNextPhrase.useMutation();
+  const speak = trpc.speak.useMutation();
   type Phrase = NonNullable<typeof getPhrase["data"]>;
   const [phrase, setPhrase] = React.useState<Phrase>({
     id: 0,
@@ -14,28 +16,40 @@ const Recorder: React.FC = () => {
     win_percentage: 0,
     quizType: "dictation",
   });
-  if (!phrase) return <div>Loading...</div>;
-  React.useEffect(() => {
-    phrase.id === 0 &&
-      getPhrase.mutateAsync({}).then((res) => {
-        setPhrase(res);
-      });
-  }, []);
-  const sendAudio = (audio: string) => {
-    performExam.mutateAsync({
+
+  const audioPrompt = (p: Phrase) =>
+    speak.mutateAsync({ text: createQuizText(p) });
+  const getNextPhrase = async () => {
+    const p = await getPhrase.mutateAsync({});
+    setPhrase(p);
+    await audioPrompt(p);
+  };
+  const sendAudio = async (audio: string) => {
+    const { result } = await performExam.mutateAsync({
       id: phrase.id,
       audio,
       quizType: phrase.quizType,
     });
+    switch (result) {
+      case "success":
+        await speak.mutateAsync({ text: [{ kind: "en", value: "Pass" }] });
+        await getNextPhrase();
+      case "failure":
+        await speak.mutateAsync({ text: [{ kind: "en", value: "Fail" }] });
+        await audioPrompt(phrase);
+      case "error":
+        await speak.mutateAsync({ text: [{ kind: "en", value: "Error" }] });
+        return alert(result);
+    }
   };
   return (
-    <div>
-      <pre>{JSON.stringify(phrase, null, 2)}</pre>
-      <div>
+    <Center>
+      <Group>
+        <Button onClick={getNextPhrase}>Next Quiz</Button>
         <PlayButton phrase={phrase} />
         <RecordButton onRecord={sendAudio} />
-      </div>
-    </div>
+      </Group>
+    </Center>
   );
 };
 
