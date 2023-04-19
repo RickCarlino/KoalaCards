@@ -1,6 +1,6 @@
 import { SpeechClient } from "@google-cloud/speech";
 
-type Lang = "ko" | "en-US";
+export type Lang = "ko" | "en-US";
 const UNKNOWN = "ENCODING_UNSPECIFIED" as any
 const ENCODING_TABLE: Record<string, string> = {
   "audio/amr-wb": "AMR_WB",

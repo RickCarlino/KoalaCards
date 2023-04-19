@@ -3,18 +3,6 @@ import { RecordButton } from "@/components/record-button";
 import { trpc } from "@/utils/trpc";
 import * as React from "react";
 
-function runQuiz(phrase: Phrase) {
-  switch (phrase.quizType) {
-    case "dictation":
-      return <div>Dictation</div>;
-    case "listening":
-      return <div>Listening</div>;
-    case "speaking":
-      return <div>Listening</div>;
-    default:
-      throw new Error("Invalid quiz type" + phrase.quizType);
-  }
-}
 const Recorder: React.FC = () => {
   const performExam = trpc.performExam.useMutation();
   const getPhrase = trpc.getNextPhrase.useMutation();
@@ -35,9 +23,9 @@ const Recorder: React.FC = () => {
   }, []);
   const sendAudio = (audio: string) => {
     performExam.mutateAsync({
-      id: 1,
+      id: phrase.id,
       audio,
-      quizType: "listening",
+      quizType: phrase.quizType,
     });
   };
   return (

@@ -1,10 +1,161 @@
+import { prismaClient } from "@/old_src/prisma-client";
+import { speak } from "@/old_src/utils/speak";
+import { en, ko, pause, slow, ssml } from "@/utils/ssml";
+import { Lang, transcribeB64 } from "@/utils/transcribe";
+import { Phrase } from "@prisma/client";
+import { Configuration, CreateCompletionRequest, OpenAIApi } from "openai";
+import { draw } from "radash";
 import { z } from "zod";
 import { procedure, router } from "../trpc";
-import { prismaClient } from "@/old_src/prisma-client";
-import { transcribeB64 } from "@/utils/transcribe";
-import { en, ko, pause, slow, ssml } from "@/utils/ssml";
-import { speak } from "@/old_src/utils/speak";
-import { draw } from "radash";
+
+const apiKey = process.env.OPENAI_API_KEY;
+
+if (!apiKey) {
+  throw new Error("Missing ENV Var: OPENAI_API_KEY");
+}
+
+const configuration = new Configuration({ apiKey });
+export const openai = new OpenAIApi(configuration);
+
+type AskOpts = Partial<CreateCompletionRequest>;
+
+export async function ask(prompt: string, opts: AskOpts = {}) {
+  const resp = await openai.createChatCompletion({
+    model: "gpt-3.5-turbo",
+    messages: [
+      {
+        role: "user",
+        content: prompt,
+      },
+    ],
+    temperature: opts.temperature ?? 0.15,
+    max_tokens: opts.max_tokens ?? 1024,
+    n: opts.n ?? 1,
+  });
+  return resp.data.choices
+    .filter((x) => x.finish_reason === "stop")
+    .map((x) => x.message?.content ?? "");
+}
+
+const cleanYesNo = (answer?: string) => {
+  return (answer ?? "?")
+    .replace(/(\s|\W)+/g, " ")
+    .trim()
+    .toUpperCase()
+    .split(" ")[0];
+};
+
+const translationPrompt = (ko: string, response: string) => {
+  return `
+    A Korean language student was asked to translate the following phrase to english: ${ko}.
+    The student provided this translation: ${response}
+    Was the student correct?
+    Slight variations in spacing and punctuation are acceptable.
+    The meanings of the two sentences must express the exact same idea.
+    Punctuation and word choice do not need to be exact.
+    Reply "YES" if it is a correct translation.
+    Reply "NO" if it is incorrect, then provide a reason why it is wrong
+    `;
+};
+
+const NEXT_QUIZ_TYPES: Record<string, string | undefined> = {
+  dictation: "listening",
+  listening: "speaking",
+  speaking: "listening",
+};
+
+const markIncorrect = async (phrase: Phrase) => {
+  await prismaClient.phrase.update({
+    where: { id: phrase.id },
+    data: {
+      loss_count: { increment: 1 },
+      total_attempts: { increment: 1 },
+      win_percentage: phrase.win_count / (phrase.total_attempts + 1),
+      last_win_at: undefined,
+      next_quiz_type: "dictation",
+    },
+  });
+};
+
+const markCorrect = async (phrase: Phrase) => {
+  /** Increase `win_count`, `total_attempts`.
+    Recalculate `win_percentage`.
+    Set last `last_win_at` to current time.
+    Calculate next value of `next_quiz_type` based
+    on the following table:
+
+    | Previous Val  | Next Val      |
+    |---------------|---------------|
+    | "dictation"   | "listening"   |
+    | "listening"   | "speaking"    |
+    | All others    | "dictation"   | */
+  await prismaClient.phrase.update({
+    where: { id: phrase.id },
+    data: {
+      win_count: { increment: 1 },
+      total_attempts: { increment: 1 },
+      win_percentage: (phrase.win_count + 1) / (phrase.total_attempts + 1),
+      last_win_at: { set: new Date() },
+      next_quiz_type:
+        NEXT_QUIZ_TYPES[phrase.next_quiz_type ?? "dictation"] ?? "dictation",
+    },
+  });
+};
+
+async function gradeResp(answer: string = "", phrase: Phrase) {
+  const cleanAnswer = cleanYesNo(answer);
+  switch (cleanAnswer) {
+    case "YES":
+      await markCorrect(phrase);
+      return true;
+    case "NO":
+      await markIncorrect(phrase);
+      return false;
+    default:
+      throw new Error("Invalid answer: " + JSON.stringify(answer));
+  }
+}
+
+export async function dictationTest(transcript: string, phrase: Phrase) {
+  const [answer] = await ask(
+    `
+  A Korean language student was asked to read the following phrase aloud: ${phrase.ko}.
+  The student read: ${transcript}
+  Was the student correct?
+  Slight variations in spacing and punctuation are acceptable.
+  The meanings of the two sentences must express the exact same idea.
+  Punctuation and word choice do not need to be exact.
+  Reply "YES" if it is correct.
+  Reply "NO" if it is incorrect, then provide a reason why it is wrong
+  (YES/NO)
+  `,
+    { best_of: 1, temperature: 0.2 }
+  );
+  return gradeResp(answer, phrase);
+}
+
+export async function listeningTest(transcript: string, phrase: Phrase) {
+  const p = translationPrompt(phrase.ko, transcript);
+  const [answer] = await ask(p);
+  return gradeResp(answer, phrase);
+}
+
+export async function speakingTest(transcript: string, phrase: Phrase) {
+  const [answer] = await ask(
+    `An English-speaking Korean language student was asked
+    to translate the following phrase to Korean: ${phrase.en}.
+    The student said: ${transcript}
+    Was the student correct?
+    Slight variations in spacing and punctuation are acceptable.
+    The meanings of the two sentences must express the exact same idea.
+    Punctuation and word choice do not need to be exact.
+    Reply "YES" if it is correct.
+    Reply "NO" if it is incorrect, then provide a reason why it is wrong
+    `,
+    { best_of: 1, temperature: 0.2 }
+  );
+  return gradeResp(answer, phrase);
+}
 
 const quizType = z.union([
   z.literal("dictation"),
@@ -42,9 +193,7 @@ export const appRouter = router({
       await speak(ssml(...ssmlBody));
     }),
   getNextPhrase: procedure
-    .input(
-      z.object({})
-    )
+    .input(z.object({}))
     .output(
       z.object({
         id: z.number(),
@@ -88,17 +237,40 @@ export const appRouter = router({
         id: z.number(),
       })
     )
-    .mutation(async (params) => {
-      switch (params.input.quizType) {
-        case "dictation":
-        case "speaking":
-          console.log(await transcribeB64("ko", params.input.audio));
-          break;
-        case "listening":
-          console.log(await transcribeB64("en-US", params.input.audio));
-          break;
+    .mutation(async ({ input }) => {
+      type Quiz = typeof speakingTest;
+      type QuizType = typeof input.quizType;
+      const LANG: Record<QuizType, Lang> = {
+        dictation: "ko",
+        listening: "en-US",
+        speaking: "ko",
+      };
+      const QUIZ: Record<QuizType, Quiz> = {
+        dictation: dictationTest,
+        listening: listeningTest,
+        speaking: speakingTest,
+      };
+      const lang = LANG[input.quizType];
+      const quiz = QUIZ[input.quizType];
+      const transcript = await transcribeB64(lang, input.audio);
+      const phrase = await prismaClient.phrase.findUnique({
+        where: { id: input.id },
+      });
+      const result = phrase && (await quiz(transcript, phrase));
+      console.log({
+        result,
+        phrase,
+        transcript,
+        lang,
+      });
+      switch (result) {
+        case true:
+          return { result: "success" } as const;
+        case false:
+          return { result: "failure" } as const;
+        default:
+          return { result: "error" } as const;
       }
-      return { result: "success" };
     }),
 });
 // export type definition of API
