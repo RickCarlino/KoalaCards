@@ -39,16 +39,15 @@ export const createQuizText = (phrase: Phrase) => {
       break;
   }
   return text;
-}
+};
 
 /** A React component  */
 export function PlayButton({ phrase }: { phrase: Phrase }) {
   const speak = trpc.speak.useMutation();
   const text = createQuizText(phrase);
-  const play = () => {
-    speak.mutateAsync({
+  const play = async () =>
+    await speak.mutateAsync({
       text,
     });
-  };
   return <Button onClick={play}>▶️Play</Button>;
 }

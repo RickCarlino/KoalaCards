@@ -190,7 +190,11 @@ export const appRouter = router({
             return slow(item.value);
         }
       });
-      await speak(ssml(...ssmlBody));
+      try {
+        await speak(ssml(...ssmlBody));
+      } catch (error) {
+        console.error(error);
+      }
     }),
   getNextPhrase: procedure
     .input(z.object({}))

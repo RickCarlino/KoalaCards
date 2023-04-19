@@ -17,8 +17,9 @@ const Recorder: React.FC = () => {
     quizType: "dictation",
   });
 
-  const audioPrompt = (p: Phrase) =>
-    speak.mutateAsync({ text: createQuizText(p) });
+  const audioPrompt = async (p: Phrase) => {
+    await speak.mutateAsync({ text: createQuizText(p) });
+  };
   const getNextPhrase = async () => {
     const p = await getPhrase.mutateAsync({});
     setPhrase(p);
@@ -33,10 +34,10 @@ const Recorder: React.FC = () => {
     switch (result) {
       case "success":
         await speak.mutateAsync({ text: [{ kind: "en", value: "Pass" }] });
-        await getNextPhrase();
+        return await getNextPhrase();
       case "failure":
         await speak.mutateAsync({ text: [{ kind: "en", value: "Fail" }] });
-        await audioPrompt(phrase);
+        return await audioPrompt(phrase);
       case "error":
         await speak.mutateAsync({ text: [{ kind: "en", value: "Error" }] });
         return alert(result);
