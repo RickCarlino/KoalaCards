@@ -190,11 +190,7 @@ export const appRouter = router({
             return slow(item.value);
         }
       });
-      try {
-        await speak(ssml(...ssmlBody));
-      } catch (error) {
-        console.error(error);
-      }
+      await speak(ssml(...ssmlBody));
     }),
   getNextPhrase: procedure
     .input(z.object({}))
@@ -261,12 +257,6 @@ export const appRouter = router({
         where: { id: input.id },
       });
       const result = phrase && (await quiz(transcript, phrase));
-      console.log({
-        result,
-        phrase,
-        transcript,
-        lang,
-      });
       switch (result) {
         case true:
           return { result: "success" } as const;

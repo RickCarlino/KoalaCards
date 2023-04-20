@@ -38,25 +38,34 @@ const filePathFor = (text: string, voice: string) => {
  * Stores previously synthesized speech in a cache directory
  * to improve latency. */
 export async function speak(txt: string, voice: string = randomVoice()) {
-  const p = filePathFor(txt, voice);
-  if (!existsSync(p)) {
-    const [response] = await CLIENT.synthesizeSpeech({
-      input: { ssml: txt },
-      voice: {
-        languageCode: "ko-kr",
-        name: voice,
-      },
-      audioConfig: {
-        audioEncoding: "MP3",
-      },
-    });
+  try {
+    const p = filePathFor(txt, voice);
+    if (!existsSync(p)) {
+      const [response] = await CLIENT.synthesizeSpeech({
+        input: { ssml: txt },
+        voice: {
+          languageCode: "ko-kr",
+          name: voice,
+        },
+        audioConfig: {
+          audioEncoding: "MP3",
+        },
+      });
 
-    if (!response.audioContent) {
-      throw new Error("No audio content");
+      if (!response.audioContent) {
+        throw new Error("No audio content");
+      }
+      // TODO: Use async version
+      await writeFileSync(p, response.audioContent, "binary");
     }
-    // TODO: Use async version
-    await writeFileSync(p, response.audioContent, "binary");
+    play(p);
+    return p;
+  } catch (error) {
+    console.log('='.repeat(80));
+    console.log(JSON.stringify({
+      text: txt,
+      voice,
+    }));
+    console.error(JSON.stringify(error, null, 2));
   }
-  play(p);
-  return p;
 }
