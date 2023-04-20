@@ -49,5 +49,5 @@ export function PlayButton({ phrase }: { phrase: Phrase }) {
     await speak.mutateAsync({
       text,
     });
-  return <Button onClick={play}>▶️Play</Button>;
+  return <Button onClick={play}>▶️Play Sentence</Button>;
 }

@@ -1,14 +1,14 @@
 import { PlayButton, createQuizText } from "@/components/play-button";
 import { RecordButton } from "@/components/record-button";
 import { trpc } from "@/utils/trpc";
-import { Button, Center, Group } from "@mantine/core";
+import { Center, Group } from "@mantine/core";
 import * as React from "react";
 
 const Recorder: React.FC = () => {
+  type Phrase = NonNullable<typeof getPhrase["data"]>;
   const performExam = trpc.performExam.useMutation();
   const getPhrase = trpc.getNextPhrase.useMutation();
   const speak = trpc.speak.useMutation();
-  type Phrase = NonNullable<typeof getPhrase["data"]>;
   const [phrase, setPhrase] = React.useState<Phrase>({
     id: 0,
     en: "Loading",
@@ -17,14 +17,25 @@ const Recorder: React.FC = () => {
     quizType: "dictation",
   });
 
+  React.useEffect(() => {
+    phrase.id === 0 && doSetPhrase();
+  }, []);
+
+  const doSetPhrase = async () => {
+    const p = await getPhrase.mutateAsync({});
+    setPhrase(p);
+    console.log(p.id);
+    return p;
+  };
+
   const audioPrompt = async (p: Phrase) => {
     await speak.mutateAsync({ text: createQuizText(p) });
   };
+
   const getNextPhrase = async () => {
-    const p = await getPhrase.mutateAsync({});
-    setPhrase(p);
-    await audioPrompt(p);
+    await audioPrompt(await doSetPhrase());
   };
+
   const sendAudio = async (audio: string) => {
     const { result } = await performExam.mutateAsync({
       id: phrase.id,
@@ -44,13 +55,15 @@ const Recorder: React.FC = () => {
     }
   };
   return (
-    <Center>
-      <Group>
-        <Button onClick={getNextPhrase}>Next Quiz</Button>
-        <PlayButton phrase={phrase} />
-        <RecordButton onRecord={sendAudio} />
-      </Group>
-    </Center>
+    <div>
+      <Center>
+        <h1>Card #{phrase.id}</h1>{" "}
+        <Group>
+          <PlayButton phrase={phrase} />
+          <RecordButton onRecord={sendAudio} />
+        </Group>
+      </Center>
+    </div>
   );
 };
 

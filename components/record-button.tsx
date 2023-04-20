@@ -16,8 +16,8 @@ export function RecordButton(props: { onRecord: (data: string) => void }) {
   });
 
   return isRecording ? (
-    <Button onClick={stop}>⏹️Stop</Button>
+    <Button onClick={stop}>⏹️Submit Answer</Button>
   ) : (
-    <Button onClick={start}>⏺️Record</Button>
+    <Button onClick={start}>⏺️Record Answer</Button>
   );
 }
