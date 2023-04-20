@@ -1,5 +1,5 @@
 import textToSpeech from "@google-cloud/text-to-speech";
-import fs, { existsSync } from "fs";
+import fs, { existsSync, writeFileSync } from "fs";
 import util from "util";
 import { createHash } from "crypto";
 import { draw } from "radash";
@@ -39,7 +39,6 @@ const filePathFor = (text: string, voice: string) => {
  * to improve latency. */
 export async function speak(txt: string, voice: string = randomVoice()) {
   const p = filePathFor(txt, voice);
-
   if (!existsSync(p)) {
     const [response] = await CLIENT.synthesizeSpeech({
       input: { ssml: txt },
@@ -55,9 +54,8 @@ export async function speak(txt: string, voice: string = randomVoice()) {
     if (!response.audioContent) {
       throw new Error("No audio content");
     }
-
-    const writeFile = util.promisify(fs.writeFile);
-    await writeFile(p, response.audioContent, "binary");
+    // TODO: Use async version
+    await writeFileSync(p, response.audioContent, "binary");
   }
   play(p);
   return p;
