@@ -1,16 +1,24 @@
 import { SpeechClient } from "@google-cloud/speech";
+import { execSync } from "child_process";
+import { readFileSync, writeFileSync } from "fs";
+import { uid } from "radash";
 
 export type Lang = "ko" | "en-US";
-const UNKNOWN = "ENCODING_UNSPECIFIED" as any
-const ENCODING_TABLE: Record<string, string> = {
-  "audio/amr-wb": "AMR_WB",
-  "Audio/amr": "AMR",
-  "audio/flac": "FLAC",
-  "audio/l16": "LINEAR16",
-  "audio/ogg": "WEBM_OPUS", // Might need to change to "OGG_OPUS" if it doesn't work
-  "audio/webm": "WEBM_OPUS",
-  "audio/x-mulaw": "MULAW",
-  "audio/x-speex-with-header-byte": "SPEEX_WITH_HEADER_BYTE",
+
+export const captureAudio = (dataURI: string) => {
+  const regex = /^data:.+\/(.+);base64,(.*)$/;
+  const matches = dataURI.match(regex);
+  if (!matches || matches.length !== 3) return new Error("Invalid input string");
+  const ext = matches[1].slice(0, 4).toLowerCase().replace(/[^a-z]/gi, ''); // security critical
+  const data = matches[2];
+  const id = uid(8);
+  const input = `/tmp/koala-audio-${id}.${ext}`;
+  const output = `/tmp/koala-audio-${id}.webm`;
+  const buffer = Buffer.from(data, "base64"); // TODO: Set a cap on length.
+  writeFileSync(input, buffer); // TODO: Use non-synchronous version
+  // Convert file from mp4 to ogg
+  execSync(`ffmpeg -i ${input} -c:a libopus -ar 48000 -b:a 128k -ac 1 ${output}`);
+  return readFileSync(output, "base64"); // TODO: Use non-synchronous version
 };
 
 export async function transcribeB64(
@@ -19,23 +27,18 @@ export async function transcribeB64(
 ): Promise<string> {
   const client = new SpeechClient();
   return new Promise(async (resolve) => {
-    const mime = dataURI.split(",")[0].split(":")[1].split(";")[0];
-    const content = dataURI.split(",")[1];
-    const encoding = ENCODING_TABLE[mime.toLowerCase()] || UNKNOWN; // TODO: fix type
     const [resp] = await client.recognize({
       config: {
-        encoding,
+        encoding: "WEBM_OPUS",
         sampleRateHertz: 48000,
         languageCode: lang,
       },
       audio: {
-        content,
+        content: captureAudio(dataURI) as string,
       },
     });
     const speech = resp?.results?.[0]?.alternatives?.[0]?.transcript;
     if (!speech) {
-      console.log("===")
-      console.log(dataURI.slice(0, 100));
       throw new Error(
         "No speech detected. See `error.ogg` to inspect. " +
           JSON.stringify(resp)
