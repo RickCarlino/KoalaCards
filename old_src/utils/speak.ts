@@ -1,6 +1,5 @@
 import textToSpeech from "@google-cloud/text-to-speech";
-import fs, { existsSync, writeFileSync } from "fs";
-import util from "util";
+import { existsSync, writeFileSync } from "fs";
 import { createHash } from "crypto";
 import { draw } from "radash";
 import { play } from "./play";
@@ -8,16 +7,8 @@ import { play } from "./play";
 const CLIENT = new textToSpeech.TextToSpeechClient();
 
 const VOICES = [
-  // "ko-KR-Neural2-A",
-  "ko-KR-Neural2-B",
-  "ko-KR-Neural2-C",
-  // "ko-KR-Standard-B",
-  // "ko-KR-Standard-C",
-  // "ko-KR-Standard-D",
-  // "ko-KR-Wavenet-A",
   "ko-KR-Wavenet-B",
   "ko-KR-Wavenet-C",
-  // "ko-KR-Wavenet-D",
 ];
 
 /** My main focus is Korean, so I randomly pick
@@ -38,9 +29,10 @@ const filePathFor = (text: string, voice: string) => {
  * Stores previously synthesized speech in a cache directory
  * to improve latency. */
 export async function speak(txt: string, voice: string = randomVoice()) {
-  try {
-    const p = filePathFor(txt, voice);
-    if (!existsSync(p)) {
+  const p = filePathFor(txt, voice);
+  const cacheMiss = !existsSync(p);
+try {
+    if (cacheMiss) {
       const [response] = await CLIENT.synthesizeSpeech({
         input: { ssml: txt },
         voice: {
@@ -65,6 +57,8 @@ export async function speak(txt: string, voice: string = randomVoice()) {
     console.log(JSON.stringify({
       text: txt,
       voice,
+      cacheMiss,
+      p
     }));
     console.error(JSON.stringify(error, null, 2));
   }
