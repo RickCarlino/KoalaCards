@@ -1,12 +1,12 @@
 import { trpc } from "@/utils/trpc";
 import { Button } from "@mantine/core";
+import { useEffect, useRef, useState } from "react";
 // TODO Clean this up.
 type Mutation = ReturnType<typeof trpc.speak.useMutation>["mutateAsync"];
 type Speech = Parameters<Mutation>[0]["text"];
 type Phrase = NonNullable<
   ReturnType<typeof trpc.getNextPhrase.useMutation>["data"]
 >;
-
 export const createQuizText = (phrase: Phrase) => {
   let text: Speech = [
     { kind: "ko", value: phrase?.ko ?? "" },
@@ -41,13 +41,31 @@ export const createQuizText = (phrase: Phrase) => {
   return text;
 };
 
+interface State {
+  b64: string;
+}
 /** A React component  */
 export function PlayButton({ phrase }: { phrase: Phrase }) {
+  const [state, setState] = useState<State>({ b64: "" });
+  const ref = useRef<HTMLAudioElement>(null);
   const speak = trpc.speak.useMutation();
-  const text = createQuizText(phrase);
-  const play = async () =>
-    await speak.mutateAsync({
-      text,
-    });
-  return <Button onClick={play}>▶️Play Sentence</Button>;
+  const play = async () => {
+    // TODO: Find a way to cache sounds maybe
+    let text = state.b64;
+    if (!text) {
+      text = await speak.mutateAsync({ text: createQuizText(phrase) });
+      setState({
+        ...state,
+        b64: text,
+      });
+    }
+    ref.current && ref.current.setAttribute("src", text);
+    await ref.current?.play();
+  };
+  return (
+    <>
+      <audio ref={ref} src={state.b64} style={{ display: "none" }} />
+      <Button onClick={play}>▶️Play Sentence</Button>
+    </>
+  );
 }

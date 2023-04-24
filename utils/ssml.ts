@@ -1,7 +1,7 @@
 import textToSpeech from "@google-cloud/text-to-speech";
 import { execSync } from "child_process";
 import { createHash } from "crypto";
-import fs, { existsSync } from "fs";
+import fs, { existsSync, readFileSync } from "fs";
 import { draw } from "radash";
 import util from "util";
 
@@ -61,6 +61,33 @@ export async function speak(txt: string, voice: string = randomVoice()) {
   }
   play(p);
   return p;
+}
+
+/** Create and play a text to speech MP3 via Google Cloud.
+ * Stores previously synthesized speech in a cache directory
+ * to improve latency. */
+export async function newSpeak(txt: string, voice: string = randomVoice()) {
+  const p = filePathFor(txt, voice);
+  if (!existsSync(p)) {
+    const [response] = await CLIENT.synthesizeSpeech({
+      input: { ssml: txt },
+      voice: {
+        languageCode: "ko-kr",
+        name: voice,
+      },
+      audioConfig: {
+        audioEncoding: "MP3",
+      },
+    });
+
+    if (!response.audioContent) {
+      throw new Error("No audio content");
+    }
+
+    const writeFile = util.promisify(fs.writeFile);
+    await writeFile(p, response.audioContent, "binary");
+  }
+  return `data:audio/mpeg;base64,${readFileSync(p, {encoding: 'base64'})}`;
 }
 
 export const ssml = (...text: string[]) => {

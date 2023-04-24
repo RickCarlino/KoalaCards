@@ -5,7 +5,7 @@ import { Center, Group } from "@mantine/core";
 import * as React from "react";
 
 const Recorder: React.FC = () => {
-  type Phrase = NonNullable<typeof getPhrase["data"]>;
+  type Phrase = NonNullable<(typeof getPhrase)["data"]>;
   const performExam = trpc.performExam.useMutation();
   const getPhrase = trpc.getNextPhrase.useMutation();
   const speak = trpc.speak.useMutation();
@@ -24,12 +24,14 @@ const Recorder: React.FC = () => {
   const doSetPhrase = async () => {
     const p = await getPhrase.mutateAsync({});
     setPhrase(p);
-    console.log(p.id);
     return p;
   };
-
+  type JSONSpeech = Parameters<typeof speak.mutateAsync>[0];
+  const sayIt = async (text: JSONSpeech) => {
+    const dataURI = await speak.mutateAsync(text);
+  };
   const audioPrompt = async (p: Phrase) => {
-    await speak.mutateAsync({ text: createQuizText(p) });
+    await sayIt({ text: createQuizText(p) });
   };
 
   const getNextPhrase = async () => {
@@ -44,13 +46,13 @@ const Recorder: React.FC = () => {
     });
     switch (result) {
       case "success":
-        await speak.mutateAsync({ text: [{ kind: "en", value: "Pass" }] });
+        await sayIt({ text: [{ kind: "en", value: "Pass" }] });
         return await getNextPhrase();
       case "failure":
-        await speak.mutateAsync({ text: [{ kind: "en", value: "Fail" }] });
+        await sayIt({ text: [{ kind: "en", value: "Fail" }] });
         return await audioPrompt(phrase);
       case "error":
-        await speak.mutateAsync({ text: [{ kind: "en", value: "Error" }] });
+        await sayIt({ text: [{ kind: "en", value: "Error" }] });
         return alert(result);
     }
   };
