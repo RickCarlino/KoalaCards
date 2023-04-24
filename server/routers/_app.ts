@@ -1,6 +1,5 @@
-import { prismaClient } from "@/old_src/prisma-client";
-import { speak } from "@/old_src/utils/speak";
-import { en, ko, pause, slow, ssml } from "@/utils/ssml";
+import { prismaClient } from "@/server/prisma-client";
+import { en, ko, pause, slow, speak, ssml } from "@/utils/ssml";
 import { Lang, transcribeB64 } from "@/utils/transcribe";
 import { Phrase } from "@prisma/client";
 import { Configuration, CreateCompletionRequest, OpenAIApi } from "openai";
@@ -190,7 +189,7 @@ export const appRouter = router({
             return slow(item.value);
         }
       });
-      await speak(ssml(...ssmlBody));
+      return await speak(ssml(...ssmlBody));
     }),
   getNextPhrase: procedure
     .input(z.object({}))

@@ -1,8 +1,7 @@
-import "../old_src/utils/env";
-import { draw, shuffle, zip } from "radash";
-import { ask } from "../old_src/utils/ask";
+import { draw, shuffle } from "radash";
 import { koreanGrammar } from "./korean-grammar";
 import { scenarios } from "./scenarios";
+import { ask } from "@/server/routers/_app";
 
 const PROMPT = `
 I am a Korean language student.
