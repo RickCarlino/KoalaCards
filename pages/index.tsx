@@ -1,7 +1,7 @@
 import { PlayButton } from "@/components/play-button";
 import { RecordButton } from "@/components/record-button";
 import { trpc } from "@/utils/trpc";
-import { Center, Group } from "@mantine/core";
+import { Center, Grid, Group } from "@mantine/core";
 import * as React from "react";
 type Mutation = ReturnType<typeof trpc.speak.useMutation>["mutateAsync"];
 type Speech = Parameters<Mutation>[0]["text"];
@@ -53,11 +53,11 @@ const Recorder: React.FC = () => {
   const x = async (text: JSONSpeech) => {
     ({
       text: [
-        { kind: 'en', value: 'Say this in Korean: ' },
-        { kind: 'pause', value: 250 },
-        { kind: 'en', value: "It's every two days." }
-      ]
-    })
+        { kind: "en", value: "Say this in Korean: " },
+        { kind: "pause", value: 250 },
+        { kind: "en", value: "It's every two days." },
+      ],
+    });
     setDataURI(await speak.mutateAsync(text));
   };
 
@@ -75,7 +75,6 @@ const Recorder: React.FC = () => {
   }, []);
 
   if (!phrase) {
-  
     return <div>Loading Phrase</div>;
   }
 
@@ -113,19 +112,23 @@ const Recorder: React.FC = () => {
   }
 
   return (
-    <div>
-      <Center>
-        <h1>Card #{phrase.id}</h1>{" "}
-        <Group>
-          <PlayButton dataURI={dataURI} />
-          <RecordButton onRecord={sendAudio} />
-        </Group>
-      </Center>
-    </div>
+    <Grid grow justify="center" align="center">
+      <Grid.Col span={3}>
+        <h1> #{JSON.stringify(phrase)}</h1>
+      </Grid.Col>
+      {/* <Grid.Col span={3}>{phrase.en}</Grid.Col> */}
+      {/* <Grid.Col span={3}>{phrase.ko}</Grid.Col> */}
+      <Grid.Col span={3}>
+        <PlayButton dataURI={dataURI} />
+      </Grid.Col>
+      <Grid.Col span={3}>
+        <RecordButton onRecord={sendAudio} />
+      </Grid.Col>
+    </Grid>
   );
 };
 
-export default function NavbarMinimal() {
+export default function Main() {
   return (
     <div>
       <Recorder />

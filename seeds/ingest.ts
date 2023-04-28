@@ -7,12 +7,12 @@ const prisma = new PrismaClient();
 // WITH THE GRAMMAR LIST.
 async function main() {
   map(shuffle(GRAMMAR), async (pair) => {
-    const {ko, en, length} = pair;
+    const { ko, en, length } = pair;
     if (length > 5) {
       return;
     }
-    console.log(`${ko}: ${en}`)
-    const hasWord = await prisma.phrase.findUnique({where: {ko}});
+    console.log(`${ko}: ${en}`);
+    const hasWord = await prisma.phrase.findUnique({ where: { ko } });
     if (!hasWord) {
       const data = {
         ko,

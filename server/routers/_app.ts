@@ -210,6 +210,7 @@ export const appRouter = router({
         ko: z.string(),
         quizType,
         win_percentage: z.number(),
+        total_attempts: z.number(),
       })
     )
     .mutation(async () => {
@@ -222,18 +223,12 @@ export const appRouter = router({
           id: phrase.id,
           en: phrase.en ?? "",
           ko: phrase.ko ?? "",
+          total_attempts: phrase.total_attempts,
           win_percentage: phrase.win_percentage,
           quizType: draw(["dictation", "listening", "speaking"]) ?? "dictation",
         };
-      } else {
-        return {
-          id: 0,
-          en: "You must add more phrases",
-          ko: "더 많은 문장을 추가해야 합니다.",
-          win_percentage: 0,
-          quizType: "dictation",
-        };
       }
+      throw new Error("No phrases found");
     }),
   performExam: procedure
     .input(

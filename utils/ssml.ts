@@ -8,12 +8,8 @@ import util from "util";
 const CLIENT = new textToSpeech.TextToSpeechClient();
 
 const VOICES = [
-  "ko-KR-Neural2-B",
-  "ko-KR-Neural2-C",
   "ko-KR-Wavenet-B",
   "ko-KR-Wavenet-C",
-  // "ko-KR-Standard-B",
-  // "ko-KR-Standard-C",
 ];
 
 /** My main focus is Korean, so I randomly pick
@@ -72,10 +68,11 @@ export async function speak(txt: string, voice: string = randomVoice()) {
 export async function newSpeak(txt: string, voice: string = randomVoice()) {
   const p = filePathFor(txt, voice);
   if (!existsSync(p)) {
+    console.log("Does not exist: " + txt);
     const [response] = await CLIENT.synthesizeSpeech({
       input: { ssml: txt },
       voice: {
-        languageCode: "ko-kr",
+        languageCode: "ko",
         name: voice,
       },
       audioConfig: {
@@ -86,9 +83,11 @@ export async function newSpeak(txt: string, voice: string = randomVoice()) {
     if (!response.audioContent) {
       throw new Error("No audio content");
     }
-
+    console.log("Writing file..");
     const writeFile = util.promisify(fs.writeFile);
     await writeFile(p, response.audioContent, "binary");
+  } else {
+    console.log("Exists..");
   }
   return `data:audio/mpeg;base64,${readFileSync(p, {encoding: 'base64'})}`;
 }

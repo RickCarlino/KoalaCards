@@ -1,4 +1,4 @@
-import { initTRPC } from '@trpc/server';
+import { initTRPC } from "@trpc/server";
 // Avoid exporting the entire t-object
 // since it's not very descriptive.
 // For instance, the use of a t variable
