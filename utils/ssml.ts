@@ -41,6 +41,7 @@ export async function speak(txt: string, voice: string = randomVoice()) {
   const p = filePathFor(txt, voice);
 
   if (!existsSync(p)) {
+    console.log("=== CACHED VERSION");
     const [response] = await CLIENT.synthesizeSpeech({
       input: { ssml: txt },
       voice: {
@@ -58,6 +59,8 @@ export async function speak(txt: string, voice: string = randomVoice()) {
 
     const writeFile = util.promisify(fs.writeFile);
     await writeFile(p, response.audioContent, "binary");
+  } else {
+    console.log("=== NON-CACHED VERSION");
   }
   play(p);
   return p;

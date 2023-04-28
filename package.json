@@ -39,17 +39,18 @@
     "@trpc/react-query": "^10.20.0",
     "@trpc/server": "^10.20.0",
     "@types/node": "18.15.11",
-    "@types/react-dom": "18.0.11",
     "@types/react": "18.0.32",
+    "@types/react-dom": "18.0.11",
     "dotenv": "^16.0.3",
-    "eslint-config-next": "13.2.4",
     "eslint": "8.37.0",
+    "eslint-config-next": "13.2.4",
     "next": "13.2.4",
     "openai": "^3.1.0",
     "radash": "^10.7.0",
-    "react-dom": "18.2.0",
     "react": "18.2.0",
+    "react-dom": "18.2.0",
     "typescript": "5.0.3",
+    "use-sound": "^4.0.1",
     "zod": "^3.21.4"
   }
 }

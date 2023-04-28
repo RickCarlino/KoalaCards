@@ -51,30 +51,22 @@ export const useVoiceRecorder = (cb: (result: Blob) => void): ReturnedSig => {
   };
 
   const start = async () => {
-    try {
-      if (state.isRecording) return;
-      dispatch({ type: "start" });
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
-      recorder.addEventListener("dataavailable", finishRecording);
-      dispatch({ type: "startRecording", payload: { recorder } });
-      recorder.start();
-      if (state.error) dispatch({ type: "hasError", payload: { error: null } });
-    } catch (err) {
-      dispatch({ type: "hasError", payload: { error: err } } as any);
-    }
+    if (state.isRecording) return;
+    dispatch({ type: "start" });
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const recorder = new MediaRecorder(stream);
+    recorder.addEventListener("dataavailable", finishRecording);
+    dispatch({ type: "startRecording", payload: { recorder } });
+    recorder.start();
+    if (state.error) dispatch({ type: "hasError", payload: { error: null } });
   };
 
   const stop = () => {
-    try {
-      const recorder = state.recorder;
-      dispatch({ type: "stop" });
-      if (recorder) {
-        if (recorder.state !== "inactive") recorder.stop();
-        recorder.removeEventListener("dataavailable", finishRecording);
-      }
-    } catch (err) {
-      dispatch({ type: "hasError", payload: { error: err } } as any);
+    const recorder = state.recorder;
+    dispatch({ type: "stop" });
+    if (recorder) {
+      if (recorder.state !== "inactive") recorder.stop();
+      recorder.removeEventListener("dataavailable", finishRecording);
     }
   };
 

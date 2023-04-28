@@ -1,71 +1,20 @@
-import { trpc } from "@/utils/trpc";
 import { Button } from "@mantine/core";
-import { useEffect, useRef, useState } from "react";
-// TODO Clean this up.
-type Mutation = ReturnType<typeof trpc.speak.useMutation>["mutateAsync"];
-type Speech = Parameters<Mutation>[0]["text"];
-type Phrase = NonNullable<
-  ReturnType<typeof trpc.getNextPhrase.useMutation>["data"]
->;
-export const createQuizText = (phrase: Phrase) => {
-  let text: Speech = [
-    { kind: "ko", value: phrase?.ko ?? "" },
-    { kind: "pause", value: 500 },
-    { kind: "en", value: phrase?.en ?? "" },
-  ];
-  switch (phrase.quizType) {
-    case "dictation":
-      text = [
-        { kind: "en", value: "Repeat after me: " },
-        { kind: "pause", value: 250 },
-        { kind: "ko", value: phrase.ko },
-        { kind: "pause", value: 250 },
-        { kind: "slow", value: phrase.ko },
-      ];
-      break;
-    case "listening":
-      text = [
-        { kind: "en", value: "Say this in English: " },
-        { kind: "pause", value: 250 },
-        { kind: "ko", value: phrase.ko },
-      ];
-      break;
-    case "speaking":
-      text = [
-        { kind: "en", value: "Say this in Korean: " },
-        { kind: "pause", value: 250 },
-        { kind: "en", value: phrase.en },
-      ];
-      break;
-  }
-  return text;
-};
+import useSound from "use-sound";
 
-interface State {
-  b64: string;
-}
 /** A React component  */
-export function PlayButton({ phrase }: { phrase: Phrase }) {
-  const [state, setState] = useState<State>({ b64: "" });
-  const ref = useRef<HTMLAudioElement>(null);
-  const speak = trpc.speak.useMutation();
-  const play = async () => {
-    // TODO: Find a way to cache sounds maybe
-    let text = state.b64;
-    if (!text) {
-      text = await speak.mutateAsync({ text: createQuizText(phrase) });
-      setState({
-        ...state,
-        b64: text,
-      });
-    }
-    ref.current && ref.current.setAttribute("src", text);
-    await ref.current?.play();
-  };
+export function PlayButton({ dataURI }: { dataURI?: string }) {
+  if (!dataURI) {
+    return (
+      <>
+        <Button disabled>▶️Loading...</Button>
+      </>
+    );
+  
+  }
+  const [play /*, _controls*/] = useSound(dataURI);
   return (
     <>
-      <audio ref={ref} src={state.b64} style={{ display: "none" }} />
-      <Button onClick={play}>▶️Play Sentence</Button>
+      <Button onClick={() => play()}>▶️Play Sentence</Button>
     </>
   );
 }
