@@ -8,16 +8,31 @@ function blobToBase64(blob: Blob): Promise<string> {
     reader.readAsDataURL(blob);
   });
 }
-
-export function RecordButton(props: { onRecord: (data: string) => void }) {
+type Props = {
+  onRecord: (data: string) => void;
+  quizType: string;
+};
+export function RecordButton(props: Props) {
 
   const { isRecording, stop, start } = useVoiceRecorder(async (data) => {
     props.onRecord(await blobToBase64(data));
   });
 
+  let buttonText = "Record";
+  switch(props.quizType) {
+    case "dictation":
+      buttonText = "Say it in Korean";
+      break;
+    case "listening":
+      buttonText = "Translate to English";
+      break;
+    case "speaking":
+      buttonText = "Translate to Korean?";
+      break;
+  }
   return isRecording ? (
     <Button onClick={stop}>⏹️Submit Answer</Button>
   ) : (
-    <Button onClick={start}>⏺️Record Answer</Button>
+    <Button onClick={start}>⏺️{buttonText}</Button>
   );
 }

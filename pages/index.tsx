@@ -57,9 +57,7 @@ const Recorder: React.FC = () => {
   const doSetPhrase = async () => {
     const p = await getPhrase.mutateAsync({});
     setPhrase(p);
-    if (!dataURI) {
-      setDataURI(await speak.mutateAsync({ text: createQuizText(p) }));
-    }
+    setDataURI(await speak.mutateAsync({ text: createQuizText(p) }));
     return p;
   };
 
@@ -77,6 +75,7 @@ const Recorder: React.FC = () => {
       audio,
       quizType: phrase.quizType,
     });
+    doSetPhrase();
     switch (result) {
       case "success":
         return okSound();
@@ -94,19 +93,13 @@ const Recorder: React.FC = () => {
   return (
     <Grid grow justify="center" align="center">
       <Grid.Col span={3}>
-        <Button
-          onClick={() => {
-            alert("TODO");
-          }}
-        >
-          🚩 Flag Item #{phrase.id}
-        </Button>
+        <Button onClick={() => alert("TODO")}>🚩Flag Item #{phrase.id}</Button>
       </Grid.Col>
       <Grid.Col span={3}>
         <PlayButton dataURI={dataURI} />
       </Grid.Col>
       <Grid.Col span={3}>
-        <RecordButton onRecord={sendAudio} />
+        <RecordButton quizType={phrase.quizType} onRecord={sendAudio} />
       </Grid.Col>
     </Grid>
   );
