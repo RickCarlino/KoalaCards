@@ -1,8 +1,9 @@
 import { PlayButton } from "@/components/play-button";
 import { RecordButton } from "@/components/record-button";
 import { trpc } from "@/utils/trpc";
-import { Center, Grid, Group } from "@mantine/core";
+import { Button, Grid } from "@mantine/core";
 import * as React from "react";
+import useSound from "use-sound";
 type Mutation = ReturnType<typeof trpc.speak.useMutation>["mutateAsync"];
 type Speech = Parameters<Mutation>[0]["text"];
 type Phrase = NonNullable<
@@ -49,23 +50,15 @@ const Recorder: React.FC = () => {
   const speak = trpc.speak.useMutation();
   const [phrase, setPhrase] = React.useState<Phrase>();
   const [dataURI, setDataURI] = React.useState("");
-
-  const x = async (text: JSONSpeech) => {
-    ({
-      text: [
-        { kind: "en", value: "Say this in Korean: " },
-        { kind: "pause", value: 250 },
-        { kind: "en", value: "It's every two days." },
-      ],
-    });
-    setDataURI(await speak.mutateAsync(text));
-  };
+  const [failSound] = useSound("/sfx/beep.mp3");
+  const [okSound] = useSound("/sfx/tada.mp3");
+  const [errorSound] = useSound("/sfx/flip.wav");
 
   const doSetPhrase = async () => {
     const p = await getPhrase.mutateAsync({});
     setPhrase(p);
     if (!dataURI) {
-      x({ text: createQuizText(p) });
+      setDataURI(await speak.mutateAsync({ text: createQuizText(p) }));
     }
     return p;
   };
@@ -78,16 +71,6 @@ const Recorder: React.FC = () => {
     return <div>Loading Phrase</div>;
   }
 
-  type JSONSpeech = Parameters<typeof speak.mutateAsync>[0];
-
-  const audioPrompt = async (p: Phrase) => {
-    await x({ text: createQuizText(p) });
-  };
-
-  const getNextPhrase = async () => {
-    await audioPrompt(await doSetPhrase());
-  };
-
   const sendAudio = async (audio: string) => {
     const { result } = await performExam.mutateAsync({
       id: phrase.id,
@@ -96,14 +79,11 @@ const Recorder: React.FC = () => {
     });
     switch (result) {
       case "success":
-        await x({ text: [{ kind: "en", value: "Pass" }] });
-        return await getNextPhrase();
+        return okSound();
       case "failure":
-        await x({ text: [{ kind: "en", value: "Fail" }] });
-        return await audioPrompt(phrase);
+        return failSound();
       case "error":
-        await x({ text: [{ kind: "en", value: "Error" }] });
-        return alert(result);
+        return errorSound();
     }
   };
 
@@ -114,10 +94,14 @@ const Recorder: React.FC = () => {
   return (
     <Grid grow justify="center" align="center">
       <Grid.Col span={3}>
-        <h1> #{JSON.stringify(phrase)}</h1>
+        <Button
+          onClick={() => {
+            alert("TODO");
+          }}
+        >
+          🚩 Flag Item #{phrase.id}
+        </Button>
       </Grid.Col>
-      {/* <Grid.Col span={3}>{phrase.en}</Grid.Col> */}
-      {/* <Grid.Col span={3}>{phrase.ko}</Grid.Col> */}
       <Grid.Col span={3}>
         <PlayButton dataURI={dataURI} />
       </Grid.Col>
