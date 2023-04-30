@@ -1,6 +1,7 @@
 import { useVoiceRecorder } from "@/hooks/use-recorder";
 import { Button } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
+import { playAudio } from "./play-button";
 
 function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, _) => {
@@ -15,7 +16,10 @@ type Props = {
 };
 export function RecordButton(props: Props) {
   const { isRecording, stop, start } = useVoiceRecorder(async (data) => {
-    props.onRecord(await blobToBase64(data));
+    // TODO: Playback audio.
+    const b64 = await blobToBase64(data);
+    await playAudio(b64); // TODO: Maybe move to onRecord callback in parent.
+    props.onRecord(b64);
   });
   useHotkeys([
     [

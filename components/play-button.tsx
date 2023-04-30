@@ -2,17 +2,17 @@ import { Button } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import { useEffect } from "react";
 
-export const createPlayer = (dataURI: string): [() => void, string] => {
-  if (!dataURI) {
-    return [() => {}, dataURI ?? ""];
-  }
+export const playAudio = (dataURI: string): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    if (!dataURI) {
+      resolve();
+    }
 
-  return [() => {
     const audio = new Audio(dataURI);
-    // audio.playbackRate = 1;
-    // audio.volume = 1;
+    audio.onended = () => resolve();
+    audio.onerror = (e) => reject(e);
     audio.play();
-  }, dataURI];
+  });
 };
 
 /** A React component  */
@@ -24,12 +24,14 @@ export function PlayButton({ dataURI }: { dataURI?: string }) {
       </>
     );
   }
-  const [play, sound] = createPlayer(dataURI);
-  useHotkeys([["X", () => play()]]);
-  useEffect(() => play(), [sound]);
+  const playSound = () => playAudio(dataURI);
+  useHotkeys([["X", playSound]]);
+  useEffect(() => {
+    playSound();
+  }, [dataURI]);
   return (
     <>
-      <Button onClick={() => play()}>▶️Play Sentence (X)</Button>
+      <Button onClick={playSound}>▶️Play Sentence (X)</Button>
     </>
   );
 }
