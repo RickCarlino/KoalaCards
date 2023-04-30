@@ -75,7 +75,8 @@ const Recorder: React.FC = () => {
       audio,
       quizType: phrase.quizType,
     });
-    doSetPhrase();
+    /* Set 1500 ms pause so that experience is less intense to user. */
+    setTimeout(doSetPhrase, 1500);
     switch (result) {
       case "success":
         return okSound();

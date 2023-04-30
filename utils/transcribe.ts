@@ -9,7 +9,6 @@ export const captureAudio = (dataURI: string): string => {
   const regex = /^data:.+\/(.+);base64,(.*)$/;
   const matches = dataURI.match(regex);
   if (!matches || matches.length !== 3) {
-    console.log("=== THROW")
     throw new Error("Invalid input string");
   }
   const ext = matches[1]
@@ -29,10 +28,11 @@ export const captureAudio = (dataURI: string): string => {
   return readFileSync(output, "base64");
 };
 
+type TranscriptionResult = { kind: "OK"; text: string } | { kind: "NO_SPEECH" };
 export async function transcribeB64(
   lang: Lang,
   dataURI: string
-): Promise<string> {
+): Promise<TranscriptionResult> {
   const client = new SpeechClient();
   return new Promise(async (resolve) => {
     const [resp] = await client.recognize({
@@ -47,12 +47,8 @@ export async function transcribeB64(
     });
     const speech = resp?.results?.[0]?.alternatives?.[0]?.transcript;
     if (!speech) {
-      console.log("NO SPEECH?!");
-      throw new Error(
-        "No speech detected. See `error.ogg` to inspect. " +
-          JSON.stringify(resp)
-      );
+      return resolve({ kind: "NO_SPEECH" });
     }
-    resolve(speech);
+    return resolve({ kind: "OK", text: speech });
   });
 }

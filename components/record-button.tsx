@@ -18,12 +18,15 @@ export function RecordButton(props: Props) {
     props.onRecord(await blobToBase64(data));
   });
   useHotkeys([
-    ['z', () => {
-      (isRecording ? stop : start)();
-    }],
-  ])
+    [
+      "z",
+      () => {
+        (isRecording ? stop : start)();
+      },
+    ],
+  ]);
   let buttonText = "Record";
-  switch(props.quizType) {
+  switch (props.quizType) {
     case "dictation":
       buttonText = "Say it in Korean";
       break;
@@ -35,7 +38,9 @@ export function RecordButton(props: Props) {
       break;
   }
   return isRecording ? (
-    <Button onClick={stop} color="red">⏹️Submit Answer</Button>
+    <Button onClick={stop} color="red">
+      ⏹️Submit Answer (Z)
+    </Button>
   ) : (
     <Button onClick={start}>⏺️{buttonText} (Z)</Button>
   );
