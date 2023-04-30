@@ -1,9 +1,9 @@
-import { PlayButton } from "@/components/play-button";
+import { PlayButton, createPlayer } from "@/components/play-button";
 import { RecordButton } from "@/components/record-button";
 import { trpc } from "@/utils/trpc";
 import { Button, Grid } from "@mantine/core";
 import * as React from "react";
-import useSound from "use-sound";
+
 type Mutation = ReturnType<typeof trpc.speak.useMutation>["mutateAsync"];
 type Speech = Parameters<Mutation>[0]["text"];
 type Phrase = NonNullable<
@@ -50,9 +50,9 @@ const Recorder: React.FC = () => {
   const speak = trpc.speak.useMutation();
   const [phrase, setPhrase] = React.useState<Phrase>();
   const [dataURI, setDataURI] = React.useState("");
-  const [failSound] = useSound("/sfx/beep.mp3");
-  const [okSound] = useSound("/sfx/tada.mp3");
-  const [errorSound] = useSound("/sfx/flip.wav");
+  const [failSound] = createPlayer("/sfx/beep.mp3");
+  const [okSound] = createPlayer("/sfx/tada.mp3");
+  const [errorSound] = createPlayer("/sfx/flip.wav");
 
   const doSetPhrase = async () => {
     const p = await getPhrase.mutateAsync({});
