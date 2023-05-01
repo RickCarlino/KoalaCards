@@ -177,29 +177,19 @@ export const appRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      try {
-        const ssmlBody = input.text.map((item) => {
-          switch (item.kind) {
-            case "ko":
-              return ko(item.value);
-            case "en":
-              return en(item.value);
-            case "pause":
-              return pause(item.value);
-            case "slow":
-              return slow(item.value);
-          }
-        });
-        const result = await newSpeak(ssml(...ssmlBody));
-        console.log("==== THIS ONE PASSED:");
-        console.log(input);
-        return result;
-      } catch (error) {
-        console.log("==== THIS ONE FAILED:");
-        console.dir(input);
-        console.error(error);
-        throw error;
-      }
+      const ssmlBody = input.text.map((item) => {
+        switch (item.kind) {
+          case "ko":
+            return ko(item.value);
+          case "en":
+            return en(item.value);
+          case "pause":
+            return pause(item.value);
+          case "slow":
+            return slow(item.value);
+        }
+      });
+      return await newSpeak(ssml(...ssmlBody));
     }),
   getNextPhrase: procedure
     .input(z.object({}))

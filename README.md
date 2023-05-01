@@ -58,7 +58,7 @@ Check out the [whitepaper](https://github.com/RickCarlino/gpt-language-learning-
 
 The project is in a semi-public alpha phase. If you don't understand the instructions below, you might want to wait for the project to mature before proceeding. Please only contact me for help if you're a professional software developer.
 
-1. Ensure your Linux desktop has access to `node`, `play` and `ffmpeg`. If you don't have these installed, check Google for help. You can find out if you have them installed by running `which <app_name>`.
+1. Install NodeJS if you have not done so already.
 1. Clone this repo and `cd` in.
 1. Create an [OpenAI API key](https://platform.openai.com/account/api-keys).
 1. Create a [Google Cloud Service Account JSON credentials file](https://developers.google.com/workspace/guides/create-credentials)

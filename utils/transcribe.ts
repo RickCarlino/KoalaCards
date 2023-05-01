@@ -1,7 +1,4 @@
 import { SpeechClient } from "@google-cloud/speech";
-import { execSync } from "child_process";
-import { readFileSync, writeFileSync } from "fs";
-import { uid } from "radash";
 
 export type Lang = "ko" | "en-US";
 
@@ -15,17 +12,7 @@ export const captureAudio = (dataURI: string): string => {
     .slice(0, 4)
     .toLowerCase()
     .replace(/[^a-z]/gi, ""); // security critical
-  const data = matches[2];
-  const id = uid(8);
-  const input = `/tmp/koala-audio-${id}.${ext}`;
-  const output = `/tmp/koala-audio-${id}.webm`;
-  const buffer = Buffer.from(data, "base64"); // TODO: Set a cap on length.
-  writeFileSync(input, buffer); // TODO: Use non-synchronous version
-  // Convert file from mp4 to ogg
-  execSync(
-    `ffmpeg -i ${input} -c:a libopus -ar 48000 -b:a 128k -ac 1 ${output}`
-  );
-  return readFileSync(output, "base64");
+  return matches[2];
 };
 
 type TranscriptionResult = { kind: "OK"; text: string } | { kind: "NO_SPEECH" };
@@ -37,8 +24,8 @@ export async function transcribeB64(
   return new Promise(async (resolve) => {
     const [resp] = await client.recognize({
       config: {
-        encoding: "WEBM_OPUS",
-        sampleRateHertz: 48000,
+        encoding: "LINEAR16",
+        sampleRateHertz: 44100, // Default sample rate for AudioContext, unless specified otherwise
         languageCode: lang,
       },
       audio: {
