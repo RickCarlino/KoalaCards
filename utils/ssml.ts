@@ -68,7 +68,6 @@ export async function speak(txt: string, voice: string = randomVoice()) {
 export async function newSpeak(txt: string, voice: string = randomVoice()) {
   const p = filePathFor(txt, voice);
   if (!existsSync(p)) {
-    console.log("Does not exist: " + txt);
     const [response] = await CLIENT.synthesizeSpeech({
       input: { ssml: txt },
       voice: {
@@ -83,11 +82,8 @@ export async function newSpeak(txt: string, voice: string = randomVoice()) {
     if (!response.audioContent) {
       throw new Error("No audio content");
     }
-    console.log("Writing file..");
     const writeFile = util.promisify(fs.writeFile);
     await writeFile(p, response.audioContent, "binary");
-  } else {
-    console.log("Exists..");
   }
   return `data:audio/mpeg;base64,${readFileSync(p, {encoding: 'base64'})}`;
 }
