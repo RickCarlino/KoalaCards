@@ -3,7 +3,7 @@ import { RecordButton } from "@/components/record-button";
 import { trpc } from "@/utils/trpc";
 import { Button, Grid } from "@mantine/core";
 import * as React from "react";
-
+import { useSession, signIn, signOut } from "next-auth/react"
 type Mutation = ReturnType<typeof trpc.speak.useMutation>["mutateAsync"];
 type Speech = Parameters<Mutation>[0]["text"];
 type Phrase = NonNullable<
@@ -53,6 +53,7 @@ const Recorder: React.FC = () => {
   const failSound = () => playAudio("/sfx/beep.mp3");
   const okSound = () => playAudio("/sfx/tada.mp3");
   const errorSound = () => playAudio("/sfx/flip.wav");
+  const { data: session } = useSession();
 
   const doSetPhrase = async () => {
     const p = await getPhrase.mutateAsync({});
@@ -64,6 +65,13 @@ const Recorder: React.FC = () => {
   React.useEffect(() => {
     !phrase && doSetPhrase();
   }, []);
+
+  if (!session) {
+    return <div>
+      You need to login.
+      <Button onClick={() => signIn()}>Login</Button>
+    </div>
+  }
 
   if (!phrase) {
     return <div>Loading Phrase</div>;
@@ -90,7 +98,6 @@ const Recorder: React.FC = () => {
   if (!dataURI) {
     return <div>Loading Audio</div>;
   }
-
   return (
     <Grid grow justify="center" align="center">
       <Grid.Col span={3}>
@@ -101,6 +108,9 @@ const Recorder: React.FC = () => {
       </Grid.Col>
       <Grid.Col span={3}>
         <RecordButton quizType={phrase.quizType} onRecord={sendAudio} />
+      </Grid.Col>
+      <Grid.Col span={9}>
+        <Button onClick={() => signOut()}>Sign Out</Button>
       </Grid.Col>
     </Grid>
   );
