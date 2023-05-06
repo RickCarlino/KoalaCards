@@ -1,9 +1,12 @@
 import { initTRPC } from "@trpc/server";
-// Avoid exporting the entire t-object
-// since it's not very descriptive.
-// For instance, the use of a t variable
-// is common in i18n libraries.
-const t = initTRPC.create();
-// Base router and procedure helpers
+import { Session } from "next-auth";
+const t = initTRPC.context<{ session: Session | null }>().create();
 export const router = t.router;
-export const procedure = t.procedure;
+export const procedure = t.procedure.use(
+  t.middleware(async ({ ctx, next }) => {
+    if (!ctx.session) {
+      console.log("TODO: Figure out how to populate session here");
+    }
+    return next();
+  })
+);

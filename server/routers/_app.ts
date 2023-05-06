@@ -115,7 +115,7 @@ async function gradeResp(answer: string = "", phrase: Phrase) {
   }
 }
 
-export async function dictationTest(transcript: string, phrase: Phrase) {
+async function dictationTest(transcript: string, phrase: Phrase) {
   const [answer] = await ask(
     `
   A Korean language student was asked to read the following phrase aloud: ${phrase.ko}.
@@ -133,13 +133,13 @@ export async function dictationTest(transcript: string, phrase: Phrase) {
   return gradeResp(answer, phrase);
 }
 
-export async function listeningTest(transcript: string, phrase: Phrase) {
+async function listeningTest(transcript: string, phrase: Phrase) {
   const p = translationPrompt(phrase.ko, transcript);
   const [answer] = await ask(p);
   return gradeResp(answer, phrase);
 }
 
-export async function speakingTest(transcript: string, phrase: Phrase) {
+async function speakingTest(transcript: string, phrase: Phrase) {
   const [answer] = await ask(
     `An English-speaking Korean language student was asked
     to translate the following phrase to Korean: ${phrase.en}.

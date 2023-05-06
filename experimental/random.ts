@@ -4,19 +4,14 @@ import { scenarios } from "./scenarios";
 import { ask } from "@/server/routers/_app";
 
 const PROMPT = `
-I am a Korean language student.
-I am going to give you:
-1. A Korean grammar pattern
-2. A list of 5 themes or scenarios
+Provide 3 short, conversation-focused Korean sentences
+using the grammar pattern '-(으)면서' and the mandatory vocabulary
+word '공부하다' for everyday situations. Each sentence should
+be no more than 12 syllables long.
 
-Create 5 example sentences uses the themes in item 2.
-Sentences must be under 23 characters in length.
-Sentences must be polite and conversational.
-Sentences should represent speech that would happen in the given scenario.
+Provide the response in the following JSON format:
 
-Return JSON in the format of:
-[{"ko": "...", "en": "..."}, ...]
-
+{"ko": "한국어 문장", "en": "English sentence"}
 `;
 type KoEn = {
   ko: string;
@@ -25,6 +20,7 @@ type KoEn = {
 type RandomExample = Partial<KoEn>;
 
 export async function createRandomGrammar() {
+  console.log("=== THIS IS NOT COMPLETE. The prompt works but code is broke.");
   const grammars = draw(shuffle(Object.entries(koreanGrammar)));
   const scenario = shuffle(scenarios).slice(0, 5);
 
