@@ -1,6 +1,6 @@
 import { prismaClient } from "@/server/prisma-client";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import NextAuth from "next-auth";
+import NextAuth, { AuthOptions } from "next-auth";
 import EmailProvider from "next-auth/providers/email";
 [
 'EMAIL_SERVER_HOST',
@@ -13,7 +13,8 @@ import EmailProvider from "next-auth/providers/email";
     throw new Error(`Missing env ${key}`);
   }
 })
-export default NextAuth({
+
+export const authOptions: AuthOptions = {
   adapter: PrismaAdapter(prismaClient),
   providers: [
     EmailProvider({
@@ -28,4 +29,6 @@ export default NextAuth({
       from: process.env.EMAIL_FROM,
     }),
   ],
-});
+};
+
+export default NextAuth(authOptions);
