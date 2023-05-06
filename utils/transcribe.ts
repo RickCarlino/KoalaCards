@@ -1,3 +1,4 @@
+import { minutesSpoken } from "@/pages/api/prometheus";
 import { SpeechClient } from "@google-cloud/speech";
 
 export type Lang = "ko" | "en-US";
@@ -32,6 +33,7 @@ export async function transcribeB64(
         content: captureAudio(dataURI),
       },
     });
+    minutesSpoken.inc({ user_id: "TBD" }, Number(resp.totalBilledTime?.seconds || 0));
     const speech = resp?.results?.[0]?.alternatives?.[0]?.transcript;
     if (!speech) {
       return resolve({ kind: "NO_SPEECH" });

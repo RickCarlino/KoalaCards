@@ -3,7 +3,8 @@ import { RecordButton } from "@/components/record-button";
 import { trpc } from "@/utils/trpc";
 import { Button, Grid } from "@mantine/core";
 import * as React from "react";
-import { useSession, signIn, signOut } from "next-auth/react"
+import { useSession, signIn, signOut } from "next-auth/react";
+
 type Mutation = ReturnType<typeof trpc.speak.useMutation>["mutateAsync"];
 type Speech = Parameters<Mutation>[0]["text"];
 type Phrase = NonNullable<
@@ -53,7 +54,7 @@ const Recorder: React.FC = () => {
   const failSound = () => playAudio("/sfx/beep.mp3");
   const okSound = () => playAudio("/sfx/tada.mp3");
   const errorSound = () => playAudio("/sfx/flip.wav");
-  const { data: session } = useSession();
+  const { status } = useSession();
 
   const doSetPhrase = async () => {
     const p = await getPhrase.mutateAsync({});
@@ -63,18 +64,19 @@ const Recorder: React.FC = () => {
   };
 
   React.useEffect(() => {
-    !phrase && doSetPhrase();
-  }, []);
+    status === "authenticated" && !phrase && doSetPhrase();
+  }, [status]);
 
-  if (!session) {
-    return <div>
-      You need to login.
-      <Button onClick={() => signIn()}>Login</Button>
-    </div>
+  if (status === "unauthenticated") {
+    return <Button onClick={() => signIn()}>🔑Login</Button>;
+  }
+
+  if (status === "loading") {
+    return <Button>🌀Authenticating...</Button>;
   }
 
   if (!phrase) {
-    return <div>Loading Phrase</div>;
+    return <Button>📖Loading Phrase</Button>;
   }
 
   const sendAudio = async (audio: string) => {
@@ -96,22 +98,25 @@ const Recorder: React.FC = () => {
   };
 
   if (!dataURI) {
-    return <div>Loading Audio</div>;
+    return <Button>🔊Loading Audio</Button>;
   }
+
   return (
     <Grid grow justify="center" align="center">
-      <Grid.Col span={3}>
+      <Grid.Col span={2}>
+        <Button onClick={() => signOut()}>🚪Sign Out</Button>
+      </Grid.Col>
+      <Grid.Col span={2}>
         <Button onClick={() => alert("TODO")}>🚩Flag Item #{phrase.id}</Button>
       </Grid.Col>
-      <Grid.Col span={3}>
+      <Grid.Col span={2}>
         <PlayButton dataURI={dataURI} />
       </Grid.Col>
-      <Grid.Col span={3}>
+      <Grid.Col span={2}>
         <RecordButton quizType={phrase.quizType} onRecord={sendAudio} />
       </Grid.Col>
-      <Grid.Col span={9}>
-        <Button onClick={() => signOut()}>Sign Out</Button>
-      </Grid.Col>
+      <Grid.Col span={2}></Grid.Col>
+      <Grid.Col span={2}></Grid.Col>
     </Grid>
   );
 };

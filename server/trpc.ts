@@ -6,11 +6,10 @@ export const procedure = t.procedure.use(
   t.middleware(async ({ ctx, next }) => {
     if (!ctx.session) {
       throw new TRPCError({
-        code: 'UNAUTHORIZED',
-        message: 'Please log in.',
+        code: "UNAUTHORIZED",
+        message: "Please log in.",
       });
     }
-
     return next();
   })
 );
