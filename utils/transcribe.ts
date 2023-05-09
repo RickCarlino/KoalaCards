@@ -19,7 +19,8 @@ export const captureAudio = (dataURI: string): string => {
 type TranscriptionResult = { kind: "OK"; text: string } | { kind: "NO_SPEECH" };
 export async function transcribeB64(
   lang: Lang,
-  dataURI: string
+  dataURI: string,
+  user_id: string
 ): Promise<TranscriptionResult> {
   const client = new SpeechClient();
   return new Promise(async (resolve) => {
@@ -33,7 +34,7 @@ export async function transcribeB64(
         content: captureAudio(dataURI),
       },
     });
-    minutesSpoken.inc({ user_id: "TBD" }, Number(resp.totalBilledTime?.seconds || 0));
+    minutesSpoken.inc({ user_id }, Number(resp.totalBilledTime?.seconds || 0));
     const speech = resp?.results?.[0]?.alternatives?.[0]?.transcript;
     if (!speech) {
       return resolve({ kind: "NO_SPEECH" });

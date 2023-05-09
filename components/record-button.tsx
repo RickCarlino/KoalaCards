@@ -118,7 +118,7 @@ export function RecordButton(props: Props) {
       buttonText = "Translate to English";
       break;
     case "speaking":
-      buttonText = "Translate to Korean?";
+      buttonText = "Translate to Korean";
       break;
   }
   return isRecording ? (

@@ -10,6 +10,25 @@ type Speech = Parameters<Mutation>[0]["text"];
 type Phrase = NonNullable<
   ReturnType<typeof trpc.getNextPhrase.useMutation>["data"]
 >;
+
+export const sayTheAnswer = (phrase: Phrase): Speech => {
+  switch (phrase.quizType) {
+    case "dictation":
+    case "speaking":
+      return [
+        { kind: "ko", value: phrase.ko },
+        { kind: "pause", value: 250 },
+        { kind: "en", value: phrase.en },
+      ];
+    case "listening":
+      return [
+        { kind: "en", value: phrase.en },
+        { kind: "pause", value: 250 },
+        { kind: "ko", value: phrase.ko },
+      ];
+  }
+};
+
 export const createQuizText = (phrase: Phrase) => {
   let text: Speech = [
     { kind: "ko", value: phrase?.ko ?? "" },
@@ -56,10 +75,14 @@ const Recorder: React.FC = () => {
   const errorSound = () => playAudio("/sfx/flip.wav");
   const { status } = useSession();
 
+  const talk = async (text: Speech) => {
+    setDataURI(await speak.mutateAsync({ text }));
+  }
+
   const doSetPhrase = async () => {
     const p = await getPhrase.mutateAsync({});
     setPhrase(p);
-    setDataURI(await speak.mutateAsync({ text: createQuizText(p) }));
+    talk(createQuizText(p));
     return p;
   };
 
@@ -86,14 +109,20 @@ const Recorder: React.FC = () => {
       quizType: phrase.quizType,
     });
     /* Set 1500 ms pause so that experience is less intense to user. */
-    setTimeout(doSetPhrase, 1500);
     switch (result) {
       case "success":
-        return okSound();
+        setTimeout(doSetPhrase, 1500);
+        return await okSound();
       case "failure":
-        return failSound();
+        // TODO: Auto-skip to next phrase.
+        // Can't do it currently because
+        // <PlayButton /> does not have an "onEnd" callback.
+        await failSound();
+        await talk(sayTheAnswer(phrase));
+        return;
       case "error":
-        return errorSound();
+        setTimeout(doSetPhrase, 1500);
+        return await errorSound();
     }
   };
 
@@ -107,7 +136,11 @@ const Recorder: React.FC = () => {
         <Button onClick={() => signOut()}>🚪Sign Out</Button>
       </Grid.Col>
       <Grid.Col span={2}>
-        <Button onClick={() => alert("TODO")}>🚩Flag Item #{phrase.id}</Button>
+        <Button onClick={() => {
+          // TODO: Create a "flag" field on phrases and update
+          // the backend query to exclude flagged phrases.
+          doSetPhrase();
+        }}>🚩Flag Item #{phrase.id}</Button>
       </Grid.Col>
       <Grid.Col span={2}>
         <PlayButton dataURI={dataURI} />
