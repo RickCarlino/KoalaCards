@@ -63,7 +63,9 @@ export function PlayButton({ dataURI }: { dataURI?: string }) {
   if (!dataURI) {
     return (
       <>
-        <Button disabled>▶️Loading...</Button>
+        <Button disabled fullWidth>
+          ▶️Loading...
+        </Button>
       </>
     );
   }
@@ -74,7 +76,9 @@ export function PlayButton({ dataURI }: { dataURI?: string }) {
   }, [dataURI]);
   return (
     <>
-      <Button onClick={playSound}>▶️Play Sentence (X)</Button>
+      <Button onClick={playSound} fullWidth>
+        ▶️Play Sentence (X)
+      </Button>
     </>
   );
 }

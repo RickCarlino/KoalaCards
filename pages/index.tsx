@@ -1,9 +1,9 @@
 import { PlayButton, playAudio } from "@/components/play-button";
 import { RecordButton } from "@/components/record-button";
 import { trpc } from "@/utils/trpc";
-import { Button, Grid } from "@mantine/core";
+import { Button, Container, Grid } from "@mantine/core";
+import { signIn, signOut, useSession } from "next-auth/react";
 import * as React from "react";
-import { useSession, signIn, signOut } from "next-auth/react";
 
 type Mutation = ReturnType<typeof trpc.speak.useMutation>["mutateAsync"];
 type Speech = Parameters<Mutation>[0]["text"];
@@ -77,7 +77,7 @@ const Recorder: React.FC = () => {
 
   const talk = async (text: Speech) => {
     setDataURI(await speak.mutateAsync({ text }));
-  }
+  };
 
   const doSetPhrase = async () => {
     const p = await getPhrase.mutateAsync({});
@@ -131,26 +131,39 @@ const Recorder: React.FC = () => {
   }
 
   return (
-    <Grid grow justify="center" align="center">
-      <Grid.Col span={2}>
-        <Button onClick={() => signOut()}>🚪Sign Out</Button>
-      </Grid.Col>
-      <Grid.Col span={2}>
-        <Button onClick={() => {
-          // TODO: Create a "flag" field on phrases and update
-          // the backend query to exclude flagged phrases.
-          doSetPhrase();
-        }}>🚩Flag Item #{phrase.id}</Button>
-      </Grid.Col>
-      <Grid.Col span={2}>
-        <PlayButton dataURI={dataURI} />
-      </Grid.Col>
-      <Grid.Col span={2}>
-        <RecordButton quizType={phrase.quizType} onRecord={sendAudio} />
-      </Grid.Col>
-      <Grid.Col span={2}></Grid.Col>
-      <Grid.Col span={2}></Grid.Col>
-    </Grid>
+    <Container size="xs" padding={0}>
+      <Grid grow justify="center" align="center">
+        <Grid.Col span={2}>
+          <Button fullWidth>Button 6</Button>
+        </Grid.Col>
+        <Grid.Col span={2}>
+          <Button onClick={() => signOut()} fullWidth>
+            🚪Sign Out
+          </Button>
+        </Grid.Col>
+        <Grid.Col span={2}>
+          <PlayButton dataURI={dataURI} />
+        </Grid.Col>
+        <Grid.Col span={2}>
+          <RecordButton quizType={phrase.quizType} onRecord={sendAudio} />
+        </Grid.Col>
+        <Grid.Col span={2}>
+          <Button fullWidth>❌Fail Item</Button>
+        </Grid.Col>
+        <Grid.Col span={2}>
+          <Button
+            onClick={() => {
+              // TODO: Create a "flag" field on phrases and update
+              // the backend query to exclude flagged phrases.
+              doSetPhrase();
+            }}
+            fullWidth
+          >
+            🚩Report Item #{phrase.id}
+          </Button>
+        </Grid.Col>
+      </Grid>
+    </Container>
   );
 };
 

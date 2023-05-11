@@ -5,11 +5,11 @@ import { playAudio } from "./play-button";
 
 /**
  * Converts an MP4 audio Blob to a single-channel (mono) WAV audio Blob.
- * 
+ *
  * This function takes an MP4 audio Blob as input, decodes it, downmixes it to mono,
  * and converts it to a WAV audio Blob. This is useful when the target use case requires
  * single-channel audio, such as voice recordings or other mono audio data.
- * 
+ *
  * Example usage:
  * // Convert an MP4 audio Blob to a single-channel WAV audio Blob
  * const mp4Blob = new Blob([data], { type: "audio/mp4" });
@@ -20,14 +20,21 @@ import { playAudio } from "./play-button";
  * const audioElement = new Audio(audioURL);
  * audioElement.play();
  */
-async function convertBlobToWav(blob: Blob, targetSampleRate = 8000): Promise<Blob> {
+async function convertBlobToWav(
+  blob: Blob,
+  targetSampleRate = 8000
+): Promise<Blob> {
   const arrayBuffer = await blob.arrayBuffer();
   const audioContext = new AudioContext();
   const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
   const numberOfChannels = 1; // Set to mono
 
   // Create an offline audio context to resample the audio
-  const offlineAudioContext = new OfflineAudioContext(numberOfChannels, audioBuffer.duration * targetSampleRate, targetSampleRate);
+  const offlineAudioContext = new OfflineAudioContext(
+    numberOfChannels,
+    audioBuffer.duration * targetSampleRate,
+    targetSampleRate
+  );
 
   // Create a buffer source with the original audio
   const bufferSource = offlineAudioContext.createBufferSource();
@@ -72,7 +79,11 @@ async function convertBlobToWav(blob: Blob, targetSampleRate = 8000): Promise<Bl
 
   for (let i = 0; i < length; i++) {
     let mixedSample = 0;
-    for (let channel = 0; channel < resampledBuffer.numberOfChannels; channel++) {
+    for (
+      let channel = 0;
+      channel < resampledBuffer.numberOfChannels;
+      channel++
+    ) {
       mixedSample += resampledBuffer.getChannelData(channel)[i];
     }
     mixedSample /= resampledBuffer.numberOfChannels;
@@ -122,10 +133,12 @@ export function RecordButton(props: Props) {
       break;
   }
   return isRecording ? (
-    <Button onClick={stop} color="red">
+    <Button onClick={stop} color="red" fullWidth>
       ⏹️Submit Answer (Z)
     </Button>
   ) : (
-    <Button onClick={start}>⏺️{buttonText} (Z)</Button>
+    <Button onClick={start} fullWidth>
+      ⏺️{buttonText} (Z)
+    </Button>
   );
 }
