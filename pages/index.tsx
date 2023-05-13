@@ -11,24 +11,6 @@ type Phrase = NonNullable<
   ReturnType<typeof trpc.getNextPhrase.useMutation>["data"]
 >;
 
-export const sayTheAnswer = (phrase: Phrase): Speech => {
-  switch (phrase.quizType) {
-    case "dictation":
-    case "speaking":
-      return [
-        { kind: "ko", value: phrase.ko },
-        { kind: "pause", value: 250 },
-        { kind: "en", value: phrase.en },
-      ];
-    case "listening":
-      return [
-        { kind: "en", value: phrase.en },
-        { kind: "pause", value: 250 },
-        { kind: "ko", value: phrase.ko },
-      ];
-  }
-};
-
 export const createQuizText = (phrase: Phrase) => {
   let text: Speech = [
     { kind: "ko", value: phrase?.ko ?? "" },
@@ -64,16 +46,17 @@ export const createQuizText = (phrase: Phrase) => {
 };
 
 const Recorder: React.FC = () => {
-  type Phrase = NonNullable<(typeof getPhrase)["data"]>;
   const performExam = trpc.performExam.useMutation();
   const getPhrase = trpc.getNextPhrase.useMutation();
   const speak = trpc.speak.useMutation();
-  const [phrase, setPhrase] = React.useState<Phrase>();
-  const [dataURI, setDataURI] = React.useState("");
-  const failSound = () => playAudio("/sfx/beep.mp3");
-  const okSound = () => playAudio("/sfx/tada.mp3");
-  const errorSound = () => playAudio("/sfx/flip.wav");
+  const [phrase, setPhrase] = React.useState<Phrase | null>(null);
+  const [dataURI, setDataURI] = React.useState<string | null>(null);
   const { status } = useSession();
+  const sounds = {
+    fail: () => playAudio("/sfx/beep.mp3"),
+    success: () => playAudio("/sfx/tada.mp3"),
+    error: () => playAudio("/sfx/flip.wav"),
+  };
 
   const talk = async (text: Speech) => {
     setDataURI(await speak.mutateAsync({ text }));
@@ -87,20 +70,15 @@ const Recorder: React.FC = () => {
   };
 
   React.useEffect(() => {
-    status === "authenticated" && !phrase && doSetPhrase();
+    if (status === "authenticated" && !phrase) {
+      doSetPhrase();
+    }
   }, [status]);
 
-  if (status === "unauthenticated") {
+  if (status === "unauthenticated")
     return <Button onClick={() => signIn()}>🔑Login</Button>;
-  }
-
-  if (status === "loading") {
-    return <Button>🌀Authenticating...</Button>;
-  }
-
-  if (!phrase) {
-    return <Button>📖Loading Phrase</Button>;
-  }
+  if (status === "loading") return <Button>🌀Authenticating...</Button>;
+  if (!phrase) return <Button>📖Loading Phrase</Button>;
 
   const sendAudio = async (audio: string) => {
     const { result } = await performExam.mutateAsync({
@@ -108,21 +86,19 @@ const Recorder: React.FC = () => {
       audio,
       quizType: phrase.quizType,
     });
-    /* Set 1500 ms pause so that experience is less intense to user. */
+
     switch (result) {
       case "success":
-        setTimeout(doSetPhrase, 1500);
-        return await okSound();
-      case "failure":
-        // TODO: Auto-skip to next phrase.
-        // Can't do it currently because
-        // <PlayButton /> does not have an "onEnd" callback.
-        await failSound();
-        await talk(sayTheAnswer(phrase));
-        return;
       case "error":
         setTimeout(doSetPhrase, 1500);
-        return await errorSound();
+        sounds[result]();
+        break;
+      case "failure":
+        // TODO: Auto-skip to next phrase.
+        // Can't do it currently because <PlayButton /> does not have an "onEnd" callback.
+        sounds.fail();
+        talk(createQuizText(phrase));
+        break;
     }
   };
 
@@ -131,7 +107,7 @@ const Recorder: React.FC = () => {
   }
 
   return (
-    <Container size="xs" padding={0}>
+    <Container size="xs">
       <Grid grow justify="center" align="center">
         <Grid.Col span={2}>
           <Button fullWidth>Button 6</Button>
