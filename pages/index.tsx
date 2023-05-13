@@ -2,6 +2,7 @@ import { PlayButton, playAudio } from "@/components/play-button";
 import { RecordButton } from "@/components/record-button";
 import { trpc } from "@/utils/trpc";
 import { Button, Container, Grid } from "@mantine/core";
+import { useHotkeys } from "@mantine/hooks";
 import { signIn, signOut, useSession } from "next-auth/react";
 import * as React from "react";
 
@@ -48,16 +49,22 @@ export const createQuizText = (phrase: Phrase) => {
 const Recorder: React.FC = () => {
   const performExam = trpc.performExam.useMutation();
   const getPhrase = trpc.getNextPhrase.useMutation();
+  const failPhrase = trpc.failPhrase.useMutation();
   const speak = trpc.speak.useMutation();
   const [phrase, setPhrase] = React.useState<Phrase | null>(null);
   const [dataURI, setDataURI] = React.useState<string | null>(null);
   const { status } = useSession();
+  const doFail = async () => {
+    sounds.fail();
+    await failPhrase.mutate({ id: phrase?.id ?? 0 });
+    doSetPhrase();
+  };
   const sounds = {
     fail: () => playAudio("/sfx/beep.mp3"),
     success: () => playAudio("/sfx/tada.mp3"),
     error: () => playAudio("/sfx/flip.wav"),
   };
-
+  useHotkeys([["f", doFail]]);
   const talk = async (text: Speech) => {
     setDataURI(await speak.mutateAsync({ text }));
   };
@@ -124,18 +131,13 @@ const Recorder: React.FC = () => {
           <RecordButton quizType={phrase.quizType} onRecord={sendAudio} />
         </Grid.Col>
         <Grid.Col span={2}>
-          <Button fullWidth>❌Fail Item</Button>
+          <Button onClick={doFail} fullWidth>
+            ❌[F]ail Item
+          </Button>
         </Grid.Col>
         <Grid.Col span={2}>
-          <Button
-            onClick={() => {
-              // TODO: Create a "flag" field on phrases and update
-              // the backend query to exclude flagged phrases.
-              doSetPhrase();
-            }}
-            fullWidth
-          >
-            🚩Report Item #{phrase.id}
+          <Button onClick={doSetPhrase} fullWidth>
+            🚩[R]eport Item #{phrase.id}
           </Button>
         </Grid.Col>
       </Grid>

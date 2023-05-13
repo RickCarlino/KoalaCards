@@ -114,13 +114,13 @@ export function RecordButton(props: Props) {
   });
   useHotkeys([
     [
-      "z",
+      "d",
       () => {
         (isRecording ? stop : start)();
       },
     ],
   ]);
-  let buttonText = "Record";
+  let buttonText = "Recor[d]";
   switch (props.quizType) {
     case "dictation":
       buttonText = "Say it in Korean";
@@ -134,11 +134,11 @@ export function RecordButton(props: Props) {
   }
   return isRecording ? (
     <Button onClick={stop} color="red" fullWidth>
-      ⏹️Submit Answer (Z)
+      ⏹️[S]ubmit Answer
     </Button>
   ) : (
     <Button onClick={start} fullWidth>
-      ⏺️{buttonText} (Z)
+      ⏺️{buttonText} [S]
     </Button>
   );
 }

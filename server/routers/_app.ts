@@ -163,6 +163,20 @@ const quizType = z.union([
 ]);
 
 export const appRouter = router({
+  failPhrase: procedure
+    .input(
+      z.object({
+        id: z.number(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const phrase = await prismaClient.phrase.findFirst({
+        where: { id: input.id },
+      });
+      if (phrase) {
+        markIncorrect(phrase);
+      }
+    }),
   speak: procedure
     .input(
       z.object({

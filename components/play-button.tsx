@@ -70,14 +70,14 @@ export function PlayButton({ dataURI }: { dataURI?: string }) {
     );
   }
   const playSound = () => playAudio(dataURI);
-  useHotkeys([["X", playSound]]);
+  useHotkeys([["c", playSound]]);
   useEffect(() => {
     playSound();
   }, [dataURI]);
   return (
     <>
       <Button onClick={playSound} fullWidth>
-        ▶️Play Sentence (X)
+        ▶️Play Senten[c]e
       </Button>
     </>
   );
