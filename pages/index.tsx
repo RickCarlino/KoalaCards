@@ -50,6 +50,7 @@ const Recorder: React.FC = () => {
   const performExam = trpc.performExam.useMutation();
   const getPhrase = trpc.getNextPhrase.useMutation();
   const failPhrase = trpc.failPhrase.useMutation();
+  const flagPhrase = trpc.flagPhrase.useMutation();
   const speak = trpc.speak.useMutation();
   const [phrase, setPhrase] = React.useState<Phrase | null>(null);
   const [dataURI, setDataURI] = React.useState<string | null>(null);
@@ -59,12 +60,19 @@ const Recorder: React.FC = () => {
     await failPhrase.mutate({ id: phrase?.id ?? 0 });
     doSetPhrase();
   };
+  const doFlag = async () => {
+    await flagPhrase.mutate({ id: phrase?.id ?? 0 });
+    doSetPhrase();
+  };
   const sounds = {
     fail: () => playAudio("/sfx/beep.mp3"),
     success: () => playAudio("/sfx/tada.mp3"),
     error: () => playAudio("/sfx/flip.wav"),
   };
-  useHotkeys([["f", doFail]]);
+  useHotkeys([
+    ["f", doFail],
+    ["r", doFlag],
+  ]);
   const talk = async (text: Speech) => {
     setDataURI(await speak.mutateAsync({ text }));
   };

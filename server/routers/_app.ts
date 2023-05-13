@@ -177,6 +177,25 @@ export const appRouter = router({
         markIncorrect(phrase);
       }
     }),
+  flagPhrase: procedure
+    .input(
+      z.object({
+        id: z.number(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const phrase = await prismaClient.phrase.findFirst({
+        where: { id: input.id },
+      });
+      if (phrase) {
+        await prismaClient.phrase.update({
+          where: { id: phrase.id },
+          data: {
+            flagged: true,
+          },
+        });
+      }
+    }),
   speak: procedure
     .input(
       z.object({
@@ -220,6 +239,7 @@ export const appRouter = router({
     .mutation(async () => {
       // SELECT * FROM Phrase ORDER BY win_percentage ASC, total_attempts ASC;
       const phrase = await prismaClient.phrase.findFirst({
+        where: { flagged: false },
         orderBy: [{ win_percentage: "asc" }, { total_attempts: "asc" }],
       });
       if (phrase) {

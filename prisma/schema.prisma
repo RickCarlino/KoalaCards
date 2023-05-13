@@ -28,6 +28,7 @@ model Phrase {
   loss_count     Int       @default(0)
   win_count      Int       @default(0)
   win_percentage Float     @default(0)
+  flagged        Boolean   @default(false)
 }
 
 model Note {
