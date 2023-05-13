@@ -114,7 +114,7 @@ export function RecordButton(props: Props) {
   });
   useHotkeys([
     [
-      "d",
+      "s",
       () => {
         (isRecording ? stop : start)();
       },
@@ -123,13 +123,13 @@ export function RecordButton(props: Props) {
   let buttonText = "Recor[d]";
   switch (props.quizType) {
     case "dictation":
-      buttonText = "Say it in Korean";
+      buttonText = "Repeat Phrase";
       break;
     case "listening":
-      buttonText = "Translate to English";
+      buttonText = "Translate to EN";
       break;
     case "speaking":
-      buttonText = "Translate to Korean";
+      buttonText = "Translate to KO";
       break;
   }
   return isRecording ? (
