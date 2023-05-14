@@ -1,7 +1,3 @@
-const TODO_ITEMS = [
-  "Add a log: ko, en, what was said, what was heard, success/failure",
-  "Make the second phrase a newly generated phrase",
-];
 import { PlayButton, playAudio } from "@/components/play-button";
 import { RecordButton } from "@/components/record-button";
 import { trpc } from "@/utils/trpc";
@@ -147,8 +143,8 @@ const Recorder: React.FC = () => {
     await failPhrase.mutate({ id: phrase?.id ?? 0 });
     doSetPhrase();
   };
-  const doFlag = async () => {
-    await flagPhrase.mutate({ id: phrase?.id ?? 0 });
+  const doFlag = async (id = phrase?.id ?? 0) => {
+    await flagPhrase.mutate({ id });
     doSetPhrase();
   };
   const sounds = {
@@ -158,7 +154,7 @@ const Recorder: React.FC = () => {
   };
   useHotkeys([
     ["f", doFail],
-    ["r", doFlag],
+    ["r", () => doFlag()],
   ]);
   const talk = async (text: Speech) => {
     setDataURI(await speak.mutateAsync({ text }));
@@ -254,7 +250,10 @@ const Recorder: React.FC = () => {
           </Button>
         </Grid.Col>
       </Grid>
-      <QuizResultList results={quizResults.contents} onFlag={doFlag} />
+      <QuizResultList
+        results={quizResults.contents}
+        onFlag={({ id }) => doFlag(id)}
+      />
     </Container>
   );
 };
