@@ -1,10 +1,91 @@
+const TODO_ITEMS = [
+  "Add a log: ko, en, what was said, what was heard, success/failure",
+  "Make the second phrase a newly generated phrase",
+];
 import { PlayButton, playAudio } from "@/components/play-button";
 import { RecordButton } from "@/components/record-button";
 import { trpc } from "@/utils/trpc";
-import { Button, Container, Grid } from "@mantine/core";
+import {
+  Badge,
+  Button,
+  Card,
+  Container,
+  Grid,
+  Header,
+  Text,
+} from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import { signIn, signOut, useSession } from "next-auth/react";
 import * as React from "react";
+
+type QuizResult = { phrase: Phrase; pass: boolean };
+type QuizResultListProps = {
+  results: QuizResult[];
+  onFlag: (phrase: Phrase) => void;
+};
+
+const QuizResultList: React.FC<QuizResultListProps> = ({ results, onFlag }) => {
+  return (
+    <div>
+      {results.map((result) => {
+        const { phrase } = result;
+        return (
+          <Card
+            key={phrase.id}
+            shadow="xs"
+            padding="md"
+            radius="sm"
+            style={{ marginBottom: "10px" }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "5px",
+              }}
+            >
+              <Badge
+                variant={result.pass ? "outline" : "filled"}
+                color={result.pass ? "green" : "red"}
+              >
+                {phrase.quizType}
+              </Badge>
+              <Button
+                onClick={() => onFlag(phrase)}
+                variant="link"
+                color="gray"
+                size="xs"
+              >
+                🚩
+              </Button>
+            </div>
+            <Text size="lg" weight={500}>
+              {phrase.ko}
+            </Text>
+            <Text size="sm" color="gray">
+              {phrase.en}
+            </Text>
+            <Text size="sm" style={{ marginTop: "10px" }}>
+              {result.pass ? "Pass" : "Fail"}
+            </Text>
+          </Card>
+        );
+      })}
+    </div>
+  );
+};
+
+interface CappedStack<T> {
+  contents: T[];
+  limit: number;
+}
+
+function push<T>(stack: CappedStack<T>, item: T): CappedStack<T> {
+  const { contents, limit } = stack;
+  const newContents = [item, ...contents].slice(0, limit);
+  return { contents: newContents, limit };
+}
 
 type Mutation = ReturnType<typeof trpc.speak.useMutation>["mutateAsync"];
 type Speech = Parameters<Mutation>[0]["text"];
@@ -54,6 +135,12 @@ const Recorder: React.FC = () => {
   const speak = trpc.speak.useMutation();
   const [phrase, setPhrase] = React.useState<Phrase | null>(null);
   const [dataURI, setDataURI] = React.useState<string | null>(null);
+  const [quizResults, setQuizResults] = React.useState<CappedStack<QuizResult>>(
+    {
+      contents: [],
+      limit: 5,
+    }
+  );
   const { status } = useSession();
   const doFail = async () => {
     sounds.fail();
@@ -105,10 +192,12 @@ const Recorder: React.FC = () => {
     switch (result) {
       case "success":
       case "error":
+        setQuizResults(push(quizResults, { phrase: phrase, pass: true }));
         setTimeout(doSetPhrase, 1500);
         sounds[result]();
         break;
       case "failure":
+        setQuizResults(push(quizResults, { phrase: phrase, pass: false }));
         // TODO: Auto-skip to next phrase.
         // Can't do it currently because <PlayButton /> does not have an "onEnd" callback.
         sounds.fail();
@@ -123,6 +212,22 @@ const Recorder: React.FC = () => {
 
   return (
     <Container size="xs">
+      <Header
+        height={80}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          marginBottom: "20px",
+        }}
+      >
+        <span style={{ fontSize: "24px", marginRight: "10px" }}>
+          <span role="img" aria-label="Koala">
+            🐨
+          </span>
+        </span>
+        <span style={{ fontSize: "24px", fontWeight: "bold" }}>KoalaSRS</span>
+      </Header>
       <Grid grow justify="center" align="center">
         <Grid.Col span={2}>
           <Button fullWidth>Button 6</Button>
@@ -149,6 +254,7 @@ const Recorder: React.FC = () => {
           </Button>
         </Grid.Col>
       </Grid>
+      <QuizResultList results={quizResults.contents} onFlag={doFlag} />
     </Container>
   );
 };
