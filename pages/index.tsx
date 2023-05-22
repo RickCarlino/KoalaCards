@@ -12,9 +12,17 @@ import {
 } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import { signIn, signOut, useSession } from "next-auth/react";
+import { uid } from "radash";
 import * as React from "react";
 
-type QuizResult = { phrase: Phrase; pass: boolean };
+type QuizResult = {
+  phrase: Phrase;
+  pass: boolean;
+  // Can't use "id" as a React `key` prop because it's not unique
+  // across all quiz attempts (you can quiz on things twice).
+  uid: string;
+};
+
 type QuizResultListProps = {
   results: QuizResult[];
   onFlag: (phrase: Phrase) => void;
@@ -24,10 +32,10 @@ const QuizResultList: React.FC<QuizResultListProps> = ({ results, onFlag }) => {
   return (
     <div>
       {results.map((result) => {
-        const { phrase } = result;
+        const { phrase, uid } = result;
         return (
           <Card
-            key={phrase.id}
+            key={uid}
             shadow="xs"
             padding="md"
             radius="sm"
@@ -139,6 +147,11 @@ const Recorder: React.FC = () => {
   );
   const { status } = useSession();
   const doFail = async () => {
+    phrase && setQuizResults(push(quizResults, {
+      phrase,
+      pass: true,
+      uid: uid(8),
+    }));
     sounds.fail();
     await failPhrase.mutate({ id: phrase?.id ?? 0 });
     doSetPhrase();
@@ -184,16 +197,21 @@ const Recorder: React.FC = () => {
       audio,
       quizType: phrase.quizType,
     });
-
+    const passFail = {
+      phrase,
+      pass: true,
+      uid: uid(8),
+    };
     switch (result) {
       case "success":
       case "error":
-        setQuizResults(push(quizResults, { phrase: phrase, pass: true }));
+        setQuizResults(push(quizResults, passFail));
         setTimeout(doSetPhrase, 1500);
         sounds[result]();
         break;
       case "failure":
-        setQuizResults(push(quizResults, { phrase: phrase, pass: false }));
+        passFail.pass = false;
+        setQuizResults(push(quizResults, passFail));
         // TODO: Auto-skip to next phrase.
         // Can't do it currently because <PlayButton /> does not have an "onEnd" callback.
         sounds.fail();
