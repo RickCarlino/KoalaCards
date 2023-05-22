@@ -27,7 +27,7 @@ export async function transcribeB64(
     const [resp] = await client.recognize({
       config: {
         encoding: "LINEAR16",
-        sampleRateHertz: 8000, // Default sample rate for AudioContext, unless specified otherwise
+        sampleRateHertz: 16000, // Default sample rate for AudioContext, unless specified otherwise
         languageCode: lang,
       },
       audio: {
