@@ -6,24 +6,6 @@ import {
   register,
 } from "prom-client";
 
-const getOrCreateCounter = <T extends string>(
-  i: CounterConfiguration<T>
-): Counter<T> => {
-  const existingMetric = register.getSingleMetric("seconds_spoken_total");
-
-  if (existingMetric) {
-    return existingMetric as Counter<T>;
-  }
-
-  return new Counter(i);
-};
-
-// Create a custom counter metric for counting HTTP requests
-export const minutesSpoken = getOrCreateCounter({
-  name: "seconds_spoken_total",
-  help: "Total number of seconds that a user has spoken.",
-  labelNames: ["user_id"],
-});
 if (!(global as any).defaultMetricsInitialized) {
   collectDefaultMetrics();
   (global as any).defaultMetricsInitialized = true;
