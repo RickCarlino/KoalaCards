@@ -147,11 +147,14 @@ const Recorder: React.FC = () => {
   );
   const { status } = useSession();
   const doFail = async () => {
-    phrase && setQuizResults(push(quizResults, {
-      phrase,
-      pass: true,
-      uid: uid(8),
-    }));
+    phrase &&
+      setQuizResults(
+        push(quizResults, {
+          phrase,
+          pass: true,
+          uid: uid(8),
+        })
+      );
     sounds.fail();
     await failPhrase.mutate({ id: phrase?.id ?? 0 });
     doSetPhrase();
@@ -243,9 +246,6 @@ const Recorder: React.FC = () => {
         <span style={{ fontSize: "24px", fontWeight: "bold" }}>KoalaSRS</span>
       </Header>
       <Grid grow justify="center" align="center">
-        <Grid.Col span={2}>
-          <Button fullWidth>Button 6</Button>
-        </Grid.Col>
         <Grid.Col span={2}>
           <Button onClick={() => signOut()} fullWidth>
             🚪Sign Out
