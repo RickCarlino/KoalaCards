@@ -285,7 +285,7 @@ export const appRouter = router({
       const phrase = await prismaClient.phrase.findUnique({
         where: { id: input.id },
       });
-      if (transcript.kind === "NO_SPEECH") {
+      if (transcript.kind === "error") {
         return { result: "error" } as const;
       }
       const result = phrase && (await quiz(transcript.text, phrase));
