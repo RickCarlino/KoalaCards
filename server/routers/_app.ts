@@ -7,7 +7,7 @@ import { draw } from "radash";
 import { z } from "zod";
 import { procedure, router } from "../trpc";
 
-const PROMPT_CONFIG = { best_of: 1, temperature: 0.2 };
+const PROMPT_CONFIG = { best_of: 2, temperature: 0.4 };
 
 const apiKey = process.env.OPENAI_API_KEY;
 
