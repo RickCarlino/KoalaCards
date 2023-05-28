@@ -7,6 +7,8 @@ import { draw } from "radash";
 import { z } from "zod";
 import { procedure, router } from "../trpc";
 
+const PROMPT_CONFIG = { best_of: 1, temperature: 0.2 };
+
 const apiKey = process.env.OPENAI_API_KEY;
 
 if (!apiKey) {
@@ -46,14 +48,16 @@ const cleanYesNo = (answer?: string) => {
 
 const translationPrompt = (ko: string, response: string) => {
   return `
-    A Korean language student was asked to translate the following phrase to english: ${ko}.
-    The student provided this translation: ${response}
-    Was the student correct?
+    A Korean language learning app user was asked to translate
+    the following phrase to english: ${ko}.
+    The user provided this translation: ${response}
+    Was the user correct?
     Slight variations in spacing and punctuation are acceptable.
     The meanings of the two sentences must express the exact same idea.
     Punctuation and word choice do not need to be exact.
     Reply "YES" if it is a correct translation.
-    Reply "NO" if it is incorrect, then provide a reason why it is wrong
+    Reply "NO" if it is incorrect, then provide a display
+    reason for why it is wrong
     `;
 };
 
@@ -108,6 +112,7 @@ async function gradeResp(answer: string = "", phrase: Phrase) {
       await markCorrect(phrase);
       return true;
     case "NO":
+      console.log(answer);
       await markIncorrect(phrase);
       return false;
     default:
@@ -116,42 +121,43 @@ async function gradeResp(answer: string = "", phrase: Phrase) {
 }
 
 async function dictationTest(transcript: string, phrase: Phrase) {
-  const [answer] = await ask(
-    `
-  A Korean language student was asked to read the following phrase aloud: ${phrase.ko}.
-  The student read: ${transcript}
-  Was the student correct?
+  const [answer] = await ask(`
+  A Korean language learning app user was asked to read the
+  following phrase aloud: ${phrase.ko} (${phrase.en}).
+  The user read: ${transcript}
+  Was the user correct?
   Slight variations in spacing and punctuation are acceptable.
   The meanings of the two sentences must express the exact same idea.
   Punctuation and word choice do not need to be exact.
   Reply "YES" if it is correct.
-  Reply "NO" if it is incorrect, then provide a reason why it is wrong
+  Reply "NO" if it is incorrect, then provide a display reason
+  why it is wrong
   (YES/NO)
   `,
-    { best_of: 1, temperature: 0.2 }
+  PROMPT_CONFIG
   );
   return gradeResp(answer, phrase);
 }
 
 async function listeningTest(transcript: string, phrase: Phrase) {
   const p = translationPrompt(phrase.ko, transcript);
-  const [answer] = await ask(p);
+  const [answer] = await ask(p, PROMPT_CONFIG);
   return gradeResp(answer, phrase);
 }
 
 async function speakingTest(transcript: string, phrase: Phrase) {
   const [answer] = await ask(
-    `An English-speaking Korean language student was asked
-    to translate the following phrase to Korean: ${phrase.en}.
-    The student said: ${transcript}
-    Was the student correct?
+    `An English-speaking Korean language learning app user was asked
+    to translate the following phrase to Korean: ${phrase.en} (${phrase.ko}).
+    The user said: ${transcript}
+    Was the user correct?
     Slight variations in spacing and punctuation are acceptable.
     The meanings of the two sentences must express the exact same idea.
     Punctuation and word choice do not need to be exact.
     Reply "YES" if it is correct.
     Reply "NO" if it is incorrect, then provide a reason why it is wrong
     `,
-    { best_of: 1, temperature: 0.2 }
+    PROMPT_CONFIG
   );
   return gradeResp(answer, phrase);
 }
@@ -286,6 +292,7 @@ export const appRouter = router({
         where: { id: input.id },
       });
       if (transcript.kind === "error") {
+        console.log(`Transcription error`);
         return { result: "error" } as const;
       }
       const result = phrase && (await quiz(transcript.text, phrase));

@@ -3,8 +3,12 @@
 <p align="center">
   <img src="./logo.png" alt="The KoalaSRS Logo (for now)"/>
 </p>
+<p align="center">
+  <img src="./screenshot.jpg" alt="The KoalaSRS Logo (for now)"/>
+</p>
 
-Hey there! Welcome to KoalaSRS, a fun and friendly Korean-only [spaced repetition system](https://en.wikipedia.org/wiki/Spaced_repetition) that's all about listening and speaking skills. We teach vocabulary using fully-formed sentences, not just boring word/definition pairs. KoalaSRS captures your voice input using speech-to-text and uses the super-smart GPT-3 for human-like test assessments and corrections. That means that the app is clever enough to mark your answers as "close enough" and can even give you optional feedback about _why_ you were wrong ("coaching"). It can explain sentences that don't make sense or have unknown vocabulary. 🧠
+Hey there! Welcome to KoalaSRS, a fun and friendly Korean-only [spaced repetition system](https://en.wikipedia.org/wiki/Spaced_repetition) that's all about listening and speaking skills. We teach vocabulary using fully-formed sentences, not just boring word/definition pairs. KoalaSRS captures your voice input using speech-to-text and uses the super-smart GPT-3 for human-like test assessments and corrections. That means that the app is clever enough to mark your answers as "close enough" and can even give you optional feedback about _why_ you were wrong (Called "coaching"- UI is not built yet). It can explain sentences that don't make sense or have unknown vocabulary. 🧠
+
 
 ## UNDER CONSTRUCTION ⚠️
 
@@ -39,8 +43,6 @@ The app has three types of quizzes:
 - **Dictation quiz:** You read a Korean phrase aloud, and the app transcribes it using speech-to-text technology. GPT-3 grades your answer. This quiz is the easiest one and focuses on pronunciation and memorization. 🗣️
 - **Listening quiz:** You listen to a Korean phrase and then translate it to English. This quiz comes after the dictation phase. 🎶
 - **Speaking quiz:** You get an English text and are asked to say it in Korean. The program transcribes your phrase via speech-to-text, and GPT-3 grades your answer. 📣
-
-The app also has a **coaching** feature where you can ask GPT for guidance on unknown words and grammar after a failed quiz. While coaching is mostly effective, remember that language models like GPT can ["hallucinate"](<https://en.wikipedia.org/wiki/Hallucination_(artificial_intelligence)>), so double-check all lessons learned via coaching. 🔍
 
 Please note that this app is not ready for non-technical users just yet. If you want to try the app, you'll need to clone this repo and build it on your local machine (Linux only). There's no public demo available, but we'd love your feedback! 😊
 

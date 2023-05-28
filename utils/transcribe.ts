@@ -59,7 +59,7 @@ export async function transcribeB64(
   );
 
   const timeoutPromise = new Promise<TranscriptionResult>((resolve, _) =>
-    setTimeout(() => resolve({ kind: "error" }), 3500)
+    setTimeout(() => resolve({ kind: "error" }), 4321)
   );
 
   return Promise.race([transcribePromise, timeoutPromise]);
