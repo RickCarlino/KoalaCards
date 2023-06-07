@@ -1,4 +1,20 @@
 -- CreateTable
+CREATE TABLE "Phrase" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "ko" TEXT NOT NULL,
+    "en" TEXT NOT NULL,
+    "next_quiz_type" TEXT,
+    "last_win_at" DATETIME,
+    "total_attempts" INTEGER NOT NULL DEFAULT 0,
+    "loss_count" INTEGER NOT NULL DEFAULT 0,
+    "win_count" INTEGER NOT NULL DEFAULT 0,
+    "win_percentage" REAL NOT NULL DEFAULT 0,
+    "flagged" BOOLEAN NOT NULL DEFAULT false,
+    "userId" TEXT NOT NULL,
+    CONSTRAINT "Phrase_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- CreateTable
 CREATE TABLE "Account" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "userId" TEXT NOT NULL,
@@ -39,6 +55,9 @@ CREATE TABLE "VerificationToken" (
     "token" TEXT NOT NULL,
     "expires" DATETIME NOT NULL
 );
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Phrase_ko_key" ON "Phrase"("ko");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Account_provider_providerAccountId_key" ON "Account"("provider", "providerAccountId");

@@ -10,14 +10,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Word {
-  id       Int     @id @default(autoincrement())
-  ko       String  @unique
-  en       String
-  known    Boolean @default(false)
-  reviewed Boolean @default(false)
-}
-
 model Phrase {
   id             Int       @id @default(autoincrement())
   ko             String    @unique
@@ -29,13 +21,8 @@ model Phrase {
   win_count      Int       @default(0)
   win_percentage Float     @default(0)
   flagged        Boolean   @default(false)
-}
-
-model Note {
-  id          Int    @id @default(autoincrement())
-  value       String
-  sourceTable String
-  sourceId    Int
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Account {
@@ -73,6 +60,7 @@ model User {
   image         String?
   accounts      Account[]
   sessions      Session[]
+  phrases       Phrase[]
 }
 
 model VerificationToken {
