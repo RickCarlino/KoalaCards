@@ -1,6 +1,5 @@
 import { TRPCError, initTRPC } from "@trpc/server";
 import { Session } from "next-auth";
-import { prismaClient } from "./prisma-client";
 import { User } from "@prisma/client";
 const t = initTRPC
   .context<{

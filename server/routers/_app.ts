@@ -121,7 +121,8 @@ async function gradeResp(answer: string = "", phrase: Phrase) {
 }
 
 async function dictationTest(transcript: string, phrase: Phrase) {
-  const [answer] = await ask(`
+  const [answer] = await ask(
+    `
   A Korean language learning app user was asked to read the
   following phrase aloud: ${phrase.ko} (${phrase.en}).
   The user read: ${transcript}
@@ -134,7 +135,7 @@ async function dictationTest(transcript: string, phrase: Phrase) {
   why it is wrong
   (YES/NO)
   `,
-  PROMPT_CONFIG
+    PROMPT_CONFIG
   );
   return gradeResp(answer, phrase);
 }
@@ -169,6 +170,25 @@ const quizType = z.union([
 ]);
 
 export const appRouter = router({
+  getAllPhrases: procedure
+    .input(z.object({}))
+    .output(
+      z.array(
+        z.object({
+          id: z.number(),
+          en: z.string(),
+          ko: z.string(),
+          win_percentage: z.number(),
+          total_attempts: z.number(),
+          flagged: z.boolean(),
+        })
+      )
+    )
+    .query(async ({ ctx }) => {
+      return await prismaClient.phrase.findMany({
+        where: { userId: ctx.user?.id || "000" },
+      });
+    }),
   failPhrase: procedure
     .input(
       z.object({

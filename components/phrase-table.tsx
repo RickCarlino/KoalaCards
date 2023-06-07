@@ -1,12 +1,18 @@
 import React, { useState } from "react";
 import { Table, Checkbox, Button, Col, Grid } from "@mantine/core";
-import Link from "next/link";
 import { useRouter } from "next/router";
 import { Phrase } from "@prisma/client";
 import { IconPencil } from "@tabler/icons-react";
 
+type Keys =
+  | "en"
+  | "id"
+  | "ko"
+  | "total_attempts"
+  | "win_percentage"
+  | "flagged";
 interface PhraseTableProps {
-  phrases: Phrase[];
+  phrases: Pick<Phrase, Keys>[];
 }
 
 export const PhraseTable: React.FC<PhraseTableProps> = ({ phrases }) => {
@@ -72,7 +78,7 @@ export const PhraseTable: React.FC<PhraseTableProps> = ({ phrases }) => {
               <td>{phrase.win_percentage}</td>
               <td>
                 <Button onClick={() => router.push(`/cards/${phrase.id}`)}>
-                  <IconPencil stroke={1.5}/>
+                  <IconPencil stroke={1.5} />
                 </Button>
               </td>
             </tr>
