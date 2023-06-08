@@ -1,7 +1,7 @@
 import { draw, shuffle } from "radash";
 import { koreanGrammar } from "./korean-grammar";
 import { scenarios } from "./scenarios";
-import { ask } from "@/server/routers/_app";
+import { ask } from "@/server/routers/main";
 
 const PROMPT = `
 Provide 3 short, conversation-focused Korean sentences

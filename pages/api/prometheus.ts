@@ -1,10 +1,5 @@
 import { NextApiResponse } from "next";
-import {
-  Counter,
-  CounterConfiguration,
-  collectDefaultMetrics,
-  register,
-} from "prom-client";
+import { collectDefaultMetrics, register } from "prom-client";
 
 if (!(global as any).defaultMetricsInitialized) {
   collectDefaultMetrics();

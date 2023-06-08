@@ -7,10 +7,7 @@ import util from "util";
 
 const CLIENT = new textToSpeech.TextToSpeechClient();
 
-const VOICES = [
-  "ko-KR-Wavenet-B",
-  "ko-KR-Wavenet-C",
-];
+const VOICES = ["ko-KR-Wavenet-B", "ko-KR-Wavenet-C"];
 
 /** My main focus is Korean, so I randomly pick
  * one of Google's Korean voices if no voice is
@@ -85,7 +82,7 @@ export async function newSpeak(txt: string, voice: string = randomVoice()) {
     const writeFile = util.promisify(fs.writeFile);
     await writeFile(p, response.audioContent, "binary");
   }
-  return `data:audio/mpeg;base64,${readFileSync(p, {encoding: 'base64'})}`;
+  return `data:audio/mpeg;base64,${readFileSync(p, { encoding: "base64" })}`;
 }
 
 export const ssml = (...text: string[]) => {

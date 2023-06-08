@@ -1,6 +1,4 @@
-import {
-    Container, Header
-} from "@mantine/core";
+import { Container, Header } from "@mantine/core";
 import * as React from "react";
 
 const Index: React.FC = () => {

@@ -2,7 +2,7 @@ import { AppProps } from "next/app";
 import Head from "next/head";
 import { MantineProvider } from "@mantine/core";
 import { trpc } from "@/utils/trpc";
-import { SessionProvider } from "next-auth/react"
+import { SessionProvider } from "next-auth/react";
 import Navbar from "./_nav";
 
 function App(props: AppProps) {
@@ -18,8 +18,8 @@ function App(props: AppProps) {
         />
       </Head>
       <SessionProvider session={pageProps.session}>
-        <MantineProvider withGlobalStyles withNormalizeCSS> 
-          <div style={{ display: 'flex', flexDirection: 'row' }}>
+        <MantineProvider withGlobalStyles withNormalizeCSS>
+          <div style={{ display: "flex", flexDirection: "row" }}>
             <Navbar />
             <Component {...pageProps} />
           </div>

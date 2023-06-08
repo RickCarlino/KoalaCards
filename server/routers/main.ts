@@ -291,7 +291,7 @@ export const appRouter = router({
         id: z.number(),
       })
     )
-    .mutation(async ({ input, ctx }) => {
+    .mutation(async ({ input }) => {
       type Quiz = typeof speakingTest;
       type QuizType = typeof input.quizType;
       const LANG: Record<QuizType, Lang> = {
@@ -306,8 +306,7 @@ export const appRouter = router({
       };
       const lang = LANG[input.quizType];
       const quiz = QUIZ[input.quizType];
-      const email = ctx.session?.user?.email || "NONE";
-      const transcript = await transcribeB64(lang, input.audio, email);
+      const transcript = await transcribeB64(lang, input.audio);
       const phrase = await prismaClient.phrase.findUnique({
         where: { id: input.id },
       });

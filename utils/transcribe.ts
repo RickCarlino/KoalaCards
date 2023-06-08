@@ -1,4 +1,4 @@
-import { openai } from "@/server/routers/_app";
+import { openai } from "@/server/routers/main";
 import { createReadStream, writeFile } from "fs";
 import { uid } from "radash";
 import { promisify } from "util";
@@ -11,10 +11,6 @@ export const captureAudio = (dataURI: string): string => {
   if (!matches || matches.length !== 3) {
     throw new Error("Invalid input string");
   }
-  const ext = matches[1]
-    .slice(0, 4)
-    .toLowerCase()
-    .replace(/[^a-z]/gi, ""); // security critical
   return matches[2];
 };
 
@@ -25,8 +21,7 @@ const PROMPT_EN = "Korean language learner translates sentences to English.";
 
 export async function transcribeB64(
   lang: Lang,
-  dataURI: string,
-  user_id: string
+  dataURI: string
 ): Promise<TranscriptionResult> {
   const writeFileAsync = promisify(writeFile);
   const base64Data = dataURI.split(";base64,").pop() || "";

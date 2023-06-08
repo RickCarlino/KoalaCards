@@ -10683,7 +10683,7 @@ export const GRAMMAR = [
 function syllables(sentence: string): number {
   // Regular expression to match Korean syllables
   const koreanRegex = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/g;
-  
+
   // Get an array of all Korean syllables in the sentence
   const koreanSyllables = sentence.match(koreanRegex);
 

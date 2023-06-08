@@ -1,5 +1,5 @@
 import * as trpcNext from "@trpc/server/adapters/next";
-import { appRouter } from "../../../server/routers/_app";
+import { appRouter } from "../../../server/routers/main";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]";
 import { prismaClient } from "@/server/prisma-client";
