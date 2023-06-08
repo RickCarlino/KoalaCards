@@ -3,7 +3,6 @@
   "version": "1.0.0-alpha",
   "description": "",
   "main": "index.js",
-  "type": "module",
   "scripts": {
     "build": "next build",
     "dev": "next dev",

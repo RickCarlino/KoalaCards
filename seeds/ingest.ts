@@ -10680,14 +10680,26 @@ export const GRAMMAR = [
   },
 ];
 
+function syllables(sentence: string): number {
+  // Regular expression to match Korean syllables
+  const koreanRegex = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/g;
+  
+  // Get an array of all Korean syllables in the sentence
+  const koreanSyllables = sentence.match(koreanRegex);
+
+  // Return the count of Korean syllables
+  return koreanSyllables ? koreanSyllables.length : 0;
+}
+
 const prisma = new PrismaClient();
 // RUN THIS FILE WITH `ts-node` TO SEED THE DATABASE
 // WITH THE GRAMMAR LIST.
 async function main() {
   const users = await prisma.user.findMany();
   map(shuffle(GRAMMAR), async (pair) => {
-    const { ko, en, length } = pair;
-    if (ko.replace(/(\ |\.|,|\?|\!)/g, "").length > 12) {
+    const { ko, en } = pair;
+    const length = syllables(ko);
+    if (length > 10) {
       console.log(`Skipping ${ko} because it's too long (${length})`);
       return;
     }
