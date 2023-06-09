@@ -189,6 +189,34 @@ export const appRouter = router({
         where: { userId: ctx.user?.id || "000" },
       });
     }),
+  getOnePhrase: procedure
+    .input(
+      z.object({
+        id: z.number(),
+      })
+    )
+    .output(
+      z.object({
+        id: z.number(),
+        en: z.string(),
+        ko: z.string(),
+        win_percentage: z.number(),
+        total_attempts: z.number(),
+        flagged: z.boolean(),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      const phrase = await prismaClient.phrase.findFirst({
+        where: {
+          id: input.id,
+          userId: ctx.user?.id || "000",
+        },
+      });
+      if (!phrase) {
+        throw new Error("Phrase not found");
+      }
+      return phrase;
+    }),
   failPhrase: procedure
     .input(
       z.object({

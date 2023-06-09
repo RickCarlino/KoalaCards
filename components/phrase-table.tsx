@@ -11,8 +11,10 @@ type Keys =
   | "total_attempts"
   | "win_percentage"
   | "flagged";
+
+type LocalPhrase = Pick<Phrase, Keys>;
 interface PhraseTableProps {
-  phrases: Pick<Phrase, Keys>[];
+  phrases: LocalPhrase[];
 }
 
 export const PhraseTable: React.FC<PhraseTableProps> = ({ phrases }) => {
