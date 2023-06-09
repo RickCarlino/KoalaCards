@@ -11,6 +11,7 @@ function Card({ id }: { id: number }) {
       flagged: false,
     },
   });
+  const m = trpc.editPhrase.useMutation();
   const phrase = trpc.getOnePhrase.useQuery(
     { id },
     {
@@ -23,12 +24,21 @@ function Card({ id }: { id: number }) {
       },
     }
   );
-  if (phrase.error) return <pre>{JSON.stringify(phrase.error.message, null, 2)}</pre>;
+  if (phrase.error)
+    return <pre>{JSON.stringify(phrase.error.message, null, 2)}</pre>;
   if (!phrase.data) return <div>Loading data...</div>;
   // Define updateForm function
   const updateForm = (values: { en: string; ko: string; flagged: boolean }) => {
     // Logic to update the phrase will go here
     console.log(values);
+    m.mutateAsync({
+      id,
+      en: values.en,
+      ko: values.ko,
+      flagged: values.flagged,
+    }).then(() => {
+      location.assign(`/cards`);
+    });
   };
 
   return (
@@ -51,9 +61,7 @@ function Card({ id }: { id: number }) {
             <Checkbox label="Flagged" {...form.getInputProps("flagged")} />
           </Container>
 
-          <Button type="submit" variant="outline" color="blue">
-            Update
-          </Button>
+          <Button type="submit">Update</Button>
         </form>
       </Paper>
     </div>
@@ -65,7 +73,7 @@ function CardWrapper() {
   const id = router.query.card_id as string;
   if (typeof id === "string") {
     return <Card id={parseInt(id)} />;
-  } 
+  }
   return <div>Loading page...</div>;
 }
 
