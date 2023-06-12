@@ -6,6 +6,7 @@ import { Configuration, CreateCompletionRequest, OpenAIApi } from "openai";
 import { draw } from "radash";
 import { z } from "zod";
 import { procedure, router } from "../trpc";
+import { randomNewPhrase } from "@/experimental/random";
 
 const PROMPT_CONFIG = { best_of: 2, temperature: 0.4 };
 
@@ -318,7 +319,20 @@ export const appRouter = router({
         total_attempts: z.number(),
       })
     )
-    .mutation(async () => {
+    .mutation(async ({ ctx }) => {
+      const newPhrase = await randomNewPhrase();
+      if (newPhrase) {
+        console.log(JSON.stringify(newPhrase, null, 2));
+        await prismaClient.phrase.create({
+          data: {
+            ko: newPhrase.ko,
+            en: newPhrase.en,
+            userId: ctx?.user?.id || "0",
+          },
+        });
+      } else {
+        console.log("No new phrases added");
+      }
       // SELECT * FROM Phrase ORDER BY win_percentage ASC, total_attempts ASC;
       const phrase = await prismaClient.phrase.findFirst({
         where: { flagged: false },
