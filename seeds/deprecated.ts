@@ -1,7 +1,3 @@
-import { PrismaClient } from "@prisma/client";
-import { map, shuffle } from "radash";
-// CREDIT: "Korean Grammar Sentences by Evita"
-// https://ankiweb.net/shared/info/3614346923
 export const GRAMMAR = [
   {
     ko: "살을 빼고 싶어요.",
@@ -10679,62 +10675,3 @@ export const GRAMMAR = [
     length: 5,
   },
 ];
-
-function syllables(sentence: string): number {
-  // Regular expression to match Korean syllables
-  const koreanRegex = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/g;
-
-  // Get an array of all Korean syllables in the sentence
-  const koreanSyllables = sentence.match(koreanRegex);
-
-  // Return the count of Korean syllables
-  return koreanSyllables ? koreanSyllables.length : 0;
-}
-
-const prisma = new PrismaClient();
-// RUN THIS FILE WITH `ts-node` TO SEED THE DATABASE
-// WITH THE GRAMMAR LIST.
-async function main() {
-  const users = await prisma.user.findMany();
-  map(shuffle(GRAMMAR), async (pair) => {
-    const { ko, en } = pair;
-    const length = syllables(ko);
-    if (length > 10) {
-      console.log(`Skipping ${ko} because it's too long (${length})`);
-      return;
-    }
-    console.log(`${ko}: ${en}`);
-    users.map(async (user) => {
-      const hasWord = await prisma.phrase.findFirst({
-        where: {
-          ko,
-          userId: user.id,
-        },
-      });
-      if (!hasWord) {
-        await prisma.phrase.create({
-          data: {
-            ko,
-            en,
-            next_quiz_type: "dictation",
-            userId: user.id,
-          },
-        });
-      }
-    });
-    console.log(`Added ${ko}`);
-  });
-}
-
-main()
-  .then(async () => {
-    await prisma.$disconnect();
-  })
-
-  .catch(async (e) => {
-    console.error(e ?? "???????");
-
-    await prisma.$disconnect();
-
-    process.exit(1);
-  });

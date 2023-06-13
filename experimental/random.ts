@@ -32,7 +32,7 @@ const OPTS = {
 
 export async function randomNewPhrase() {
   try {
-    const fn = draw([createRandomGrammar, createRandomVocab, () => null]);
+    const fn = draw(shuffle([createRandomGrammar, createRandomVocab]));
     return fn && (await fn());
   } catch (error) {
     console.warn("PHRASE ERROR: " + JSON.stringify(error, null, 2));
@@ -98,7 +98,26 @@ async function postProcess(sentence: string) {
   Return exactly one English translation of this sentence and nothing else.
   `;
   const [en] = await ask(`The sentence is: ${ko}` + prompt2, OPTS);
-  return { ko, en };
+  const prompt3 = `
+  ${JSON.stringify({ ko, en }, null, 2)}
+
+  Is the Korean example sentence above correct?
+
+  Reply "YES" if all conditions are met:
+   * The sentence is grammatically correct.
+   * The sentence is natural and sounds like something a native speaker would say.
+   * The translation is accurate and natural.
+
+  Reply "NO" if any of the above conditions are not met and EXPLAIN WHY.
+  (yes/no):
+  `;
+
+  const [yesNo] = await ask(prompt3);
+  if (yesNo.slice(0, 3).toUpperCase() === "YES") {
+    return { ko, en };
+  } else {
+    console.log(yesNo + JSON.stringify({ ko, en }, null, 2));
+  }
 }
 
 function syllables(sentence: string): number {

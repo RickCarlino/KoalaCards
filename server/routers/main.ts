@@ -3,7 +3,7 @@ import { en, ko, newSpeak, pause, slow, ssml } from "@/utils/ssml";
 import { Lang, transcribeB64 } from "@/utils/transcribe";
 import { Phrase } from "@prisma/client";
 import { Configuration, CreateCompletionRequest, OpenAIApi } from "openai";
-import { draw } from "radash";
+import { draw, sleep } from "radash";
 import { z } from "zod";
 import { procedure, router } from "../trpc";
 import { randomNewPhrase } from "@/experimental/random";
@@ -320,22 +320,13 @@ export const appRouter = router({
       })
     )
     .mutation(async ({ ctx }) => {
-      const newPhrase = await randomNewPhrase();
-      if (newPhrase) {
-        console.log(JSON.stringify(newPhrase, null, 2));
-        await prismaClient.phrase.create({
-          data: {
-            ko: newPhrase.ko,
-            en: newPhrase.en,
-            userId: ctx?.user?.id || "0",
-          },
-        });
-      } else {
-        console.log("No new phrases added");
+      const userId = ctx.user?.id;
+      if (!userId) {
+        throw new Error("User not found");
       }
-      // SELECT * FROM Phrase ORDER BY win_percentage ASC, total_attempts ASC;
+      await maybeCreatePhraseForUser(userId);
       const phrase = await prismaClient.phrase.findFirst({
-        where: { flagged: false },
+        where: { flagged: false, userId },
         orderBy: [{ win_percentage: "asc" }, { total_attempts: "asc" }],
       });
       if (phrase) {
@@ -397,3 +388,32 @@ export const appRouter = router({
 });
 // export type definition of API
 export type AppRouter = typeof appRouter;
+async function maybeCreatePhraseForUser(userId: string) {
+  const count = await prismaClient.phrase.count({
+    where: {
+      flagged: false,
+      userId,
+    },
+  });
+
+  if (Math.random() > 0.8 || count < 10) {
+    let newPhrase = await randomNewPhrase();
+    let attempts = 0;
+    while (!newPhrase && attempts < 3) {
+      console.log("Trying again...");
+      attempts++;
+      await sleep(333);
+      newPhrase = await randomNewPhrase();
+    }
+    if (newPhrase) {
+      console.log(JSON.stringify(newPhrase, null, 2));
+      await prismaClient.phrase.create({
+        data: {
+          ko: newPhrase.ko,
+          en: newPhrase.en,
+          userId,
+        },
+      });
+    }
+  }
+}
