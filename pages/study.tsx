@@ -231,7 +231,14 @@ function Study({ quizzes }: Props) {
 
 function StudyLoader() {
   const { data } = trpc.getNextQuizzes.useQuery({});
+  // HACK: Browsers will not auto-play audio if you have
+  // not interacted with the page. This is a hack to get
+  // around that.
+  const [didClick, doClick] = React.useState(false);
   if (data) {
+    if (!didClick) {
+      return <Button onClick={() => doClick(true)}>Start</Button>;
+    }
     return <Study quizzes={data} />;
   } else {
     return <div>Loading...</div>;
