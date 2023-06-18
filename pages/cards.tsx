@@ -10,7 +10,10 @@ const Edit: React.FC = () => {
   if (phrases.data) {
     content = <PhraseTable phrases={phrases.data} />;
   }
-  return Authed(<Container size="s">{content}</Container>);
+  return Authed(<Container size="s">
+    <h1>Edit Phrases</h1>
+    {content}
+  </Container>);
 };
 
 export default Edit;
