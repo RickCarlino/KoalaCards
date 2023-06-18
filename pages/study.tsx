@@ -47,9 +47,9 @@ function push<T>(stack: CappedStack<T>, item: T): CappedStack<T> {
 }
 
 const sounds = {
-  fail: () => playAudio("/sfx/beep.mp3"),
-  success: () => playAudio("/sfx/tada.mp3"),
-  error: () => playAudio("/sfx/flip.wav"),
+  fail: async () => await playAudio("/sfx/beep.mp3"),
+  success: async () => await playAudio("/sfx/tada.mp3"),
+  error: async () => await playAudio("/sfx/flip.wav"),
 };
 
 type QuizResultListProps = {
@@ -134,7 +134,7 @@ function Study({ quizzes }: Props) {
         uid: uid(8),
       })
     );
-    sounds.fail();
+    await sounds.fail();
     await failPhrase.mutate({ id: quiz.id });
     gotoNextPhrase();
   };
@@ -150,7 +150,7 @@ function Study({ quizzes }: Props) {
     const nextIndex = currentIndex - 1;
     setIndex(nextIndex);
     const p = quizzes[nextIndex];
-    playAudio(p.quizAudio);
+    await playAudio(p.quizAudio);
     return p;
   };
   const sendAudio = async (audio: string) => {
@@ -164,21 +164,33 @@ function Study({ quizzes }: Props) {
       case "success":
       case "error":
         setQuizResults(push(quizResults, passFail));
-        setTimeout(gotoNextPhrase, 800);
+        setTimeout(gotoNextPhrase, 1000);
         sounds[result]();
         break;
       case "failure":
         passFail.pass = false;
         setQuizResults(push(quizResults, passFail));
-        sounds.fail();
-        console.log(
-          "TODO: Make sure this works. Might not be correct not sure."
-        );
-        playAudio(quiz.quizAudio);
+        await sounds.fail();
+        // await playAudio(quiz.quizAudio);
         break;
     }
   };
-
+  const difficultWord = quiz.win_percentage < 0.33 || quiz.total_attempts < 2;
+  const header = (() => {
+    if (difficultWord) {
+      return (
+        <span>
+          👩‍🏫 {quiz.ko} / {quiz.en}
+        </span>
+      );
+    } else {
+      return (
+        <span>
+          🫣 Phrase #{quiz.id} grade: {quiz.win_percentage}%
+        </span>
+      );
+    }
+  })();
   return (
     <Container size="xs">
       <Header
@@ -192,6 +204,7 @@ function Study({ quizzes }: Props) {
       >
         <span style={{ fontSize: "24px", fontWeight: "bold" }}>Study</span>
       </Header>
+      {header}
       <Grid grow justify="center" align="center">
         <Grid.Col span={4}>
           <PlayButton dataURI={quiz.quizAudio} />

@@ -7,6 +7,7 @@ import { z } from "zod";
 import { procedure, router } from "../trpc";
 import { randomNewPhrase } from "@/experimental/random";
 import getLessons from "@/utils/fetch-lesson";
+import { use } from "react";
 
 const PROMPT_CONFIG = { best_of: 2, temperature: 0.4 };
 
@@ -267,9 +268,12 @@ export const appRouter = router({
         id: z.number(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const phrase = await prismaClient.phrase.findFirst({
-        where: { id: input.id },
+        where: {
+          id: input.id,
+          userId: ctx.user?.id || "0",
+        },
       });
       if (phrase) {
         await prismaClient.phrase.update({

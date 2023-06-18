@@ -84,18 +84,10 @@ async function getAudio(quizType: QuizType, _ko: string, _en: string) {
       ].join(" ");
       break;
     case "listening":
-      innerSSML = [
-        en("Say in English: "),
-        pause(250),
-        ko(_ko),
-      ].join(" ");
+      innerSSML = [en("Say in English: "), pause(250), ko(_ko)].join(" ");
       break;
     case "speaking":
-      innerSSML = [
-        en("In Korean: "),
-        pause(250),
-        en(_en),
-      ].join(" ");
+      innerSSML = [en("In Korean: "), pause(250), en(_en)].join(" ");
       break;
   }
   return newSpeak(ssml(innerSSML));
@@ -108,7 +100,12 @@ export default async function getLessons(userId: string) {
     take: 10,
   });
   const quizzes = phrases.map(async (phrase) => {
-    const quizType: QuizType = draw(["dictation", "listening", "speaking"]) ?? "dictation";
+    let quizType: QuizType;
+    if (phrase.win_percentage < 0.33) {
+      quizType = "dictation";
+    } else {
+      quizType = draw(["listening", "speaking"]) ?? "listening";
+    }
     const en = phrase.en ?? "";
     const ko = phrase.ko ?? "";
     const quizAudio = await getAudio(quizType, ko, en);
