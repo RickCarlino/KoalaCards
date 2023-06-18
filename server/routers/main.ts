@@ -1,12 +1,12 @@
 import { prismaClient } from "@/server/prisma-client";
-import { en, ko, newSpeak, pause, slow, ssml } from "@/utils/ssml";
 import { Lang, transcribeB64 } from "@/utils/transcribe";
 import { Phrase } from "@prisma/client";
 import { Configuration, CreateCompletionRequest, OpenAIApi } from "openai";
-import { draw, sleep } from "radash";
+import { sleep } from "radash";
 import { z } from "zod";
 import { procedure, router } from "../trpc";
 import { randomNewPhrase } from "@/experimental/random";
+import getLessons from "@/utils/fetch-lesson";
 
 const PROMPT_CONFIG = { best_of: 2, temperature: 0.4 };
 
@@ -279,45 +279,19 @@ export const appRouter = router({
         });
       }
     }),
-  speak: procedure
-    .input(
-      z.object({
-        text: z.array(
-          z.union([
-            z.object({ kind: z.literal("ko"), value: z.string() }),
-            z.object({ kind: z.literal("slow"), value: z.string() }), // Only supports Korean.
-            z.object({ kind: z.literal("en"), value: z.string() }),
-            z.object({ kind: z.literal("pause"), value: z.number() }),
-          ])
-        ),
-      })
-    )
-    .mutation(async ({ input }) => {
-      const ssmlBody = input.text.map((item) => {
-        switch (item.kind) {
-          case "ko":
-            return ko(item.value);
-          case "en":
-            return en(item.value);
-          case "pause":
-            return pause(item.value);
-          case "slow":
-            return slow(item.value);
-        }
-      });
-      return await newSpeak(ssml(...ssmlBody));
-    }),
-  getNextPhrase: procedure
+  getNextPhrases: procedure
     .input(z.object({}))
     .output(
-      z.object({
-        id: z.number(),
-        en: z.string(),
-        ko: z.string(),
-        quizType,
-        win_percentage: z.number(),
-        total_attempts: z.number(),
-      })
+      z.array(
+        z.object({
+          id: z.number(),
+          en: z.string(),
+          ko: z.string(),
+          quizType,
+          win_percentage: z.number(),
+          total_attempts: z.number(),
+        })
+      )
     )
     .mutation(async ({ ctx }) => {
       const userId = ctx.user?.id;
@@ -325,21 +299,7 @@ export const appRouter = router({
         throw new Error("User not found");
       }
       await maybeCreatePhraseForUser(userId);
-      const phrase = await prismaClient.phrase.findFirst({
-        where: { flagged: false, userId },
-        orderBy: [{ win_percentage: "asc" }, { total_attempts: "asc" }],
-      });
-      if (phrase) {
-        return {
-          id: phrase.id,
-          en: phrase.en ?? "",
-          ko: phrase.ko ?? "",
-          total_attempts: phrase.total_attempts,
-          win_percentage: phrase.win_percentage,
-          quizType: draw(["dictation", "listening", "speaking"]) ?? "dictation",
-        };
-      }
-      throw new Error("No phrases found");
+      return await getLessons(userId);
     }),
   performExam: procedure
     .input(
@@ -406,7 +366,6 @@ async function maybeCreatePhraseForUser(userId: string) {
       newPhrase = await randomNewPhrase();
     }
     if (newPhrase) {
-      console.log(JSON.stringify(newPhrase, null, 2));
       await prismaClient.phrase.create({
         data: {
           ko: newPhrase.ko,
@@ -414,6 +373,8 @@ async function maybeCreatePhraseForUser(userId: string) {
           userId,
         },
       });
+      console.log("Created new phrase:");
+      console.log(JSON.stringify(newPhrase, null, 2));
     }
   }
 }
