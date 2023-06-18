@@ -17,7 +17,7 @@ import Authed from "./_authed";
 
 type QuizResult = {
   phrase: Quiz;
-  pass: boolean;
+  result: "error" | "success" | "failure";
   uid: string;
 };
 
@@ -47,7 +47,7 @@ function push<T>(stack: CappedStack<T>, item: T): CappedStack<T> {
 }
 
 const sounds = {
-  fail: async () => await playAudio("/sfx/beep.mp3"),
+  failure: async () => await playAudio("/sfx/beep.mp3"),
   success: async () => await playAudio("/sfx/tada.mp3"),
   error: async () => await playAudio("/sfx/flip.wav"),
 };
@@ -61,6 +61,18 @@ const QuizResultList: React.FC<QuizResultListProps> = ({ results, onFlag }) => {
   return (
     <div>
       {results.map((result) => {
+        let color: string;
+        switch (result.result) {
+          case "success":
+            color = "green";
+            break;
+          case "failure":
+            color = "red";
+            break;
+          case "error":
+            color = "yellow";
+            break;
+        }
         const { phrase, uid } = result;
         return (
           <Card
@@ -79,8 +91,8 @@ const QuizResultList: React.FC<QuizResultListProps> = ({ results, onFlag }) => {
               }}
             >
               <Badge
-                variant={result.pass ? "outline" : "filled"}
-                color={result.pass ? "green" : "red"}
+                variant={"filled"}
+                color={color}
               >
                 {phrase.quizType}
               </Badge>
@@ -98,9 +110,6 @@ const QuizResultList: React.FC<QuizResultListProps> = ({ results, onFlag }) => {
             </Text>
             <Text size="sm" color="gray">
               {phrase.en}
-            </Text>
-            <Text size="sm" style={{ marginTop: "10px" }}>
-              {result.pass ? "Pass" : "Fail"}
             </Text>
           </Card>
         );
@@ -130,11 +139,11 @@ function Study({ quizzes }: Props) {
     setQuizResults(
       push(quizResults, {
         phrase: quiz,
-        pass: true,
+        result: "failure",
         uid: uid(8),
       })
     );
-    await sounds.fail();
+    await sounds.failure();
     await failPhrase.mutate({ id: quiz.id });
     gotoNextPhrase();
   };
@@ -159,21 +168,10 @@ function Study({ quizzes }: Props) {
       audio,
       quizType: quiz.quizType,
     });
-    const passFail = { phrase: quiz, pass: true, uid: uid(8) };
-    switch (result) {
-      case "success":
-      case "error":
-        setQuizResults(push(quizResults, passFail));
-        setTimeout(gotoNextPhrase, 1000);
-        sounds[result]();
-        break;
-      case "failure":
-        passFail.pass = false;
-        setQuizResults(push(quizResults, passFail));
-        await sounds.fail();
-        // await playAudio(quiz.quizAudio);
-        break;
-    }
+    const passFail = { phrase: quiz, result, uid: uid(8) };
+    setQuizResults(push(quizResults, passFail));
+    await sounds[result]();
+    gotoNextPhrase();
   };
   const difficultWord = quiz.win_percentage < 0.33 || quiz.total_attempts < 2;
   const header = (() => {

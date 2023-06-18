@@ -54,7 +54,10 @@ export async function transcribeB64(
   );
 
   const timeoutPromise = new Promise<TranscriptionResult>((resolve, _) =>
-    setTimeout(() => resolve({ kind: "error" }), 4321)
+    setTimeout(() => {
+      console.log("Transcription timeout.");
+      resolve({ kind: "error" });
+    }, 5000)
   );
 
   return Promise.race([transcribePromise, timeoutPromise]);
