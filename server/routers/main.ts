@@ -7,7 +7,6 @@ import { z } from "zod";
 import { procedure, router } from "../trpc";
 import { randomNewPhrase } from "@/experimental/random";
 import getLessons from "@/utils/fetch-lesson";
-import { use } from "react";
 
 const PROMPT_CONFIG = { best_of: 2, temperature: 0.4 };
 
