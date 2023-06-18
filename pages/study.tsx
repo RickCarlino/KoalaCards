@@ -90,10 +90,7 @@ const QuizResultList: React.FC<QuizResultListProps> = ({ results, onFlag }) => {
                 marginBottom: "5px",
               }}
             >
-              <Badge
-                variant={"filled"}
-                color={color}
-              >
+              <Badge variant={"filled"} color={color}>
                 {phrase.quizType}
               </Badge>
               <Button
@@ -120,7 +117,7 @@ const QuizResultList: React.FC<QuizResultListProps> = ({ results, onFlag }) => {
 
 function Study({ quizzes }: Props) {
   const [currentIndex, setIndex] = React.useState(quizzes.length - 1);
-  const quiz = quizzes[currentIndex];
+  const quiz: Quiz | undefined = quizzes[currentIndex];
   const [quizResults, setQuizResults] = React.useState<CappedStack<QuizResult>>(
     {
       contents: [],
@@ -128,13 +125,10 @@ function Study({ quizzes }: Props) {
     }
   );
 
-  if (!quiz) {
-    return <div>Done!</div>;
-  }
-
   const performExam = trpc.performExam.useMutation();
   const failPhrase = trpc.failPhrase.useMutation();
   const flagPhrase = trpc.flagPhrase.useMutation();
+
   const doFail = async () => {
     setQuizResults(
       push(quizResults, {
@@ -147,14 +141,20 @@ function Study({ quizzes }: Props) {
     await failPhrase.mutate({ id: quiz.id });
     gotoNextPhrase();
   };
-  const doFlag = async (id = quiz.id) => {
-    await flagPhrase.mutate({ id });
-    gotoNextPhrase();
-  };
+
   useHotkeys([
     ["f", doFail],
     ["r", () => doFlag()],
   ]);
+
+  if (!quiz) {
+    return <div>Done!</div>;
+  }
+
+  const doFlag = async (id = quiz.id) => {
+    await flagPhrase.mutate({ id });
+    gotoNextPhrase();
+  };
   const gotoNextPhrase = async () => {
     const nextIndex = currentIndex - 1;
     setIndex(nextIndex);
@@ -173,7 +173,7 @@ function Study({ quizzes }: Props) {
     await sounds[result]();
     gotoNextPhrase();
   };
-  const difficultWord = quiz.win_percentage < 0.33 || quiz.total_attempts < 2;
+  const difficultWord = (quiz.win_percentage < 0.33 || quiz.total_attempts < 2) && quiz.quizType !== "speaking";
   const header = (() => {
     if (difficultWord) {
       return (
@@ -184,7 +184,7 @@ function Study({ quizzes }: Props) {
     } else {
       return (
         <span>
-          🫣 Phrase #{quiz.id} grade: {quiz.win_percentage}%
+          🫣 Phrase #{quiz.id} grade: {Math.round(quiz.win_percentage * 100)}%
         </span>
       );
     }
@@ -216,8 +216,8 @@ function Study({ quizzes }: Props) {
           </Button>
         </Grid.Col>
         <Grid.Col span={4}>
-          <Button onClick={gotoNextPhrase} fullWidth>
-            🚩[R]eport Item #{quiz.id}
+          <Button onClick={() => doFlag(quiz.id)} fullWidth>
+            🚩Flag Item[R] #{quiz.id}
           </Button>
         </Grid.Col>
       </Grid>

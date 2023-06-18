@@ -29,7 +29,7 @@ export async function transcribeB64(
   const fpath = `/tmp/${uid(8)}.wav`;
   await writeFileAsync(fpath, buffer);
   const isEn = lang.slice(0, 2) === "en";
-
+  let done = false;
   const transcribePromise = new Promise<TranscriptionResult>(
     async (resolve) => {
       try {
@@ -42,6 +42,7 @@ export async function transcribeB64(
         const text =
           (y && typeof y.data == "string" && y.data) || "NO RESPONSE.";
         console.log(`Show in UI: ${text}`);
+        done = true;
         return resolve({
           kind: "OK",
           text,
@@ -55,8 +56,10 @@ export async function transcribeB64(
 
   const timeoutPromise = new Promise<TranscriptionResult>((resolve, _) =>
     setTimeout(() => {
-      console.log("Transcription timeout.");
-      resolve({ kind: "error" });
+      if (!done) {
+        console.log("Transcription timeout.");
+        resolve({ kind: "error" });
+      }
     }, 5000)
   );
 

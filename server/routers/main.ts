@@ -53,7 +53,7 @@ const translationPrompt = (ko: string, response: string) => {
     the following phrase to english: ${ko}.
     The user provided this translation: ${response}
     Was the user correct?
-    Slight variations in spacing and punctuation are acceptable.
+    spacing and punctuation mistakes are acceptable.
     The meanings of the two sentences must express the exact same idea.
     Punctuation and word choice do not need to be exact.
     Reply "YES" if it is a correct translation.
@@ -128,7 +128,7 @@ async function dictationTest(transcript: string, phrase: Phrase) {
   following phrase aloud: ${phrase.ko} (${phrase.en}).
   The user read: ${transcript}
   Was the user correct?
-  Slight variations in spacing and punctuation are acceptable.
+  spacing and punctuation mistakes are acceptable.
   The meanings of the two sentences must express the exact same idea.
   Punctuation and word choice do not need to be exact.
   Reply "YES" if it is correct.
@@ -153,7 +153,7 @@ async function speakingTest(transcript: string, phrase: Phrase) {
     to translate the following phrase to Korean: ${phrase.en} (${phrase.ko}).
     The user said: ${transcript}
     Was the user correct?
-    Slight variations in spacing and punctuation are acceptable.
+    spacing and punctuation mistakes are acceptable.
     The meanings of the two sentences must express the exact same idea.
     Punctuation and word choice do not need to be exact.
     Reply "YES" if it is correct.
@@ -358,10 +358,11 @@ async function maybeCreatePhraseForUser(userId: string) {
     where: {
       flagged: false,
       userId,
+      total_attempts: 0
     },
   });
 
-  if (Math.random() > 0.8 || count < 10) {
+  if (count < 3) {
     let newPhrase = await randomNewPhrase();
     let attempts = 0;
     while (!newPhrase && attempts < 3) {
