@@ -1,6 +1,7 @@
 import { PhraseTable } from "@/components/phrase-table";
 import { trpc } from "@/utils/trpc";
 import { Container } from "@mantine/core";
+import Authed from "./_authed";
 
 const Edit: React.FC = () => {
   /** Call the "getAllPhrases" trpc method. */
@@ -9,7 +10,7 @@ const Edit: React.FC = () => {
   if (phrases.data) {
     content = <PhraseTable phrases={phrases.data} />;
   }
-  return <Container size="s">{content}</Container>;
+  return Authed(<Container size="s">{content}</Container>);
 };
 
 export default Edit;

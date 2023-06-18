@@ -41,7 +41,7 @@ export const PhraseTable: React.FC<PhraseTableProps> = ({ phrases }) => {
               <td>{phrase.en}</td>
               <td>{phrase.ko}</td>
               <td>{phrase.total_attempts}</td>
-              <td>{phrase.win_percentage}</td>
+              <td>{Math.round(phrase.win_percentage * 100)}</td>
               <td>
                 <Button onClick={() => router.push(`/cards/${phrase.id}`)}>
                   <IconPencil stroke={1.5} />

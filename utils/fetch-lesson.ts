@@ -76,7 +76,7 @@ async function getAudio(quizType: QuizType, _ko: string, _en: string) {
   switch (quizType) {
     case "dictation":
       innerSSML = [
-        en("Repeat after me: "),
+        en("Repeat: "),
         pause(250),
         ko(_ko),
         pause(250),
@@ -85,7 +85,7 @@ async function getAudio(quizType: QuizType, _ko: string, _en: string) {
       break;
     case "listening":
       innerSSML = [
-        en("Say this in English: "),
+        en("Say in English: "),
         pause(250),
         ko(_ko),
       ].join(" ");

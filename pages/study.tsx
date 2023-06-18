@@ -11,21 +11,50 @@ import {
   Text,
 } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
-import { signIn, useSession } from "next-auth/react";
 import { uid } from "radash";
 import * as React from "react";
+import Authed from "./_authed";
 
 type QuizResult = {
-  phrase: Phrase;
+  phrase: Quiz;
   pass: boolean;
-  // Can't use "id" as a React `key` prop because it's not unique
-  // across all quiz attempts (you can quiz on things twice).
   uid: string;
+};
+
+interface CappedStack<T> {
+  contents: T[];
+  limit: number;
+}
+
+type Quiz = {
+  id: number;
+  en: string;
+  ko: string;
+  win_percentage: number;
+  total_attempts: number;
+  quizType: "dictation" | "listening" | "speaking";
+  quizAudio: string;
+};
+
+type Props = {
+  quizzes: Quiz[];
+};
+
+function push<T>(stack: CappedStack<T>, item: T): CappedStack<T> {
+  const { contents, limit } = stack;
+  const newContents = [item, ...contents].slice(0, limit);
+  return { contents: newContents, limit };
+}
+
+const sounds = {
+  fail: () => playAudio("/sfx/beep.mp3"),
+  success: () => playAudio("/sfx/tada.mp3"),
+  error: () => playAudio("/sfx/flip.wav"),
 };
 
 type QuizResultListProps = {
   results: QuizResult[];
-  onFlag: (phrase: Phrase) => void;
+  onFlag: (phrase: Quiz) => void;
 };
 
 const QuizResultList: React.FC<QuizResultListProps> = ({ results, onFlag }) => {
@@ -80,152 +109,75 @@ const QuizResultList: React.FC<QuizResultListProps> = ({ results, onFlag }) => {
   );
 };
 
-interface CappedStack<T> {
-  contents: T[];
-  limit: number;
-}
-
-function push<T>(stack: CappedStack<T>, item: T): CappedStack<T> {
-  const { contents, limit } = stack;
-  const newContents = [item, ...contents].slice(0, limit);
-  return { contents: newContents, limit };
-}
-
-type Mutation = ReturnType<typeof trpc.speak.useMutation>["mutateAsync"];
-type Speech = Parameters<Mutation>[0]["text"];
-type Phrase = NonNullable<
-  ReturnType<typeof trpc.getNextPhrase.useMutation>["data"]
->;
-
-export const createQuizText = (phrase: Phrase) => {
-  let text: Speech = [
-    { kind: "ko", value: phrase?.ko ?? "" },
-    { kind: "pause", value: 500 },
-    { kind: "en", value: phrase?.en ?? "" },
-  ];
-  switch (phrase.quizType) {
-    case "dictation":
-      text = [
-        { kind: "en", value: "Repeat after me: " },
-        { kind: "pause", value: 250 },
-        { kind: "ko", value: phrase.ko },
-        { kind: "pause", value: 250 },
-        { kind: "slow", value: phrase.ko },
-      ];
-      break;
-    case "listening":
-      text = [
-        { kind: "en", value: "Say this in English: " },
-        { kind: "pause", value: 250 },
-        { kind: "ko", value: phrase.ko },
-      ];
-      break;
-    case "speaking":
-      text = [
-        { kind: "en", value: "Say this in Korean: " },
-        { kind: "pause", value: 250 },
-        { kind: "en", value: phrase.en },
-      ];
-      break;
-  }
-  return text;
-};
-
-const Recorder: React.FC = () => {
-  const performExam = trpc.performExam.useMutation();
-  const getPhrase = trpc.getNextPhrase.useMutation();
-  const failPhrase = trpc.failPhrase.useMutation();
-  const flagPhrase = trpc.flagPhrase.useMutation();
-  const speak = trpc.speak.useMutation();
-  const [phrase, setPhrase] = React.useState<Phrase | null>(null);
-  const [dataURI, setDataURI] = React.useState<string | null>(null);
+function Study({ quizzes }: Props) {
+  const [currentIndex, setIndex] = React.useState(quizzes.length - 1);
+  const quiz = quizzes[currentIndex];
   const [quizResults, setQuizResults] = React.useState<CappedStack<QuizResult>>(
     {
       contents: [],
       limit: 5,
     }
   );
-  const { status } = useSession();
+
+  if (!quiz) {
+    return <div>Done!</div>;
+  }
+
+  const performExam = trpc.performExam.useMutation();
+  const failPhrase = trpc.failPhrase.useMutation();
+  const flagPhrase = trpc.flagPhrase.useMutation();
   const doFail = async () => {
-    phrase &&
-      setQuizResults(
-        push(quizResults, {
-          phrase,
-          pass: true,
-          uid: uid(8),
-        })
-      );
+    setQuizResults(
+      push(quizResults, {
+        phrase: quiz,
+        pass: true,
+        uid: uid(8),
+      })
+    );
     sounds.fail();
-    await failPhrase.mutate({ id: phrase?.id ?? 0 });
-    doSetPhrase();
+    await failPhrase.mutate({ id: quiz.id });
+    gotoNextPhrase();
   };
-  const doFlag = async (id = phrase?.id ?? 0) => {
+  const doFlag = async (id = quiz.id) => {
     await flagPhrase.mutate({ id });
-    doSetPhrase();
-  };
-  const sounds = {
-    fail: () => playAudio("/sfx/beep.mp3"),
-    success: () => playAudio("/sfx/tada.mp3"),
-    error: () => playAudio("/sfx/flip.wav"),
+    gotoNextPhrase();
   };
   useHotkeys([
     ["f", doFail],
     ["r", () => doFlag()],
   ]);
-  const talk = async (text: Speech) => {
-    setDataURI(await speak.mutateAsync({ text }));
-  };
-
-  const doSetPhrase = async () => {
-    const p = await getPhrase.mutateAsync({});
-    setPhrase(p);
-    talk(createQuizText(p));
+  const gotoNextPhrase = async () => {
+    const nextIndex = currentIndex - 1;
+    setIndex(nextIndex);
+    const p = quizzes[nextIndex];
+    playAudio(p.quizAudio);
     return p;
   };
-
-  React.useEffect(() => {
-    if (status === "authenticated" && !phrase) {
-      doSetPhrase();
-    }
-  }, [status]);
-
-  if (status === "unauthenticated")
-    return <Button onClick={() => signIn()}>🔑Login</Button>;
-  if (status === "loading") return <Button>🌀Authenticating...</Button>;
-  if (!phrase) return <Button>📖Loading Phrase</Button>;
-
   const sendAudio = async (audio: string) => {
     const { result } = await performExam.mutateAsync({
-      id: phrase.id,
+      id: quiz.id,
       audio,
-      quizType: phrase.quizType,
+      quizType: quiz.quizType,
     });
-    const passFail = {
-      phrase,
-      pass: true,
-      uid: uid(8),
-    };
+    const passFail = { phrase: quiz, pass: true, uid: uid(8) };
     switch (result) {
       case "success":
       case "error":
         setQuizResults(push(quizResults, passFail));
-        setTimeout(doSetPhrase, 1500);
+        setTimeout(gotoNextPhrase, 800);
         sounds[result]();
         break;
       case "failure":
         passFail.pass = false;
         setQuizResults(push(quizResults, passFail));
-        // TODO: Auto-skip to next phrase.
-        // Can't do it currently because <PlayButton /> does not have an "onEnd" callback.
         sounds.fail();
-        talk(createQuizText(phrase));
+        console.log(
+          "TODO: Make sure this works. Might not be correct not sure."
+        );
+        playAudio(quiz.quizAudio);
         break;
     }
   };
-
-  if (!dataURI) {
-    return <Button>🔊Loading Audio</Button>;
-  }
 
   return (
     <Container size="xs">
@@ -242,10 +194,10 @@ const Recorder: React.FC = () => {
       </Header>
       <Grid grow justify="center" align="center">
         <Grid.Col span={4}>
-          <PlayButton dataURI={dataURI} />
+          <PlayButton dataURI={quiz.quizAudio} />
         </Grid.Col>
         <Grid.Col span={4}>
-          <RecordButton quizType={phrase.quizType} onRecord={sendAudio} />
+          <RecordButton quizType={quiz.quizType} onRecord={sendAudio} />
         </Grid.Col>
         <Grid.Col span={4}>
           <Button onClick={doFail} fullWidth>
@@ -253,8 +205,8 @@ const Recorder: React.FC = () => {
           </Button>
         </Grid.Col>
         <Grid.Col span={4}>
-          <Button onClick={doSetPhrase} fullWidth>
-            🚩[R]eport Item #{phrase.id}
+          <Button onClick={gotoNextPhrase} fullWidth>
+            🚩[R]eport Item #{quiz.id}
           </Button>
         </Grid.Col>
       </Grid>
@@ -264,12 +216,17 @@ const Recorder: React.FC = () => {
       />
     </Container>
   );
-};
+}
+
+function StudyLoader() {
+  const { data } = trpc.getNextQuizzes.useQuery({});
+  if (data) {
+    return <Study quizzes={data} />;
+  } else {
+    return <div>Loading...</div>;
+  }
+}
 
 export default function Main() {
-  return (
-    <div>
-      <Recorder />
-    </div>
-  );
+  return Authed(<StudyLoader />);
 }

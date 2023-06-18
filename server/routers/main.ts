@@ -188,6 +188,7 @@ export const appRouter = router({
     .query(async ({ ctx }) => {
       return await prismaClient.phrase.findMany({
         where: { userId: ctx.user?.id || "000" },
+        orderBy: { total_attempts: "desc" },
       });
     }),
   editPhrase: procedure
@@ -279,7 +280,7 @@ export const appRouter = router({
         });
       }
     }),
-  getNextPhrases: procedure
+  getNextQuizzes: procedure
     .input(z.object({}))
     .output(
       z.array(
@@ -288,12 +289,13 @@ export const appRouter = router({
           en: z.string(),
           ko: z.string(),
           quizType,
+          quizAudio: z.string(),
           win_percentage: z.number(),
           total_attempts: z.number(),
         })
       )
     )
-    .mutation(async ({ ctx }) => {
+    .query(async ({ ctx }) => {
       const userId = ctx.user?.id;
       if (!userId) {
         throw new Error("User not found");
