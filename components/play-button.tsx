@@ -3,14 +3,21 @@ import { useHotkeys } from "@mantine/hooks";
 import { useEffect } from "react";
 
 let audioContext: AudioContext;
+let audioQueue: string[] = [];
+let currentlyPlaying = false;
 
-// Helper function to play audio from an AudioBuffer
 const playAudioBuffer = (buffer: AudioBuffer): Promise<void> => {
   return new Promise((resolve) => {
     const source = audioContext.createBufferSource();
     source.buffer = buffer;
     source.connect(audioContext.destination);
-    source.onended = () => resolve();
+    source.onended = () => {
+      currentlyPlaying = false;
+      resolve();
+      if (audioQueue.length > 0) {
+        playAudio(audioQueue.shift() as string);
+      }
+    };
     source.start(0);
   });
 };
@@ -21,23 +28,24 @@ export const playAudio = (urlOrDataURI: string): Promise<void> => {
       resolve();
     }
 
-    // Create an AudioContext if it doesn't exist yet
+    if (currentlyPlaying) {
+      audioQueue.push(urlOrDataURI);
+      return;
+    }
+
+    currentlyPlaying = true;
+
     if (!audioContext) {
       audioContext = new AudioContext();
     }
 
-    // Check if the input is a data URI or a URL
     if (urlOrDataURI.startsWith("data:")) {
-      // It's a data URI
-
-      // Decode the audio data from the data URI
       const audioData = atob(urlOrDataURI.split(",")[1]);
       const audioArray = new Uint8Array(audioData.length);
       for (let i = 0; i < audioData.length; i++) {
         audioArray[i] = audioData.charCodeAt(i);
       }
 
-      // Decode the audio data and play it
       audioContext.decodeAudioData(
         audioArray.buffer,
         (buffer) => {
@@ -46,9 +54,6 @@ export const playAudio = (urlOrDataURI: string): Promise<void> => {
         (e) => reject(e)
       );
     } else {
-      // It's a URL
-
-      // Fetch the audio data from the URL
       fetch(urlOrDataURI)
         .then((response) => response.arrayBuffer())
         .then((arrayBuffer) => audioContext.decodeAudioData(arrayBuffer))
