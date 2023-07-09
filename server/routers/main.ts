@@ -1,12 +1,13 @@
 import { prismaClient } from "@/server/prisma-client";
 import { Lang, transcribeB64 } from "@/utils/transcribe";
 import { Phrase } from "@prisma/client";
-import { Configuration, CreateCompletionRequest, OpenAIApi } from "openai";
+import { Configuration, CreateChatCompletionRequest, CreateCompletionRequest, OpenAIApi } from "openai";
 import { sleep } from "radash";
 import { z } from "zod";
 import { procedure, router } from "../trpc";
 import { randomNewPhrase } from "@/experimental/random";
 import getLessons from "@/utils/fetch-lesson";
+import { randomNew } from "@/experimental/random-new";
 
 const PROMPT_CONFIG = { best_of: 2, temperature: 0.4 };
 
@@ -21,8 +22,12 @@ export const openai = new OpenAIApi(configuration);
 
 type AskOpts = Partial<CreateCompletionRequest>;
 
+export async function askRaw(opts: CreateChatCompletionRequest) {
+  return await openai.createChatCompletion(opts);
+}
+
 export async function ask(prompt: string, opts: AskOpts = {}) {
-  const resp = await openai.createChatCompletion({
+  const resp = await askRaw({
     model: "gpt-3.5-turbo",
     messages: [
       {
@@ -171,6 +176,15 @@ const quizType = z.union([
 ]);
 
 export const appRouter = router({
+  /** The `faucet` route is a mutation that returns a "Hello, world" string
+   * and takes an empty object as its only argument. */
+  faucet: procedure
+    .input(z.object({}))
+    .output(z.object({ message: z.string() }))
+    .mutation(async () => {
+      const phrase = await randomNew();
+      return { message: JSON.stringify(phrase, null, 2) };
+    }),
   getAllPhrases: procedure
     .input(z.object({}))
     .output(
@@ -358,7 +372,7 @@ async function maybeCreatePhraseForUser(userId: string) {
     where: {
       flagged: false,
       userId,
-      total_attempts: 0
+      total_attempts: 0,
     },
   });
 
