@@ -63,6 +63,12 @@ const KO_EN = {
   },
 };
 
+const GLOBAL_PROMPT = [
+  `The example MUST be less than 13 syllables in length.`,
+  `Use a spoken 해요체 speech style.`,
+  `Do not return anything except a Korean sentence.`,
+].join("\n");
+
 const CONF = {
   n: 4,
   temperature: 1,
@@ -78,31 +84,26 @@ function syllables(sentence: string): number {
   // Return the count of Korean syllables
   return koreanSyllables ? koreanSyllables.length : 0;
 }
+const askRandom = async (data: string | null, prompt: string) => {
+  if (!data) {
+    throw new Error("No data to prompt on");
+  }
+  const resp = await ask([data, `===`, prompt, GLOBAL_PROMPT].join("\n"), CONF);
+  return resp;
+};
 
 const randomGrammar = async () => {
   const grammar = draw(
     Object.entries(koreanGrammar).map((x) => x.join(" => "))
   );
-  const prompt = [
-    `Create a random phrase for a Korean language student using the grammar above.`,
-    `The example MUST be less than 13 syllables in length.`,
-    `Use a spoken 해요체 speech style.`,
-    `Do not return anything except a Korean sentence.`,
-  ].join("\n");
-  const resp = await ask([grammar, `===`, prompt].join("\n"), CONF);
-  return resp;
+  const prompt = `Create a random phrase for a Korean language student using the grammar above.`;
+  return askRandom(grammar, prompt);
 };
 
 const randomVocab = async () => {
   const vocab = draw(koreanWords);
-  const prompt = [
-    `Create a random phrase for a Korean language student using the word above.`,
-    `The example MUST be less than 13 syllables in length.`,
-    `Use a spoken 해요체 speech style.`,
-    `Do not return anything except a Korean sentence.`,
-  ].join("\n");
-  const resp = await ask([vocab, `===`, prompt].join("\n"), CONF);
-  return resp;
+  const prompt = `Create a random phrase for a Korean language student using the word above.`;
+  return askRandom(vocab, prompt);
 };
 
 const yesOrNo = async (content: string): Promise<"yes" | "no"> => {
@@ -139,10 +140,6 @@ const translate = async (ko: string) => {
     .map((x) => JSON.parse(x))[0] as KoEn;
 };
 
-const pickShortest = (sentences: string[]) => {
-  return sentences.reduce((a, b) => (syllables(a) <= syllables(b) ? a : b));
-};
-
 export async function maybeGeneratePhrase() {
   try {
     const fn = draw(shuffle([randomGrammar, randomVocab]));
@@ -155,7 +152,7 @@ export async function maybeGeneratePhrase() {
         ok.push(sentence);
       }
     }
-    const untranslated = pickShortest(ok);
+    const untranslated = draw(ok);
     if (untranslated) {
       return await translate(untranslated);
     }
