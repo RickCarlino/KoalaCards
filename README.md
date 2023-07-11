@@ -6,9 +6,9 @@
 
 Hey there! Welcome to KoalaSRS, a fun and friendly Korean-only [spaced repetition system](https://en.wikipedia.org/wiki/Spaced_repetition) that's all about listening and speaking skills. We teach vocabulary using fully-formed sentences, not just boring word/definition pairs. KoalaSRS captures your voice input using speech-to-text and uses the super-smart GPT-3 for human-like test assessments and corrections. That means that the app is clever enough to mark your answers as "close enough" and can even give you optional feedback about _why_ you were wrong (Called "coaching"- UI is not built yet but early experiments are promising). It can explain sentences that don't make sense or have unknown vocabulary. 🧠
 
-## Private Beta 
+## Private Alpha
 
-I am running a privately hosted server instance of this server. Please contact me via my blog/LinkedIn/Mastodon/etc if you are interested in trying it out.
+I am privately hosting an instance of KoalaSRS. Please contact me via my blog/LinkedIn/Mastodon/etc if you are interested in trying it out or want to help with alpha testing.
 
 ## UNDER CONSTRUCTION ⚠️
 

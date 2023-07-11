@@ -18,3 +18,5 @@
 "정답을 맞췄어요.", "You got the answer right."
 "잠을 많이 자고 일찍 일어나요.", "I sleep a lot and wake up early."
 "매일 아침 기도해.", "I pray every morning."
+"이번 주말에 비올 리가 없어요.", "It's not going to rain this weekend."
+"어제 친구와 통화했어요.", "Yesterday, I had a conversation with my friend."
