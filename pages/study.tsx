@@ -159,6 +159,11 @@ function Study({ quizzes }: Props) {
     const nextIndex = currentIndex - 1;
     setIndex(nextIndex);
     const p = quizzes[nextIndex];
+    if (!p) {
+      // This usually happens on
+      // new accounts with < 10 cards.
+      return;
+    }
     await playAudio(p.quizAudio);
     return p;
   };
