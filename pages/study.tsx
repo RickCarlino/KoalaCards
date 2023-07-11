@@ -115,6 +115,52 @@ const QuizResultList: React.FC<QuizResultListProps> = ({ results, onFlag }) => {
   );
 };
 
+interface CurrentQuizProps {
+  quiz?: Quiz;
+  sendAudio: (audio: string) => void;
+  doFail: () => void;
+  doFlag: (id?: number) => void;
+}
+
+function CurrentQuiz(props: CurrentQuizProps) {
+  const { quiz, sendAudio, doFail, doFlag } = props;
+  if (!quiz) {
+    return (
+      <Grid grow justify="center" align="center">
+        <Grid.Col span={4}>
+          <p>The session is over.</p>
+        </Grid.Col>
+        <Grid.Col span={4}>
+          <Button onClick={() => location.reload()} fullWidth>
+            Begin Next Session
+          </Button>
+        </Grid.Col>
+      </Grid>
+    );
+  }
+
+  return (
+    <Grid grow justify="center" align="center">
+      <Grid.Col span={4}>
+        <PlayButton dataURI={quiz.quizAudio} />
+      </Grid.Col>
+      <Grid.Col span={4}>
+        <RecordButton quizType={quiz.quizType} onRecord={sendAudio} />
+      </Grid.Col>
+      <Grid.Col span={4}>
+        <Button onClick={doFail} fullWidth>
+          ❌[F]ail Item
+        </Button>
+      </Grid.Col>
+      <Grid.Col span={4}>
+        <Button onClick={() => doFlag(quiz.id)} fullWidth>
+          🚩Flag Item[R] #{quiz.id}
+        </Button>
+      </Grid.Col>
+    </Grid>
+  );
+}
+
 function Study({ quizzes }: Props) {
   const [currentIndex, setIndex] = React.useState(quizzes.length - 1);
   const quiz: Quiz | undefined = quizzes[currentIndex];
@@ -130,6 +176,7 @@ function Study({ quizzes }: Props) {
   const flagPhrase = trpc.flagPhrase.useMutation();
 
   const doFail = async () => {
+    if (!quiz) return;
     setQuizResults(
       push(quizResults, {
         phrase: quiz,
@@ -146,10 +193,6 @@ function Study({ quizzes }: Props) {
     ["f", doFail],
     ["r", () => doFlag()],
   ]);
-
-  if (!quiz) {
-    return <div>Done!</div>;
-  }
 
   const doFlag = async (id = quiz.id) => {
     await flagPhrase.mutate({ id });
@@ -178,8 +221,12 @@ function Study({ quizzes }: Props) {
     await sounds[result]();
     gotoNextPhrase();
   };
-  const difficultWord = (quiz.win_percentage < 0.33 || quiz.total_attempts < 2) && quiz.quizType !== "speaking";
   const header = (() => {
+    if (!quiz) return <span></span>;
+    const difficultWord =
+      quiz &&
+      (quiz.win_percentage < 0.33 || quiz.total_attempts < 2) &&
+      quiz.quizType !== "speaking";
     if (difficultWord) {
       return (
         <span>
@@ -208,24 +255,12 @@ function Study({ quizzes }: Props) {
         <span style={{ fontSize: "24px", fontWeight: "bold" }}>Study</span>
       </Header>
       {header}
-      <Grid grow justify="center" align="center">
-        <Grid.Col span={4}>
-          <PlayButton dataURI={quiz.quizAudio} />
-        </Grid.Col>
-        <Grid.Col span={4}>
-          <RecordButton quizType={quiz.quizType} onRecord={sendAudio} />
-        </Grid.Col>
-        <Grid.Col span={4}>
-          <Button onClick={doFail} fullWidth>
-            ❌[F]ail Item
-          </Button>
-        </Grid.Col>
-        <Grid.Col span={4}>
-          <Button onClick={() => doFlag(quiz.id)} fullWidth>
-            🚩Flag Item[R] #{quiz.id}
-          </Button>
-        </Grid.Col>
-      </Grid>
+      <CurrentQuiz
+        doFail={doFail}
+        sendAudio={sendAudio}
+        doFlag={doFlag}
+        quiz={quiz}
+      />
       <QuizResultList
         results={quizResults.contents}
         onFlag={({ id }) => doFlag(id)}
