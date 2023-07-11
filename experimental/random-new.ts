@@ -2,6 +2,7 @@ import { draw, shuffle } from "radash";
 import { koreanGrammar } from "./korean-grammar";
 import { koreanWords } from "./korean-words";
 import { ask, askRaw } from "@/server/routers/main";
+import { appendFileSync } from "fs";
 
 const YES_OR_NO = {
   name: "answer",
@@ -65,7 +66,7 @@ const KO_EN = {
 
 const GLOBAL_PROMPT = [
   `The example MUST be less than 13 syllables in length.`,
-  `Use a spoken 해요체 speech style.`,
+  `Conjugate all sentences in the -요 form.`,
   `Do not return anything except a Korean sentence.`,
 ].join("\n");
 
@@ -135,9 +136,10 @@ const translate = async (ko: string) => {
     functions: [KO_EN],
   });
   type KoEn = Record<"ko" | "en", string> | undefined;
-  return answer.data.choices
+  const resp = answer.data.choices
     .map((x) => JSON.stringify(x.message?.function_call?.arguments))
-    .map((x) => JSON.parse(x))[0] as KoEn;
+    .map((x) => JSON.parse(x))[0];
+  return JSON.parse(resp) as KoEn;
 };
 
 export async function maybeGeneratePhrase() {
@@ -166,7 +168,8 @@ export const randomNew = async () => {
   for (let i = 0; i <= 3; i++) {
     const result = await maybeGeneratePhrase();
     if (result) {
-      console.log(result);
+      const text = Object.values(result).map(x => JSON.stringify(x)).join(", ");
+      appendFileSync("phrases.txt", text + "\n", "utf8");
       return result;
     } else {
       console.log("Nope?");

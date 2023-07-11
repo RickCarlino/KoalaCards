@@ -1,0 +1,4 @@
+"나는 내일 비가 올지도 모른다.","I don't know if it will rain tomorrow."
+"필통이 필요해요.", "I need a pencil case."
+"공부하기 위해 도서관에 가요.", "I go to the library to study."
+"학교에 가곤 하지요.", "I often go to school."
