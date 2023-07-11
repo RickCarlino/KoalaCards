@@ -110,7 +110,7 @@ const yesOrNo = async (content: string): Promise<"yes" | "no"> => {
     messages: [{ role: "user", content }],
     model: "gpt-4-0613", // GPT 3.5 is not good enough for this task.
     n: 3,
-    temperature: 0.8,
+    temperature: 1.0,
     function_call: { name: "answer" },
     functions: [YES_OR_NO],
   });
@@ -169,7 +169,10 @@ export const randomNew = async () => {
   for (let i = 0; i <= 3; i++) {
     const result = await maybeGeneratePhrase();
     if (result) {
+      console.log(result);
       return result;
+    } else {
+      console.log("Nope?");
     }
   }
   throw new Error("randomNew function failed more than 3 times");

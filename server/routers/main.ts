@@ -1,11 +1,14 @@
 import { prismaClient } from "@/server/prisma-client";
 import { Lang, transcribeB64 } from "@/utils/transcribe";
 import { Phrase } from "@prisma/client";
-import { Configuration, CreateChatCompletionRequest, CreateCompletionRequest, OpenAIApi } from "openai";
-import { sleep } from "radash";
+import {
+  Configuration,
+  CreateChatCompletionRequest,
+  CreateCompletionRequest,
+  OpenAIApi,
+} from "openai";
 import { z } from "zod";
 import { procedure, router } from "../trpc";
-import { randomNewPhrase } from "@/experimental/random";
 import getLessons from "@/utils/fetch-lesson";
 import { randomNew } from "@/experimental/random-new";
 
@@ -377,24 +380,15 @@ async function maybeCreatePhraseForUser(userId: string) {
   });
 
   if (count < 3) {
-    let newPhrase = await randomNewPhrase();
-    let attempts = 0;
-    while (!newPhrase && attempts < 3) {
-      console.log("Trying again...");
-      attempts++;
-      await sleep(333);
-      newPhrase = await randomNewPhrase();
-    }
-    if (newPhrase) {
-      await prismaClient.phrase.create({
-        data: {
-          ko: newPhrase.ko,
-          en: newPhrase.en,
-          userId,
-        },
-      });
-      console.log("Created new phrase:");
-      console.log(JSON.stringify(newPhrase, null, 2));
-    }
+    let newPhrase = await randomNew();
+    await prismaClient.phrase.create({
+      data: {
+        ko: newPhrase.ko,
+        en: newPhrase.en,
+        userId,
+      },
+    });
+    console.log("Created new phrase:");
+    console.log(JSON.stringify(newPhrase, null, 2));
   }
 }
