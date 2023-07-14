@@ -91,7 +91,7 @@ The source code is permissively licensed and open for review by software develop
 
 ## Costs (April 2023) 💰
 
-The app uses Google Cloud and OpenAI APIs, and neither of these services is free. A 15 minute session on the app costs about $0.01 USD for GPT-3.5 access, while the cost of Speech-to-text/Text-to-speech for a much longer session is 1 cent USD / session. Because of caching mechanisms, text-to-speech becomes cheaper over time.
+The app uses Google Cloud and OpenAI APIs, and neither of these services is free. Doing two sessions which generate three new phrases (while reviewing older phrases) costs $0.04 in July of 2023. Phrase generation is significantly more expensive than reviewing. The cost of Speech-to-text/Text-to-speech for a much longer session is 1 cent USD / session. Because of caching mechanisms, text-to-speech becomes cheaper over time.
 
 ## Better Name Needed 📛
 
