@@ -1,6 +1,5 @@
 import { Button } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
-import { useCallback, useEffect } from "react";
 
 let audioContext: AudioContext;
 let audioQueue: string[] = [];
@@ -22,23 +21,8 @@ const playAudioBuffer = (buffer: AudioBuffer): Promise<void> => {
   });
 };
 
-let last = '';
 export const playAudio = (urlOrDataURI: string): Promise<void> => {
   return new Promise((resolve, reject) => {
-    /**
-     * === BEGIN HACK ===
-     *
-     * The audio plays twice on dev and I don't have time to
-     * investigate now. Will fix later.
-     *
-     */
-    const _next = urlOrDataURI.slice(0, 50);
-    if (last === _next) {
-      resolve();
-      return;
-    }
-    last = _next;
-    /** === END HACK === */
 
     if (!urlOrDataURI) {
       resolve();
@@ -81,17 +65,12 @@ export const playAudio = (urlOrDataURI: string): Promise<void> => {
 
 /** A React component  */
 export function PlayButton({ dataURI }: { dataURI?: string }) {
-  const playSound = useCallback(() => {
+  const playSound = () => {
     if (dataURI) {
       playAudio(dataURI);
     }
-  }, [dataURI]);
-
+  };
   useHotkeys([["c", playSound]]);
-
-  useEffect(() => {
-    playSound();
-  }, [playSound]);
 
   if (!dataURI) {
     return (
