@@ -94,15 +94,14 @@ const askRandom = async (data: string | null, prompt: string) => {
 };
 
 const randomGrammar = async () => {
-  const grammar = draw(
-    Object.entries(koreanGrammar).map((x) => x.join(" => "))
-  );
+  const x = Object.entries(koreanGrammar).map((x) => x.join(" => "));
+  const grammar = draw(shuffle(x));
   const prompt = `Create a random phrase for a Korean language student using the grammar above.`;
   return askRandom(grammar, prompt);
 };
 
 const randomVocab = async () => {
-  const vocab = draw(koreanWords);
+  const vocab = draw(shuffle(koreanWords));
   const prompt = `Create a random phrase for a Korean language student using the word above.`;
   return askRandom(vocab, prompt);
 };

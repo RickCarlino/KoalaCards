@@ -16,7 +16,7 @@ import * as React from "react";
 import Authed from "./_authed";
 
 type QuizResult = {
-  phrase: Quiz;
+  card: Quiz;
   result: "error" | "success" | "failure";
   uid: string;
 };
@@ -54,7 +54,7 @@ const sounds = {
 
 type QuizResultListProps = {
   results: QuizResult[];
-  onFlag: (phrase: Quiz) => void;
+  onFlag: (card: Quiz) => void;
 };
 
 const QuizResultList: React.FC<QuizResultListProps> = ({ results, onFlag }) => {
@@ -73,7 +73,7 @@ const QuizResultList: React.FC<QuizResultListProps> = ({ results, onFlag }) => {
             color = "yellow";
             break;
         }
-        const { phrase, uid } = result;
+        const { card, uid } = result;
         return (
           <Card
             key={uid}
@@ -91,10 +91,10 @@ const QuizResultList: React.FC<QuizResultListProps> = ({ results, onFlag }) => {
               }}
             >
               <Badge variant={"filled"} color={color}>
-                {phrase.quizType}
+                {card.quizType}
               </Badge>
               <Button
-                onClick={() => onFlag(phrase)}
+                onClick={() => onFlag(card)}
                 variant="link"
                 color="gray"
                 size="xs"
@@ -103,10 +103,10 @@ const QuizResultList: React.FC<QuizResultListProps> = ({ results, onFlag }) => {
               </Button>
             </div>
             <Text size="lg" weight={500}>
-              {phrase.ko}
+              {card.ko}
             </Text>
             <Text size="sm" color="gray">
-              {phrase.en}
+              {card.en}
             </Text>
           </Card>
         );
@@ -179,7 +179,7 @@ function Study({ quizzes }: Props) {
     if (!quiz) return;
     setQuizResults(
       push(quizResults, {
-        phrase: quiz,
+        card: quiz,
         result: "failure",
         uid: uid(8),
       })
@@ -216,7 +216,7 @@ function Study({ quizzes }: Props) {
       audio,
       quizType: quiz.quizType,
     });
-    const passFail = { phrase: quiz, result, uid: uid(8) };
+    const passFail = { card: quiz, result, uid: uid(8) };
     setQuizResults(push(quizResults, passFail));
     await sounds[result]();
     gotoNextPhrase();
@@ -236,7 +236,7 @@ function Study({ quizzes }: Props) {
     } else {
       return (
         <span>
-          🫣 Phrase #{quiz.id} grade: {Math.round(quiz.win_percentage * 100)}%
+          🫣 Card #{quiz.id} grade: {Math.round(quiz.win_percentage * 100)}%
         </span>
       );
     }

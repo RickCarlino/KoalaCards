@@ -16,7 +16,7 @@ const randomVoice = () => draw(VOICES) || VOICES[0];
 
 /** Generates a file path for where to store the MP3
  * file. The path is combination of the language code
- * and an MD5 hash of the phrase being synthesized. */
+ * and an MD5 hash of the card being synthesized. */
 const filePathFor = (text: string, voice: string) => {
   const hash = createHash("md5").update(text).digest("hex");
   const langCode = voice.split("-")[0];
@@ -94,29 +94,29 @@ async function getAudio(quizType: QuizType, _ko: string, _en: string) {
 }
 
 export default async function getLessons(userId: string) {
-  const phrases = await prismaClient.phrase.findMany({
+  const cards = await prismaClient.card.findMany({
     where: { flagged: false, userId },
     orderBy: [{ win_percentage: "asc" }, { total_attempts: "asc" }],
     take: 10,
   });
-  const quizzes = phrases.map(async (phrase) => {
+  const quizzes = cards.map(async (card) => {
     let quizType: QuizType;
-    if (phrase.win_percentage < 0.33) {
+    if (card.win_percentage < 0.33) {
       quizType = "dictation";
     } else {
       quizType = draw(["listening", "speaking"]) ?? "listening";
     }
-    const en = phrase.en ?? "";
-    const ko = phrase.ko ?? "";
+    const en = card.en ?? "";
+    const ko = card.ko ?? "";
     const quizAudio = await getAudio(quizType, ko, en);
     return {
-      id: phrase.id,
+      id: card.id,
       en,
       ko,
       quizType,
       quizAudio,
-      win_percentage: phrase.win_percentage,
-      total_attempts: phrase.total_attempts,
+      win_percentage: card.win_percentage,
+      total_attempts: card.total_attempts,
     };
   });
   return Promise.all(quizzes);

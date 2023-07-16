@@ -123,7 +123,7 @@ export function RecordButton(props: Props) {
   let buttonText = "Recor[d]";
   switch (props.quizType) {
     case "dictation":
-      buttonText = "Repeat Phrase";
+      buttonText = "Repeat Card";
       break;
     case "listening":
       buttonText = "Translate to EN";

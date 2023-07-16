@@ -1,5 +1,5 @@
 import { Button, Grid, Table } from "@mantine/core";
-import { Phrase } from "@prisma/client";
+import { Card } from "@prisma/client";
 import { IconPencil } from "@tabler/icons-react";
 import { useRouter } from "next/router";
 import React from "react";
@@ -12,12 +12,12 @@ type Keys =
   | "win_percentage"
   | "flagged";
 
-type LocalPhrase = Pick<Phrase, Keys>;
+type LocalPhrase = Pick<Card, Keys>;
 interface PhraseTableProps {
-  phrases: LocalPhrase[];
+  cards: LocalPhrase[];
 }
 
-export const PhraseTable: React.FC<PhraseTableProps> = ({ phrases }) => {
+export const CardTable: React.FC<PhraseTableProps> = ({ cards }) => {
   const router = useRouter();
   return (
     <Grid>
@@ -34,16 +34,16 @@ export const PhraseTable: React.FC<PhraseTableProps> = ({ phrases }) => {
           </tr>
         </thead>
         <tbody>
-          {phrases.map((phrase) => (
-            <tr key={phrase.id}>
-              <td>{phrase.id}</td>
-              <td>{phrase.flagged ? "🚩" : ""}</td>
-              <td>{phrase.en}</td>
-              <td>{phrase.ko}</td>
-              <td>{phrase.total_attempts}</td>
-              <td>{Math.round(phrase.win_percentage * 100)}</td>
+          {cards.map((card) => (
+            <tr key={card.id}>
+              <td>{card.id}</td>
+              <td>{card.flagged ? "🚩" : ""}</td>
+              <td>{card.en}</td>
+              <td>{card.ko}</td>
+              <td>{card.total_attempts}</td>
+              <td>{Math.round(card.win_percentage * 100)}</td>
               <td>
-                <Button onClick={() => router.push(`/cards/${phrase.id}`)}>
+                <Button onClick={() => router.push(`/cards/${card.id}`)}>
                   <IconPencil stroke={1.5} />
                 </Button>
               </td>

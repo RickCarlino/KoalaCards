@@ -1,6 +1,6 @@
 import { prismaClient } from "@/server/prisma-client";
 import { Lang, transcribeB64 } from "@/utils/transcribe";
-import { Phrase } from "@prisma/client";
+import { Card } from "@prisma/client";
 import {
   Configuration,
   CreateChatCompletionRequest,
@@ -76,20 +76,20 @@ const NEXT_QUIZ_TYPES: Record<string, string | undefined> = {
   speaking: "listening",
 };
 
-const markIncorrect = async (phrase: Phrase) => {
-  await prismaClient.phrase.update({
-    where: { id: phrase.id },
+const markIncorrect = async (card: Card) => {
+  await prismaClient.card.update({
+    where: { id: card.id },
     data: {
       loss_count: { increment: 1 },
       total_attempts: { increment: 1 },
-      win_percentage: phrase.win_count / (phrase.total_attempts + 1),
+      win_percentage: card.win_count / (card.total_attempts + 1),
       last_win_at: undefined,
       next_quiz_type: "dictation",
     },
   });
 };
 
-const markCorrect = async (phrase: Phrase) => {
+const markCorrect = async (card: Card) => {
   /** Increase `win_count`, `total_attempts`.
     Recalculate `win_percentage`.
     Set last `last_win_at` to current time.
@@ -101,39 +101,39 @@ const markCorrect = async (phrase: Phrase) => {
     | "dictation"   | "listening"   |
     | "listening"   | "speaking"    |
     | All others    | "dictation"   | */
-  await prismaClient.phrase.update({
-    where: { id: phrase.id },
+  await prismaClient.card.update({
+    where: { id: card.id },
     data: {
       win_count: { increment: 1 },
       total_attempts: { increment: 1 },
-      win_percentage: (phrase.win_count + 1) / (phrase.total_attempts + 1),
+      win_percentage: (card.win_count + 1) / (card.total_attempts + 1),
       last_win_at: { set: new Date() },
       next_quiz_type:
-        NEXT_QUIZ_TYPES[phrase.next_quiz_type ?? "dictation"] ?? "dictation",
+        NEXT_QUIZ_TYPES[card.next_quiz_type ?? "dictation"] ?? "dictation",
     },
   });
 };
 
-async function gradeResp(answer: string = "", phrase: Phrase) {
+async function gradeResp(answer: string = "", card: Card) {
   const cleanAnswer = cleanYesNo(answer);
   switch (cleanAnswer) {
     case "YES":
-      await markCorrect(phrase);
+      await markCorrect(card);
       return true;
     case "NO":
       console.log(answer);
-      await markIncorrect(phrase);
+      await markIncorrect(card);
       return false;
     default:
       throw new Error("Invalid answer: " + JSON.stringify(answer));
   }
 }
 
-async function dictationTest(transcript: string, phrase: Phrase) {
+async function dictationTest(transcript: string, card: Card) {
   const [answer] = await ask(
     `
   A Korean language learning app user was asked to read the
-  following phrase aloud: ${phrase.ko} (${phrase.en}).
+  following phrase aloud: ${card.ko} (${card.en}).
   The user read: ${transcript}
   Was the user correct?
   spacing and punctuation mistakes are acceptable.
@@ -146,19 +146,19 @@ async function dictationTest(transcript: string, phrase: Phrase) {
   `,
     PROMPT_CONFIG
   );
-  return gradeResp(answer, phrase);
+  return gradeResp(answer, card);
 }
 
-async function listeningTest(transcript: string, phrase: Phrase) {
-  const p = translationPrompt(phrase.ko, transcript);
+async function listeningTest(transcript: string, card: Card) {
+  const p = translationPrompt(card.ko, transcript);
   const [answer] = await ask(p, PROMPT_CONFIG);
-  return gradeResp(answer, phrase);
+  return gradeResp(answer, card);
 }
 
-async function speakingTest(transcript: string, phrase: Phrase) {
+async function speakingTest(transcript: string, card: Card) {
   const [answer] = await ask(
     `An English-speaking Korean language learning app user was asked
-    to translate the following phrase to Korean: ${phrase.en} (${phrase.ko}).
+    to translate the following phrase to Korean: ${card.en} (${card.ko}).
     The user said: ${transcript}
     Was the user correct?
     spacing and punctuation mistakes are acceptable.
@@ -169,7 +169,7 @@ async function speakingTest(transcript: string, phrase: Phrase) {
     `,
     PROMPT_CONFIG
   );
-  return gradeResp(answer, phrase);
+  return gradeResp(answer, card);
 }
 
 const quizType = z.union([
@@ -185,8 +185,8 @@ export const appRouter = router({
     .input(z.object({}))
     .output(z.object({ message: z.string() }))
     .mutation(async () => {
-      const phrase = await randomNew();
-      return { message: JSON.stringify(phrase, null, 2) };
+      const card = await randomNew();
+      return { message: JSON.stringify(card, null, 2) };
     }),
   getAllPhrases: procedure
     .input(z.object({}))
@@ -203,7 +203,7 @@ export const appRouter = router({
       )
     )
     .query(async ({ ctx }) => {
-      return await prismaClient.phrase.findMany({
+      return await prismaClient.card.findMany({
         where: { userId: ctx.user?.id || "000" },
         orderBy: { total_attempts: "desc" },
       });
@@ -218,20 +218,20 @@ export const appRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const phrase = await prismaClient.phrase.findFirst({
+      const card = await prismaClient.card.findFirst({
         where: {
           id: input.id,
           userId: ctx.user?.id || "000",
         },
       });
-      if (!phrase) {
-        throw new Error("Phrase not found");
+      if (!card) {
+        throw new Error("Card not found");
       }
-      await prismaClient.phrase.update({
-        where: { id: phrase.id },
+      await prismaClient.card.update({
+        where: { id: card.id },
         data: {
-          en: input.en ?? phrase.en,
-          ko: input.ko ?? phrase.ko,
+          en: input.en ?? card.en,
+          ko: input.ko ?? card.ko,
           flagged: input.flagged ?? false,
         },
       });
@@ -253,16 +253,16 @@ export const appRouter = router({
       })
     )
     .query(async ({ input, ctx }) => {
-      const phrase = await prismaClient.phrase.findFirst({
+      const card = await prismaClient.card.findFirst({
         where: {
           id: input.id,
           userId: ctx.user?.id || "000",
         },
       });
-      if (!phrase) {
-        throw new Error("Phrase not found");
+      if (!card) {
+        throw new Error("Card not found");
       }
-      return phrase;
+      return card;
     }),
   failPhrase: procedure
     .input(
@@ -271,11 +271,11 @@ export const appRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const phrase = await prismaClient.phrase.findFirst({
+      const card = await prismaClient.card.findFirst({
         where: { id: input.id },
       });
-      if (phrase) {
-        markIncorrect(phrase);
+      if (card) {
+        markIncorrect(card);
       }
     }),
   flagPhrase: procedure
@@ -285,15 +285,15 @@ export const appRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const phrase = await prismaClient.phrase.findFirst({
+      const card = await prismaClient.card.findFirst({
         where: {
           id: input.id,
           userId: ctx.user?.id || "0",
         },
       });
-      if (phrase) {
-        await prismaClient.phrase.update({
-          where: { id: phrase.id },
+      if (card) {
+        await prismaClient.card.update({
+          where: { id: card.id },
           data: {
             flagged: true,
           },
@@ -320,6 +320,7 @@ export const appRouter = router({
       if (!userId) {
         throw new Error("User not found");
       }
+      newPhrase(userId);
       await maybeCreatePhraseForUser(userId);
       return await getLessons(userId);
     }),
@@ -350,14 +351,14 @@ export const appRouter = router({
       const lang = LANG[input.quizType];
       const quiz = QUIZ[input.quizType];
       const transcript = await transcribeB64(lang, input.audio);
-      const phrase = await prismaClient.phrase.findUnique({
+      const card = await prismaClient.card.findUnique({
         where: { id: input.id },
       });
       if (transcript.kind === "error") {
         console.log(`Transcription error`);
         return { result: "error" } as const;
       }
-      const result = phrase && (await quiz(transcript.text, phrase));
+      const result = card && (await quiz(transcript.text, card));
       switch (result) {
         case true:
           return { result: "success" } as const;
@@ -368,10 +369,22 @@ export const appRouter = router({
       }
     }),
 });
+const newPhrase = async (userId: string) => {
+  let newPhrase = await randomNew();
+  await prismaClient.card.create({
+    data: {
+      ko: newPhrase.ko,
+      en: newPhrase.en,
+      userId,
+    },
+  });
+  console.log("Created new card:");
+  console.log(JSON.stringify(newPhrase, null, 2));
+};
 // export type definition of API
 export type AppRouter = typeof appRouter;
 async function maybeCreatePhraseForUser(userId: string) {
-  const count = await prismaClient.phrase.count({
+  const count = await prismaClient.card.count({
     where: {
       flagged: false,
       userId,
@@ -380,15 +393,6 @@ async function maybeCreatePhraseForUser(userId: string) {
   });
 
   if (count < 3) {
-    let newPhrase = await randomNew();
-    await prismaClient.phrase.create({
-      data: {
-        ko: newPhrase.ko,
-        en: newPhrase.en,
-        userId,
-      },
-    });
-    console.log("Created new phrase:");
-    console.log(JSON.stringify(newPhrase, null, 2));
+    newPhrase(userId);
   }
 }

@@ -12,7 +12,7 @@ function Card({ id }: { id: number }) {
     },
   });
   const m = trpc.editPhrase.useMutation();
-  const phrase = trpc.getOnePhrase.useQuery(
+  const card = trpc.getOnePhrase.useQuery(
     { id },
     {
       onSuccess: (data) => {
@@ -24,12 +24,12 @@ function Card({ id }: { id: number }) {
       },
     }
   );
-  if (phrase.error)
-    return <pre>{JSON.stringify(phrase.error.message, null, 2)}</pre>;
-  if (!phrase.data) return <div>Loading data...</div>;
+  if (card.error)
+    return <pre>{JSON.stringify(card.error.message, null, 2)}</pre>;
+  if (!card.data) return <div>Loading data...</div>;
   // Define updateForm function
   const updateForm = (values: { en: string; ko: string; flagged: boolean }) => {
-    // Logic to update the phrase will go here
+    // Logic to update the card will go here
     console.log(values);
     m.mutateAsync({
       id,
@@ -47,15 +47,15 @@ function Card({ id }: { id: number }) {
         <form onSubmit={form.onSubmit(updateForm)}>
           <Container size="md">
             <TextInput
-              label="English Phrase"
-              placeholder="Enter English Phrase"
-              error={form.errors.en && "Please enter an English phrase"}
+              label="English Card"
+              placeholder="Enter English Card"
+              error={form.errors.en && "Please enter an English card"}
               {...form.getInputProps("en")}
             />
             <TextInput
-              label="Korean Phrase"
-              placeholder="Enter Korean Phrase"
-              error={form.errors.ko && "Please enter a Korean phrase"}
+              label="Korean Card"
+              placeholder="Enter Korean Card"
+              error={form.errors.ko && "Please enter a Korean card"}
               {...form.getInputProps("ko")}
             />
             <Checkbox label="Flagged" {...form.getInputProps("flagged")} />

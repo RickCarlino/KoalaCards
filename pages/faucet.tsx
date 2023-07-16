@@ -6,7 +6,7 @@ import { trpc } from "@/utils/trpc";
  */
 export default function Faucet(_props: {}) {
   const f = trpc.faucet.useMutation();
-  const [phrase, setPhrase] = React.useState<string | null>("Press Button");
+  const [card, setPhrase] = React.useState<string | null>("Press Button");
   const onClick = () => {
     const no = () => {
       setPhrase("Nope");
@@ -19,7 +19,7 @@ export default function Faucet(_props: {}) {
   return (
     <div>
       <button onClick={onClick}>Again</button>
-      <p>{phrase}</p>
+      <p>{card}</p>
     </div>
   );
 }
