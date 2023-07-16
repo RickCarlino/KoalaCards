@@ -10,7 +10,8 @@ import {
 import { z } from "zod";
 import { procedure, router } from "../trpc";
 import getLessons from "@/utils/fetch-lesson";
-import { randomNew } from "@/experimental/random-new";
+import { randomNew } from "@/content-generation/random-new";
+import { ingestPhrases } from "@/content-generation/seed-phrases";
 
 const PROMPT_CONFIG = { best_of: 2, temperature: 0.4 };
 
@@ -185,6 +186,7 @@ export const appRouter = router({
     .input(z.object({}))
     .output(z.object({ message: z.string() }))
     .mutation(async () => {
+      ingestPhrases();
       const card = await randomNew();
       return { message: JSON.stringify(card, null, 2) };
     }),

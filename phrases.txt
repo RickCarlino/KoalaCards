@@ -51,4 +51,3 @@
 "제 친구는 한국어를 배워요.", "My friend is learning Korean."
 "군데에서 맛있는 음식 먹어요.", "I eat delicious food in various places."
 "군대에 가고 싶어요.", "I want to go to the military."
-"놀러 와요.", "Come to play."
