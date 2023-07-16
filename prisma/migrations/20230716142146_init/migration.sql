@@ -1,8 +1,13 @@
 -- CreateTable
+CREATE TABLE "Phrase" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "term" TEXT NOT NULL,
+    "definition" TEXT NOT NULL
+);
+
+-- CreateTable
 CREATE TABLE "Card" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    "ko" TEXT NOT NULL,
-    "en" TEXT NOT NULL,
     "next_quiz_type" TEXT,
     "last_win_at" DATETIME,
     "total_attempts" INTEGER NOT NULL DEFAULT 0,
@@ -11,7 +16,9 @@ CREATE TABLE "Card" (
     "win_percentage" REAL NOT NULL DEFAULT 0,
     "flagged" BOOLEAN NOT NULL DEFAULT false,
     "userId" TEXT NOT NULL,
-    CONSTRAINT "Card_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    "phraseId" INTEGER NOT NULL,
+    CONSTRAINT "Card_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "Card_phraseId_fkey" FOREIGN KEY ("phraseId") REFERENCES "Phrase" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -57,7 +64,7 @@ CREATE TABLE "VerificationToken" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Card_ko_key" ON "Card"("ko");
+CREATE UNIQUE INDEX "Phrase_term_key" ON "Phrase"("term");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Account_provider_providerAccountId_key" ON "Account"("provider", "providerAccountId");

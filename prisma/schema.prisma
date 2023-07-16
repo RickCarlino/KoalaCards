@@ -10,10 +10,15 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Phrase {
+  id         Int    @id @default(autoincrement())
+  term       String @unique
+  definition String
+  Card       Card[]
+}
+
 model Card {
   id             Int       @id @default(autoincrement())
-  ko             String    @unique
-  en             String
   next_quiz_type String?
   last_win_at    DateTime?
   total_attempts Int       @default(0)
@@ -23,6 +28,8 @@ model Card {
   flagged        Boolean   @default(false)
   userId         String
   user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phraseId       Int
+  phrase         Phrase    @relation(fields: [phraseId], references: [id], onDelete: Cascade)
 }
 
 model Account {
@@ -31,12 +38,12 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? // Had: @db.Text
-  access_token      String? // Had: @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? // Had: @db.Text
+  id_token          String?
   session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -60,7 +67,7 @@ model User {
   image         String?
   accounts      Account[]
   sessions      Session[]
-  cards       Card[]
+  cards         Card[]
 }
 
 model VerificationToken {
