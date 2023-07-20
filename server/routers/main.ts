@@ -205,10 +205,26 @@ export const appRouter = router({
       )
     )
     .query(async ({ ctx }) => {
-      return await prismaClient.card.findMany({
+      const cards = await prismaClient.card.findMany({
         where: { userId: ctx.user?.id || "000" },
         orderBy: { total_attempts: "desc" },
       });
+      // TODO Fix this N+1 query:
+      const phrases = await Promise.all(
+        cards.map(async (card) => {
+          const phrase = await prismaClient.phrase.findFirst({
+            where: { id: card.phraseId },
+          });
+          if (!phrase) {
+            throw new Error("Phrase not found");
+          }
+          return {
+            ...card,
+            en: phrase.definition,
+            ko: phrase.term,
+          };
+        }));
+      return phrases;
     }),
   editPhrase: procedure
     .input(
@@ -232,13 +248,11 @@ export const appRouter = router({
       await prismaClient.card.update({
         where: { id: card.id },
         data: {
-          en: input.en ?? card.en,
-          ko: input.ko ?? card.ko,
           flagged: input.flagged ?? false,
         },
       });
     }),
-  getOnePhrase: procedure
+  getOneCard: procedure
     .input(
       z.object({
         id: z.number(),
@@ -264,7 +278,17 @@ export const appRouter = router({
       if (!card) {
         throw new Error("Card not found");
       }
-      return card;
+      const phrase = await prismaClient.phrase.findFirst({
+        where: { id: card.phraseId },
+      });
+      if (!phrase) {
+        throw new Error("Phrase not found");
+      }
+      return {
+        ...card,
+        en: phrase.definition,
+        ko: phrase.term,
+      };
     }),
   failPhrase: procedure
     .input(
@@ -375,8 +399,7 @@ const newPhrase = async (userId: string) => {
   let newPhrase = await randomNew();
   await prismaClient.card.create({
     data: {
-      ko: newPhrase.ko,
-      en: newPhrase.en,
+      phraseId: newPhrase.id,
       userId,
     },
   });

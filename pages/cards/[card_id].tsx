@@ -12,7 +12,7 @@ function Card({ id }: { id: number }) {
     },
   });
   const m = trpc.editPhrase.useMutation();
-  const card = trpc.getOnePhrase.useQuery(
+  const card = trpc.getOneCard.useQuery(
     { id },
     {
       onSuccess: (data) => {

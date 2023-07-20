@@ -7,6 +7,7 @@ function ingest(ko: string, en: string) {
 }
 
 export function ingestPhrases() {
+    // Call this FN from `faucet`.
     const readInterface = readline.createInterface({
         input: fs.createReadStream('phrases.txt'),
         output: process.stdout
