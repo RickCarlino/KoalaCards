@@ -1,6 +1,6 @@
 import { prismaClient } from "@/server/prisma-client";
 import { Lang, transcribeB64 } from "@/utils/transcribe";
-import { Card } from "@prisma/client";
+import { Card, Phrase } from "@prisma/client";
 import {
   Configuration,
   CreateChatCompletionRequest,
@@ -115,7 +115,7 @@ const markCorrect = async (card: Card) => {
   });
 };
 
-async function gradeResp(answer: string = "", card: Card) {
+async function gradeResp(answer: string = "", card: Card & { phrase: Phrase }) {
   const cleanAnswer = cleanYesNo(answer);
   switch (cleanAnswer) {
     case "YES":
@@ -130,11 +130,14 @@ async function gradeResp(answer: string = "", card: Card) {
   }
 }
 
-async function dictationTest(transcript: string, card: Card) {
+async function dictationTest(
+  transcript: string,
+  card: Card & { phrase: Phrase }
+) {
   const [answer] = await ask(
     `
   A Korean language learning app user was asked to read the
-  following phrase aloud: ${card.ko} (${card.en}).
+  following phrase aloud: ${card.phrase.term} (${card.phrase.definition}).
   The user read: ${transcript}
   Was the user correct?
   spacing and punctuation mistakes are acceptable.
@@ -150,16 +153,22 @@ async function dictationTest(transcript: string, card: Card) {
   return gradeResp(answer, card);
 }
 
-async function listeningTest(transcript: string, card: Card) {
-  const p = translationPrompt(card.ko, transcript);
+async function listeningTest(
+  transcript: string,
+  card: Card & { phrase: Phrase }
+) {
+  const p = translationPrompt(card.phrase.term, transcript);
   const [answer] = await ask(p, PROMPT_CONFIG);
   return gradeResp(answer, card);
 }
 
-async function speakingTest(transcript: string, card: Card) {
+async function speakingTest(
+  transcript: string,
+  card: Card & { phrase: Phrase }
+) {
   const [answer] = await ask(
     `An English-speaking Korean language learning app user was asked
-    to translate the following phrase to Korean: ${card.en} (${card.ko}).
+    to translate the following phrase to Korean: ${card.phrase.definition} (${card.phrase.term}).
     The user said: ${transcript}
     Was the user correct?
     spacing and punctuation mistakes are acceptable.
@@ -196,35 +205,23 @@ export const appRouter = router({
       z.array(
         z.object({
           id: z.number(),
-          en: z.string(),
-          ko: z.string(),
           win_percentage: z.number(),
           total_attempts: z.number(),
           flagged: z.boolean(),
+          phrase: z.object({
+            id: z.number(),
+            term: z.string(),
+            definition: z.string(),
+          }),
         })
       )
     )
     .query(async ({ ctx }) => {
-      const cards = await prismaClient.card.findMany({
+      return await prismaClient.card.findMany({
+        include: { phrase: true },
         where: { userId: ctx.user?.id || "000" },
         orderBy: { total_attempts: "desc" },
       });
-      // TODO Fix this N+1 query:
-      const phrases = await Promise.all(
-        cards.map(async (card) => {
-          const phrase = await prismaClient.phrase.findFirst({
-            where: { id: card.phraseId },
-          });
-          if (!phrase) {
-            throw new Error("Phrase not found");
-          }
-          return {
-            ...card,
-            en: phrase.definition,
-            ko: phrase.term,
-          };
-        }));
-      return phrases;
     }),
   editPhrase: procedure
     .input(
@@ -378,6 +375,7 @@ export const appRouter = router({
       const quiz = QUIZ[input.quizType];
       const transcript = await transcribeB64(lang, input.audio);
       const card = await prismaClient.card.findUnique({
+        include: { phrase: true },
         where: { id: input.id },
       });
       if (transcript.kind === "error") {

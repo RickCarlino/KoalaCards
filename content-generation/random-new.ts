@@ -3,6 +3,7 @@ import { koreanGrammar } from "./korean-grammar";
 import { koreanWords } from "./korean-words";
 import { ask, askRaw } from "@/server/routers/main";
 import { appendFileSync } from "fs";
+import { prismaClient } from "@/server/prisma-client";
 
 const YES_OR_NO = {
   name: "answer",
@@ -169,7 +170,12 @@ export const randomNew = async () => {
     if (result) {
       const text = Object.values(result).map(x => JSON.stringify(x)).join(", ");
       appendFileSync("phrases.txt", text + "\n", "utf8");
-      return result;
+      // Insert phrase into Prisma database:
+      const phrase = await prismaClient.phrase.create({ data: {
+        term: result.ko,
+        definition: result.en,
+      } });
+      return phrase;
     } else {
       console.log("Nope?");
     }

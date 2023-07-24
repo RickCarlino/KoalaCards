@@ -1,20 +1,21 @@
 import { Button, Grid, Table } from "@mantine/core";
-import { Card } from "@prisma/client";
 import { IconPencil } from "@tabler/icons-react";
 import { useRouter } from "next/router";
 import React from "react";
 
-type Keys =
-  | "en"
-  | "id"
-  | "ko"
-  | "total_attempts"
-  | "win_percentage"
-  | "flagged";
-
-type LocalPhrase = Pick<Card, Keys>;
+type CardWithPhrase = {
+  id: number;
+  win_percentage: number;
+  total_attempts: number;
+  flagged: boolean;
+  phrase: {
+    id: number;
+    term: string;
+    definition: string;
+  };
+};
 interface PhraseTableProps {
-  cards: LocalPhrase[];
+  cards: CardWithPhrase[];
 }
 
 export const CardTable: React.FC<PhraseTableProps> = ({ cards }) => {
@@ -38,8 +39,8 @@ export const CardTable: React.FC<PhraseTableProps> = ({ cards }) => {
             <tr key={card.id}>
               <td>{card.id}</td>
               <td>{card.flagged ? "🚩" : ""}</td>
-              <td>{card.en}</td>
-              <td>{card.ko}</td>
+              <td>{card.phrase.definition}</td>
+              <td>{card.phrase.term}</td>
               <td>{card.total_attempts}</td>
               <td>{Math.round(card.win_percentage * 100)}</td>
               <td>

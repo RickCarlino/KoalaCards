@@ -95,6 +95,7 @@ async function getAudio(quizType: QuizType, _ko: string, _en: string) {
 
 export default async function getLessons(userId: string) {
   const cards = await prismaClient.card.findMany({
+    include: { phrase: true },
     where: { flagged: false, userId },
     orderBy: [{ win_percentage: "asc" }, { total_attempts: "asc" }],
     take: 10,
@@ -106,8 +107,8 @@ export default async function getLessons(userId: string) {
     } else {
       quizType = draw(["listening", "speaking"]) ?? "listening";
     }
-    const en = card.en ?? "";
-    const ko = card.ko ?? "";
+    const en = card.phrase.definition;
+    const ko = card.phrase.term;
     const quizAudio = await getAudio(quizType, ko, en);
     return {
       id: card.id,
