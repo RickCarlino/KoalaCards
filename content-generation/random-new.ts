@@ -76,7 +76,7 @@ const GLOBAL_PROMPT = [
 
 const CONF = {
   n: 4,
-  temperature: 1,
+  temperature: 0.9,
   model: "gpt-4", // GPT 3.5 is not good enough for this task.
 };
 
@@ -152,7 +152,7 @@ export async function maybeGeneratePhrase() {
     const sentences = (await fn()).filter((p) => syllables(p) < 13);
     const ok: string[] = [];
     for (const sentence of sentences) {
-      const p = `Is this AI-generated sentence suitable for a Korean language student?: ${sentence}`;
+      const p = `Is this AI-generated sentence grammatically correct, not awkward and suitable Korean language studies?: ${sentence}`;
       if ((await yesOrNo(p)) == "yes") {
         ok.push(sentence);
       }
