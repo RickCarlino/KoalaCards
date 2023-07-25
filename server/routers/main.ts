@@ -394,15 +394,17 @@ export const appRouter = router({
     }),
 });
 const newPhrase = async (userId: string) => {
-  let newPhrase = await randomNew();
-  await prismaClient.card.create({
-    data: {
-      phraseId: newPhrase.id,
-      userId,
-    },
-  });
-  console.log("Created new card:");
-  console.log(JSON.stringify(newPhrase, null, 2));
+  let newPhrases = await randomNew();
+  for (const newPhrase of newPhrases) {
+    await prismaClient.card.create({
+      data: {
+        phraseId: newPhrase.id,
+        userId,
+      },
+    });
+    console.log("Created new card:");
+    console.log(JSON.stringify(newPhrase, null, 2));
+  }
 };
 // export type definition of API
 export type AppRouter = typeof appRouter;

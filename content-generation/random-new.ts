@@ -4,6 +4,8 @@ import { koreanWords } from "./korean-words";
 import { ask, askRaw } from "@/server/routers/main";
 import { appendFileSync } from "fs";
 import { prismaClient } from "@/server/prisma-client";
+import { Phrase } from "@prisma/client";
+type KoEn = Record<"ko" | "en", string> | undefined;
 
 const YES_OR_NO = {
   name: "answer",
@@ -69,11 +71,13 @@ const GLOBAL_PROMPT = [
   `The example MUST be less than 13 syllables in length.`,
   `Conjugate all sentences in the -요 form.`,
   `Do not return anything except a Korean sentence.`,
+  `Only use modern grammar, no archaic speech.`,
 ].join("\n");
 
 const CONF = {
   n: 4,
   temperature: 1,
+  model: "gpt-4", // GPT 3.5 is not good enough for this task.
 };
 
 function syllables(sentence: string): number {
@@ -135,7 +139,6 @@ const translate = async (ko: string) => {
     },
     functions: [KO_EN],
   });
-  type KoEn = Record<"ko" | "en", string> | undefined;
   const resp = answer.data.choices
     .map((x) => JSON.stringify(x.message?.function_call?.arguments))
     .map((x) => JSON.parse(x))[0];
@@ -154,10 +157,14 @@ export async function maybeGeneratePhrase() {
         ok.push(sentence);
       }
     }
-    const untranslated = draw(ok);
-    if (untranslated) {
-      return await translate(untranslated);
+    const output: KoEn[] = [];
+    for (const sentence of ok) {
+      const translation = await translate(sentence);
+      if (translation) {
+        output.push(translation);
+      }
     }
+    return output;
   } catch (error) {
     console.warn("PHRASE ERROR: " + JSON.stringify(error, null, 2));
     return null;
@@ -165,20 +172,25 @@ export async function maybeGeneratePhrase() {
 }
 
 export const randomNew = async () => {
+  const results: Phrase[] = [];
   for (let i = 0; i <= 3; i++) {
-    const result = await maybeGeneratePhrase();
-    if (result) {
-      const text = Object.values(result).map(x => JSON.stringify(x)).join(", ");
-      appendFileSync("phrases.txt", text + "\n", "utf8");
-      // Insert phrase into Prisma database:
-      const phrase = await prismaClient.phrase.create({ data: {
-        term: result.ko,
-        definition: result.en,
-      } });
-      return phrase;
-    } else {
-      console.log("Nope?");
+    const all = (await maybeGeneratePhrase()) || [];
+    for (const result of all) {
+      if (result) {
+        const text = Object.values(result)
+          .map((x) => JSON.stringify(x))
+          .join(", ");
+        appendFileSync("phrases.txt", text + "\n", "utf8");
+        // Insert phrase into Prisma database:
+        const phrase = await prismaClient.phrase.create({
+          data: {
+            term: result.ko,
+            definition: result.en,
+          },
+        });
+        results.push(phrase);
+      }
     }
   }
-  throw new Error("randomNew function failed more than 3 times");
+  return results;
 };
