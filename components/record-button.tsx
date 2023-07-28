@@ -1,7 +1,7 @@
-import { useVoiceRecorder } from "@/hooks/use-recorder";
 import { Button } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import { playAudio } from "./play-button";
+import { useVoiceRecorder } from "@/utils/use-recorder";
 
 /**
  * Converts an MP4 audio Blob to a single-channel (mono) WAV audio Blob.

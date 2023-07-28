@@ -10,8 +10,8 @@ import {
 import { z } from "zod";
 import { procedure, router } from "../trpc";
 import getLessons from "@/utils/fetch-lesson";
-import { randomNew } from "@/content-generation/random-new";
-import { ingestPhrases } from "@/content-generation/ingest-phrases";
+import { ingestPhrases } from "@/utils/ingest-phrases";
+import { randomNew } from "@/utils/random-new";
 
 const PROMPT_CONFIG = { best_of: 2, temperature: 0.4 };
 
