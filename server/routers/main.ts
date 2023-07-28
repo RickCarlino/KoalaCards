@@ -62,9 +62,9 @@ const translationPrompt = (ko: string, response: string) => {
     the following phrase to english: ${ko}.
     The user provided this translation: ${response}
     Was the user correct?
-    spacing and punctuation mistakes are acceptable.
+    Punctuation is irrelevant and should not be evaluated.
     The meanings of the two sentences must express the exact same idea.
-    Punctuation and word choice do not need to be exact.
+    Word choice does not need to be exact. Meaning is more important.
     Reply "YES" if it is a correct translation.
     Reply "NO" if it is incorrect, then provide a display
     reason for why it is wrong
@@ -140,9 +140,9 @@ async function dictationTest(
   following phrase aloud: ${card.phrase.term} (${card.phrase.definition}).
   The user read: ${transcript}
   Was the user correct?
-  spacing and punctuation mistakes are acceptable.
   The meanings of the two sentences must express the exact same idea.
-  Punctuation and word choice do not need to be exact.
+  Punctuation is irrelevant and should not be evaluated.
+  Word choice do not need to be exact.
   Reply "YES" if it is correct.
   Reply "NO" if it is incorrect, then provide a display reason
   why it is wrong
@@ -171,9 +171,9 @@ async function speakingTest(
     to translate the following phrase to Korean: ${card.phrase.definition} (${card.phrase.term}).
     The user said: ${transcript}
     Was the user correct?
-    spacing and punctuation mistakes are acceptable.
+    Punctuation is irrelevant and should not be evaluated.
     The meanings of the two sentences must express the exact same idea.
-    Punctuation and word choice do not need to be exact.
+    The word choice does NOT need to be exactly the same.
     Reply "YES" if it is correct.
     Reply "NO" if it is incorrect, then provide a reason why it is wrong
     `,

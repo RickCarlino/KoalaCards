@@ -71,12 +71,11 @@ const GLOBAL_PROMPT = [
   `The example MUST be less than 13 syllables in length.`,
   `Conjugate all sentences in the -요 form.`,
   `Do not return anything except a Korean sentence.`,
-  `Only use modern grammar, no archaic speech.`,
 ].join("\n");
 
 const CONF = {
-  n: 4,
-  temperature: 0.9,
+  n: 2,
+  temperature: 1,
   model: "gpt-4", // GPT 3.5 is not good enough for this task.
 };
 
@@ -94,7 +93,11 @@ const askRandom = async (data: string | null, prompt: string) => {
   if (!data) {
     throw new Error("No data to prompt on");
   }
-  const resp = await ask([data, `===`, prompt, GLOBAL_PROMPT].join("\n"), CONF);
+  const conf = {
+    ...CONF,
+    best_of: 2,
+  };
+  const resp = await ask([data, `===`, prompt, GLOBAL_PROMPT].join("\n"), conf);
   return resp;
 };
 
