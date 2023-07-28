@@ -21,7 +21,7 @@ const PROMPT_EN = "Korean language learner translates sentences to English.";
 
 export async function transcribeB64(
   lang: Lang,
-  dataURI: string
+  dataURI: string,
 ): Promise<TranscriptionResult> {
   const writeFileAsync = promisify(writeFile);
   const base64Data = dataURI.split(";base64,").pop() || "";
@@ -37,7 +37,7 @@ export async function transcribeB64(
           createReadStream(fpath) as any,
           "whisper-1",
           isEn ? PROMPT_EN : PROMPT_KO,
-          "text"
+          "text",
         );
         const text =
           (y && typeof y.data == "string" && y.data) || "NO RESPONSE.";
@@ -51,7 +51,7 @@ export async function transcribeB64(
         console.error(error);
         return resolve({ kind: "error" });
       }
-    }
+    },
   );
 
   const timeoutPromise = new Promise<TranscriptionResult>((resolve, _) =>
@@ -60,7 +60,7 @@ export async function transcribeB64(
         console.log("Transcription timeout.");
         resolve({ kind: "error" });
       }
-    }, 5000)
+    }, 5000),
   );
 
   return Promise.race([transcribePromise, timeoutPromise]);

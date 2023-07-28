@@ -22,7 +22,7 @@ import { playAudio } from "./play-button";
  */
 async function convertBlobToWav(
   blob: Blob,
-  targetSampleRate = 16000
+  targetSampleRate = 16000,
 ): Promise<Blob> {
   const arrayBuffer = await blob.arrayBuffer();
   const audioContext = new AudioContext();
@@ -33,7 +33,7 @@ async function convertBlobToWav(
   const offlineAudioContext = new OfflineAudioContext(
     numberOfChannels,
     audioBuffer.duration * targetSampleRate,
-    targetSampleRate
+    targetSampleRate,
   );
 
   // Create a buffer source with the original audio

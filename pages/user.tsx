@@ -10,6 +10,6 @@ export default function User() {
         address, changing password, and deleting account. It also needs stats on
         how much you have studied.
       </p>
-    </Container>
+    </Container>,
   );
 }

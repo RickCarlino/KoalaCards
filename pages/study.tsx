@@ -168,7 +168,7 @@ function Study({ quizzes }: Props) {
     {
       contents: [],
       limit: 5,
-    }
+    },
   );
 
   const performExam = trpc.performExam.useMutation();
@@ -182,7 +182,7 @@ function Study({ quizzes }: Props) {
         card: quiz,
         result: "failure",
         uid: uid(8),
-      })
+      }),
     );
     await sounds.failure();
     await failPhrase.mutate({ id: quiz.id });

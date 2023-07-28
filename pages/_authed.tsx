@@ -8,7 +8,9 @@ const SignInButton: React.FC = () => {
   return (
     <Container>
       <Center style={{ height: "100%" }}>
-        <Button onClick={() => signIn()} size="xl" uppercase>🔑 Click Here To Log In</Button>
+        <Button onClick={() => signIn()} size="xl" uppercase>
+          🔑 Click Here To Log In
+        </Button>
       </Center>
     </Container>
   );

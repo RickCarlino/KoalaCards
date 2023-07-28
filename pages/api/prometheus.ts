@@ -7,7 +7,10 @@ if (!(global as any).defaultMetricsInitialized) {
 }
 
 // Export a middleware function to expose a /metrics endpoint
-export default async function registerMetrics(_: unknown, res: NextApiResponse) {
+export default async function registerMetrics(
+  _: unknown,
+  res: NextApiResponse,
+) {
   res.setHeader("Content-Type", register.contentType);
   res.end(await register.metrics());
 }

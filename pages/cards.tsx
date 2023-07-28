@@ -10,10 +10,12 @@ const Edit: React.FC = () => {
   if (cards.data) {
     content = <CardTable cards={cards.data} />;
   }
-  return Authed(<Container size="s">
-    <h1>Edit Cards</h1>
-    {content}
-  </Container>);
+  return Authed(
+    <Container size="s">
+      <h1>Edit Cards</h1>
+      {content}
+    </Container>,
+  );
 };
 
 export default Edit;

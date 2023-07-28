@@ -17,5 +17,5 @@ export const procedure = t.procedure.use(
       });
     }
     return next();
-  })
+  }),
 );

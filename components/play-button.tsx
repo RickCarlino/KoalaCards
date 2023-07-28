@@ -23,7 +23,6 @@ const playAudioBuffer = (buffer: AudioBuffer): Promise<void> => {
 
 export const playAudio = (urlOrDataURI: string): Promise<void> => {
   return new Promise((resolve, reject) => {
-
     if (!urlOrDataURI) {
       resolve();
     }
@@ -51,7 +50,7 @@ export const playAudio = (urlOrDataURI: string): Promise<void> => {
         (buffer) => {
           playAudioBuffer(buffer).then(resolve);
         },
-        (e) => reject(e)
+        (e) => reject(e),
       );
     } else {
       fetch(urlOrDataURI)
