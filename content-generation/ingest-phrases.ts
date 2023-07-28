@@ -6,7 +6,7 @@ async function ingest(ko: string, en: string) {
   const phrase = await prismaClient.phrase.findFirst({ where: { term: ko } });
   if (!phrase) {
     console.log(`Ingesting ${ko} => ${en}`);
-    prismaClient.phrase.create({
+    await prismaClient.phrase.create({
       data: {
         term: ko,
         definition: en,

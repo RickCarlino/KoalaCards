@@ -11,7 +11,7 @@ import { z } from "zod";
 import { procedure, router } from "../trpc";
 import getLessons from "@/utils/fetch-lesson";
 import { randomNew } from "@/content-generation/random-new";
-import { ingestPhrases } from "@/content-generation/seed-phrases";
+import { ingestPhrases } from "@/content-generation/ingest-phrases";
 
 const PROMPT_CONFIG = { best_of: 2, temperature: 0.4 };
 
@@ -414,12 +414,11 @@ async function maybeAddPhraseForUser(userId: string) {
     const ids = (await prismaClient.$queryRawUnsafe(
       // DO NOT pass in or accept user input here
       `SELECT id FROM Phrase ORDER BY RANDOM() LIMIT 10;`,
-    )) as number[];
-    console.log(`??? ${JSON.stringify(ids)}`);
+    )) as {id: number}[];
     // Select 20 random phrases from phrase table:
     const phrases = await prismaClient.phrase.findMany({
       where: {
-        id: { in: ids },
+        id: { in: ids.map(x => x.id) },
       },
     });
     // Insert them into the card table:
