@@ -174,7 +174,7 @@ function Study({ quizzes }: Props) {
       limit: 10,
     }
   );
-
+  const [gradingInProgress, setGradingInProgress] = React.useState(0);
   const performExam = trpc.performExam.useMutation();
   const failPhrase = trpc.failPhrase.useMutation();
   const flagPhrase = trpc.flagPhrase.useMutation();
@@ -217,6 +217,7 @@ function Study({ quizzes }: Props) {
   };
   const sendAudio = async (audio: string) => {
     const id = quiz.id;
+    setGradingInProgress((g) => g + 1)
     performExam
       .mutateAsync({
         id,
@@ -231,7 +232,7 @@ function Study({ quizzes }: Props) {
           uid: uid(8),
         };
         setQuizResults(qr => push(qr, passFail));
-      });
+      }).finally(() => setGradingInProgress((g) => g - 1));
     gotoNextPhrase();
   };
   const header = (() => {
@@ -265,7 +266,7 @@ function Study({ quizzes }: Props) {
           marginBottom: "20px",
         }}
       >
-        <span style={{ fontSize: "24px", fontWeight: "bold" }}>Study</span>
+        <span style={{ fontSize: "24px", fontWeight: "bold" }}>{gradingInProgress ? "🔄" : "☑️"}Study</span>
       </Header>
       {header}
       <CurrentQuiz
