@@ -60,7 +60,7 @@ export async function transcribeB64(
         console.log("Transcription timeout.");
         resolve({ kind: "error" });
       }
-    }, 5000),
+    }, 8000),
   );
 
   return Promise.race([transcribePromise, timeoutPromise]);

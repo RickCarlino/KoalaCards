@@ -168,7 +168,7 @@ function Study({ quizzes }: Props) {
     {
       contents: [],
       limit: 5,
-    },
+    }
   );
 
   const performExam = trpc.performExam.useMutation();
@@ -182,7 +182,7 @@ function Study({ quizzes }: Props) {
         card: quiz,
         result: "failure",
         uid: uid(8),
-      }),
+      })
     );
     await sounds.failure();
     await failPhrase.mutate({ id: quiz.id });
@@ -211,14 +211,17 @@ function Study({ quizzes }: Props) {
     return p;
   };
   const sendAudio = async (audio: string) => {
-    const { result } = await performExam.mutateAsync({
-      id: quiz.id,
-      audio,
-      quizType: quiz.quizType,
-    });
-    const passFail = { card: quiz, result, uid: uid(8) };
-    setQuizResults(push(quizResults, passFail));
-    await sounds[result]();
+    const id = quiz.id;
+    performExam
+      .mutateAsync({
+        id,
+        audio,
+        quizType: quiz.quizType,
+      })
+      .then(async ({ result }) => {
+        const passFail = { card: quiz, result, uid: uid(8) };
+        setQuizResults(push(quizResults, passFail));
+      });
     gotoNextPhrase();
   };
   const header = (() => {
