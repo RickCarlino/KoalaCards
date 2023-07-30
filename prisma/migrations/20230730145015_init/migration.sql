@@ -2,7 +2,9 @@
 CREATE TABLE "Phrase" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     "term" TEXT NOT NULL,
-    "definition" TEXT NOT NULL
+    "definition" TEXT NOT NULL,
+    "userId" TEXT,
+    CONSTRAINT "Phrase_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -65,6 +67,9 @@ CREATE TABLE "VerificationToken" (
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Phrase_term_key" ON "Phrase"("term");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Card_userId_phraseId_key" ON "Card"("userId", "phraseId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Account_provider_providerAccountId_key" ON "Account"("provider", "providerAccountId");

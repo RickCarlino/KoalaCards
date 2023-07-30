@@ -124,19 +124,26 @@ interface CurrentQuizProps {
   sendAudio: (audio: string) => void;
   doFail: () => void;
   doFlag: (id?: number) => void;
+  inProgress: number;
 }
 
 function CurrentQuiz(props: CurrentQuizProps) {
-  const { quiz, sendAudio, doFail, doFlag } = props;
+  const { quiz, sendAudio, doFail, doFlag, inProgress } = props;
   if (!quiz) {
+    let message = "";
+    if (inProgress) {
+      message = `Grading ${inProgress} item(s)`
+    } else {
+      message = "Begin Next Session";
+    }
     return (
       <Grid grow justify="center" align="center">
         <Grid.Col span={4}>
           <p>The session is over.</p>
         </Grid.Col>
         <Grid.Col span={4}>
-          <Button onClick={() => location.reload()} fullWidth>
-            Begin Next Session
+          <Button disabled={!!inProgress} onClick={() => location.reload()} fullWidth>
+            {message}
           </Button>
         </Grid.Col>
       </Grid>
@@ -217,7 +224,7 @@ function Study({ quizzes }: Props) {
   };
   const sendAudio = async (audio: string) => {
     const id = quiz.id;
-    setGradingInProgress((g) => g + 1)
+    setGradingInProgress((g) => g + 1);
     performExam
       .mutateAsync({
         id,
@@ -231,8 +238,9 @@ function Study({ quizzes }: Props) {
           message: result.message,
           uid: uid(8),
         };
-        setQuizResults(qr => push(qr, passFail));
-      }).finally(() => setGradingInProgress((g) => g - 1));
+        setQuizResults((qr) => push(qr, passFail));
+      })
+      .finally(() => setGradingInProgress((g) => g - 1));
     gotoNextPhrase();
   };
   const header = (() => {
@@ -266,7 +274,9 @@ function Study({ quizzes }: Props) {
           marginBottom: "20px",
         }}
       >
-        <span style={{ fontSize: "24px", fontWeight: "bold" }}>{gradingInProgress ? "🔄" : "☑️"}Study</span>
+        <span style={{ fontSize: "24px", fontWeight: "bold" }}>
+          {gradingInProgress ? "🔄" : "☑️"}Study
+        </span>
       </Header>
       {header}
       <CurrentQuiz
@@ -274,6 +284,7 @@ function Study({ quizzes }: Props) {
         sendAudio={sendAudio}
         doFlag={doFlag}
         quiz={quiz}
+        inProgress={gradingInProgress}
       />
       <QuizResultList
         results={quizResults.contents}

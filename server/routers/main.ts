@@ -401,7 +401,10 @@ export const appRouter = router({
       });
       if (transcript.kind === "error") {
         console.log(`Transcription error`);
-        return { result: "error" } as const;
+        return {
+          result: "error",
+          message: "Transcription error"
+        } as const;
       }
       const result = card && (await quiz(transcript.text, card));
       switch (result) {
