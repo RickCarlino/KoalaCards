@@ -41,7 +41,6 @@ export async function transcribeB64(
         );
         const text =
           (y && typeof y.data == "string" && y.data) || "NO RESPONSE.";
-        console.log(`Show in UI: ${text}`);
         done = true;
         return resolve({
           kind: "OK",

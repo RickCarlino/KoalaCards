@@ -18,6 +18,7 @@ import Authed from "./_authed";
 type QuizResult = {
   card: Quiz;
   result: "error" | "success" | "failure";
+  message: string;
   uid: string;
 };
 
@@ -108,6 +109,9 @@ const QuizResultList: React.FC<QuizResultListProps> = ({ results, onFlag }) => {
             <Text size="sm" color="gray">
               {card.en}
             </Text>
+            <Text size="sm" color="gray">
+              You said: {result.message}
+            </Text>
           </Card>
         );
       })}
@@ -181,6 +185,7 @@ function Study({ quizzes }: Props) {
       push(quizResults, {
         card: quiz,
         result: "failure",
+        message: "No quiz left.",
         uid: uid(8),
       })
     );
@@ -218,8 +223,13 @@ function Study({ quizzes }: Props) {
         audio,
         quizType: quiz.quizType,
       })
-      .then(async ({ result }) => {
-        const passFail = { card: quiz, result, uid: uid(8) };
+      .then(async (result) => {
+        const passFail: QuizResult = {
+          card: quiz,
+          result: result.result,
+          message: result.message,
+          uid: uid(8),
+        };
         setQuizResults(push(quizResults, passFail));
       });
     gotoNextPhrase();

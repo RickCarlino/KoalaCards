@@ -132,7 +132,7 @@ async function gradeResp(answer: string = "", card: Card & { phrase: Phrase }) {
 
 async function dictationTest(
   transcript: string,
-  card: Card & { phrase: Phrase },
+  card: Card & { phrase: Phrase }
 ) {
   const [answer] = await ask(
     `
@@ -148,14 +148,14 @@ async function dictationTest(
   why it is wrong
   (YES/NO)
   `,
-    PROMPT_CONFIG,
+    PROMPT_CONFIG
   );
   return gradeResp(answer, card);
 }
 
 async function listeningTest(
   transcript: string,
-  card: Card & { phrase: Phrase },
+  card: Card & { phrase: Phrase }
 ) {
   const p = translationPrompt(card.phrase.term, transcript);
   const [answer] = await ask(p, PROMPT_CONFIG);
@@ -164,7 +164,7 @@ async function listeningTest(
 
 async function speakingTest(
   transcript: string,
-  card: Card & { phrase: Phrase },
+  card: Card & { phrase: Phrase }
 ) {
   const [answer] = await ask(
     `An English-speaking Korean language learning app user was asked
@@ -177,7 +177,7 @@ async function speakingTest(
     Reply "YES" if it is correct.
     Reply "NO" if it is incorrect, then provide a reason why it is wrong
     `,
-    PROMPT_CONFIG,
+    PROMPT_CONFIG
   );
   return gradeResp(answer, card);
 }
@@ -219,8 +219,8 @@ export const appRouter = router({
             term: z.string(),
             definition: z.string(),
           }),
-        }),
-      ),
+        })
+      )
     )
     .query(async ({ ctx }) => {
       return await prismaClient.card.findMany({
@@ -236,7 +236,7 @@ export const appRouter = router({
         en: z.optional(z.string()),
         ko: z.optional(z.string()),
         flagged: z.optional(z.boolean()),
-      }),
+      })
     )
     .mutation(async ({ input, ctx }) => {
       const card = await prismaClient.card.findFirst({
@@ -259,7 +259,7 @@ export const appRouter = router({
     .input(
       z.object({
         id: z.number(),
-      }),
+      })
     )
     .output(
       z.object({
@@ -269,7 +269,7 @@ export const appRouter = router({
         win_percentage: z.number(),
         total_attempts: z.number(),
         flagged: z.boolean(),
-      }),
+      })
     )
     .query(async ({ input, ctx }) => {
       const card = await prismaClient.card.findFirst({
@@ -297,7 +297,7 @@ export const appRouter = router({
     .input(
       z.object({
         id: z.number(),
-      }),
+      })
     )
     .mutation(async ({ input }) => {
       const card = await prismaClient.card.findFirst({
@@ -311,7 +311,7 @@ export const appRouter = router({
     .input(
       z.object({
         id: z.number(),
-      }),
+      })
     )
     .mutation(async ({ input, ctx }) => {
       const card = await prismaClient.card.findFirst({
@@ -341,8 +341,8 @@ export const appRouter = router({
           quizAudio: z.string(),
           win_percentage: z.number(),
           total_attempts: z.number(),
-        }),
-      ),
+        })
+      )
     )
     .query(async ({ ctx }) => {
       const userId = ctx.user?.id;
@@ -361,7 +361,23 @@ export const appRouter = router({
         quizType,
         audio: z.string(),
         id: z.number(),
-      }),
+      })
+    )
+    .output(
+      z.union([
+        z.object({
+          result: z.literal("success"),
+          message: z.string(),
+        }),
+        z.object({
+          result: z.literal("failure"),
+          message: z.string(),
+        }),
+        z.object({
+          result: z.literal("error"),
+          message: z.string(),
+        }),
+      ])
     )
     .mutation(async ({ input }) => {
       type Quiz = typeof speakingTest;
@@ -390,11 +406,20 @@ export const appRouter = router({
       const result = card && (await quiz(transcript.text, card));
       switch (result) {
         case true:
-          return { result: "success" } as const;
+          return {
+            result: "success",
+            message: transcript.text,
+          } as const;
         case false:
-          return { result: "failure" } as const;
+          return {
+            result: "failure",
+            message: transcript.text,
+          } as const;
         default:
-          return { result: "error" } as const;
+          return {
+            result: "error",
+            message: "Invalid result?",
+          } as const;
       }
     }),
 });
@@ -413,12 +438,12 @@ async function maybeAddPhraseForUser(userId: string) {
   if (count < 3) {
     const ids = (await prismaClient.$queryRawUnsafe(
       // DO NOT pass in or accept user input here
-      `SELECT id FROM Phrase ORDER BY RANDOM() LIMIT 10;`,
-    )) as {id: number}[];
+      `SELECT id FROM Phrase ORDER BY RANDOM() LIMIT 10;`
+    )) as { id: number }[];
     // Select 20 random phrases from phrase table:
     const phrases = await prismaClient.phrase.findMany({
       where: {
-        id: { in: ids.map(x => x.id) },
+        id: { in: ids.map((x) => x.id) },
       },
     });
     // Insert them into the card table:
