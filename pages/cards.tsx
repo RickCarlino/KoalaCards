@@ -12,7 +12,7 @@ const Edit: React.FC = () => {
   }
   return Authed(
     <Container size="s">
-      <h1>Edit Cards</h1>
+      <h1>Manage Cards</h1>
       {content}
     </Container>,
   );
