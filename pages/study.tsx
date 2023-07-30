@@ -171,7 +171,7 @@ function Study({ quizzes }: Props) {
   const [quizResults, setQuizResults] = React.useState<CappedStack<QuizResult>>(
     {
       contents: [],
-      limit: 5,
+      limit: 10,
     }
   );
 
@@ -230,7 +230,7 @@ function Study({ quizzes }: Props) {
           message: result.message,
           uid: uid(8),
         };
-        setQuizResults(push(quizResults, passFail));
+        setQuizResults(qr => push(qr, passFail));
       });
     gotoNextPhrase();
   };
