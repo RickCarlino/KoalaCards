@@ -11,7 +11,8 @@ function Card({ id }: { id: number }) {
       flagged: false,
     },
   });
-  const m = trpc.editPhrase.useMutation();
+  const m = trpc.editCard.useMutation();
+  const d = trpc.deleteCard.useMutation();
   const card = trpc.getOneCard.useQuery(
     { id },
     {
@@ -22,7 +23,7 @@ function Card({ id }: { id: number }) {
           flagged: data.flagged,
         });
       },
-    },
+    }
   );
   if (card.error)
     return <pre>{JSON.stringify(card.error.message, null, 2)}</pre>;
@@ -40,7 +41,10 @@ function Card({ id }: { id: number }) {
       location.assign(`/cards`);
     });
   };
-
+  const deleteCard = () => {
+    d.mutate({ id });
+    location.assign(`/cards`);
+  };
   return (
     <div>
       <Paper shadow="xs">
@@ -66,8 +70,10 @@ function Card({ id }: { id: number }) {
               {...form.getInputProps("flagged")}
             />
           </Container>
-
           <Button type="submit">Update</Button>
+          <Button color="red" type="submit" onClick={deleteCard}>
+            Delete
+          </Button>
         </form>
       </Paper>
     </div>

@@ -229,7 +229,34 @@ export const appRouter = router({
         orderBy: { total_attempts: "desc" },
       });
     }),
-  editPhrase: procedure
+  deleteCard: procedure
+    .input(
+      z.object({
+        id: z.optional(z.number()),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.user?.id;
+      if (!userId) {
+        throw new Error("User not found");
+      }
+
+      const card = await prismaClient.card.findFirst({
+        where: {
+          id: input.id,
+          userId,
+        },
+      });
+
+      if (!card) {
+        throw new Error("Card not found");
+      }
+
+      await prismaClient.card.delete({
+        where: { id: card.id },
+      });
+    }),
+  editCard: procedure
     .input(
       z.object({
         id: z.optional(z.number()),
@@ -410,7 +437,7 @@ export const appRouter = router({
         console.log(`Transcription error`);
         return {
           result: "error",
-          message: "Transcription error"
+          message: "Transcription error",
         } as const;
       }
       const result = card && (await quiz(transcript.text, card));

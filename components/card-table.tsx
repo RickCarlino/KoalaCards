@@ -31,7 +31,7 @@ export const CardTable: React.FC<PhraseTableProps> = ({ cards }) => {
             <th>Korean</th>
             <th>Total Attempts</th>
             <th>Win Percentage</th>
-            <th></th>
+            <th>Edit</th>
           </tr>
         </thead>
         <tbody>
