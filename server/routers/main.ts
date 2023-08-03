@@ -239,15 +239,22 @@ export const appRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
+      const userId = ctx.user?.id;
+      if (!userId) {
+        throw new Error("User not found");
+      }
+
       const card = await prismaClient.card.findFirst({
         where: {
           id: input.id,
-          userId: ctx.user?.id || "000",
+          userId,
         },
       });
+
       if (!card) {
         throw new Error("Card not found");
       }
+
       await prismaClient.card.update({
         where: { id: card.id },
         data: {

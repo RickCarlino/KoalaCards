@@ -47,18 +47,24 @@ function Card({ id }: { id: number }) {
         <form onSubmit={form.onSubmit(updateForm)}>
           <Container size="md">
             <TextInput
-              label="English Card"
-              placeholder="Enter English Card"
-              error={form.errors.en && "Please enter an English card"}
+              label="Definition"
+              placeholder="Enter Definition"
+              error={form.errors.en && "Please enter an Definition"}
+              disabled={true}
               {...form.getInputProps("en")}
             />
             <TextInput
-              label="Korean Card"
-              placeholder="Enter Korean Card"
-              error={form.errors.ko && "Please enter a Korean card"}
+              label="Term"
+              placeholder="Enter Term"
+              error={form.errors.ko && "Please enter a Term"}
+              disabled={true}
               {...form.getInputProps("ko")}
             />
-            <Checkbox label="Flagged" {...form.getInputProps("flagged")} />
+            <Checkbox
+              label="Flagged"
+              checked={form.values.flagged}
+              {...form.getInputProps("flagged")}
+            />
           </Container>
 
           <Button type="submit">Update</Button>
