@@ -120,7 +120,6 @@
 "사라져요", "Disappear"
 "사람마다 취향에 따라 다르다.", "It varies depending on each person's taste."
 "새로운 한국어 학생이에요.", "It's a new Korean language student."
-"새로운 한국어를 배우세요!", "Learn new Korean!"
 "선배 에게 도움을 청하세요.", "Ask for help from your senior."
 "선배님한테 도움을 구하세요.", "Ask for help from your senior."
 "세로로 높이를 잴고 싶어요.", "I want to measure the height vertically."

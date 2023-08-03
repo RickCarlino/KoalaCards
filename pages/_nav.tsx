@@ -4,6 +4,7 @@ import {
   IconLogout,
   IconPencil,
   IconUser,
+  IconDatabaseImport
 } from "@tabler/icons-react";
 import { signOut } from "next-auth/react";
 import Link from "next/link";
@@ -76,7 +77,8 @@ const useStyles = createStyles((theme) => ({
 
 const data = [
   { link: "/study", label: "Study", icon: IconBook },
-  { link: "/cards", label: "Cards", icon: IconPencil },
+  { link: "/cards", label: "Edit Cards", icon: IconPencil },
+  { link: "/import", label: "Import Cards", icon: IconDatabaseImport },
   { link: "/user", label: "User", icon: IconUser },
 ];
 
