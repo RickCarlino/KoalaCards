@@ -1,3 +1,4 @@
+import { trpc } from "@/utils/trpc";
 import {
   Textarea,
   Button,
@@ -10,18 +11,23 @@ import {
 import { useState } from "react";
 
 interface Phrase {
-  korean: string;
-  english?: string;
+  term: string;
+  definition?: string;
 }
 
 interface ImportPageProps {
-  onSubmit: (phrases: Phrase[]) => void;
+  // onSubmit: (phrases: Phrase[]) => void;
 }
 
-const ImportPage: React.FC<ImportPageProps> = ({ onSubmit }) => {
+const ImportPage: React.FC<ImportPageProps> = ({}) => {
   const [text, setText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const importPhrase = trpc.importPhrases.useMutation();
+
+  const onSubmit = async (phrases: Phrase[]) => {
+    importPhrase.mutateAsync({ input: phrases });
+  };
 
   const handleSubmit = async () => {
     setIsLoading(true);
@@ -39,7 +45,7 @@ const ImportPage: React.FC<ImportPageProps> = ({ onSubmit }) => {
         setIsLoading(false);
         return;
       }
-      phrases.push({ korean, english });
+      phrases.push({ term: korean, definition: english });
     }
 
     await onSubmit(phrases);

@@ -205,6 +205,22 @@ export const appRouter = router({
       const card = await randomNew();
       return { message: JSON.stringify(card, null, 2) };
     }),
+  importPhrases: procedure
+    .input(
+      z.object({
+        input: z.array(
+          z.object({
+            term: z.string(),
+            definition: z.optional(z.string()),
+          })
+        ),
+      })
+    )
+    .output(z.object({ message: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      console.log({input});
+      return { message: "Success" };
+    }),
   getAllPhrases: procedure
     .input(z.object({}))
     .output(

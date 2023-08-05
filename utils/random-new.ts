@@ -108,8 +108,7 @@ const randomGrammar = async () => {
   return askRandom(grammar, prompt);
 };
 
-const randomVocab = async () => {
-  const vocab = draw(shuffle(koreanWords));
+export const randomVocab = async (vocab = draw(shuffle(koreanWords))) => {
   const prompt = `Create a random phrase for a Korean language student using the word above.`;
   return askRandom(vocab, prompt);
 };
@@ -130,7 +129,7 @@ const yesOrNo = async (content: string): Promise<"yes" | "no"> => {
   return result.length === 0 ? "yes" : "no";
 };
 
-const translate = async (ko: string) => {
+export const translate = async (ko: string) => {
   const content = `Translate the sentence: ${ko}`;
   const answer = await askRaw({
     messages: [{ role: "user", content }],
