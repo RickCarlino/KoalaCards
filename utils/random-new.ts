@@ -2,9 +2,8 @@ import { draw, shuffle } from "radash";
 import { koreanGrammar } from "./korean-grammar";
 import { koreanWords } from "./korean-words";
 import { ask, askRaw } from "@/server/routers/main";
-import { appendFileSync } from "fs";
-import { prismaClient } from "@/server/prisma-client";
 import { Phrase } from "@prisma/client";
+import { ingestOne } from "./ingest-phrases";
 type KoEn = Record<"ko" | "en", string> | undefined;
 
 const YES_OR_NO = {
@@ -108,7 +107,7 @@ const randomGrammar = async () => {
   return askRandom(grammar, prompt);
 };
 
-export const randomVocab = async (vocab = draw(shuffle(koreanWords))) => {
+const randomVocab = async (vocab = draw(shuffle(koreanWords))) => {
   const prompt = `Create a random phrase for a Korean language student using the word above.`;
   return askRandom(vocab, prompt);
 };
@@ -147,9 +146,10 @@ export const translate = async (ko: string) => {
   return JSON.parse(resp) as KoEn;
 };
 
-export async function maybeGeneratePhrase() {
+const randomFn = () => draw(shuffle([randomGrammar, randomVocab]));
+
+export async function maybeGeneratePhrase(fn = randomFn()) {
   try {
-    const fn = draw(shuffle([randomGrammar, randomVocab]));
     if (!fn) throw new Error("No function found");
     const sentences = (await fn()).filter((p) => syllables(p) < 13);
     const ok: string[] = [];
@@ -173,24 +173,72 @@ export async function maybeGeneratePhrase() {
   }
 }
 
+export async function phraseFromUserInput(term: string, definition: string) {
+  const content = [
+    `Create a random phrase for a Korean learner using the`,
+    `word "${term}" (as in "${definition}").`,
+    `It is important that the sentence be very short.`,
+    `Sentences must be conjugated in the -요 form.`,
+    `Don't say '당신', '그녀' or other English-isms.`,
+  ].join(" ");
+  const answer = await askRaw({
+    messages: [
+      {
+        role: "user",
+        content,
+      },
+    ],
+    model: "gpt-4-0613", // GPT 3.5 is not good enough for this task.
+    n: 1,
+    temperature: 0.9,
+    function_call: {
+      name: "create_phrase",
+    },
+    functions: [
+      {
+        name: "create_phrase",
+        description: "Create a new phrase with translation pair.",
+        parameters: {
+          required: ["ko", "en"],
+          type: "object",
+          properties: {
+            ko: {
+              type: "string",
+              description:
+                "A Korean sentence without notes, transliterations and romanization.",
+            },
+            en: {
+              type: "string",
+              description:
+                "An English translation of the Korean sentence provided.",
+            },
+          },
+        },
+      },
+    ],
+  });
+  // Calculate tokens used by request:
+  console.log("=== USAGE: " + answer.data.usage);
+  const json = answer.data.choices[0].message?.function_call?.arguments;
+  if (!json) {
+    throw new Error("Phrase import failed to generate GPT-4 response.");
+  }
+  const clean = JSON.parse(json);
+  if (clean && typeof clean.ko === "string" && typeof clean.en === "string") {
+    return clean as KoEn;
+  } else {
+    throw new Error("Malformed GPT-4 response: " + json);
+  }
+}
+
 export const randomNew = async () => {
   const results: Phrase[] = [];
   for (let i = 0; i <= 3; i++) {
     const all = (await maybeGeneratePhrase()) || [];
     for (const result of all) {
       if (result) {
-        const text = Object.values(result)
-          .map((x) => JSON.stringify(x))
-          .join(", ");
-        appendFileSync("phrases.txt", text + "\n", "utf8");
-        // Insert phrase into Prisma database:
-        const phrase = await prismaClient.phrase.create({
-          data: {
-            term: result.ko,
-            definition: result.en,
-          },
-        });
-        results.push(phrase);
+        const phrase = await ingestOne(result.ko, result.en);
+        phrase && results.push(phrase);
       }
     }
   }

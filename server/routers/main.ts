@@ -10,8 +10,8 @@ import {
 import { z } from "zod";
 import { procedure, router } from "../trpc";
 import getLessons from "@/utils/fetch-lesson";
-import { ingestPhrases } from "@/utils/ingest-phrases";
-import { randomNew } from "@/utils/random-new";
+import { ingestOne, ingestPhrases } from "@/utils/ingest-phrases";
+import { phraseFromUserInput, randomNew } from "@/utils/random-new";
 
 const PROMPT_CONFIG = { best_of: 2, temperature: 0.4 };
 
@@ -31,6 +31,7 @@ export async function askRaw(opts: CreateChatCompletionRequest) {
 }
 
 export async function ask(prompt: string, opts: AskOpts = {}) {
+  console.log(prompt);
   const resp = await askRaw({
     model: "gpt-3.5-turbo",
     messages: [
@@ -211,15 +212,44 @@ export const appRouter = router({
         input: z.array(
           z.object({
             term: z.string(),
-            definition: z.optional(z.string()),
+            definition: z.string(),
           })
         ),
       })
     )
-    .output(z.object({ message: z.string() }))
+    .output(
+      z.array(
+        z.object({
+          ko: z.string(),
+          en: z.string(),
+          input: z.string(),
+        })
+      )
+    )
     .mutation(async ({ input, ctx }) => {
-      console.log({input});
-      return { message: "Success" };
+      const results: { ko: string; en: string; input: string }[] = [];
+      for (const { term, definition } of input.input) {
+        const result = await phraseFromUserInput(term, definition);
+        const userId = ctx.user?.id;
+        if (result && userId) {
+          const phrase = await ingestOne(result.ko, result.en);
+          if (phrase) {
+            await prismaClient.card.create({
+              data: {
+                userId,
+                phraseId: phrase.id,
+                next_quiz_type: "dictation",
+              },
+            });
+            results.push({
+              ko: result.ko,
+              en: result.en,
+              input: term,
+            });
+          }
+        }
+      }
+      return results;
     }),
   getAllPhrases: procedure
     .input(z.object({}))

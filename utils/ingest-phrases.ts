@@ -1,12 +1,14 @@
 import { prismaClient } from "@/server/prisma-client";
 import * as fs from "fs";
+import { appendFileSync } from "fs";
 import * as readline from "readline";
 
-async function ingest(ko: string, en: string) {
+export async function ingestOne(ko: string, en: string) {
   const phrase = await prismaClient.phrase.findFirst({ where: { term: ko } });
   if (!phrase) {
     console.log(`Ingesting ${ko} => ${en}`);
-    await prismaClient.phrase.create({
+    appendFileSync("phrases.txt", [ko,en].join("\t") + "\n", "utf8");
+    return await prismaClient.phrase.create({
       data: {
         term: ko,
         definition: en,
@@ -30,6 +32,6 @@ export function ingestPhrases() {
     }
 
     let splitLine = line.split(",");
-    ingest(splitLine[0], splitLine[1]);
+    ingestOne(splitLine[0], splitLine[1]);
   });
 }
