@@ -190,7 +190,7 @@ export async function phraseFromUserInput(term: string, definition: string) {
     ],
     model: "gpt-4-0613", // GPT 3.5 is not good enough for this task.
     n: 1,
-    temperature: 0.9,
+    temperature: 0.3,
     function_call: {
       name: "create_phrase",
     },
@@ -217,8 +217,6 @@ export async function phraseFromUserInput(term: string, definition: string) {
       },
     ],
   });
-  // Calculate tokens used by request:
-  console.log("=== USAGE: " + answer.data.usage);
   const json = answer.data.choices[0].message?.function_call?.arguments;
   if (!json) {
     throw new Error("Phrase import failed to generate GPT-4 response.");

@@ -1,3 +1,13 @@
+A NOTE ABOUT THIS FILE:
+
+This is a list of example phrases generated during experimentation
+and development of the app. The phrases have not been proofread
+and some phrases will be incorrect, which was often the case when
+I was tweaking the `temperature` parameter.
+
+Please don't be surprised when you see awkward phrases like "각을 보고 놀라워요".
+
+
 가꾸다는 좋은 습관이에요.  Cultivating is a good habit.
 가방에 있는 책을 읽어요.   I read the book in the bag.
 가방을 가져왔어요. I brought my bag.
@@ -6,10 +16,15 @@
 가져다줄까요?  Shall I bring it to you?
 각 해를 기억하세요.    Remember each year.
 각을 보고 놀라워요.    I'm surprised by the angle.
+개발자가 코드를 배포하는 과정이 중요해요.	The process of the developer deploying the code is important.
+개발자는 모든 과정을 자동화하요.	The developer automates all processes.
 개인은 중요해요.   The individual is important.
 거실에서 잠을 자요.    I sleep in the living room.
 걱정하지 마세요!   Do not worry!
 건강한 식사를 해요.    I eat a healthy meal.
+결론이 그는 좋은 사람이에요.	In conclusion, he is a good person.
+결론이 너무 어려워요.	The conclusion is too difficult.
+결론이 무엇이에요?	What is the conclusion?
 결론이 항상 중요해요.	The conclusion is always important.
 경기도에서 산책해요.   I take a walk in Gyeonggi Province.
 경험은 최고의 선생님이에요.    Experience is the best teacher.
@@ -24,9 +39,20 @@
 국어 공부는 즐겁요!    Studying Korean is fun!
 군대에 가고 싶어요.    I want to go to the military.
 군데에서 친구를 만날 거예요.   I am going to meet a friend somewhere.
+그 멤버중에 누가 가장 잘하나요?	Who among the members does the best?
+그 사람이 우승할 수 있다고 생각해요?	Do you think that person can win?
 그 영화는 재미있는 것 같아요.  I think that movie is interesting.
 그 영화는 재미있을걸요.    That movie is going to be fun.
 그것을 해 줄 테니까.   Because I will do it.
+그는 계속 돈을 퍼주기만하고 문제를 해결하지 않아요.	He keeps giving money away without solving the problem.
+그는 계속 돈을 퍼주기만하고 아무것도 안 해요.	He just keeps giving out money and does nothing.
+그는 계속 돈을 퍼주기만하고 아무것도 하지 않아요.	He just keeps giving out money and does nothing else.
+그는 그럴수 있다고 생각합니다.	He thinks he can do it.
+그는 돈을 퍼주기만하고 돌아갔어요.	He just gave away money and left.
+그는 돈을 퍼주기만하고 아무것도 하지 않았어요.	He just gave away money and did nothing.
+그는 퍼주기만하고 자리를 떴어요.	He just distributed it and left the place.
+그는 항상 돈을 퍼주기만하고 도움이 안돼요.	He always just gives away money and it's not helpful.
+그는 항상 돈을 퍼주기만하고, 아무런 해결책을 제시하지 않아요.	He always just hands out money, without offering any solutions.
 그는 항상 퍼주기만하고, 저희 집에 모든 것을 알고 있어요.	He always just gives and knows everything about our house.
 그랬던데 너무 놀라웠어요.  That's how it was, and it was so surprising.
 그림이 참 아름답네요.  The picture is really beautiful.
@@ -117,18 +143,27 @@
 부러워하지 마세요. Don't be jealous.
 부럽다고요.    I'm jealous.
 비가 올락 말락 했어요. It almost rained.
+비밀번호를 활용하여 로그인하요.	Log in using your password.
 빨리 출발했어야 했어요.    We should have left earlier.
 사라져요   Disappear
 사람마다 취향에 따라 다르다.   It varies depending on each person's taste.
 산악회에서 만난 분들이 친절해요.	The people I met at the mountaineering club are kind.
+산악회에서 만난 친구들이랑 등산했어요.	I went hiking with friends I met in the mountaineering club.
 산책하는 강아지를 맡았어요.	I took care of a dog for a walk.
 산행하고 나서 피곤해요.	I'm tired after hiking.
+산행하고 더워서 물 많이 마셔요.	I drink a lot of water because it's hot after hiking.
+산행하고 더워서 물 많이 마셨어요.	I drank a lot of water because it was hot after hiking.
 산행하고 더워서 물을 많이 마셨어요.	Because it was hot after the mountain hike, I drank a lot of water.
+산행하고 피곤해요.	I'm tired after hiking.
 새로운 한국어 학생이에요.  It's a new Korean language student.
 선배 에게 도움을 청하세요. Ask for help from your senior.
 선배님한테 도움을 구하세요.    Ask for help from your senior.
 세로로 높이를 잴고 싶어요. I want to measure the height vertically.
 세로로 타워를 올라가요.    Go up the tower vertically.
+손바닥밖으로 나온 것을 보세요.	Look at what came out of the palm of your hand.
+손바닥밖으로 나온 것을 잡아요.	Grab what comes out of the palm of your hand.
+손바닥밖으로 나온 손가락을 접어요.	Fold the fingers that come out of the palm.
+손바닥밖으로 물건을 내밀어 주세요.	Please hold out the object outside your palm.
 손바닥밖으로 비가 오네요.	It's raining outside the palm of my hand.
 송편을 사러 가요.  I'm going to buy some rice cake.
 숨겨진 보물을 찾아요.	Look for the hidden treasure.
@@ -140,6 +175,11 @@
 신부가 예뻐요. The bride is beautiful.
 신부는 아름다워요. The bride is beautiful.
 실무에서 많이 쓰는 프로그램을 알아요.	I know the programs that are frequently used in practical work.
+실무에서는 어떤 일을 하나요?	What kind of work do you do in practice?
+실무에서는 일을 효율적으로 처리해요.	In practice, work is handled efficiently.
+실무에서는 항상 정밀함이 요구되요.	In practice, precision is always required.
+실무에서는 항상 정확해야 해요.	You always have to be accurate in practice.
+실무에서는 효율성이 중요해요.	Efficiency is important in practical work.
 실패하다면 다시 도전해요.  If you fail, try again.
 실패하지 마세요.   Do not fail.
 실패했어요. 다시 도전해요! You failed. Try again!
@@ -150,6 +190,7 @@
 아니요, 괜찮아요.  No, it's okay.
 아래쪽에 무엇이 있을까요?  What might be down below?
 아래쪽에 밥이 있어요.  There is rice below.
+아마 그럴수 있다고 생각합니다.	I think that might be possible.
 아마도 그는 빨리 달릴 수 있다고 생각합니다.	I think he can probably run fast.
 아침에 일어나야 했어요.    I should have woken up in the morning.
 안 해라고 하세요.  Tell them not to do it.
@@ -183,9 +224,19 @@
 오늘은 한국어 공부해요.    I study Korean today.
 오늘의 날씨가 좋아요.  The weather is nice today.
 올해 여행은 도쿄에 예정돼요!   This year's trip is planned for Tokyo!
+옷을 접으면 되는게 아니에요, 정리도 필요해요.	It's not just about folding clothes, tidying up is also necessary.
 외부 온도에 따라 물이 끓어요.  Water boils depending on the outside temperature.
 우리 멤버중에 누가 가장 재미있어요?	Who is the most fun among our members?
+우리 함께 프로젝트를 진행하죠.	Let's proceed with the project together.
+우리가 이제 회의를 진행하죠.	Let's proceed with the meeting now.
+우리가 프로젝트를 진행하죠.	We proceed with the project.
+우리는 여기서 프로젝트를 진행해봅니다.	We will try to proceed with the project here.
+우리는 이 과정을 자동화하려고 노력하고 있어요.	We are trying to automate this process.
+우리는 이 과정을 자동화하려고 합니다.	We are trying to automate this process.
+우리는 이 과정을 자동화하요.	We automate this process.
 우리는 이 작업을 자동화하는 중이에요.	We are automating this task.
+우리는 이제 회의를 진행해봅니다.	We will now proceed with the meeting.
+우리는 함께 요리를 진행해봅니다.	We will try cooking together.
 우산은 없는데 비가 와요.   It's raining but I don't have an umbrella.
 운동하도록 일찍 일어나요.  I wake up early to exercise.
 위층에 사는 것이 좋아요.   I like living on the upper floor.
@@ -198,10 +249,18 @@
 이 스타일은 참 멋있어요.   This style is really cool.
 이 시계는 정교한 디자인이에요.	This watch has a meticulous design.
 이 영화의 늬앙스가 너무 섬세해요.	The nuance of this movie is very delicate.
+이 영화의 늬앙스가 정말 독특해요.	The nuance of this movie is really unique.
+이 영화의 늬앙스가 흥미로워요.	The nuance of this movie is interesting.
+이 영화의 늬앙스가 흥미롭습니다.	The nuances of this movie are interesting.
+이 정교한 시계를 누가 만들었어요?	Who made this intricate clock?
+이 정교한 시계를 보세요.	Look at this intricate watch.
+이 정보를 활용하여 계획을 세워봐요.	Let's make a plan using this information.
 이 종은 크기가 작아요. This bell is small.
 이 종이컵으로 물을 마시세요.   Please drink water from this paper cup.
 이 표현은 유용해요.    This expression is useful.
+이 프로그램은 모든 작업을 자동화해요.	This program automates all tasks.
 이거 잘못했어요. 되돌려 주세요.	I made a mistake with this. Please turn it back.
+이것은 여기에서 허용하지 않아요.	This is not allowed here.
 이것은 허용하지 않아요.	This is not allowed.
 이곳에서 만날 테니까.  We will meet here.
 이리 와요. Come here.
@@ -211,6 +270,7 @@
 이해가 되지 않아요.    I don't understand.
 익숙해지고 싶어요. I want to get used to it.
 일어났어요 I woke up
+일요일에는 산행하고 커피를 마셔요.	I go for a mountain hike and drink coffee on Sundays.
 일이 끝나면 휴식해요.  I rest when the work is done.
 자동차가 빨리 달립니다.    The car is running fast.
 자동차로 학교에 가요.  I go to school by car.
@@ -219,12 +279,19 @@
 자전거를 사주겠니? Will you buy me a bicycle?
 잘 먹었더니, 배가 풀렸어요.    I ate well and now I'm full.
 잠을 많이 자고 일찍 일어나요.  I sleep a lot and wake up early.
+잼버리가 신나게 노래를 불러요.	The jamboree happily sings a song.
+잼버리를 좋아하세요?	Do you like jamboree?
 저는 공부해서 정말 지쳤어요.   I am really tired from studying.
+저는 사전을 활용하여 새 단어를 배웁니다.	I learn new words by utilizing a dictionary.
 저는 여기서 요리를 진행해봅니다.	I will try cooking here.
 저는 오늘 뭐 먹을까요? I wonder what I should eat today.
+저는 요리를 맡았어요.	I took charge of the cooking.
 저는 운동하기로 했어요.    I decided to exercise.
+저는 이번 프로젝트를 맡았어요.	I took charge of this project.
 저는 자러 가요.    I'm going to sleep.
 저는 직원입니다.   I am an employee.
+저는 책임감 있는 일을 맡았어요.	I took on a responsible job.
+저는 팀 프로젝트를 맡았어요.	I took charge of the team project.
 저는 한국어 학생이에요.    I am a Korean language student.
 저렇게요!  That's how it is!
 저렇다니까요?  Is it because of that?
@@ -270,13 +337,16 @@
 직접해 보세요. Please try it yourself.
 집에서 너무 잤어요.    I slept too much at home.
 찻잔 한 잔 해요.   Let's have a cup of tea.
+책을 읽고, 요리를 하고, 청소를 하는 등의 활동을 좋아해요.	I like activities such as reading books, cooking, and cleaning.
 책을 읽었다가 잠들어요.    I fell asleep while reading a book.
 쳐다보지 말고, 집중하세요. Don't stare, focus.
 최대한 노력해요!   Try your best!
+친구가 늦게 올 수 있다고 생각해요.	I think a friend can be late.
 코끼리가 크네요.   The elephant is big.
 코끼리는 크고 귀여워요.    Elephants are big and cute.
 코끼리는 크고 매우 강해요. Elephants are big and very strong.
 태도에 따라 성공이 결정돼요.   Success is determined by attitude.
+통깁스 조심하세요.	Be careful with the cornflakes.
 통신에 대해 배워요.    I am learning about communication.
 통신을 배우는 학생 이에요. The student is learning communication.
 팩 한 개 주세요.   Please give me one pack.

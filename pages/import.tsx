@@ -98,9 +98,9 @@ const ImportPage: React.FC<ImportPageProps> = ({}) => {
       <table>
         <thead>
           <tr>
-            <th>Korean</th>
-            <th>English</th>
-            <th>Example</th>
+            <th>Input</th>
+            <th>Output</th>
+            <th>Translation</th>
           </tr>
         </thead>
         <tbody>
@@ -117,8 +117,9 @@ const ImportPage: React.FC<ImportPageProps> = ({}) => {
   );
   return (
     <Grid>
-      <Col style={{ maxWidth: 600 }}></Col>
-      {result.length > 0 ? finish : start}
+      <Col style={{ maxWidth: 600 }}>
+        {result.length > 0 ? finish : start}
+      </Col>
     </Grid>
   );
 };
