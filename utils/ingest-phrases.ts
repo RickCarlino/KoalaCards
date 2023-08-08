@@ -7,7 +7,7 @@ export async function ingestOne(ko: string, en: string) {
   const phrase = await prismaClient.phrase.findFirst({ where: { term: ko } });
   if (!phrase) {
     console.log(`Ingesting ${ko} => ${en}`);
-    appendFileSync("phrases.txt", [ko,en].join("\t") + "\n", "utf8");
+    appendFileSync("phrases.txt", [ko, en].join("\t") + "\n", "utf8");
     return await prismaClient.phrase.create({
       data: {
         term: ko,

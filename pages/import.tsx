@@ -44,7 +44,7 @@ const ImportPage: React.FC<ImportPageProps> = ({}) => {
 
       if (!definition) {
         setError(
-          "A definition or example context is required after a tab character."
+          "A definition or example context is required after a tab character.",
         );
         setIsLoading(false);
         return;
@@ -117,9 +117,7 @@ const ImportPage: React.FC<ImportPageProps> = ({}) => {
   );
   return (
     <Grid>
-      <Col style={{ maxWidth: 600 }}>
-        {result.length > 0 ? finish : start}
-      </Col>
+      <Col style={{ maxWidth: 600 }}>{result.length > 0 ? finish : start}</Col>
     </Grid>
   );
 };

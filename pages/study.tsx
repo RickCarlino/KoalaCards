@@ -132,7 +132,7 @@ function CurrentQuiz(props: CurrentQuizProps) {
   if (!quiz) {
     let message = "";
     if (inProgress) {
-      message = `Grading ${inProgress} item(s)`
+      message = `Grading ${inProgress} item(s)`;
     } else {
       message = "Begin Next Session";
     }
@@ -142,7 +142,11 @@ function CurrentQuiz(props: CurrentQuizProps) {
           <p>The session is over.</p>
         </Grid.Col>
         <Grid.Col span={4}>
-          <Button disabled={!!inProgress} onClick={() => location.reload()} fullWidth>
+          <Button
+            disabled={!!inProgress}
+            onClick={() => location.reload()}
+            fullWidth
+          >
             {message}
           </Button>
         </Grid.Col>
@@ -179,7 +183,7 @@ function Study({ quizzes }: Props) {
     {
       contents: [],
       limit: 10,
-    }
+    },
   );
   const [gradingInProgress, setGradingInProgress] = React.useState(0);
   const performExam = trpc.performExam.useMutation();
@@ -194,7 +198,7 @@ function Study({ quizzes }: Props) {
         result: "failure",
         message: "No quiz left.",
         uid: uid(8),
-      })
+      }),
     );
     await sounds.failure();
     await failPhrase.mutate({ id: quiz.id });

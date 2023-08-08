@@ -4,7 +4,7 @@ import {
   IconLogout,
   IconPencil,
   IconUser,
-  IconDatabaseImport
+  IconDatabaseImport,
 } from "@tabler/icons-react";
 import { signOut } from "next-auth/react";
 import Link from "next/link";

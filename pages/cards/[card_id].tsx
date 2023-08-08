@@ -23,7 +23,7 @@ function Card({ id }: { id: number }) {
           flagged: data.flagged,
         });
       },
-    }
+    },
   );
   if (card.error)
     return <pre>{JSON.stringify(card.error.message, null, 2)}</pre>;

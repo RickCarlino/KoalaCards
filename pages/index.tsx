@@ -15,9 +15,7 @@ const Index: React.FC = () => {
       >
         <span style={{ fontSize: "24px", fontWeight: "bold" }}>Welcome</span>
       </Header>
-      <p>
-        Click "Study" on the left panel to begin a lesson.
-      </p>
+      <p>Click "Study" on the left panel to begin a lesson.</p>
     </Container>
   );
 };
