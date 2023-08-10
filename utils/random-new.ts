@@ -235,7 +235,7 @@ export const randomNew = async () => {
     const all = (await maybeGeneratePhrase()) || [];
     for (const result of all) {
       if (result) {
-        const phrase = await ingestOne(result.ko, result.en);
+        const phrase = await ingestOne(result.ko, result.en, "FIXME!!");
         phrase && results.push(phrase);
       }
     }

@@ -3,8 +3,20 @@ import * as fs from "fs";
 import { appendFileSync } from "fs";
 import * as readline from "readline";
 
-export async function ingestOne(ko: string, en: string) {
-  const phrase = await prismaClient.phrase.findFirst({ where: { term: ko } });
+export async function ingestOne(ko: string, en: string, rootWord: string) {
+  // Find phrase where `rootWord` or `ko` matches
+  const phrase = await prismaClient.phrase.findFirst({
+    where: {
+      OR: [
+        {
+          term: ko,
+        },
+        {
+          root_word: rootWord,
+        },
+      ],
+    }
+  });
   if (!phrase) {
     console.log(`Ingesting ${ko} => ${en}`);
     appendFileSync("phrases.txt", [ko, en].join("\t") + "\n", "utf8");
@@ -12,8 +24,12 @@ export async function ingestOne(ko: string, en: string) {
       data: {
         term: ko,
         definition: en,
+        root_word: rootWord,
       },
     });
+  } else {
+    console.log(`(already exists) ${ko} => ${en} `);
+    return phrase;
   }
 }
 
@@ -32,6 +48,8 @@ export function ingestPhrases() {
     }
 
     let splitLine = line.split(",");
-    ingestOne(splitLine[0], splitLine[1]);
+    // We never stored the root word in phrases.txt,
+    // so we'll just use the first word
+    ingestOne(splitLine[0], splitLine[1], splitLine[0]);
   });
 }

@@ -1,5 +1,5 @@
 // Define keys for Spaced Repetition System (SRS) data
-type SRSKeys = "repetitions" | "interval" | "ease" | "lapses";
+type SRSKeys = "repetitions" | "interval" | "ease" | "lapses" | "nextReviewAt";
 
 // Define the SRS data structure using the keys
 type SRSData = Record<SRSKeys, number>;
@@ -55,6 +55,7 @@ export function gradePerformance(card: SRSData, grade: number): SRSData {
     ease = calculateEase(ease, grade);
     lapses += 1;
   }
+  const nextReviewAt = Date.now() + interval * 24 * 60 * 60 * 1000;
 
   // Return the updated card data
   return {
@@ -63,6 +64,7 @@ export function gradePerformance(card: SRSData, grade: number): SRSData {
     interval,
     ease,
     lapses,
+    nextReviewAt,
   };
 }
 
@@ -71,6 +73,7 @@ const DEFAULT_CARD: SRSData = {
   interval: 1,
   ease: 2.5,
   lapses: 0,
+  nextReviewAt: 0,
 };
 
 // Function to create a new card with default SRS values

@@ -232,7 +232,7 @@ export const appRouter = router({
         const result = await phraseFromUserInput(term, definition);
         const userId = ctx.user?.id;
         if (result && userId) {
-          const phrase = await ingestOne(result.ko, result.en);
+          const phrase = await ingestOne(result.ko, result.en, term);
           if (phrase) {
             await prismaClient.card.create({
               data: {

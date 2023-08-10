@@ -15,8 +15,7 @@ model Phrase {
   term       String  @unique
   definition String
   Card       Card[]
-  // The "User" relation is optional
-  // "userId" is the foreign key
+  root_word  String
   userId     String?
   user       User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
@@ -34,6 +33,7 @@ model Card {
   user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   phraseId       Int
   phrase         Phrase    @relation(fields: [phraseId], references: [id], onDelete: Cascade)
+
   // userID and PhraseID must be unique
   @@unique([userId, phraseId])
 }
