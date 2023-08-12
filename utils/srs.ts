@@ -1,3 +1,5 @@
+import { pick } from "radash";
+
 // Define keys for Spaced Repetition System (SRS) data
 type SRSKeys = "repetitions" | "interval" | "ease" | "lapses" | "nextReviewAt";
 
@@ -56,16 +58,25 @@ export function gradePerformance(card: SRSData, grade: number): SRSData {
     lapses += 1;
   }
   const nextReviewAt = Date.now() + interval * 24 * 60 * 60 * 1000;
-
+  const keys: (keyof SRSData)[] = [
+    "repetitions",
+    "interval",
+    "ease",
+    "lapses",
+    "nextReviewAt",
+  ];
   // Return the updated card data
-  return {
-    ...card,
-    repetitions,
-    interval,
-    ease,
-    lapses,
-    nextReviewAt,
-  };
+  return pick(
+    {
+      ...card,
+      repetitions,
+      interval,
+      ease,
+      lapses,
+      nextReviewAt,
+    },
+    keys,
+  );
 }
 
 const DEFAULT_CARD: SRSData = {

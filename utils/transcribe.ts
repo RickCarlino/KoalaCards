@@ -56,7 +56,6 @@ export async function transcribeB64(
   const timeoutPromise = new Promise<TranscriptionResult>((resolve, _) =>
     setTimeout(() => {
       if (!done) {
-        console.log("Transcription timeout.");
         resolve({ kind: "error" });
       }
     }, 8000),

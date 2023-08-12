@@ -3,6 +3,7 @@ CREATE TABLE "Phrase" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     "term" TEXT NOT NULL,
     "definition" TEXT NOT NULL,
+    "root_word" TEXT NOT NULL,
     "userId" TEXT,
     CONSTRAINT "Phrase_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
@@ -10,15 +11,14 @@ CREATE TABLE "Phrase" (
 -- CreateTable
 CREATE TABLE "Card" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    "next_quiz_type" TEXT,
-    "last_win_at" DATETIME,
-    "total_attempts" INTEGER NOT NULL DEFAULT 0,
-    "loss_count" INTEGER NOT NULL DEFAULT 0,
-    "win_count" INTEGER NOT NULL DEFAULT 0,
-    "win_percentage" REAL NOT NULL DEFAULT 0,
     "flagged" BOOLEAN NOT NULL DEFAULT false,
     "userId" TEXT NOT NULL,
     "phraseId" INTEGER NOT NULL,
+    "repetitions" REAL NOT NULL DEFAULT 0,
+    "interval" REAL NOT NULL DEFAULT 1,
+    "ease" REAL NOT NULL DEFAULT 2.5,
+    "lapses" REAL NOT NULL DEFAULT 0,
+    "nextReviewAt" REAL NOT NULL DEFAULT 0,
     CONSTRAINT "Card_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT "Card_phraseId_fkey" FOREIGN KEY ("phraseId") REFERENCES "Phrase" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );

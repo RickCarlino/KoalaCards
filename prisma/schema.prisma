@@ -21,18 +21,17 @@ model Phrase {
 }
 
 model Card {
-  id             Int       @id @default(autoincrement())
-  next_quiz_type String?
-  last_win_at    DateTime?
-  total_attempts Int       @default(0)
-  loss_count     Int       @default(0)
-  win_count      Int       @default(0)
-  win_percentage Float     @default(0)
-  flagged        Boolean   @default(false)
-  userId         String
-  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  phraseId       Int
-  phrase         Phrase    @relation(fields: [phraseId], references: [id], onDelete: Cascade)
+  id           Int     @id @default(autoincrement())
+  flagged      Boolean @default(false)
+  userId       String
+  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phraseId     Int
+  phrase       Phrase  @relation(fields: [phraseId], references: [id], onDelete: Cascade)
+  repetitions  Float   @default(0)
+  interval     Float   @default(1)
+  ease         Float   @default(2.5)
+  lapses       Float   @default(0)
+  nextReviewAt Float   @default(0)
 
   // userID and PhraseID must be unique
   @@unique([userId, phraseId])

@@ -31,10 +31,8 @@ type Quiz = {
   id: number;
   en: string;
   ko: string;
-  win_percentage: number;
-  total_attempts: number;
-  quizType: "dictation" | "listening" | "speaking";
   quizAudio: string;
+  quizType: "dictation" | "listening" | "speaking";
 };
 
 type Props = {
@@ -249,23 +247,11 @@ function Study({ quizzes }: Props) {
   };
   const header = (() => {
     if (!quiz) return <span></span>;
-    const difficultWord =
-      quiz &&
-      (quiz.win_percentage < 0.33 || quiz.total_attempts < 2) &&
-      quiz.quizType !== "speaking";
-    if (difficultWord) {
-      return (
-        <span>
-          👩‍🏫 {quiz.ko} / {quiz.en}
-        </span>
-      );
-    } else {
-      return (
-        <span>
-          🫣 Card #{quiz.id} grade: {Math.round(quiz.win_percentage * 100)}%
-        </span>
-      );
-    }
+    return (
+      <span>
+        🫣 Card #{quiz.id}
+      </span>
+    );
   })();
   return (
     <Container size="xs">

@@ -12,6 +12,7 @@ import { procedure, router } from "../trpc";
 import getLessons from "@/utils/fetch-lesson";
 import { ingestOne, ingestPhrases } from "@/utils/ingest-phrases";
 import { phraseFromUserInput, randomNew } from "@/utils/random-new";
+import { gradePerformance } from "@/utils/srs";
 
 const PROMPT_CONFIG = { best_of: 2, temperature: 0.4 };
 
@@ -72,47 +73,17 @@ const translationPrompt = (ko: string, response: string) => {
     `;
 };
 
-const NEXT_QUIZ_TYPES: Record<string, string | undefined> = {
-  dictation: "listening",
-  listening: "speaking",
-  speaking: "listening",
-};
-
 const markIncorrect = async (card: Card) => {
   await prismaClient.card.update({
     where: { id: card.id },
-    data: {
-      loss_count: { increment: 1 },
-      total_attempts: { increment: 1 },
-      win_percentage: card.win_count / (card.total_attempts + 1),
-      last_win_at: undefined,
-      next_quiz_type: "dictation",
-    },
+    data: gradePerformance(card, 0),
   });
 };
 
 const markCorrect = async (card: Card) => {
-  /** Increase `win_count`, `total_attempts`.
-    Recalculate `win_percentage`.
-    Set last `last_win_at` to current time.
-    Calculate next value of `next_quiz_type` based
-    on the following table:
-
-    | Previous Val  | Next Val      |
-    |---------------|---------------|
-    | "dictation"   | "listening"   |
-    | "listening"   | "speaking"    |
-    | All others    | "dictation"   | */
   await prismaClient.card.update({
     where: { id: card.id },
-    data: {
-      win_count: { increment: 1 },
-      total_attempts: { increment: 1 },
-      win_percentage: (card.win_count + 1) / (card.total_attempts + 1),
-      last_win_at: { set: new Date() },
-      next_quiz_type:
-        NEXT_QUIZ_TYPES[card.next_quiz_type ?? "dictation"] ?? "dictation",
-    },
+    data: gradePerformance(card, 4),
   });
 };
 
@@ -238,7 +209,6 @@ export const appRouter = router({
               data: {
                 userId,
                 phraseId: phrase.id,
-                next_quiz_type: "dictation",
               },
             });
             results.push({
@@ -257,8 +227,6 @@ export const appRouter = router({
       z.array(
         z.object({
           id: z.number(),
-          win_percentage: z.number(),
-          total_attempts: z.number(),
           flagged: z.boolean(),
           phrase: z.object({
             id: z.number(),
@@ -272,7 +240,7 @@ export const appRouter = router({
       return await prismaClient.card.findMany({
         include: { phrase: true },
         where: { userId: ctx.user?.id || "000" },
-        orderBy: { total_attempts: "desc" },
+        orderBy: { nextReviewAt: "asc" },
       });
     }),
   deleteCard: procedure
@@ -346,8 +314,6 @@ export const appRouter = router({
         id: z.number(),
         en: z.string(),
         ko: z.string(),
-        win_percentage: z.number(),
-        total_attempts: z.number(),
         flagged: z.boolean(),
       }),
     )
@@ -417,10 +383,8 @@ export const appRouter = router({
           id: z.number(),
           en: z.string(),
           ko: z.string(),
-          quizType,
           quizAudio: z.string(),
-          win_percentage: z.number(),
-          total_attempts: z.number(),
+          quizType: quizType,
         }),
       ),
     )
@@ -514,7 +478,6 @@ async function maybeAddPhraseForUser(userId: string) {
     where: {
       flagged: false,
       userId,
-      total_attempts: 0,
     },
   });
 
@@ -535,7 +498,6 @@ async function maybeAddPhraseForUser(userId: string) {
         data: {
           userId,
           phraseId: phrase.id,
-          next_quiz_type: "dictation",
         },
       });
     }

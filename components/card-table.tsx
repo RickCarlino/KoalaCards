@@ -5,8 +5,6 @@ import React from "react";
 
 type CardWithPhrase = {
   id: number;
-  win_percentage: number;
-  total_attempts: number;
   flagged: boolean;
   phrase: {
     id: number;
@@ -29,8 +27,6 @@ export const CardTable: React.FC<PhraseTableProps> = ({ cards }) => {
             <th>Flagged</th>
             <th>English</th>
             <th>Korean</th>
-            <th>Total Attempts</th>
-            <th>Win Percentage</th>
             <th>Edit</th>
           </tr>
         </thead>
@@ -41,8 +37,6 @@ export const CardTable: React.FC<PhraseTableProps> = ({ cards }) => {
               <td>{card.flagged ? "🚩" : ""}</td>
               <td>{card.phrase.definition}</td>
               <td>{card.phrase.term}</td>
-              <td>{card.total_attempts}</td>
-              <td>{Math.round(card.win_percentage * 100)}</td>
               <td>
                 <Button onClick={() => router.push(`/cards/${card.id}`)}>
                   <IconPencil stroke={1.5} />

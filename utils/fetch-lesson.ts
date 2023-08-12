@@ -2,7 +2,7 @@ import { prismaClient } from "@/server/prisma-client";
 import textToSpeech from "@google-cloud/text-to-speech";
 import { createHash } from "crypto";
 import fs, { existsSync, readFileSync } from "fs";
-import { draw } from "radash";
+import { draw, shuffle } from "radash";
 import util from "util";
 
 const CLIENT = new textToSpeech.TextToSpeechClient();
@@ -71,6 +71,8 @@ const pause = (ms: number) => {
 
 type QuizType = "dictation" | "listening" | "speaking";
 
+export const QUIZ_TYPES: QuizType[] = ["dictation", "listening", "speaking"];
+
 async function getAudio(quizType: QuizType, _ko: string, _en: string) {
   let innerSSML: string;
   switch (quizType) {
@@ -93,32 +95,52 @@ async function getAudio(quizType: QuizType, _ko: string, _en: string) {
   return newSpeak(ssml(innerSSML));
 }
 
-export default async function getLessons(userId: string) {
+interface Quiz {
+  id: number;
+  en: string;
+  ko: string;
+  quizType: QuizType;
+  quizAudio: string;
+}
+export default async function getLessons(userId: string): Promise<Quiz[]> {
   const cards = await prismaClient.card.findMany({
     include: { phrase: true },
     where: { flagged: false, userId },
-    orderBy: [{ win_percentage: "asc" }, { total_attempts: "asc" }],
+    orderBy: [{ nextReviewAt: "asc" }, { repetitions: "asc" }],
     take: 10,
   });
-  const quizzes = cards.map(async (card) => {
-    let quizType: QuizType;
-    if (card.win_percentage < 0.33) {
-      quizType = "dictation";
-    } else {
-      quizType = draw(["listening", "speaking"]) ?? "listening";
+  const DICT = "dictation" as const;
+  const LIST = "listening" as const;
+  const SPEAK = "speaking" as const;
+  const quizzes: Quiz[] = [];
+  cards.map(async (card) => {
+    if (card.repetitions > 3) {
+      return;
     }
-    const en = card.phrase.definition;
     const ko = card.phrase.term;
-    const quizAudio = await getAudio(quizType, ko, en);
-    return {
+    const en = card.phrase.definition;
+    const quizAudio = await getAudio("dictation", ko, en);
+    quizzes.push({
       id: card.id,
       en,
       ko,
-      quizType,
+      quizType: DICT,
       quizAudio,
-      win_percentage: card.win_percentage,
-      total_attempts: card.total_attempts,
-    };
+    });
   });
-  return Promise.all(quizzes);
+  cards.map(async (card) => {
+    shuffle([LIST, SPEAK]).map(async (quizType) => {
+      const ko = card.phrase.term;
+      const en = card.phrase.definition;
+      const quizAudio = await getAudio(quizType, ko, en);
+      quizzes.push({
+        id: card.id,
+        en,
+        ko,
+        quizType,
+        quizAudio,
+      });
+    });
+  });
+  return quizzes;
 }
