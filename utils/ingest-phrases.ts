@@ -8,12 +8,8 @@ export async function ingestOne(ko: string, en: string, rootWord: string) {
   const phrase = await prismaClient.phrase.findFirst({
     where: {
       OR: [
-        {
-          term: ko,
-        },
-        {
-          root_word: rootWord,
-        },
+        { term: ko },
+        { root_word: rootWord },
       ],
     }
   });
