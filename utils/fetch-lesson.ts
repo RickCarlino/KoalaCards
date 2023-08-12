@@ -114,21 +114,6 @@ export default async function getLessons(userId: string): Promise<Quiz[]> {
   const SPEAK = "speaking" as const;
   const quizzes: Quiz[] = [];
   cards.map(async (card) => {
-    if (card.repetitions > 3) {
-      return;
-    }
-    const ko = card.phrase.term;
-    const en = card.phrase.definition;
-    const quizAudio = await getAudio("dictation", ko, en);
-    quizzes.push({
-      id: card.id,
-      en,
-      ko,
-      quizType: DICT,
-      quizAudio,
-    });
-  });
-  cards.map(async (card) => {
     shuffle([LIST, SPEAK]).map(async (quizType) => {
       const ko = card.phrase.term;
       const en = card.phrase.definition;
@@ -140,6 +125,21 @@ export default async function getLessons(userId: string): Promise<Quiz[]> {
         quizType,
         quizAudio,
       });
+    });
+  });
+  cards.map(async (card) => {
+    if (card.repetitions > 4) {
+      return;
+    }
+    const ko = card.phrase.term;
+    const en = card.phrase.definition;
+    const quizAudio = await getAudio("dictation", ko, en);
+    quizzes.push({
+      id: card.id,
+      en,
+      ko,
+      quizType: DICT,
+      quizAudio,
     });
   });
   return quizzes;
