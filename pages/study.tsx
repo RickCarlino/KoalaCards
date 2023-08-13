@@ -1,49 +1,31 @@
 import { PlayButton, playAudio } from "@/components/play-button";
 import { RecordButton } from "@/components/record-button";
 import { trpc } from "@/utils/trpc";
-import {
-  Badge,
-  Button,
-  Card,
-  Container,
-  Grid,
-  Header,
-  Text,
-} from "@mantine/core";
+import { Button, Container, Grid, Header } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
-import { uid } from "radash";
 import * as React from "react";
 import Authed from "./_authed";
 
-type QuizResult = {
-  card: Quiz;
-  result: "error" | "success" | "failure";
-  message: string;
-  uid: string;
-};
-
-interface CappedStack<T> {
-  contents: T[];
-  limit: number;
-}
-
 type Quiz = {
   id: number;
-  en: string;
   ko: string;
-  quizAudio: string;
+  en: string;
+  repetitions: number;
+  audio: {
+    // TODO: `?: string | undefined;` is not correct,
+    // but Zod types seem to be returning falsey values.
+    dictation?: string | undefined;
+    listening?: string | undefined;
+    speaking?: string | undefined;
+  };
+};
+
+type CurrentQuiz = Quiz & {
   quizType: "dictation" | "listening" | "speaking";
+  quizAudio: string;
 };
 
-type Props = {
-  quizzes: Quiz[];
-};
-
-function push<T>(stack: CappedStack<T>, item: T): CappedStack<T> {
-  const { contents, limit } = stack;
-  const newContents = [item, ...contents].slice(0, limit);
-  return { contents: newContents, limit };
-}
+type Props = { quizzes: Quiz[] };
 
 const sounds = {
   failure: async () => await playAudio("/sfx/beep.mp3"),
@@ -51,74 +33,8 @@ const sounds = {
   error: async () => await playAudio("/sfx/flip.wav"),
 };
 
-type QuizResultListProps = {
-  results: QuizResult[];
-  onFlag: (card: Quiz) => void;
-};
-
-const QuizResultList: React.FC<QuizResultListProps> = ({ results, onFlag }) => {
-  return (
-    <div>
-      {results.map((result) => {
-        let color: string;
-        switch (result.result) {
-          case "success":
-            color = "green";
-            break;
-          case "failure":
-            color = "red";
-            break;
-          case "error":
-            color = "yellow";
-            break;
-        }
-        const { card, uid } = result;
-        return (
-          <Card
-            key={uid}
-            shadow="xs"
-            padding="md"
-            radius="sm"
-            style={{ marginBottom: "10px" }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "5px",
-              }}
-            >
-              <Badge variant={"filled"} color={color}>
-                {card.quizType}
-              </Badge>
-              <Button
-                onClick={() => onFlag(card)}
-                variant="link"
-                color="gray"
-                size="xs"
-              >
-                🚩
-              </Button>
-            </div>
-            <Text size="lg" weight={500}>
-              {card.ko}
-            </Text>
-            <Text size="sm" color="gray">
-              {card.en}
-            </Text>
-            <Text size="sm" color="gray">
-              You said: {result.message}
-            </Text>
-          </Card>
-        );
-      })}
-    </div>
-  );
-};
-
 interface CurrentQuizProps {
-  quiz?: Quiz;
+  quiz?: CurrentQuiz;
   sendAudio: (audio: string) => void;
   doFail: () => void;
   doFlag: (id?: number) => void;
@@ -175,32 +91,26 @@ function CurrentQuiz(props: CurrentQuizProps) {
 }
 
 function Study({ quizzes }: Props) {
-  const [currentIndex, setIndex] = React.useState(quizzes.length - 1);
-  const quiz: Quiz | undefined = quizzes[currentIndex];
-  const [quizResults, setQuizResults] = React.useState<CappedStack<QuizResult>>(
-    {
-      contents: [],
-      limit: 10,
-    },
-  );
   const [gradingInProgress, setGradingInProgress] = React.useState(0);
   const performExam = trpc.performExam.useMutation();
   const failPhrase = trpc.failPhrase.useMutation();
   const flagPhrase = trpc.flagPhrase.useMutation();
 
+  const getQuiz = (): CurrentQuiz => {
+    const quiz = quizzes[0];
+    const quizType = "dictation" as const;
+    return {
+      ...quiz,
+      quizType,
+      quizAudio: quiz.audio[quizType] ?? "",
+    };
+  };
+
   const doFail = async () => {
+    const quiz = getQuiz();
     if (!quiz) return;
-    setQuizResults(
-      push(quizResults, {
-        card: quiz,
-        result: "failure",
-        message: "No quiz left.",
-        uid: uid(8),
-      }),
-    );
     await sounds.failure();
-    await failPhrase.mutate({ id: quiz.id });
-    gotoNextPhrase();
+    await failPhrase.mutate({ id: getQuiz().id });
   };
 
   useHotkeys([
@@ -208,50 +118,28 @@ function Study({ quizzes }: Props) {
     ["r", () => doFlag()],
   ]);
 
-  const doFlag = async (id = quiz.id) => {
+  const doFlag = async (id = getQuiz().id) => {
     await flagPhrase.mutate({ id });
-    gotoNextPhrase();
   };
-  const gotoNextPhrase = async () => {
-    const nextIndex = currentIndex - 1;
-    setIndex(nextIndex);
-    const p = quizzes[nextIndex];
-    if (!p) {
-      // This usually happens on
-      // new accounts with < 10 cards.
-      return;
-    }
-    await playAudio(p.quizAudio);
-    return p;
-  };
+
   const sendAudio = async (audio: string) => {
-    const id = quiz.id;
+    const id = getQuiz().id;
     setGradingInProgress((g) => g + 1);
     performExam
       .mutateAsync({
         id,
         audio,
-        quizType: quiz.quizType,
+        quizType: getQuiz().quizType,
       })
       .then(async (result) => {
-        const passFail: QuizResult = {
-          card: quiz,
-          result: result.result,
-          message: result.message,
-          uid: uid(8),
-        };
-        setQuizResults((qr) => push(qr, passFail));
+        console.log("TODO: Handle quiz grade: " + JSON.stringify(result));
       })
       .finally(() => setGradingInProgress((g) => g - 1));
-    gotoNextPhrase();
   };
   const header = (() => {
+    const quiz = getQuiz();
     if (!quiz) return <span></span>;
-    return (
-      <span>
-        🫣 Card #{quiz.id}
-      </span>
-    );
+    return <span>🫣 Card #{quiz.id}</span>;
   })();
   return (
     <Container size="xs">
@@ -273,12 +161,8 @@ function Study({ quizzes }: Props) {
         doFail={doFail}
         sendAudio={sendAudio}
         doFlag={doFlag}
-        quiz={quiz}
+        quiz={getQuiz()}
         inProgress={gradingInProgress}
-      />
-      <QuizResultList
-        results={quizResults.contents}
-        onFlag={({ id }) => doFlag(id)}
       />
     </Container>
   );
