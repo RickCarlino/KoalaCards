@@ -1,4 +1,4 @@
-import { PlayButton } from "@/components/play-button";
+import { PlayButton, playAudio } from "@/components/play-button";
 import { RecordButton } from "@/components/record-button";
 import { trpc } from "@/utils/trpc";
 import { Button, Container, Grid, Header } from "@mantine/core";
@@ -10,6 +10,7 @@ import {
   newQuizState,
   quizReducer,
   currentQuiz,
+  gotoNextQuiz,
 } from "./_study_reducer";
 
 type Props = { quizzes: Quiz[] };
@@ -112,6 +113,8 @@ function Study({ quizzes }: Props) {
         onRecord={(audio) => {
           const { id, quizType } = quiz;
           dispatch({ type: "WILL_GRADE" });
+          const { quizAudio } = currentQuiz(gotoNextQuiz(state));
+          setTimeout(() => playAudio(quizAudio), 678);
           performExam
             .mutateAsync({ id, audio, quizType })
             .then((data) => {
@@ -129,6 +132,25 @@ function Study({ quizzes }: Props) {
         quiz={quiz}
         inProgress={state.pendingQuizzes}
       />
+      <br />
+      <pre>
+        {JSON.stringify(
+          {
+            ...state,
+            quizzes: null,
+          },
+          null,
+          2,
+        )}
+      </pre>
+      <br />
+      <pre>
+        {JSON.stringify(
+          quiz,
+          null,
+          2,
+        )}
+      </pre>
     </Container>
   );
 }

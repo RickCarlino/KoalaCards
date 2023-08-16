@@ -21,17 +21,16 @@ type State = {
 
 type QuizType = "dictation" | "listening" | "speaking";
 
+type QuizResult = "error" | "failure" | "success";
+
 type Action =
-  | { type: "START_QUIZ" }
-  | { type: "NEXT_QUIZ" }
-  | { type: "FAIL_QUIZ"; id: number }
-  | { type: "FLAG_QUIZ"; id: number }
   | { type: "WILL_GRADE" }
   | { type: "ADD_ERROR"; message: string }
-  | { type: "DID_GRADE"; id: number; result: "error" | "failure" | "success" }
-  | { type: "SET_QUIZ_TYPE"; quizType: QuizType };
+  | { type: "FAIL_QUIZ"; id: number }
+  | { type: "FLAG_QUIZ"; id: number }
+  | { type: "DID_GRADE"; id: number; result: QuizResult };
 
-function gotoNextQuiz(state: State): State {
+export function gotoNextQuiz(state: State): State {
   const findFailedQuiz = (quiz: Quiz) => state.failedQuizzes.has(quiz.id);
   let nextQuizIndex =
     state.failedQuizzes.size > 0
@@ -93,12 +92,6 @@ export function quizReducer(state: State, action: Action): State {
     case "ADD_ERROR":
       return { ...state, errors: [...state.errors, action.message] };
 
-    case "START_QUIZ":
-      return newQuizState();
-
-    case "NEXT_QUIZ":
-      return gotoNextQuiz(state);
-
     case "FAIL_QUIZ":
       const newFailedQuizzes = new Set(state.failedQuizzes);
       newFailedQuizzes.add(action.id);
@@ -124,9 +117,6 @@ export function quizReducer(state: State, action: Action): State {
         pendingQuizzes: state.pendingQuizzes - 1,
         failedQuizzes: updatedFailedQuizzes,
       });
-
-    case "SET_QUIZ_TYPE":
-      return { ...state, currentQuizType: action.quizType };
 
     default:
       return state;

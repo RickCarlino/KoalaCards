@@ -1,5 +1,6 @@
 import { Button } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
+import { useEffect, useRef } from "react";
 
 let audioContext: AudioContext;
 let audioQueue: string[] = [];
@@ -63,13 +64,20 @@ export const playAudio = (urlOrDataURI: string): Promise<void> => {
 };
 
 /** A React component  */
-export function PlayButton({ dataURI }: { dataURI?: string }) {
+export function PlayButton({ dataURI }: { dataURI: string }) {
   const playSound = () => {
     if (dataURI) {
       playAudio(dataURI);
     }
   };
+  const hasPlayedRef = useRef(false);
   useHotkeys([["c", playSound]]);
+  useEffect(() => {
+    if (!hasPlayedRef.current) {
+      playAudio(dataURI);
+      hasPlayedRef.current = true;
+    }
+  }, [dataURI]);
 
   if (!dataURI) {
     return (
