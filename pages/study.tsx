@@ -1,24 +1,29 @@
-import { PlayButton, playAudio } from "@/components/play-button";
+import { PlayButton } from "@/components/play-button";
 import { RecordButton } from "@/components/record-button";
 import { trpc } from "@/utils/trpc";
 import { Button, Container, Grid, Header } from "@mantine/core";
-import { useHotkeys } from "@mantine/hooks";
-import * as React from "react";
+import { useReducer } from "react";
 import Authed from "./_authed";
-import { Quiz, newQuizState, quizReducer } from "./_study_reducer";
+import {
+  Quiz,
+  CurrentQuiz,
+  newQuizState,
+  quizReducer,
+  currentQuiz,
+} from "./_study_reducer";
 
 type Props = { quizzes: Quiz[] };
 
 interface CurrentQuizProps {
-  quiz?: CurrentQuiz;
-  sendAudio: (audio: string) => void;
-  doFail: () => void;
-  doFlag: (id?: number) => void;
+  quiz: CurrentQuiz;
   inProgress: number;
+  doFail: (id: number) => void;
+  doFlag: (id: number) => void;
+  onRecord: (audio: string) => void;
 }
 
 function CurrentQuiz(props: CurrentQuizProps) {
-  const { quiz, sendAudio, doFail, doFlag, inProgress } = props;
+  const { quiz, onRecord, doFail, doFlag, inProgress } = props;
   if (!quiz) {
     let message = "";
     if (inProgress) {
@@ -50,10 +55,10 @@ function CurrentQuiz(props: CurrentQuizProps) {
         <PlayButton dataURI={quiz.quizAudio} />
       </Grid.Col>
       <Grid.Col span={4}>
-        <RecordButton quizType={quiz.quizType} onRecord={sendAudio} />
+        <RecordButton quizType={quiz.quizType} onRecord={onRecord} />
       </Grid.Col>
       <Grid.Col span={4}>
-        <Button onClick={doFail} fullWidth>
+        <Button onClick={() => doFail(quiz.id)} fullWidth>
           ❌[F]ail Item
         </Button>
       </Grid.Col>
@@ -67,22 +72,24 @@ function CurrentQuiz(props: CurrentQuizProps) {
 }
 
 function Study({ quizzes }: Props) {
-  const [state, dispatch] = React.useReducer(
-    quizReducer,
-    newQuizState({ quizzes }),
-  );
+  const [state, dispatch] = useReducer(quizReducer, newQuizState({ quizzes }));
   const performExam = trpc.performExam.useMutation();
   const failPhrase = trpc.failPhrase.useMutation();
   const flagPhrase = trpc.flagPhrase.useMutation();
+  const needBetterErrorHandler = (error: any) => {
+    console.error(error);
+    dispatch({ type: "ADD_ERROR", message: JSON.stringify(error) });
+  };
+  const quiz = currentQuiz(state);
 
   const header = (() => {
-    const quiz = getQuiz();
     if (!quiz) return <span></span>;
     return <span>🫣 Card #{quiz.id}</span>;
   })();
 
   return (
     <Container size="xs">
+      {state.errors.length ? "ERROR DETECTED!?!?!" : ""}
       <Header
         height={80}
         style={{
@@ -98,11 +105,29 @@ function Study({ quizzes }: Props) {
       </Header>
       {header}
       <CurrentQuiz
-        doFail={doFail}
-        sendAudio={sendAudio}
-        doFlag={doFlag}
-        quiz={getQuiz()}
-        inProgress={gradingInProgress}
+        doFail={(id) => {
+          dispatch({ type: "FAIL_QUIZ", id });
+          failPhrase.mutateAsync({ id }).catch(needBetterErrorHandler);
+        }}
+        onRecord={(audio) => {
+          const { id, quizType } = quiz;
+          dispatch({ type: "WILL_GRADE" });
+          performExam
+            .mutateAsync({ id, audio, quizType })
+            .then((data) => {
+              dispatch({ type: "DID_GRADE", id, result: data.result });
+            })
+            .catch((error) => {
+              needBetterErrorHandler(error);
+              dispatch({ type: "DID_GRADE", id, result: "error" });
+            });
+        }}
+        doFlag={(id) => {
+          dispatch({ type: "FLAG_QUIZ", id });
+          flagPhrase.mutateAsync({ id }).catch(needBetterErrorHandler);
+        }}
+        quiz={quiz}
+        inProgress={state.pendingQuizzes}
       />
     </Container>
   );

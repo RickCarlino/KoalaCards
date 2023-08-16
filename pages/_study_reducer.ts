@@ -16,6 +16,7 @@ type State = {
   failedQuizzes: Set<number>;
   currentQuizType: QuizType;
   quizzes: Quiz[];
+  errors: string[];
 };
 
 type QuizType = "dictation" | "listening" | "speaking";
@@ -26,6 +27,7 @@ type Action =
   | { type: "FAIL_QUIZ"; id: number }
   | { type: "FLAG_QUIZ"; id: number }
   | { type: "WILL_GRADE" }
+  | { type: "ADD_ERROR"; message: string }
   | { type: "DID_GRADE"; id: number; result: "error" | "failure" | "success" }
   | { type: "SET_QUIZ_TYPE"; quizType: QuizType };
 
@@ -60,12 +62,37 @@ export const newQuizState = (state: Partial<State> = {}): State => {
     failedQuizzes: new Set(),
     currentQuizType: "dictation",
     quizzes: [],
+    errors: [],
     ...state,
   };
 };
 
+export type CurrentQuiz = {
+  id: number;
+  en: string;
+  ko: string;
+  quizAudio: string;
+  quizType: "dictation" | "speaking" | "listening";
+};
+
+export function currentQuiz(state: State): CurrentQuiz {
+  const currentQuiz = state.quizzes[state.currentQuizIndex];
+  const quizType = state.currentQuizType;
+
+  return {
+    id: currentQuiz.id,
+    en: currentQuiz.en,
+    ko: currentQuiz.ko,
+    quizAudio: currentQuiz.audio[quizType],
+    quizType,
+  };
+}
+
 export function quizReducer(state: State, action: Action): State {
   switch (action.type) {
+    case "ADD_ERROR":
+      return { ...state, errors: [...state.errors, action.message] };
+
     case "START_QUIZ":
       return newQuizState();
 
@@ -92,11 +119,11 @@ export function quizReducer(state: State, action: Action): State {
       } else if (action.result === "success") {
         updatedFailedQuizzes.delete(action.id);
       }
-      return {
+      return gotoNextQuiz({
         ...state,
         pendingQuizzes: state.pendingQuizzes - 1,
         failedQuizzes: updatedFailedQuizzes,
-      };
+      });
 
     case "SET_QUIZ_TYPE":
       return { ...state, currentQuizType: action.quizType };
