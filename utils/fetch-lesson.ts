@@ -2,7 +2,7 @@ import { prismaClient } from "@/server/prisma-client";
 import textToSpeech from "@google-cloud/text-to-speech";
 import { createHash } from "crypto";
 import fs, { existsSync, readFileSync } from "fs";
-import { draw, shuffle } from "radash";
+import { draw } from "radash";
 import util from "util";
 
 const CLIENT = new textToSpeech.TextToSpeechClient();
@@ -95,52 +95,40 @@ async function getAudio(quizType: QuizType, _ko: string, _en: string) {
   return newSpeak(ssml(innerSSML));
 }
 
-interface Quiz {
-  id: number;
-  en: string;
-  ko: string;
-  quizType: QuizType;
-  quizAudio: string;
-}
-export default async function getLessons(userId: string): Promise<Quiz[]> {
+export default async function getLessons(userId: string) {
   const cards = await prismaClient.card.findMany({
     include: { phrase: true },
     where: { flagged: false, userId },
     orderBy: [{ nextReviewAt: "asc" }, { repetitions: "asc" }],
-    take: 10,
+    take: 14,
   });
-  const DICT = "dictation" as const;
-  const LIST = "listening" as const;
-  const SPEAK = "speaking" as const;
-  const quizzes: Quiz[] = [];
-  cards.map(async (card) => {
-    shuffle([LIST, SPEAK]).map(async (quizType) => {
-      const ko = card.phrase.term;
-      const en = card.phrase.definition;
-      const quizAudio = await getAudio(quizType, ko, en);
-      quizzes.push({
-        id: card.id,
-        en,
-        ko,
-        quizType,
-        quizAudio,
-      });
-    });
-  });
-  cards.map(async (card) => {
-    if (card.repetitions > 4) {
-      return;
-    }
-    const ko = card.phrase.term;
+  type LocalQuiz = {
+    id: number;
+    en: string;
+    ko: string;
+    repetitions: number;
+    audio: {
+      dictation: string;
+      listening: string;
+      speaking: string;
+    };
+  };
+
+  const output: LocalQuiz[] = [];
+  for (const card of cards) {
     const en = card.phrase.definition;
-    const quizAudio = await getAudio("dictation", ko, en);
-    quizzes.push({
+    const ko = card.phrase.term;
+    output.push({
       id: card.id,
       en,
       ko,
-      quizType: DICT,
-      quizAudio,
+      repetitions: card.repetitions,
+      audio: {
+        dictation: await getAudio("dictation", ko, en),
+        listening: await getAudio("listening", ko, en),
+        speaking: await getAudio("speaking", ko, en),
+      },
     });
-  });
-  return quizzes;
+  }
+  return output;
 }

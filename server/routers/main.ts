@@ -1,4 +1,7 @@
 import { prismaClient } from "@/server/prisma-client";
+import { ingestOne, ingestPhrases } from "@/utils/ingest-phrases";
+import { phraseFromUserInput, randomNew } from "@/utils/random-new";
+import { gradePerformance } from "@/utils/srs";
 import { Lang, transcribeB64 } from "@/utils/transcribe";
 import { Card, Phrase } from "@prisma/client";
 import {
@@ -9,10 +12,7 @@ import {
 } from "openai";
 import { z } from "zod";
 import { procedure, router } from "../trpc";
-import getLessons from "@/utils/fetch-lesson";
-import { ingestOne, ingestPhrases } from "@/utils/ingest-phrases";
-import { phraseFromUserInput, randomNew } from "@/utils/random-new";
-import { gradePerformance } from "@/utils/srs";
+import { getNextQuizzes } from "./get-next-quizzes";
 
 const PROMPT_CONFIG = { best_of: 2, temperature: 0.4 };
 
@@ -375,27 +375,7 @@ export const appRouter = router({
         });
       }
     }),
-  getNextQuizzes: procedure
-    .input(z.object({}))
-    .output(
-      z.array(
-        z.object({
-          id: z.number(),
-          en: z.string(),
-          ko: z.string(),
-          quizAudio: z.string(),
-          quizType: quizType,
-        }),
-      ),
-    )
-    .query(async ({ ctx }) => {
-      const userId = ctx.user?.id;
-      if (!userId) {
-        throw new Error("User not found");
-      }
-      await maybeAddPhraseForUser(userId);
-      return await getLessons(userId);
-    }),
+  getNextQuizzes: getNextQuizzes,
   performExam: procedure
     .input(
       z.object({
@@ -473,33 +453,3 @@ export const appRouter = router({
 
 // export type definition of API
 export type AppRouter = typeof appRouter;
-async function maybeAddPhraseForUser(userId: string) {
-  const count = await prismaClient.card.count({
-    where: {
-      flagged: false,
-      userId,
-    },
-  });
-
-  if (count < 3) {
-    const ids = (await prismaClient.$queryRawUnsafe(
-      // DO NOT pass in or accept user input here
-      `SELECT id FROM Phrase ORDER BY RANDOM() LIMIT 10;`,
-    )) as { id: number }[];
-    // Select 20 random phrases from phrase table:
-    const phrases = await prismaClient.phrase.findMany({
-      where: {
-        id: { in: ids.map((x) => x.id) },
-      },
-    });
-    // Insert them into the card table:
-    for (const phrase of phrases) {
-      await prismaClient.card.create({
-        data: {
-          userId,
-          phraseId: phrase.id,
-        },
-      });
-    }
-  }
-}

@@ -63,7 +63,7 @@ export const playAudio = (urlOrDataURI: string): Promise<void> => {
 };
 
 /** A React component  */
-export function PlayButton({ dataURI }: { dataURI?: string }) {
+export function PlayButton({ dataURI }: { dataURI: string }) {
   const playSound = () => {
     if (dataURI) {
       playAudio(dataURI);

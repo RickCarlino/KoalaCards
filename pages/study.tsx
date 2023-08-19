@@ -1,132 +1,30 @@
 import { PlayButton, playAudio } from "@/components/play-button";
 import { RecordButton } from "@/components/record-button";
 import { trpc } from "@/utils/trpc";
-import {
-  Badge,
-  Button,
-  Card,
-  Container,
-  Grid,
-  Header,
-  Text,
-} from "@mantine/core";
-import { useHotkeys } from "@mantine/hooks";
-import { uid } from "radash";
-import * as React from "react";
+import { Button, Container, Grid, Header } from "@mantine/core";
+import { useReducer } from "react";
 import Authed from "./_authed";
+import {
+  Quiz,
+  CurrentQuiz,
+  newQuizState,
+  quizReducer,
+  currentQuiz,
+  gotoNextQuiz,
+} from "./_study_reducer";
 
-type QuizResult = {
-  card: Quiz;
-  result: "error" | "success" | "failure";
-  message: string;
-  uid: string;
-};
-
-interface CappedStack<T> {
-  contents: T[];
-  limit: number;
-}
-
-type Quiz = {
-  id: number;
-  en: string;
-  ko: string;
-  quizAudio: string;
-  quizType: "dictation" | "listening" | "speaking";
-};
-
-type Props = {
-  quizzes: Quiz[];
-};
-
-function push<T>(stack: CappedStack<T>, item: T): CappedStack<T> {
-  const { contents, limit } = stack;
-  const newContents = [item, ...contents].slice(0, limit);
-  return { contents: newContents, limit };
-}
-
-const sounds = {
-  failure: async () => await playAudio("/sfx/beep.mp3"),
-  success: async () => await playAudio("/sfx/tada.mp3"),
-  error: async () => await playAudio("/sfx/flip.wav"),
-};
-
-type QuizResultListProps = {
-  results: QuizResult[];
-  onFlag: (card: Quiz) => void;
-};
-
-const QuizResultList: React.FC<QuizResultListProps> = ({ results, onFlag }) => {
-  return (
-    <div>
-      {results.map((result) => {
-        let color: string;
-        switch (result.result) {
-          case "success":
-            color = "green";
-            break;
-          case "failure":
-            color = "red";
-            break;
-          case "error":
-            color = "yellow";
-            break;
-        }
-        const { card, uid } = result;
-        return (
-          <Card
-            key={uid}
-            shadow="xs"
-            padding="md"
-            radius="sm"
-            style={{ marginBottom: "10px" }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "5px",
-              }}
-            >
-              <Badge variant={"filled"} color={color}>
-                {card.quizType}
-              </Badge>
-              <Button
-                onClick={() => onFlag(card)}
-                variant="link"
-                color="gray"
-                size="xs"
-              >
-                🚩
-              </Button>
-            </div>
-            <Text size="lg" weight={500}>
-              {card.ko}
-            </Text>
-            <Text size="sm" color="gray">
-              {card.en}
-            </Text>
-            <Text size="sm" color="gray">
-              You said: {result.message}
-            </Text>
-          </Card>
-        );
-      })}
-    </div>
-  );
-};
+type Props = { quizzes: Quiz[] };
 
 interface CurrentQuizProps {
-  quiz?: Quiz;
-  sendAudio: (audio: string) => void;
-  doFail: () => void;
-  doFlag: (id?: number) => void;
+  quiz: CurrentQuiz;
   inProgress: number;
+  doFail: (id: string) => void;
+  doFlag: (id: string) => void;
+  onRecord: (audio: string) => void;
 }
 
 function CurrentQuiz(props: CurrentQuizProps) {
-  const { quiz, sendAudio, doFail, doFlag, inProgress } = props;
+  const { quiz, onRecord, doFail, doFlag, inProgress } = props;
   if (!quiz) {
     let message = "";
     if (inProgress) {
@@ -158,15 +56,15 @@ function CurrentQuiz(props: CurrentQuizProps) {
         <PlayButton dataURI={quiz.quizAudio} />
       </Grid.Col>
       <Grid.Col span={4}>
-        <RecordButton quizType={quiz.quizType} onRecord={sendAudio} />
+        <RecordButton quizType={quiz.quizType} onRecord={onRecord} />
       </Grid.Col>
       <Grid.Col span={4}>
-        <Button onClick={doFail} fullWidth>
+        <Button onClick={() => doFail("" + quiz.id)} fullWidth>
           ❌[F]ail Item
         </Button>
       </Grid.Col>
       <Grid.Col span={4}>
-        <Button onClick={() => doFlag(quiz.id)} fullWidth>
+        <Button onClick={() => doFlag("" + quiz.id)} fullWidth>
           🚩Flag Item[R] #{quiz.id}
         </Button>
       </Grid.Col>
@@ -175,86 +73,31 @@ function CurrentQuiz(props: CurrentQuizProps) {
 }
 
 function Study({ quizzes }: Props) {
-  const [currentIndex, setIndex] = React.useState(quizzes.length - 1);
-  const quiz: Quiz | undefined = quizzes[currentIndex];
-  const [quizResults, setQuizResults] = React.useState<CappedStack<QuizResult>>(
-    {
-      contents: [],
-      limit: 10,
-    },
-  );
-  const [gradingInProgress, setGradingInProgress] = React.useState(0);
+  const phrasesById = quizzes.reduce((acc, quiz) => {
+    acc[quiz.id] = quiz;
+    return acc;
+  }, {} as Record<number, Quiz>);
+  const newState = newQuizState({ phrasesById });
+  const [state, dispatch] = useReducer(quizReducer, newState);
   const performExam = trpc.performExam.useMutation();
   const failPhrase = trpc.failPhrase.useMutation();
   const flagPhrase = trpc.flagPhrase.useMutation();
-
-  const doFail = async () => {
-    if (!quiz) return;
-    setQuizResults(
-      push(quizResults, {
-        card: quiz,
-        result: "failure",
-        message: "No quiz left.",
-        uid: uid(8),
-      }),
-    );
-    await sounds.failure();
-    await failPhrase.mutate({ id: quiz.id });
-    gotoNextPhrase();
+  const needBetterErrorHandler = (error: any) => {
+    console.error(error);
+    dispatch({ type: "ADD_ERROR", message: JSON.stringify(error) });
   };
-
-  useHotkeys([
-    ["f", doFail],
-    ["r", () => doFlag()],
-  ]);
-
-  const doFlag = async (id = quiz.id) => {
-    await flagPhrase.mutate({ id });
-    gotoNextPhrase();
-  };
-  const gotoNextPhrase = async () => {
-    const nextIndex = currentIndex - 1;
-    setIndex(nextIndex);
-    const p = quizzes[nextIndex];
-    if (!p) {
-      // This usually happens on
-      // new accounts with < 10 cards.
-      return;
-    }
-    await playAudio(p.quizAudio);
-    return p;
-  };
-  const sendAudio = async (audio: string) => {
-    const id = quiz.id;
-    setGradingInProgress((g) => g + 1);
-    performExam
-      .mutateAsync({
-        id,
-        audio,
-        quizType: quiz.quizType,
-      })
-      .then(async (result) => {
-        const passFail: QuizResult = {
-          card: quiz,
-          result: result.result,
-          message: result.message,
-          uid: uid(8),
-        };
-        setQuizResults((qr) => push(qr, passFail));
-      })
-      .finally(() => setGradingInProgress((g) => g - 1));
-    gotoNextPhrase();
-  };
+  const quiz = currentQuiz(state);
+  if (!quiz) {
+    return <div>Session complete.</div>;
+  }
   const header = (() => {
     if (!quiz) return <span></span>;
-    return (
-      <span>
-        🫣 Card #{quiz.id}
-      </span>
-    );
+    return <span>🫣 Card #{quiz.id}</span>;
   })();
+
   return (
     <Container size="xs">
+      {state.errors.length ? "ERROR DETECTED!?!?!" : ""}
       <Header
         height={80}
         style={{
@@ -265,21 +108,60 @@ function Study({ quizzes }: Props) {
         }}
       >
         <span style={{ fontSize: "24px", fontWeight: "bold" }}>
-          {gradingInProgress ? "🔄" : "☑️"}Study
+          {state.numQuizzesAwaitingServerResponse ? "🔄" : "☑️"}Study
         </span>
       </Header>
       {header}
       <CurrentQuiz
-        doFail={doFail}
-        sendAudio={sendAudio}
-        doFlag={doFlag}
+        doFail={(id) => {
+          dispatch({ type: "FAIL_QUIZ", id });
+          failPhrase
+            .mutateAsync({ id: parseInt(id, 10) })
+            .catch(needBetterErrorHandler);
+        }}
+        onRecord={(audio) => {
+          const { id, quizType } = quiz;
+          dispatch({ type: "WILL_GRADE" });
+          // Possible race condition here, what happens if
+          // the last result of a lesson is "error"?
+          // TODO Write tests for when the last result is of type
+          // "error".
+          const nextQuiz = currentQuiz(gotoNextQuiz(state));
+          if (nextQuiz) {
+            setTimeout(() => playAudio(nextQuiz.quizAudio), 678);
+          }
+          performExam
+            .mutateAsync({ id, audio, quizType })
+            .then((data) => {
+              dispatch({ type: "DID_GRADE", id: "" + id, result: data.result });
+            })
+            .catch((error) => {
+              needBetterErrorHandler(error);
+              dispatch({ type: "DID_GRADE", id: "" + id, result: "error" });
+            });
+        }}
+        doFlag={(id) => {
+          dispatch({ type: "FLAG_QUIZ", id });
+          flagPhrase
+            .mutateAsync({ id: parseInt(id, 10) })
+            .catch(needBetterErrorHandler);
+        }}
         quiz={quiz}
-        inProgress={gradingInProgress}
+        inProgress={state.numQuizzesAwaitingServerResponse}
       />
-      <QuizResultList
-        results={quizResults.contents}
-        onFlag={({ id }) => doFlag(id)}
-      />
+      <br />
+      <pre>{JSON.stringify(quiz, null, 2)}</pre>
+      <br />
+      <pre>
+        {JSON.stringify(
+          {
+            ...state,
+            quizzes: null,
+          },
+          null,
+          2,
+        )}
+      </pre>
     </Container>
   );
 }
@@ -287,7 +169,27 @@ function Study({ quizzes }: Props) {
 function StudyLoader() {
   const { data } = trpc.getNextQuizzes.useQuery({});
   if (data) {
-    return <Study quizzes={data} />;
+    const cleanData = (i: (typeof data)[number]): Quiz => {
+      if (i) {
+        const { dictation, speaking, listening } = i.audio;
+        if (typeof dictation === "string") {
+          if (typeof speaking === "string") {
+            if (typeof listening === "string") {
+              return {
+                ...i,
+                audio: {
+                  dictation,
+                  speaking,
+                  listening,
+                },
+              };
+            }
+          }
+        }
+      }
+      throw new Error("Impossible");
+    };
+    return <Study quizzes={data.map(cleanData)} />;
   } else {
     return <div>Loading...</div>;
   }
