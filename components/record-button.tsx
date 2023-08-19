@@ -114,7 +114,7 @@ export function RecordButton(props: Props) {
   });
   useHotkeys([
     [
-      "s",
+      "v",
       () => {
         (isRecording ? stop : start)();
       },
@@ -134,11 +134,11 @@ export function RecordButton(props: Props) {
   }
   return isRecording ? (
     <Button onClick={stop} color="red" fullWidth>
-      ⏹️[S]ubmit Answer
+      [V]⏹️Submit Answer
     </Button>
   ) : (
     <Button onClick={start} fullWidth>
-      ⏺️{buttonText} [S]
+      [V]⏺️{buttonText}
     </Button>
   );
 }

@@ -1,3 +1,4 @@
+import { playAudio } from "@/components/play-button";
 import { shuffle } from "radash";
 
 export type Quiz = {
@@ -76,11 +77,20 @@ export function gotoNextQuiz(state: State): State {
     }
   }
 
+  let nextState: State;
   if (nextID) {
-    return { ...state, currentQuizIndex: nextQuizIndex };
+    nextState = { ...state, currentQuizIndex: nextQuizIndex };
   } else {
-    return proceedToNextLessonType(state);
+    nextState = proceedToNextLessonType(state);
   }
+  // I am not in love with the fact that we have side effects in a reducer.
+  // Will fix this later.
+  // TODO: Fix this. Move side effects into React component probably.
+  const quiz = currentQuiz(nextState);
+  if (quiz) {
+    playAudio(quiz.quizAudio);
+  }
+  return nextState;
 }
 
 export const newQuizState = (state: Partial<State> = {}): State => {
