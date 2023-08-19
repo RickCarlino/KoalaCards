@@ -1,4 +1,4 @@
-import { PlayButton, playAudio } from "@/components/play-button";
+import { PlayButton } from "@/components/play-button";
 import { RecordButton } from "@/components/record-button";
 import { trpc } from "@/utils/trpc";
 import { Button, Container, Grid, Header } from "@mantine/core";
@@ -10,8 +10,8 @@ import {
   newQuizState,
   quizReducer,
   currentQuiz,
-  gotoNextQuiz,
 } from "./_study_reducer";
+import { useHotkeys } from "@mantine/hooks";
 
 type Props = { quizzes: Quiz[] };
 
@@ -25,6 +25,10 @@ interface CurrentQuizProps {
 
 function CurrentQuiz(props: CurrentQuizProps) {
   const { quiz, onRecord, doFail, doFlag, inProgress } = props;
+  useHotkeys([
+    ["x", () => doFail("" + quiz.id)],
+    ["z", () => doFlag("" + quiz.id)]
+  ]);
   if (!quiz) {
     let message = "";
     if (inProgress) {
@@ -60,12 +64,12 @@ function CurrentQuiz(props: CurrentQuizProps) {
       </Grid.Col>
       <Grid.Col span={4}>
         <Button onClick={() => doFail("" + quiz.id)} fullWidth>
-          ❌[F]ail Item
+          [X]❌Fail Item
         </Button>
       </Grid.Col>
       <Grid.Col span={4}>
         <Button onClick={() => doFlag("" + quiz.id)} fullWidth>
-          🚩Flag Item[R] #{quiz.id}
+          [Z]🚩Flag Item #{quiz.id}
         </Button>
       </Grid.Col>
     </Grid>
@@ -122,14 +126,6 @@ function Study({ quizzes }: Props) {
         onRecord={(audio) => {
           const { id, quizType } = quiz;
           dispatch({ type: "WILL_GRADE" });
-          // Possible race condition here, what happens if
-          // the last result of a lesson is "error"?
-          // TODO Write tests for when the last result is of type
-          // "error".
-          const nextQuiz = currentQuiz(gotoNextQuiz(state));
-          if (nextQuiz) {
-            setTimeout(() => playAudio(nextQuiz.quizAudio), 678);
-          }
           performExam
             .mutateAsync({ id, audio, quizType })
             .then((data) => {
@@ -149,19 +145,6 @@ function Study({ quizzes }: Props) {
         quiz={quiz}
         inProgress={state.numQuizzesAwaitingServerResponse}
       />
-      <br />
-      <pre>{JSON.stringify(quiz, null, 2)}</pre>
-      <br />
-      <pre>
-        {JSON.stringify(
-          {
-            ...state,
-            quizzes: null,
-          },
-          null,
-          2,
-        )}
-      </pre>
     </Container>
   );
 }

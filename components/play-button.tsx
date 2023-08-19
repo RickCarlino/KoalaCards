@@ -2,7 +2,7 @@ import { Button } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 
 let audioContext: AudioContext;
-let audioQueue: string[] = [];
+// let audioQueue: string[] = [];
 let currentlyPlaying = false;
 
 const playAudioBuffer = (buffer: AudioBuffer): Promise<void> => {
@@ -13,9 +13,6 @@ const playAudioBuffer = (buffer: AudioBuffer): Promise<void> => {
     source.onended = () => {
       currentlyPlaying = false;
       resolve();
-      if (audioQueue.length > 0) {
-        playAudio(audioQueue.shift() as string);
-      }
     };
     source.start(0);
   });
@@ -28,7 +25,6 @@ export const playAudio = (urlOrDataURI: string): Promise<void> => {
     }
 
     if (currentlyPlaying) {
-      audioQueue.push(urlOrDataURI);
       return;
     }
 
@@ -84,7 +80,7 @@ export function PlayButton({ dataURI }: { dataURI: string }) {
   return (
     <>
       <Button onClick={playSound} fullWidth>
-        ▶️Play Senten[c]e
+        [C]▶️Play Sentence
       </Button>
     </>
   );
