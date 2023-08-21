@@ -13,6 +13,9 @@ import {
 import { z } from "zod";
 import { procedure, router } from "../trpc";
 import { getNextQuizzes } from "./get-next-quizzes";
+import { LessonType } from "@/utils/fetch-lesson";
+
+type CardWithPhrase = Card & { phrase: Phrase };
 
 const PROMPT_CONFIG = { best_of: 2, temperature: 0.4 };
 
@@ -81,20 +84,29 @@ const markIncorrect = async (card: Card) => {
 };
 
 const markCorrect = async (card: Card) => {
+  console.log("TODO: Only increase interval if lesson type is `speaking`");
   await prismaClient.card.update({
     where: { id: card.id },
     data: gradePerformance(card, 4),
   });
 };
 
-async function gradeResp(answer: string = "", card: Card & { phrase: Phrase }) {
+async function gradeResp(
+  answer: string = "",
+  card: CardWithPhrase,
+  lessonType: LessonType,
+) {
   const cleanAnswer = cleanYesNo(answer);
   switch (cleanAnswer) {
     case "YES":
-      await markCorrect(card);
+      // We only mark the phrase correct if the user is doing a speaking lesson
+      // Failure can happen early, but success only happens if you make it past
+      // the last lesson type.
+      if (lessonType === "speaking") {
+        await markCorrect(card);
+      }
       return true;
     case "NO":
-      console.log(answer);
       await markIncorrect(card);
       return false;
     default:
@@ -102,10 +114,7 @@ async function gradeResp(answer: string = "", card: Card & { phrase: Phrase }) {
   }
 }
 
-async function dictationTest(
-  transcript: string,
-  card: Card & { phrase: Phrase },
-) {
+async function dictationTest(transcript: string, card: CardWithPhrase) {
   const [answer] = await ask(
     `
   A Korean language learning app user was asked to read the
@@ -122,22 +131,16 @@ async function dictationTest(
   `,
     PROMPT_CONFIG,
   );
-  return gradeResp(answer, card);
+  return gradeResp(answer, card, "dictation");
 }
 
-async function listeningTest(
-  transcript: string,
-  card: Card & { phrase: Phrase },
-) {
+async function listeningTest(transcript: string, card: CardWithPhrase) {
   const p = translationPrompt(card.phrase.term, transcript);
   const [answer] = await ask(p, PROMPT_CONFIG);
-  return gradeResp(answer, card);
+  return gradeResp(answer, card, "listening");
 }
 
-async function speakingTest(
-  transcript: string,
-  card: Card & { phrase: Phrase },
-) {
+async function speakingTest(transcript: string, card: CardWithPhrase) {
   const [answer] = await ask(
     `An English-speaking Korean language learning app user was asked
     to translate the following phrase to Korean: ${card.phrase.definition} (${card.phrase.term}).
@@ -151,7 +154,7 @@ async function speakingTest(
     `,
     PROMPT_CONFIG,
   );
-  return gradeResp(answer, card);
+  return gradeResp(answer, card, "speaking");
 }
 
 const quizType = z.union([
