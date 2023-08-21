@@ -208,12 +208,20 @@ export const appRouter = router({
         if (result && userId) {
           const phrase = await ingestOne(result.ko, result.en, term);
           if (phrase) {
-            await prismaClient.card.create({
-              data: {
-                userId,
-                phraseId: phrase.id,
-              },
+            const alreadyExists = await prismaClient.card.findFirst({
+              where: { userId, phraseId: phrase.id },
             });
+            if (!alreadyExists) {
+              await prismaClient.card.create({
+                data: {
+                  userId,
+                  phraseId: phrase.id,
+                },
+              });
+            } else {
+              console.log("Duplicate phrase: ");
+              console.log(result);
+            }
             results.push({
               ko: result.ko,
               en: result.en,
