@@ -12,6 +12,7 @@ import {
   currentQuiz,
 } from "./_study_reducer";
 import { useHotkeys } from "@mantine/hooks";
+import { notifications } from "@mantine/notifications";
 
 type Props = { quizzes: Quiz[] };
 
@@ -151,6 +152,29 @@ function Study({ quizzes }: Props) {
           performExam
             .mutateAsync({ id, audio, quizType })
             .then((data) => {
+              switch (data.result) {
+                case "success":
+                  notifications.show({
+                    title: "Correct!",
+                    message: "Good job!",
+                    color: "green",
+                  });
+                  break;
+                case "failure":
+                  notifications.show({
+                    title: "Incorrect!",
+                    message: "Try again!",
+                    color: "red",
+                  });
+                  break;
+                case "error":
+                  notifications.show({
+                    title: "Error!",
+                    message: "Something went wrong!",
+                    color: "yellow",
+                  });
+                  break;
+              }
               dispatch({ type: "DID_GRADE", id: "" + id, result: data.result });
             })
             .catch((error) => {
