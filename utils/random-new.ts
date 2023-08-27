@@ -236,9 +236,6 @@ async function maybeGenerateSmallerPhrase(input: KoEn): Promise<KoEn[]> {
   const json = answer.data.choices[0].message?.function_call?.arguments;
   const clean: KoEn[] = JSON.parse(json ? json : '{"translationPairs": []}')?.translationPairs;
   if (Array.isArray(clean)) {
-    clean.forEach((x, i) =>
-      console.log(x ? `${i}) ${x.ko} / ${x.en}` : "??? EMPTY"),
-    );
     return clean.filter((x) => x && wordCount(x.ko) < 6);
   }
   throw new Error("Malformed GPT-4 response: " + json);

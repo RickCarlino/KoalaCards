@@ -6,8 +6,8 @@ import { draw } from "radash";
 import util from "util";
 
 const CLIENT = new textToSpeech.TextToSpeechClient();
-
 const VOICES = ["ko-KR-Wavenet-B", "ko-KR-Wavenet-C"];
+const LESSON_SIZE = 5;
 
 /** My main focus is Korean, so I randomly pick
  * one of Google's Korean voices if no voice is
@@ -100,7 +100,7 @@ export default async function getLessons(userId: string) {
     include: { phrase: true },
     where: { flagged: false, userId },
     orderBy: [{ nextReviewAt: "asc" }, { repetitions: "asc" }],
-    take: 14,
+    take: LESSON_SIZE,
   });
   type LocalQuiz = {
     id: number;
