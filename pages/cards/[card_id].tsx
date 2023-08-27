@@ -31,7 +31,6 @@ function Card({ id }: { id: number }) {
   // Define updateForm function
   const updateForm = (values: { en: string; ko: string; flagged: boolean }) => {
     // Logic to update the card will go here
-    console.log(values);
     m.mutateAsync({
       id,
       en: values.en,

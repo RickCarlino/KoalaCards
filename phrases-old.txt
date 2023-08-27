@@ -377,3 +377,54 @@ Please don't be surprised when you see awkward phrases like "각을 보고 놀�
 휴가를 즐겨 보아요!    Enjoy your vacation!
 휴식을 취하세요!   Take a rest!
 흘러가요.  It flows.
+무릎이 아파요?	Does your knee hurt?
+현장을 확인해요.	Check the scene.
+댓글을 확인해요.	I check the comments.
+접수하고 기다려요.	Register and wait.
+무릎 운동 끝났나요?	Have you finished your knee exercises?
+이날 날씨가 좋아요.	The weather is nice today.
+음악에 맞춰 춤춰요.	Dance to the music.
+제가 느낀게 있어요.	I feel something.
+이 책이 딱 좋아요.	This book is just right.
+공지사항을 확인하세요.	Please check the notice.
+생태계는 아주 중요해요.	The ecosystem is very important.
+이웃에게 도움을 주세요.	Please help your neighbor.
+정보를 얻기도 어려워요.	It's also hard to get information.
+하나도 이해하지 못해요.	I don't understand at all.
+짐승이나 물고기를 잡아요.	I catch animals or fish.
+이 문제는 너무 어려워요.	This problem is too difficult.
+골목길에 고양이가 있어요.	There is a cat in the alley.
+회의가 이미 진행되었어요.	The meeting has already been conducted.
+저녁을 먹고 나서 씻어요.	I wash up after eating dinner.
+언덕길에서 산책하고 싶어요.	I want to take a walk on the hill road.
+책을 두 권 겹쳐 놓으세요.	Please stack two books on top of each other.
+그렇게 된다면 어떻게 해요?	What do we do if that happens?
+나는 계획을 세우고 있어요.	I am making a plan.
+나는 속도를 제한하고 있어요.	I am limiting the speed.
+이제 발목도 한번 풀어볼게요!	Now let's stretch the ankles too!
+영화가 재미있다니 다행이에요.	I'm glad you find the movie fun.
+이 회사는 위기에 처해 있어요.	This company is in a crisis.
+커피가 내 몸을 온기로 채워요.	The coffee fills my body with warmth.
+이 카페의 커피 맛은 유별나요.	The taste of this cafe's coffee is extraordinary.
+나는 책을 세어보며 기다렸어요.	I waited while counting the books.
+결제일로부터 1주일이 지났어요.	A week has passed since the payment date.
+연말이 다가오니까 준비해야 돼요.	You need to prepare as the end of the year is approaching.
+학교는 규칙을 엄격하게 지키세요.	Strictly follow the school rules.
+제가 구매한 책은 어디에 있나요?	Where is the book I bought?
+자동차들이 일렬로 주차되어 있어요.	The cars are parked in a row.
+제가 핸드폰을 집에 빠트리고 왔어요.	I left my phone at home.
+그렇게 되면, 저는 집에 갈 거예요.	If that happens, I will go home.
+머리가 좋아서 항상 시험에서 잘해요.	Because I'm smart, I always do well on tests.
+이 케이크가 1킬로그램에 달할 거예요.	This cake will weigh up to 1 kilogram.
+이 가파른 언덕길을 어떻게 올라갈까요?	How can I climb up this steep hill?
+그는 물고기를 포획하려고 강가에 갔어요.	He went to the river to catch fish.
+물이 부족해지면, 우리는 갈증을 느낍니다.	When water is scarce, we feel thirsty.
+책을 이해하기 위해서는 많이 읽어야 해요.	You need to read a lot to understand the book.
+알고 나면 그때부터 진짜 공부가 시작돼요.	Once you know, that's when the real study begins.
+봉사동아리인 '앞치마'는 학교를 청소했어요.	The 'Apron' volunteer club cleaned the school.
+이번 프로젝트는 우리 학교와 연계한 것이에요.	This project is in collaboration with our school.
+그의 의견에는 문제가 있다는 지적이 나왔어요.	There was a point made that there is a problem with his opinion.
+그렇게 된 걸까요? 아니면 다른 이유가 있나요?	Is that how it happened? Or is there another reason?
+이번 주말에 비가 올 것이라는 소식이 전해진다요.	I heard that it's going to rain this weekend.
+조금 더 설명드리자면요, 이것은 제가 만든 작품입니다.	To elaborate a bit, this is a work I created.
+한국어 공부를 하나도 하지 않고 있다가 문제가 될 거예요.	If you don't study Korean at all, it will be a problem.

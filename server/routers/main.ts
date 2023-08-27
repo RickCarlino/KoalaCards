@@ -35,7 +35,6 @@ export async function askRaw(opts: CreateChatCompletionRequest) {
 }
 
 export async function ask(prompt: string, opts: AskOpts = {}) {
-  console.log(prompt);
   const resp = await askRaw({
     model: "gpt-3.5-turbo",
     messages: [
@@ -203,30 +202,32 @@ export const appRouter = router({
     .mutation(async ({ input, ctx }) => {
       const results: { ko: string; en: string; input: string }[] = [];
       for (const { term, definition } of input.input) {
-        const result = await phraseFromUserInput(term, definition);
+        const candidates = await phraseFromUserInput(term, definition);
         const userId = ctx.user?.id;
-        if (result && userId) {
-          const phrase = await ingestOne(result.ko, result.en, term);
-          if (phrase) {
-            const alreadyExists = await prismaClient.card.findFirst({
-              where: { userId, phraseId: phrase.id },
-            });
-            if (!alreadyExists) {
-              await prismaClient.card.create({
-                data: {
-                  userId,
-                  phraseId: phrase.id,
-                },
+        for (const result of candidates) {
+          if (result && userId) {
+            const phrase = await ingestOne(result.ko, result.en, term);
+            if (phrase) {
+              const alreadyExists = await prismaClient.card.findFirst({
+                where: { userId, phraseId: phrase.id },
               });
-            } else {
-              console.log("Duplicate phrase: ");
-              console.log(result);
+              if (!alreadyExists) {
+                await prismaClient.card.create({
+                  data: {
+                    userId,
+                    phraseId: phrase.id,
+                  },
+                });
+              } else {
+                console.log("Duplicate phrase: ");
+                console.log(result);
+              }
+              results.push({
+                ko: result.ko,
+                en: result.en,
+                input: term,
+              });
             }
-            results.push({
-              ko: result.ko,
-              en: result.en,
-              input: term,
-            });
           }
         }
       }
