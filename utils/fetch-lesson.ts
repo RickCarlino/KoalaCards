@@ -69,11 +69,11 @@ const pause = (ms: number) => {
   return `<break time="${ms}ms"/>`;
 };
 
-type QuizType = "dictation" | "listening" | "speaking";
+export type LessonType = "dictation" | "listening" | "speaking";
 
-export const QUIZ_TYPES: QuizType[] = ["dictation", "listening", "speaking"];
+export const QUIZ_TYPES: LessonType[] = ["dictation", "listening", "speaking"];
 
-async function getAudio(quizType: QuizType, _ko: string, _en: string) {
+async function getAudio(quizType: LessonType, _ko: string, _en: string) {
   let innerSSML: string;
   switch (quizType) {
     case "dictation":

@@ -13,6 +13,9 @@ import {
 import { z } from "zod";
 import { procedure, router } from "../trpc";
 import { getNextQuizzes } from "./get-next-quizzes";
+import { LessonType } from "@/utils/fetch-lesson";
+
+type CardWithPhrase = Card & { phrase: Phrase };
 
 const PROMPT_CONFIG = { best_of: 2, temperature: 0.4 };
 
@@ -32,7 +35,6 @@ export async function askRaw(opts: CreateChatCompletionRequest) {
 }
 
 export async function ask(prompt: string, opts: AskOpts = {}) {
-  console.log(prompt);
   const resp = await askRaw({
     model: "gpt-3.5-turbo",
     messages: [
@@ -81,20 +83,29 @@ const markIncorrect = async (card: Card) => {
 };
 
 const markCorrect = async (card: Card) => {
+  console.log("TODO: Only increase interval if lesson type is `speaking`");
   await prismaClient.card.update({
     where: { id: card.id },
     data: gradePerformance(card, 4),
   });
 };
 
-async function gradeResp(answer: string = "", card: Card & { phrase: Phrase }) {
+async function gradeResp(
+  answer: string = "",
+  card: CardWithPhrase,
+  lessonType: LessonType,
+) {
   const cleanAnswer = cleanYesNo(answer);
   switch (cleanAnswer) {
     case "YES":
-      await markCorrect(card);
+      // We only mark the phrase correct if the user is doing a speaking lesson
+      // Failure can happen early, but success only happens if you make it past
+      // the last lesson type.
+      if (lessonType === "speaking") {
+        await markCorrect(card);
+      }
       return true;
     case "NO":
-      console.log(answer);
       await markIncorrect(card);
       return false;
     default:
@@ -102,10 +113,7 @@ async function gradeResp(answer: string = "", card: Card & { phrase: Phrase }) {
   }
 }
 
-async function dictationTest(
-  transcript: string,
-  card: Card & { phrase: Phrase },
-) {
+async function dictationTest(transcript: string, card: CardWithPhrase) {
   const [answer] = await ask(
     `
   A Korean language learning app user was asked to read the
@@ -122,22 +130,16 @@ async function dictationTest(
   `,
     PROMPT_CONFIG,
   );
-  return gradeResp(answer, card);
+  return gradeResp(answer, card, "dictation");
 }
 
-async function listeningTest(
-  transcript: string,
-  card: Card & { phrase: Phrase },
-) {
+async function listeningTest(transcript: string, card: CardWithPhrase) {
   const p = translationPrompt(card.phrase.term, transcript);
   const [answer] = await ask(p, PROMPT_CONFIG);
-  return gradeResp(answer, card);
+  return gradeResp(answer, card, "listening");
 }
 
-async function speakingTest(
-  transcript: string,
-  card: Card & { phrase: Phrase },
-) {
+async function speakingTest(transcript: string, card: CardWithPhrase) {
   const [answer] = await ask(
     `An English-speaking Korean language learning app user was asked
     to translate the following phrase to Korean: ${card.phrase.definition} (${card.phrase.term}).
@@ -151,7 +153,7 @@ async function speakingTest(
     `,
     PROMPT_CONFIG,
   );
-  return gradeResp(answer, card);
+  return gradeResp(answer, card, "speaking");
 }
 
 const quizType = z.union([
@@ -200,22 +202,32 @@ export const appRouter = router({
     .mutation(async ({ input, ctx }) => {
       const results: { ko: string; en: string; input: string }[] = [];
       for (const { term, definition } of input.input) {
-        const result = await phraseFromUserInput(term, definition);
+        const candidates = await phraseFromUserInput(term, definition);
         const userId = ctx.user?.id;
-        if (result && userId) {
-          const phrase = await ingestOne(result.ko, result.en, term);
-          if (phrase) {
-            await prismaClient.card.create({
-              data: {
-                userId,
-                phraseId: phrase.id,
-              },
-            });
-            results.push({
-              ko: result.ko,
-              en: result.en,
-              input: term,
-            });
+        for (const result of candidates) {
+          if (result && userId) {
+            const phrase = await ingestOne(result.ko, result.en, term);
+            if (phrase) {
+              const alreadyExists = await prismaClient.card.findFirst({
+                where: { userId, phraseId: phrase.id },
+              });
+              if (!alreadyExists) {
+                await prismaClient.card.create({
+                  data: {
+                    userId,
+                    phraseId: phrase.id,
+                  },
+                });
+              } else {
+                console.log("Duplicate phrase: ");
+                console.log(result);
+              }
+              results.push({
+                ko: result.ko,
+                en: result.en,
+                input: term,
+              });
+            }
           }
         }
       }

@@ -1,7 +1,7 @@
 import { PlayButton } from "@/components/play-button";
 import { RecordButton } from "@/components/record-button";
 import { trpc } from "@/utils/trpc";
-import { Button, Container, Grid, Header } from "@mantine/core";
+import { Button, Container, Grid, Header, Paper } from "@mantine/core";
 import { useReducer } from "react";
 import Authed from "./_authed";
 import {
@@ -27,7 +27,7 @@ function CurrentQuiz(props: CurrentQuizProps) {
   const { quiz, onRecord, doFail, doFlag, inProgress } = props;
   useHotkeys([
     ["x", () => doFail("" + quiz.id)],
-    ["z", () => doFlag("" + quiz.id)]
+    ["z", () => doFlag("" + quiz.id)],
   ]);
   if (!quiz) {
     let message = "";
@@ -71,6 +71,28 @@ function CurrentQuiz(props: CurrentQuizProps) {
         <Button onClick={() => doFlag("" + quiz.id)} fullWidth>
           [Z]🚩Flag Item #{quiz.id}
         </Button>
+      </Grid.Col>
+    </Grid>
+  );
+}
+
+function CardOverview({ quiz }: { quiz: CurrentQuiz }) {
+  let term = "";
+  let def = "";
+  switch (quiz.quizType) {
+    case "dictation":
+      term = quiz.ko;
+      def = quiz.en;
+    case "speaking":
+      def = quiz.en;
+  }
+  return (
+    <Grid grow justify="center" align="center">
+      <Grid.Col span={4}>
+        <Paper>{def}</Paper>
+      </Grid.Col>
+      <Grid.Col span={12}>
+        <Paper>{term}</Paper>
       </Grid.Col>
     </Grid>
   );
@@ -145,6 +167,7 @@ function Study({ quizzes }: Props) {
         quiz={quiz}
         inProgress={state.numQuizzesAwaitingServerResponse}
       />
+      <CardOverview quiz={quiz} />
     </Container>
   );
 }
