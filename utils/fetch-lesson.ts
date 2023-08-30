@@ -23,10 +23,7 @@ const filePathFor = (text: string, voice: string) => {
   return `speech/${langCode}/${hash}.mp3`;
 };
 
-/** Create and play a text to speech MP3 via Google Cloud.
- * Stores previously synthesized speech in a cache directory
- * to improve latency. */
-async function newSpeak(txt: string, voice: string = randomVoice()) {
+export const generateSpeechFile = async (txt: string, voice: string = randomVoice()) => {
   const p = filePathFor(txt, voice);
   if (!existsSync(p)) {
     const [response] = await CLIENT.synthesizeSpeech({
@@ -46,26 +43,34 @@ async function newSpeak(txt: string, voice: string = randomVoice()) {
     const writeFile = util.promisify(fs.writeFile);
     await writeFile(p, response.audioContent, "binary");
   }
+  return p;
+};
+
+/** Create and play a text to speech MP3 via Google Cloud.
+ * Stores previously synthesized speech in a cache directory
+ * to improve latency. */
+export async function newSpeak(txt: string, voice: string = randomVoice()) {
+  const p = await generateSpeechFile(txt, voice);
   return `data:audio/mpeg;base64,${readFileSync(p, { encoding: "base64" })}`;
 }
 
-const ssml = (...text: string[]) => {
+export const ssml = (...text: string[]) => {
   return `<speak>${text.join(" ")}</speak>`;
 };
 
-const slow = (text: string) => {
+export const slow = (text: string) => {
   return `<prosody rate="slow">${text}</prosody>`;
 };
 
-const en = (text: string) => {
+export const en = (text: string) => {
   return `<voice language="en-US" gender="female">${text}</voice>`;
 };
 
-const ko = (text: string) => {
+export const ko = (text: string) => {
   return text;
 };
 
-const pause = (ms: number) => {
+export const pause = (ms: number) => {
   return `<break time="${ms}ms"/>`;
 };
 

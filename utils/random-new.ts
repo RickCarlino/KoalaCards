@@ -173,7 +173,7 @@ export async function maybeGeneratePhrase(fn = randomFn()) {
   }
 }
 
-const wordCount = (input: string): number => {
+export const wordCount = (input: string): number => {
   return input.split(" ").filter((word) => word.trim() !== "").length;
 };
 
