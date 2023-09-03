@@ -23,7 +23,10 @@ const filePathFor = (text: string, voice: string) => {
   return `speech/${langCode}/${hash}.mp3`;
 };
 
-export const generateSpeechFile = async (txt: string, voice: string = randomVoice()) => {
+export const generateSpeechFile = async (
+  txt: string,
+  voice: string = randomVoice(),
+) => {
   const p = filePathFor(txt, voice);
   if (!existsSync(p)) {
     const [response] = await CLIENT.synthesizeSpeech({
@@ -100,10 +103,16 @@ async function getAudio(quizType: LessonType, _ko: string, _en: string) {
   return newSpeak(ssml(innerSSML));
 }
 
-export default async function getLessons(userId: string) {
+export default async function getLessons(userId: string, now = Date.now()) {
   const cards = await prismaClient.card.findMany({
     include: { phrase: true },
-    where: { flagged: false, userId },
+    where: {
+      flagged: false,
+      userId,
+      nextReviewAt: {
+        lte: now,
+      },
+    },
     orderBy: [{ nextReviewAt: "asc" }, { repetitions: "asc" }],
     take: LESSON_SIZE,
   });
@@ -134,6 +143,9 @@ export default async function getLessons(userId: string) {
         speaking: await getAudio("speaking", ko, en),
       },
     });
+  }
+  if (output.length < LESSON_SIZE) {
+    console.log("TODO: User is ready for new cards. Handle that here.");
   }
   return output;
 }
