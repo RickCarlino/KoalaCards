@@ -7,11 +7,19 @@ import {
   Configuration,
   CreateChatCompletionRequest,
   CreateCompletionRequest,
-  OpenAIApi
+  OpenAIApi,
 } from "openai";
 import { z } from "zod";
 import { procedure } from "../trpc";
 
+type CardWithPhrase = Card & { phrase: Phrase };
+type AskOpts = Partial<CreateCompletionRequest>;
+type CorrectQuiz = { correct: true };
+type IncorrectQuiz = { correct: false; why: string };
+type Quiz = (
+  transcript: string,
+  card: CardWithPhrase,
+) => Promise<CorrectQuiz | IncorrectQuiz>;
 const apiKey = process.env.OPENAI_API_KEY;
 
 if (!apiKey) {
@@ -19,35 +27,8 @@ if (!apiKey) {
 }
 
 const configuration = new Configuration({ apiKey });
-export const openai = new OpenAIApi(configuration);
-
-type CardWithPhrase = Card & { phrase: Phrase };
 
 const PROMPT_CONFIG = { best_of: 2, temperature: 0.4 };
-
-type AskOpts = Partial<CreateCompletionRequest>;
-
-export async function askRaw(opts: CreateChatCompletionRequest) {
-  return await openai.createChatCompletion(opts);
-}
-
-export async function ask(prompt: string, opts: AskOpts = {}) {
-  const resp = await askRaw({
-    model: "gpt-3.5-turbo",
-    messages: [
-      {
-        role: "user",
-        content: prompt,
-      },
-    ],
-    temperature: opts.temperature ?? 0.15,
-    max_tokens: opts.max_tokens ?? 1024,
-    n: opts.n ?? 1,
-  });
-  return resp.data.choices
-    .filter((x) => x.finish_reason === "stop")
-    .map((x) => x.message?.content ?? "");
-}
 
 const markIncorrect = async (card: Card) => {
   await prismaClient.card.update({
@@ -91,7 +72,7 @@ async function gradeResp(
   answer: string = "",
   card: CardWithPhrase,
   lessonType: LessonType,
-) {
+): Promise<ReturnType<Quiz>> {
   const cleanAnswer = cleanYesNo(answer);
   switch (cleanAnswer) {
     case "YES":
@@ -101,10 +82,15 @@ async function gradeResp(
       if (lessonType === "speaking") {
         await markCorrect(card);
       }
-      return true;
+      return {
+        correct: true,
+      };
     case "NO":
       await markIncorrect(card);
-      return false;
+      return {
+        correct: false,
+        why: answer,
+      };
     default:
       throw new Error("Invalid answer: " + JSON.stringify(answer));
   }
@@ -159,35 +145,58 @@ const quizType = z.union([
   z.literal("speaking"),
 ]);
 
+export const openai = new OpenAIApi(configuration);
+
+export async function askRaw(opts: CreateChatCompletionRequest) {
+  return await openai.createChatCompletion(opts);
+}
+
+export async function ask(prompt: string, opts: AskOpts = {}) {
+  const resp = await askRaw({
+    model: "gpt-3.5-turbo",
+    messages: [
+      {
+        role: "user",
+        content: prompt,
+      },
+    ],
+    temperature: opts.temperature ?? 0.15,
+    max_tokens: opts.max_tokens ?? 1024,
+    n: opts.n ?? 1,
+  });
+  return resp.data.choices
+    .filter((x) => x.finish_reason === "stop")
+    .map((x) => x.message?.content ?? "");
+}
+
+const performExamOutput = z.union([
+  z.object({
+    result: z.literal("success"),
+    userTranscription: z.string(),
+  }),
+  z.object({
+    result: z.literal("failure"),
+    userTranscription: z.string(),
+    rejectionText: z.string(),
+  }),
+  z.object({
+    result: z.literal("error"),
+    rejectionText: z.string(),
+  }),
+]);
+
+type PerformExamOutput = z.infer<typeof performExamOutput>;
+
 export const performExam = procedure
   .input(
     z.object({
-      /** quizType represents what type of quiz was administered.
-       * It is one of the following values:
-       * "dictation", "listening", "speaking" */
       quizType,
       audio: z.string(),
       id: z.number(),
     }),
   )
-  .output(
-    z.union([
-      z.object({
-        result: z.literal("success"),
-        message: z.string(),
-      }),
-      z.object({
-        result: z.literal("failure"),
-        message: z.string(),
-      }),
-      z.object({
-        result: z.literal("error"),
-        message: z.string(),
-      }),
-    ]),
-  )
-  .mutation(async ({ input }) => {
-    type Quiz = typeof speakingTest;
+  .output(performExamOutput)
+  .mutation(async ({ input }): Promise<PerformExamOutput> => {
     type QuizType = typeof input.quizType;
     const LANG: Record<QuizType, Lang> = {
       dictation: "ko",
@@ -210,25 +219,33 @@ export const performExam = procedure
       console.log(`Transcription error`);
       return {
         result: "error",
-        message: "Transcription error",
+        rejectionText: "Transcription error",
       } as const;
     }
     const result = card && (await quiz(transcript.text, card));
-    switch (result) {
+    if (!result) {
+      console.log(`Invalid result: ${JSON.stringify(result)}`);
+      return {
+        result: "error",
+        rejectionText: "Invalid result?",
+      };
+    }
+    switch (result.correct) {
       case true:
         return {
           result: "success",
-          message: transcript.text,
+          userTranscription: transcript.text,
         } as const;
       case false:
         return {
           result: "failure",
-          message: transcript.text,
+          userTranscription: transcript.text,
+          rejectionText: result.why,
         } as const;
       default:
         return {
           result: "error",
-          message: "Invalid result?",
+          rejectionText: "Invalid result?",
         } as const;
     }
   });

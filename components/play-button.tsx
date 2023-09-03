@@ -1,5 +1,6 @@
 import { Button } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
+import { useEffect } from "react";
 
 let audioContext: AudioContext;
 // let audioQueue: string[] = [];
@@ -66,6 +67,13 @@ export function PlayButton({ dataURI }: { dataURI: string }) {
     }
   };
   useHotkeys([["c", playSound]]);
+
+  // Use the useEffect hook to listen for changes to dataURI
+  useEffect(() => {
+    if (dataURI) {
+      playAudio(dataURI);
+    }
+  }, [dataURI]);  // Dependency array includes dataURI
 
   if (!dataURI) {
     return (

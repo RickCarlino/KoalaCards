@@ -2,7 +2,7 @@ import { PlayButton } from "@/components/play-button";
 import { RecordButton } from "@/components/record-button";
 import { trpc } from "@/utils/trpc";
 import { Button, Container, Grid, Header, Paper } from "@mantine/core";
-import { useReducer } from "react";
+import { useReducer, useState } from "react";
 import Authed from "./_authed";
 import {
   Quiz,
@@ -99,6 +99,18 @@ function CardOverview({ quiz }: { quiz: CurrentQuiz }) {
   );
 }
 
+function Failure(props: {
+  id: number;
+  userTranscription: string;
+  rejectionText: string;
+}) {
+  return <div>
+    <p>Incorrect!</p>
+    <p>What you said: {props.userTranscription}</p>
+    <p>Why it's wrong: {props.rejectionText}</p>
+  </div>
+}
+
 function Study({ quizzes }: Props) {
   const phrasesById = quizzes.reduce((acc, quiz) => {
     acc[quiz.id] = quiz;
@@ -109,6 +121,11 @@ function Study({ quizzes }: Props) {
   const performExam = trpc.performExam.useMutation();
   const failPhrase = trpc.failPhrase.useMutation();
   const flagPhrase = trpc.flagPhrase.useMutation();
+  const [failure, setFailure] = useState<{
+    id: number;
+    userTranscription: string;
+    rejectionText: string;
+  } | null>(null);
   const needBetterErrorHandler = (error: any) => {
     console.error(error);
     dispatch({ type: "ADD_ERROR", message: JSON.stringify(error) });
@@ -152,6 +169,7 @@ function Study({ quizzes }: Props) {
           performExam
             .mutateAsync({ id, audio, quizType })
             .then((data) => {
+              setFailure(null);
               switch (data.result) {
                 case "success":
                   notifications.show({
@@ -165,6 +183,11 @@ function Study({ quizzes }: Props) {
                     title: "Incorrect!",
                     message: "Try again!",
                     color: "red",
+                  });
+                  setFailure({
+                    id,
+                    userTranscription: data.userTranscription,
+                    rejectionText: data.rejectionText,
                   });
                   break;
                 case "error":
@@ -192,6 +215,7 @@ function Study({ quizzes }: Props) {
         inProgress={state.numQuizzesAwaitingServerResponse}
       />
       <CardOverview quiz={quiz} />
+      {failure ? <Failure {...failure} /> : null}
     </Container>
   );
 }

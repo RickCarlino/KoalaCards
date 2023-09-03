@@ -83,13 +83,7 @@ export function gotoNextQuiz(state: State): State {
   } else {
     nextState = proceedToNextLessonType(state);
   }
-  // I am not in love with the fact that we have side effects in a reducer.
-  // Will fix this later.
-  // TODO: Fix this. Move side effects into React component probably.
-  const quiz = currentQuiz(nextState);
-  if (quiz) {
-    playAudio(quiz.quizAudio);
-  }
+
   return nextState;
 }
 
