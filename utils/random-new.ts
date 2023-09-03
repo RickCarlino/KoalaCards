@@ -1,9 +1,9 @@
 import { draw, shuffle } from "radash";
 import { koreanGrammar } from "./korean-grammar";
 import { koreanWords } from "./korean-words";
-import { ask, askRaw } from "@/server/routers/main";
 import { Phrase } from "@prisma/client";
 import { ingestOne } from "./ingest-phrases";
+import { ask, askRaw } from "@/server/routers/perform-exam";
 type KoEn = Record<"ko" | "en", string> | undefined;
 
 const YES_OR_NO = {

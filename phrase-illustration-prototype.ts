@@ -1,5 +1,6 @@
+import { ask, openai } from "./server/routers/perform-exam";
 import { wordCount } from "./utils/random-new";
-import { ask, openai } from "./server/routers/main";
+
 const examples = [
   ["땀이 많이 나요.", "I sweat a lot."],
   [

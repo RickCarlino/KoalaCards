@@ -1,4 +1,4 @@
-import { openai } from "@/server/routers/main";
+import { openai } from "@/server/routers/perform-exam";
 import { createReadStream, writeFile } from "fs";
 import { uid } from "radash";
 import { promisify } from "util";
