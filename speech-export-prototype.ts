@@ -12,7 +12,7 @@ const readInterface = readline.createInterface({
 });
 
 // Read the file line-by-line
-readInterface.on("line", (line) => {
+readInterface.on("line", async (line) => {
   // Split the line by tab to get an array of columns
   const columns = line.split("\t");
 
@@ -28,7 +28,7 @@ readInterface.on("line", (line) => {
   const x = ssml(
     [ko(koTxt), pause(400), en(enTxt), pause(400), slow(koTxt), pause(4000)].join("\n"),
   );
-  if (wordCount(x) < 7) {
-    console.log(generateSpeechFile(x));
+  if (wordCount(koTxt) < 7) {
+    console.log(await generateSpeechFile(x));
   }
 });
