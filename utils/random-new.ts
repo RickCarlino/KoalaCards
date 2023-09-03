@@ -1,9 +1,9 @@
 import { draw, shuffle } from "radash";
 import { koreanGrammar } from "./korean-grammar";
 import { koreanWords } from "./korean-words";
-import { ask, askRaw } from "@/server/routers/main";
 import { Phrase } from "@prisma/client";
 import { ingestOne } from "./ingest-phrases";
+import { ask, askRaw } from "@/server/routers/perform-exam";
 type KoEn = Record<"ko" | "en", string> | undefined;
 
 const YES_OR_NO = {
@@ -173,7 +173,7 @@ export async function maybeGeneratePhrase(fn = randomFn()) {
   }
 }
 
-const wordCount = (input: string): number => {
+export const wordCount = (input: string): number => {
   return input.split(" ").filter((word) => word.trim() !== "").length;
 };
 
@@ -236,9 +236,6 @@ async function maybeGenerateSmallerPhrase(input: KoEn): Promise<KoEn[]> {
   const json = answer.data.choices[0].message?.function_call?.arguments;
   const clean: KoEn[] = JSON.parse(json ? json : '{"translationPairs": []}')?.translationPairs;
   if (Array.isArray(clean)) {
-    clean.forEach((x, i) =>
-      console.log(x ? `${i}) ${x.ko} / ${x.en}` : "??? EMPTY"),
-    );
     return clean.filter((x) => x && wordCount(x.ko) < 6);
   }
   throw new Error("Malformed GPT-4 response: " + json);

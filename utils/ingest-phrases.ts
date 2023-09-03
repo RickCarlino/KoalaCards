@@ -14,9 +14,7 @@ export async function ingestOne(ko: string, en: string, rootWord: string) {
     }
   });
   if (!phrase) {
-    // console.log(`Ingesting ${ko} => ${en}`);
     appendFileSync("phrases.txt", [rootWord, ko, en].join("\t") + "\n", "utf8");
-    // console.log({ko,en,rootWord});
     return await prismaClient.phrase.create({
       data: {
         term: ko,
