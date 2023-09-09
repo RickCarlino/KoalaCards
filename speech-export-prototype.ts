@@ -6,7 +6,7 @@ import { wordCount } from "./utils/random-new";
 
 // Create a readline interface to read the file line-by-line
 const readInterface = readline.createInterface({
-  input: fs.createReadStream("phrases.txt"),
+  input: fs.createReadStream("phrases.tsv"),
   output: process.stdout,
   terminal: false,
 });
@@ -23,8 +23,8 @@ readInterface.on("line", async (line) => {
   }
 
   // Get the values from the second and third columns
-  const koTxt = columns[1];
-  const enTxt = columns[2];
+  const koTxt = columns[0];
+  const enTxt = columns[1];
   const x = ssml(
     [ko(koTxt), pause(400), en(enTxt), pause(400), slow(koTxt), pause(4000)].join("\n"),
   );

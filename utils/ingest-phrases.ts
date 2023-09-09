@@ -14,7 +14,7 @@ export async function ingestOne(ko: string, en: string, rootWord: string) {
     }
   });
   if (!phrase) {
-    appendFileSync("phrases.txt", [rootWord, ko, en].join("\t") + "\n", "utf8");
+    appendFileSync("phrases.tsv", [rootWord, ko, en].join("\t") + "\n", "utf8");
     return await prismaClient.phrase.create({
       data: {
         term: ko,
@@ -30,7 +30,7 @@ export async function ingestOne(ko: string, en: string, rootWord: string) {
 
 export function ingestPhrases() {
   const readInterface = readline.createInterface({
-    input: fs.createReadStream("phrases.txt"),
+    input: fs.createReadStream("phrases.tsv"),
     output: process.stdout,
   });
 
@@ -43,8 +43,8 @@ export function ingestPhrases() {
     }
 
     let splitLine = line.split("\t");
-    // We never stored the root word in phrases.txt,
+    // We never stored the root word in phrases.tsv,
     // so we'll just use the first word
-    ingestOne(splitLine[0], splitLine[1], splitLine[0]);
+    ingestOne(splitLine[0], splitLine[1], splitLine[2] || splitLine[0]);
   });
 }
