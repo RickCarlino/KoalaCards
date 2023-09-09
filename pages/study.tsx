@@ -143,6 +143,8 @@ function Study({ quizzes }: Props) {
   };
   const quiz = currentQuiz(state);
   if (!quiz) {
+    const reload = confirm("Session complete. Study more?");
+    reload && location.reload();
     return <div>Session complete.</div>;
   }
   const header = (() => {
