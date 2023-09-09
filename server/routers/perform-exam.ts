@@ -1,5 +1,4 @@
 import { prismaClient } from "@/server/prisma-client";
-import { LessonType } from "@/utils/fetch-lesson";
 import { gradePerformance } from "@/utils/srs";
 import { Lang, transcribeB64 } from "@/utils/transcribe";
 import { Card, Phrase } from "@prisma/client";
@@ -12,14 +11,75 @@ import {
 import { z } from "zod";
 import { procedure } from "../trpc";
 
-type CardWithPhrase = Card & { phrase: Phrase };
+const YES_OR_NO = {
+  name: "answer",
+  parameters: {
+    $schema: "http://json-schema.org/draft-07/schema#",
+    type: "object",
+    properties: {
+      response: {
+        type: "string",
+        description: "Answer to a yes or no question.",
+        enum: ["yes", "no"],
+      },
+      why: {
+        type: "string",
+        description:
+          "Explanation of your response, directed to I. Only required if answer is 'no'",
+      },
+    },
+    required: ["response"],
+    dependencies: {
+      response: {
+        oneOf: [
+          {
+            properties: {
+              response: { enum: ["yes"] },
+            },
+          },
+          {
+            properties: {
+              response: { enum: ["no"] },
+              why: { type: "string" },
+            },
+            required: ["why"],
+          },
+        ],
+      },
+    },
+  },
+};
+
+export const yesOrNo = async (content: string): Promise<YesOrNo> => {
+  const answer = await askRaw({
+    messages: [{ role: "user", content }],
+    model: "gpt-3.5-turbo-0613",
+    n: 3,
+    temperature: 1.0,
+    function_call: { name: "answer" },
+    functions: [YES_OR_NO],
+  });
+  const result = answer.data.choices
+    .map((x) => JSON.stringify(x.message?.function_call))
+    .map((x) => JSON.parse(JSON.parse(x).arguments).why)
+    .filter((x) => !!x);
+  const why: string = result[0];
+  const yes = typeof why !== "string";
+  return yes ? { yes: true, why: undefined } : { yes: false, why };
+};
+
 type AskOpts = Partial<CreateCompletionRequest>;
+type CardWithPhrase = Card & { phrase: Phrase };
 type CorrectQuiz = { correct: true };
 type IncorrectQuiz = { correct: false; why: string };
+type No = { yes: false; why: string };
+type Yes = { yes: true; why: undefined };
+type YesOrNo = Yes | No;
 type Quiz = (
   transcript: string,
   card: CardWithPhrase,
 ) => Promise<CorrectQuiz | IncorrectQuiz>;
+
 const apiKey = process.env.OPENAI_API_KEY;
 
 if (!apiKey) {
@@ -28,8 +88,6 @@ if (!apiKey) {
 
 const configuration = new Configuration({ apiKey });
 
-const PROMPT_CONFIG = { best_of: 2, temperature: 0.4 };
-
 const markIncorrect = async (card: Card) => {
   await prismaClient.card.update({
     where: { id: card.id },
@@ -37,31 +95,20 @@ const markIncorrect = async (card: Card) => {
   });
 };
 
-const cleanYesNo = (answer?: string) => {
-  return (answer ?? "?")
-    .replace(/(\s|\W)+/g, " ")
-    .trim()
-    .toUpperCase()
-    .split(" ")[0];
-};
-
 const translationPrompt = (ko: string, response: string) => {
   return `
-      A Korean language learning app user was asked to translate
-      the following phrase to english: ${ko}.
-      The user provided this translation: ${response}
-      Was the user correct?
-      The audio was transcribed so you should NOT grade spelling, punctuation or spacing issues.
-      The meanings of the two sentences must express the exact same idea.
-      Word choice does not need to be exact. Meaning is more important.
-      Reply "YES" if it is a correct translation.
-      Reply "NO" if it is incorrect, then provide a display
-      reason for why it is wrong
-      `;
+      Korean phrase: <<${ko}>>.
+      I said: <<${response}>>.
+      ---
+      A Korean language learning app asked me to translate the
+      phrase above. Tell me if I was correct. The audio was
+      transcribed via speech-to-text, so DO NOT grade punctuation
+      or spacing issues. The meanings of the two sentences must
+      express the same idea, but word choice does not need to
+      be exact. Meaning is more important.`;
 };
 
 const markCorrect = async (card: Card) => {
-  console.log("TODO: Only increase interval if lesson type is `speaking`");
   await prismaClient.card.update({
     where: { id: card.id },
     data: gradePerformance(card, 4),
@@ -69,77 +116,58 @@ const markCorrect = async (card: Card) => {
 };
 
 async function gradeResp(
-  answer: string = "",
   card: CardWithPhrase,
-  lessonType: LessonType,
+  whyIsItWrong: string | undefined,
 ): Promise<ReturnType<Quiz>> {
-  const cleanAnswer = cleanYesNo(answer);
-  switch (cleanAnswer) {
-    case "YES":
-      // We only mark the phrase correct if the user is doing a speaking lesson
-      // Failure can happen early, but success only happens if you make it past
-      // the last lesson type.
-      if (lessonType === "speaking") {
-        await markCorrect(card);
-      }
-      return {
-        correct: true,
-      };
-    case "NO":
-      await markIncorrect(card);
-      return {
-        correct: false,
-        why: answer,
-      };
-    default:
-      throw new Error("Invalid answer: " + JSON.stringify(answer));
+  if (whyIsItWrong) {
+    await markIncorrect(card);
+    return {
+      correct: false,
+      why: whyIsItWrong,
+    };
   }
+  await markCorrect(card);
+  return {
+    correct: true,
+  };
 }
 
 async function dictationTest(transcript: string, card: CardWithPhrase) {
-  const [answer] = await ask(
-    `
-    A Korean language learning app user was asked to read the
-    following phrase aloud: ${card.phrase.term} (${card.phrase.definition}).
-    The user read: ${transcript}
-    Was the user correct?
-    The meanings of the two sentences must express the exact same idea.
-    The audio was transcribed so you should NOT grade spelling, punctuation or spacing issues.
-    Word choice do not need to be exact.
-    Reply "YES" if it is correct.
-    Reply "NO" if it is incorrect, then provide a display reason
-    why it is wrong
-    (YES/NO)
-    `,
-    PROMPT_CONFIG,
-  );
-  return gradeResp(answer, card, "dictation");
+  const { why } = await yesOrNo(`
+    Phrase: <<${card.phrase.term}>>
+    Translation: <<${card.phrase.definition}>>
+    I said: <<${transcript}>>
+    ---
+    I was asked to read the above phrase aloud. Was I correct?
+    The audio was transcribed via speech-to-text so you should
+    NOT grade  punctuation or spacing issues. Word choice does
+    not need to be exact (focus on meaning).`);
+  return gradeResp(card, why);
 }
 
 async function listeningTest(transcript: string, card: CardWithPhrase) {
   const p = translationPrompt(card.phrase.term, transcript);
-  const [answer] = await ask(p, PROMPT_CONFIG);
-  return gradeResp(answer, card, "listening");
+  const { why } = await yesOrNo(p);
+  return gradeResp(card, why);
 }
 
 async function speakingTest(transcript: string, card: CardWithPhrase) {
-  const [answer] = await ask(
-    `An English-speaking Korean language learning app user was asked
-      to translate the following phrase to Korean: ${card.phrase.definition} (${card.phrase.term}).
-      The user said: ${transcript}
-      Was the user correct?
-      The audio was transcribed so you should NOT grade spelling, punctuation or spacing issues.
-      The meanings of the two sentences must express the exact same idea.
-      The word choice does NOT need to be exactly the same.
-      Reply "YES" if it is correct.
-      Reply "NO" if it is incorrect, then provide a reason why it is wrong
-      `,
-    PROMPT_CONFIG,
+  const { why } = await yesOrNo(
+    `Phrase: <<${card.phrase.term}>>
+     Translation: <<${card.phrase.definition}>>
+     I said: <<${transcript}>>
+     ---
+      A Korean language learning app asked me to translate
+      the phrase above to Korean. Was I correct? The audio was
+      transcribed via speech-to-text, so you should NOT grade
+      punctuation or spacing issues. The meanings of the two
+      sentences must express the same idea, but the word
+      choice does NOT need to be exactly the same.`
   );
-  return gradeResp(answer, card, "speaking");
+  return gradeResp(card, why);
 }
 
-const quizType = z.union([
+const lessonType = z.union([
   z.literal("dictation"),
   z.literal("listening"),
   z.literal("speaking"),
@@ -190,26 +218,26 @@ type PerformExamOutput = z.infer<typeof performExamOutput>;
 export const performExam = procedure
   .input(
     z.object({
-      quizType,
+      lessonType,
       audio: z.string(),
       id: z.number(),
     }),
   )
   .output(performExamOutput)
   .mutation(async ({ input }): Promise<PerformExamOutput> => {
-    type QuizType = typeof input.quizType;
-    const LANG: Record<QuizType, Lang> = {
+    type LessonType = typeof input.lessonType;
+    const LANG: Record<LessonType, Lang> = {
       dictation: "ko",
       listening: "en-US",
       speaking: "ko",
     };
-    const QUIZ: Record<QuizType, Quiz> = {
+    const QUIZ: Record<LessonType, Quiz> = {
       dictation: dictationTest,
       listening: listeningTest,
       speaking: speakingTest,
     };
-    const lang = LANG[input.quizType];
-    const quiz = QUIZ[input.quizType];
+    const lang = LANG[input.lessonType];
+    const quiz = QUIZ[input.lessonType];
     const transcript = await transcribeB64(lang, input.audio);
     const card = await prismaClient.card.findUnique({
       include: { phrase: true },

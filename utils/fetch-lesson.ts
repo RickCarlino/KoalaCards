@@ -81,9 +81,9 @@ export type LessonType = "dictation" | "listening" | "speaking";
 
 export const QUIZ_TYPES: LessonType[] = ["dictation", "listening", "speaking"];
 
-async function getAudio(quizType: LessonType, _ko: string, _en: string) {
+async function getAudio(lessonType: LessonType, _ko: string, _en: string) {
   let innerSSML: string;
-  switch (quizType) {
+  switch (lessonType) {
     case "dictation":
       innerSSML = [
         en("Repeat: "),
@@ -145,7 +145,7 @@ export default async function getLessons(userId: string, now = Date.now()) {
     });
   }
   if (output.length < LESSON_SIZE) {
-    console.log("TODO: User is ready for new cards. Handle that here.");
+    throw new Error("TODO: User is ready for new cards. Handle that here.");
   }
   return output;
 }

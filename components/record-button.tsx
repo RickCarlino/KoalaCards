@@ -103,7 +103,7 @@ function blobToBase64(blob: Blob): Promise<string> {
 }
 type Props = {
   onRecord: (data: string) => void;
-  quizType: string;
+  lessonType: string;
 };
 export function RecordButton(props: Props) {
   const { isRecording, stop, start } = useVoiceRecorder(async (data) => {
@@ -121,7 +121,7 @@ export function RecordButton(props: Props) {
     ],
   ]);
   let buttonText = "Recor[d]";
-  switch (props.quizType) {
+  switch (props.lessonType) {
     case "dictation":
       buttonText = "Dictate Card";
       break;

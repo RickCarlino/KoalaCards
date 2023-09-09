@@ -61,7 +61,7 @@ function CurrentQuiz(props: CurrentQuizProps) {
         <PlayButton dataURI={quiz.quizAudio} />
       </Grid.Col>
       <Grid.Col span={4}>
-        <RecordButton quizType={quiz.quizType} onRecord={onRecord} />
+        <RecordButton lessonType={quiz.lessonType} onRecord={onRecord} />
       </Grid.Col>
       <Grid.Col span={4}>
         <Button onClick={() => doFail("" + quiz.id)} fullWidth>
@@ -80,7 +80,7 @@ function CurrentQuiz(props: CurrentQuizProps) {
 function CardOverview({ quiz }: { quiz: CurrentQuiz }) {
   let term = "";
   let def = "";
-  switch (quiz.quizType) {
+  switch (quiz.lessonType) {
     case "dictation":
       term = quiz.ko;
       def = quiz.en;
@@ -101,14 +101,22 @@ function CardOverview({ quiz }: { quiz: CurrentQuiz }) {
 
 function Failure(props: {
   id: number;
+  ko: string;
+  en: string;
+  lessonType: string;
   userTranscription: string;
   rejectionText: string;
 }) {
-  return <div>
-    <p>Incorrect!</p>
-    <p>What you said: {props.userTranscription}</p>
-    <p>Why it's wrong: {props.rejectionText}</p>
-  </div>
+  return (
+    <div>
+      <p>You answered the last question incorrectly:</p>
+      <p>Quiz type: {props.lessonType}</p>
+      <p>Korean: {props.ko}</p>
+      <p>English: {props.en}</p>
+      <p>What you said: {props.userTranscription}</p>
+      <p>Why it's wrong: {props.rejectionText}</p>
+    </div>
+  );
 }
 
 function Study({ quizzes }: Props) {
@@ -123,6 +131,9 @@ function Study({ quizzes }: Props) {
   const flagPhrase = trpc.flagPhrase.useMutation();
   const [failure, setFailure] = useState<{
     id: number;
+    ko: string;
+    en: string;
+    lessonType: string;
     userTranscription: string;
     rejectionText: string;
   } | null>(null);
@@ -132,11 +143,13 @@ function Study({ quizzes }: Props) {
   };
   const quiz = currentQuiz(state);
   if (!quiz) {
+    const reload = confirm("Session complete. Study more?");
+    reload && location.reload();
     return <div>Session complete.</div>;
   }
   const header = (() => {
     if (!quiz) return <span></span>;
-    return <span>🫣 Card #{quiz.id}</span>;
+    return <span>🫣 Card #{quiz.id}, {quiz.repetitions} repetitions</span>;
   })();
 
   return (
@@ -164,10 +177,10 @@ function Study({ quizzes }: Props) {
             .catch(needBetterErrorHandler);
         }}
         onRecord={(audio) => {
-          const { id, quizType } = quiz;
+          const { id, lessonType } = quiz;
           dispatch({ type: "WILL_GRADE" });
           performExam
-            .mutateAsync({ id, audio, quizType })
+            .mutateAsync({ id, audio, lessonType })
             .then((data) => {
               setFailure(null);
               switch (data.result) {
@@ -186,6 +199,9 @@ function Study({ quizzes }: Props) {
                   });
                   setFailure({
                     id,
+                    ko: quiz.ko,
+                    en: quiz.en,
+                    lessonType: quiz.lessonType,
                     userTranscription: data.userTranscription,
                     rejectionText: data.rejectionText,
                   });
