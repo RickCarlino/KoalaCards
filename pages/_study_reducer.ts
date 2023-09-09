@@ -1,4 +1,3 @@
-import { playAudio } from "@/components/play-button";
 import { shuffle } from "radash";
 
 export type Quiz = {

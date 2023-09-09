@@ -101,14 +101,22 @@ function CardOverview({ quiz }: { quiz: CurrentQuiz }) {
 
 function Failure(props: {
   id: number;
+  ko: string;
+  en: string;
+  quizType: string;
   userTranscription: string;
   rejectionText: string;
 }) {
-  return <div>
-    <p>Incorrect!</p>
-    <p>What you said: {props.userTranscription}</p>
-    <p>Why it's wrong: {props.rejectionText}</p>
-  </div>
+  return (
+    <div>
+      <p>You answered the last question incorrectly:</p>
+      <p>Quiz type: {props.quizType}</p>
+      <p>Korean: {props.ko}</p>
+      <p>English: {props.en}</p>
+      <p>What you said: {props.userTranscription}</p>
+      <p>Why it's wrong: {props.rejectionText}</p>
+    </div>
+  );
 }
 
 function Study({ quizzes }: Props) {
@@ -123,6 +131,9 @@ function Study({ quizzes }: Props) {
   const flagPhrase = trpc.flagPhrase.useMutation();
   const [failure, setFailure] = useState<{
     id: number;
+    ko: string;
+    en: string;
+    quizType: string;
     userTranscription: string;
     rejectionText: string;
   } | null>(null);
@@ -186,6 +197,9 @@ function Study({ quizzes }: Props) {
                   });
                   setFailure({
                     id,
+                    ko: quiz.ko,
+                    en: quiz.en,
+                    quizType: quiz.quizType,
                     userTranscription: data.userTranscription,
                     rejectionText: data.rejectionText,
                   });

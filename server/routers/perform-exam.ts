@@ -1,5 +1,4 @@
 import { prismaClient } from "@/server/prisma-client";
-import { LessonType } from "@/utils/fetch-lesson";
 import { gradePerformance } from "@/utils/srs";
 import { Lang, transcribeB64 } from "@/utils/transcribe";
 import { Card, Phrase } from "@prisma/client";
@@ -70,18 +69,12 @@ const markCorrect = async (card: Card) => {
 
 async function gradeResp(
   answer: string = "",
-  card: CardWithPhrase,
-  lessonType: LessonType,
+  card: CardWithPhrase
 ): Promise<ReturnType<Quiz>> {
   const cleanAnswer = cleanYesNo(answer);
   switch (cleanAnswer) {
     case "YES":
-      // We only mark the phrase correct if the user is doing a speaking lesson
-      // Failure can happen early, but success only happens if you make it past
-      // the last lesson type.
-      if (lessonType === "speaking") {
-        await markCorrect(card);
-      }
+      await markCorrect(card);
       return {
         correct: true,
       };
@@ -113,13 +106,13 @@ async function dictationTest(transcript: string, card: CardWithPhrase) {
     `,
     PROMPT_CONFIG,
   );
-  return gradeResp(answer, card, "dictation");
+  return gradeResp(answer, card);
 }
 
 async function listeningTest(transcript: string, card: CardWithPhrase) {
   const p = translationPrompt(card.phrase.term, transcript);
   const [answer] = await ask(p, PROMPT_CONFIG);
-  return gradeResp(answer, card, "listening");
+  return gradeResp(answer, card);
 }
 
 async function speakingTest(transcript: string, card: CardWithPhrase) {
@@ -136,7 +129,7 @@ async function speakingTest(transcript: string, card: CardWithPhrase) {
       `,
     PROMPT_CONFIG,
   );
-  return gradeResp(answer, card, "speaking");
+  return gradeResp(answer, card);
 }
 
 const quizType = z.union([

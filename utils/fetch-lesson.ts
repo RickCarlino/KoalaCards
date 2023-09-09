@@ -145,7 +145,7 @@ export default async function getLessons(userId: string, now = Date.now()) {
     });
   }
   if (output.length < LESSON_SIZE) {
-    console.log("TODO: User is ready for new cards. Handle that here.");
+    throw new Error("TODO: User is ready for new cards. Handle that here.");
   }
   return output;
 }
