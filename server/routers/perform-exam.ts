@@ -132,7 +132,7 @@ async function speakingTest(transcript: string, card: CardWithPhrase) {
   return gradeResp(answer, card);
 }
 
-const quizType = z.union([
+const lessonType = z.union([
   z.literal("dictation"),
   z.literal("listening"),
   z.literal("speaking"),
@@ -183,26 +183,26 @@ type PerformExamOutput = z.infer<typeof performExamOutput>;
 export const performExam = procedure
   .input(
     z.object({
-      quizType,
+      lessonType,
       audio: z.string(),
       id: z.number(),
     }),
   )
   .output(performExamOutput)
   .mutation(async ({ input }): Promise<PerformExamOutput> => {
-    type QuizType = typeof input.quizType;
-    const LANG: Record<QuizType, Lang> = {
+    type LessonType = typeof input.lessonType;
+    const LANG: Record<LessonType, Lang> = {
       dictation: "ko",
       listening: "en-US",
       speaking: "ko",
     };
-    const QUIZ: Record<QuizType, Quiz> = {
+    const QUIZ: Record<LessonType, Quiz> = {
       dictation: dictationTest,
       listening: listeningTest,
       speaking: speakingTest,
     };
-    const lang = LANG[input.quizType];
-    const quiz = QUIZ[input.quizType];
+    const lang = LANG[input.lessonType];
+    const quiz = QUIZ[input.lessonType];
     const transcript = await transcribeB64(lang, input.audio);
     const card = await prismaClient.card.findUnique({
       include: { phrase: true },

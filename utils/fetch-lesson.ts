@@ -81,9 +81,9 @@ export type LessonType = "dictation" | "listening" | "speaking";
 
 export const QUIZ_TYPES: LessonType[] = ["dictation", "listening", "speaking"];
 
-async function getAudio(quizType: LessonType, _ko: string, _en: string) {
+async function getAudio(lessonType: LessonType, _ko: string, _en: string) {
   let innerSSML: string;
-  switch (quizType) {
+  switch (lessonType) {
     case "dictation":
       innerSSML = [
         en("Repeat: "),
