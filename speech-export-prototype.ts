@@ -6,7 +6,7 @@ import { wordCount } from "./utils/random-new";
 
 // Create a readline interface to read the file line-by-line
 const readInterface = readline.createInterface({
-  input: fs.createReadStream("phrases.tsv"),
+  input: fs.createReadStream("phrases-experimental.tsv"),
   output: process.stdout,
   terminal: false,
 });
@@ -17,7 +17,7 @@ readInterface.on("line", async (line) => {
   const columns = line.split("\t");
 
   // Skip lines with insufficient columns
-  if (columns.length < 3) {
+  if (columns.length < 2) {
     console.log("Skipping line with insufficient columns:", line);
     return;
   }

@@ -3,15 +3,16 @@ import * as fs from "fs";
 import { appendFileSync } from "fs";
 import * as readline from "readline";
 
-export async function ingestOne(ko: string, en: string, rootWord: string) {
+export async function ingestOne(
+  ko: string,
+  en: string,
+  rootWord: string | undefined,
+) {
   // Find phrase where `rootWord` or `ko` matches
   const phrase = await prismaClient.phrase.findFirst({
     where: {
-      OR: [
-        { term: ko },
-        { root_word: rootWord },
-      ],
-    }
+      term: ko,
+    },
   });
   if (!phrase) {
     appendFileSync("phrases.tsv", [rootWord, ko, en].join("\t") + "\n", "utf8");
@@ -19,7 +20,7 @@ export async function ingestOne(ko: string, en: string, rootWord: string) {
       data: {
         term: ko,
         definition: en,
-        root_word: rootWord,
+        root_word: rootWord || "",
       },
     });
   } else {

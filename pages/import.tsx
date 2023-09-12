@@ -11,8 +11,9 @@ import {
 import { useState } from "react";
 
 interface Phrase {
-  term: string;
-  definition: string;
+  korean: string;
+  english: string;
+  rootWord: string;
 }
 
 interface ImportPageProps {
@@ -23,7 +24,7 @@ const ImportPage: React.FC<ImportPageProps> = ({}) => {
   const [text, setText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<[string, string, string][]>([]);
+  const [result, setResult] = useState<[string, string][]>([]);
   const importPhrase = trpc.importPhrases.useMutation();
 
   const handleSubmit = async () => {
@@ -32,31 +33,37 @@ const ImportPage: React.FC<ImportPageProps> = ({}) => {
 
     const lines = text.split("\n");
     const phrases: Phrase[] = [];
-
+    let lineIndex = 0;
+    let total = lines.length;
     for (let line of lines) {
-      let [term, definition] = line.split("\t");
+      lineIndex = lineIndex + 1;
+      if (line.length < 3) continue;
+      if (line.length > 80) {
+        setError(`(Line ${lineIndex}/${total}) Is too long. KoalaSRS is optimized for short phrases.`);
+        setIsLoading(false);
+        return;
+      }
+      let [korean, english, rootWord] = line.split("\t");
 
-      if (!term) {
-        setError("Each line must start with a vocabulary word.");
+      if (!korean) {
+        setError(`(Line ${lineIndex}/${total}) line must start with a vocabulary word.`);
         setIsLoading(false);
         return;
       }
 
-      if (!definition) {
-        setError(
-          "A definition or example context is required after a tab character.",
-        );
+      if (!english) {
+        setError(`(Line ${lineIndex}/${total}) A definition is required after a tab character.`);
         setIsLoading(false);
         return;
       }
 
-      term = term.trim();
-      definition = definition?.trim();
-      phrases.push({ term: term, definition: definition });
+      korean = korean.trim();
+      english = english.trim();
+      phrases.push({ korean, english, rootWord });
     }
 
     importPhrase.mutateAsync({ input: phrases }).then((imports) => {
-      setResult(imports.map((x) => [x.input, x.ko, x.en]));
+      setResult(imports.map((x) => [x.ko, x.en]));
     });
 
     setIsLoading(false);
@@ -66,14 +73,17 @@ const ImportPage: React.FC<ImportPageProps> = ({}) => {
     <Paper>
       <h1>Import New Cards</h1>
       <p>
-        Enter a list of phrases below, one per line. Each line should contain a
-        Korean word, followed by a tab character, followed by an either an
-        English definition or a Korean sentence that contains the word.
+        Enter a list of phrases below, one per line.
+        Each line has three parts, separated by a tab character.
+        The order is as follows:
       </p>
-      <h3>Example of contextual import:</h3>
-      <pre>실무 대부분의 [[실무]] 환경에서는 CI/CD를 진행하죠.</pre>
-      <h3>Examples of definition import:</h3>
-      <pre>최신순 newest</pre>
+      <ol>
+        <li>Korean sentence</li>
+        <li>(tab character) English translation or example sentence.</li>
+        <li>(tab character) Optional key vocab word in the sentence.</li>
+      </ol>
+      <h3>Example of phrase input:</h3>
+      <pre>여러가지 음식을 먹어 봤어요. I tried various foods. 여러가지</pre>
       <Textarea
         minRows={10}
         placeholder="Korean sentence <tab> English translation or example sentence"
@@ -98,17 +108,15 @@ const ImportPage: React.FC<ImportPageProps> = ({}) => {
       <table>
         <thead>
           <tr>
-            <th>Input</th>
-            <th>Output</th>
-            <th>Translation</th>
+            <th>Korean</th>
+            <th>English</th>
           </tr>
         </thead>
         <tbody>
-          {result.map((x) => (
-            <tr>
+          {result.map((x, i) => (
+            <tr key={i}>
               <td>{x[0]}</td>
               <td>{x[1]}</td>
-              <td>{x[2]}</td>
             </tr>
           ))}
         </tbody>

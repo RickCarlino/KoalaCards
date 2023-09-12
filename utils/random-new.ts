@@ -177,128 +177,135 @@ export const wordCount = (input: string): number => {
   return input.split(" ").filter((word) => word.trim() !== "").length;
 };
 
-async function maybeGenerateSmallerPhrase(input: KoEn): Promise<KoEn[]> {
-  if (!input) {
-    return [];
-  }
+// == I AM LEAVING THIS HERE ==
+// Phrase generation was a fun experiment, and I continue to
+// use it, but it is not stable or reliable enough for use by
+// all. TODO: Re-visit this experiment some day or spin this
+// off as a CLI tool for advanced users.
+// == I AM LEAVING THIS HERE ==
+//
+// async function maybeGenerateSmallerPhrase(input: KoEn): Promise<KoEn[]> {
+//   if (!input) {
+//     return [];
+//   }
 
-  if (wordCount(input.ko) < 6) {
-    return [input];
-  }
+//   if (wordCount(input.ko) < 6) {
+//     return [input];
+//   }
 
-  const content = [
-    input.ko,
-    "\n",
-    input.en,
-    "\n",
-    '===',
-    `The example sentence above is too long. Break it down into smaller sentences.`,
-  ].join(" ");
-  const answer = await askRaw({
-    messages: [{ role: "user", content }],
-    model: "gpt-4-0613",
-    n: 1,
-    temperature: 0.3,
-    function_call: {
-      name: "create_phrases",
-    },
-    functions: [
-      {
-        name: "create_phrases",
-        description: "Create an array of new phrases from a larger phrase.",
-        parameters: {
-          required: ["translationPairs"],
-          type: "object",
-          properties: {
-            translationPairs: {
-              type: "array",
-              description: "An array of translation pair objects.",
-              items: {
-                type: "object",
-                properties: {
-                  ko: {
-                    type: "string",
-                    description: "A Korean sentence.",
-                  },
-                  en: {
-                    type: "string",
-                    description: "An English translation of the Korean phrase.",
-                  },
-                },
-                required: ["ko", "en"],
-              },
-            },
-          },
-        },
-      },
-    ],
-  });
-  const json = answer.data.choices[0].message?.function_call?.arguments;
-  const clean: KoEn[] = JSON.parse(json ? json : '{"translationPairs": []}')?.translationPairs;
-  if (Array.isArray(clean)) {
-    return clean.filter((x) => x && wordCount(x.ko) < 6);
-  }
-  throw new Error("Malformed GPT-4 response: " + json);
-}
+//   const content = [
+//     input.ko,
+//     "\n",
+//     input.en,
+//     "\n",
+//     '===',
+//     `The example sentence above is too long. Break it down into smaller sentences.`,
+//   ].join(" ");
+//   const answer = await askRaw({
+//     messages: [{ role: "user", content }],
+//     model: "gpt-4-0613",
+//     n: 1,
+//     temperature: 0.3,
+//     function_call: {
+//       name: "create_phrases",
+//     },
+//     functions: [
+//       {
+//         name: "create_phrases",
+//         description: "Create an array of new phrases from a larger phrase.",
+//         parameters: {
+//           required: ["translationPairs"],
+//           type: "object",
+//           properties: {
+//             translationPairs: {
+//               type: "array",
+//               description: "An array of translation pair objects.",
+//               items: {
+//                 type: "object",
+//                 properties: {
+//                   ko: {
+//                     type: "string",
+//                     description: "A Korean sentence.",
+//                   },
+//                   en: {
+//                     type: "string",
+//                     description: "An English translation of the Korean phrase.",
+//                   },
+//                 },
+//                 required: ["ko", "en"],
+//               },
+//             },
+//           },
+//         },
+//       },
+//     ],
+//   });
+//   const json = answer.data.choices[0].message?.function_call?.arguments;
+//   const clean: KoEn[] = JSON.parse(json ? json : '{"translationPairs": []}')?.translationPairs;
+//   if (Array.isArray(clean)) {
+//     return clean.filter((x) => x && wordCount(x.ko) < 6);
+//   }
+//   throw new Error("Malformed GPT-4 response: " + json);
+// }
 
-export async function phraseFromUserInput(
-  term: string,
-  definition: string,
-): Promise<KoEn[]> {
-  const content = [
-    `Create a random phrase for a Korean learner using the`,
-    `word "${term}" (as in "${definition}").`,
-    `It is important that the sentence be very short.`,
-    `Sentences must be conjugated in the -요 form.`,
-    `Don't say '당신', '그녀' or other English-isms.`,
-  ].join(" ");
-  const answer = await askRaw({
-    messages: [
-      {
-        role: "user",
-        content,
-      },
-    ],
-    model: "gpt-4-0613", // GPT 3.5 is not good enough for this task.
-    n: 1,
-    temperature: 0.3,
-    function_call: {
-      name: "create_phrase",
-    },
-    functions: [
-      {
-        name: "create_phrase",
-        description: "Create a new phrase with translation pair.",
-        parameters: {
-          required: ["ko", "en"],
-          type: "object",
-          properties: {
-            ko: {
-              type: "string",
-              description:
-                "A Korean sentence without notes, transliterations and romanization.",
-            },
-            en: {
-              type: "string",
-              description:
-                "An English translation of the Korean sentence provided.",
-            },
-          },
-        },
-      },
-    ],
-  });
-  const json = answer.data.choices[0].message?.function_call?.arguments;
-  if (!json) {
-    throw new Error("Phrase import failed to generate GPT-4 response.");
-  }
-  const clean = JSON.parse(json);
-  if (clean && typeof clean.ko === "string" && typeof clean.en === "string") {
-    return maybeGenerateSmallerPhrase(clean);
-  } else {
-    throw new Error("Malformed GPT-4 response: " + json);
-  }
-}
+// export async function phraseFromUserInput(
+//   term: string,
+//   definition: string,
+// ): Promise<KoEn[]> {
+//   const content = [
+//     `Create a random phrase for a Korean learner using the`,
+//     `word "${term}" (as in "${definition}").`,
+//     `It is important that the sentence be very short.`,
+//     `Sentences must be conjugated in the -요 form.`,
+//     `Don't say '당신', '그녀' or other English-isms.`,
+//   ].join(" ");
+//   const answer = await askRaw({
+//     messages: [
+//       {
+//         role: "user",
+//         content,
+//       },
+//     ],
+//     model: "gpt-4-0613", // GPT 3.5 is not good enough for this task.
+//     n: 1,
+//     temperature: 0.3,
+//     function_call: {
+//       name: "create_phrase",
+//     },
+//     functions: [
+//       {
+//         name: "create_phrase",
+//         description: "Create a new phrase with translation pair.",
+//         parameters: {
+//           required: ["ko", "en"],
+//           type: "object",
+//           properties: {
+//             ko: {
+//               type: "string",
+//               description:
+//                 "A Korean sentence without notes, transliterations and romanization.",
+//             },
+//             en: {
+//               type: "string",
+//               description:
+//                 "An English translation of the Korean sentence provided.",
+//             },
+//           },
+//         },
+//       },
+//     ],
+//   });
+//   const json = answer.data.choices[0].message?.function_call?.arguments;
+//   if (!json) {
+//     throw new Error("Phrase import failed to generate GPT-4 response.");
+//   }
+//   const clean = JSON.parse(json);
+//   if (clean && typeof clean.ko === "string" && typeof clean.en === "string") {
+//     return maybeGenerateSmallerPhrase(clean);
+//   } else {
+//     throw new Error("Malformed GPT-4 response: " + json);
+//   }
+// }
 
 export const randomNew = async () => {
   const results: Phrase[] = [];

@@ -1,6 +1,6 @@
 import { prismaClient } from "@/server/prisma-client";
 import { ingestOne, ingestPhrases } from "@/utils/ingest-phrases";
-import { phraseFromUserInput, randomNew } from "@/utils/random-new";
+import { randomNew } from "@/utils/random-new";
 import { z } from "zod";
 import { procedure, router } from "../trpc";
 import { getNextQuizzes } from "./get-next-quizzes";
@@ -28,8 +28,9 @@ export const appRouter = router({
       z.object({
         input: z.array(
           z.object({
-            term: z.string(),
-            definition: z.string(),
+            korean: z.string(),
+            english: z.string(),
+            rootWord: z.optional(z.string()),
           }),
         ),
       }),
@@ -39,37 +40,35 @@ export const appRouter = router({
         z.object({
           ko: z.string(),
           en: z.string(),
-          input: z.string(),
         }),
       ),
     )
     .mutation(async ({ input, ctx }) => {
-      const results: { ko: string; en: string; input: string }[] = [];
-      for (const { term, definition } of input.input) {
-        const candidates = await phraseFromUserInput(term, definition);
+      const results: { ko: string; en: string }[] = [];
+      for (const { korean, english, rootWord } of input.input) {
         const userId = ctx.user?.id;
-        for (const result of candidates) {
-          if (result && userId) {
-            const phrase = await ingestOne(result.ko, result.en, term);
-            if (phrase) {
-              const alreadyExists = await prismaClient.card.findFirst({
-                where: { userId, phraseId: phrase.id },
+        if (userId) {
+          const phrase = await ingestOne(korean, english, rootWord);
+          if (phrase) {
+            const alreadyExists = await prismaClient.card.findFirst({
+              where: { userId, phraseId: phrase.id },
+            });
+            if (!alreadyExists) {
+              await prismaClient.card.create({
+                data: {
+                  userId,
+                  phraseId: phrase.id,
+                },
               });
-              if (!alreadyExists) {
-                await prismaClient.card.create({
-                  data: {
-                    userId,
-                    phraseId: phrase.id,
-                  },
-                });
-              } else {
-                console.log("Duplicate phrase: ");
-                console.log(result);
-              }
               results.push({
-                ko: result.ko,
-                en: result.en,
-                input: term,
+                ko: phrase.term,
+                en: phrase.definition,
+              });
+            } else {
+              const ERR = "(Duplicate) ";
+              results.push({
+                ko: ERR + korean,
+                en: ERR + english,
               });
             }
           }
