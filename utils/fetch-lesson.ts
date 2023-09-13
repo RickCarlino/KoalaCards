@@ -104,6 +104,11 @@ async function getAudio(lessonType: LessonType, _ko: string, _en: string) {
 }
 
 export default async function getLessons(userId: string, now = Date.now()) {
+  // First, pick the card with the most repetitions.
+  // If there are multiple cards with the same number of repetitions,
+  // pick the one that was last reviewed the longest ago.
+  // SELECT * FROM Card WHERE nextReviewAt < NOW
+  // ORDER BY repetitions DESC, nextReviewAt DESC;
   const cards = await prismaClient.card.findMany({
     include: { phrase: true },
     where: {
@@ -113,7 +118,7 @@ export default async function getLessons(userId: string, now = Date.now()) {
         lte: now,
       },
     },
-    orderBy: [{ nextReviewAt: "asc" }, { repetitions: "asc" }],
+    orderBy: [{ repetitions: "desc" }, { nextReviewAt: "asc" }],
     take: LESSON_SIZE,
   });
   type LocalQuiz = {
