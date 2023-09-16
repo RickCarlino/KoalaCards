@@ -6,9 +6,16 @@
 
 Hey there! Welcome to KoalaSRS, a fun and friendly Korean-only [spaced repetition system](https://en.wikipedia.org/wiki/Spaced_repetition) that's all about listening and speaking skills. We teach vocabulary using fully-formed sentences, not just boring word/definition pairs. KoalaSRS captures your voice input using speech-to-text and uses the super-smart GPT-3 for human-like test assessments and corrections. That means that the app is clever enough to mark your answers as "close enough" and can even give you optional feedback about _why_ you were wrong (Called "coaching"- UI is not built yet but early experiments are promising). It can explain sentences that don't make sense or have unknown vocabulary. 🧠
 
+
+## Demo
+
+[Watch a short YouTube demo of the app as of 2023-09-16.](https://www.youtube.com/watch?v=0H2MufXrYl8)
+
 ## Private Alpha
 
-I am privately hosting an instance of KoalaSRS. Please contact me via my blog/LinkedIn/Mastodon/etc if you are interested in trying it out or want to help with alpha testing.
+I am privately hosting an instance of KoalaSRS. Please contact me via my blog/LinkedIn/Mastodon/etc if you are interested in trying it out or want to help with alpha testing. There is no free public instance at the moment due to hosting/API costs.
+
+I've created a [group on Club House](https://www.clubhouse.com/c/join/B2Tyn13w) to discuss KoalaSRS development in an informal manner. Feel free to drop in and say "hi" or suggest new ideas.
 
 I've created a [group on Club House](https://www.clubhouse.com/c/join/B2Tyn13w) to discuss KoalaSRS development in an informal manner. Feel free to drop in and say "hi" or suggest new ideas.
 
@@ -26,10 +33,6 @@ The app started as a command line app while I experimented with different quiz s
 - [Project Status and Limitations](#project-status-and-limitations)
 - [Costs (April 2023)](#costs-april-2023)
 - [Better Name Needed](#better-name-needed)
-
-## Demo
-
-[Watch a quick YouTube demo where I foolishly say "들고 싶어요" instead of "듣고 싶어요"](https://youtu.be/XJsDDZQp2oo)
 
 <p align="center">
   <img src="./screenshot.jpg" alt="The KoalaSRS Logo (for now)"/>
