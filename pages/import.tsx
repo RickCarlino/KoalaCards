@@ -38,7 +38,7 @@ const ImportPage: React.FC<ImportPageProps> = ({}) => {
     for (let line of lines) {
       lineIndex = lineIndex + 1;
       if (line.length < 3) continue;
-      if (line.length > 80) {
+      if (line.split("\t")[0].length > 80) {
         setError(`(Line ${lineIndex}/${total}) Is too long. KoalaSRS is optimized for short phrases.`);
         setIsLoading(false);
         return;
