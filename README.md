@@ -10,6 +10,8 @@ Hey there! Welcome to KoalaSRS, a fun and friendly Korean-only [spaced repetitio
 
 I am privately hosting an instance of KoalaSRS. Please contact me via my blog/LinkedIn/Mastodon/etc if you are interested in trying it out or want to help with alpha testing.
 
+I've created a [group on Club House](https://www.clubhouse.com/c/join/B2Tyn13w) to discuss KoalaSRS development in an informal manner. Feel free to drop in and say "hi" or suggest new ideas.
+
 ## UNDER CONSTRUCTION ⚠️
 
 The app started as a command line app while I experimented with different quiz strategies. Now that the details are resolved, I am converting the app to run in a browser so that it can be used by non-technical users. I am working directly off of the `main` branch for now since it seems like we don't have a ton of users. If you want to use the app but are hitting stability issues, please reach out.
