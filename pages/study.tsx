@@ -14,7 +14,11 @@ import {
 import { useHotkeys } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 
-type Props = { quizzes: Quiz[] };
+type Props = {
+  quizzes: Quiz[];
+  totalCards: number;
+  quizzesDue: number;
+};
 
 interface CurrentQuizProps {
   quiz: CurrentQuiz;
@@ -119,7 +123,7 @@ function Failure(props: {
   );
 }
 
-function Study({ quizzes }: Props) {
+function Study({ quizzes, totalCards, quizzesDue }: Props) {
   const phrasesById = quizzes.reduce((acc, quiz) => {
     acc[quiz.id] = quiz;
     return acc;
@@ -148,7 +152,13 @@ function Study({ quizzes }: Props) {
   }
   const header = (() => {
     if (!quiz) return <span></span>;
-    return <span>🫣 Card #{quiz.id}, {quiz.repetitions} repetitions</span>;
+    let message = "";
+    if (quizzesDue > 100) {
+      message = `🔥 ${quizzesDue}/${totalCards} cards due!`;
+    } else {
+      message = `${quizzesDue}/${totalCards} cards due.`;
+    }
+    return <span>🫣 Card #{quiz.id}, {quiz.repetitions} repetitions. {message}</span>;
   })();
 
   return (
@@ -238,7 +248,7 @@ function Study({ quizzes }: Props) {
 function StudyLoader() {
   const { data } = trpc.getNextQuizzes.useQuery({});
   if (data) {
-    const cleanData = (i: (typeof data)[number]): Quiz => {
+    const cleanData = (i: (typeof data.quizzes)[number]): Quiz => {
       if (i) {
         const { dictation, speaking, listening } = i.audio;
         if (typeof dictation === "string") {
@@ -258,7 +268,11 @@ function StudyLoader() {
       }
       throw new Error("Impossible");
     };
-    return <Study quizzes={data.map(cleanData)} />;
+    return <Study
+      quizzes={data.quizzes.map(cleanData)}
+      totalCards={data.totalCards}
+      quizzesDue={data.quizzesDue}
+      />;
   } else {
     return <div>Loading...</div>;
   }

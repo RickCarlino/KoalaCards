@@ -17,7 +17,11 @@ const Quiz = z.object({
   audio: z.record(QuizType, z.string()),
 });
 
-const QuizList = z.array(Quiz);
+const QuizList = z.object({
+  quizzes: z.array(Quiz),
+  totalCards: z.number(),
+  quizzesDue: z.number(),
+});
 
 type QuizType = z.TypeOf<typeof Quiz>;
 
@@ -62,5 +66,30 @@ export const getNextQuizzes = procedure
       throw new Error("User not found");
     }
     await maybeAddPhraseForUser(userId);
-    return await getLessons(userId);
+    const totalCards = await prismaClient.card.count({
+      where: {
+        flagged: false,
+        userId,
+      },
+    });
+    // SELECT COUNT()
+    // FROM Card
+    // WHERE nextReviewAt < Date.now()
+    // AND flagged = false
+    // AND userId = ?;
+    // AND REPETITIONS <> 0
+    // ORDER BY repetitions DESC, nextReviewAt DESC;
+    const quizzesDue = await prismaClient.card.count({
+      where: {
+        flagged: false,
+        userId,
+        nextReviewAt: { lte: Date.now() },
+        repetitions: { gt: 0 },
+      },
+    });
+    return {
+      quizzes: await getLessons(userId),
+      totalCards,
+      quizzesDue,
+    };
   });
