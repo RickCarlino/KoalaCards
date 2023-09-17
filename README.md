@@ -9,6 +9,10 @@ Hey there! Welcome to KoalaSRS, a fun and friendly Korean-only [spaced repetitio
 
 ## Demo
 
+<p align="center">
+  <img src="./screenshot.jpg" alt="The KoalaSRS Logo (for now)"/>
+</p>
+
 [Watch a short YouTube demo of the app as of 2023-09-16.](https://www.youtube.com/watch?v=0H2MufXrYl8)
 
 ## Private Alpha
@@ -31,10 +35,6 @@ The app started as a command line app while I experimented with different quiz s
 - [Project Status and Limitations](#project-status-and-limitations)
 - [Costs (April 2023)](#costs-april-2023)
 - [Better Name Needed](#better-name-needed)
-
-<p align="center">
-  <img src="./screenshot.jpg" alt="The KoalaSRS Logo (for now)"/>
-</p>
 
 ## Features 💡
 
