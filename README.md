@@ -15,6 +15,11 @@ Hey there! Welcome to KoalaSRS, a fun and friendly Korean-only [spaced repetitio
 
 [Watch a short YouTube demo of the app as of 2023-09-16.](https://www.youtube.com/watch?v=0H2MufXrYl8)
 
+
+## Demo
+
+[Watch a short YouTube demo of the app as of 2023-09-16.](https://www.youtube.com/watch?v=0H2MufXrYl8)
+
 ## Private Alpha
 
 I am privately hosting an instance of KoalaSRS. Please contact me via my blog/LinkedIn/Mastodon/etc if you are interested in trying it out or want to help with alpha testing. There is no free public instance at the moment due to hosting/API costs.
