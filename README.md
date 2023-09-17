@@ -4,7 +4,7 @@
   <img src="./logo.png" alt="The KoalaSRS Logo (for now)"/>
 </p>
 
-Hey there! Welcome to KoalaSRS, a fun and friendly Korean-only [spaced repetition system](https://en.wikipedia.org/wiki/Spaced_repetition) that's all about listening and speaking skills. We teach vocabulary using fully-formed sentences, not just boring word/definition pairs. KoalaSRS captures your voice input using speech-to-text and uses the super-smart GPT-3 for human-like test assessments and corrections. That means that the app is clever enough to mark your answers as "close enough" and can even give you optional feedback about _why_ you were wrong (Called "coaching"- UI is not built yet but early experiments are promising). It can explain sentences that don't make sense or have unknown vocabulary. 🧠
+Hey there! Welcome to KoalaSRS, a fun and friendly Korean-only [spaced repetition system](https://en.wikipedia.org/wiki/Spaced_repetition) that's all about listening and speaking skills. We teach vocabulary using fully-formed sentences, not just boring word/definition pairs. KoalaSRS captures your voice input using speech-to-text and uses the super-smart GPT-4 for human-like test assessments and corrections. That means that the app is clever enough to mark your answers as "close enough" and can even give you optional feedback about _why_ you were wrong. It can explain sentences that don't make sense or have unknown vocabulary (WIP). 🧠
 
 
 ## Demo
@@ -69,7 +69,7 @@ Check out the [whitepaper](https://github.com/RickCarlino/gpt-language-learning-
 
 **Prerequisites:** NodeJS is required. I've tested it on v18 of node, and newer versions will probably work too.
 
-The project is in a semi-public alpha phase. If you don't understand the instructions below, you might want to wait for the project to mature before proceeding. Please only contact me for help if you're a professional software developer.
+The project is in a semi-public alpha phase. If you don't understand the instructions below, you might want to wait for the project to mature before proceeding. **These instructions may be out of date. Please raise an issue if things don't work!**
 
 1. Install NodeJS if you have not done so already.
 1. Clone this repo and `cd` in.
@@ -90,7 +90,6 @@ The source code is permissively licensed and open for review by software develop
 - I use the app every day for studying, but the documentation is, well, not great. If you really want to use this app, consider DMing me on Reddit for help.
 - By design, the app won't quiz on reading or writing. This is a speaking/listening app.
 - The target user is English speakers trying to learn Korean. I can add other language pairs later, but the main focus right now is EN/KO.
-- **The scheduling algorithm is on hold.** I had a simple heuristic-based scheduling algorithm, but the app currently just does a simple shuffle of all sentences at start time. This is adequate for my study needs right now and allows me to focus on other parts of the app's development. Getting a real scheduling algorithm (like SM-2) is planned.
 
 ## Costs (April 2023) 💰
 
