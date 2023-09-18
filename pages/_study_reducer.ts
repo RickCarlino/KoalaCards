@@ -67,11 +67,11 @@ export function currentQuiz(state: State): CurrentQuiz | undefined {
     return undefined;
   }
   let lessonType: LessonType;
-  // TODO: Calculating the lessonType on the frontend does not
-  // make sense any more and is an artifact of a previous architecture.
+  // TODO: Calculating the lessonType on the frontend no longer
+  // makes sense and is an artifact of a previous architecture.
   // In the future we should calculate this on the backend and only
   // send audio for the appropriate quiz.
-  if (quiz.repetitions < 4) {
+  if (quiz.repetitions < 2) {
     lessonType = "dictation";
   } else {
     lessonType = quiz.repetitions % 2 === 0 ? "listening" : "speaking";

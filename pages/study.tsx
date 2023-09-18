@@ -30,6 +30,7 @@ interface CurrentQuizProps {
 
 function CurrentQuiz(props: CurrentQuizProps) {
   const { quiz, onRecord, doFail, doFlag, inProgress } = props;
+  const [isRecording, setIsRecording] = useState(false);
   useHotkeys([
     ["x", () => doFail("" + quiz.id)],
     ["z", () => doFlag("" + quiz.id)],
@@ -65,15 +66,32 @@ function CurrentQuiz(props: CurrentQuizProps) {
         <PlayButton dataURI={quiz.quizAudio} />
       </Grid.Col>
       <Grid.Col span={4}>
-        <RecordButton lessonType={quiz.lessonType} onRecord={onRecord} />
+        <RecordButton
+          lessonType={quiz.lessonType}
+          onStart={() => {
+            setIsRecording(true);
+          }}
+          onRecord={(data) => {
+            setIsRecording(false);
+            onRecord(data);
+          }}
+        />
       </Grid.Col>
       <Grid.Col span={4}>
-        <Button onClick={() => doFail("" + quiz.id)} fullWidth>
+        <Button
+          disabled={isRecording}
+          onClick={() => doFail("" + quiz.id)}
+          fullWidth
+        >
           [X]❌Fail Item
         </Button>
       </Grid.Col>
       <Grid.Col span={4}>
-        <Button onClick={() => doFlag("" + quiz.id)} fullWidth>
+        <Button
+          disabled={isRecording}
+          onClick={() => doFlag("" + quiz.id)}
+          fullWidth
+        >
           [Z]🚩Flag Item #{quiz.id}
         </Button>
       </Grid.Col>
@@ -111,8 +129,12 @@ function Failure(props: {
   userTranscription: string;
   rejectionText: string;
 }) {
+  const style = {
+    background: "salmon",
+    border: "1px dashed pink"
+  };
   return (
-    <div>
+    <div style={style}>
       <p>You answered the last question incorrectly:</p>
       <p>Quiz type: {props.lessonType}</p>
       <p>Korean: {props.ko}</p>
@@ -158,7 +180,11 @@ function Study({ quizzes, totalCards, quizzesDue }: Props) {
     } else {
       message = `${quizzesDue}/${totalCards} cards due.`;
     }
-    return <span>🫣 Card #{quiz.id}, {quiz.repetitions} repetitions. {message}</span>;
+    return (
+      <span>
+        🫣 Card #{quiz.id}, {quiz.repetitions} repetitions. {message}
+      </span>
+    );
   })();
 
   return (
@@ -268,11 +294,13 @@ function StudyLoader() {
       }
       throw new Error("Impossible");
     };
-    return <Study
-      quizzes={data.quizzes.map(cleanData)}
-      totalCards={data.totalCards}
-      quizzesDue={data.quizzesDue}
-      />;
+    return (
+      <Study
+        quizzes={data.quizzes.map(cleanData)}
+        totalCards={data.totalCards}
+        quizzesDue={data.quizzesDue}
+      />
+    );
   } else {
     return <div>Loading...</div>;
   }
