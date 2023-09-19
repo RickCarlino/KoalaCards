@@ -102,6 +102,7 @@ function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 type Props = {
+  onStart?: () => void;
   onRecord: (data: string) => void;
   lessonType: string;
 };
@@ -112,11 +113,15 @@ export function RecordButton(props: Props) {
     await playAudio(b64); // TODO: Maybe move to onRecord callback in parent.
     props.onRecord(b64);
   });
+  const doStart = () => {
+    props.onStart?.();
+    start();
+  }
   useHotkeys([
     [
       "v",
       () => {
-        (isRecording ? stop : start)();
+        (isRecording ? stop : doStart)();
       },
     ],
   ]);
