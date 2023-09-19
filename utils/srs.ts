@@ -1,5 +1,19 @@
 import { pick } from "radash";
 
+/** Convert seconds to days */
+const minutes = (m: number) => m / 60 / 24;
+const hours = (h: number) => h / 24;
+
+// My flavor of SM-2 departs from the original slightly.
+// I review more often in the beginning.
+const EARLY_REVIEW_INTERVAL_MAPPING: Record<number, number> = {
+  0: minutes(0.5),
+  1: minutes(5),
+  2: hours(1),
+  3: hours(5),
+  4: hours(24),
+};
+
 // Define keys for Spaced Repetition System (SRS) data
 type SRSKeys = "repetitions" | "interval" | "ease" | "lapses" | "nextReviewAt";
 
@@ -40,15 +54,8 @@ export function gradePerformance(card: SRSData, grade: number): SRSData {
   // If grade is 3 or higher, update repetitions, interval, and ease
   if (grade >= 3) {
     repetitions += 1;
-
-    if (repetitions === 1) {
-      interval = 1;
-    } else if (repetitions === 2) {
-      interval = 6;
-    } else {
-      interval = Math.ceil(interval * ease);
-    }
-
+    interval =
+      EARLY_REVIEW_INTERVAL_MAPPING[repetitions] || Math.ceil(interval * ease);
     ease = calculateEase(ease, grade);
   } else {
     // If grade is less than 3, reset repetitions and interval, update ease, and increase lapses
