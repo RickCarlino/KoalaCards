@@ -18,6 +18,7 @@ type Props = {
   quizzes: Quiz[];
   totalCards: number;
   quizzesDue: number;
+  newCards: number;
 };
 
 interface CurrentQuizProps {
@@ -145,7 +146,7 @@ function Failure(props: {
   );
 }
 
-function Study({ quizzes, totalCards, quizzesDue }: Props) {
+function Study({ quizzes, totalCards, quizzesDue, newCards }: Props) {
   const phrasesById = quizzes.reduce((acc, quiz) => {
     acc[quiz.id] = quiz;
     return acc;
@@ -178,7 +179,7 @@ function Study({ quizzes, totalCards, quizzesDue }: Props) {
     if (quizzesDue > 100) {
       message = `🔥 ${quizzesDue}/${totalCards} cards due!`;
     } else {
-      message = `${quizzesDue}/${totalCards} cards due.`;
+      message = `Due: ${quizzesDue} New: ${newCards} Total: ${totalCards}`;
     }
     return (
       <span>
@@ -299,6 +300,7 @@ function StudyLoader() {
         quizzes={data.quizzes.map(cleanData)}
         totalCards={data.totalCards}
         quizzesDue={data.quizzesDue}
+        newCards={data.newCards}
       />
     );
   } else {

@@ -21,6 +21,7 @@ const QuizList = z.object({
   quizzes: z.array(Quiz),
   totalCards: z.number(),
   quizzesDue: z.number(),
+  newCards: z.number(),
 });
 
 type QuizType = z.TypeOf<typeof Quiz>;
@@ -77,7 +78,7 @@ export const getNextQuizzes = procedure
     // WHERE nextReviewAt < Date.now()
     // AND flagged = false
     // AND userId = ?;
-    // AND REPETITIONS <> 0
+    // AND repetitions <> 0
     // ORDER BY repetitions DESC, nextReviewAt DESC;
     const quizzesDue = await prismaClient.card.count({
       where: {
@@ -87,9 +88,22 @@ export const getNextQuizzes = procedure
         repetitions: { gt: 0 },
       },
     });
+    // SELECT COUNT()
+    // FROM Card
+    // WHERE repetitions = 0
+    // AND flagged = false
+    // AND userId = ?;
+    const newCards = await prismaClient.card.count({
+      where: {
+        flagged: false,
+        userId,
+        repetitions: 0,
+      },
+    });
     return {
       quizzes: await getLessons(userId),
       totalCards,
       quizzesDue,
+      newCards,
     };
   });
