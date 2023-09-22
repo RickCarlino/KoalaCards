@@ -74,7 +74,7 @@ export function currentQuiz(state: State): CurrentQuiz | undefined {
   if (quiz.repetitions < 2) {
     lessonType = "dictation";
   } else {
-    lessonType = quiz.repetitions % 2 === 0 ? "listening" : "speaking";
+    lessonType = Math.random() > 0.5 ? "listening" : "speaking";
   }
   return (
     quiz && {
