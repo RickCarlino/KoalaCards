@@ -6,7 +6,8 @@ type Element = React.JSX.Element;
 
 const SignInButton: React.FC = () => {
   return (
-    <Container>
+    <Container size="s">
+      <h1>Not Logged In</h1>
       <Center style={{ height: "100%" }}>
         <Button onClick={() => signIn()} size="xl" uppercase>
           🔑 Click Here To Log In

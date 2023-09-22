@@ -2,11 +2,10 @@ import { trpc } from "@/utils/trpc";
 import {
   Textarea,
   Button,
-  Col,
   Paper,
   Notification,
   Loader,
-  Grid,
+  Container,
 } from "@mantine/core";
 import { useState } from "react";
 
@@ -124,9 +123,9 @@ const ImportPage: React.FC<ImportPageProps> = ({}) => {
     </Paper>
   );
   return (
-    <Grid>
-      <Col style={{ maxWidth: 600 }}>{result.length > 0 ? finish : start}</Col>
-    </Grid>
+    <Container>
+      {result.length > 0 ? finish : start}
+    </Container>
   );
 };
 

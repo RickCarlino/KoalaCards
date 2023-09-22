@@ -4,7 +4,7 @@ import { MantineProvider } from "@mantine/core";
 import { trpc } from "@/utils/trpc";
 import { SessionProvider } from "next-auth/react";
 import Navbar from "./_nav";
-import { Notifications } from '@mantine/notifications';
+import { Notifications } from "@mantine/notifications";
 
 function App(props: AppProps) {
   const { Component, pageProps } = props;
@@ -20,9 +20,9 @@ function App(props: AppProps) {
       </Head>
       <SessionProvider session={pageProps.session}>
         <MantineProvider withGlobalStyles withNormalizeCSS>
-          <Notifications/>
+          <Notifications />
+          <Navbar />
           <div style={{ display: "flex", flexDirection: "row" }}>
-            <Navbar />
             <Component {...pageProps} />
           </div>
         </MantineProvider>
