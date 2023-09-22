@@ -1,49 +1,60 @@
-import {
-  Group,
-  Navbar,
-  Title,
-  createStyles,
-  getStylesRef,
-} from "@mantine/core";
-import { MantineLogo } from "@mantine/ds";
-import {
-  IconBook,
-  IconLogout,
-  IconPencil,
-  IconUser,
-  IconDatabaseImport,
-} from "@tabler/icons-react";
-import { signOut } from "next-auth/react";
 import Link from "next/link";
-import { MouseEventHandler } from "react";
+import { signOut } from "next-auth/react";
 
-const signouthandler: MouseEventHandler<HTMLAnchorElement> = (event) => {
-  event.preventDefault();
-  signOut();
-};
+const NavBar = () => {
+  const navBarStyle = {
+    width: "100%",
+    height: "64px",
+    display: "flex",
+    alignItems: "center",
+    backgroundColor: "#333",
+    color: "white",
+    padding: "0 16px",
+  };
 
-const data = [
-  { link: "/study", label: "Study", icon: IconBook },
-  { link: "/cards", label: "Edit Cards", icon: IconPencil },
-  { link: "/import", label: "Import Cards", icon: IconDatabaseImport },
-  { link: "/user", label: "User", icon: IconUser },
-];
+  const linkStyle = {
+    margin: "0 16px",
+    color: "lightgray",
+    "text-decoration": "none",
+    "font-weight": "bold",
+  };
 
-export default function NavbarSimple() {
-  const mainLinks = data.map((item) => {
-    return (
-      <Link href={item.link} key={item.label} aria-label={item.label}>
-        <item.icon stroke={1.5} />
-      </Link>
-    );
-  });
+  const logoutButtonStyle = {
+    ...linkStyle,
+    margin: undefined,
+    marginLeft: "auto",
+    cursor: "pointer",
+  };
+
+  const links = [
+    { path: "/study", name: "Study" },
+    { path: "/import", name: "Import" },
+    { path: "/cards", name: "Edit" },
+    { path: "/user", name: "Settings" },
+  ];
 
   return (
-    <nav>
-      {mainLinks}
-      <Link onClick={signouthandler} aria-label={"Log out"} href={""}>
-        <IconLogout stroke={1.5} />
+    <div style={navBarStyle}>
+      <Link href={"/"} role="img" aria-label="koala" style={linkStyle}>
+        🐨
       </Link>
-    </nav>
+      {links.map((link, index) => (
+        <Link key={index} href={link.path} style={linkStyle}>
+          {link.name}
+        </Link>
+      ))}
+      <div
+        style={logoutButtonStyle}
+        onClick={(event) => {
+          event.preventDefault();
+          signOut();
+          location.assign("/");
+        }}
+      >
+        Log Out
+      </div>
+    </div>
   );
-}
+};
+
+export default NavBar;
