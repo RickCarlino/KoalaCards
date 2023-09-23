@@ -2,7 +2,7 @@ import { PlayButton } from "@/components/play-button";
 import { RecordButton } from "@/components/record-button";
 import { trpc } from "@/utils/trpc";
 import { Button, Container, Grid, Header, Paper } from "@mantine/core";
-import { useReducer, useState } from "react";
+import { useEffect, useReducer, useState } from "react";
 import Authed from "./_authed";
 import {
   Quiz,
@@ -68,6 +68,7 @@ function CurrentQuiz(props: CurrentQuizProps) {
       </Grid.Col>
       <Grid.Col span={4}>
         <RecordButton
+          disabled={!!props.inProgress}
           lessonType={quiz.lessonType}
           onStart={() => {
             setIsRecording(true);
@@ -132,7 +133,7 @@ function Failure(props: {
 }) {
   const style = {
     background: "salmon",
-    border: "1px dashed pink"
+    border: "1px dashed pink",
   };
   return (
     <div style={style}>
@@ -273,7 +274,17 @@ function Study({ quizzes, totalCards, quizzesDue, newCards }: Props) {
 }
 
 function StudyLoader() {
+  const [isReady, setReady] = useState(false);
+  useEffect(() => {
+    // Request microphone permission
+    navigator.mediaDevices
+      .getUserMedia({ audio: true })
+      .then((_stream) => setReady(true));
+  }, []);
   const { data } = trpc.getNextQuizzes.useQuery({});
+  if (!isReady) {
+    return <div>Requesting microphone permission...</div>;
+  }
   if (data) {
     const cleanData = (i: (typeof data.quizzes)[number]): Quiz => {
       if (i) {

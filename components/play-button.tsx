@@ -61,18 +61,16 @@ export const playAudio = (urlOrDataURI: string): Promise<void> => {
 
 /** A React component  */
 export function PlayButton({ dataURI }: { dataURI: string }) {
-  const playSound = () => {
+  const playSound = async () => {
     if (dataURI) {
-      playAudio(dataURI);
+      await playAudio(dataURI);
     }
   };
   useHotkeys([["c", playSound]]);
 
   // Use the useEffect hook to listen for changes to dataURI
   useEffect(() => {
-    if (dataURI) {
-      playAudio(dataURI);
-    }
+    playSound()
   }, [dataURI]);  // Dependency array includes dataURI
 
   if (!dataURI) {
