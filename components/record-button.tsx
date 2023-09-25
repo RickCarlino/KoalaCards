@@ -105,6 +105,7 @@ type Props = {
   onStart?: () => void;
   onRecord: (data: string) => void;
   lessonType: string;
+  disabled?: boolean;
 };
 export function RecordButton(props: Props) {
   const { isRecording, stop, start } = useVoiceRecorder(async (data) => {
@@ -114,9 +115,11 @@ export function RecordButton(props: Props) {
     props.onRecord(b64);
   });
   const doStart = () => {
-    props.onStart?.();
-    start();
-  }
+    if (!props.disabled) {
+      props.onStart?.();
+      start();
+    }
+  };
   useHotkeys([
     [
       "v",
@@ -138,11 +141,11 @@ export function RecordButton(props: Props) {
       break;
   }
   return isRecording ? (
-    <Button onClick={stop} color="red" fullWidth>
+    <Button onClick={stop} color="red" fullWidth disabled={props.disabled}>
       [V]⏹️Submit Answer
     </Button>
   ) : (
-    <Button onClick={start} fullWidth>
+    <Button onClick={start} fullWidth disabled={props.disabled}>
       [V]⏺️{buttonText}
     </Button>
   );

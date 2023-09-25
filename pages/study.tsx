@@ -1,8 +1,8 @@
-import { PlayButton } from "@/components/play-button";
+import { PlayButton, playAudio } from "@/components/play-button";
 import { RecordButton } from "@/components/record-button";
 import { trpc } from "@/utils/trpc";
 import { Button, Container, Grid, Header, Paper } from "@mantine/core";
-import { useReducer, useState } from "react";
+import { useEffect, useReducer, useState } from "react";
 import Authed from "./_authed";
 import {
   Quiz,
@@ -24,8 +24,8 @@ type Props = {
 interface CurrentQuizProps {
   quiz: CurrentQuiz;
   inProgress: number;
-  doFail: (id: string) => void;
-  doFlag: (id: string) => void;
+  doFail: (id: number) => void;
+  doFlag: (id: number) => void;
   onRecord: (audio: string) => void;
 }
 
@@ -33,8 +33,8 @@ function CurrentQuiz(props: CurrentQuizProps) {
   const { quiz, onRecord, doFail, doFlag, inProgress } = props;
   const [isRecording, setIsRecording] = useState(false);
   useHotkeys([
-    ["x", () => doFail("" + quiz.id)],
-    ["z", () => doFlag("" + quiz.id)],
+    ["x", () => doFail(quiz.id)],
+    ["z", () => doFlag(quiz.id)],
   ]);
   if (!quiz) {
     let message = "";
@@ -68,6 +68,7 @@ function CurrentQuiz(props: CurrentQuizProps) {
       </Grid.Col>
       <Grid.Col span={4}>
         <RecordButton
+          disabled={!!props.inProgress}
           lessonType={quiz.lessonType}
           onStart={() => {
             setIsRecording(true);
@@ -81,7 +82,7 @@ function CurrentQuiz(props: CurrentQuizProps) {
       <Grid.Col span={4}>
         <Button
           disabled={isRecording}
-          onClick={() => doFail("" + quiz.id)}
+          onClick={() => doFail(quiz.id)}
           fullWidth
         >
           [X]❌Fail Item
@@ -90,7 +91,7 @@ function CurrentQuiz(props: CurrentQuizProps) {
       <Grid.Col span={4}>
         <Button
           disabled={isRecording}
-          onClick={() => doFlag("" + quiz.id)}
+          onClick={() => doFlag(quiz.id)}
           fullWidth
         >
           [Z]🚩Flag Item #{quiz.id}
@@ -132,7 +133,7 @@ function Failure(props: {
 }) {
   const style = {
     background: "salmon",
-    border: "1px dashed pink"
+    border: "1px dashed pink",
   };
   return (
     <div style={style}>
@@ -166,9 +167,13 @@ function Study({ quizzes, totalCards, quizzesDue, newCards }: Props) {
   } | null>(null);
   const needBetterErrorHandler = (error: any) => {
     console.error(error);
-    dispatch({ type: "ADD_ERROR", message: JSON.stringify(error) });
   };
   const quiz = currentQuiz(state);
+  useEffect(() => {
+    if (quiz) {
+      playAudio(quiz.quizAudio);
+    }
+  }, [`${quiz?.id} + ${quiz?.lessonType}`]);
   if (!quiz) {
     location.reload();
     return <div>Session complete.</div>;
@@ -187,10 +192,10 @@ function Study({ quizzes, totalCards, quizzesDue, newCards }: Props) {
       </span>
     );
   })();
+  const { id, lessonType } = quiz;
 
   return (
     <Container size="xs">
-      {state.errors.length ? "ERROR DETECTED!?!?!" : ""}
       <Header
         height={80}
         style={{
@@ -207,14 +212,11 @@ function Study({ quizzes, totalCards, quizzesDue, newCards }: Props) {
       {header}
       <CurrentQuiz
         doFail={(id) => {
-          dispatch({ type: "FAIL_QUIZ", id });
-          failPhrase
-            .mutateAsync({ id: parseInt(id, 10) })
-            .catch(needBetterErrorHandler);
+          dispatch({ type: "USER_GAVE_UP", id });
+          failPhrase.mutateAsync({ id }).catch(needBetterErrorHandler);
         }}
         onRecord={(audio) => {
-          const { id, lessonType } = quiz;
-          dispatch({ type: "WILL_GRADE" });
+          dispatch({ type: "WILL_GRADE", id });
           performExam
             .mutateAsync({ id, audio, lessonType })
             .then((data) => {
@@ -250,18 +252,24 @@ function Study({ quizzes, totalCards, quizzesDue, newCards }: Props) {
                   });
                   break;
               }
-              dispatch({ type: "DID_GRADE", id: "" + id, result: data.result });
+              dispatch({
+                type: "DID_GRADE",
+                id,
+                result: data.result,
+              });
             })
             .catch((error) => {
               needBetterErrorHandler(error);
-              dispatch({ type: "DID_GRADE", id: "" + id, result: "error" });
+              dispatch({
+                type: "DID_GRADE",
+                id,
+                result: "error",
+              });
             });
         }}
         doFlag={(id) => {
           dispatch({ type: "FLAG_QUIZ", id });
-          flagPhrase
-            .mutateAsync({ id: parseInt(id, 10) })
-            .catch(needBetterErrorHandler);
+          flagPhrase.mutateAsync({ id }).catch(needBetterErrorHandler);
         }}
         quiz={quiz}
         inProgress={state.numQuizzesAwaitingServerResponse}
@@ -273,31 +281,21 @@ function Study({ quizzes, totalCards, quizzesDue, newCards }: Props) {
 }
 
 function StudyLoader() {
+  const [isReady, setReady] = useState(false);
+  useEffect(() => {
+    // Request microphone permission
+    navigator.mediaDevices
+      .getUserMedia({ audio: true })
+      .then((_stream) => setReady(true));
+  }, []);
   const { data } = trpc.getNextQuizzes.useQuery({});
+  if (!isReady) {
+    return <div>Requesting microphone permission...</div>;
+  }
   if (data) {
-    const cleanData = (i: (typeof data.quizzes)[number]): Quiz => {
-      if (i) {
-        const { dictation, speaking, listening } = i.audio;
-        if (typeof dictation === "string") {
-          if (typeof speaking === "string") {
-            if (typeof listening === "string") {
-              return {
-                ...i,
-                audio: {
-                  dictation,
-                  speaking,
-                  listening,
-                },
-              };
-            }
-          }
-        }
-      }
-      throw new Error("Impossible");
-    };
     return (
       <Study
-        quizzes={data.quizzes.map(cleanData)}
+        quizzes={data.quizzes as Quiz[]}
         totalCards={data.totalCards}
         quizzesDue={data.quizzesDue}
         newCards={data.newCards}

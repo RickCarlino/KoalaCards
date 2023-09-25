@@ -12,10 +12,8 @@ export type Quiz = {
 
 type State = {
   numQuizzesAwaitingServerResponse: number;
-  currentQuizIndex: number;
   errors: string[];
-  quizIDsForLesson: string[];
-  failedQuizzes: Set<string>;
+  quizIDsForLesson: number[];
   phrasesById: Record<string, Quiz>;
 };
 
@@ -24,11 +22,10 @@ type LessonType = keyof Quiz["audio"];
 type QuizResult = "error" | "failure" | "success";
 
 type Action =
-  | { type: "WILL_GRADE" }
-  | { type: "ADD_ERROR"; message: string }
-  | { type: "FAIL_QUIZ"; id: string }
-  | { type: "FLAG_QUIZ"; id: string }
-  | { type: "DID_GRADE"; id: string; result: QuizResult };
+  | { type: "WILL_GRADE"; id: number }
+  | { type: "USER_GAVE_UP"; id: number }
+  | { type: "FLAG_QUIZ"; id: number }
+  | { type: "DID_GRADE"; id: number; result: QuizResult };
 
 export type CurrentQuiz = {
   id: number;
@@ -39,29 +36,26 @@ export type CurrentQuiz = {
   repetitions: number;
 };
 
-export function gotoNextQuiz(state: State): State {
-  return {
-    ...state,
-    currentQuizIndex: state.currentQuizIndex + 1
-  };
+export function gotoNextQuiz(state: State, lastQuizID: number): State {
+  const filter = (id: number) => id !== lastQuizID;
+  const quizIDsForLesson = state.quizIDsForLesson.filter(filter);
+  return { ...state, quizIDsForLesson };
 }
 
 export const newQuizState = (state: Partial<State> = {}): State => {
   const phrasesById = state.phrasesById || {};
-  const remainingQuizIDs = Object.keys(phrasesById);
+  const remainingQuizIDs = Object.keys(phrasesById).map((x) => parseInt(x));
   return {
-    currentQuizIndex: 0,
     numQuizzesAwaitingServerResponse: 0,
     phrasesById,
     quizIDsForLesson: remainingQuizIDs,
     errors: [],
-    failedQuizzes: new Set(),
     ...state,
   };
 };
 
 export function currentQuiz(state: State): CurrentQuiz | undefined {
-  const quizID = state.quizIDsForLesson[state.currentQuizIndex];
+  const quizID = state.quizIDsForLesson[0];
   const quiz = state.phrasesById[quizID];
   if (!quiz) {
     return undefined;
@@ -74,7 +68,9 @@ export function currentQuiz(state: State): CurrentQuiz | undefined {
   if (quiz.repetitions < 2) {
     lessonType = "dictation";
   } else {
-    lessonType = Math.random() > 0.5 ? "listening" : "speaking";
+    const nonce = quiz.id + quiz.repetitions;
+    const x = nonce % 2;
+    lessonType = x === 0 ? "listening" : "speaking";
   }
   return (
     quiz && {
@@ -88,67 +84,36 @@ export function currentQuiz(state: State): CurrentQuiz | undefined {
   );
 }
 
-export function quizReducer(state: State, action: Action): State {
+function reduce(state: State, action: Action): State {
   switch (action.type) {
-    case "ADD_ERROR":
-      return { ...state, errors: [...state.errors, action.message] };
-
-    case "FAIL_QUIZ":
-      // Add to failed quiz set.
-      const failedQuizzes = new Set(state.failedQuizzes);
-      failedQuizzes.add(action.id);
-      // Remove from list of remaining quizzes.
-      const remainingQuizIDs = state.quizIDsForLesson.filter(
-        (id) => id !== action.id,
-      );
-      return gotoNextQuiz({
-        ...state,
-        failedQuizzes,
-        quizIDsForLesson: remainingQuizIDs,
-      });
-
+    case "USER_GAVE_UP":
     case "FLAG_QUIZ":
-      const filter = (id: string) => id !== action.id;
-      return gotoNextQuiz({
-        ...state,
-        quizIDsForLesson: state.quizIDsForLesson.filter(filter),
-      });
-
+      return gotoNextQuiz(state, action.id);
     case "WILL_GRADE":
       return {
         ...state,
         numQuizzesAwaitingServerResponse:
           state.numQuizzesAwaitingServerResponse + 1,
       };
-
     case "DID_GRADE":
       let numQuizzesAwaitingServerResponse =
         state.numQuizzesAwaitingServerResponse - 1;
-      const nextState = {
-        ...state,
-        numQuizzesAwaitingServerResponse,
-      };
-      switch (action.result) {
-        case "failure":
-          return gotoNextQuiz({
-            ...nextState,
-            failedQuizzes: new Set(state.failedQuizzes).add(action.id),
-          });
-        case "error":
-          // In the case of a server error,
-          // we push the quiz onto the end of the list
-          // and try again later.
-          return gotoNextQuiz({
-            ...nextState,
-            quizIDsForLesson: [...state.quizIDsForLesson, action.id],
-          });
-        case "success":
-          return gotoNextQuiz({ ...nextState });
-        default:
-          throw new Error("Invalid quiz result " + action.result);
-      }
+      return gotoNextQuiz(
+        {
+          ...state,
+          numQuizzesAwaitingServerResponse,
+        },
+        action.id,
+      );
     default:
       console.warn("Unhandled action", action);
       return state;
   }
+}
+
+export function quizReducer(state: State, action: Action): State {
+  const nextState = reduce(state, action);
+  // Do debugging here:
+  // console.log(action.type);
+  return nextState;
 }
