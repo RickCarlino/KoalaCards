@@ -1,4 +1,4 @@
-import { PlayButton } from "@/components/play-button";
+import { PlayButton, playAudio } from "@/components/play-button";
 import { RecordButton } from "@/components/record-button";
 import { trpc } from "@/utils/trpc";
 import { Button, Container, Grid, Header, Paper } from "@mantine/core";
@@ -169,6 +169,11 @@ function Study({ quizzes, totalCards, quizzesDue, newCards }: Props) {
     console.error(error);
   };
   const quiz = currentQuiz(state);
+  useEffect(() => {
+    if (quiz) {
+      playAudio(quiz.quizAudio);
+    }
+  }, [`${quiz?.id} + ${quiz?.lessonType}`]);
   if (!quiz) {
     location.reload();
     return <div>Session complete.</div>;
