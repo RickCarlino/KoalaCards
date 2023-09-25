@@ -1,5 +1,3 @@
-import { playAudio } from "@/components/play-button";
-
 export type Quiz = {
   id: number;
   ko: string;
@@ -14,7 +12,6 @@ export type Quiz = {
 
 type State = {
   numQuizzesAwaitingServerResponse: number;
-  currentQuizIndex: number;
   errors: string[];
   quizIDsForLesson: number[];
   phrasesById: Record<string, Quiz>;
@@ -25,7 +22,7 @@ type LessonType = keyof Quiz["audio"];
 type QuizResult = "error" | "failure" | "success";
 
 type Action =
-  | { type: "WILL_GRADE" }
+  | { type: "WILL_GRADE"; id: number }
   | { type: "USER_GAVE_UP"; id: number }
   | { type: "FLAG_QUIZ"; id: number }
   | { type: "DID_GRADE"; id: number; result: QuizResult };
@@ -39,16 +36,16 @@ export type CurrentQuiz = {
   repetitions: number;
 };
 
-export function gotoNextQuiz(state: State): State {
-  const currentQuizIndex = state.currentQuizIndex + 1;
-  return { ...state, currentQuizIndex };
+export function gotoNextQuiz(state: State, lastQuizID: number): State {
+  const filter = (id: number) => id !== lastQuizID;
+  const quizIDsForLesson = state.quizIDsForLesson.filter(filter);
+  return { ...state, quizIDsForLesson };
 }
 
 export const newQuizState = (state: Partial<State> = {}): State => {
   const phrasesById = state.phrasesById || {};
   const remainingQuizIDs = Object.keys(phrasesById).map((x) => parseInt(x));
   return {
-    currentQuizIndex: 0,
     numQuizzesAwaitingServerResponse: 0,
     phrasesById,
     quizIDsForLesson: remainingQuizIDs,
@@ -58,7 +55,7 @@ export const newQuizState = (state: Partial<State> = {}): State => {
 };
 
 export function currentQuiz(state: State): CurrentQuiz | undefined {
-  const quizID = state.quizIDsForLesson[state.currentQuizIndex];
+  const quizID = state.quizIDsForLesson[0];
   const quiz = state.phrasesById[quizID];
   if (!quiz) {
     return undefined;
@@ -71,7 +68,9 @@ export function currentQuiz(state: State): CurrentQuiz | undefined {
   if (quiz.repetitions < 2) {
     lessonType = "dictation";
   } else {
-    lessonType = quiz.id + (quiz.repetitions % 2) ? "listening" : "speaking";
+    const nonce = quiz.id + quiz.repetitions;
+    const x = nonce % 2;
+    lessonType = x === 0 ? "listening" : "speaking";
   }
   return (
     quiz && {
@@ -89,11 +88,7 @@ function reduce(state: State, action: Action): State {
   switch (action.type) {
     case "USER_GAVE_UP":
     case "FLAG_QUIZ":
-      const filter = (id: number) => id !== action.id;
-      return gotoNextQuiz({
-        ...state,
-        quizIDsForLesson: state.quizIDsForLesson.filter(filter),
-      });
+      return gotoNextQuiz(state, action.id);
     case "WILL_GRADE":
       return {
         ...state,
@@ -103,31 +98,22 @@ function reduce(state: State, action: Action): State {
     case "DID_GRADE":
       let numQuizzesAwaitingServerResponse =
         state.numQuizzesAwaitingServerResponse - 1;
-      return gotoNextQuiz({
-        ...state,
-        numQuizzesAwaitingServerResponse,
-      });
+      return gotoNextQuiz(
+        {
+          ...state,
+          numQuizzesAwaitingServerResponse,
+        },
+        action.id,
+      );
     default:
       console.warn("Unhandled action", action);
       return state;
   }
 }
 
-let lastQuizAndLesson = `None + None`;
-
-function temporaryWorkaround(quiz: CurrentQuiz | undefined) {
-  if (!quiz) return;
-  const nextQuizAndLesson = `${quiz.id || "None"} + ${
-    quiz.lessonType || "None"
-  }`;
-  if (nextQuizAndLesson !== lastQuizAndLesson) {
-    playAudio(quiz.quizAudio);
-    lastQuizAndLesson = nextQuizAndLesson;
-  }
-}
-
 export function quizReducer(state: State, action: Action): State {
   const nextState = reduce(state, action);
-  temporaryWorkaround(currentQuiz(nextState));
+  // Do debugging here:
+  // console.log(action.type);
   return nextState;
 }

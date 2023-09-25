@@ -187,6 +187,7 @@ function Study({ quizzes, totalCards, quizzesDue, newCards }: Props) {
       </span>
     );
   })();
+  const { id, lessonType } = quiz;
 
   return (
     <Container size="xs">
@@ -207,13 +208,10 @@ function Study({ quizzes, totalCards, quizzesDue, newCards }: Props) {
       <CurrentQuiz
         doFail={(id) => {
           dispatch({ type: "USER_GAVE_UP", id });
-          failPhrase
-            .mutateAsync({ id })
-            .catch(needBetterErrorHandler);
+          failPhrase.mutateAsync({ id }).catch(needBetterErrorHandler);
         }}
         onRecord={(audio) => {
-          const { id, lessonType } = quiz;
-          dispatch({ type: "WILL_GRADE" });
+          dispatch({ type: "WILL_GRADE", id });
           performExam
             .mutateAsync({ id, audio, lessonType })
             .then((data) => {
@@ -266,9 +264,7 @@ function Study({ quizzes, totalCards, quizzesDue, newCards }: Props) {
         }}
         doFlag={(id) => {
           dispatch({ type: "FLAG_QUIZ", id });
-          flagPhrase
-            .mutateAsync({ id })
-            .catch(needBetterErrorHandler);
+          flagPhrase.mutateAsync({ id }).catch(needBetterErrorHandler);
         }}
         quiz={quiz}
         inProgress={state.numQuizzesAwaitingServerResponse}
