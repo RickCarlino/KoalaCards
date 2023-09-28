@@ -154,15 +154,15 @@ async function listeningTest(transcript: string, card: CardWithPhrase) {
 async function speakingTest(transcript: string, card: CardWithPhrase) {
   const { why } = await yesOrNo(
     `Phrase: <<${card.phrase.term}>>
-     Translation: <<${card.phrase.definition}>>
      I said: <<${transcript}>>
      ---
-      A Korean language learning app asked me to translate
-      the phrase above to Korean. Was I correct? The audio was
-      transcribed via speech-to-text, so you should NOT grade
-      punctuation or spacing issues. The meanings of the two
-      sentences must express the same idea, but the word
-      choice does NOT need to be exactly the same.`
+      A Korean language learning app asked me to say the English
+      phrase above in Korean. Was I correct? The audio was
+      transcribed via speech-to-text, so DO NOT grade punctuation
+      or spacing. The meanings of the two sentences must
+      express the same idea, but the word choice does NOT need
+      to be exactly the same. The only way I can be wrong is
+      if the meaning does not match the phrase.`
   );
   return gradeResp(card, why);
 }

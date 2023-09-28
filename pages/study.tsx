@@ -67,17 +67,13 @@ function CurrentQuiz(props: CurrentQuizProps) {
         <PlayButton dataURI={quiz.quizAudio} />
       </Grid.Col>
       <Grid.Col span={4}>
-        <RecordButton
-          disabled={!!props.inProgress}
-          lessonType={quiz.lessonType}
-          onStart={() => {
-            setIsRecording(true);
-          }}
-          onRecord={(data) => {
-            setIsRecording(false);
-            onRecord(data);
-          }}
-        />
+        <Button
+          disabled={isRecording}
+          onClick={() => doFlag(quiz.id)}
+          fullWidth
+        >
+          [Z]🚩Flag Item #{quiz.id}
+        </Button>
       </Grid.Col>
       <Grid.Col span={4}>
         <Button
@@ -89,13 +85,17 @@ function CurrentQuiz(props: CurrentQuizProps) {
         </Button>
       </Grid.Col>
       <Grid.Col span={4}>
-        <Button
-          disabled={isRecording}
-          onClick={() => doFlag(quiz.id)}
-          fullWidth
-        >
-          [Z]🚩Flag Item #{quiz.id}
-        </Button>
+        <RecordButton
+          disabled={!!props.inProgress}
+          lessonType={quiz.lessonType}
+          onStart={() => {
+            setIsRecording(true);
+          }}
+          onRecord={(data) => {
+            setIsRecording(false);
+            onRecord(data);
+          }}
+        />
       </Grid.Col>
     </Grid>
   );
@@ -193,7 +193,66 @@ function Study({ quizzes, totalCards, quizzesDue, newCards }: Props) {
     );
   })();
   const { id, lessonType } = quiz;
-
+  const onRecord = (audio: string) => {
+    dispatch({ type: "WILL_GRADE", id });
+    performExam
+      .mutateAsync({ id, audio, lessonType })
+      .then((data) => {
+        setFailure(null);
+        switch (data.result) {
+          case "success":
+            notifications.show({
+              title: "Correct!",
+              message: "Good job!",
+              color: "green",
+            });
+            break;
+          case "failure":
+            notifications.show({
+              title: "Incorrect!",
+              message: "Try again!",
+              color: "red",
+            });
+            setFailure({
+              id,
+              ko: quiz.ko,
+              en: quiz.en,
+              lessonType: quiz.lessonType,
+              userTranscription: data.userTranscription,
+              rejectionText: data.rejectionText,
+            });
+            break;
+          case "error":
+            notifications.show({
+              title: "Error!",
+              message: "Something went wrong!",
+              color: "yellow",
+            });
+            break;
+        }
+        dispatch({
+          type: "DID_GRADE",
+          id,
+          result: data.result,
+        });
+      })
+      .catch((error) => {
+        needBetterErrorHandler(error);
+        dispatch({
+          type: "DID_GRADE",
+          id,
+          result: "error",
+        });
+      });
+  };
+  const onFail = (id: number) => {
+    dispatch({ type: "USER_GAVE_UP", id });
+    failPhrase.mutateAsync({ id }).catch(needBetterErrorHandler);
+  };
+  const onFlag = (id: number) => {
+    dispatch({ type: "FLAG_QUIZ", id });
+    flagPhrase.mutateAsync({ id }).catch(needBetterErrorHandler);
+  };
   return (
     <Container size="xs">
       <Header
@@ -211,66 +270,9 @@ function Study({ quizzes, totalCards, quizzesDue, newCards }: Props) {
       </Header>
       {header}
       <CurrentQuiz
-        doFail={(id) => {
-          dispatch({ type: "USER_GAVE_UP", id });
-          failPhrase.mutateAsync({ id }).catch(needBetterErrorHandler);
-        }}
-        onRecord={(audio) => {
-          dispatch({ type: "WILL_GRADE", id });
-          performExam
-            .mutateAsync({ id, audio, lessonType })
-            .then((data) => {
-              setFailure(null);
-              switch (data.result) {
-                case "success":
-                  notifications.show({
-                    title: "Correct!",
-                    message: "Good job!",
-                    color: "green",
-                  });
-                  break;
-                case "failure":
-                  notifications.show({
-                    title: "Incorrect!",
-                    message: "Try again!",
-                    color: "red",
-                  });
-                  setFailure({
-                    id,
-                    ko: quiz.ko,
-                    en: quiz.en,
-                    lessonType: quiz.lessonType,
-                    userTranscription: data.userTranscription,
-                    rejectionText: data.rejectionText,
-                  });
-                  break;
-                case "error":
-                  notifications.show({
-                    title: "Error!",
-                    message: "Something went wrong!",
-                    color: "yellow",
-                  });
-                  break;
-              }
-              dispatch({
-                type: "DID_GRADE",
-                id,
-                result: data.result,
-              });
-            })
-            .catch((error) => {
-              needBetterErrorHandler(error);
-              dispatch({
-                type: "DID_GRADE",
-                id,
-                result: "error",
-              });
-            });
-        }}
-        doFlag={(id) => {
-          dispatch({ type: "FLAG_QUIZ", id });
-          flagPhrase.mutateAsync({ id }).catch(needBetterErrorHandler);
-        }}
+        doFail={onFail}
+        onRecord={onRecord}
+        doFlag={onFlag}
         quiz={quiz}
         inProgress={state.numQuizzesAwaitingServerResponse}
       />
