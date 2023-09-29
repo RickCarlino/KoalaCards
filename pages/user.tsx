@@ -1,5 +1,5 @@
 import { Container } from "@mantine/core";
-import Authed from "./_authed";
+import Authed from "../components/authed";
 
 export default function User() {
   return Authed(

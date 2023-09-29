@@ -1,18 +1,19 @@
+import MicrophonePermissions from "@/components/microphone-permissions";
 import { PlayButton, playAudio } from "@/components/play-button";
 import { RecordButton } from "@/components/record-button";
 import { trpc } from "@/utils/trpc";
 import { Button, Container, Grid, Header, Paper } from "@mantine/core";
-import { useEffect, useReducer, useState } from "react";
-import Authed from "./_authed";
-import {
-  Quiz,
-  CurrentQuiz,
-  newQuizState,
-  quizReducer,
-  currentQuiz,
-} from "./_study_reducer";
 import { useHotkeys } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
+import { useEffect, useReducer, useState } from "react";
+import Authed from "../components/authed";
+import {
+  CurrentQuiz,
+  Quiz,
+  currentQuiz,
+  newQuizState,
+  quizReducer,
+} from "./_study_reducer";
 
 type Props = {
   quizzes: Quiz[];
@@ -21,85 +22,17 @@ type Props = {
   newCards: number;
 };
 
-interface CurrentQuizProps {
-  quiz: CurrentQuiz;
-  inProgress: number;
-  doFail: (id: number) => void;
-  doFlag: (id: number) => void;
-  onRecord: (audio: string) => void;
-}
+const style = {
+  background: "salmon",
+  border: "1px dashed pink",
+};
 
-function CurrentQuiz(props: CurrentQuizProps) {
-  const { quiz, onRecord, doFail, doFlag, inProgress } = props;
-  const [isRecording, setIsRecording] = useState(false);
-  useHotkeys([
-    ["x", () => doFail(quiz.id)],
-    ["z", () => doFlag(quiz.id)],
-  ]);
-  if (!quiz) {
-    let message = "";
-    if (inProgress) {
-      message = `Grading ${inProgress} item(s)`;
-    } else {
-      message = "Begin Next Session";
-    }
-    return (
-      <Grid grow justify="center" align="center">
-        <Grid.Col span={4}>
-          <p>The session is over.</p>
-        </Grid.Col>
-        <Grid.Col span={4}>
-          <Button
-            disabled={!!inProgress}
-            onClick={() => location.reload()}
-            fullWidth
-          >
-            {message}
-          </Button>
-        </Grid.Col>
-      </Grid>
-    );
-  }
-
-  return (
-    <Grid grow justify="center" align="center">
-      <Grid.Col span={4}>
-        <PlayButton dataURI={quiz.quizAudio} />
-      </Grid.Col>
-      <Grid.Col span={4}>
-        <Button
-          disabled={isRecording}
-          onClick={() => doFlag(quiz.id)}
-          fullWidth
-        >
-          [Z]🚩Flag Item #{quiz.id}
-        </Button>
-      </Grid.Col>
-      <Grid.Col span={4}>
-        <Button
-          disabled={isRecording}
-          onClick={() => doFail(quiz.id)}
-          fullWidth
-        >
-          [X]❌Fail Item
-        </Button>
-      </Grid.Col>
-      <Grid.Col span={4}>
-        <RecordButton
-          disabled={!!props.inProgress}
-          lessonType={quiz.lessonType}
-          onStart={() => {
-            setIsRecording(true);
-          }}
-          onRecord={(data) => {
-            setIsRecording(false);
-            onRecord(data);
-          }}
-        />
-      </Grid.Col>
-    </Grid>
-  );
-}
+const HEADER_STYLES = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  marginBottom: "20px",
+};
 
 function CardOverview({ quiz }: { quiz: CurrentQuiz }) {
   let term = "";
@@ -131,10 +64,6 @@ function Failure(props: {
   userTranscription: string;
   rejectionText: string;
 }) {
-  const style = {
-    background: "salmon",
-    border: "1px dashed pink",
-  };
   return (
     <div style={style}>
       <p>You answered the last question incorrectly:</p>
@@ -165,10 +94,15 @@ function Study({ quizzes, totalCards, quizzesDue, newCards }: Props) {
     userTranscription: string;
     rejectionText: string;
   } | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
   const needBetterErrorHandler = (error: any) => {
     console.error(error);
   };
   const quiz = currentQuiz(state);
+  useHotkeys([
+    ["x", () => quiz && doFail(quiz.id)],
+    ["z", () => quiz && doFlag(quiz.id)],
+  ]);
   useEffect(() => {
     if (quiz) {
       playAudio(quiz.quizAudio);
@@ -178,20 +112,6 @@ function Study({ quizzes, totalCards, quizzesDue, newCards }: Props) {
     location.reload();
     return <div>Session complete.</div>;
   }
-  const header = (() => {
-    if (!quiz) return <span></span>;
-    let message = "";
-    if (quizzesDue > 100) {
-      message = `🔥 ${quizzesDue}/${totalCards} cards due!`;
-    } else {
-      message = `Due: ${quizzesDue} New: ${newCards} Total: ${totalCards}`;
-    }
-    return (
-      <span>
-        🫣 Card #{quiz.id}, {quiz.repetitions} repetitions. {message}
-      </span>
-    );
-  })();
   const { id, lessonType } = quiz;
   const onRecord = (audio: string) => {
     dispatch({ type: "WILL_GRADE", id });
@@ -245,55 +165,69 @@ function Study({ quizzes, totalCards, quizzesDue, newCards }: Props) {
         });
       });
   };
-  const onFail = (id: number) => {
+  const doFlag = (id: number) => {
     dispatch({ type: "USER_GAVE_UP", id });
     failPhrase.mutateAsync({ id }).catch(needBetterErrorHandler);
   };
-  const onFlag = (id: number) => {
+  const doFail = (id: number) => {
     dispatch({ type: "FLAG_QUIZ", id });
     flagPhrase.mutateAsync({ id }).catch(needBetterErrorHandler);
   };
+
   return (
     <Container size="xs">
-      <Header
-        height={80}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          marginBottom: "20px",
-        }}
-      >
+      <Header height={80} style={HEADER_STYLES}>
         <span style={{ fontSize: "24px", fontWeight: "bold" }}>
           {state.numQuizzesAwaitingServerResponse ? "🔄" : "☑️"}Study
         </span>
       </Header>
-      {header}
-      <CurrentQuiz
-        doFail={onFail}
-        onRecord={onRecord}
-        doFlag={onFlag}
-        quiz={quiz}
-        inProgress={state.numQuizzesAwaitingServerResponse}
-      />
+      <span>
+        Card #{quiz.id} ({quiz.repetitions} repetitions) Due: {quizzesDue}
+        New: {newCards}
+        Total: {totalCards}
+      </span>
+      <Grid grow justify="center" align="center">
+        <Grid.Col span={4}>
+          <PlayButton dataURI={quiz.quizAudio} />
+        </Grid.Col>
+        <Grid.Col span={4}>
+          <Button
+            disabled={isRecording}
+            onClick={() => doFlag(quiz.id)}
+            fullWidth
+          >
+            [Z]🚩Flag Item #{quiz.id}
+          </Button>
+        </Grid.Col>
+        <Grid.Col span={4}>
+          <Button
+            disabled={isRecording}
+            onClick={() => doFail(quiz.id)}
+            fullWidth
+          >
+            [X]❌Fail Item
+          </Button>
+        </Grid.Col>
+        <Grid.Col span={4}>
+          <RecordButton
+            disabled={state.numQuizzesAwaitingServerResponse > 0 || isRecording}
+            lessonType={quiz.lessonType}
+            onStart={() => setIsRecording(true)}
+            onRecord={(data) => {
+              setIsRecording(false);
+              onRecord(data);
+            }}
+          />
+        </Grid.Col>
+      </Grid>
       <CardOverview quiz={quiz} />
-      {failure ? <Failure {...failure} /> : null}
+      {failure && <Failure {...failure} />}
     </Container>
   );
 }
 
 function StudyLoader() {
-  const [isReady, setReady] = useState(false);
-  useEffect(() => {
-    // Request microphone permission
-    navigator.mediaDevices
-      .getUserMedia({ audio: true })
-      .then((_stream) => setReady(true));
-  }, []);
   const { data } = trpc.getNextQuizzes.useQuery({});
-  if (!isReady) {
-    return <div>Requesting microphone permission...</div>;
-  }
   if (data) {
     return (
       <Study
@@ -309,5 +243,5 @@ function StudyLoader() {
 }
 
 export default function Main() {
-  return Authed(<StudyLoader />);
+  return Authed(MicrophonePermissions(<StudyLoader />));
 }
