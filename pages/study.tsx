@@ -86,6 +86,7 @@ function Study({ quizzes, totalCards, quizzesDue, newCards }: Props) {
   const performExam = trpc.performExam.useMutation();
   const failPhrase = trpc.failPhrase.useMutation();
   const flagPhrase = trpc.flagPhrase.useMutation();
+  const getNextQuiz = trpc.getNextQuiz.useMutation();
   const [failure, setFailure] = useState<{
     id: number;
     ko: string;
@@ -109,8 +110,12 @@ function Study({ quizzes, totalCards, quizzesDue, newCards }: Props) {
     }
   }, [`${quiz?.id} + ${quiz?.lessonType}`]);
   if (!quiz) {
-    location.reload();
-    return <div>Session complete.</div>;
+    return (
+      <div>
+        <h1>Session Complete.</h1>
+        {failure && <Failure {...failure} />}
+      </div>
+    );
   }
   const { id, lessonType } = quiz;
   const onRecord = (audio: string) => {
@@ -163,6 +168,16 @@ function Study({ quizzes, totalCards, quizzesDue, newCards }: Props) {
           id,
           result: "error",
         });
+      })
+      .finally(() => {
+        getNextQuiz
+          .mutateAsync({})
+          .catch(needBetterErrorHandler)
+          .then((data) => {
+            console.log("TODO: Update new/due/total card stats");
+            if (!data) return;
+            dispatch({ type: "ADD_MORE", quizzes: data.quizzes });
+          });
       });
   };
   const doFlag = (id: number) => {
@@ -231,7 +246,7 @@ function StudyLoader() {
   if (data) {
     return (
       <Study
-        quizzes={data.quizzes as Quiz[]}
+        quizzes={data.quizzes}
         totalCards={data.totalCards}
         quizzesDue={data.quizzesDue}
         newCards={data.newCards}
