@@ -4,31 +4,24 @@
   <img src="./logo.png" alt="The KoalaSRS Logo (for now)"/>
 </p>
 
-Hey there! Welcome to KoalaSRS, a fun and friendly Korean-only [spaced repetition system](https://en.wikipedia.org/wiki/Spaced_repetition) that's all about listening and speaking skills. We teach vocabulary using fully-formed sentences, not just boring word/definition pairs. KoalaSRS captures your voice input using speech-to-text and uses the super-smart GPT-4 for human-like test assessments and corrections. That means that the app is clever enough to mark your answers as "close enough" and can even give you optional feedback about _why_ you were wrong. It can explain sentences that don't make sense or have unknown vocabulary (WIP). 🧠
+Hey there! Welcome to KoalaSRS, a fun and friendly Korean-only [spaced repetition system](https://en.wikipedia.org/wiki/Spaced_repetition) that's all about listening and speaking skills. We teach vocabulary using fully-formed sentences, not just boring word/definition pairs. KoalaSRS captures your voice input using speech-to-text and uses the super-smart GPT-4 for human-like test assessments and corrections. That means that the app is clever enough to mark your answers as "close enough" and can even give you optional feedback about _why_ you were wrong. 🧠
 
 
 ## Demo
 
 <p align="center">
-  <img src="./screenshot.jpg" alt="The KoalaSRS Logo (for now)"/>
+  <img src="./screenshot.png" alt="The KoalaSRS Logo (for now)"/>
 </p>
 
-[Watch a short YouTube demo of the app as of 2023-09-16.](https://www.youtube.com/watch?v=0H2MufXrYl8)
+[Watch a short YouTube demo of the app as of 2023-09-16 (older v1.1 release- new video coming soon).](https://www.youtube.com/watch?v=0H2MufXrYl8)
 
+## ~~ALPHA~~ Beta Software
 
-## Demo
+The app is now stable enough to be used for serious studying, but there are still stability issues and many features are still pending. If you want to use the app but are hitting stability issues, please reach out.
 
-[Watch a short YouTube demo of the app as of 2023-09-16.](https://www.youtube.com/watch?v=0H2MufXrYl8)
-
-## Private Alpha
-
-I am privately hosting an instance of KoalaSRS. Please contact me via my blog/LinkedIn/Mastodon/etc if you are interested in trying it out or want to help with alpha testing. There is no free public instance at the moment due to hosting/API costs.
+I am also privately hosting an instance of KoalaSRS. Please contact me via my blog/LinkedIn/Mastodon/etc if you are interested in trying it out or want to help with alpha testing. There is no free public instance at the moment due to hosting/API costs.
 
 I've created a [group on Club House](https://www.clubhouse.com/c/join/B2Tyn13w) to discuss KoalaSRS development in an informal manner. Feel free to drop in and say "hi" or suggest new ideas.
-
-## UNDER CONSTRUCTION ⚠️
-
-The app started as a command line app while I experimented with different quiz strategies. Now that the details are resolved, I am converting the app to run in a browser so that it can be used by non-technical users. I am working directly off of the `main` branch for now since it seems like we don't have a ton of users. If you want to use the app but are hitting stability issues, please reach out.
 
 ## Table of Contents 📑
 
@@ -48,11 +41,11 @@ KoalaSRS rocks a minimal GUI because the focus is on what you can _hear_, not wh
 Here's how the app works:
 
 1. Korean sentences with English translations are loaded into a SQLite database (I use `seeds.ts` for now but an editor is in the works).
-1. The app creates a queue of sentences, sorted by difficulty. Difficulty comes from past quiz fails. More on quizzes soon.
+1. The app creates a queue of sentences, sorted by scheduling need, which is calculated via a cards age and difficulty.
 1. The app asks the user to take one of three quizzes. All quizzes involve listening to Korean speech or speaking Korean sentences into the microphone. 🎤
-1. The user has to pass a quiz to move on.
+1. The user must pass a quiz to move on to the next card.
 1. Once the quiz is complete, the sentence is played back in Korean and English. The user's audio is also played back to help with pronunciation.
-1. The process goes on until the queue is empty or the user quits the program.
+1. The process goes on until the queue is empty.
 
 The app has three types of quizzes:
 
@@ -60,7 +53,7 @@ The app has three types of quizzes:
 - **Listening quiz:** You listen to a Korean phrase and then translate it to English. This quiz comes after the dictation phase. 🎶
 - **Speaking quiz:** You get an English text and are asked to say it in Korean. The program transcribes your phrase via speech-to-text, and GPT-3 grades your answer. 📣
 
-Please note that this app is not ready for non-technical users just yet. If you want to try the app, you'll need to clone this repo and build it on your local machine. There's no public demo available, but we'd love your feedback! 😊
+Please note that this app is not ready for non-technical users just yet. If you want to try the app, you'll need to clone this repo and build it on your local machine (or ask nicely for an invitation to a private instance). There's no public demo available, but we'd love your feedback! 😊
 
 The program also comes with helper functions for formatting prompts, grading responses, and inspecting results.
 
@@ -72,7 +65,7 @@ Check out the [whitepaper](https://github.com/RickCarlino/gpt-language-learning-
 
 ## Developer Setup 🛠️
 
-**Prerequisites:** NodeJS is required. I've tested it on v18 of node, and newer versions will probably work too.
+**Prerequisites:** NodeJS is required. I've tested it on v20 of node.
 
 The project is in a semi-public alpha phase. If you don't understand the instructions below, you might want to wait for the project to mature before proceeding. **These instructions may be out of date. Please raise an issue if things don't work!**
 
@@ -92,7 +85,7 @@ The source code is permissively licensed and open for review by software develop
 
 ## Project Status and Limitations ⚠️
 
-- I use the app every day for studying, but the documentation is, well, not great. If you really want to use this app, consider DMing me on Reddit for help.
+- I use the app every day for studying, but the documentation is, well, not great. If you really want to use this app, consider DMing me on Reddit/LinkedIn/ClubHouse for help.
 - By design, the app won't quiz on reading or writing. This is a speaking/listening app.
 - The target user is English speakers trying to learn Korean. I can add other language pairs later, but the main focus right now is EN/KO.
 

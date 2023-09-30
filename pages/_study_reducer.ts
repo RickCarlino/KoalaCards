@@ -1,5 +1,3 @@
-import { unique } from "radash";
-
 export type Quiz = {
   id: number;
   ko: string;
@@ -12,11 +10,25 @@ export type Quiz = {
   };
 };
 
+type Failure = {
+  id: number;
+  ko: string;
+  en: string;
+  lessonType: string;
+  userTranscription: string;
+  rejectionText: string;
+};
+
 type State = {
   numQuizzesAwaitingServerResponse: number;
   errors: string[];
   quizIDsForLesson: number[];
   phrasesById: Record<string, Quiz>;
+  isRecording: boolean;
+  failure: Failure | null;
+  totalCards: number;
+  quizzesDue: number;
+  newCards: number;
 };
 
 type LessonType = keyof Quiz["audio"];
@@ -28,7 +40,15 @@ type Action =
   | { type: "USER_GAVE_UP"; id: number }
   | { type: "FLAG_QUIZ"; id: number }
   | { type: "DID_GRADE"; id: number; result: QuizResult }
-  | { type: "ADD_MORE"; quizzes: Quiz[] };
+  | { type: "SET_RECORDING"; value: boolean }
+  | { type: "SET_FAILURE"; value: null | Failure }
+  | {
+      type: "ADD_MORE";
+      quizzes: Quiz[];
+      totalCards: number;
+      quizzesDue: number;
+      newCards: number;
+    };
 
 export type CurrentQuiz = {
   id: number;
@@ -53,6 +73,11 @@ export const newQuizState = (state: Partial<State> = {}): State => {
     phrasesById,
     quizIDsForLesson: remainingQuizIDs,
     errors: [],
+    isRecording: false,
+    failure: null,
+    totalCards: 0,
+    quizzesDue: 0,
+    newCards: 0,
     ...state,
   };
 };
@@ -109,10 +134,10 @@ function reduce(state: State, action: Action): State {
         action.id,
       );
     case "ADD_MORE":
-      const nextQuizIDsForLesson = unique([
+      const nextQuizIDsForLesson = [
         ...state.quizIDsForLesson,
         ...action.quizzes.map((x) => x.id),
-      ]);
+      ];
 
       const nextphrasesById: Record<string, Quiz> = action.quizzes.reduce(
         (acc, x) => {
@@ -130,6 +155,9 @@ function reduce(state: State, action: Action): State {
         ...state,
         phrasesById: nextphrasesById,
         quizIDsForLesson: nextQuizIDsForLesson,
+        totalCards: action.totalCards,
+        quizzesDue: action.quizzesDue,
+        newCards: action.newCards,
       };
     default:
       console.warn("Unhandled action", action);
