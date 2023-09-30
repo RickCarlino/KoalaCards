@@ -12,11 +12,22 @@ export type Quiz = {
   };
 };
 
+type Failure = {
+  id: number;
+  ko: string;
+  en: string;
+  lessonType: string;
+  userTranscription: string;
+  rejectionText: string;
+};
+
 type State = {
   numQuizzesAwaitingServerResponse: number;
   errors: string[];
   quizIDsForLesson: number[];
   phrasesById: Record<string, Quiz>;
+  isRecording: boolean;
+  failure: Failure | null;
 };
 
 type LessonType = keyof Quiz["audio"];
@@ -28,7 +39,9 @@ type Action =
   | { type: "USER_GAVE_UP"; id: number }
   | { type: "FLAG_QUIZ"; id: number }
   | { type: "DID_GRADE"; id: number; result: QuizResult }
-  | { type: "ADD_MORE"; quizzes: Quiz[] };
+  | { type: "ADD_MORE"; quizzes: Quiz[] }
+  | { type: "SET_RECORDING"; value: boolean }
+  | { type: "SET_FAILURE"; value: null | Failure };
 
 export type CurrentQuiz = {
   id: number;
@@ -53,6 +66,8 @@ export const newQuizState = (state: Partial<State> = {}): State => {
     phrasesById,
     quizIDsForLesson: remainingQuizIDs,
     errors: [],
+    isRecording: false,
+    failure: null,
     ...state,
   };
 };
