@@ -3,7 +3,7 @@ import { ingestOne, ingestPhrases } from "@/utils/ingest-phrases";
 import { randomNew } from "@/utils/random-new";
 import { z } from "zod";
 import { procedure, router } from "../trpc";
-import { getNextQuizzes } from "./get-next-quizzes";
+import { getNextQuiz, getNextQuizzes } from "./get-next-quizzes";
 import { failPhrase, performExam } from "./perform-exam";
 
 prismaClient.phrase.count().then((any) => {
@@ -216,7 +216,8 @@ export const appRouter = router({
         });
       }
     }),
-  getNextQuizzes: getNextQuizzes,
+  getNextQuizzes,
+  getNextQuiz,
   failPhrase,
   performExam,
 });

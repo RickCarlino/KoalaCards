@@ -103,7 +103,18 @@ async function getAudio(lessonType: LessonType, _ko: string, _en: string) {
   return newSpeak(ssml(innerSSML));
 }
 
-export default async function getLessons(userId: string, now = Date.now()) {
+type GetLessonInputParams = {
+  userId: string;
+  /** Current time */
+  now?: number;
+  /** Max number of cards to return */
+  take?: number;
+};
+
+export default async function getLessons(p: GetLessonInputParams) {
+  const userId = p.userId;
+  const now = p.now || Date.now();
+  const take = p.take || LESSON_SIZE;
   // First, pick the card with the most repetitions.
   // If there are multiple cards with the same number of repetitions,
   // pick the one that was last reviewed the longest ago.
@@ -119,7 +130,7 @@ export default async function getLessons(userId: string, now = Date.now()) {
       },
     },
     orderBy: [{ repetitions: "desc" }, { nextReviewAt: "asc" }],
-    take: LESSON_SIZE,
+    take,
   });
   type LocalQuiz = {
     id: number;
@@ -149,8 +160,6 @@ export default async function getLessons(userId: string, now = Date.now()) {
       },
     });
   }
-  if (output.length < LESSON_SIZE) {
-    throw new Error("TODO: User is ready for new cards. Handle that here.");
-  }
+
   return output;
 }

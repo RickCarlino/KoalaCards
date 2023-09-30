@@ -1,3 +1,5 @@
+import { unique } from "radash";
+
 export type Quiz = {
   id: number;
   ko: string;
@@ -25,7 +27,8 @@ type Action =
   | { type: "WILL_GRADE"; id: number }
   | { type: "USER_GAVE_UP"; id: number }
   | { type: "FLAG_QUIZ"; id: number }
-  | { type: "DID_GRADE"; id: number; result: QuizResult };
+  | { type: "DID_GRADE"; id: number; result: QuizResult }
+  | { type: "ADD_MORE"; quizzes: Quiz[] };
 
 export type CurrentQuiz = {
   id: number;
@@ -105,6 +108,29 @@ function reduce(state: State, action: Action): State {
         },
         action.id,
       );
+    case "ADD_MORE":
+      const nextQuizIDsForLesson = unique([
+        ...state.quizIDsForLesson,
+        ...action.quizzes.map((x) => x.id),
+      ]);
+
+      const nextphrasesById: Record<string, Quiz> = action.quizzes.reduce(
+        (acc, x) => {
+          acc[x.id] = x;
+          return acc;
+        },
+        {} as Record<string, Quiz>,
+      );
+
+      nextQuizIDsForLesson.forEach((id) => {
+        nextphrasesById[id] ??= state.phrasesById[id];
+      });
+
+      return {
+        ...state,
+        phrasesById: nextphrasesById,
+        quizIDsForLesson: nextQuizIDsForLesson,
+      };
     default:
       console.warn("Unhandled action", action);
       return state;

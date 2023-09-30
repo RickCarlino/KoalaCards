@@ -1,7 +1,7 @@
 import { CardTable } from "@/components/card-table";
 import { trpc } from "@/utils/trpc";
 import { Container } from "@mantine/core";
-import Authed from "./_authed";
+import Authed from "../components/authed";
 
 const Edit: React.FC = () => {
   /** Call the "getAllPhrases" trpc method. */

@@ -16,7 +16,6 @@ interface Phrase {
 }
 
 interface ImportPageProps {
-  // onSubmit: (phrases: Phrase[]) => void;
 }
 
 const ImportPage: React.FC<ImportPageProps> = ({}) => {
