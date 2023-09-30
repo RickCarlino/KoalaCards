@@ -76,12 +76,17 @@ function Failure(props: {
   );
 }
 
-function Study({ quizzes, totalCards, quizzesDue, newCards }: Props) {
-  const phrasesById = quizzes.reduce((acc, quiz) => {
+function Study(props: Props) {
+  const phrasesById = props.quizzes.reduce((acc, quiz) => {
     acc[quiz.id] = quiz;
     return acc;
   }, {} as Record<number, Quiz>);
-  const newState = newQuizState({ phrasesById });
+  const newState = newQuizState({
+    phrasesById,
+    totalCards: props.totalCards,
+    quizzesDue: props.quizzesDue,
+    newCards: props.newCards,
+  });
   const [state, dispatch] = useReducer(quizReducer, newState);
   const performExam = trpc.performExam.useMutation();
   const failPhrase = trpc.failPhrase.useMutation();
@@ -173,6 +178,9 @@ function Study({ quizzes, totalCards, quizzesDue, newCards }: Props) {
             dispatch({
               type: "ADD_MORE",
               quizzes: data.quizzes,
+              totalCards: data.totalCards,
+              quizzesDue: data.quizzesDue,
+              newCards: data.newCards,
             });
           });
       });
@@ -232,7 +240,7 @@ function Study({ quizzes, totalCards, quizzesDue, newCards }: Props) {
       <CardOverview quiz={quiz} />
       <p>{quiz.lessonType.toUpperCase()} quiz for Card #{quiz.id} ({quiz.repetitions} repetitions)</p>
       <p>
-      {totalCards} cards total, {quizzesDue} due, {newCards} new.
+      {state.totalCards} cards total, {state.quizzesDue} due, {state.newCards} new.
       </p>
       {state.failure && <Failure {...state.failure} />}
     </Container>
