@@ -6,6 +6,7 @@ RUN npm install
 COPY . .
 RUN npm run build
 RUN npx prisma generate
+COPY . .
 RUN npm prune --production
 
 # Production Stage
