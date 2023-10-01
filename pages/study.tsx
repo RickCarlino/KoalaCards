@@ -5,7 +5,7 @@ import { trpc } from "@/utils/trpc";
 import { Button, Container, Grid, Header, Paper } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
-import { useEffect, useReducer, useState } from "react";
+import { useEffect, useReducer } from "react";
 import Authed from "../components/authed";
 import {
   CurrentQuiz,
@@ -76,26 +76,22 @@ function Failure(props: {
   );
 }
 
-function Study({ quizzes, totalCards, quizzesDue, newCards }: Props) {
-  const phrasesById = quizzes.reduce((acc, quiz) => {
+function Study(props: Props) {
+  const phrasesById = props.quizzes.reduce((acc, quiz) => {
     acc[quiz.id] = quiz;
     return acc;
   }, {} as Record<number, Quiz>);
-  const newState = newQuizState({ phrasesById });
+  const newState = newQuizState({
+    phrasesById,
+    totalCards: props.totalCards,
+    quizzesDue: props.quizzesDue,
+    newCards: props.newCards,
+  });
   const [state, dispatch] = useReducer(quizReducer, newState);
   const performExam = trpc.performExam.useMutation();
   const failPhrase = trpc.failPhrase.useMutation();
   const flagPhrase = trpc.flagPhrase.useMutation();
   const getNextQuiz = trpc.getNextQuiz.useMutation();
-  const [failure, setFailure] = useState<{
-    id: number;
-    ko: string;
-    en: string;
-    lessonType: string;
-    userTranscription: string;
-    rejectionText: string;
-  } | null>(null);
-  const [isRecording, setIsRecording] = useState(false);
   const needBetterErrorHandler = (error: any) => {
     console.error(error);
   };
@@ -113,7 +109,7 @@ function Study({ quizzes, totalCards, quizzesDue, newCards }: Props) {
     return (
       <div>
         <h1>Session Complete.</h1>
-        {failure && <Failure {...failure} />}
+        {state.failure && <Failure {...state.failure} />}
       </div>
     );
   }
@@ -123,7 +119,7 @@ function Study({ quizzes, totalCards, quizzesDue, newCards }: Props) {
     performExam
       .mutateAsync({ id, audio, lessonType })
       .then((data) => {
-        setFailure(null);
+        dispatch({ type: "SET_FAILURE", value: null });
         switch (data.result) {
           case "success":
             notifications.show({
@@ -138,13 +134,16 @@ function Study({ quizzes, totalCards, quizzesDue, newCards }: Props) {
               message: "Try again!",
               color: "red",
             });
-            setFailure({
-              id,
-              ko: quiz.ko,
-              en: quiz.en,
-              lessonType: quiz.lessonType,
-              userTranscription: data.userTranscription,
-              rejectionText: data.rejectionText,
+            dispatch({
+              type: "SET_FAILURE",
+              value: {
+                id,
+                ko: quiz.ko,
+                en: quiz.en,
+                lessonType: quiz.lessonType,
+                userTranscription: data.userTranscription,
+                rejectionText: data.rejectionText,
+              },
             });
             break;
           case "error":
@@ -176,7 +175,13 @@ function Study({ quizzes, totalCards, quizzesDue, newCards }: Props) {
           .then((data) => {
             console.log("TODO: Update new/due/total card stats");
             if (!data) return;
-            dispatch({ type: "ADD_MORE", quizzes: data.quizzes });
+            dispatch({
+              type: "ADD_MORE",
+              quizzes: data.quizzes,
+              totalCards: data.totalCards,
+              quizzesDue: data.quizzesDue,
+              newCards: data.newCards,
+            });
           });
       });
   };
@@ -196,18 +201,13 @@ function Study({ quizzes, totalCards, quizzesDue, newCards }: Props) {
           {state.numQuizzesAwaitingServerResponse ? "🔄" : "☑️"}Study
         </span>
       </Header>
-      <span>
-        Card #{quiz.id} ({quiz.repetitions} repetitions) Due: {quizzesDue}
-        New: {newCards}
-        Total: {totalCards}
-      </span>
       <Grid grow justify="center" align="center">
         <Grid.Col span={4}>
           <PlayButton dataURI={quiz.quizAudio} />
         </Grid.Col>
         <Grid.Col span={4}>
           <Button
-            disabled={isRecording}
+            disabled={state.isRecording}
             onClick={() => doFlag(quiz.id)}
             fullWidth
           >
@@ -216,7 +216,7 @@ function Study({ quizzes, totalCards, quizzesDue, newCards }: Props) {
         </Grid.Col>
         <Grid.Col span={4}>
           <Button
-            disabled={isRecording}
+            disabled={state.isRecording}
             onClick={() => doFail(quiz.id)}
             fullWidth
           >
@@ -225,24 +225,37 @@ function Study({ quizzes, totalCards, quizzesDue, newCards }: Props) {
         </Grid.Col>
         <Grid.Col span={4}>
           <RecordButton
-            disabled={state.numQuizzesAwaitingServerResponse > 0 || isRecording}
+            disabled={
+              state.numQuizzesAwaitingServerResponse > 0 || state.isRecording
+            }
             lessonType={quiz.lessonType}
-            onStart={() => setIsRecording(true)}
+            onStart={() => dispatch({ type: "SET_RECORDING", value: true })}
             onRecord={(data) => {
-              setIsRecording(false);
+              dispatch({ type: "SET_RECORDING", value: false });
               onRecord(data);
             }}
           />
         </Grid.Col>
       </Grid>
       <CardOverview quiz={quiz} />
-      {failure && <Failure {...failure} />}
+      <p>
+        {quiz.lessonType.toUpperCase()} quiz for Card #{quiz.id} (
+        {quiz.repetitions} repetitions)
+      </p>
+      <p>
+        {state.totalCards} cards total, {state.quizzesDue} due, {state.newCards}{" "}
+        new.
+      </p>
+      {state.failure && <Failure {...state.failure} />}
     </Container>
   );
 }
 
 function StudyLoader() {
-  const { data } = trpc.getNextQuizzes.useQuery({});
+  const { data, failureReason } = trpc.getNextQuizzes.useQuery({});
+  if (failureReason) {
+    return <div>Failed to load: {failureReason.message}</div>;
+  }
   if (data) {
     return (
       <Study
