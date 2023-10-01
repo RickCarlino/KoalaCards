@@ -173,7 +173,6 @@ function Study(props: Props) {
           .mutateAsync({})
           .catch(needBetterErrorHandler)
           .then((data) => {
-            console.log("TODO: Update new/due/total card stats");
             if (!data) return;
             dispatch({
               type: "ADD_MORE",
@@ -198,7 +197,7 @@ function Study(props: Props) {
     <Container size="xs">
       <Header height={80} style={HEADER_STYLES}>
         <span style={{ fontSize: "24px", fontWeight: "bold" }}>
-          {state.numQuizzesAwaitingServerResponse ? "🔄" : "☑️"}Study
+          Study{!!state.numQuizzesAwaitingServerResponse && "⏳"}
         </span>
       </Header>
       <Grid grow justify="center" align="center">

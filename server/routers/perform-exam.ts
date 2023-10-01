@@ -153,7 +153,7 @@ async function listeningTest(transcript: string, card: CardWithPhrase) {
 
 async function speakingTest(transcript: string, card: CardWithPhrase) {
   const { why } = await yesOrNo(
-    `Phrase: <<${card.phrase.term}>>
+    `Phrase: <<${card.phrase.definition}>>
      I said: <<${transcript}>>
      ---
       A Korean language learning app asked me to say the English

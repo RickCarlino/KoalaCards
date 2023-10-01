@@ -114,7 +114,18 @@ export function currentQuiz(state: State): CurrentQuiz | undefined {
 
 function reduce(state: State, action: Action): State {
   switch (action.type) {
+    case "SET_FAILURE":
+      return {
+        ...state,
+        failure: action.value,
+      };
+    case "SET_RECORDING":
+      return {
+        ...state,
+        isRecording: action.value,
+      };
     case "USER_GAVE_UP":
+      return gotoNextQuiz(state, action.id);
     case "FLAG_QUIZ":
       return gotoNextQuiz(state, action.id);
     case "WILL_GRADE":
