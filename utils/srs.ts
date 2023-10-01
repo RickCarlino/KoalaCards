@@ -7,11 +7,9 @@ const hours = (h: number) => h / 24;
 // My flavor of SM-2 departs from the original slightly.
 // I review more often in the beginning.
 const EARLY_REVIEW_INTERVAL_MAPPING: Record<number, number> = {
-  0: minutes(0.5),
-  1: minutes(5),
-  2: hours(1),
-  3: hours(5),
-  4: hours(24),
+  0: minutes(5),
+  1: hours(1),
+  2: hours(12),
 };
 
 // Define keys for Spaced Repetition System (SRS) data
