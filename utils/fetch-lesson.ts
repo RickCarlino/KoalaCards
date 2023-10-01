@@ -1,11 +1,21 @@
 import { prismaClient } from "@/server/prisma-client";
-import textToSpeech from "@google-cloud/text-to-speech";
+import textToSpeech, { TextToSpeechClient } from "@google-cloud/text-to-speech";
 import { createHash } from "crypto";
 import fs, { existsSync, readFileSync } from "fs";
 import { draw } from "radash";
 import util from "util";
 
-const CLIENT = new textToSpeech.TextToSpeechClient();
+let CLIENT: TextToSpeechClient;
+const creds = JSON.parse(process.env.GCP_JSON_CREDS || 'false');
+if (creds) {
+  CLIENT = new textToSpeech.TextToSpeechClient({
+    projectId: creds.project_id,
+    credentials: creds,
+  });
+} else {
+  CLIENT = new textToSpeech.TextToSpeechClient();
+}
+
 const VOICES = ["ko-KR-Wavenet-B", "ko-KR-Wavenet-C"];
 const LESSON_SIZE = 5;
 

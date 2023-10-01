@@ -48,12 +48,7 @@ examples.map(async ([koTxt, enTxt]) => {
       });
       const urls = response.data.data.map((d) => d.url);
       urls.map((url) => {
-        console.log([
-          '====',
-          koTxt,
-          enTxt,
-          url
-        ].join('\n'));
+        console.log(["====", koTxt, enTxt, url].join("\n"));
       });
     }
   }

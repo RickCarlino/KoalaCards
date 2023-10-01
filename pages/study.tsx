@@ -13,7 +13,7 @@ import {
   currentQuiz,
   newQuizState,
   quizReducer,
-} from "./_study_reducer";
+} from "../utils/_study_reducer";
 
 type Props = {
   quizzes: Quiz[];
@@ -77,10 +77,13 @@ function Failure(props: {
 }
 
 function Study(props: Props) {
-  const phrasesById = props.quizzes.reduce((acc, quiz) => {
-    acc[quiz.id] = quiz;
-    return acc;
-  }, {} as Record<number, Quiz>);
+  const phrasesById = props.quizzes.reduce(
+    (acc, quiz) => {
+      acc[quiz.id] = quiz;
+      return acc;
+    },
+    {} as Record<number, Quiz>,
+  );
   const newState = newQuizState({
     phrasesById,
     totalCards: props.totalCards,
