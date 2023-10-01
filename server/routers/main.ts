@@ -6,7 +6,7 @@ import { procedure, router } from "../trpc";
 import { getNextQuiz, getNextQuizzes } from "./get-next-quizzes";
 import { failPhrase, performExam } from "./perform-exam";
 
-prismaClient.phrase.count().then((any) => {
+prismaClient.phrase.count().then((any: any) => {
   if (!any) {
     console.log("New database detected...");
     ingestPhrases();
