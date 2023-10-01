@@ -1,5 +1,6 @@
 import { openai } from "@/server/routers/perform-exam";
 import { createReadStream, writeFile } from "fs";
+import path from "path";
 import { uid } from "radash";
 import { promisify } from "util";
 
@@ -26,7 +27,11 @@ export async function transcribeB64(
   const writeFileAsync = promisify(writeFile);
   const base64Data = dataURI.split(";base64,").pop() || "";
   const buffer = Buffer.from(base64Data, "base64");
-  const fpath = `/tmp/${uid(8)}.wav`;
+  const fpath = path.format({
+    dir: path.join("/", "tmp"),
+    name: uid(8),
+    ext: ".wav",
+  });
   await writeFileAsync(fpath, buffer);
   const isEn = lang.slice(0, 2) === "en";
   let done = false;
