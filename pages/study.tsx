@@ -238,9 +238,13 @@ function Study(props: Props) {
         </Grid.Col>
       </Grid>
       <CardOverview quiz={quiz} />
-      <p>{quiz.lessonType.toUpperCase()} quiz for Card #{quiz.id} ({quiz.repetitions} repetitions)</p>
       <p>
-      {state.totalCards} cards total, {state.quizzesDue} due, {state.newCards} new.
+        {quiz.lessonType.toUpperCase()} quiz for Card #{quiz.id} (
+        {quiz.repetitions} repetitions)
+      </p>
+      <p>
+        {state.totalCards} cards total, {state.quizzesDue} due, {state.newCards}{" "}
+        new.
       </p>
       {state.failure && <Failure {...state.failure} />}
     </Container>
@@ -248,7 +252,10 @@ function Study(props: Props) {
 }
 
 function StudyLoader() {
-  const { data } = trpc.getNextQuizzes.useQuery({});
+  const { data, failureReason } = trpc.getNextQuizzes.useQuery({});
+  if (failureReason) {
+    return <div>Failed to load: {failureReason.message}</div>;
+  }
   if (data) {
     return (
       <Study
