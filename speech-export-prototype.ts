@@ -1,7 +1,13 @@
-
 import fs from "fs";
 import readline from "readline";
-import { ssml, pause, slow, en, ko, generateSpeechFile } from "./utils/fetch-lesson";
+import {
+  ssml,
+  pause,
+  slow,
+  en,
+  ko,
+  generateSpeechFile,
+} from "./utils/fetch-lesson";
 import { wordCount } from "./utils/random-new";
 
 // Create a readline interface to read the file line-by-line
@@ -26,7 +32,14 @@ readInterface.on("line", async (line) => {
   const koTxt = columns[0];
   const enTxt = columns[1];
   const x = ssml(
-    [ko(koTxt), pause(400), en(enTxt), pause(400), slow(koTxt), pause(4000)].join("\n"),
+    [
+      ko(koTxt),
+      pause(400),
+      en(enTxt),
+      pause(400),
+      slow(koTxt),
+      pause(4000),
+    ].join("\n"),
   );
   if (wordCount(koTxt) < 7) {
     console.log(await generateSpeechFile(x));

@@ -162,7 +162,7 @@ async function speakingTest(transcript: string, card: CardWithPhrase) {
       or spacing. The meanings of the two sentences must
       express the same idea, but the word choice does NOT need
       to be exactly the same. The only way I can be wrong is
-      if the meaning does not match the phrase.`
+      if the meaning does not match the phrase.`,
   );
   return gradeResp(card, why);
 }

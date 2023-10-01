@@ -15,8 +15,7 @@ interface Phrase {
   rootWord: string;
 }
 
-interface ImportPageProps {
-}
+interface ImportPageProps {}
 
 const ImportPage: React.FC<ImportPageProps> = ({}) => {
   const [text, setText] = useState("");
@@ -37,20 +36,26 @@ const ImportPage: React.FC<ImportPageProps> = ({}) => {
       lineIndex = lineIndex + 1;
       if (line.length < 3) continue;
       if (line.split("\t")[0].length > 80) {
-        setError(`(Line ${lineIndex}/${total}) Is too long. KoalaSRS is optimized for short phrases.`);
+        setError(
+          `(Line ${lineIndex}/${total}) Is too long. KoalaSRS is optimized for short phrases.`,
+        );
         setIsLoading(false);
         return;
       }
       let [korean, english, rootWord] = line.split("\t");
 
       if (!korean) {
-        setError(`(Line ${lineIndex}/${total}) line must start with a vocabulary word.`);
+        setError(
+          `(Line ${lineIndex}/${total}) line must start with a vocabulary word.`,
+        );
         setIsLoading(false);
         return;
       }
 
       if (!english) {
-        setError(`(Line ${lineIndex}/${total}) A definition is required after a tab character.`);
+        setError(
+          `(Line ${lineIndex}/${total}) A definition is required after a tab character.`,
+        );
         setIsLoading(false);
         return;
       }
@@ -71,9 +76,8 @@ const ImportPage: React.FC<ImportPageProps> = ({}) => {
     <Paper>
       <h1>Import New Cards</h1>
       <p>
-        Enter a list of phrases below, one per line.
-        Each line has three parts, separated by a tab character.
-        The order is as follows:
+        Enter a list of phrases below, one per line. Each line has three parts,
+        separated by a tab character. The order is as follows:
       </p>
       <ol>
         <li>Korean sentence</li>
@@ -121,11 +125,7 @@ const ImportPage: React.FC<ImportPageProps> = ({}) => {
       </table>
     </Paper>
   );
-  return (
-    <Container>
-      {result.length > 0 ? finish : start}
-    </Container>
-  );
+  return <Container>{result.length > 0 ? finish : start}</Container>;
 };
 
 export default ImportPage;
