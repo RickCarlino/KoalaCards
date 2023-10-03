@@ -51,7 +51,7 @@
     "next": "^13.5.4",
     "next-auth": "^4.23.2",
     "nodemailer": "^6.9.5",
-    "openai": "^3.3.0",
+    "openai": "^4.11.1",
     "prom-client": "^14.2.0",
     "radash": "^11.0.0",
     "react": "^18.2.0",

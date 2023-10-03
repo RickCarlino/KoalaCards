@@ -38,14 +38,12 @@ export async function transcribeB64(
   const transcribePromise = new Promise<TranscriptionResult>(
     async (resolve) => {
       try {
-        const y = await openai.createTranscription(
-          createReadStream(fpath) as any,
-          "whisper-1",
-          isEn ? PROMPT_EN : PROMPT_KO,
-          "text",
-        );
-        const text =
-          (y && typeof y.data == "string" && y.data) || "NO RESPONSE.";
+        const y = await openai.audio.transcriptions.create({
+          file: createReadStream(fpath) as any,
+          model: "whisper-1",
+          prompt: isEn ? PROMPT_EN : PROMPT_KO,
+        });
+        const text = y.text || "NO RESPONSE.";
         done = true;
         return resolve({
           kind: "OK",

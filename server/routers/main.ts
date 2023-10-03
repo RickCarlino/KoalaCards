@@ -1,6 +1,6 @@
 import { prismaClient } from "@/server/prisma-client";
 import { ingestOne, ingestPhrases } from "@/utils/ingest-phrases";
-import { randomNew } from "@/utils/random-new";
+// import { randomNew } from "@/utils/random-new";
 import { z } from "zod";
 import { procedure, router } from "../trpc";
 import { getNextQuiz, getNextQuizzes } from "./get-next-quizzes";
@@ -20,8 +20,8 @@ export const appRouter = router({
     .input(z.object({}))
     .output(z.object({ message: z.string() }))
     .mutation(async () => {
-      const card = await randomNew();
-      return { message: JSON.stringify(card, null, 2) };
+      // const card = await randomNew();
+      return { message: "[]" /*JSON.stringify(card, null, 2)*/ };
     }),
   importPhrases: procedure
     .input(
