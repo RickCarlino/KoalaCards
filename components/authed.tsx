@@ -9,7 +9,7 @@ const SignInButton: React.FC = () => {
     <Container size="s">
       <h1>Not Logged In</h1>
       <Center style={{ height: "100%" }}>
-        <Button onClick={() => signIn()} size="xl" uppercase>
+        <Button onClick={() => signIn()} size="xl">
           🔑 Click Here To Log In
         </Button>
       </Center>

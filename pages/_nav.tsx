@@ -15,8 +15,8 @@ const NavBar = () => {
   const linkStyle = {
     margin: "0 16px",
     color: "lightgray",
-    "textDecoration": "none",
-    "fontWeight": "bold",
+    textDecoration: "none",
+    fontWeight: "bold",
   };
 
   const logoutButtonStyle = {

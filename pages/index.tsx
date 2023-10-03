@@ -1,11 +1,10 @@
-import { Container, Header } from "@mantine/core";
+import { Container } from "@mantine/core";
 import * as React from "react";
 
 const Index: React.FC = () => {
   return (
     <Container size="xs">
-      <Header
-        height={80}
+      <header
         style={{
           display: "flex",
           alignItems: "center",
@@ -14,7 +13,7 @@ const Index: React.FC = () => {
         }}
       >
         <span style={{ fontSize: "24px", fontWeight: "bold" }}>Welcome</span>
-      </Header>
+      </header>
       <p>Click "Study" on the left panel to begin a lesson.</p>
     </Container>
   );
