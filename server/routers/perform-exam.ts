@@ -2,14 +2,10 @@ import { prismaClient } from "@/server/prisma-client";
 import { gradePerformance } from "@/utils/srs";
 import { Lang, transcribeB64 } from "@/utils/transcribe";
 import { Card, Phrase } from "@prisma/client";
-import {
-  Configuration,
-  CreateChatCompletionRequest,
-  CreateCompletionRequest,
-  OpenAIApi,
-} from "openai";
 import { z } from "zod";
 import { procedure } from "../trpc";
+import OpenAI from "openai";
+import { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat";
 
 const YES_OR_NO = {
   name: "answer",
@@ -59,7 +55,7 @@ export const yesOrNo = async (content: string): Promise<YesOrNo> => {
     function_call: { name: "answer" },
     functions: [YES_OR_NO],
   });
-  const result = answer.data.choices
+  const result = answer.choices
     .map((x) => JSON.stringify(x.message?.function_call))
     .map((x) => JSON.parse(JSON.parse(x).arguments).why)
     .filter((x) => !!x);
@@ -67,8 +63,7 @@ export const yesOrNo = async (content: string): Promise<YesOrNo> => {
   const yes = typeof why !== "string";
   return yes ? { yes: true, why: undefined } : { yes: false, why };
 };
-
-type AskOpts = Partial<CreateCompletionRequest>;
+type AskOpts = Partial<ChatCompletionCreateParamsNonStreaming>;
 type CardWithPhrase = Card & { phrase: Phrase };
 type CorrectQuiz = { correct: true };
 type IncorrectQuiz = { correct: false; why: string };
@@ -86,7 +81,7 @@ if (!apiKey) {
   throw new Error("Missing ENV Var: OPENAI_API_KEY");
 }
 
-const configuration = new Configuration({ apiKey });
+const configuration = { apiKey };
 
 const markIncorrect = async (card: Card) => {
   await prismaClient.card.update({
@@ -173,10 +168,10 @@ const lessonType = z.union([
   z.literal("speaking"),
 ]);
 
-export const openai = new OpenAIApi(configuration);
+export const openai = new OpenAI(configuration);
 
-export async function askRaw(opts: CreateChatCompletionRequest) {
-  return await openai.createChatCompletion(opts);
+export async function askRaw(opts: ChatCompletionCreateParamsNonStreaming) {
+  return await openai.chat.completions.create(opts);
 }
 
 export async function ask(prompt: string, opts: AskOpts = {}) {
@@ -192,7 +187,7 @@ export async function ask(prompt: string, opts: AskOpts = {}) {
     max_tokens: opts.max_tokens ?? 1024,
     n: opts.n ?? 1,
   });
-  return resp.data.choices
+  return resp.choices
     .filter((x) => x.finish_reason === "stop")
     .map((x) => x.message?.content ?? "");
 }

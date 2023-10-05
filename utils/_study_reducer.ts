@@ -59,9 +59,8 @@ export type CurrentQuiz = {
   repetitions: number;
 };
 
-export function gotoNextQuiz(state: State, lastQuizID: number): State {
-  const filter = (id: number) => id !== lastQuizID;
-  const quizIDsForLesson = state.quizIDsForLesson.filter(filter);
+export function gotoNextQuiz(state: State): State {
+  const quizIDsForLesson = [...state.quizIDsForLesson.slice(1)];
   return { ...state, quizIDsForLesson };
 }
 
@@ -86,6 +85,7 @@ export function currentQuiz(state: State): CurrentQuiz | undefined {
   const quizID = state.quizIDsForLesson[0];
   const quiz = state.phrasesById[quizID];
   if (!quiz) {
+    console.log("=== No quiz found for quizID " + (quizID ?? "null"));
     return undefined;
   }
   let lessonType: LessonType;
@@ -100,16 +100,14 @@ export function currentQuiz(state: State): CurrentQuiz | undefined {
     const x = nonce % 2;
     lessonType = x === 0 ? "listening" : "speaking";
   }
-  return (
-    quiz && {
-      id: quiz.id,
-      en: quiz.en,
-      ko: quiz.ko,
-      quizAudio: quiz.audio[lessonType],
-      lessonType,
-      repetitions: quiz.repetitions,
-    }
-  );
+  return {
+    id: quiz.id,
+    en: quiz.en,
+    ko: quiz.ko,
+    quizAudio: quiz.audio[lessonType],
+    lessonType,
+    repetitions: quiz.repetitions,
+  };
 }
 
 function reduce(state: State, action: Action): State {
@@ -125,9 +123,9 @@ function reduce(state: State, action: Action): State {
         isRecording: action.value,
       };
     case "USER_GAVE_UP":
-      return gotoNextQuiz(state, action.id);
+      return gotoNextQuiz(state);
     case "FLAG_QUIZ":
-      return gotoNextQuiz(state, action.id);
+      return gotoNextQuiz(state);
     case "WILL_GRADE":
       return {
         ...state,
@@ -137,13 +135,10 @@ function reduce(state: State, action: Action): State {
     case "DID_GRADE":
       let numQuizzesAwaitingServerResponse =
         state.numQuizzesAwaitingServerResponse - 1;
-      return gotoNextQuiz(
-        {
-          ...state,
-          numQuizzesAwaitingServerResponse,
-        },
-        action.id,
-      );
+      return gotoNextQuiz({
+        ...state,
+        numQuizzesAwaitingServerResponse,
+      });
     case "ADD_MORE":
       const nextQuizIDsForLesson = [
         ...state.quizIDsForLesson,

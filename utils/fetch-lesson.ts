@@ -2,11 +2,14 @@ import { prismaClient } from "@/server/prisma-client";
 import textToSpeech, { TextToSpeechClient } from "@google-cloud/text-to-speech";
 import { createHash } from "crypto";
 import fs, { existsSync, readFileSync } from "fs";
+import path from "path";
 import { draw } from "radash";
 import util from "util";
 
+const DATA_DIR = process.env.DATA_DIR || ".";
+
 let CLIENT: TextToSpeechClient;
-const creds = JSON.parse(process.env.GCP_JSON_CREDS || 'false');
+const creds = JSON.parse(process.env.GCP_JSON_CREDS || "false");
 if (creds) {
   CLIENT = new textToSpeech.TextToSpeechClient({
     projectId: creds.project_id,
@@ -30,7 +33,11 @@ const randomVoice = () => draw(VOICES) || VOICES[0];
 const filePathFor = (text: string, voice: string) => {
   const hash = createHash("md5").update(text).digest("hex");
   const langCode = voice.split("-")[0];
-  return `speech/${langCode}/${hash}.mp3`;
+  return path.format({
+    dir: path.join(DATA_DIR, "speech", langCode),
+    name: hash,
+    ext: ".mp3",
+  });
 };
 
 export const generateSpeechFile = async (
@@ -119,12 +126,15 @@ type GetLessonInputParams = {
   now?: number;
   /** Max number of cards to return */
   take?: number;
+  /** IDs that are already in the user's hand. */
+  notIn?: number[];
 };
 
 export default async function getLessons(p: GetLessonInputParams) {
   const userId = p.userId;
   const now = p.now || Date.now();
   const take = p.take || LESSON_SIZE;
+  const excludedIDs = p.notIn || [];
   // First, pick the card with the most repetitions.
   // If there are multiple cards with the same number of repetitions,
   // pick the one that was last reviewed the longest ago.
@@ -133,6 +143,7 @@ export default async function getLessons(p: GetLessonInputParams) {
   const cards = await prismaClient.card.findMany({
     include: { phrase: true },
     where: {
+      id: { notIn: excludedIDs },
       flagged: false,
       userId,
       nextReviewAt: {

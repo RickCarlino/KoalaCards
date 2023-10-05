@@ -2,7 +2,7 @@ import MicrophonePermissions from "@/components/microphone-permissions";
 import { PlayButton, playAudio } from "@/components/play-button";
 import { RecordButton } from "@/components/record-button";
 import { trpc } from "@/utils/trpc";
-import { Button, Container, Grid, Header, Paper } from "@mantine/core";
+import { Button, Container, Grid, Paper } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { useEffect, useReducer } from "react";
@@ -173,7 +173,9 @@ function Study(props: Props) {
       })
       .finally(() => {
         getNextQuiz
-          .mutateAsync({})
+          .mutateAsync({
+            notIn: state.quizIDsForLesson,
+          })
           .catch(needBetterErrorHandler)
           .then((data) => {
             if (!data) return;
@@ -198,11 +200,11 @@ function Study(props: Props) {
 
   return (
     <Container size="xs">
-      <Header height={80} style={HEADER_STYLES}>
+      <header style={HEADER_STYLES}>
         <span style={{ fontSize: "24px", fontWeight: "bold" }}>
           Study{!!state.numQuizzesAwaitingServerResponse && "⏳"}
         </span>
-      </Header>
+      </header>
       <Grid grow justify="center" align="center">
         <Grid.Col span={4}>
           <PlayButton dataURI={quiz.quizAudio} />
@@ -249,6 +251,7 @@ function Study(props: Props) {
         new.
       </p>
       {state.failure && <Failure {...state.failure} />}
+      <pre>{JSON.stringify({ ...state, phrasesById: {} }, null, 2)}</pre>
     </Container>
   );
 }

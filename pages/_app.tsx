@@ -1,3 +1,4 @@
+import "@mantine/core/styles.css";
 import { AppProps } from "next/app";
 import Head from "next/head";
 import { MantineProvider } from "@mantine/core";
@@ -19,7 +20,7 @@ function App(props: AppProps) {
         />
       </Head>
       <SessionProvider session={pageProps.session}>
-        <MantineProvider withGlobalStyles withNormalizeCSS>
+        <MantineProvider defaultColorScheme="auto">
           <Notifications />
           <Navbar />
           <div style={{ display: "flex", flexDirection: "row" }}>

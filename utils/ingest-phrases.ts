@@ -1,8 +1,9 @@
 import { prismaClient } from "@/server/prisma-client";
 import * as fs from "fs";
 import { appendFileSync } from "fs";
+import path from "path";
 import * as readline from "readline";
-
+const DATA_DIR = process.env.DATA_DIR || ".";
 export async function ingestOne(
   ko: string,
   en: string,
@@ -31,7 +32,13 @@ export async function ingestOne(
 
 export function ingestPhrases() {
   const readInterface = readline.createInterface({
-    input: fs.createReadStream("phrases.tsv"),
+    input: fs.createReadStream(
+      path.format({
+        dir: path.join(DATA_DIR),
+        name: "phrases",
+        ext: ".tsv",
+      }),
+    ),
     output: process.stdout,
   });
 
