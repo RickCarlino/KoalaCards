@@ -173,7 +173,9 @@ function Study(props: Props) {
       })
       .finally(() => {
         getNextQuiz
-          .mutateAsync({})
+          .mutateAsync({
+            notIn: state.quizIDsForLesson,
+          })
           .catch(needBetterErrorHandler)
           .then((data) => {
             if (!data) return;
@@ -249,6 +251,7 @@ function Study(props: Props) {
         new.
       </p>
       {state.failure && <Failure {...state.failure} />}
+      <pre>{JSON.stringify({ ...state, phrasesById: {} }, null, 2)}</pre>
     </Container>
   );
 }

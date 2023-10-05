@@ -126,12 +126,15 @@ type GetLessonInputParams = {
   now?: number;
   /** Max number of cards to return */
   take?: number;
+  /** IDs that are already in the user's hand. */
+  notIn?: number[];
 };
 
 export default async function getLessons(p: GetLessonInputParams) {
   const userId = p.userId;
   const now = p.now || Date.now();
   const take = p.take || LESSON_SIZE;
+  const excludedIDs = p.notIn || [];
   // First, pick the card with the most repetitions.
   // If there are multiple cards with the same number of repetitions,
   // pick the one that was last reviewed the longest ago.
@@ -140,6 +143,7 @@ export default async function getLessons(p: GetLessonInputParams) {
   const cards = await prismaClient.card.findMany({
     include: { phrase: true },
     where: {
+      id: { notIn: excludedIDs },
       flagged: false,
       userId,
       nextReviewAt: {

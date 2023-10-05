@@ -78,15 +78,24 @@ export const getNextQuizzes = procedure
   });
 
 export const getNextQuiz = procedure
-  .input(z.object({}))
+  .input(
+    z.object({
+      notIn: z.array(z.number()),
+    }),
+  )
   .output(QuizList)
-  .mutation(async ({ ctx }) => {
+  .mutation(async ({ ctx, input }) => {
     const userId = ctx.user?.id;
     if (!userId) {
       throw new Error("User not found");
     }
+    const quizzes = await getLessons({
+      userId,
+      take: 1,
+      notIn: input.notIn,
+    });
     return {
       ...(await getLessonMeta(userId)),
-      quizzes: await getLessons({ userId, take: 1 }),
+      quizzes,
     };
   });
