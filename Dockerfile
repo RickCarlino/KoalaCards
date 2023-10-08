@@ -16,11 +16,12 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/next.config.js ./next.config.js
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/package.json ./package.json
 # Set Environment Variable for Production
 ENV NODE_ENV production
 
 EXPOSE 3000
 
 # Command to start the application
-CMD ["node_modules/.bin/next", "start"]
+CMD ["npm", "start"]
 

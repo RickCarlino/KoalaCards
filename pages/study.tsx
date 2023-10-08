@@ -251,7 +251,6 @@ function Study(props: Props) {
         new.
       </p>
       {state.failure && <Failure {...state.failure} />}
-      <pre>{JSON.stringify({ ...state, phrasesById: {} }, null, 2)}</pre>
     </Container>
   );
 }
