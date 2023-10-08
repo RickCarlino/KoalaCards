@@ -22,5 +22,5 @@ ENV NODE_ENV production
 EXPOSE 3000
 
 # Command to start the application
-CMD ["node_modules/.bin/next", "start"]
+CMD ["npm", "start"]
 
