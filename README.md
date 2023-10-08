@@ -4,7 +4,12 @@
   <img src="./logo.png" alt="The KoalaSRS Logo (for now)"/>
 </p>
 
-Hey there! Welcome to KoalaSRS, a fun and friendly Korean-only [spaced repetition system](https://en.wikipedia.org/wiki/Spaced_repetition) that's all about listening and speaking skills. We teach vocabulary using fully-formed sentences, not just boring word/definition pairs. KoalaSRS captures your voice input using speech-to-text and uses the super-smart GPT-4 for human-like test assessments and corrections. That means that the app is clever enough to mark your answers as "close enough" and can even give you optional feedback about _why_ you were wrong. 🧠
+Hey there! Welcome to KoalaSRS, a fun and friendly Korean-only [spaced repetition system](https://en.wikipedia.org/wiki/Spaced_repetition) that's all about listening and speaking skills. Koala teaches vocabulary using fully-formed sentences, rather than boring word/definition pairs. KoalaSRS captures your voice input using speech-to-text and uses the super-smart GPT-4 for human-like test assessments and corrections. This has two advantages over traditional spaced repetition systems:
+
+1. There is no self-grading of quizzes. Results are recorded objectively.
+2. Your quizzes will not be marked incorrect for small variations in word choice. "Close enough" answers that match the meaning of the target sentence will always be accepted.
+
+The app also gives feedback about _why_ you were wrong. 🧠
 
 ## Demo
 
@@ -18,9 +23,9 @@ Hey there! Welcome to KoalaSRS, a fun and friendly Korean-only [spaced repetitio
 
 The app is now stable enough to be used for serious studying, but there are still stability issues and many features are still pending. If you want to use the app but are hitting stability issues, please reach out.
 
-I am also privately hosting an instance of KoalaSRS. Please contact me via my blog/LinkedIn/Mastodon/etc if you are interested in trying it out or want to help with alpha testing. There is no free public instance at the moment due to hosting/API costs.
+I am also privately hosting an instance of KoalaSRS. Please [fill out this Google form](https://forms.gle/GFcpqvt1Hkfo4mWq5) if you are interested in trying it out or want to help with alpha testing. There is no free public instance at the moment due to hosting/API costs. I have also set up a [Patreon](https://www.patreon.com/rickcarlino) to help offset hosting costs.
 
-I've created a [group on Club House](https://www.clubhouse.com/c/join/B2Tyn13w) to discuss KoalaSRS development in an informal manner. Feel free to drop in and say "hi" or suggest new ideas.
+Lastly, there is a [group on Club House](https://www.clubhouse.com/c/join/B2Tyn13w) to discuss KoalaSRS development in an informal manner. Feel free to drop in and say "hi" or suggest new ideas.
 
 ## Table of Contents 📑
 
@@ -30,7 +35,6 @@ I've created a [group on Club House](https://www.clubhouse.com/c/join/B2Tyn13w) 
 - [Developer Setup](#developer-setup)
 - [Contribution Guidelines](#contribution-guidelines)
 - [Project Status and Limitations](#project-status-and-limitations)
-- [Costs (April 2023)](#costs-april-2023)
 - [Better Name Needed](#better-name-needed)
 
 ## Features 💡
@@ -87,10 +91,6 @@ The source code is permissively licensed and open for review by software develop
 - I use the app every day for studying, but the documentation is, well, not great. If you really want to use this app, consider DMing me on Reddit/LinkedIn/ClubHouse for help.
 - By design, the app won't quiz on reading or writing. This is a speaking/listening app.
 - The target user is English speakers trying to learn Korean. I can add other language pairs later, but the main focus right now is EN/KO.
-
-## Costs (April 2023) 💰
-
-The app uses Google Cloud and OpenAI APIs, and neither of these services is free. Doing two sessions which generate three new phrases (while reviewing older phrases) costs $0.04 in July of 2023. Phrase generation is significantly more expensive than reviewing. The cost of Speech-to-text/Text-to-speech for a much longer session is 1 cent USD / session. Because of caching mechanisms, text-to-speech becomes cheaper over time.
 
 ## Better Name Needed 📛
 

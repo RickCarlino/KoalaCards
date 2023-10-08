@@ -1,5 +1,3 @@
-import { pick } from "radash";
-
 /** Convert seconds to days */
 const minutes = (m: number) => m / 60 / 24;
 const hours = (h: number) => h / 24;
@@ -46,42 +44,43 @@ function calculateEase(ease: number, grade: number): number {
 }
 
 // Function to update a card's SRS data based on the user's performance grade
-export function gradePerformance(card: SRSData, grade: number): SRSData {
+export function gradePerformance(
+  card: SRSData,
+  grade: number,
+  now = Date.now(),
+): SRSData {
   let { repetitions, interval, ease, lapses } = card;
 
   // If grade is 3 or higher, update repetitions, interval, and ease
   if (grade >= 3) {
-    repetitions += 1;
-    interval =
+    interval = // Don't swap variable order, it matters!
       EARLY_REVIEW_INTERVAL_MAPPING[repetitions] || Math.ceil(interval * ease);
+    repetitions += 1;
     ease = calculateEase(ease, grade);
   } else {
     // If grade is less than 3, reset repetitions and interval, update ease, and increase lapses
-    repetitions = 0;
     interval = 1;
+    repetitions = 0;
     ease = calculateEase(ease, grade);
     lapses += 1;
   }
-  const nextReviewAt = Date.now() + interval * 24 * 60 * 60 * 1000;
-  const keys: (keyof SRSData)[] = [
-    "repetitions",
-    "interval",
-    "ease",
-    "lapses",
-    "nextReviewAt",
-  ];
+  const nextReviewAt = now + interval * 24 * 60 * 60 * 1000;
+  const oldCard = {
+    repetitions: card.repetitions,
+    interval: card.interval,
+    ease: card.ease,
+    lapses: card.lapses,
+    nextReviewAt: card.nextReviewAt,
+  };
   // Return the updated card data
-  return pick(
-    {
-      ...card,
-      repetitions,
-      interval,
-      ease,
-      lapses,
-      nextReviewAt,
-    },
-    keys,
-  );
+  return {
+    ...oldCard,
+    repetitions,
+    interval,
+    ease,
+    lapses,
+    nextReviewAt,
+  };
 }
 
 const DEFAULT_CARD: SRSData = {
