@@ -111,7 +111,9 @@ export function RecordButton(props: Props) {
   const { isRecording, stop, start } = useVoiceRecorder(async (data) => {
     const wav = await convertBlobToWav(data);
     const b64 = await blobToBase64(wav);
-    await playAudio(b64); // TODO: Maybe move to onRecord callback in parent.
+    if (props.lessonType !== "listening") {
+      await playAudio(b64); // TODO: Maybe move to onRecord callback in parent.
+    }
     props.onRecord(b64);
   });
   const doStart = () => {
