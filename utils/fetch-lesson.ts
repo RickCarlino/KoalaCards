@@ -105,8 +105,6 @@ async function getAudio(lessonType: LessonType, _ko: string, _en: string) {
       innerSSML = [
         en("Repeat: "),
         pause(250),
-        ko(_ko),
-        pause(250),
         slow(_ko),
       ].join(" ");
       break;
