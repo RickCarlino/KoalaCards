@@ -17,7 +17,7 @@ export const captureAudio = (dataURI: string): string => {
 
 type TranscriptionResult = { kind: "OK"; text: string } | { kind: "error" };
 
-const PROMPT_KO = "한국어 학생이 한국어 예문을 읽으려고 합니다.";
+const PROMPT_KO = "한국어 학생이 한국어로 말씁합니다.";
 const PROMPT_EN = "Korean language learner translates sentences to English.";
 
 export async function transcribeB64(
