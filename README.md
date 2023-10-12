@@ -97,6 +97,6 @@ The source code is permissively licensed and open for review by software develop
 The project could use help in the following areas:
 
 1. I picked this name in a snap because it starts with the letter "K" just like "Korean." Maybe we can think of something better?
-2. I'd like to create a large library of example sentences that are appropriate for use with the app. For this, I'd need the help of a Korean native speaker who can curate and moderate a large corpus of AI-generated phrases containing target grammar/vocab.
-3. UI/UX needs an overall and has not been a priority due to time constraints.
-4. Would love to hear input from folks with a background in linguistics or Korean language education. Please reach out.
+1. I'd like to create a large library of example sentences that are appropriate for use with the app. For this, I'd need the help of a Korean native speaker who can curate and moderate a large corpus of AI-generated phrases containing target grammar/vocab.
+1. UI/UX needs an overall and has not been a priority due to time constraints.
+1. Would love to hear input from folks with a background in linguistics or Korean language education. Please reach out.
