@@ -102,13 +102,7 @@ async function getAudio(lessonType: LessonType, _ko: string, _en: string) {
   let innerSSML: string;
   switch (lessonType) {
     case "dictation":
-      innerSSML = [
-        en("Repeat: "),
-        pause(250),
-        ko(_ko),
-        pause(250),
-        slow(_ko),
-      ].join(" ");
+      innerSSML = [en("Repeat: "), pause(250), slow(_ko)].join(" ");
       break;
     case "listening":
       innerSSML = [en("Say in English: "), pause(250), ko(_ko)].join(" ");

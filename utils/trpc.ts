@@ -17,13 +17,7 @@ export const trpc = createTRPCNext<AppRouter>({
     return {
       links: [
         httpBatchLink({
-          /**
-           * If you want to use SSR, you need to use the server's full URL
-           * @link https://trpc.io/docs/ssr
-           **/
           url: `${getBaseUrl()}/api/trpc`,
-
-          // You can pass any HTTP headers you wish here
           async headers() {
             return {
               // authorization: getAuthCookie(),
@@ -33,8 +27,6 @@ export const trpc = createTRPCNext<AppRouter>({
       ],
     };
   },
-  /**
-   * @link https://trpc.io/docs/ssr
-   **/
+  /** @link https://trpc.io/docs/ssr **/
   ssr: false,
 });
