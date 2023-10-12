@@ -9,14 +9,14 @@ describe("gradePerformance", () => {
       i && deck.push(card); // Don't push first card into deck.
       card = gradePerformance(card, 3, START_TIME + card.interval);
     }
-    const expectations =     [
-      '0.0035', // 5 Minutes
-      '0.0417', // 1 hour
-      '0.5000', // Half a day, etc..
-      '2.0000',
-      '4.0000',
-      '8.0000',
-      '14.0000',
+    const expectations = [
+      "0.0035", // 5 Minutes
+      "0.0417", // 1 hour
+      "0.5000", // Half a day, etc..
+      "2.0000",
+      "4.0000",
+      "8.0000",
+      "14.0000",
     ];
     const actual = deck.map((card) => card.interval.toFixed(4));
     expect(actual).toEqual(expectations);

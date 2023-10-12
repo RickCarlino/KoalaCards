@@ -1,7 +1,7 @@
 # KoalaSRS 🐨
 
 <p align="center">
-  <img src="./logo.png" alt="The KoalaSRS Logo (for now)"/>
+  <img width="33%" src="./logo.png" alt="The KoalaSRS Logo (for now)"/>
 </p>
 
 Hey there! Welcome to KoalaSRS, a fun and friendly Korean-only [spaced repetition system](https://en.wikipedia.org/wiki/Spaced_repetition) that's all about listening and speaking skills. Koala teaches vocabulary using fully-formed sentences, rather than boring word/definition pairs. KoalaSRS captures your voice input using speech-to-text and uses the super-smart GPT-4 for human-like test assessments and corrections. This has two advantages over traditional spaced repetition systems:
@@ -35,7 +35,7 @@ Lastly, there is a [group on Club House](https://www.clubhouse.com/c/join/B2Tyn1
 - [Developer Setup](#developer-setup)
 - [Contribution Guidelines](#contribution-guidelines)
 - [Project Status and Limitations](#project-status-and-limitations)
-- [Better Name Needed](#better-name-needed)
+- [Help Needed](#help-needed)
 
 ## Features 💡
 
@@ -88,10 +88,15 @@ The source code is permissively licensed and open for review by software develop
 
 ## Project Status and Limitations ⚠️
 
-- I use the app every day for studying, but the documentation is, well, not great. If you really want to use this app, consider DMing me on Reddit/LinkedIn/ClubHouse for help.
-- By design, the app won't quiz on reading or writing. This is a speaking/listening app.
+- I use the app every day, multiple times per day for studying. It is stable, but the documentation is not great. If you want to use this app, consider DMing me on Reddit/LinkedIn/ClubHouse for help.
+- By design, the app won't quiz on reading or writing. This is a speaking/listening app and there are better ways to practice writing and reading.
 - The target user is English speakers trying to learn Korean. I can add other language pairs later, but the main focus right now is EN/KO.
 
-## Better Name Needed 📛
+## Help Needed 📛
 
-I picked this name in a snap because it starts with the letter "K" just like "Korean." Maybe we can think of something better?
+The project could use help in the following areas:
+
+1. I picked this name in a snap because it starts with the letter "K" just like "Korean." Maybe we can think of something better?
+1. I'd like to create a large library of example sentences that are appropriate for use with the app. For this, I'd need the help of a Korean native speaker who can curate and moderate a large corpus of AI-generated phrases containing target grammar/vocab.
+1. UI/UX needs an overall and has not been a priority due to time constraints.
+1. Would love to hear input from folks with a background in linguistics or Korean language education. Please reach out.

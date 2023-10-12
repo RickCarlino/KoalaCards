@@ -20,8 +20,7 @@ export const appRouter = router({
     .input(z.object({}))
     .output(z.object({ message: z.string() }))
     .mutation(async () => {
-      // const card = await randomNew();
-      return { message: "[]" /*JSON.stringify(card, null, 2)*/ };
+      return { message: "[]" };
     }),
   importPhrases: procedure
     .input(
@@ -222,5 +221,4 @@ export const appRouter = router({
   performExam,
 });
 
-// export type definition of API
 export type AppRouter = typeof appRouter;
