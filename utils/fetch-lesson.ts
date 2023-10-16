@@ -6,6 +6,19 @@ import path from "path";
 import { draw } from "radash";
 import util from "util";
 
+type LocalQuiz = {
+  id: number;
+  en: string;
+  ko: string;
+  repetitions: number;
+  lapses: number;
+  audio: {
+    dictation: string;
+    listening: string;
+    speaking: string;
+  };
+};
+
 const DATA_DIR = process.env.DATA_DIR || ".";
 
 let CLIENT: TextToSpeechClient;
@@ -147,18 +160,6 @@ export default async function getLessons(p: GetLessonInputParams) {
     orderBy: [{ repetitions: "desc" }, { nextReviewAt: "asc" }],
     take,
   });
-  type LocalQuiz = {
-    id: number;
-    en: string;
-    ko: string;
-    repetitions: number;
-    audio: {
-      dictation: string;
-      listening: string;
-      speaking: string;
-    };
-  };
-
   const output: LocalQuiz[] = [];
   for (const card of cards) {
     const en = card.phrase.definition;
@@ -168,6 +169,7 @@ export default async function getLessons(p: GetLessonInputParams) {
       en,
       ko,
       repetitions: card.repetitions,
+      lapses: card.lapses,
       audio: {
         dictation: await getAudio("dictation", ko, en),
         listening: await getAudio("listening", ko, en),
