@@ -100,3 +100,4 @@ The project could use help in the following areas:
 1. I'd like to create a large library of example sentences that are appropriate for use with the app. For this, I'd need the help of a Korean native speaker who can curate and moderate a large corpus of AI-generated phrases containing target grammar/vocab.
 1. UI/UX needs an overall and has not been a priority due to time constraints.
 1. Would love to hear input from folks with a background in linguistics or Korean language education. Please reach out.
+1. The app relies heavily on Google Cloud and OpenAI for text-to-speech and AI features. I would be interested in exploring other options, such as Bark TTS or custom Llama models.

@@ -243,8 +243,13 @@ function Study(props: Props) {
       </Grid>
       <CardOverview quiz={quiz} />
       <p>
-        {quiz.lessonType.toUpperCase()} quiz for Card #{quiz.id} (
-        {quiz.repetitions} repetitions)
+      Card #{quiz.id} {quiz.lessonType.toUpperCase()} quiz
+      </p>
+      <p>
+      {quiz.repetitions} repetitions
+      </p>
+      <p>
+      {quiz.lapses} lapses
       </p>
       <p>
         {state.totalCards} cards total, {state.quizzesDue} due, {state.newCards}{" "}

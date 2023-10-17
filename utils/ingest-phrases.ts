@@ -1,6 +1,5 @@
 import { prismaClient } from "@/server/prisma-client";
 import * as fs from "fs";
-import { appendFileSync } from "fs";
 import path from "path";
 import * as readline from "readline";
 const DATA_DIR = process.env.DATA_DIR || ".";

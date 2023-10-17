@@ -3,6 +3,7 @@ export type Quiz = {
   ko: string;
   en: string;
   repetitions: number;
+  lapses: number;
   audio: {
     dictation: string;
     listening: string;
@@ -57,6 +58,7 @@ export type CurrentQuiz = {
   quizAudio: string;
   lessonType: "dictation" | "speaking" | "listening";
   repetitions: number;
+  lapses: number;
 };
 
 export function gotoNextQuiz(state: State): State {
@@ -111,6 +113,7 @@ export function currentQuiz(state: State): CurrentQuiz | undefined {
     quizAudio: quiz.audio[lessonType],
     lessonType,
     repetitions: quiz.repetitions,
+    lapses: quiz.lapses,
   };
 }
 

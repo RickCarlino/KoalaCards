@@ -8,6 +8,7 @@ const Quiz = z.object({
   en: z.string(),
   ko: z.string(),
   repetitions: z.number(),
+  lapses: z.number(),
   audio: z.object({
     dictation: z.string(),
     listening: z.string(),
@@ -26,6 +27,7 @@ async function getLessonMeta(userId: string) {
   const totalCards = await prismaClient.card.count({
     where: {
       flagged: false,
+      lapses: 0,
       userId,
     },
   });
@@ -54,6 +56,7 @@ async function getLessonMeta(userId: string) {
       flagged: false,
       userId,
       repetitions: 0,
+      lapses: 0,
     },
   });
   return {
