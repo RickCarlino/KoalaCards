@@ -32,7 +32,7 @@ if (creds) {
   CLIENT = new textToSpeech.TextToSpeechClient();
 }
 
-const VOICES = ["ko-KR-Wavenet-B", "ko-KR-Wavenet-C"];
+const VOICES = ["A", "B", "C", "D"].map((x) => `ko-KR-Wavenet-${x}`);
 const LESSON_SIZE = 5;
 
 /** My main focus is Korean, so I randomly pick
@@ -92,7 +92,7 @@ export const ssml = (...text: string[]) => {
 };
 
 export const slow = (text: string) => {
-  return `<prosody rate="slow">${text}</prosody>`;
+  return `<prosody rate="x-slow">${text}</prosody>`;
 };
 
 export const en = (text: string) => {
@@ -118,10 +118,10 @@ async function getAudio(lessonType: LessonType, _ko: string, _en: string) {
       innerSSML = [en("Repeat: "), pause(250), slow(_ko)].join(" ");
       break;
     case "listening":
-      innerSSML = [en("Say in English: "), pause(250), ko(_ko)].join(" ");
+      innerSSML = ko(_ko);
       break;
     case "speaking":
-      innerSSML = [en("In Korean: "), pause(250), en(_en)].join(" ");
+      innerSSML = en(_en);
       break;
   }
   return newSpeak(ssml(innerSSML));

@@ -14,6 +14,7 @@ import {
   newQuizState,
   quizReducer,
 } from "../utils/_study_reducer";
+import { QuizFailure } from "../components/quiz-failure";
 
 type Props = {
   quizzes: Quiz[];
@@ -22,18 +23,17 @@ type Props = {
   newCards: number;
 };
 
-const style = {
-  background: "salmon",
-  border: "1px dashed pink",
-};
-
 const HEADER_STYLES = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
   marginBottom: "20px",
 };
-
+const HEADER: Record<string, string> = {
+  dictation: "Repeat After Me",
+  speaking: "Say in Korean",
+  listening: "Translate to English",
+}
 function CardOverview({ quiz }: { quiz: CurrentQuiz }) {
   let term = "";
   let def = "";
@@ -56,34 +56,11 @@ function CardOverview({ quiz }: { quiz: CurrentQuiz }) {
   );
 }
 
-function Failure(props: {
-  id: number;
-  ko: string;
-  en: string;
-  lessonType: string;
-  userTranscription: string;
-  rejectionText: string;
-}) {
-  return (
-    <div style={style}>
-      <p>You answered the last question incorrectly:</p>
-      <p>Quiz type: {props.lessonType}</p>
-      <p>Korean: {props.ko}</p>
-      <p>English: {props.en}</p>
-      <p>What you said: {props.userTranscription}</p>
-      <p>Why it's wrong: {props.rejectionText}</p>
-    </div>
-  );
-}
-
 function Study(props: Props) {
-  const phrasesById = props.quizzes.reduce(
-    (acc, quiz) => {
-      acc[quiz.id] = quiz;
-      return acc;
-    },
-    {} as Record<number, Quiz>,
-  );
+  const phrasesById = props.quizzes.reduce((acc, quiz) => {
+    acc[quiz.id] = quiz;
+    return acc;
+  }, {} as Record<number, Quiz>);
   const newState = newQuizState({
     phrasesById,
     totalCards: props.totalCards,
@@ -108,11 +85,35 @@ function Study(props: Props) {
       playAudio(quiz.quizAudio);
     }
   }, [`${quiz?.id} + ${quiz?.lessonType}`]);
+
+  const doFail = (id: number) => {
+    dispatch({ type: "USER_GAVE_UP", id });
+    failPhrase.mutateAsync({ id }).catch(needBetterErrorHandler);
+  };
+
+  /** goToNext flag controls if the session will skip to next
+   * card or not. */
+  const doFlag = (id: number, goToNext = true) => {
+    goToNext && dispatch({ type: "FLAG_QUIZ", id });
+    flagPhrase.mutateAsync({ id }).catch(needBetterErrorHandler);
+  };
+
+  function Failure() {
+    const f = state.failure;
+    if (!f) return null;
+    return (
+      <QuizFailure
+        {...f}
+        onDiscard={() => alert("Coming soon!")}
+        onFlag={() => doFlag(f.id, false)}
+      />
+    );
+  }
   if (!quiz) {
     return (
       <div>
         <h1>Session Complete.</h1>
-        {state.failure && <Failure {...state.failure} />}
+        <Failure />
       </div>
     );
   }
@@ -189,20 +190,12 @@ function Study(props: Props) {
           });
       });
   };
-  const doFlag = (id: number) => {
-    dispatch({ type: "USER_GAVE_UP", id });
-    failPhrase.mutateAsync({ id }).catch(needBetterErrorHandler);
-  };
-  const doFail = (id: number) => {
-    dispatch({ type: "FLAG_QUIZ", id });
-    flagPhrase.mutateAsync({ id }).catch(needBetterErrorHandler);
-  };
 
   return (
     <Container size="xs">
       <header style={HEADER_STYLES}>
         <span style={{ fontSize: "24px", fontWeight: "bold" }}>
-          Study{!!state.numQuizzesAwaitingServerResponse && "⏳"}
+          {HEADER[quiz.lessonType] || "Study"}{!!state.numQuizzesAwaitingServerResponse && "⏳"}
         </span>
       </header>
       <Grid grow justify="center" align="center">
@@ -243,7 +236,7 @@ function Study(props: Props) {
       </Grid>
       <CardOverview quiz={quiz} />
       <p>
-        Card #{quiz.id} {quiz.lessonType.toUpperCase()} quiz
+        Card #{quiz.id} quiz
       </p>
       <p>{quiz.repetitions} repetitions</p>
       <p>{quiz.lapses} lapses</p>
@@ -251,7 +244,7 @@ function Study(props: Props) {
         {state.totalCards} cards total, {state.quizzesDue} due, {state.newCards}{" "}
         new.
       </p>
-      {state.failure && <Failure {...state.failure} />}
+      <Failure />
     </Container>
   );
 }
