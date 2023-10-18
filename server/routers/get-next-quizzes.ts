@@ -27,7 +27,6 @@ async function getLessonMeta(userId: string) {
   const totalCards = await prismaClient.card.count({
     where: {
       flagged: false,
-      lapses: 0,
       userId,
     },
   });
@@ -43,7 +42,10 @@ async function getLessonMeta(userId: string) {
       flagged: false,
       userId,
       nextReviewAt: { lte: Date.now() },
-      repetitions: { gt: 0 },
+      OR: [
+        { repetitions: { gt: 0 } },
+        { lapses: { gt: 0 } }
+      ],
     },
   });
   // SELECT COUNT()

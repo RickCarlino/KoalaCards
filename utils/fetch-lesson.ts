@@ -32,7 +32,7 @@ if (creds) {
   CLIENT = new textToSpeech.TextToSpeechClient();
 }
 
-const VOICES = ["ko-KR-Wavenet-B", "ko-KR-Wavenet-C"];
+const VOICES = ["A", "B", "C", "D"].map((x) => `ko-KR-Wavenet-${x}`);
 const LESSON_SIZE = 5;
 
 /** My main focus is Korean, so I randomly pick
@@ -53,7 +53,7 @@ const filePathFor = (text: string, voice: string) => {
   });
 };
 
-export const generateSpeechFile = async (
+const generateSpeechFile = async (
   txt: string,
   voice: string = randomVoice(),
 ) => {
@@ -82,46 +82,36 @@ export const generateSpeechFile = async (
 /** Create and play a text to speech MP3 via Google Cloud.
  * Stores previously synthesized speech in a cache directory
  * to improve latency. */
-export async function newSpeak(txt: string, voice: string = randomVoice()) {
+async function newSpeak(txt: string, voice: string = randomVoice()) {
   const p = await generateSpeechFile(txt, voice);
   return `data:audio/mpeg;base64,${readFileSync(p, { encoding: "base64" })}`;
 }
 
-export const ssml = (...text: string[]) => {
+const ssml = (...text: string[]) => {
   return `<speak>${text.join(" ")}</speak>`;
 };
 
-export const slow = (text: string) => {
-  return `<prosody rate="slow">${text}</prosody>`;
+const slow = (text: string) => {
+  return `<prosody rate="x-slow">${text}</prosody>`;
 };
 
-export const en = (text: string) => {
+const en = (text: string) => {
   return `<voice language="en-US" gender="female">${text}</voice>`;
 };
 
-export const ko = (text: string) => {
-  return text;
-};
-
-export const pause = (ms: number) => {
-  return `<break time="${ms}ms"/>`;
-};
-
-export type LessonType = "dictation" | "listening" | "speaking";
-
-export const QUIZ_TYPES: LessonType[] = ["dictation", "listening", "speaking"];
+type LessonType = "dictation" | "listening" | "speaking";
 
 async function getAudio(lessonType: LessonType, _ko: string, _en: string) {
   let innerSSML: string;
   switch (lessonType) {
     case "dictation":
-      innerSSML = [en("Repeat: "), pause(250), slow(_ko)].join(" ");
+      innerSSML = slow(_ko);
       break;
     case "listening":
-      innerSSML = [en("Say in English: "), pause(250), ko(_ko)].join(" ");
+      innerSSML = _ko;
       break;
     case "speaking":
-      innerSSML = [en("In Korean: "), pause(250), en(_en)].join(" ");
+      innerSSML = en(_en);
       break;
   }
   return newSpeak(ssml(innerSSML));
