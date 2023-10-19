@@ -6,20 +6,20 @@ import { trpc } from "@/utils/trpc";
  */
 export default function Faucet(_props: {}) {
   const f = trpc.faucet.useMutation();
-  const [card, setPhrase] = React.useState<string | null>("Press Button");
+  const [result, setResult] = React.useState<string | null>("Press Button");
   const onClick = () => {
     const no = () => {
-      setPhrase("Nope");
+      setResult("Nope");
     };
-    setPhrase("Loading...");
+    setResult("Loading...");
     f.mutateAsync({}).then(({ message }) => {
-      setPhrase(message);
+      setResult(message);
     }, no);
   };
   return (
     <div>
       <button onClick={onClick}>Again</button>
-      <p>{card}</p>
+      <p>{result}</p>
     </div>
   );
 }
