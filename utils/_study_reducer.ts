@@ -141,8 +141,8 @@ function reduce(state: State, action: Action): State {
           lessonType: currentQuiz(state)?.lessonType ?? "dictation",
           userTranscription: "Empty response",
           rejectionText: "You hit the `Fail` button. Better luck next time!",
-        }
-      }
+        },
+      };
     case "FLAG_QUIZ":
       return gotoNextQuiz(state);
     case "WILL_GRADE":

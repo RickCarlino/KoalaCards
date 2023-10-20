@@ -3,7 +3,7 @@ import textToSpeech, { TextToSpeechClient } from "@google-cloud/text-to-speech";
 import { createHash } from "crypto";
 import fs, { existsSync, readFileSync } from "fs";
 import path from "path";
-import { draw } from "radash";
+import { draw, template } from "radash";
 import util from "util";
 
 type LocalQuiz = {
@@ -19,7 +19,26 @@ type LocalQuiz = {
   };
 };
 
+type LessonType = keyof LocalQuiz["audio"];
+
+type GetLessonInputParams = {
+  userId: string;
+  /** Current time */
+  now?: number;
+  /** Max number of cards to return */
+  take?: number;
+  /** IDs that are already in the user's hand. */
+  notIn?: number[];
+};
+
 const DATA_DIR = process.env.DATA_DIR || ".";
+const VOICES = ["A", "B", "C", "D"].map((x) => `ko-KR-Wavenet-${x}`);
+const LESSON_SIZE = 5;
+const SSML: Record<LessonType, string> = {
+  dictation: `<speak><prosody rate="x-slow">{{ko}}</prosody></speak>`,
+  speaking: `<speak><voice language="en-US" gender="female">{{en}}</voice></speak>`,
+  listening: `<speak>{{ko}}</speak>`,
+};
 
 let CLIENT: TextToSpeechClient;
 const creds = JSON.parse(process.env.GCP_JSON_CREDS || "false");
@@ -31,9 +50,6 @@ if (creds) {
 } else {
   CLIENT = new textToSpeech.TextToSpeechClient();
 }
-
-const VOICES = ["A", "B", "C", "D"].map((x) => `ko-KR-Wavenet-${x}`);
-const LESSON_SIZE = 5;
 
 /** My main focus is Korean, so I randomly pick
  * one of Google's Korean voices if no voice is
@@ -82,50 +98,19 @@ const generateSpeechFile = async (
 /** Create and play a text to speech MP3 via Google Cloud.
  * Stores previously synthesized speech in a cache directory
  * to improve latency. */
-async function newSpeak(txt: string, voice: string = randomVoice()) {
+async function generateSpeech(txt: string, voice: string = randomVoice()) {
   const p = await generateSpeechFile(txt, voice);
   return `data:audio/mpeg;base64,${readFileSync(p, { encoding: "base64" })}`;
 }
 
-const ssml = (...text: string[]) => {
-  return `<speak>${text.join(" ")}</speak>`;
-};
-
-const slow = (text: string) => {
-  return `<prosody rate="x-slow">${text}</prosody>`;
-};
-
-const en = (text: string) => {
-  return `<voice language="en-US" gender="female">${text}</voice>`;
-};
-
-type LessonType = "dictation" | "listening" | "speaking";
-
-async function getAudio(lessonType: LessonType, _ko: string, _en: string) {
-  let innerSSML: string;
-  switch (lessonType) {
-    case "dictation":
-      innerSSML = slow(_ko);
-      break;
-    case "listening":
-      innerSSML = _ko;
-      break;
-    case "speaking":
-      innerSSML = en(_en);
-      break;
-  }
-  return newSpeak(ssml(innerSSML));
+async function generateLessonAudio(
+  lessonType: LessonType,
+  _ko: string,
+  _en: string,
+) {
+  const ssml = template(SSML[lessonType], { ko: _ko, en: _en });
+  return generateSpeech(ssml);
 }
-
-type GetLessonInputParams = {
-  userId: string;
-  /** Current time */
-  now?: number;
-  /** Max number of cards to return */
-  take?: number;
-  /** IDs that are already in the user's hand. */
-  notIn?: number[];
-};
 
 export default async function getLessons(p: GetLessonInputParams) {
   const userId = p.userId;
@@ -161,9 +146,9 @@ export default async function getLessons(p: GetLessonInputParams) {
       repetitions: card.repetitions,
       lapses: card.lapses,
       audio: {
-        dictation: await getAudio("dictation", ko, en),
-        listening: await getAudio("listening", ko, en),
-        speaking: await getAudio("speaking", ko, en),
+        dictation: await generateLessonAudio("dictation", ko, en),
+        listening: await generateLessonAudio("listening", ko, en),
+        speaking: await generateLessonAudio("speaking", ko, en),
       },
     });
   }
