@@ -70,6 +70,7 @@ model User {
   name          String?
   email         String?   @unique
   emailVerified DateTime?
+  lastSeen      DateTime?
   image         String?
   accounts      Account[]
   sessions      Session[]
