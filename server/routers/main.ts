@@ -32,14 +32,7 @@ export const appRouter = router({
     .input(z.object({}))
     .output(z.object({ message: z.string() }))
     .mutation(async () => {
-      const users = await prismaClient.user.findMany();
-      for (const user of users) {
-        const phraseCount = await prismaClient.card.count({
-          where: { userId: user.id },
-        });
-        console.log(`=== ${user.email} has ${phraseCount} cards`);
-      }
-      return { message: users.toString() };
+      return { message: '[]' };
     }),
   importPhrases: procedure
     .input(
