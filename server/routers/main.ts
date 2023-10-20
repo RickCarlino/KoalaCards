@@ -162,6 +162,7 @@ export const appRouter = router({
         where: {
           id: input.id,
           userId,
+          flagged: false,
         },
       });
 
