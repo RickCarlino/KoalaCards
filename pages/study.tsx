@@ -33,7 +33,7 @@ const HEADER: Record<string, string> = {
   dictation: "Repeat After Me",
   speaking: "Say in Korean",
   listening: "Translate to English",
-}
+};
 function CardOverview({ quiz }: { quiz: CurrentQuiz }) {
   let term = "";
   let def = "";
@@ -57,10 +57,13 @@ function CardOverview({ quiz }: { quiz: CurrentQuiz }) {
 }
 
 function Study(props: Props) {
-  const phrasesById = props.quizzes.reduce((acc, quiz) => {
-    acc[quiz.id] = quiz;
-    return acc;
-  }, {} as Record<number, Quiz>);
+  const phrasesById = props.quizzes.reduce(
+    (acc, quiz) => {
+      acc[quiz.id] = quiz;
+      return acc;
+    },
+    {} as Record<number, Quiz>,
+  );
   const newState = newQuizState({
     phrasesById,
     totalCards: props.totalCards,
@@ -195,7 +198,8 @@ function Study(props: Props) {
     <Container size="xs">
       <header style={HEADER_STYLES}>
         <span style={{ fontSize: "24px", fontWeight: "bold" }}>
-          {HEADER[quiz.lessonType] || "Study"}{!!state.numQuizzesAwaitingServerResponse && "⏳"}
+          {HEADER[quiz.lessonType] || "Study"}
+          {!!state.numQuizzesAwaitingServerResponse && "⏳"}
         </span>
       </header>
       <Grid grow justify="center" align="center">
@@ -235,9 +239,7 @@ function Study(props: Props) {
         </Grid.Col>
       </Grid>
       <CardOverview quiz={quiz} />
-      <p>
-        Card #{quiz.id} quiz
-      </p>
+      <p>Card #{quiz.id} quiz</p>
       <p>{quiz.repetitions} repetitions</p>
       <p>{quiz.lapses} lapses</p>
       <p>

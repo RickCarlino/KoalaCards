@@ -13,21 +13,22 @@ import EmailProvider from "next-auth/providers/email";
     throw new Error(`Missing env ${key}`);
   }
 });
+export const EMAIL_SERVER_OPTIONS = {
+  server: {
+    host: process.env.EMAIL_SERVER_HOST,
+    port: process.env.EMAIL_SERVER_PORT,
+    auth: {
+      user: process.env.EMAIL_SERVER_USER,
+      pass: process.env.EMAIL_SERVER_PASSWORD,
+    },
+  },
+  from: process.env.EMAIL_FROM,
+};
 
 export const authOptions: AuthOptions = {
   adapter: PrismaAdapter(prismaClient),
   providers: [
-    EmailProvider({
-      server: {
-        host: process.env.EMAIL_SERVER_HOST,
-        port: process.env.EMAIL_SERVER_PORT,
-        auth: {
-          user: process.env.EMAIL_SERVER_USER,
-          pass: process.env.EMAIL_SERVER_PASSWORD,
-        },
-      },
-      from: process.env.EMAIL_FROM,
-    }),
+    EmailProvider(EMAIL_SERVER_OPTIONS),
   ],
 };
 

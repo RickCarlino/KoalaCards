@@ -5,16 +5,17 @@ const hours = (h: number) => h / 24;
 // My flavor of SM-2 departs from the original slightly.
 // I review more often in the beginning.
 const EARLY_REVIEW_INTERVAL_MAPPING: Record<number, number> = {
-  0: minutes(5),
+  0: minutes(1),
   1: hours(1),
-  2: hours(12),
+  2: hours(4),
+  3: hours(24),
 };
 
 // Define keys for Spaced Repetition System (SRS) data
 type SRSKeys = "repetitions" | "interval" | "ease" | "lapses" | "nextReviewAt";
 
 // Define the SRS data structure using the keys
-type SRSData = Record<SRSKeys, number>;
+type SRSData = Record<SRSKeys, number> & { flagged: boolean };
 
 // Constants for ease calculation
 const MIN_EASE = 1.3;
@@ -80,6 +81,7 @@ export function gradePerformance(
     ease,
     lapses,
     nextReviewAt,
+    flagged: lapses >= 4 ? true : card.flagged,
   };
 }
 
@@ -89,6 +91,7 @@ const DEFAULT_CARD: SRSData = {
   ease: 2.5,
   lapses: 0,
   nextReviewAt: 0,
+  flagged: false,
 };
 
 // Function to create a new card with default SRS values

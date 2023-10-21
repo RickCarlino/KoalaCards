@@ -130,7 +130,19 @@ function reduce(state: State, action: Action): State {
         isRecording: action.value,
       };
     case "USER_GAVE_UP":
-      return gotoNextQuiz(state);
+      const nextState = gotoNextQuiz(state);
+      const card = state.phrasesById[action.id];
+      return {
+        ...nextState,
+        failure: {
+          id: action.id,
+          ko: card.ko,
+          en: card.en,
+          lessonType: currentQuiz(state)?.lessonType ?? "dictation",
+          userTranscription: "Empty response",
+          rejectionText: "You hit the `Fail` button. Better luck next time!",
+        },
+      };
     case "FLAG_QUIZ":
       return gotoNextQuiz(state);
     case "WILL_GRADE":

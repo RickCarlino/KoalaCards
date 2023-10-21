@@ -32,7 +32,7 @@ export const appRouter = router({
     .input(z.object({}))
     .output(z.object({ message: z.string() }))
     .mutation(async () => {
-      return { message: "[]" };
+      return { message: '[]' };
     }),
   importPhrases: procedure
     .input(
@@ -155,6 +155,7 @@ export const appRouter = router({
         where: {
           id: input.id,
           userId,
+          flagged: false,
         },
       });
 

@@ -15,9 +15,7 @@ export function QuizFailure(props: {
 }) {
   return (
     <div style={style}>
-      <button onClick={props.onFlag}>
-        Flag Item
-      </button>
+      <button onClick={props.onFlag}>Flag Item</button>
       {/* <button onClick={props.onDiscard}>
         Discard Results
       </button> */}
