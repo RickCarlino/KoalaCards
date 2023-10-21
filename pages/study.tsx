@@ -15,6 +15,7 @@ import {
   quizReducer,
 } from "../utils/_study_reducer";
 import { QuizFailure } from "../components/quiz-failure";
+import { beep } from "@/utils/beep";
 
 type Props = {
   quizzes: Quiz[];
@@ -57,13 +58,10 @@ function CardOverview({ quiz }: { quiz: CurrentQuiz }) {
 }
 
 function Study(props: Props) {
-  const phrasesById = props.quizzes.reduce(
-    (acc, quiz) => {
-      acc[quiz.id] = quiz;
-      return acc;
-    },
-    {} as Record<number, Quiz>,
-  );
+  const phrasesById = props.quizzes.reduce((acc, quiz) => {
+    acc[quiz.id] = quiz;
+    return acc;
+  }, {} as Record<number, Quiz>);
   const newState = newQuizState({
     phrasesById,
     totalCards: props.totalCards,
@@ -125,7 +123,7 @@ function Study(props: Props) {
     dispatch({ type: "WILL_GRADE", id });
     performExam
       .mutateAsync({ id, audio, lessonType })
-      .then((data) => {
+      .then(async (data) => {
         dispatch({ type: "SET_FAILURE", value: null });
         switch (data.result) {
           case "success":
@@ -136,11 +134,7 @@ function Study(props: Props) {
             });
             break;
           case "failure":
-            notifications.show({
-              title: "Incorrect!",
-              message: "Try again!",
-              color: "red",
-            });
+            await beep();
             dispatch({
               type: "SET_FAILURE",
               value: {
