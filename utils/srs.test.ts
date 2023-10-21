@@ -10,13 +10,13 @@ describe("gradePerformance", () => {
       card = gradePerformance(card, 3, START_TIME + card.interval);
     }
     const expectations = [
-      "0.0035", // 5 Minutes
-      "0.0417", // 1 hour
-      "0.5000", // Half a day, etc..
+      "0.0007",
+      "0.0417",
+      "0.1667",
+      "1.0000",
       "2.0000",
       "4.0000",
-      "8.0000",
-      "14.0000",
+      "7.0000",
     ];
     const actual = deck.map((card) => card.interval.toFixed(4));
     expect(actual).toEqual(expectations);
