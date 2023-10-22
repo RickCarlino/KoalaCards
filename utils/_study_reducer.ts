@@ -118,7 +118,6 @@ export function currentQuiz(state: State): CurrentQuiz | undefined {
 }
 
 function reduce(state: State, action: Action): State {
-  console.log(`=== ${action.type} ===`);
   switch (action.type) {
     case "SET_FAILURE":
       return {
@@ -163,9 +162,6 @@ function reduce(state: State, action: Action): State {
       const newStuff = action.quizzes.map((x) => x.id);
       const oldStuff = state.quizIDsForLesson;
       const nextQuizIDsForLesson = [...oldStuff, ...newStuff];
-      console.log(
-        `${nextQuizIDsForLesson.join(", ")} <= ${newStuff.join(", ")}`,
-      );
       const nextphrasesById: Record<string, Quiz> = action.quizzes.reduce(
         (acc, x) => {
           acc[x.id] = x;
