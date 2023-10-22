@@ -4,27 +4,6 @@ import { procedure, router } from "../trpc";
 import { getNextQuiz, getNextQuizzes } from "./get-next-quizzes";
 import { failPhrase, performExam } from "./perform-exam";
 
-async function ingestOne(ko: string, en: string, rootWord: string | undefined) {
-  // Find phrase where `rootWord` or `ko` matches
-  const phrase = await prismaClient.phrase.findFirst({
-    where: {
-      term: ko,
-    },
-  });
-  if (!phrase) {
-    return await prismaClient.phrase.create({
-      data: {
-        term: ko,
-        definition: en,
-        root_word: rootWord || "",
-      },
-    });
-  } else {
-    console.log(`(already exists) ${ko} => ${en} `);
-    return phrase;
-  }
-}
-
 export const appRouter = router({
   /** The `faucet` route is a mutation that returns a "Hello, world" string
    * and takes an empty object as its only argument. */
@@ -32,7 +11,7 @@ export const appRouter = router({
     .input(z.object({}))
     .output(z.object({ message: z.string() }))
     .mutation(async () => {
-      return { message: '[]' };
+      return { message: "[]" };
     }),
   importPhrases: procedure
     .input(
@@ -41,7 +20,6 @@ export const appRouter = router({
           z.object({
             korean: z.string(),
             english: z.string(),
-            rootWord: z.optional(z.string()),
           }),
         ),
       }),
@@ -56,32 +34,34 @@ export const appRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       const results: { ko: string; en: string }[] = [];
-      for (const { korean, english, rootWord } of input.input) {
+      for (const { korean, english } of input.input) {
         const userId = ctx.user?.id;
         if (userId) {
-          const phrase = await ingestOne(korean, english, rootWord);
-          if (phrase) {
-            const alreadyExists = await prismaClient.card.findFirst({
-              where: { userId, phraseId: phrase.id },
+          const alreadyExists = await prismaClient.card.findFirst({
+            where: {
+              userId,
+              term: korean,
+            },
+          });
+          if (!alreadyExists) {
+            await prismaClient.card.create({
+              data: {
+                userId,
+                term: korean,
+                definition: english,
+                phraseId: 0,
+              },
             });
-            if (!alreadyExists) {
-              await prismaClient.card.create({
-                data: {
-                  userId,
-                  phraseId: phrase.id,
-                },
-              });
-              results.push({
-                ko: phrase.term,
-                en: phrase.definition,
-              });
-            } else {
-              const ERR = "(Duplicate) ";
-              results.push({
-                ko: ERR + korean,
-                en: ERR + english,
-              });
-            }
+            results.push({
+              ko: korean,
+              en: english,
+            });
+          } else {
+            const ERR = "(Duplicate) ";
+            results.push({
+              ko: ERR + korean,
+              en: ERR + english,
+            });
           }
         }
       }
@@ -94,17 +74,13 @@ export const appRouter = router({
         z.object({
           id: z.number(),
           flagged: z.boolean(),
-          phrase: z.object({
-            id: z.number(),
-            term: z.string(),
-            definition: z.string(),
-          }),
+          term: z.string(),
+          definition: z.string(),
         }),
       ),
     )
     .query(async ({ ctx }) => {
       return await prismaClient.card.findMany({
-        include: { phrase: true },
         where: { userId: ctx.user?.id || "000" },
         orderBy: { nextReviewAt: "asc" },
       });
@@ -166,6 +142,8 @@ export const appRouter = router({
       await prismaClient.card.update({
         where: { id: card.id },
         data: {
+          term: input.ko ?? card.term,
+          definition: input.en ?? card.definition,
           flagged: input.flagged ?? false,
         },
       });
@@ -194,16 +172,11 @@ export const appRouter = router({
       if (!card) {
         throw new Error("Card not found");
       }
-      const phrase = await prismaClient.phrase.findFirst({
-        where: { id: card.phraseId },
-      });
-      if (!phrase) {
-        throw new Error("Phrase not found");
-      }
       return {
-        ...card,
-        en: phrase.definition,
-        ko: phrase.term,
+        id: card.id,
+        en: card.definition,
+        ko: card.term,
+        flagged: card.flagged,
       };
     }),
   flagPhrase: procedure

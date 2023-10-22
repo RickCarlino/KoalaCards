@@ -58,10 +58,13 @@ function CardOverview({ quiz }: { quiz: CurrentQuiz }) {
 }
 
 function Study(props: Props) {
-  const phrasesById = props.quizzes.reduce((acc, quiz) => {
-    acc[quiz.id] = quiz;
-    return acc;
-  }, {} as Record<number, Quiz>);
+  const phrasesById = props.quizzes.reduce(
+    (acc, quiz) => {
+      acc[quiz.id] = quiz;
+      return acc;
+    },
+    {} as Record<number, Quiz>,
+  );
   const newState = newQuizState({
     phrasesById,
     totalCards: props.totalCards,
@@ -113,7 +116,8 @@ function Study(props: Props) {
   if (!quiz) {
     return (
       <div>
-        <h1>Session Complete.</h1>
+        <h1>No Cards Due</h1>
+        <p>Consider adding more by clicking "import"</p>
         <Failure />
       </div>
     );
@@ -239,6 +243,9 @@ function Study(props: Props) {
       <p>
         {state.totalCards} cards total, {state.quizzesDue} due, {state.newCards}{" "}
         new.
+      </p>
+      <p>
+        <a href={["cards", quiz.id].join("/")}>Edit Card</a>
       </p>
       <Failure />
     </Container>

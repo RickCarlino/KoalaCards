@@ -123,7 +123,6 @@ export default async function getLessons(p: GetLessonInputParams) {
   // SELECT * FROM Card WHERE nextReviewAt < NOW
   // ORDER BY repetitions DESC, nextReviewAt DESC;
   const cards = await prismaClient.card.findMany({
-    include: { phrase: true },
     where: {
       id: { notIn: excludedIDs },
       flagged: false,
@@ -137,8 +136,8 @@ export default async function getLessons(p: GetLessonInputParams) {
   });
   const output: LocalQuiz[] = [];
   for (const card of cards) {
-    const en = card.phrase.definition;
-    const ko = card.phrase.term;
+    const en = card.definition;
+    const ko = card.term;
     output.push({
       id: card.id,
       en,

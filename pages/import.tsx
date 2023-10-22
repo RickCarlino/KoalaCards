@@ -12,7 +12,6 @@ import { useState } from "react";
 interface Phrase {
   korean: string;
   english: string;
-  rootWord: string;
 }
 
 interface ImportPageProps {}
@@ -42,7 +41,7 @@ const ImportPage: React.FC<ImportPageProps> = ({}) => {
         setIsLoading(false);
         return;
       }
-      let [korean, english, rootWord] = line.split("\t");
+      let [korean, english] = line.split("\t");
 
       if (!korean) {
         setError(
@@ -62,7 +61,7 @@ const ImportPage: React.FC<ImportPageProps> = ({}) => {
 
       korean = korean.trim();
       english = english.trim();
-      phrases.push({ korean, english, rootWord });
+      phrases.push({ korean, english });
     }
 
     importPhrase.mutateAsync({ input: phrases }).then((imports) => {
@@ -81,11 +80,16 @@ const ImportPage: React.FC<ImportPageProps> = ({}) => {
       </p>
       <ol>
         <li>Korean sentence</li>
-        <li>(tab character) English translation or example sentence.</li>
-        <li>(tab character) Optional key vocab word in the sentence.</li>
+        <li>A Tab character</li>
+        <li>The English translation or example sentence.</li>
       </ol>
+      <p>
+        <b>Pro Tip:</b>
+        Edit your phrases in a spreadsheet program like Excel
+        or Google Sheets, then copy and paste them here.
+      </p>
       <h3>Example of phrase input:</h3>
-      <pre>여러가지 음식을 먹어 봤어요. I tried various foods. 여러가지</pre>
+      <pre>그는 나를 웃게 했어요. He made me laugh.</pre>
       <Textarea
         minRows={10}
         placeholder="Korean sentence <tab> English translation or example sentence"
