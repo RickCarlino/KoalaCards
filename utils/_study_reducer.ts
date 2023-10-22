@@ -95,7 +95,12 @@ export function currentQuiz(state: State): CurrentQuiz | undefined {
   // makes sense and is an artifact of a previous architecture.
   // In the future we should calculate this on the backend and only
   // send audio for the appropriate quiz.
-  const PROGRESSION: LessonType[] = ["dictation", "dictation", "listening"];
+  const PROGRESSION: LessonType[] = [
+    "dictation",
+    "dictation",
+    "listening",
+    "listening",
+  ];
   const progression = PROGRESSION[quiz.repetitions];
   if (progression) {
     lessonType = progression;
