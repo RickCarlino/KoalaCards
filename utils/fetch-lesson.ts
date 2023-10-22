@@ -131,7 +131,7 @@ export default async function getLessons(p: GetLessonInputParams) {
         lte: now,
       },
     },
-    orderBy: [{ repetitions: "desc" }],
+    orderBy: [{ lapses: "desc" }, { repetitions: "desc" }],
     take,
   });
   const output: LocalQuiz[] = [];
