@@ -82,10 +82,28 @@ if (!apiKey) {
 
 const configuration = { apiKey };
 
+const gradeAndUpdateTimestamps = (card: Card, grade: number) => {
+  const now = Date.now();
+  const { interval, ease, lapses, repetitions } = gradePerformance(
+    card,
+    grade,
+    now,
+  );
+
+  return {
+    interval,
+    ease,
+    lapses,
+    repetitions,
+    firstReview: new Date(card.lastReview || now),
+    lastReview: new Date(now),
+  };
+}
+
 const markIncorrect = async (card: Card) => {
   await prismaClient.card.update({
     where: { id: card.id },
-    data: gradePerformance(card, 0),
+    data: gradeAndUpdateTimestamps(card, 0),
   });
 };
 
@@ -105,7 +123,7 @@ const translationPrompt = (ko: string, response: string) => {
 const markCorrect = async (card: Card) => {
   await prismaClient.card.update({
     where: { id: card.id },
-    data: gradePerformance(card, 4),
+    data: gradeAndUpdateTimestamps(card, 4),
   });
 };
 
