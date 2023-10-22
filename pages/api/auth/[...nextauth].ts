@@ -27,9 +27,7 @@ export const EMAIL_SERVER_OPTIONS = {
 
 export const authOptions: AuthOptions = {
   adapter: PrismaAdapter(prismaClient),
-  providers: [
-    EmailProvider(EMAIL_SERVER_OPTIONS),
-  ],
+  providers: [EmailProvider(EMAIL_SERVER_OPTIONS)],
 };
 
 export default NextAuth(authOptions);

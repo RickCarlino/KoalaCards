@@ -53,14 +53,12 @@ function Card({ id }: { id: number }) {
               label="Definition"
               placeholder="Enter Definition"
               error={form.errors.en && "Please enter an Definition"}
-              disabled={true}
               {...form.getInputProps("en")}
             />
             <TextInput
               label="Term"
               placeholder="Enter Term"
               error={form.errors.ko && "Please enter a Term"}
-              disabled={true}
               {...form.getInputProps("ko")}
             />
             <Checkbox

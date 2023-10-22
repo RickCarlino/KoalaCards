@@ -1,7 +1,7 @@
 import { prismaClient } from "@/server/prisma-client";
 import { gradePerformance } from "@/utils/srs";
 import { Lang, transcribeB64 } from "@/utils/transcribe";
-import { Card, Phrase } from "@prisma/client";
+import { Card } from "@prisma/client";
 import { z } from "zod";
 import { procedure } from "../trpc";
 import OpenAI from "openai";
@@ -64,7 +64,6 @@ export const yesOrNo = async (content: string): Promise<YesOrNo> => {
   return yes ? { yes: true, why: undefined } : { yes: false, why };
 };
 type AskOpts = Partial<ChatCompletionCreateParamsNonStreaming>;
-type CardWithPhrase = Card & { phrase: Phrase };
 type CorrectQuiz = { correct: true };
 type IncorrectQuiz = { correct: false; why: string };
 type No = { yes: false; why: string };
@@ -72,7 +71,7 @@ type Yes = { yes: true; why: undefined };
 type YesOrNo = Yes | No;
 type Quiz = (
   transcript: string,
-  card: CardWithPhrase,
+  card: Card,
 ) => Promise<CorrectQuiz | IncorrectQuiz>;
 
 const apiKey = process.env.OPENAI_API_KEY;
@@ -111,7 +110,7 @@ const markCorrect = async (card: Card) => {
 };
 
 async function gradeResp(
-  card: CardWithPhrase,
+  card: Card,
   whyIsItWrong: string | undefined,
 ): Promise<ReturnType<Quiz>> {
   if (whyIsItWrong) {
@@ -127,10 +126,10 @@ async function gradeResp(
   };
 }
 
-async function dictationTest(transcript: string, card: CardWithPhrase) {
+async function dictationTest(transcript: string, card: Card) {
   const { why } = await yesOrNo(`
-    Phrase: <<${card.phrase.term}>>
-    Translation: <<${card.phrase.definition}>>
+    Phrase: <<${card.term}>>
+    Translation: <<${card.definition}>>
     I said: <<${transcript}>>
     ---
     I was asked to read the above phrase aloud. Was I correct?
@@ -140,15 +139,15 @@ async function dictationTest(transcript: string, card: CardWithPhrase) {
   return gradeResp(card, why);
 }
 
-async function listeningTest(transcript: string, card: CardWithPhrase) {
-  const p = translationPrompt(card.phrase.term, transcript);
+async function listeningTest(transcript: string, card: Card) {
+  const p = translationPrompt(card.term, transcript);
   const { why } = await yesOrNo(p);
   return gradeResp(card, why);
 }
 
-async function speakingTest(transcript: string, card: CardWithPhrase) {
+async function speakingTest(transcript: string, card: Card) {
   const { why } = await yesOrNo(
-    `Phrase: <<${card.phrase.definition}>>
+    `Phrase: <<${card.definition}>>
      I said: <<${transcript}>>
      ---
       A Korean language learning app asked me to say the English
@@ -235,7 +234,6 @@ export const performExam = procedure
     const quiz = QUIZ[input.lessonType];
     const transcript = await transcribeB64(lang, input.audio);
     const card = await prismaClient.card.findUnique({
-      include: { phrase: true },
       where: { id: input.id },
     });
     if (transcript.kind === "error") {

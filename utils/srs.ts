@@ -15,7 +15,7 @@ const EARLY_REVIEW_INTERVAL_MAPPING: Record<number, number> = {
 type SRSKeys = "repetitions" | "interval" | "ease" | "lapses" | "nextReviewAt";
 
 // Define the SRS data structure using the keys
-type SRSData = Record<SRSKeys, number> & { flagged: boolean };
+type SRSData = Record<SRSKeys, number>;
 
 // Constants for ease calculation
 const MIN_EASE = 1.3;
@@ -81,7 +81,6 @@ export function gradePerformance(
     ease,
     lapses,
     nextReviewAt,
-    flagged: lapses >= 4 ? true : card.flagged,
   };
 }
 
@@ -91,7 +90,6 @@ const DEFAULT_CARD: SRSData = {
   ease: 2.5,
   lapses: 0,
   nextReviewAt: 0,
-  flagged: false,
 };
 
 // Function to create a new card with default SRS values
