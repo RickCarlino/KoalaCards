@@ -84,19 +84,11 @@ const configuration = { apiKey };
 
 const gradeAndUpdateTimestamps = (card: Card, grade: number) => {
   const now = Date.now();
-  const { interval, ease, lapses, repetitions } = gradePerformance(
-    card,
-    grade,
-    now,
-  );
 
   return {
-    interval,
-    ease,
-    lapses,
-    repetitions,
     firstReview: new Date(card.lastReview || now),
     lastReview: new Date(now),
+    ...gradePerformance(card, grade, now),
   };
 };
 

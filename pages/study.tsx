@@ -131,7 +131,8 @@ function Study(props: Props) {
         dispatch({ type: "SET_FAILURE", value: null });
         switch (data.result) {
           case "success":
-            lessonType === "speaking" && console.log('Transcript: ' + data.userTranscription);
+            lessonType === "speaking" &&
+              console.log("Transcript: " + data.userTranscription);
             notifications.show({
               title: "Correct!",
               message: "Good job!",
@@ -140,7 +141,8 @@ function Study(props: Props) {
             break;
           case "failure":
             await beep();
-            lessonType === "speaking" && console.log('Transcript: ' + data.userTranscription);
+            lessonType === "speaking" &&
+              console.log("Transcript: " + data.userTranscription);
             dispatch({
               type: "SET_FAILURE",
               value: {
