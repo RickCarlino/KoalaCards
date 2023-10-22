@@ -98,7 +98,7 @@ const gradeAndUpdateTimestamps = (card: Card, grade: number) => {
     firstReview: new Date(card.lastReview || now),
     lastReview: new Date(now),
   };
-}
+};
 
 const markIncorrect = async (card: Card) => {
   await prismaClient.card.update({

@@ -85,8 +85,8 @@ const ImportPage: React.FC<ImportPageProps> = ({}) => {
       </ol>
       <p>
         <b>Pro Tip:</b>
-        Edit your phrases in a spreadsheet program like Excel
-        or Google Sheets, then copy and paste them here.
+        Edit your phrases in a spreadsheet program like Excel or Google Sheets,
+        then copy and paste them here.
       </p>
       <h3>Example of phrase input:</h3>
       <pre>그는 나를 웃게 했어요. He made me laugh.</pre>

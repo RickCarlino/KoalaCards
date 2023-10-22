@@ -11,27 +11,18 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Phrase {
-  id         Int     @id @default(autoincrement())
-  term       String  @unique
-  definition String
-  userId     String?
-  user       User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
 model Card {
   id           Int       @id @default(autoincrement())
   flagged      Boolean   @default(false)
-  userId       String
   user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  phraseId     Int
+  userId       String
+  term         String
+  definition   String
   repetitions  Float     @default(0)
   interval     Float     @default(1)
   ease         Float     @default(2.5)
   lapses       Float     @default(0)
   nextReviewAt Float     @default(0)
-  term         String
-  definition   String
   createdAt    DateTime  @default(now())
   firstReview  DateTime?
   lastReview   DateTime?
@@ -76,7 +67,6 @@ model User {
   accounts      Account[]
   sessions      Session[]
   cards         Card[]
-  Phrase        Phrase[]
 }
 
 model VerificationToken {

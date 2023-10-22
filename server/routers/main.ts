@@ -49,7 +49,6 @@ export const appRouter = router({
                 userId,
                 term: korean,
                 definition: english,
-                phraseId: 0,
               },
             });
             results.push({
