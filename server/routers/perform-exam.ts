@@ -99,10 +99,10 @@ const markIncorrect = async (card: Card) => {
   });
 };
 
-const translationPrompt = (ko: string, response: string) => {
+const translationPrompt = (ko: string, transcript: string) => {
   return `
-      Korean phrase: <<${ko}>>.
-      I said: <<${response}>>.
+      Korean: <<${ko}>>.
+      English: <<${transcript}>>.
       ---
       A Korean language learning app asked me to translate the
       phrase above. Tell me if I was correct. The audio was

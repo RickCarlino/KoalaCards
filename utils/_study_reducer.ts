@@ -97,8 +97,8 @@ export function currentQuiz(state: State): CurrentQuiz | undefined {
   // send audio for the appropriate quiz.
   const PROGRESSION: LessonType[] = [
     "dictation",
-    "dictation",
     "listening",
+    "dictation",
     "listening",
   ];
   const progression = PROGRESSION[quiz.repetitions];
