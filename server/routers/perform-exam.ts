@@ -7,6 +7,16 @@ import { procedure } from "../trpc";
 import OpenAI from "openai";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat";
 
+type CorrectQuiz = { correct: true };
+type IncorrectQuiz = { correct: false; why: string };
+type No = { yes: false; why: string };
+type Yes = { yes: true; why: undefined };
+type YesOrNo = Yes | No;
+type Quiz = (
+  transcript: string,
+  card: Card,
+) => Promise<CorrectQuiz | IncorrectQuiz>;
+
 const YES_OR_NO = {
   name: "answer",
   parameters: {
@@ -21,7 +31,7 @@ const YES_OR_NO = {
       why: {
         type: "string",
         description:
-          "Explanation of your response, directed to I. Only required if answer is 'no'",
+          "Explanation of your response. Only required if answer is 'no'",
       },
     },
     required: ["response"],
@@ -47,7 +57,7 @@ const YES_OR_NO = {
 };
 
 export const yesOrNo = async (content: string): Promise<YesOrNo> => {
-  const answer = await askRaw({
+  const answer = await gptCall({
     messages: [{ role: "user", content }],
     model: "gpt-3.5-turbo-0613",
     n: 3,
@@ -63,16 +73,6 @@ export const yesOrNo = async (content: string): Promise<YesOrNo> => {
   const yes = typeof why !== "string";
   return yes ? { yes: true, why: undefined } : { yes: false, why };
 };
-type AskOpts = Partial<ChatCompletionCreateParamsNonStreaming>;
-type CorrectQuiz = { correct: true };
-type IncorrectQuiz = { correct: false; why: string };
-type No = { yes: false; why: string };
-type Yes = { yes: true; why: undefined };
-type YesOrNo = Yes | No;
-type Quiz = (
-  transcript: string,
-  card: Card,
-) => Promise<CorrectQuiz | IncorrectQuiz>;
 
 const apiKey = process.env.OPENAI_API_KEY;
 
@@ -179,26 +179,8 @@ const lessonType = z.union([
 
 export const openai = new OpenAI(configuration);
 
-export async function askRaw(opts: ChatCompletionCreateParamsNonStreaming) {
+export async function gptCall(opts: ChatCompletionCreateParamsNonStreaming) {
   return await openai.chat.completions.create(opts);
-}
-
-export async function ask(prompt: string, opts: AskOpts = {}) {
-  const resp = await askRaw({
-    model: "gpt-3.5-turbo",
-    messages: [
-      {
-        role: "user",
-        content: prompt,
-      },
-    ],
-    temperature: opts.temperature ?? 0.15,
-    max_tokens: opts.max_tokens ?? 1024,
-    n: opts.n ?? 1,
-  });
-  return resp.choices
-    .filter((x) => x.finish_reason === "stop")
-    .map((x) => x.message?.content ?? "");
 }
 
 const performExamOutput = z.union([

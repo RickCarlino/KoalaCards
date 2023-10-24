@@ -54,7 +54,7 @@ export async function transcribeB64(
         return resolve({ kind: "error" });
       } finally {
         // Delete the file now that we are done:
-        await unlink(fpath);
+        unlink(fpath, (e) => e && console.error("Delete Err: " + JSON.stringify(e)));
       }
     },
   );
