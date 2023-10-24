@@ -1,5 +1,5 @@
 import { openai } from "@/server/routers/perform-exam";
-import { createReadStream, writeFile } from "fs";
+import { createReadStream, writeFile, unlink } from "fs";
 import path from "path";
 import { uid } from "radash";
 import { promisify } from "util";
@@ -52,6 +52,9 @@ export async function transcribeB64(
       } catch (error) {
         console.error(error);
         return resolve({ kind: "error" });
+      } finally {
+        // Delete the file now that we are done:
+        await unlink(fpath);
       }
     },
   );
