@@ -77,7 +77,7 @@ export const yesOrNo = async (input: string): Promise<YesOrNo> => {
       { role: "system", content: SYSTEM_PROMPT },
     ],
     model: "gpt-3.5-turbo-0613",
-    n: 3,
+    n: 4,
     temperature: 1.0,
     function_call: { name: "answer" },
     functions: [YES_OR_NO],
@@ -86,7 +86,7 @@ export const yesOrNo = async (input: string): Promise<YesOrNo> => {
     .map((x) => JSON.stringify(x.message?.function_call))
     .map((x) => JSON.parse(JSON.parse(x).arguments).why)
     .filter((x) => !!x);
-  if (result.length) {
+  if (result.length > 1) {
     const why: string = result[0];
     return { yes: false, why };
   }
