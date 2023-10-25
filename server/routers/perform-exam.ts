@@ -56,11 +56,19 @@ const YES_OR_NO = {
   },
 };
 
-export const yesOrNo = async (content: string): Promise<YesOrNo> => {
+const SYSTEM_PROMPT =
+  "You are a Korean learning app. The user enters text via speech-to-text and has no control over spacing or punctuation. Correct the user if the meaning is incorrect.";
+
+export const yesOrNo = async (input: string): Promise<YesOrNo> => {
+  const content = input.replace(/^\s+/gm, '');
+  console.log(content);
   const answer = await gptCall({
-    messages: [{ role: "user", content }],
-    model: "gpt-3.5-turbo-0613",
-    n: 3,
+    messages: [
+      { role: "system", content: SYSTEM_PROMPT },
+      { role: "user", content },
+    ],
+    model: "gpt-4-0613",
+    n: 1,
     temperature: 1.0,
     function_call: { name: "answer" },
     functions: [YES_OR_NO],
@@ -101,15 +109,11 @@ const markIncorrect = async (card: Card) => {
 
 const translationPrompt = (ko: string, transcript: string) => {
   return `
-      Korean: <<${ko}>>.
-      English: <<${transcript}>>.
+      TRANSLATION TEST:
+      Prompt: <<${ko}>>.
+      I said: <<${transcript}>>.
       ---
-      A Korean language learning app asked me to translate the
-      phrase above. Tell me if I was correct. The audio was
-      transcribed via speech-to-text, so DO NOT grade punctuation
-      or spacing issues. The meanings of the two sentences must
-      express the same idea, but word choice does not need to
-      be exact. Meaning is more important.`;
+      Was I correct?`;
 };
 
 const markCorrect = async (card: Card) => {
@@ -138,14 +142,11 @@ async function gradeResp(
 
 async function dictationTest(transcript: string, card: Card) {
   const { why } = await yesOrNo(`
-    Phrase: <<${card.term}>>
-    Translation: <<${card.definition}>>
+    REPEAT AFTER ME TEST:
+    PROMPT: <<${card.term}>>
     I said: <<${transcript}>>
     ---
-    I was asked to read the above phrase aloud. Was I correct?
-    The audio was transcribed via speech-to-text so you should
-    NOT grade  punctuation or spacing issues. Word choice does
-    not need to be exact (focus on meaning).`);
+    Was I correct?`);
   return gradeResp(card, why);
 }
 
@@ -156,17 +157,12 @@ async function listeningTest(transcript: string, card: Card) {
 }
 
 async function speakingTest(transcript: string, card: Card) {
-  const { why } = await yesOrNo(
-    `Phrase: <<${card.definition}>>
+  const { why } = await yesOrNo(`
+     SPEAKING TEST:
+     PROMPT: <<${card.definition}>>
      I said: <<${transcript}>>
      ---
-      A Korean language learning app asked me to say the English
-      phrase above in Korean. Was I correct? The audio was
-      transcribed via speech-to-text, so DO NOT grade punctuation
-      or spacing. The meanings of the two sentences must
-      express the same idea, but the word choice does NOT need
-      to be exactly the same. The only way I can be wrong is
-      if the meaning does not match the phrase.`,
+     Was I correct?`,
   );
   return gradeResp(card, why);
 }
