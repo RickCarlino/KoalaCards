@@ -87,7 +87,7 @@ export const yesOrNo = async (input: string): Promise<YesOrNo> => {
     .map((x) => JSON.parse(JSON.parse(x).arguments).why)
     .filter((x) => !!x);
   if (result.length > 1) {
-    const why: string = result[0];
+    const why: string = result.join("\n\n");
     return { yes: false, why };
   }
   return { yes: true, why: undefined };
