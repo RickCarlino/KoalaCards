@@ -56,19 +56,28 @@ const YES_OR_NO = {
   },
 };
 
-const SYSTEM_PROMPT =
-  "You are a Korean learning app. The user enters text via speech-to-text and has no control over spacing or punctuation. Correct the user if the meaning is incorrect.";
+const SYSTEM_PROMPT = `
+You are an educational Korean learning app that teaches listening
+and speaking. You must grade their quizzes. The user enters
+text via speech-to-text and has no control over spacing or
+punctuation (so don't worry about that). You must grade their
+Word choice. It does not need to be an exact match, but it must
+must be grammatically correct. Variations in word choice are
+acceptable as long as the translation meaning is equivalent.
+If they make a spelling mistake, you must treat it as a
+pronunciation mistake.
+`;
 
 export const yesOrNo = async (input: string): Promise<YesOrNo> => {
-  const content = input.replace(/^\s+/gm, '');
+  const content = input.replace(/^\s+/gm, "");
   console.log(content);
   const answer = await gptCall({
     messages: [
-      { role: "system", content: SYSTEM_PROMPT },
       { role: "user", content },
+      { role: "system", content: SYSTEM_PROMPT },
     ],
-    model: "gpt-4-0613",
-    n: 1,
+    model: "gpt-3.5-turbo-0613",
+    n: 4,
     temperature: 1.0,
     function_call: { name: "answer" },
     functions: [YES_OR_NO],
@@ -77,9 +86,11 @@ export const yesOrNo = async (input: string): Promise<YesOrNo> => {
     .map((x) => JSON.stringify(x.message?.function_call))
     .map((x) => JSON.parse(JSON.parse(x).arguments).why)
     .filter((x) => !!x);
-  const why: string = result[0];
-  const yes = typeof why !== "string";
-  return yes ? { yes: true, why: undefined } : { yes: false, why };
+  if (result.length > 2) {
+    const why: string = result[0];
+    return { yes: false, why };
+  }
+  return { yes: true, why: undefined };
 };
 
 const apiKey = process.env.OPENAI_API_KEY;
@@ -141,6 +152,10 @@ async function gradeResp(
 }
 
 async function dictationTest(transcript: string, card: Card) {
+  if (transcript === card.term) {
+    console.log("=== Exact match: " + card.term);
+    return gradeResp(card, undefined);
+  }
   const { why } = await yesOrNo(`
     REPEAT AFTER ME TEST:
     PROMPT: <<${card.term}>>
@@ -162,8 +177,7 @@ async function speakingTest(transcript: string, card: Card) {
      PROMPT: <<${card.definition}>>
      I said: <<${transcript}>>
      ---
-     Was I correct?`,
-  );
+     Was I correct?`);
   return gradeResp(card, why);
 }
 
