@@ -4,7 +4,6 @@ import {
   Button,
   Paper,
   Notification,
-  Loader,
   Container,
 } from "@mantine/core";
 import { useState } from "react";
@@ -103,7 +102,7 @@ const ImportPage: React.FC<ImportPageProps> = ({}) => {
         style={{ marginTop: "1em" }}
         disabled={isLoading}
       >
-        {isLoading ? <Loader /> : "Import"}
+        {isLoading ? "Uploading..." : "Import"}
       </Button>
     </Paper>
   );

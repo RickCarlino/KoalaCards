@@ -112,7 +112,9 @@ export function RecordButton(props: Props) {
     const wav = await convertBlobToWav(data);
     const b64 = await blobToBase64(wav);
     if (props.lessonType !== "listening") {
-      await playAudio(b64); // TODO: Maybe move to onRecord callback in parent.
+      if (Math.random() < 0.5) {
+        await playAudio(b64); // TODO: Maybe move to onRecord callback in parent.
+      }
     }
     props.onRecord(b64);
   });

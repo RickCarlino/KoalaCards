@@ -95,7 +95,12 @@ export function currentQuiz(state: State): CurrentQuiz | undefined {
   // makes sense and is an artifact of a previous architecture.
   // In the future we should calculate this on the backend and only
   // send audio for the appropriate quiz.
-  const PROGRESSION: LessonType[] = ["dictation", "dictation", "listening"];
+  const PROGRESSION: LessonType[] = [
+    "dictation",
+    "listening",
+    "dictation",
+    "listening",
+  ];
   const progression = PROGRESSION[quiz.repetitions];
   if (progression) {
     lessonType = progression;
@@ -118,7 +123,6 @@ export function currentQuiz(state: State): CurrentQuiz | undefined {
 }
 
 function reduce(state: State, action: Action): State {
-  console.log(`=== ${action.type} ===`);
   switch (action.type) {
     case "SET_FAILURE":
       return {
@@ -163,9 +167,6 @@ function reduce(state: State, action: Action): State {
       const newStuff = action.quizzes.map((x) => x.id);
       const oldStuff = state.quizIDsForLesson;
       const nextQuizIDsForLesson = [...oldStuff, ...newStuff];
-      console.log(
-        `${nextQuizIDsForLesson.join(", ")} <= ${newStuff.join(", ")}`,
-      );
       const nextphrasesById: Record<string, Quiz> = action.quizzes.reduce(
         (acc, x) => {
           acc[x.id] = x;

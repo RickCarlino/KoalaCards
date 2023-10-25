@@ -91,9 +91,11 @@ export const getNextQuiz = procedure
     if (!userId) {
       throw new Error("User not found");
     }
+
+    const take = input.notIn.length < 3 ? 3 : 1;
     const quizzes = await getLessons({
       userId,
-      take: 1,
+      take,
       notIn: input.notIn,
     });
     return {
