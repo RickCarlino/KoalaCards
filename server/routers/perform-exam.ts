@@ -56,11 +56,29 @@ const YES_OR_NO = {
   },
 };
 
-export const yesOrNo = async (content: string): Promise<YesOrNo> => {
+const SYSTEM_PROMPT = `
+You are an educational Korean learning app.
+You grade speaking, listening and dictation drills provided by students.
+You only grade grammar and meaning, not spacing or punctuation.
+
+Perform the following steps on input:
+
+1. Check the sentence spacing usage and disregard this information entirely.
+2. Check the sentence punctuation and disregard this information entirely.
+3. Check the sentence grammar usage. Reply "no" if the sentence is grammatically incorrect.
+4. Check the sentence meaning. Reply "yes" if the meanings are mostly the same. Only reply "no" if the meaning is very different.
+`;
+
+export const yesOrNo = async (input: string): Promise<YesOrNo> => {
+  const content = input.replace(/^\s+/gm, "");
+  console.log(content);
   const answer = await gptCall({
-    messages: [{ role: "user", content }],
+    messages: [
+      { role: "user", content },
+      { role: "system", content: SYSTEM_PROMPT },
+    ],
     model: "gpt-3.5-turbo-0613",
-    n: 3,
+    n: 4,
     temperature: 1.0,
     function_call: { name: "answer" },
     functions: [YES_OR_NO],
@@ -69,9 +87,11 @@ export const yesOrNo = async (content: string): Promise<YesOrNo> => {
     .map((x) => JSON.stringify(x.message?.function_call))
     .map((x) => JSON.parse(JSON.parse(x).arguments).why)
     .filter((x) => !!x);
-  const why: string = result[0];
-  const yes = typeof why !== "string";
-  return yes ? { yes: true, why: undefined } : { yes: false, why };
+  if (result.length > 1) {
+    const why: string = result.join("\n\n");
+    return { yes: false, why };
+  }
+  return { yes: true, why: undefined };
 };
 
 const apiKey = process.env.OPENAI_API_KEY;
@@ -101,15 +121,11 @@ const markIncorrect = async (card: Card) => {
 
 const translationPrompt = (ko: string, transcript: string) => {
   return `
-      Korean: <<${ko}>>.
-      English: <<${transcript}>>.
+      TRANSLATION TEST:
+      Prompt: <<${ko}>>.
+      I said: <<${transcript}>>.
       ---
-      A Korean language learning app asked me to translate the
-      phrase above. Tell me if I was correct. The audio was
-      transcribed via speech-to-text, so DO NOT grade punctuation
-      or spacing issues. The meanings of the two sentences must
-      express the same idea, but word choice does not need to
-      be exact. Meaning is more important.`;
+      Was I correct?`;
 };
 
 const markCorrect = async (card: Card) => {
@@ -137,15 +153,16 @@ async function gradeResp(
 }
 
 async function dictationTest(transcript: string, card: Card) {
+  if (transcript === card.term) {
+    console.log("=== Exact match: " + card.term);
+    return gradeResp(card, undefined);
+  }
   const { why } = await yesOrNo(`
-    Phrase: <<${card.term}>>
-    Translation: <<${card.definition}>>
+    REPEAT AFTER ME TEST:
+    PROMPT: <<${card.term}>>
     I said: <<${transcript}>>
     ---
-    I was asked to read the above phrase aloud. Was I correct?
-    The audio was transcribed via speech-to-text so you should
-    NOT grade  punctuation or spacing issues. Word choice does
-    not need to be exact (focus on meaning).`);
+    Was I correct?`);
   return gradeResp(card, why);
 }
 
@@ -156,18 +173,12 @@ async function listeningTest(transcript: string, card: Card) {
 }
 
 async function speakingTest(transcript: string, card: Card) {
-  const { why } = await yesOrNo(
-    `Phrase: <<${card.definition}>>
+  const { why } = await yesOrNo(`
+     SPEAKING TEST:
+     PROMPT: <<${card.definition}>>
      I said: <<${transcript}>>
      ---
-      A Korean language learning app asked me to say the English
-      phrase above in Korean. Was I correct? The audio was
-      transcribed via speech-to-text, so DO NOT grade punctuation
-      or spacing. The meanings of the two sentences must
-      express the same idea, but the word choice does NOT need
-      to be exactly the same. The only way I can be wrong is
-      if the meaning does not match the phrase.`,
-  );
+     Was I correct?`);
   return gradeResp(card, why);
 }
 

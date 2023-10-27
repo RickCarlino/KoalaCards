@@ -1,5 +1,7 @@
 const style = {
-  background: "salmon",
+  background: "#FFF0F5",
+  font: "1em sans-serif",
+  color: "black",
   border: "1px dashed pink",
 };
 
