@@ -78,7 +78,7 @@ export const yesOrNo = async (input: string): Promise<YesOrNo> => {
       { role: "system", content: SYSTEM_PROMPT },
     ],
     model: "gpt-3.5-turbo-0613",
-    n: 4,
+    n: 2,
     temperature: 1.0,
     function_call: { name: "answer" },
     functions: [YES_OR_NO],
