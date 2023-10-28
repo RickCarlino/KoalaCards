@@ -24,6 +24,12 @@ const quizCompletion = SafeCounter({
   labelNames: ["result", "userID"],
 });
 
+const tokenUsage = SafeCounter({
+  name: "token_usage",
+  help: "Number of OpenAI tokens used",
+  labelNames: ["userID"],
+});
+
 const YES_OR_NO = {
   name: "answer",
   parameters: {
@@ -76,7 +82,10 @@ Perform the following steps on input:
 4. Check the sentence meaning. Reply "yes" if the meanings are mostly the same. Only reply "no" if the meaning is very different.
 `;
 
-export const yesOrNo = async (input: string): Promise<YesOrNo> => {
+export const yesOrNo = async (
+  input: string,
+  userID: string | number,
+): Promise<YesOrNo> => {
   const content = input.replace(/^\s+/gm, "");
   console.log(content);
   const answer = await gptCall({
@@ -90,6 +99,7 @@ export const yesOrNo = async (input: string): Promise<YesOrNo> => {
     function_call: { name: "answer" },
     functions: [YES_OR_NO],
   });
+  tokenUsage.labels({ userID }).inc(answer.usage?.total_tokens ?? 0);
   const result = answer.choices
     .map((x) => JSON.stringify(x.message?.function_call))
     .map((x) => JSON.parse(JSON.parse(x).arguments).why)
@@ -164,28 +174,34 @@ async function dictationTest(transcript: string, card: Card) {
     console.log("=== Exact match: " + card.term);
     return gradeResp(card, undefined);
   }
-  const { why } = await yesOrNo(`
+  const { why } = await yesOrNo(
+    `
     REPEAT AFTER ME TEST:
     PROMPT: <<${card.term}>>
     I said: <<${transcript}>>
     ---
-    Was I correct?`);
+    Was I correct?`,
+    card.userId,
+  );
   return gradeResp(card, why);
 }
 
 async function listeningTest(transcript: string, card: Card) {
   const p = translationPrompt(card.term, transcript);
-  const { why } = await yesOrNo(p);
+  const { why } = await yesOrNo(p, card.userId);
   return gradeResp(card, why);
 }
 
 async function speakingTest(transcript: string, card: Card) {
-  const { why } = await yesOrNo(`
+  const { why } = await yesOrNo(
+    `
      SPEAKING TEST:
      PROMPT: <<${card.definition}>>
      I said: <<${transcript}>>
      ---
-     Was I correct?`);
+     Was I correct?`,
+    card.userId,
+  );
   return gradeResp(card, why);
 }
 
