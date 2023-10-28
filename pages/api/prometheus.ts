@@ -16,7 +16,7 @@ import { NextApiResponse, NextApiRequest } from "next";
 import { collectDefaultMetrics, register } from "prom-client";
 
 if (!(global as any).defaultMetricsInitialized) {
-  collectDefaultMetrics();
+  collectDefaultMetrics({prefix: "koala_"});
   (global as any).defaultMetricsInitialized = true;
 }
 
