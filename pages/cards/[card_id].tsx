@@ -6,8 +6,8 @@ import { useRouter } from "next/router";
 function Card({ id }: { id: number }) {
   const form = useForm({
     initialValues: {
-      en: "loading...",
-      ko: "Loading...",
+      definition: "loading...",
+      term: "Loading...",
       flagged: false,
     },
   });
@@ -18,8 +18,8 @@ function Card({ id }: { id: number }) {
     {
       onSuccess: (data) => {
         form.setValues({
-          en: data.en,
-          ko: data.ko,
+          definition: data.definition,
+          term: data.term,
           flagged: data.flagged,
         });
       },
@@ -29,12 +29,12 @@ function Card({ id }: { id: number }) {
     return <pre>{JSON.stringify(card.error.message, null, 2)}</pre>;
   if (!card.data) return <div>Loading data...</div>;
   // Define updateForm function
-  const updateForm = (values: { en: string; ko: string; flagged: boolean }) => {
+  const updateForm = (values: { definition: string; term: string; flagged: boolean }) => {
     // Logic to update the card will go here
     m.mutateAsync({
       id,
-      en: values.en,
-      ko: values.ko,
+      definition: values.definition,
+      term: values.term,
       flagged: values.flagged,
     }).then(() => {
       location.assign(`/cards`);
@@ -53,13 +53,13 @@ function Card({ id }: { id: number }) {
               label="Definition"
               placeholder="Enter Definition"
               error={form.errors.en && "Please enter an Definition"}
-              {...form.getInputProps("en")}
+              {...form.getInputProps("definition")}
             />
             <TextInput
               label="Term"
               placeholder="Enter Term"
               error={form.errors.ko && "Please enter a Term"}
-              {...form.getInputProps("ko")}
+              {...form.getInputProps("term")}
             />
             <Checkbox
               label="Flagged"

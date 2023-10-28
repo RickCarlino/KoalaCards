@@ -1,7 +1,7 @@
 export type Quiz = {
   id: number;
-  ko: string;
-  en: string;
+  term: string;
+  definition: string;
   repetitions: number;
   lapses: number;
   audio: {
@@ -13,8 +13,8 @@ export type Quiz = {
 
 type Failure = {
   id: number;
-  ko: string;
-  en: string;
+  term: string;
+  definition: string;
   lessonType: string;
   userTranscription: string;
   rejectionText: string;
@@ -53,8 +53,8 @@ type Action =
 
 export type CurrentQuiz = {
   id: number;
-  en: string;
-  ko: string;
+  definition: string;
+  term: string;
   quizAudio: string;
   lessonType: "dictation" | "speaking" | "listening";
   repetitions: number;
@@ -113,8 +113,8 @@ export function currentQuiz(state: State): CurrentQuiz | undefined {
   }
   return {
     id: quiz.id,
-    en: quiz.en,
-    ko: quiz.ko,
+    definition: quiz.definition,
+    term: quiz.term,
     quizAudio: quiz.audio[lessonType],
     lessonType,
     repetitions: quiz.repetitions,
@@ -141,8 +141,8 @@ function reduce(state: State, action: Action): State {
         ...nextState,
         failure: {
           id: action.id,
-          ko: card.ko,
-          en: card.en,
+          term: card.term,
+          definition: card.definition,
           lessonType: currentQuiz(state)?.lessonType ?? "dictation",
           userTranscription: "Empty response",
           rejectionText: "You hit the `Fail` button. Better luck next time!",

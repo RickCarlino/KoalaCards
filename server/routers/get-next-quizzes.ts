@@ -5,8 +5,8 @@ import { prismaClient } from "../prisma-client";
 
 const Quiz = z.object({
   id: z.number(),
-  en: z.string(),
-  ko: z.string(),
+  definition: z.string(),
+  term: z.string(),
   repetitions: z.number(),
   lapses: z.number(),
   audio: z.object({

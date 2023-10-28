@@ -40,10 +40,10 @@ function CardOverview({ quiz }: { quiz: CurrentQuiz }) {
   let def = "";
   switch (quiz.lessonType) {
     case "dictation":
-      term = quiz.ko;
-      def = quiz.en;
+      term = quiz.term;
+      def = quiz.definition;
     case "speaking":
-      def = quiz.en;
+      def = quiz.definition;
   }
   return (
     <Grid grow justify="center" align="center">
@@ -147,8 +147,8 @@ function Study(props: Props) {
               type: "SET_FAILURE",
               value: {
                 id,
-                ko: quiz.ko,
-                en: quiz.en,
+                term: quiz.term,
+                definition: quiz.definition,
                 lessonType: quiz.lessonType,
                 userTranscription: data.userTranscription,
                 rejectionText: data.rejectionText,

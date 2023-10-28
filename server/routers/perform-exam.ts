@@ -136,10 +136,10 @@ const markIncorrect = async (card: Card) => {
   });
 };
 
-const translationPrompt = (ko: string, transcript: string) => {
+const translationPrompt = (term: string, transcript: string) => {
   return `
       TRANSLATION TEST:
-      Prompt: <<${ko}>>.
+      Prompt: <<${term}>>.
       I said: <<${transcript}>>.
       ---
       Was I correct?`;
@@ -258,7 +258,7 @@ export const performExam = procedure
     };
     const lang = LANG[input.lessonType];
     const quiz = QUIZ[input.lessonType];
-    const transcript = await transcribeB64(lang, input.audio);
+    const transcript = await transcribeB64(lang, input.audio, ctx.user?.id ?? 0);
     const card = await prismaClient.card.findUnique({
       where: { id: input.id },
     });

@@ -18,8 +18,8 @@ export const appRouter = router({
       z.object({
         input: z.array(
           z.object({
-            korean: z.string(),
-            english: z.string(),
+            term: z.string(),
+            definition: z.string(),
           }),
         ),
       }),
@@ -27,14 +27,14 @@ export const appRouter = router({
     .output(
       z.array(
         z.object({
-          ko: z.string(),
-          en: z.string(),
+          term: z.string(),
+          definition: z.string(),
         }),
       ),
     )
     .mutation(async ({ input, ctx }) => {
-      const results: { ko: string; en: string }[] = [];
-      for (const { korean, english } of input.input) {
+      const results: { term: string; definition: string }[] = [];
+      for (const { term: korean, definition: english } of input.input) {
         const userId = ctx.user?.id;
         if (userId) {
           const alreadyExists = await prismaClient.card.findFirst({
@@ -52,14 +52,14 @@ export const appRouter = router({
               },
             });
             results.push({
-              ko: korean,
-              en: english,
+              term: korean,
+              definition: english,
             });
           } else {
             const ERR = "(Duplicate) ";
             results.push({
-              ko: ERR + korean,
-              en: ERR + english,
+              term: ERR + korean,
+              definition: ERR + english,
             });
           }
         }
@@ -115,8 +115,8 @@ export const appRouter = router({
     .input(
       z.object({
         id: z.optional(z.number()),
-        en: z.optional(z.string()),
-        ko: z.optional(z.string()),
+        definition: z.optional(z.string()),
+        term: z.optional(z.string()),
         flagged: z.optional(z.boolean()),
       }),
     )
@@ -141,8 +141,8 @@ export const appRouter = router({
       await prismaClient.card.update({
         where: { id: card.id },
         data: {
-          term: input.ko ?? card.term,
-          definition: input.en ?? card.definition,
+          term: input.term ?? card.term,
+          definition: input.definition ?? card.definition,
           flagged: input.flagged ?? false,
         },
       });
@@ -156,8 +156,8 @@ export const appRouter = router({
     .output(
       z.object({
         id: z.number(),
-        en: z.string(),
-        ko: z.string(),
+        definition: z.string(),
+        term: z.string(),
         flagged: z.boolean(),
       }),
     )
@@ -173,8 +173,8 @@ export const appRouter = router({
       }
       return {
         id: card.id,
-        en: card.definition,
-        ko: card.term,
+        definition: card.definition,
+        term: card.term,
         flagged: card.flagged,
       };
     }),
