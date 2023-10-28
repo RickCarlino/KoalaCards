@@ -3,6 +3,7 @@ import { createReadStream, writeFile, unlink } from "fs";
 import path from "path";
 import { uid } from "radash";
 import { promisify } from "util";
+import { SafeCounter } from "./counter";
 
 export type Lang = "ko" | "en-US";
 
@@ -20,9 +21,16 @@ type TranscriptionResult = { kind: "OK"; text: string } | { kind: "error" };
 const PROMPT_KO = "한국어 학생이 한국어로 말씁합니다.";
 const PROMPT_EN = "Korean language learner translates sentences to English.";
 
+const transcriptionLength = SafeCounter({
+  name: "transcriptionLength",
+  help: "Number of characters transcribed.",
+  labelNames: ["lang", "userID"],
+});
+
 export async function transcribeB64(
   lang: Lang,
   dataURI: string,
+  userID: string | number,
 ): Promise<TranscriptionResult> {
   const writeFileAsync = promisify(writeFile);
   const base64Data = dataURI.split(";base64,").pop() || "";
@@ -45,6 +53,7 @@ export async function transcribeB64(
         });
         const text = y.text || "NO RESPONSE.";
         done = true;
+        transcriptionLength.labels({ lang, userID }).inc(y.text.length);
         return resolve({
           kind: "OK",
           text,

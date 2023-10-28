@@ -28,7 +28,7 @@ async function getLessonMeta(userId: string) {
     where: {
       flagged: false,
       userId,
-      OR: [{ repetitions: { gt: 0 } }, { lapses: { gt: 0 } }]
+      OR: [{ repetitions: { gt: 0 } }, { lapses: { gt: 0 } }],
     },
   });
   // SELECT COUNT()
