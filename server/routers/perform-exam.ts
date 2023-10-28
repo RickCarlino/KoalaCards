@@ -20,14 +20,16 @@ type Quiz = (
 
 let quizCompletion: Counter<"result" | "userID">;
 
-if (!register.getSingleMetric('quiz_completion')) {
+if (!register.getSingleMetric("quiz_completion")) {
   quizCompletion = new Counter({
-      name: "quiz_completion",
-      help: "Number of quiz attempts started",
-      labelNames: ["result", "userID"],
+    name: "quiz_completion",
+    help: "Number of quiz attempts started",
+    labelNames: ["result", "userID"],
   });
 } else {
-  quizCompletion = register.getSingleMetric('quiz_completion') as Counter<string>;
+  quizCompletion = register.getSingleMetric(
+    "quiz_completion",
+  ) as Counter<string>;
 }
 
 const YES_OR_NO = {
