@@ -6,7 +6,7 @@ import { z } from "zod";
 import { procedure } from "../trpc";
 import OpenAI from "openai";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat";
-import { Counter, register } from "prom-client";
+import { SafeCounter } from "@/utils/counter";
 
 type CorrectQuiz = { correct: true };
 type IncorrectQuiz = { correct: false; why: string };
@@ -18,19 +18,11 @@ type Quiz = (
   card: Card,
 ) => Promise<CorrectQuiz | IncorrectQuiz>;
 
-let quizCompletion: Counter<"result" | "userID">;
-
-if (!register.getSingleMetric("quiz_completion")) {
-  quizCompletion = new Counter({
-    name: "quiz_completion",
-    help: "Number of quiz attempts started",
-    labelNames: ["result", "userID"],
-  });
-} else {
-  quizCompletion = register.getSingleMetric(
-    "quiz_completion",
-  ) as Counter<string>;
-}
+const quizCompletion = SafeCounter({
+  name: "quiz_completion",
+  help: "Number of quiz attempts started",
+  labelNames: ["result", "userID"],
+});
 
 const YES_OR_NO = {
   name: "answer",
