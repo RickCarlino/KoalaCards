@@ -6,6 +6,7 @@ import { z } from "zod";
 import { procedure } from "../trpc";
 import OpenAI from "openai";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat";
+import { Counter, register } from "prom-client";
 
 type CorrectQuiz = { correct: true };
 type IncorrectQuiz = { correct: false; why: string };
@@ -16,6 +17,18 @@ type Quiz = (
   transcript: string,
   card: Card,
 ) => Promise<CorrectQuiz | IncorrectQuiz>;
+
+let quizCompletion: Counter<"result" | "userID">;
+
+if (!register.getSingleMetric('quiz_completion')) {
+  quizCompletion = new Counter({
+      name: "quiz_completion",
+      help: "Number of quiz attempts started",
+      labelNames: ["result", "userID"],
+  });
+} else {
+  quizCompletion = register.getSingleMetric('quiz_completion') as Counter<string>;
+}
 
 const YES_OR_NO = {
   name: "answer",
@@ -221,7 +234,7 @@ export const performExam = procedure
     }),
   )
   .output(performExamOutput)
-  .mutation(async ({ input }): Promise<PerformExamOutput> => {
+  .mutation(async ({ input, ctx }): Promise<PerformExamOutput> => {
     type LessonType = typeof input.lessonType;
     const LANG: Record<LessonType, Lang> = {
       dictation: "ko",
@@ -247,8 +260,10 @@ export const performExam = procedure
       } as const;
     }
     const result = card && (await quiz(transcript.text, card));
+    const userID = ctx.user?.id;
     if (!result) {
       console.log(`Invalid result: ${JSON.stringify(result)}`);
+      quizCompletion.labels({ result: "error", userID }).inc();
       return {
         result: "error",
         rejectionText: "Invalid result?",
@@ -256,11 +271,13 @@ export const performExam = procedure
     }
     switch (result.correct) {
       case true:
+        quizCompletion.labels({ result: "success", userID }).inc();
         return {
           result: "success",
           userTranscription: transcript.text,
         } as const;
       case false:
+        quizCompletion.labels({ result: "failure", userID }).inc();
         return {
           result: "failure",
           userTranscription: transcript.text,
