@@ -28,11 +28,11 @@ export default async function registerMetrics(
   // Check for the password in the request headers
   const authHeader = req.headers.authorization;
 
-  if (!authHeader || authHeader !== `Bearer ${process.env.PROMETHEUS_SECRET}`) {
+  if (!authHeader) {
     return res.status(401).send("Unauthorized - No auth header");
   }
 
-  if (authHeader !== `Bearer ${process.env.PROMETHEUS_SECRET}`) {
+  if (authHeader !== `Basic ${process.env.PROMETHEUS_SECRET}`) {
     return res.status(401).send("Unauthorized - Bad auth header");
   }
   console.log("Auth OK");
