@@ -83,7 +83,8 @@ const GRADED_RESPONSE = {
 
 const SYSTEM_PROMPT = `
 You are an educational Korean learning app.
-You grade speaking, listening and dictation drills provided by students.
+You grade speaking, listening and dictation drills provided
+by students.
 
 Please provide the following grades for quizzes:
   Grade 0 - WRONG User said "I don't know" or gave up.
@@ -92,6 +93,10 @@ Please provide the following grades for quizzes:
   Grade 3 - MOSTLY CORRECT Expresses correct meaning, but is awkward or unnatural.
   Grade 4 - CORRECT Correct except for spelling, punctuation, pronoun usage.
   Grade 5 - CORRECT Perfectly correct.
+
+Remember:
+ * If the user says "I don't know" or similar, always grade 0.
+ * If the sentence is completely different than the provided sentence, always grade 0.
 `;
 
 export const gradedResponse = async (
@@ -106,7 +111,7 @@ export const gradedResponse = async (
       { role: "system", content: SYSTEM_PROMPT },
     ],
     model: "gpt-3.5-turbo-0613",
-    n: 3,
+    n: 2,
     temperature: 1.0,
     function_call: { name: "grade_quiz" },
     functions: [GRADED_RESPONSE],
@@ -121,9 +126,7 @@ export const gradedResponse = async (
     .filter((x) => !!x)
     .map((x) => x as { grade: number; explanation?: string })
     .map((x) => [x.grade, x.explanation] as const);
-  const avg = Math.round(
-    results.reduce((acc, [grade]) => acc + grade, 0) / results.length,
-  );
+  const avg = results.reduce((acc, [grade]) => acc + grade, 0) / results.length;
   let expl: string | undefined = undefined;
   for (const [, value] of results) {
     if (value !== undefined) {
@@ -131,9 +134,9 @@ export const gradedResponse = async (
       break;
     }
   }
-  console.log([...results, [avg, expl]].map((x) => x.join(" / ")));
-  console.log();
-  return [avg, expl];
+  const TIPPING_POINT = 0.1; // A grade of exactly 3.0 should be marked wrong.
+  console.log([...results, [avg, expl]].map((x) => x.join(" / ")).join("\n"));
+  return [avg - TIPPING_POINT, expl];
 };
 
 const gradeAndUpdateTimestamps = (card: Card, grade: number) => {
@@ -155,9 +158,11 @@ const setGrade = async (card: Card, grade: number) => {
 
 const translationPrompt = (term: string, transcript: string) => {
   return `
-      TRANSLATION TEST:
-      Prompt: <<${term}>>.
-      I said: <<${transcript}>>.
+      TRANSLATION TEST
+      I was asked to translate the following sentence to English:
+      <<${term}>>.
+      I said:
+      <<${transcript}>>.
       ---
       Was I correct?`;
 };
@@ -179,8 +184,10 @@ async function dictationTest(transcript: string, card: Card) {
   const [grade, why] = await gradedResponse(
     `
     REPEAT AFTER ME TEST:
-    PROMPT: <<${card.term}>>
-    I said: <<${transcript}>>
+    The system asked me to say: 
+    <<${card.term}>>
+    I said:
+    <<${transcript}>>
     ---
     Was I correct?`,
     card.userId,
@@ -198,8 +205,10 @@ async function speakingTest(transcript: string, card: Card) {
   const [grade, why] = await gradedResponse(
     `
      SPEAKING TEST:
-     PROMPT: <<${card.definition}>>
-     I said: <<${transcript}>>
+     I was asked to translate the following sentence to the target language:
+     <<${card.definition}>>
+     I said:
+     <<${transcript}>>
      ---
      Was I correct?`,
     card.userId,

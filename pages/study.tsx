@@ -58,10 +58,13 @@ function CardOverview({ quiz }: { quiz: CurrentQuiz }) {
 }
 
 function Study(props: Props) {
-  const phrasesById = props.quizzes.reduce((acc, quiz) => {
-    acc[quiz.id] = quiz;
-    return acc;
-  }, {} as Record<number, Quiz>);
+  const phrasesById = props.quizzes.reduce(
+    (acc, quiz) => {
+      acc[quiz.id] = quiz;
+      return acc;
+    },
+    {} as Record<number, Quiz>,
+  );
   const newState = newQuizState({
     phrasesById,
     totalCards: props.totalCards,
@@ -128,21 +131,22 @@ function Study(props: Props) {
         dispatch({ type: "SET_FAILURE", value: null });
         switch (data.result) {
           case "success":
+            const g = Math.round(data.grade);
             const colors: Record<number, string> = {
               3: "#23c91a",
               4: "#1ac0c9",
               5: "#1a1ac9",
             };
-            const color = colors[data.grade] || "#c90ea7";
+            const color = colors[g] || "#c90ea7";
             const titles: Record<number, string> = {
               3: "Close Enough",
               4: "Correct!",
               5: "Perfect!",
             };
-            const title = titles[data.grade] || "OK";
+            const title = titles[g] || "OK";
             notifications.show({
               title,
-              message: "Grade: " + (["A+", "B", "C"][5 - data.grade] || "?"),
+              message: `Grade: ${data.grade.toPrecision(2)}/5`,
               color,
             });
             break;
