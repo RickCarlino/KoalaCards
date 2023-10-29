@@ -106,7 +106,7 @@ export const gradedResponse = async (
       { role: "system", content: SYSTEM_PROMPT },
     ],
     model: "gpt-3.5-turbo-0613",
-    n: 3,
+    n: 2,
     temperature: 1.0,
     function_call: { name: "grade_quiz" },
     functions: [GRADED_RESPONSE],
@@ -121,9 +121,7 @@ export const gradedResponse = async (
     .filter((x) => !!x)
     .map((x) => x as { grade: number; explanation?: string })
     .map((x) => [x.grade, x.explanation] as const);
-  const avg = Math.round(
-    results.reduce((acc, [grade]) => acc + grade, 0) / results.length,
-  );
+  const avg = results.reduce((acc, [grade]) => acc + grade, 0) / results.length;
   let expl: string | undefined = undefined;
   for (const [, value] of results) {
     if (value !== undefined) {
