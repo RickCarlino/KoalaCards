@@ -11,13 +11,15 @@ Hey there! Welcome to KoalaSRS, a fun and friendly Korean-only [spaced repetitio
 
 The app also gives feedback about _why_ you were wrong. 🧠
 
-## Demo
+## Demo Video
 
 <p align="center">
-  <img src="./screenshot.png" alt="The KoalaSRS Logo (for now)"/>
+  <a href="https://youtu.be/1myuAsxfk74">
+    Watch a short YouTube demo of the app as of 2023-10-29
+    <br/>
+    <img src="./screenshot.png" alt="The KoalaSRS Logo (for now)"/>
+  </a>
 </p>
-
-[Watch a short YouTube demo of the app as of 2023-09-16 (older v1.1 release- new video coming soon).](https://www.youtube.com/watch?v=0H2MufXrYl8)
 
 ## ~~ALPHA~~ Beta Software
 
