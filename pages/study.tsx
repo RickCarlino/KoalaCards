@@ -58,13 +58,10 @@ function CardOverview({ quiz }: { quiz: CurrentQuiz }) {
 }
 
 function Study(props: Props) {
-  const phrasesById = props.quizzes.reduce(
-    (acc, quiz) => {
-      acc[quiz.id] = quiz;
-      return acc;
-    },
-    {} as Record<number, Quiz>,
-  );
+  const phrasesById = props.quizzes.reduce((acc, quiz) => {
+    acc[quiz.id] = quiz;
+    return acc;
+  }, {} as Record<number, Quiz>);
   const newState = newQuizState({
     phrasesById,
     totalCards: props.totalCards,
@@ -131,12 +128,22 @@ function Study(props: Props) {
         dispatch({ type: "SET_FAILURE", value: null });
         switch (data.result) {
           case "success":
-            lessonType === "speaking" &&
-              console.log("Transcript: " + data.userTranscription);
+            const colors: Record<number, string> = {
+              3: "#23c91a",
+              4: "#1ac0c9",
+              5: "#1a1ac9",
+            };
+            const color = colors[data.grade] || "#c90ea7";
+            const titles: Record<number, string> = {
+              3: "Close Enough",
+              4: "Correct!",
+              5: "Perfect!",
+            };
+            const title = titles[data.grade] || "OK";
             notifications.show({
-              title: "Correct!",
-              message: "Good job!",
-              color: "green",
+              title,
+              message: "Grade: " + (["A+", "B", "C"][5 - data.grade] || "?"),
+              color,
             });
             break;
           case "failure":

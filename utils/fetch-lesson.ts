@@ -108,7 +108,10 @@ async function generateLessonAudio(
   _term: string,
   _definition: string,
 ) {
-  const ssml = template(SSML[lessonType], { term: _term, definition: _definition });
+  const ssml = template(SSML[lessonType], {
+    term: _term,
+    definition: _definition,
+  });
   return generateSpeech(ssml);
 }
 

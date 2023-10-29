@@ -29,7 +29,11 @@ function Card({ id }: { id: number }) {
     return <pre>{JSON.stringify(card.error.message, null, 2)}</pre>;
   if (!card.data) return <div>Loading data...</div>;
   // Define updateForm function
-  const updateForm = (values: { definition: string; term: string; flagged: boolean }) => {
+  const updateForm = (values: {
+    definition: string;
+    term: string;
+    flagged: boolean;
+  }) => {
     // Logic to update the card will go here
     m.mutateAsync({
       id,

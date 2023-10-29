@@ -91,16 +91,11 @@ export function currentQuiz(state: State): CurrentQuiz | undefined {
     return undefined;
   }
   let lessonType: LessonType;
-  // TODO: Calculating the lessonType on the frontend no longer
-  // makes sense and is an artifact of a previous architecture.
-  // In the future we should calculate this on the backend and only
-  // send audio for the appropriate quiz.
-  const PROGRESSION: LessonType[] = [
-    "dictation",
-    "listening",
-    "dictation",
-    "listening",
-  ];
+  // // TODO: Calculating the lessonType on the frontend no longer
+  // // makes sense and is an artifact of a previous architecture.
+  // // In the future we should calculate this on the backend and only
+  // // send audio for the appropriate quiz.
+  const PROGRESSION: LessonType[] = ["dictation", "listening"];
   const progression = PROGRESSION[quiz.repetitions];
   if (progression) {
     lessonType = progression;

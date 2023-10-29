@@ -8,15 +8,20 @@ import OpenAI from "openai";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat";
 import { SafeCounter } from "@/utils/counter";
 
-type CorrectQuiz = { correct: true };
-type IncorrectQuiz = { correct: false; why: string };
-type No = { yes: false; why: string };
-type Yes = { yes: true; why: undefined };
-type YesOrNo = Yes | No;
 type Quiz = (
   transcript: string,
   card: Card,
-) => Promise<CorrectQuiz | IncorrectQuiz>;
+) => Promise<[number, string | undefined]>;
+const cleanString = (str: string) =>
+  str.replace(/[^\w\s]|_/g, "").replace(/\s+/g, "");
+
+const apiKey = process.env.OPENAI_API_KEY;
+
+if (!apiKey) {
+  throw new Error("Missing ENV Var: OPENAI_API_KEY");
+}
+
+const configuration = { apiKey };
 
 const quizCompletion = SafeCounter({
   name: "quiz_completion",
@@ -30,38 +35,45 @@ const tokenUsage = SafeCounter({
   labelNames: ["userID"],
 });
 
-const YES_OR_NO = {
-  name: "answer",
+const GRADED_RESPONSE = {
+  name: "grade_quiz",
   parameters: {
     $schema: "http://json-schema.org/draft-07/schema#",
     type: "object",
+    title: "grade_quiz",
+    required: ["grade"],
     properties: {
-      response: {
-        type: "string",
-        description: "Answer to a yes or no question.",
-        enum: ["yes", "no"],
+      grade: {
+        type: "integer",
+        minimum: 0,
+        maximum: 5,
+        description: "The grade given to the quiz, ranging from 0 to 5.",
       },
-      why: {
+      explanation: {
         type: "string",
         description:
-          "Explanation of your response. Only required if answer is 'no'",
+          "Explanation for why the grade was given. Only required for a grade of 3 or lower.",
       },
     },
-    required: ["response"],
     dependencies: {
-      response: {
+      grade: {
         oneOf: [
           {
             properties: {
-              response: { enum: ["yes"] },
+              grade: {
+                type: "integer",
+                enum: [4, 5],
+              },
             },
           },
           {
             properties: {
-              response: { enum: ["no"] },
-              why: { type: "string" },
+              grade: {
+                type: "integer",
+                enum: [0, 1, 2, 3],
+              },
             },
-            required: ["why"],
+            required: ["explanation"],
           },
         ],
       },
@@ -72,20 +84,20 @@ const YES_OR_NO = {
 const SYSTEM_PROMPT = `
 You are an educational Korean learning app.
 You grade speaking, listening and dictation drills provided by students.
-You only grade grammar and meaning, not spacing or punctuation.
 
-Perform the following steps on input:
-
-1. Check the sentence spacing usage and disregard this information entirely.
-2. Check the sentence punctuation and disregard this information entirely.
-3. Check the sentence grammar usage. Reply "no" if the sentence is grammatically incorrect.
-4. Check the sentence meaning. Reply "yes" if the meanings are mostly the same. Only reply "no" if the meaning is very different.
+Please provide the following grades for quizzes:
+  Grade 0 - WRONG User said "I don't know" or gave up.
+  Grade 1 - WRONG User tried to answer, but was very wrong.
+  Grade 2 - WRONG Most words are correct, but conveys a different meaning.
+  Grade 3 - MOSTLY CORRECT Expresses correct meaning, but is awkward or unnatural.
+  Grade 4 - CORRECT Correct except for spelling, punctuation, pronoun usage.
+  Grade 5 - CORRECT Perfectly correct.
 `;
 
-export const yesOrNo = async (
+export const gradedResponse = async (
   input: string,
   userID: string | number,
-): Promise<YesOrNo> => {
+): Promise<[number, string | undefined]> => {
   const content = input.replace(/^\s+/gm, "");
   console.log(content);
   const answer = await gptCall({
@@ -94,30 +106,35 @@ export const yesOrNo = async (
       { role: "system", content: SYSTEM_PROMPT },
     ],
     model: "gpt-3.5-turbo-0613",
-    n: 2,
+    n: 3,
     temperature: 1.0,
-    function_call: { name: "answer" },
-    functions: [YES_OR_NO],
+    function_call: { name: "grade_quiz" },
+    functions: [GRADED_RESPONSE],
   });
-  tokenUsage.labels({ userID }).inc(answer.usage?.total_tokens ?? 0);
-  const result = answer.choices
-    .map((x) => JSON.stringify(x.message?.function_call))
-    .map((x) => JSON.parse(JSON.parse(x).arguments).why)
-    .filter((x) => !!x);
-  if (result.length > 1) {
-    const why: string = result.join("\n\n");
-    return { yes: false, why };
+  if (!answer) {
+    throw new Error("No answer");
   }
-  return { yes: true, why: undefined };
+  tokenUsage.labels({ userID }).inc(answer.usage?.total_tokens ?? 0);
+  const results = answer.choices
+    .map((x) => JSON.stringify(x.message?.function_call))
+    .map((x) => JSON.parse(JSON.parse(x).arguments))
+    .filter((x) => !!x)
+    .map((x) => x as { grade: number; explanation?: string })
+    .map((x) => [x.grade, x.explanation] as const);
+  const avg = Math.round(
+    results.reduce((acc, [grade]) => acc + grade, 0) / results.length,
+  );
+  let expl: string | undefined = undefined;
+  for (const [, value] of results) {
+    if (value !== undefined) {
+      expl = value;
+      break;
+    }
+  }
+  console.log([...results, [avg, expl]].map((x) => x.join(" / ")));
+  console.log();
+  return [avg, expl];
 };
-
-const apiKey = process.env.OPENAI_API_KEY;
-
-if (!apiKey) {
-  throw new Error("Missing ENV Var: OPENAI_API_KEY");
-}
-
-const configuration = { apiKey };
 
 const gradeAndUpdateTimestamps = (card: Card, grade: number) => {
   const now = Date.now();
@@ -129,10 +146,10 @@ const gradeAndUpdateTimestamps = (card: Card, grade: number) => {
   };
 };
 
-const markIncorrect = async (card: Card) => {
+const setGrade = async (card: Card, grade: number) => {
   await prismaClient.card.update({
     where: { id: card.id },
-    data: gradeAndUpdateTimestamps(card, 0),
+    data: gradeAndUpdateTimestamps(card, grade),
   });
 };
 
@@ -145,36 +162,21 @@ const translationPrompt = (term: string, transcript: string) => {
       Was I correct?`;
 };
 
-const markCorrect = async (card: Card) => {
-  await prismaClient.card.update({
-    where: { id: card.id },
-    data: gradeAndUpdateTimestamps(card, 4),
-  });
-};
-
 async function gradeResp(
   card: Card,
+  grade: number,
   whyIsItWrong: string | undefined,
 ): Promise<ReturnType<Quiz>> {
-  if (whyIsItWrong) {
-    await markIncorrect(card);
-    return {
-      correct: false,
-      why: whyIsItWrong,
-    };
-  }
-  await markCorrect(card);
-  return {
-    correct: true,
-  };
+  await setGrade(card, grade);
+  return [grade, whyIsItWrong];
 }
 
 async function dictationTest(transcript: string, card: Card) {
-  if (transcript === card.term) {
+  if (cleanString(transcript) === cleanString(card.term)) {
     console.log("=== Exact match: " + card.term);
-    return gradeResp(card, undefined);
+    return gradeResp(card, 5, undefined);
   }
-  const { why } = await yesOrNo(
+  const [grade, why] = await gradedResponse(
     `
     REPEAT AFTER ME TEST:
     PROMPT: <<${card.term}>>
@@ -183,17 +185,17 @@ async function dictationTest(transcript: string, card: Card) {
     Was I correct?`,
     card.userId,
   );
-  return gradeResp(card, why);
+  return gradeResp(card, grade, why);
 }
 
 async function listeningTest(transcript: string, card: Card) {
   const p = translationPrompt(card.term, transcript);
-  const { why } = await yesOrNo(p, card.userId);
-  return gradeResp(card, why);
+  const [grade, why] = await gradedResponse(p, card.userId);
+  return gradeResp(card, grade, why);
 }
 
 async function speakingTest(transcript: string, card: Card) {
-  const { why } = await yesOrNo(
+  const [grade, why] = await gradedResponse(
     `
      SPEAKING TEST:
      PROMPT: <<${card.definition}>>
@@ -202,7 +204,7 @@ async function speakingTest(transcript: string, card: Card) {
      Was I correct?`,
     card.userId,
   );
-  return gradeResp(card, why);
+  return gradeResp(card, grade, why);
 }
 
 const lessonType = z.union([
@@ -219,17 +221,19 @@ export async function gptCall(opts: ChatCompletionCreateParamsNonStreaming) {
 
 const performExamOutput = z.union([
   z.object({
+    grade: z.number(),
+    userTranscription: z.string(),
     result: z.literal("success"),
-    userTranscription: z.string(),
   }),
   z.object({
+    grade: z.number(),
+    rejectionText: z.string(),
+    userTranscription: z.string(),
     result: z.literal("failure"),
-    userTranscription: z.string(),
-    rejectionText: z.string(),
   }),
   z.object({
-    result: z.literal("error"),
     rejectionText: z.string(),
+    result: z.literal("error"),
   }),
 ]);
 
@@ -258,7 +262,11 @@ export const performExam = procedure
     };
     const lang = LANG[input.lessonType];
     const quiz = QUIZ[input.lessonType];
-    const transcript = await transcribeB64(lang, input.audio, ctx.user?.id ?? 0);
+    const transcript = await transcribeB64(
+      lang,
+      input.audio,
+      ctx.user?.id ?? 0,
+    );
     const card = await prismaClient.card.findUnique({
       where: { id: input.id },
     });
@@ -269,35 +277,25 @@ export const performExam = procedure
         rejectionText: "Transcription error",
       } as const;
     }
-    const result = card && (await quiz(transcript.text, card));
+    const [grade, reason] = card
+      ? await quiz(transcript.text, card)
+      : [0, "Error"];
     const userID = ctx.user?.id;
-    if (!result) {
-      console.log(`Invalid result: ${JSON.stringify(result)}`);
-      quizCompletion.labels({ result: "error", userID }).inc();
+    if (grade < 3) {
+      quizCompletion.labels({ result: "failure", userID }).inc();
       return {
-        result: "error",
-        rejectionText: "Invalid result?",
-      };
-    }
-    switch (result.correct) {
-      case true:
-        quizCompletion.labels({ result: "success", userID }).inc();
-        return {
-          result: "success",
-          userTranscription: transcript.text,
-        } as const;
-      case false:
-        quizCompletion.labels({ result: "failure", userID }).inc();
-        return {
-          result: "failure",
-          userTranscription: transcript.text,
-          rejectionText: result.why,
-        } as const;
-      default:
-        return {
-          result: "error",
-          rejectionText: "Invalid result?",
-        } as const;
+        result: "failure",
+        userTranscription: transcript.text,
+        rejectionText: reason || "Unknown reason",
+        grade,
+      } as const;
+    } else {
+      quizCompletion.labels({ result: "success", userID }).inc();
+      return {
+        result: "success",
+        userTranscription: transcript.text,
+        grade,
+      } as const;
     }
   });
 
@@ -312,6 +310,6 @@ export const failPhrase = procedure
       where: { id: input.id },
     });
     if (card) {
-      markIncorrect(card);
+      setGrade(card, 0);
     }
   });

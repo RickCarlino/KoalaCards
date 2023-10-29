@@ -7,7 +7,7 @@ export function SafeCounter<T extends string>(x: CounterConfiguration<T>) {
   if (!register.getSingleMetric(name)) {
     return new C({
       ...x,
-      name
+      name,
     });
   } else {
     return register.getSingleMetric(name) as C<T>;
