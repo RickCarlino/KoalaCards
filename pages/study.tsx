@@ -14,7 +14,7 @@ import {
   newQuizState,
   quizReducer,
 } from "../utils/_study_reducer";
-import { QuizFailure } from "../components/quiz-failure";
+import { QuizFailure, linkToEditPage } from "../components/quiz-failure";
 import { beep } from "@/utils/beep";
 
 type Props = {
@@ -35,6 +35,7 @@ const HEADER: Record<string, string> = {
   speaking: "Say in Korean",
   listening: "Translate to English",
 };
+
 function CardOverview({ quiz }: { quiz: CurrentQuiz }) {
   let term = "";
   let def = "";
@@ -58,13 +59,10 @@ function CardOverview({ quiz }: { quiz: CurrentQuiz }) {
 }
 
 function Study(props: Props) {
-  const phrasesById = props.quizzes.reduce(
-    (acc, quiz) => {
-      acc[quiz.id] = quiz;
-      return acc;
-    },
-    {} as Record<number, Quiz>,
-  );
+  const phrasesById = props.quizzes.reduce((acc, quiz) => {
+    acc[quiz.id] = quiz;
+    return acc;
+  }, {} as Record<number, Quiz>);
   const newState = newQuizState({
     phrasesById,
     totalCards: props.totalCards,
@@ -259,9 +257,7 @@ function Study(props: Props) {
         {state.totalCards} cards total, {state.quizzesDue} due, {state.newCards}{" "}
         new.
       </p>
-      <p>
-        <a href={["cards", quiz.id].join("/")}>Edit Card</a>
-      </p>
+      <p>{linkToEditPage(quiz.id)}</p>
       <Failure />
     </Container>
   );

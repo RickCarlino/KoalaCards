@@ -1,3 +1,7 @@
+export const linkToEditPage = (id: number) => {
+  return <a href={["cards", id].join("/")}>Edit Card</a>;
+};
+
 const style = {
   background: "#FFF0F5",
   font: "1em sans-serif",
@@ -27,6 +31,7 @@ export function QuizFailure(props: {
       <p>Definition: {props.definition}</p>
       <p>What you said: {props.userTranscription}</p>
       <p>Why it's wrong: {props.rejectionText}</p>
+      <p>{linkToEditPage(props.id)}</p>
     </div>
   );
 }
