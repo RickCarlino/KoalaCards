@@ -9,8 +9,8 @@ import {
 import { useState } from "react";
 
 interface Phrase {
-  korean: string;
-  english: string;
+  term: string;
+  definition: string;
 }
 
 interface ImportPageProps {}
@@ -40,9 +40,9 @@ const ImportPage: React.FC<ImportPageProps> = ({}) => {
         setIsLoading(false);
         return;
       }
-      let [korean, english] = line.split("\t");
+      let [term, english] = line.split("\t");
 
-      if (!korean) {
+      if (!term) {
         setError(
           `(Line ${lineIndex}/${total}) line must start with a vocabulary word.`,
         );
@@ -58,13 +58,13 @@ const ImportPage: React.FC<ImportPageProps> = ({}) => {
         return;
       }
 
-      korean = korean.trim();
+      term = term.trim();
       english = english.trim();
-      phrases.push({ korean, english });
+      phrases.push({ term: term, definition: english });
     }
 
     importPhrase.mutateAsync({ input: phrases }).then((imports) => {
-      setResult(imports.map((x) => [x.ko, x.en]));
+      setResult(imports.map((x) => [x.term, x.definition]));
     });
 
     setIsLoading(false);
@@ -78,9 +78,9 @@ const ImportPage: React.FC<ImportPageProps> = ({}) => {
         separated by a tab character. The order is as follows:
       </p>
       <ol>
-        <li>Korean sentence</li>
+        <li>Target language term</li>
         <li>A Tab character</li>
-        <li>The English translation or example sentence.</li>
+        <li>The translation</li>
       </ol>
       <p>
         <b>Pro Tip:</b>
@@ -113,8 +113,8 @@ const ImportPage: React.FC<ImportPageProps> = ({}) => {
       <table>
         <thead>
           <tr>
-            <th>Korean</th>
-            <th>English</th>
+            <th>Term</th>
+            <th>Definition</th>
           </tr>
         </thead>
         <tbody>

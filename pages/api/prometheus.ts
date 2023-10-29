@@ -16,7 +16,7 @@ import { NextApiResponse, NextApiRequest } from "next";
 import { collectDefaultMetrics, register } from "prom-client";
 
 if (!(global as any).defaultMetricsInitialized) {
-  collectDefaultMetrics();
+  collectDefaultMetrics({ prefix: "koala_" });
   (global as any).defaultMetricsInitialized = true;
 }
 
@@ -24,8 +24,6 @@ export default async function registerMetrics(
   req: NextApiRequest,
   res: NextApiResponse,
 ) {
-  console.log(req.headers);
-  // Check for the password in the request headers
   const authHeader = req.headers.authorization;
 
   if (!authHeader) {
@@ -35,7 +33,6 @@ export default async function registerMetrics(
   if (authHeader !== `Basic ${process.env.PROMETHEUS_SECRET}`) {
     return res.status(401).send("Unauthorized - Bad auth header");
   }
-  console.log("Auth OK");
   res.setHeader("Content-Type", register.contentType);
   res.end(await register.metrics());
 }

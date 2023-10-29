@@ -7,8 +7,8 @@ const style = {
 
 export function QuizFailure(props: {
   id: number;
-  ko: string;
-  en: string;
+  term: string;
+  definition: string;
   lessonType: string;
   userTranscription: string;
   rejectionText: string;
@@ -23,8 +23,8 @@ export function QuizFailure(props: {
       </button> */}
       <p>You answered the last question incorrectly:</p>
       <p>Quiz type: {props.lessonType}</p>
-      <p>Korean: {props.ko}</p>
-      <p>English: {props.en}</p>
+      <p>Term: {props.term}</p>
+      <p>Definition: {props.definition}</p>
       <p>What you said: {props.userTranscription}</p>
       <p>Why it's wrong: {props.rejectionText}</p>
     </div>

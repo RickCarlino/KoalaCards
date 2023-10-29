@@ -8,8 +8,8 @@ import util from "util";
 
 type LocalQuiz = {
   id: number;
-  en: string;
-  ko: string;
+  definition: string;
+  term: string;
   repetitions: number;
   lapses: number;
   audio: {
@@ -35,9 +35,9 @@ const DATA_DIR = process.env.DATA_DIR || ".";
 const VOICES = ["A", "B", "C", "D"].map((x) => `ko-KR-Wavenet-${x}`);
 const LESSON_SIZE = 5;
 const SSML: Record<LessonType, string> = {
-  dictation: `<speak><prosody rate="x-slow">{{ko}}</prosody></speak>`,
-  speaking: `<speak><voice language="en-US" gender="female">{{en}}</voice></speak>`,
-  listening: `<speak>{{ko}}</speak>`,
+  dictation: `<speak><prosody rate="x-slow">{{term}}</prosody></speak>`,
+  speaking: `<speak><voice language="en-US" gender="female">{{definition}}</voice></speak>`,
+  listening: `<speak>{{term}}</speak>`,
 };
 
 let CLIENT: TextToSpeechClient;
@@ -105,10 +105,13 @@ async function generateSpeech(txt: string, voice: string = randomVoice()) {
 
 async function generateLessonAudio(
   lessonType: LessonType,
-  _ko: string,
-  _en: string,
+  _term: string,
+  _definition: string,
 ) {
-  const ssml = template(SSML[lessonType], { ko: _ko, en: _en });
+  const ssml = template(SSML[lessonType], {
+    term: _term,
+    definition: _definition,
+  });
   return generateSpeech(ssml);
 }
 
@@ -136,18 +139,17 @@ export default async function getLessons(p: GetLessonInputParams) {
   });
   const output: LocalQuiz[] = [];
   for (const card of cards) {
-    const en = card.definition;
-    const ko = card.term;
+    const { term, definition } = card;
     output.push({
       id: card.id,
-      en,
-      ko,
+      definition,
+      term,
       repetitions: card.repetitions,
       lapses: card.lapses,
       audio: {
-        dictation: await generateLessonAudio("dictation", ko, en),
-        listening: await generateLessonAudio("listening", ko, en),
-        speaking: await generateLessonAudio("speaking", ko, en),
+        dictation: await generateLessonAudio("dictation", term, definition),
+        listening: await generateLessonAudio("listening", term, definition),
+        speaking: await generateLessonAudio("speaking", term, definition),
       },
     });
   }
