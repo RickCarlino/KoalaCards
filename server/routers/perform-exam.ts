@@ -287,7 +287,7 @@ export const performExam = procedure
       } as const;
     }
     const [grade, reason] = card
-      ? await quiz(transcript.text, card)
+      ? await quiz(transcript.text.slice(0, 80), card)
       : [0, "Error"];
     const userID = ctx.user?.id;
     if (grade < 3) {

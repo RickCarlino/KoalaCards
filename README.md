@@ -21,11 +21,11 @@ The app also gives feedback about _why_ you were wrong. 🧠
   </a>
 </p>
 
+I host a demo instance of the app [here](https://koala.vaporsoft.xyz/user) but please keep in mind I may **turn off the server during peak usage** to reduce costs. I have set up a [Patreon](https://www.patreon.com/rickcarlino) to help offset hosting costs. Please consider donating if you find the app useful.
+
 ## ~~ALPHA~~ Beta Software
 
-The app is now stable enough to be used for serious studying, but there are still stability issues and many features are still pending. If you want to use the app but are hitting stability issues, please reach out.
-
-I am also privately hosting an instance of KoalaSRS. Please [fill out this Google form](https://forms.gle/GFcpqvt1Hkfo4mWq5) if you are interested in trying it out or want to help with alpha testing. There is no free public instance at the moment due to hosting/API costs. I have also set up a [Patreon](https://www.patreon.com/rickcarlino) to help offset hosting costs.
+The app is now stable enough to be used for serious studying, but many features are still pending. If you want to use the app but are hitting stability issues, please reach out.
 
 Lastly, there is a [group on Club House](https://www.clubhouse.com/c/join/B2Tyn13w) to discuss KoalaSRS development in an informal manner. Feel free to drop in and say "hi" or suggest new ideas.
 
@@ -45,7 +45,7 @@ KoalaSRS rocks a minimal GUI because the focus is on what you can _hear_, not wh
 
 Here's how the app works:
 
-1. Korean sentences with English translations are loaded into a SQLite database (I use `seeds.ts` for now but an editor is in the works).
+1. Korean sentences with English translations are loaded into a SQLite database.
 1. The app creates a queue of sentences, sorted by scheduling need, which is calculated via a cards age and difficulty.
 1. The app asks the user to take one of three quizzes. All quizzes involve listening to Korean speech or speaking Korean sentences into the microphone. 🎤
 1. The user must pass a quiz to move on to the next card.
