@@ -21,6 +21,8 @@ The app also gives feedback about _why_ you were wrong. 🧠
   </a>
 </p>
 
+## Demo Server / Accounts
+
 I host a demo instance of the app [here](https://koala.vaporsoft.xyz/user) but please keep in mind I may **turn off the server during peak usage** to reduce costs. I have set up a [Patreon](https://www.patreon.com/rickcarlino) to help offset hosting costs. Please consider donating if you find the app useful.
 
 ## ~~ALPHA~~ Beta Software
