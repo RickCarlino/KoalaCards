@@ -16,12 +16,14 @@ export const appRouter = router({
   importPhrases: procedure
     .input(
       z.object({
-        input: z.array(
-          z.object({
-            term: z.string(),
-            definition: z.string(),
-          }),
-        ),
+        input: z
+          .array(
+            z.object({
+              term: z.string().max(1000),
+              definition: z.string(),
+            }),
+          )
+          .max(1000),
       }),
     )
     .output(
