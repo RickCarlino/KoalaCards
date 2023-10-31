@@ -35,8 +35,6 @@ const tokenUsage = SafeCounter({
   labelNames: ["userID"],
 });
 
-const STRICTNESS = 0.2; // Always subtract this from grades.
-
 const GRADED_RESPONSE = {
   name: "grade_quiz",
   parameters: {
@@ -84,27 +82,35 @@ const GRADED_RESPONSE = {
 };
 
 const SYSTEM_PROMPT = `
-You are an educational Korean learning app.
-You grade speaking, listening and dictation drills provided
-by students.
+== Welcome to the KoalaSRS - a Korean Language Learning App!
 
-How you will grade:
+As an educational Korean learning tool, I'm here to grade your
+speaking, listening, and dictation drills.
 
-1. take what the student said and translate it to the other language.
-2. compare the student's translation to the provided translation.
-3. Provide a grade (and justification) using the follwoing scale:
+Here's how I will grade:
 
-Grade 0 - WRONG User said "I don't know", gave up did not speak.
-  Grade 1 - WRONG Totally different meaning.
-  Grade 2 - WRONG Most words are correct, but conveys a different meaning.
-  Grade 3 - CORRECT but awkward or unnatural. Conveys correct meaning and is understandable by native speakers.
-  Grade 4 - CORRECT Correct except for spelling, punctuation, pronoun usage.
-  Grade 5 - CORRECT Perfectly correct.
+== Grade 0 - WRONG 
+- If the user says "I don't know", gives up, or remains silent.
+- If the sentence is entirely unrelated to the provided one.
 
-Remember:
- * If the user says "I don't know" or similar, always grade 0.
- * If the sentence is completely different than the provided sentence, always grade 0.
- * Have a cheerful and helpful tone.
+== Grade 1 - WRONG 
+- The sentence has a completely different meaning from the original.
+
+== Grade 2 - WRONG 
+- Majority of the words are correct, but some key parts alter the overall meaning.
+
+== Grade 3 - CORRECT (with reservations) 
+- The sentence is understandable by native speakers and conveys the correct meaning but may sound awkward or unnatural.
+
+== Grade 4 - CORRECT (minor mistakes) 
+- The meaning is spot on, but there are small errors like spelling, punctuation, or incorrect pronoun usage.
+
+== Grade 5 - PERFECT 
+- The sentence is impeccable in both meaning and form.
+
+== Remember:
+- The user is paraphrasing, not memorizing translations word-for-word.
+- Don't English translations. The user is not learning English.
 `;
 
 export const gradedResponse = async (
@@ -112,7 +118,6 @@ export const gradedResponse = async (
   userID: string | number,
 ): Promise<[number, string | undefined]> => {
   const content = input.replace(/^\s+/gm, "");
-  console.log(content);
   const answer = await gptCall({
     messages: [
       { role: "user", content },
@@ -120,7 +125,7 @@ export const gradedResponse = async (
     ],
     model: "gpt-3.5-turbo-0613",
     n: 2,
-    temperature: 1.0,
+    temperature: 0.8,
     function_call: { name: "grade_quiz" },
     functions: [GRADED_RESPONSE],
   });
@@ -128,22 +133,21 @@ export const gradedResponse = async (
     throw new Error("No answer");
   }
   tokenUsage.labels({ userID }).inc(answer.usage?.total_tokens ?? 0);
-  const results = answer.choices
+  type Result = [number, string | undefined];
+  const results: Result[] = answer.choices
     .map((x) => JSON.stringify(x.message?.function_call))
     .map((x) => JSON.parse(JSON.parse(x).arguments))
     .filter((x) => !!x)
     .map((x) => x as { grade: number; explanation?: string })
-    .map((x) => [x.grade, x.explanation] as const);
-  const avg = results.reduce((acc, [grade]) => acc + grade, 0) / results.length;
-  let expl: string | undefined = undefined;
-  for (const [, value] of results) {
-    if (value !== undefined) {
-      expl = value;
-      break;
-    }
-  }
-  console.log([...results, [avg, expl]].map((x) => x.join(" / ")).join("\n"));
-  return [avg - STRICTNESS, expl];
+    .map((x): Result => [x.grade, x.explanation]);
+
+  const result = results.reduce((prev, curr) => {
+    return Math.abs(curr[0] - 3) < Math.abs(prev[0] - 3) ? curr : prev;
+  });
+  console.log(`#`.repeat(20));
+  console.log(results);
+  console.log(result);
+  return result;
 };
 
 const gradeAndUpdateTimestamps = (card: Card, grade: number) => {
