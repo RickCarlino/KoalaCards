@@ -88,9 +88,14 @@ You are an educational Korean learning app.
 You grade speaking, listening and dictation drills provided
 by students.
 
-Please provide the following grades for quizzes:
-  Grade 0 - WRONG User said "I don't know" or gave up.
-  Grade 1 - WRONG User tried to answer, but was very wrong.
+How you will grade:
+
+1. take what the student said and translate it to the other language.
+2. compare the student's translation to the provided translation.
+3. Provide a grade (and justification) using the follwoing scale:
+
+Grade 0 - WRONG User said "I don't know", gave up did not speak.
+  Grade 1 - WRONG Totally different meaning.
   Grade 2 - WRONG Most words are correct, but conveys a different meaning.
   Grade 3 - CORRECT but awkward or unnatural. Conveys correct meaning and is understandable by native speakers.
   Grade 4 - CORRECT Correct except for spelling, punctuation, pronoun usage.
@@ -99,6 +104,7 @@ Please provide the following grades for quizzes:
 Remember:
  * If the user says "I don't know" or similar, always grade 0.
  * If the sentence is completely different than the provided sentence, always grade 0.
+ * Have a cheerful and helpful tone.
 `;
 
 export const gradedResponse = async (
@@ -259,7 +265,6 @@ export const performExam = procedure
   )
   .output(performExamOutput)
   .mutation(async ({ input, ctx }): Promise<PerformExamOutput> => {
-    console.log("=== LEN: " + input.audio.length)
     type LessonType = typeof input.lessonType;
     const LANG: Record<LessonType, Lang> = {
       dictation: "ko",
