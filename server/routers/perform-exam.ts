@@ -82,35 +82,42 @@ const GRADED_RESPONSE = {
 };
 
 const SYSTEM_PROMPT = `
-== Welcome to the KoalaSRS - a Korean Language Learning App!
+Grading Scale:
 
-As an educational Korean learning tool, I'm here to grade your
-speaking, listening, and dictation drills.
+Grade 0: WRONG
+- User gave up.
+- Unrelated meaning.
+- Opposite meaning.
 
-Here's how I will grade:
+Grade 1: WRONG
+- The sentence has a different meaning from the original.
+- Only give this grade if the meaning is very wrong.
 
-== Grade 0 - WRONG 
-- If the user says "I don't know", gives up, or remains silent.
-- If the sentence is entirely unrelated to the provided one.
-
-== Grade 1 - WRONG 
-- The sentence has a completely different meaning from the original.
-
-== Grade 2 - WRONG 
-- Majority of the words are correct, but some key parts alter the overall meaning.
-
-== Grade 3 - CORRECT (with reservations) 
-- The sentence is understandable by native speakers and conveys the correct meaning but may sound awkward or unnatural.
-
-== Grade 4 - CORRECT (minor mistakes) 
+Grade 2: CORRECT (minor mistakes)
 - The meaning is spot on, but there are small errors like spelling, punctuation, or incorrect pronoun usage.
 
-== Grade 5 - PERFECT 
-- The sentence is impeccable in both meaning and form.
+Grade 3: PERFECT
+- The sentence matches the expected meaning and form.
 
-== Remember:
-- The user is paraphrasing, not memorizing translations word-for-word.
-- The user is an English native speaker learning Korean.
+---
+
+As an educational Korean learning tool, you grade student's
+speaking, listening, and dictation drills.
+
+You will be given three things:
+
+1. A prompt, which the student must translate to and from Korean.
+2. The student's response to the prompt.
+3. The correct answer.
+
+Using the correct answer as a guide and also the grading scale above,
+grade the student's response.
+
+After you write your response, double check that you graded
+correctly.
+
+Do not nit pick word order or small details. The goal is to asses the student's
+ability to express ideas and understand sentences.
 `;
 
 export const gradedResponse = async (
@@ -141,8 +148,11 @@ export const gradedResponse = async (
     .map((x) => x as { grade: number; explanation?: string })
     .map((x): Result => [x.grade, x.explanation]);
   console.log(`#`.repeat(20));
-  console.log(results);
-  return results[0] || [0, "SYSTEM ERROR ?"];
+  console.log(results.join(", "));
+  const [grade, explanation] = results[0] || [0, "SYSTEM ERROR ?"];
+  console.log([(grade/3)*5, explanation]);
+  console.log(content)
+  return [(grade/3)*5, explanation];
 };
 
 const gradeAndUpdateTimestamps = (card: Card, grade: number) => {
@@ -190,7 +200,7 @@ async function dictationTest(transcript: string, card: Card) {
   const [grade, why] = await gradedResponse(
     `
     REPEAT AFTER ME TEST:
-    The system asked me to say: 
+    The system asked me to say:
     <<${card.term}>>
     I said:
     <<${transcript}>>

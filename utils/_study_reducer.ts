@@ -95,17 +95,17 @@ export function currentQuiz(state: State): CurrentQuiz | undefined {
   // // makes sense and is an artifact of a previous architecture.
   // // In the future we should calculate this on the backend and only
   // // send audio for the appropriate quiz.
-  const PROGRESSION: LessonType[] = ["dictation", "listening"];
-  const progression = PROGRESSION[quiz.repetitions];
-  if (progression) {
-    lessonType = progression;
-  } else {
+  // const PROGRESSION: LessonType[] = ["dictation", "listening"];
+  // const progression = PROGRESSION[quiz.repetitions];
+  // if (progression) {
+  //   lessonType = progression;
+  // } else {
     // After the nth repetition, the lessonType
     // oscillates between listening and speaking.
     const nonce = quiz.id + quiz.repetitions;
     const x = nonce % 2;
     lessonType = x === 0 ? "listening" : "speaking";
-  }
+  // }
   return {
     id: quiz.id,
     definition: quiz.definition,
