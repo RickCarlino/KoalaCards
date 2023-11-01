@@ -110,7 +110,7 @@ Here's how I will grade:
 
 == Remember:
 - The user is paraphrasing, not memorizing translations word-for-word.
-- Don't English translations. The user is not learning English.
+- The user is an English native speaker learning Korean.
 `;
 
 export const gradedResponse = async (
