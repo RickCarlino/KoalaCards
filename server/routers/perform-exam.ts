@@ -124,8 +124,8 @@ export const gradedResponse = async (
       { role: "system", content: SYSTEM_PROMPT },
     ],
     model: "gpt-3.5-turbo-0613",
-    n: 2,
-    temperature: 0.8,
+    n: 1,
+    temperature: 0,
     function_call: { name: "grade_quiz" },
     functions: [GRADED_RESPONSE],
   });
@@ -140,14 +140,9 @@ export const gradedResponse = async (
     .filter((x) => !!x)
     .map((x) => x as { grade: number; explanation?: string })
     .map((x): Result => [x.grade, x.explanation]);
-
-  const result = results.reduce((prev, curr) => {
-    return Math.abs(curr[0] - 3) < Math.abs(prev[0] - 3) ? curr : prev;
-  });
   console.log(`#`.repeat(20));
   console.log(results);
-  console.log(result);
-  return result;
+  return results[0] || [0, "SYSTEM ERROR ?"];
 };
 
 const gradeAndUpdateTimestamps = (card: Card, grade: number) => {
