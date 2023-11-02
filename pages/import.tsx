@@ -8,7 +8,7 @@ import {
 } from "@mantine/core";
 import { useState } from "react";
 
-interface Phrase {
+interface Card {
   term: string;
   definition: string;
 }
@@ -20,14 +20,14 @@ const ImportPage: React.FC<ImportPageProps> = ({}) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<[string, string][]>([]);
-  const importPhrase = trpc.importPhrases.useMutation();
+  const importCard = trpc.importCards.useMutation();
 
   const handleSubmit = async () => {
     setIsLoading(true);
     setError(null);
 
     const lines = text.split("\n");
-    const phrases: Phrase[] = [];
+    const cards: Card[] = [];
     let lineIndex = 0;
     let total = lines.length;
     for (let line of lines) {
@@ -35,7 +35,7 @@ const ImportPage: React.FC<ImportPageProps> = ({}) => {
       if (line.length < 3) continue;
       if (line.split("\t")[0].length > 80) {
         setError(
-          `(Line ${lineIndex}/${total}) Is too long. KoalaSRS is optimized for short phrases.`,
+          `(Line ${lineIndex}/${total}) Is too long. KoalaSRS is optimized for short cards.`,
         );
         setIsLoading(false);
         return;
@@ -60,10 +60,10 @@ const ImportPage: React.FC<ImportPageProps> = ({}) => {
 
       term = term.trim();
       english = english.trim();
-      phrases.push({ term: term, definition: english });
+      cards.push({ term: term, definition: english });
     }
 
-    importPhrase.mutateAsync({ input: phrases }).then((imports) => {
+    importCard.mutateAsync({ input: cards }).then((imports) => {
       setResult(imports.map((x) => [x.term, x.definition]));
     });
 
@@ -74,7 +74,7 @@ const ImportPage: React.FC<ImportPageProps> = ({}) => {
     <Paper>
       <h1>Import New Cards</h1>
       <p>
-        Enter a list of phrases below, one per line. Each line has three parts,
+        Enter a list of cards below, one per line. Each line has two parts,
         separated by a tab character. The order is as follows:
       </p>
       <ol>
@@ -84,10 +84,10 @@ const ImportPage: React.FC<ImportPageProps> = ({}) => {
       </ol>
       <p>
         <b>Pro Tip:</b>
-        Edit your phrases in a spreadsheet program like Excel or Google Sheets,
+        Edit your cards in a spreadsheet program like Excel or Google Sheets,
         then copy and paste them here.
       </p>
-      <h3>Example of phrase input:</h3>
+      <h3>Example of card input:</h3>
       <pre>그는 나를 웃게 했어요. He made me laugh.</pre>
       <Textarea
         minRows={10}
@@ -109,7 +109,7 @@ const ImportPage: React.FC<ImportPageProps> = ({}) => {
 
   const finish = (
     <Paper>
-      <h1>Imported Phrases</h1>
+      <h1>Imported Cards</h1>
       <table>
         <thead>
           <tr>

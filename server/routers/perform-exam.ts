@@ -46,8 +46,8 @@ const GRADED_RESPONSE = {
       grade: {
         type: "integer",
         minimum: 0,
-        maximum: 5,
-        description: "The grade given to the quiz, ranging from 0 to 5.",
+        maximum: 3,
+        description: "The grade given to the quiz, ranging from 0 to 3.",
       },
       explanation: {
         type: "string",
@@ -62,7 +62,7 @@ const GRADED_RESPONSE = {
             properties: {
               grade: {
                 type: "integer",
-                enum: [4, 5],
+                enum: [2, 3],
               },
             },
           },
@@ -70,7 +70,7 @@ const GRADED_RESPONSE = {
             properties: {
               grade: {
                 type: "integer",
-                enum: [0, 1, 2, 3],
+                enum: [0, 1],
               },
             },
             required: ["explanation"],
@@ -82,21 +82,42 @@ const GRADED_RESPONSE = {
 };
 
 const SYSTEM_PROMPT = `
-You are an educational Korean learning app.
-You grade speaking, listening and dictation drills provided
-by students.
+Grading Scale:
 
-Please provide the following grades for quizzes:
-  Grade 0 - WRONG User said "I don't know" or gave up.
-  Grade 1 - WRONG User tried to answer, but was very wrong.
-  Grade 2 - WRONG Most words are correct, but conveys a different meaning.
-  Grade 3 - MOSTLY CORRECT Expresses correct meaning, but is awkward or unnatural.
-  Grade 4 - CORRECT Correct except for spelling, punctuation, pronoun usage.
-  Grade 5 - CORRECT Perfectly correct.
+Grade 0: WRONG
+- User gave up.
+- Unrelated meaning.
+- Opposite meaning.
 
-Remember:
- * If the user says "I don't know" or similar, always grade 0.
- * If the sentence is completely different than the provided sentence, always grade 0.
+Grade 1: WRONG
+- The sentence has a different meaning from the original.
+- Only give this grade if the meaning is very wrong.
+
+Grade 2: CORRECT (minor mistakes)
+- The meaning is spot on, but there are small errors like spelling, punctuation, or incorrect pronoun usage.
+
+Grade 3: PERFECT
+- The sentence matches the expected meaning and form.
+
+---
+
+As an educational Korean learning tool, you grade student's
+speaking, listening, and dictation drills.
+
+You will be given three things:
+
+1. A prompt, which the student must translate to and from Korean.
+2. The student's response to the prompt.
+3. The correct answer.
+
+Using the correct answer as a guide and also the grading scale above,
+grade the student's response.
+
+After you write your response, double check that you graded
+correctly.
+
+Do not nit pick word order or small details. The goal is to asses the student's
+ability to express ideas and understand sentences.
 `;
 
 export const gradedResponse = async (
@@ -104,15 +125,14 @@ export const gradedResponse = async (
   userID: string | number,
 ): Promise<[number, string | undefined]> => {
   const content = input.replace(/^\s+/gm, "");
-  console.log(content);
   const answer = await gptCall({
     messages: [
       { role: "user", content },
       { role: "system", content: SYSTEM_PROMPT },
     ],
     model: "gpt-3.5-turbo-0613",
-    n: 2,
-    temperature: 1.0,
+    n: 1,
+    temperature: 0,
     function_call: { name: "grade_quiz" },
     functions: [GRADED_RESPONSE],
   });
@@ -120,23 +140,20 @@ export const gradedResponse = async (
     throw new Error("No answer");
   }
   tokenUsage.labels({ userID }).inc(answer.usage?.total_tokens ?? 0);
-  const results = answer.choices
+  type Result = [number, string | undefined];
+  const results: Result[] = answer.choices
     .map((x) => JSON.stringify(x.message?.function_call))
     .map((x) => JSON.parse(JSON.parse(x).arguments))
     .filter((x) => !!x)
     .map((x) => x as { grade: number; explanation?: string })
-    .map((x) => [x.grade, x.explanation] as const);
-  const avg = results.reduce((acc, [grade]) => acc + grade, 0) / results.length;
-  let expl: string | undefined = undefined;
-  for (const [, value] of results) {
-    if (value !== undefined) {
-      expl = value;
-      break;
-    }
-  }
-  const TIPPING_POINT = 0.1; // A grade of exactly 3.0 should be marked wrong.
-  console.log([...results, [avg, expl]].map((x) => x.join(" / ")).join("\n"));
-  return [avg - TIPPING_POINT, expl];
+    .map((x): Result => [x.grade, x.explanation]);
+  console.log("\n" + `#`.repeat(20));
+  console.log(content);
+  const result = results[0];
+  const scaled = (result[0] / 3) * 5;
+  const explanation = result[1] || "No explanation";
+  console.log([result[0], scaled, explanation].join(" => "));
+  return [scaled, explanation];
 };
 
 const gradeAndUpdateTimestamps = (card: Card, grade: number) => {
@@ -184,7 +201,7 @@ async function dictationTest(transcript: string, card: Card) {
   const [grade, why] = await gradedResponse(
     `
     REPEAT AFTER ME TEST:
-    The system asked me to say: 
+    The system asked me to say:
     <<${card.term}>>
     I said:
     <<${transcript}>>
@@ -235,6 +252,13 @@ const performExamOutput = z.union([
     result: z.literal("success"),
   }),
   z.object({
+    // ADD previousSpacingData HERE
+    previousSpacingData: z.object({
+      repetitions: z.number(),
+      interval: z.number(),
+      ease: z.number(),
+      lapses: z.number(),
+    }),
     grade: z.number(),
     rejectionText: z.string(),
     userTranscription: z.string(),
@@ -252,7 +276,7 @@ export const performExam = procedure
   .input(
     z.object({
       lessonType,
-      audio: z.string(),
+      audio: z.string().max(800000), // 15 seconds max
       id: z.number(),
     }),
   )
@@ -286,6 +310,19 @@ export const performExam = procedure
         rejectionText: "Transcription error",
       } as const;
     }
+    if (!card) {
+      console.log(`Card not found`);
+      return {
+        result: "error",
+        rejectionText: "Card not found",
+      } as const;
+    }
+    const previousSpacingData = {
+      repetitions: card.repetitions,
+      interval: card.interval,
+      ease: card.ease,
+      lapses: card.lapses,
+    };
     const [grade, reason] = card
       ? await quiz(transcript.text.slice(0, 80), card)
       : [0, "Error"];
@@ -297,6 +334,7 @@ export const performExam = procedure
         userTranscription: transcript.text,
         rejectionText: reason || "Unknown reason",
         grade,
+        previousSpacingData,
       } as const;
     } else {
       quizCompletion.labels({ result: "success", userID }).inc();
@@ -308,7 +346,7 @@ export const performExam = procedure
     }
   });
 
-export const failPhrase = procedure
+export const failCard = procedure
   .input(
     z.object({
       id: z.number(),

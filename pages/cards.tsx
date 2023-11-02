@@ -4,8 +4,8 @@ import { Container } from "@mantine/core";
 import Authed from "../components/authed";
 
 const Edit: React.FC = () => {
-  /** Call the "getAllPhrases" trpc method. */
-  const cards = trpc.getAllPhrases.useQuery({});
+  /** Call the "getAllCards" trpc method. */
+  const cards = trpc.getAllCards.useQuery({});
   let content = <div>Loading...</div>;
   if (cards.data) {
     content = <CardTable cards={cards.data} />;

@@ -59,20 +59,24 @@ function CardOverview({ quiz }: { quiz: CurrentQuiz }) {
 }
 
 function Study(props: Props) {
-  const phrasesById = props.quizzes.reduce((acc, quiz) => {
-    acc[quiz.id] = quiz;
-    return acc;
-  }, {} as Record<number, Quiz>);
+  const cardsById = props.quizzes.reduce(
+    (acc, quiz) => {
+      acc[quiz.id] = quiz;
+      return acc;
+    },
+    {} as Record<number, Quiz>,
+  );
   const newState = newQuizState({
-    phrasesById,
+    cardsById,
     totalCards: props.totalCards,
     quizzesDue: props.quizzesDue,
     newCards: props.newCards,
   });
   const [state, dispatch] = useReducer(quizReducer, newState);
   const performExam = trpc.performExam.useMutation();
-  const failPhrase = trpc.failPhrase.useMutation();
-  const flagPhrase = trpc.flagPhrase.useMutation();
+  const failCard = trpc.failCard.useMutation();
+  const flagCard = trpc.flagCard.useMutation();
+  const editCard = trpc.editCard.useMutation();
   const getNextQuiz = trpc.getNextQuiz.useMutation();
   const needBetterErrorHandler = (error: any) => {
     console.error(error);
@@ -90,26 +94,38 @@ function Study(props: Props) {
 
   const doFail = (id: number) => {
     dispatch({ type: "USER_GAVE_UP", id });
-    failPhrase.mutateAsync({ id }).catch(needBetterErrorHandler);
+    failCard.mutateAsync({ id }).catch(needBetterErrorHandler);
   };
 
   /** goToNext flag controls if the session will skip to next
    * card or not. */
   const doFlag = (id: number, goToNext = true) => {
     goToNext && dispatch({ type: "FLAG_QUIZ", id });
-    flagPhrase.mutateAsync({ id }).catch(needBetterErrorHandler);
+    return flagCard.mutateAsync({ id }).catch(needBetterErrorHandler);
   };
 
   function Failure() {
     const f = state.failure;
     if (!f) return null;
-    return (
-      <QuizFailure
-        {...f}
-        onDiscard={() => alert("Coming soon!")}
-        onFlag={() => doFlag(f.id, false)}
-      />
-    );
+    const clear = () => dispatch({ type: "SET_FAILURE", value: null });
+    const psd = f.previousSpacingData;
+    const failProps: Parameters<typeof QuizFailure>[0] = {
+      ...f,
+      onFlag: () => {
+        doFlag(f.id, false).then(clear);
+      },
+    };
+    if (psd) {
+      failProps.onDiscard = () => {
+        editCard
+          .mutateAsync({
+            id: f.id,
+            ...psd,
+          })
+          .then(clear);
+      };
+    }
+    return <QuizFailure {...failProps} />;
   }
   if (!quiz) {
     return (
@@ -161,6 +177,7 @@ function Study(props: Props) {
                 lessonType: quiz.lessonType,
                 userTranscription: data.userTranscription,
                 rejectionText: data.rejectionText,
+                previousSpacingData: data.previousSpacingData,
               },
             });
             break;
