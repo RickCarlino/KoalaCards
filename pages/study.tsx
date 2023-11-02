@@ -106,13 +106,17 @@ function Study(props: Props) {
   function Failure() {
     const f = state.failure;
     if (!f) return null;
-    return (
-      <QuizFailure
-        {...f}
-        onDiscard={() => alert("Coming soon!")}
-        onFlag={() => doFlag(f.id, false)}
-      />
-    );
+    const psd = f.previousSpacingData;
+    const failProps: Parameters<typeof QuizFailure>[0] = {
+      ...f,
+      onFlag: () => doFlag(f.id, false),
+    };
+    if (psd) {
+      failProps.onDiscard = () => {
+        alert("Not implemented yet");
+      };
+    }
+    return <QuizFailure {...failProps} />;
   }
   if (!quiz) {
     return (

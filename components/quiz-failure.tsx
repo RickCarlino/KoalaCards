@@ -17,14 +17,15 @@ export function QuizFailure(props: {
   userTranscription: string;
   rejectionText: string;
   onFlag: () => void;
-  onDiscard: () => void;
+  onDiscard?: () => void;
 }) {
+  const discard = props.onDiscard && (
+    <button onClick={props.onDiscard}>Discard Results</button>
+  );
   return (
     <div style={style}>
       <button onClick={props.onFlag}>Flag Item</button>
-      {/* <button onClick={props.onDiscard}>
-        Discard Results
-      </button> */}
+      {discard}
       <p>You answered the last question incorrectly:</p>
       <p>Quiz type: {props.lessonType}</p>
       <p>Term: {props.term}</p>
