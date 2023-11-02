@@ -150,9 +150,9 @@ export const gradedResponse = async (
   console.log(`#`.repeat(20));
   console.log(results.join(", "));
   const [grade, explanation] = results[0] || [0, "SYSTEM ERROR ?"];
-  console.log([(grade/3)*5, explanation]);
-  console.log(content)
-  return [(grade/3)*5, explanation];
+  console.log([(grade / 3) * 5, explanation]);
+  console.log(content);
+  return [(grade / 3) * 5, explanation];
 };
 
 const gradeAndUpdateTimestamps = (card: Card, grade: number) => {
@@ -251,6 +251,13 @@ const performExamOutput = z.union([
     result: z.literal("success"),
   }),
   z.object({
+    // ADD previousSpacingData HERE
+    previousSpacingData: z.object({
+      repetitions: z.number(),
+      interval: z.number(),
+      ease: z.number(),
+      lapses: z.number(),
+    }),
     grade: z.number(),
     rejectionText: z.string(),
     userTranscription: z.string(),
@@ -302,6 +309,19 @@ export const performExam = procedure
         rejectionText: "Transcription error",
       } as const;
     }
+    if (!card) {
+      console.log(`Card not found`);
+      return {
+        result: "error",
+        rejectionText: "Card not found",
+      } as const;
+    }
+    const previousSpacingData = {
+      repetitions: card.repetitions,
+      interval: card.interval,
+      ease: card.ease,
+      lapses: card.lapses,
+    };
     const [grade, reason] = card
       ? await quiz(transcript.text.slice(0, 80), card)
       : [0, "Error"];
@@ -313,6 +333,7 @@ export const performExam = procedure
         userTranscription: transcript.text,
         rejectionText: reason || "Unknown reason",
         grade,
+        previousSpacingData,
       } as const;
     } else {
       quizCompletion.labels({ result: "success", userID }).inc();

@@ -164,6 +164,7 @@ function Study(props: Props) {
                 lessonType: quiz.lessonType,
                 userTranscription: data.userTranscription,
                 rejectionText: data.rejectionText,
+                previousSpacingData: data.previousSpacingData,
               },
             });
             break;
