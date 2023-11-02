@@ -150,10 +150,14 @@ export const gradedResponse = async (
   console.log("\n" + `#`.repeat(20));
   console.log(content);
   const result = results[0];
-  const scaled = (result[0] / 3) * 5;
+  // Add some jitter to the score
+  // to prevent scheduling pileups when
+  // the user crams many cards at one time.
+  const jitter = Math.random() * 0.8;
+  const scaled = ((result[0] + jitter) / 3) * 5;
   const explanation = result[1] || "No explanation";
   console.log([result[0], scaled, explanation].join(" => "));
-  return [scaled, explanation];
+  return [Math.max(scaled, 5), explanation];
 };
 
 const gradeAndUpdateTimestamps = (card: Card, grade: number) => {
