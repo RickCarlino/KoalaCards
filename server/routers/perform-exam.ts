@@ -46,8 +46,8 @@ const GRADED_RESPONSE = {
       grade: {
         type: "integer",
         minimum: 0,
-        maximum: 5,
-        description: "The grade given to the quiz, ranging from 0 to 5.",
+        maximum: 3,
+        description: "The grade given to the quiz, ranging from 0 to 3.",
       },
       explanation: {
         type: "string",
@@ -62,7 +62,7 @@ const GRADED_RESPONSE = {
             properties: {
               grade: {
                 type: "integer",
-                enum: [3, 4, 5],
+                enum: [2, 3],
               },
             },
           },
@@ -70,7 +70,7 @@ const GRADED_RESPONSE = {
             properties: {
               grade: {
                 type: "integer",
-                enum: [0, 1, 2],
+                enum: [0, 1],
               },
             },
             required: ["explanation"],

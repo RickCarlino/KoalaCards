@@ -74,7 +74,7 @@ const ImportPage: React.FC<ImportPageProps> = ({}) => {
     <Paper>
       <h1>Import New Cards</h1>
       <p>
-        Enter a list of cards below, one per line. Each line has three parts,
+        Enter a list of cards below, one per line. Each line has two parts,
         separated by a tab character. The order is as follows:
       </p>
       <ol>
