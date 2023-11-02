@@ -2,7 +2,7 @@ import { z } from "zod";
 import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc";
 
-export const flagPhrase = procedure
+export const flagCard = procedure
   .input(
     z.object({
       id: z.number(),

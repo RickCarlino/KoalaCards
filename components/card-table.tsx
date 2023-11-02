@@ -9,11 +9,11 @@ type Card = {
   term: string;
   definition: string;
 };
-interface PhraseTableProps {
+interface CardTableProps {
   cards: Card[];
 }
 
-export const CardTable: React.FC<PhraseTableProps> = ({ cards }) => {
+export const CardTable: React.FC<CardTableProps> = ({ cards }) => {
   const router = useRouter();
   return (
     <Table>

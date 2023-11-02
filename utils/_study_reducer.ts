@@ -30,7 +30,7 @@ type State = {
   numQuizzesAwaitingServerResponse: number;
   errors: string[];
   quizIDsForLesson: number[];
-  phrasesById: Record<string, Quiz>;
+  cardsById: Record<string, Quiz>;
   isRecording: boolean;
   failure: Failure | null;
   totalCards: number;
@@ -73,11 +73,11 @@ export function gotoNextQuiz(state: State): State {
 }
 
 export const newQuizState = (state: Partial<State> = {}): State => {
-  const phrasesById = state.phrasesById || {};
-  const remainingQuizIDs = Object.keys(phrasesById).map((x) => parseInt(x));
+  const cardsById = state.cardsById || {};
+  const remainingQuizIDs = Object.keys(cardsById).map((x) => parseInt(x));
   return {
     numQuizzesAwaitingServerResponse: 0,
-    phrasesById,
+    cardsById,
     quizIDsForLesson: remainingQuizIDs,
     errors: [],
     isRecording: false,
@@ -91,7 +91,7 @@ export const newQuizState = (state: Partial<State> = {}): State => {
 
 export function currentQuiz(state: State): CurrentQuiz | undefined {
   const quizID = state.quizIDsForLesson[0];
-  const quiz = state.phrasesById[quizID];
+  const quiz = state.cardsById[quizID];
   if (!quiz) {
     console.log("=== No quiz found for quizID " + (quizID ?? "null"));
     return undefined;
@@ -137,7 +137,7 @@ function reduce(state: State, action: Action): State {
       };
     case "USER_GAVE_UP":
       const nextState = gotoNextQuiz(state);
-      const card = state.phrasesById[action.id];
+      const card = state.cardsById[action.id];
       return {
         ...nextState,
         failure: {
@@ -168,7 +168,7 @@ function reduce(state: State, action: Action): State {
       const newStuff = action.quizzes.map((x) => x.id);
       const oldStuff = state.quizIDsForLesson;
       const nextQuizIDsForLesson = [...oldStuff, ...newStuff];
-      const nextphrasesById: Record<string, Quiz> = action.quizzes.reduce(
+      const nextcardsById: Record<string, Quiz> = action.quizzes.reduce(
         (acc, x) => {
           acc[x.id] = x;
           return acc;
@@ -177,12 +177,12 @@ function reduce(state: State, action: Action): State {
       );
 
       nextQuizIDsForLesson.forEach((id) => {
-        nextphrasesById[id] ??= state.phrasesById[id];
+        nextcardsById[id] ??= state.cardsById[id];
       });
 
       return {
         ...state,
-        phrasesById: nextphrasesById,
+        cardsById: nextcardsById,
         quizIDsForLesson: nextQuizIDsForLesson,
         totalCards: action.totalCards,
         quizzesDue: action.quizzesDue,

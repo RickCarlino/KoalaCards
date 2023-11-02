@@ -2,7 +2,7 @@ import { z } from "zod";
 import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc";
 
-export const importPhrases = procedure
+export const importCards = procedure
   .input(
     z.object({
       input: z

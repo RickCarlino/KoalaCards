@@ -59,7 +59,7 @@ function CardOverview({ quiz }: { quiz: CurrentQuiz }) {
 }
 
 function Study(props: Props) {
-  const phrasesById = props.quizzes.reduce(
+  const cardsById = props.quizzes.reduce(
     (acc, quiz) => {
       acc[quiz.id] = quiz;
       return acc;
@@ -67,15 +67,15 @@ function Study(props: Props) {
     {} as Record<number, Quiz>,
   );
   const newState = newQuizState({
-    phrasesById,
+    cardsById,
     totalCards: props.totalCards,
     quizzesDue: props.quizzesDue,
     newCards: props.newCards,
   });
   const [state, dispatch] = useReducer(quizReducer, newState);
   const performExam = trpc.performExam.useMutation();
-  const failPhrase = trpc.failPhrase.useMutation();
-  const flagPhrase = trpc.flagPhrase.useMutation();
+  const failCard = trpc.failCard.useMutation();
+  const flagCard = trpc.flagCard.useMutation();
   const getNextQuiz = trpc.getNextQuiz.useMutation();
   const needBetterErrorHandler = (error: any) => {
     console.error(error);
@@ -93,14 +93,14 @@ function Study(props: Props) {
 
   const doFail = (id: number) => {
     dispatch({ type: "USER_GAVE_UP", id });
-    failPhrase.mutateAsync({ id }).catch(needBetterErrorHandler);
+    failCard.mutateAsync({ id }).catch(needBetterErrorHandler);
   };
 
   /** goToNext flag controls if the session will skip to next
    * card or not. */
   const doFlag = (id: number, goToNext = true) => {
     goToNext && dispatch({ type: "FLAG_QUIZ", id });
-    flagPhrase.mutateAsync({ id }).catch(needBetterErrorHandler);
+    flagCard.mutateAsync({ id }).catch(needBetterErrorHandler);
   };
 
   function Failure() {

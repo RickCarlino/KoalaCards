@@ -345,7 +345,7 @@ export const performExam = procedure
     }
   });
 
-export const failPhrase = procedure
+export const failCard = procedure
   .input(
     z.object({
       id: z.number(),

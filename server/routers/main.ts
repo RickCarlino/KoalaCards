@@ -2,24 +2,24 @@ import { router } from "../trpc";
 import { deleteCard } from "./delete-card";
 import { editCard } from "./edit-card";
 import { faucet } from "./faucet";
-import { flagPhrase } from "./flag-phrase";
-import { getAllPhrases } from "./get-all-phrases";
+import { flagCard } from "./flag-card";
+import { getAllCards } from "./get-all-cards";
 import { getNextQuiz, getNextQuizzes } from "./get-next-quizzes";
 import { getOneCard } from "./get-one-card";
-import { importPhrases } from "./import-phrases";
-import { failPhrase, performExam } from "./perform-exam";
+import { importCards } from "./import-cards";
+import { failCard, performExam } from "./perform-exam";
 
 export const appRouter = router({
-  faucet,
-  importPhrases,
-  getAllPhrases,
   deleteCard,
   editCard,
-  getOneCard,
-  flagPhrase,
-  getNextQuizzes,
+  failCard,
+  faucet,
+  flagCard,
+  getAllCards,
   getNextQuiz,
-  failPhrase,
+  getNextQuizzes,
+  getOneCard,
+  importCards,
   performExam,
 });
 
