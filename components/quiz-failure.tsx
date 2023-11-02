@@ -18,12 +18,14 @@ export function QuizFailure(props: {
   rejectionText: string;
   onFlag: () => void;
   onDiscard?: () => void;
+  onClose: () => void;
 }) {
   const discard = props.onDiscard && (
     <button onClick={props.onDiscard}>Disagree With Results</button>
   );
   return (
     <div style={style}>
+      <button onClick={props.onClose}>Continue</button>
       <button onClick={props.onFlag}>Flag Item</button>
       {discard}
       <p>You answered the last question incorrectly:</p>

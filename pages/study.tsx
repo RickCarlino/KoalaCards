@@ -59,13 +59,10 @@ function CardOverview({ quiz }: { quiz: CurrentQuiz }) {
 }
 
 function Study(props: Props) {
-  const cardsById = props.quizzes.reduce(
-    (acc, quiz) => {
-      acc[quiz.id] = quiz;
-      return acc;
-    },
-    {} as Record<number, Quiz>,
-  );
+  const cardsById = props.quizzes.reduce((acc, quiz) => {
+    acc[quiz.id] = quiz;
+    return acc;
+  }, {} as Record<number, Quiz>);
   const newState = newQuizState({
     cardsById,
     totalCards: props.totalCards,
@@ -87,10 +84,10 @@ function Study(props: Props) {
     ["z", () => quiz && doFlag(quiz.id)],
   ]);
   useEffect(() => {
-    if (quiz) {
+    if (quiz && !state.failure) {
       playAudio(quiz.quizAudio);
     }
-  }, [`${quiz?.id} + ${quiz?.lessonType}`]);
+  }, [`${quiz?.id},${quiz?.lessonType},${!!state.failure}`]);
 
   const doFail = (id: number) => {
     dispatch({ type: "USER_GAVE_UP", id });
@@ -104,13 +101,13 @@ function Study(props: Props) {
     return flagCard.mutateAsync({ id }).catch(needBetterErrorHandler);
   };
 
-  function Failure() {
-    const f = state.failure;
-    if (!f) return null;
+  const f = state.failure;
+  if (f) {
     const clear = () => dispatch({ type: "SET_FAILURE", value: null });
     const psd = f.previousSpacingData;
     const failProps: Parameters<typeof QuizFailure>[0] = {
       ...f,
+      onClose: clear,
       onFlag: () => {
         doFlag(f.id, false).then(clear);
       },
@@ -132,7 +129,6 @@ function Study(props: Props) {
       <div>
         <h1>No Cards Due</h1>
         <p>Consider adding more by clicking "import"</p>
-        <Failure />
       </div>
     );
   }
@@ -275,7 +271,6 @@ function Study(props: Props) {
         new.
       </p>
       <p>{linkToEditPage(quiz.id)}</p>
-      <Failure />
     </Container>
   );
 }
