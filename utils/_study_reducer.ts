@@ -43,12 +43,12 @@ type LessonType = keyof Quiz["audio"];
 type QuizResult = "error" | "failure" | "success";
 
 type Action =
-  | { type: "WILL_GRADE"; id: number }
-  | { type: "USER_GAVE_UP"; id: number }
-  | { type: "FLAG_QUIZ"; id: number }
   | { type: "DID_GRADE"; id: number; result: QuizResult }
-  | { type: "SET_RECORDING"; value: boolean }
+  | { type: "FLAG_QUIZ"; id: number }
   | { type: "SET_FAILURE"; value: null | Failure }
+  | { type: "SET_RECORDING"; value: boolean }
+  | { type: "USER_GAVE_UP"; id: number }
+  | { type: "WILL_GRADE"; id: number }
   | {
       type: "ADD_MORE";
       quizzes: Quiz[];

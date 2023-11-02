@@ -147,12 +147,13 @@ export const gradedResponse = async (
     .filter((x) => !!x)
     .map((x) => x as { grade: number; explanation?: string })
     .map((x): Result => [x.grade, x.explanation]);
-  console.log(`#`.repeat(20));
-  console.log(results.join(", "));
-  const [grade, explanation] = results[0] || [0, "SYSTEM ERROR ?"];
-  console.log([(grade / 3) * 5, explanation]);
+  console.log("\n" + `#`.repeat(20));
   console.log(content);
-  return [(grade / 3) * 5, explanation];
+  const result = results[0];
+  const scaled = (result[0] / 3) * 5;
+  const explanation = result[1] || "No explanation";
+  console.log([result[0], scaled, explanation].join(" => "));
+  return [scaled, explanation];
 };
 
 const gradeAndUpdateTimestamps = (card: Card, grade: number) => {

@@ -20,7 +20,7 @@ export function QuizFailure(props: {
   onDiscard?: () => void;
 }) {
   const discard = props.onDiscard && (
-    <button onClick={props.onDiscard}>Discard Results</button>
+    <button onClick={props.onDiscard}>Disagree With Results</button>
   );
   return (
     <div style={style}>

@@ -9,6 +9,10 @@ export const editCard = procedure
       definition: z.optional(z.string()),
       term: z.optional(z.string()),
       flagged: z.optional(z.boolean()),
+      repetitions: z.optional(z.number()),
+      interval: z.optional(z.number()),
+      ease: z.optional(z.number()),
+      lapses: z.optional(z.number()),
     }),
   )
   .mutation(async ({ input, ctx }) => {
@@ -32,8 +36,8 @@ export const editCard = procedure
     await prismaClient.card.update({
       where: { id: card.id },
       data: {
-        term: input.term ?? card.term,
-        definition: input.definition ?? card.definition,
+        ...card,
+        ...input,
         flagged: input.flagged ?? false,
       },
     });

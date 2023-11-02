@@ -76,6 +76,7 @@ function Study(props: Props) {
   const performExam = trpc.performExam.useMutation();
   const failCard = trpc.failCard.useMutation();
   const flagCard = trpc.flagCard.useMutation();
+  const editCard = trpc.editCard.useMutation();
   const getNextQuiz = trpc.getNextQuiz.useMutation();
   const needBetterErrorHandler = (error: any) => {
     console.error(error);
@@ -100,20 +101,28 @@ function Study(props: Props) {
    * card or not. */
   const doFlag = (id: number, goToNext = true) => {
     goToNext && dispatch({ type: "FLAG_QUIZ", id });
-    flagCard.mutateAsync({ id }).catch(needBetterErrorHandler);
+    return flagCard.mutateAsync({ id }).catch(needBetterErrorHandler);
   };
 
   function Failure() {
     const f = state.failure;
     if (!f) return null;
+    const clear = () => dispatch({ type: "SET_FAILURE", value: null });
     const psd = f.previousSpacingData;
     const failProps: Parameters<typeof QuizFailure>[0] = {
       ...f,
-      onFlag: () => doFlag(f.id, false),
+      onFlag: () => {
+        doFlag(f.id, false).then(clear);
+      },
     };
     if (psd) {
       failProps.onDiscard = () => {
-        alert("Not implemented yet");
+        editCard
+          .mutateAsync({
+            id: f.id,
+            ...psd,
+          })
+          .then(clear);
       };
     }
     return <QuizFailure {...failProps} />;
