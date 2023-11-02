@@ -157,7 +157,7 @@ export const gradedResponse = async (
   const scaled = ((result[0] + jitter) / 3) * 5;
   const explanation = result[1] || "No explanation";
   console.log([result[0], scaled, explanation].join(" => "));
-  return [Math.max(scaled, 5), explanation];
+  return [Math.min(scaled, 5), explanation];
 };
 
 const gradeAndUpdateTimestamps = (card: Card, grade: number) => {
