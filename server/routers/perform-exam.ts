@@ -202,10 +202,10 @@ async function gradeResp(
 }
 
 async function dictationTest(transcript: string, card: Card) {
-  // if (cleanString(transcript) === cleanString(card.term)) {
-  //   console.log("=== Exact match: " + card.term);
-  //   return gradeResp(card, 5, undefined);
-  // }
+  if (cleanString(transcript) === cleanString(card.term)) {
+    console.log("=== Exact match: " + card.term);
+    return gradeResp(card, 5, undefined);
+  }
   const [grade, why] = await gradedResponse(
     `
     REPEAT AFTER ME TEST:

@@ -1,4 +1,4 @@
-import { Button, Grid, Text, Notification, Container } from "@mantine/core";
+import { Button, Grid, Text, Container } from "@mantine/core";
 import Link from "next/link";
 
 export function linkToEditPage(id: number) {
