@@ -1,4 +1,5 @@
 import { Button, Grid, Text, Container } from "@mantine/core";
+import { useHotkeys } from "@mantine/hooks";
 import Link from "next/link";
 
 export function linkToEditPage(id: number) {
@@ -16,12 +17,11 @@ export function QuizFailure(props: {
   onDiscard?: () => void;
   onClose: () => void;
 }) {
-  const discardButton = props.onDiscard && (
-    <Button onClick={props.onDiscard} color="red">
-      Disagree
-    </Button>
-  );
-
+  useHotkeys([
+    ["V", () => props.onClose()],
+    ["X", props.onFlag],
+    ["C", () => props.onDiscard?.()],
+  ]);
   return (
     <Container size="xs">
       <Grid grow justify="center" align="center">
@@ -55,12 +55,16 @@ export function QuizFailure(props: {
             </Text>
             <Text>{linkToEditPage(props.id)}</Text>
             <Button color="green" onClick={props.onClose}>
-              Continue
+              Continue - V
             </Button>
-            <Button onClick={props.onFlag} color="yellow">
-              Flag / Pause
+            {props.onDiscard && (
+              <Button onClick={props.onDiscard} color="yellow">
+                Disagree - C
+              </Button>
+            )}
+            <Button onClick={props.onFlag} color="red">
+              Flag / Pause - X
             </Button>
-            {discardButton}
           </Grid.Col>
         </Grid.Col>
       </Grid>
