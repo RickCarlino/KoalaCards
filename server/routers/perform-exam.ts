@@ -131,7 +131,7 @@ export const gradedResponse = async (
       { role: "system", content: SYSTEM_PROMPT },
     ],
     model: "gpt-3.5-turbo-0613",
-    n: 1,
+    n: 3,
     temperature: 0,
     function_call: { name: "grade_quiz" },
     functions: [GRADED_RESPONSE],
@@ -147,13 +147,21 @@ export const gradedResponse = async (
     .filter((x) => !!x)
     .map((x) => x as { grade: number; explanation?: string })
     .map((x): Result => [x.grade, x.explanation]);
+  // sort results by 0th element.
+  // Grab median value:
+  const median = results.sort((a, b) => a[0] - b[0])[1][0];
+  const jitter = Math.random() * 0.4;
+  const result = median + jitter;
+  const explanation = results[1][1] ?? "No explanation";
+  const scaled = (result / 3) * 5;
+  const capped = Math.min(scaled, 5);
   console.log("\n" + `#`.repeat(20));
   console.log(content);
-  const result = results[0];
-  const scaled = (result[0] / 3) * 5;
-  const explanation = result[1] || "No explanation";
-  console.log([result[0], scaled, explanation].join(" => "));
-  return [scaled, explanation];
+  // Add some jitter to the score
+  // to prevent scheduling pileups when
+  // the user crams many cards at one time.
+  console.log([result, scaled, explanation].join(" => "));
+  return [capped, explanation];
 };
 
 const gradeAndUpdateTimestamps = (card: Card, grade: number) => {
