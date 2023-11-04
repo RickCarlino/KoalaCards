@@ -1,5 +1,6 @@
 import { router } from "../trpc";
 import { deleteCard } from "./delete-card";
+import { deleteFlaggedCards } from "./delete-flagged";
 import { editCard } from "./edit-card";
 import { faucet } from "./faucet";
 import { flagCard } from "./flag-card";
@@ -11,6 +12,7 @@ import { failCard, performExam } from "./perform-exam";
 
 export const appRouter = router({
   deleteCard,
+  deleteFlaggedCards,
   editCard,
   failCard,
   faucet,
