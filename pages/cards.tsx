@@ -12,7 +12,7 @@ export const BACKUP_SCHEMA = z.array(
     lapses: z.number(),
     repetitions: z.number(),
     nextReviewAt: z.number(),
-    createdAt: z.nullable(z.coerce.date()),
+    createdAt: z.coerce.date(),
     firstReview: z.nullable(z.coerce.date()),
     lastReview: z.nullable(z.coerce.date()),
   }),
@@ -83,7 +83,16 @@ const Edit: React.FC = () => {
       <h1>Manage Cards</h1>
       <Button onClick={doDeleteFlagged}>Delete Flagged Cards</Button>
       <Button onClick={doExport}>Export Cards</Button>
-      <FileImportButton onReady={(data) => importCards.mutateAsync(data)} />
+      <FileImportButton
+        onReady={(data) => {
+          const desired = data.length;
+          alert("This is going to take a while. Please wait...");
+          importCards.mutateAsync(data).then(({ count }) => {
+            alert(`Imported ${count}/${desired} cards.`);
+            location.reload();
+          });
+        }}
+      />
       <hr />
       {content}
     </Container>,
