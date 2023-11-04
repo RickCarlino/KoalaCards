@@ -8,7 +8,7 @@ import { flagCard } from "./flag-card";
 import { getAllCards } from "./get-all-cards";
 import { getNextQuiz, getNextQuizzes } from "./get-next-quizzes";
 import { getOneCard } from "./get-one-card";
-import { importCards } from "./import-cards";
+import { bulkCreateCards } from "./bulk-create-cards";
 import { failCard, performExam } from "./perform-exam";
 
 export const appRouter = router({
@@ -23,7 +23,7 @@ export const appRouter = router({
   getNextQuiz,
   getNextQuizzes,
   getOneCard,
-  importCards,
+  bulkCreateCards,
   performExam,
 });
 
