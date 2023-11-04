@@ -10,8 +10,10 @@ import { getNextQuiz, getNextQuizzes } from "./get-next-quizzes";
 import { getOneCard } from "./get-one-card";
 import { bulkCreateCards } from "./bulk-create-cards";
 import { failCard, performExam } from "./perform-exam";
+import { importCards } from "./import-cards";
 
 export const appRouter = router({
+  bulkCreateCards,
   deleteCard,
   deleteFlaggedCards,
   editCard,
@@ -23,7 +25,7 @@ export const appRouter = router({
   getNextQuiz,
   getNextQuizzes,
   getOneCard,
-  bulkCreateCards,
+  importCards,
   performExam,
 });
 

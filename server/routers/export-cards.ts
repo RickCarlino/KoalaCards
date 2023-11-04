@@ -1,25 +1,11 @@
 import { z } from "zod";
 import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc";
+import { BACKUP_SCHEMA } from "@/pages/cards";
 
 export const exportCards = procedure
   .input(z.object({}))
-  .output(
-    z.array(
-      z.object({
-        definition: z.string(),
-        term: z.string(),
-        ease: z.number(),
-        interval: z.number(),
-        lapses: z.number(),
-        repetitions: z.number(),
-        nextReviewAt: z.number(),
-        createdAt: z.nullable(z.date()),
-        firstReview: z.nullable(z.date()),
-        lastReview: z.nullable(z.date()),
-      }),
-    ),
-  )
+  .output(BACKUP_SCHEMA)
   .mutation(async ({ ctx }) => {
     const userId = ctx.user?.id;
     if (!userId) {
