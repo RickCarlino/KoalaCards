@@ -20,7 +20,7 @@ const ImportPage: React.FC<ImportPageProps> = ({}) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<[string, string][]>([]);
-  const importCard = trpc.importCards.useMutation();
+  const importCard = trpc.bulkCreateCards.useMutation();
 
   const handleSubmit = async () => {
     setIsLoading(true);

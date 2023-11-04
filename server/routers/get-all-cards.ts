@@ -17,6 +17,8 @@ export const getAllCards = procedure
   .query(async ({ ctx }) => {
     return await prismaClient.card.findMany({
       where: { userId: ctx.user?.id || "000" },
-      orderBy: { nextReviewAt: "asc" },
+      // ORDER BY ease ASC, lapses DESC;
+      // Hardest cards first
+      orderBy: [{ ease: "asc" }, { lapses: "desc" }],
     });
   });

@@ -28,8 +28,8 @@ const NavBar = () => {
 
   const links = [
     { path: "/study", name: "Study" },
-    { path: "/import", name: "Import" },
-    { path: "/cards", name: "Edit" },
+    { path: "/import", name: "Create" },
+    { path: "/cards", name: "Cards" },
     { path: "/user", name: "Settings" },
   ];
 
