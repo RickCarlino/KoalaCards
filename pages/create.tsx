@@ -13,15 +13,19 @@ interface Card {
   definition: string;
 }
 
-interface ImportPageProps {}
+interface CreateCardProps {}
 
-const ImportPage: React.FC<ImportPageProps> = ({}) => {
+const CreateCardPage: React.FC<CreateCardProps> = ({}) => {
   const [text, setText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<[string, string][]>([]);
   const importCard = trpc.bulkCreateCards.useMutation();
-
+  const resetAllState = () => {
+    setIsLoading(false);
+    setError(null);
+    setResult([]);
+  };
   const handleSubmit = async () => {
     setIsLoading(true);
     setError(null);
@@ -65,14 +69,14 @@ const ImportPage: React.FC<ImportPageProps> = ({}) => {
 
     importCard.mutateAsync({ input: cards }).then((imports) => {
       setResult(imports.map((x) => [x.term, x.definition]));
+      setIsLoading(false);
+      setText("");
     });
 
-    setIsLoading(false);
-    setText("");
   };
   const start = (
     <Paper>
-      <h1>Import New Cards</h1>
+      <h1>Create New Cards</h1>
       <p>
         Enter a list of cards below, one per line. Each line has two parts,
         separated by a tab character. The order is as follows:
@@ -97,7 +101,7 @@ const ImportPage: React.FC<ImportPageProps> = ({}) => {
       />
       {error && <Notification color="red">{error}</Notification>}
       <Button
-        color="blue"
+        color={isLoading ? "gray" : "blue"}
         onClick={handleSubmit}
         style={{ marginTop: "1em" }}
         disabled={isLoading}
@@ -110,6 +114,7 @@ const ImportPage: React.FC<ImportPageProps> = ({}) => {
   const finish = (
     <Paper>
       <h1>Imported Cards</h1>
+      <Button onClick={resetAllState}>Add More Cards</Button>
       <table>
         <thead>
           <tr>
@@ -131,4 +136,4 @@ const ImportPage: React.FC<ImportPageProps> = ({}) => {
   return <Container>{result.length > 0 ? finish : start}</Container>;
 };
 
-export default ImportPage;
+export default CreateCardPage;

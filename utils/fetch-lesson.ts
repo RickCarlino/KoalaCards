@@ -120,21 +120,18 @@ export default async function getLessons(p: GetLessonInputParams) {
   const now = p.now || Date.now();
   const take = p.take || LESSON_SIZE;
   const excludedIDs = p.notIn || [];
-  // First, pick the card with the most repetitions.
-  // If there are multiple cards with the same number of repetitions,
-  // pick the one that was last reviewed the longest ago.
-  // SELECT * FROM Card WHERE nextReviewAt < NOW
-  // ORDER BY repetitions DESC, nextReviewAt DESC;
   const cards = await prismaClient.card.findMany({
     where: {
       id: { notIn: excludedIDs },
       flagged: false,
       userId,
-      nextReviewAt: {
-        lte: now,
-      },
+      nextReviewAt: { lt: now },
     },
-    orderBy: [{ lapses: "desc" }, { repetitions: "desc" }],
+    orderBy: [
+      { lapses: "desc" },
+      { repetitions: "desc" },
+      { createdAt: "asc" },
+    ],
     take,
   });
   const output: LocalQuiz[] = [];
