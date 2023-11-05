@@ -69,10 +69,10 @@ const CreateCardPage: React.FC<CreateCardProps> = ({}) => {
 
     importCard.mutateAsync({ input: cards }).then((imports) => {
       setResult(imports.map((x) => [x.term, x.definition]));
+      setIsLoading(false);
+      setText("");
     });
 
-    setIsLoading(false);
-    setText("");
   };
   const start = (
     <Paper>
@@ -101,7 +101,7 @@ const CreateCardPage: React.FC<CreateCardProps> = ({}) => {
       />
       {error && <Notification color="red">{error}</Notification>}
       <Button
-        color="blue"
+        color={isLoading ? "gray" : "blue"}
         onClick={handleSubmit}
         style={{ marginTop: "1em" }}
         disabled={isLoading}
