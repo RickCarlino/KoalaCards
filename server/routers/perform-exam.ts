@@ -12,9 +12,10 @@ type Quiz = (
   transcript: string,
   card: Card,
 ) => Promise<[number, string | undefined]>;
-const cleanString = (str: string) =>
-  str.replace(/[^\w\s]|_/g, "").replace(/\s+/g, "");
-
+const cleanString = (str: string) => {
+  // This regex matches any whitespace characters or punctuation
+  return str.replace(/[\s\.,\/#!$%\^&\*;:{}=\-_`~()]/g,"");
+}
 const apiKey = process.env.OPENAI_API_KEY;
 
 if (!apiKey) {
