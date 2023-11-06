@@ -14,8 +14,8 @@ type Quiz = (
 ) => Promise<[number, string | undefined]>;
 const cleanString = (str: string) => {
   // This regex matches any whitespace characters or punctuation
-  return str.replace(/[\s\.,\/#!$%\^&\*;:{}=\-_`~()]/g,"");
-}
+  return str.replace(/[\s\.,\/#!$%\^&\*;:{}=\-_`~()]/g, "");
+};
 const apiKey = process.env.OPENAI_API_KEY;
 
 if (!apiKey) {
@@ -131,8 +131,8 @@ export const gradedResponse = async (
       { role: "user", content },
       { role: "system", content: SYSTEM_PROMPT },
     ],
-    model: "gpt-3.5-turbo-0613",
-    n: 3,
+    model: "gpt-3.5-turbo-1106",
+    n: 1,
     temperature: 0,
     function_call: { name: "grade_quiz" },
     functions: [GRADED_RESPONSE],
@@ -150,10 +150,10 @@ export const gradedResponse = async (
     .map((x): Result => [x.grade, x.explanation]);
   // sort results by 0th element.
   // Grab median value:
-  const median = results.sort((a, b) => a[0] - b[0])[1][0];
+  const median = results[0][0]; //.sort((a, b) => a[0] - b[0])[1][0];
   const jitter = Math.random() * 0.4;
   const result = median + jitter;
-  const explanation = results[1][1] ?? "No explanation";
+  const explanation = results[0][1] ?? "No explanation";
   const scaled = (result / 3) * 5;
   const capped = Math.min(scaled, 5);
   console.log("\n" + `#`.repeat(20));

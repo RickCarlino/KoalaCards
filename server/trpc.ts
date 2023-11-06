@@ -2,10 +2,10 @@ import { TRPCError, initTRPC } from "@trpc/server";
 import { Session } from "next-auth";
 import { User } from "@prisma/client";
 const authorizedUsersString = process.env.AUTHORIZED_EMAILS || "";
-const authorizedUsers = authorizedUsersString
+export const authorizedUsers = authorizedUsersString
   .split(",")
-  .map((x: string) => x.trim().toLowerCase())
-  .filter((x: string) => x.includes("@"));
+  .filter((x: string) => x.includes("@"))
+  .map((x: string) => x.trim().toLowerCase());
 
 const t = initTRPC
   .context<{
