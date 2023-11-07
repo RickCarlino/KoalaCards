@@ -26,7 +26,7 @@ interface FileImportButtonProps {
 // It's a file picker that has an "onReady" callback.
 // When the user selects a file, it calls the callback with the file contents:
 const FileImportButton = ({ onReady }: FileImportButtonProps) => {
-  const onChange = (file: File) => {
+  const onChange = (file: File | null) => {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (e) => {
