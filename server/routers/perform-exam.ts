@@ -337,13 +337,15 @@ export const performExam = procedure
       ? await quiz(transcript.text.slice(0, 80), card)
       : [0, "Error"];
     if (lang == "ko") {
-      prismaClient.transcript.create({
-        data: {
-          value: transcript.text,
-          cardId: card.id,
-          grade,
-        },
-      }).then(() => {});
+      prismaClient.transcript
+        .create({
+          data: {
+            value: transcript.text,
+            cardId: card.id,
+            grade,
+          },
+        })
+        .then(() => {});
     }
     if (grade < 3) {
       quizCompletion.labels({ result: "failure", userID }).inc();
