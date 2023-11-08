@@ -16,7 +16,6 @@ export const importCards = procedure
       const existingCard = await prismaClient.card.count({
         where,
       });
-      console.log({ existingCard });
       if (!existingCard) {
         const data = { ...card, ...where };
         await prismaClient.card.create({ data });

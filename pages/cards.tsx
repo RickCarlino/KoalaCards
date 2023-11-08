@@ -86,7 +86,7 @@ const Edit: React.FC = () => {
       <FileImportButton
         onReady={(data) => {
           const desired = data.length;
-          alert("This is going to take a while. Please wait...");
+          alert("This is going to take a while. Are you ready?");
           importCards.mutateAsync(data).then(({ count }) => {
             alert(`Imported ${count}/${desired} cards.`);
             location.reload();

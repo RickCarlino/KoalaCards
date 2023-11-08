@@ -302,6 +302,7 @@ export const performExam = procedure
       listening: listeningTest,
       speaking: speakingTest,
     };
+    const userID = ctx.user?.id;
     const lang = LANG[input.lessonType];
     const quiz = QUIZ[input.lessonType];
     const transcript = await transcribeB64(
@@ -335,7 +336,15 @@ export const performExam = procedure
     const [grade, reason] = card
       ? await quiz(transcript.text.slice(0, 80), card)
       : [0, "Error"];
-    const userID = ctx.user?.id;
+    if (lang == "ko") {
+      prismaClient.transcript.create({
+        data: {
+          value: transcript.text,
+          cardId: card.id,
+          grade,
+        },
+      }).then(() => {});
+    }
     if (grade < 3) {
       quizCompletion.labels({ result: "failure", userID }).inc();
       return {

@@ -131,7 +131,7 @@ function Study(props: Props) {
     return (
       <div>
         <h1>No Cards Due</h1>
-        <p>Consider adding more by clicking "import"</p>
+        <p>You must <a href="/create">create new cards</a> or <a href="/cards">import cards from a backup file</a>.</p>
       </div>
     );
   }
