@@ -60,13 +60,10 @@ function CardOverview({ quiz }: { quiz: CurrentQuiz }) {
 }
 
 function Study(props: Props) {
-  const cardsById = props.quizzes.reduce(
-    (acc, quiz) => {
-      acc[quiz.id] = quiz;
-      return acc;
-    },
-    {} as Record<number, Quiz>,
-  );
+  const cardsById = props.quizzes.reduce((acc, quiz) => {
+    acc[quiz.id] = quiz;
+    return acc;
+  }, {} as Record<number, Quiz>);
   const newState = newQuizState({
     cardsById,
     totalCards: props.totalCards,
@@ -87,11 +84,13 @@ function Study(props: Props) {
     ["x", () => quiz && doFail(quiz.id)],
     ["z", () => quiz && doFlag(quiz.id)],
   ]);
+  const deps = [quiz?.id, quiz?.lessonType, !!state.failure];
+  const linterRequiresThis = deps.join(".");
   useEffect(() => {
     if (quiz && !state.failure) {
       playAudio(quiz.quizAudio);
     }
-  }, [`${quiz?.id},${quiz?.lessonType},${!!state.failure}`]);
+  }, [linterRequiresThis]);
 
   const doFail = (id: number) => {
     dispatch({ type: "USER_GAVE_UP", id });

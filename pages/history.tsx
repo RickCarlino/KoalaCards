@@ -25,11 +25,9 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
   ).map((t) => {
     return {
       id: t.id,
-      grade: t.grade,
+      grade: t.grade.toPrecision(2),
       value: t.value,
-      card: {
-        term: t.card.term,
-      },
+      term: t.card.term,
     };
   });
   // Pass the transcripts to the page via props
@@ -38,11 +36,9 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
 
 type Transcript = {
   id: number;
-  grade: number;
+  grade: string;
   value: string;
-  card: {
-    term: string;
-  };
+  term: string;
 };
 
 type Props = {
@@ -65,7 +61,7 @@ const TranscriptsPage = ({ transcripts }: Props) => {
           {transcripts.map((transcript) => (
             <tr key={transcript.id}>
               <td>{transcript.grade}</td>
-              <td>{transcript.card.term}</td>
+              <td>{transcript.term}</td>
               <td>{transcript.value}</td>
             </tr>
           ))}
