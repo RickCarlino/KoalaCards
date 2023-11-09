@@ -1,4 +1,5 @@
 import { prismaClient } from "@/server/prisma-client";
+import { cleanString } from "@/utils/clean-string";
 import { GetServerSidePropsContext } from "next";
 import { getSession } from "next-auth/react";
 import React from "react";
@@ -22,14 +23,18 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
         card: true,
       },
     })
-  ).map((t) => {
-    return {
-      id: t.id,
-      grade: t.grade.toPrecision(2),
-      value: t.value,
-      term: t.card.term,
-    };
-  });
+  )
+    .filter((t) => {
+      return cleanString(t.value) !== cleanString(t.card.term);
+    })
+    .map((t) => {
+      return {
+        id: t.id,
+        grade: t.grade.toPrecision(1),
+        value: t.value,
+        term: t.card.term,
+      };
+    });
   // Pass the transcripts to the page via props
   return { props: { transcripts } };
 }
@@ -49,6 +54,11 @@ const TranscriptsPage = ({ transcripts }: Props) => {
   return (
     <div>
       <h1>Transcripts</h1>
+      <p>
+        <strong>NOTE:</strong> Only cards that are not an exact match are
+        displayed here.
+      </p>
+      <hr/>
       <table>
         <thead>
           <tr>

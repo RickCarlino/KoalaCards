@@ -7,15 +7,12 @@ import { procedure } from "../trpc";
 import OpenAI from "openai";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat";
 import { SafeCounter } from "@/utils/counter";
+import { cleanString } from "@/utils/clean-string";
 
 type Quiz = (
   transcript: string,
   card: Card,
 ) => Promise<[number, string | undefined]>;
-const cleanString = (str: string) => {
-  // This regex matches any whitespace characters or punctuation
-  return str.replace(/[\s\.,\/#!$%\^&\*;:{}=\-_`~()]/g, "");
-};
 const apiKey = process.env.OPENAI_API_KEY;
 
 if (!apiKey) {
