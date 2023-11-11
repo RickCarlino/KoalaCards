@@ -70,15 +70,25 @@ model Session {
 }
 
 model User {
-  id            String    @id @default(cuid())
+  id            String        @id @default(cuid())
   name          String?
-  email         String?   @unique
+  email         String?       @unique
   emailVerified DateTime?
   lastSeen      DateTime?
   image         String?
   accounts      Account[]
   sessions      Session[]
   cards         Card[]
+  userSettings  UserSettings?
+}
+
+model UserSettings {
+  id                 Int      @id @default(autoincrement())
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId             String   @unique
+  playbackPercentage Float    @default(1)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }
 
 model VerificationToken {

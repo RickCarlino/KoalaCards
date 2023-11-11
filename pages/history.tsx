@@ -58,7 +58,7 @@ const TranscriptsPage = ({ transcripts }: Props) => {
         <strong>NOTE:</strong> Only cards that are not an exact match are
         displayed here.
       </p>
-      <hr/>
+      <hr />
       <table>
         <thead>
           <tr>
