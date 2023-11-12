@@ -40,7 +40,7 @@ function SettingsDisplay<T extends keyof UserSettings>(
     <li>
       <label>
         {props.description}
-        <input type="text" value={"" + props.value} />
+        <input type="text" defaultValue={"" + props.value} />
       </label>
     </li>
   );
