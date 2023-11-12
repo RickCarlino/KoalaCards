@@ -23,7 +23,6 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
     update: {},
     create: { userId },
   });
-  console.log(userSettings);
   // Pass the transcripts to the page via props
   return { props: { userSettings: JSON.parse(JSON.stringify(userSettings)) } };
 }
@@ -46,6 +45,7 @@ function SettingsDisplay<T extends keyof UserSettings>(
     </li>
   );
 }
+
 type Props = {
   userSettings: UserSettings;
 };
@@ -53,7 +53,7 @@ type Props = {
 export default function User(props: Props) {
   return Authed(
     <Container size="s">
-      <h1>User Settings</h1>
+      <h1>THIS DOESN'T WORK YET</h1>
       <ul>
         <SettingsDisplay
           setting={"playbackPercentage"}
