@@ -7,15 +7,12 @@ import { procedure } from "../trpc";
 import OpenAI from "openai";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat";
 import { SafeCounter } from "@/utils/counter";
+import { cleanString } from "@/utils/clean-string";
 
 type Quiz = (
   transcript: string,
   card: Card,
 ) => Promise<[number, string | undefined]>;
-const cleanString = (str: string) => {
-  // This regex matches any whitespace characters or punctuation
-  return str.replace(/[\s\.,\/#!$%\^&\*;:{}=\-_`~()]/g,"");
-}
 const apiKey = process.env.OPENAI_API_KEY;
 
 if (!apiKey) {
@@ -95,7 +92,8 @@ Grade 1: WRONG
 - Only give this grade if the meaning is very wrong.
 
 Grade 2: CORRECT (minor mistakes)
-- The meaning is spot on, but there are small errors like spelling, punctuation, or incorrect pronoun usage.
+- The meaning is spot on, but there are small errors like spelling,
+  punctuation, or incorrect pronoun usage.
 
 Grade 3: PERFECT
 - The sentence matches the expected meaning and form.
@@ -105,11 +103,10 @@ Grade 3: PERFECT
 As an educational Korean learning tool, you grade student's
 speaking, listening, and dictation drills.
 
-You will be given three things:
+You will be given two things:
 
-1. A prompt, which the student must translate to and from Korean.
+1. A prompt, which the student must translate.
 2. The student's response to the prompt.
-3. The correct answer.
 
 Using the correct answer as a guide and also the grading scale above,
 grade the student's response.
@@ -131,8 +128,8 @@ export const gradedResponse = async (
       { role: "user", content },
       { role: "system", content: SYSTEM_PROMPT },
     ],
-    model: "gpt-3.5-turbo-0613",
-    n: 3,
+    model: "gpt-3.5-turbo-1106",
+    n: 1,
     temperature: 0,
     function_call: { name: "grade_quiz" },
     functions: [GRADED_RESPONSE],
@@ -150,10 +147,10 @@ export const gradedResponse = async (
     .map((x): Result => [x.grade, x.explanation]);
   // sort results by 0th element.
   // Grab median value:
-  const median = results.sort((a, b) => a[0] - b[0])[1][0];
+  const median = results[0][0]; //.sort((a, b) => a[0] - b[0])[1][0];
   const jitter = Math.random() * 0.4;
   const result = median + jitter;
-  const explanation = results[1][1] ?? "No explanation";
+  const explanation = results[0][1] ?? "No explanation";
   const scaled = (result / 3) * 5;
   const capped = Math.min(scaled, 5);
   console.log("\n" + `#`.repeat(20));
@@ -302,6 +299,7 @@ export const performExam = procedure
       listening: listeningTest,
       speaking: speakingTest,
     };
+    const userID = ctx.user?.id;
     const lang = LANG[input.lessonType];
     const quiz = QUIZ[input.lessonType];
     const transcript = await transcribeB64(
@@ -335,7 +333,17 @@ export const performExam = procedure
     const [grade, reason] = card
       ? await quiz(transcript.text.slice(0, 80), card)
       : [0, "Error"];
-    const userID = ctx.user?.id;
+    if (lang == "ko") {
+      prismaClient.transcript
+        .create({
+          data: {
+            value: transcript.text,
+            cardId: card.id,
+            grade,
+          },
+        })
+        .then(() => {});
+    }
     if (grade < 3) {
       quizCompletion.labels({ result: "failure", userID }).inc();
       return {

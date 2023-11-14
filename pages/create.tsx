@@ -72,7 +72,6 @@ const CreateCardPage: React.FC<CreateCardProps> = ({}) => {
       setIsLoading(false);
       setText("");
     });
-
   };
   const start = (
     <Paper>

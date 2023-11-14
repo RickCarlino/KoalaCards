@@ -16,6 +16,7 @@ import {
 } from "../utils/_study_reducer";
 import { QuizFailure, linkToEditPage } from "../components/quiz-failure";
 import { beep } from "@/utils/beep";
+import Link from "next/link";
 
 type Props = {
   quizzes: Quiz[];
@@ -86,11 +87,13 @@ function Study(props: Props) {
     ["x", () => quiz && doFail(quiz.id)],
     ["z", () => quiz && doFlag(quiz.id)],
   ]);
+  const deps = [quiz?.id, quiz?.lessonType, !!state.failure];
+  const linterRequiresThis = deps.join(".");
   useEffect(() => {
     if (quiz && !state.failure) {
       playAudio(quiz.quizAudio);
     }
-  }, [`${quiz?.id},${quiz?.lessonType},${!!state.failure}`]);
+  }, [linterRequiresThis]);
 
   const doFail = (id: number) => {
     dispatch({ type: "USER_GAVE_UP", id });
@@ -131,7 +134,10 @@ function Study(props: Props) {
     return (
       <div>
         <h1>No Cards Due</h1>
-        <p>Consider adding more by clicking "import"</p>
+        <p>
+          You must <Link href="/create">create new cards</Link> or{" "}
+          <Link href="/cards">import cards from a backup file</Link>.
+        </p>
       </div>
     );
   }

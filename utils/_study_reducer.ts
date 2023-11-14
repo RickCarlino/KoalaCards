@@ -108,7 +108,7 @@ export function currentQuiz(state: State): CurrentQuiz | undefined {
   } else {
     // After the nth repetition, the lessonType
     // oscillates between listening and speaking.
-    const nonce = quiz.id + quiz.repetitions;
+    const nonce = quiz.id + quiz.repetitions + quiz.lapses;
     const x = nonce % 2;
     lessonType = x === 0 ? "listening" : "speaking";
   }
