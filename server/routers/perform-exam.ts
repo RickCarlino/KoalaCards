@@ -219,12 +219,19 @@ async function dictationTest(transcript: string, card: Card) {
 }
 
 async function listeningTest(transcript: string, card: Card) {
+  if (cleanString(transcript) === cleanString(card.term)) {
+    return gradeResp(card, 5, undefined);
+  }
   const p = translationPrompt(card.term, transcript);
   const [grade, why] = await gradedResponse(p, card.userId);
   return gradeResp(card, grade, why);
 }
 
 async function speakingTest(transcript: string, card: Card) {
+  if (cleanString(transcript) === cleanString(card.definition)) {
+    return gradeResp(card, 5, undefined);
+  }
+
   const [grade, why] = await gradedResponse(
     `
      SPEAKING TEST:
