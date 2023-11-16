@@ -7,7 +7,7 @@ import { procedure } from "../trpc";
 import OpenAI from "openai";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat";
 import { SafeCounter } from "@/utils/counter";
-import { cleanString } from "@/utils/clean-string";
+import { exactMatch } from "@/utils/clean-string";
 
 type Quiz = (
   transcript: string,
@@ -200,7 +200,7 @@ async function gradeResp(
 }
 
 async function dictationTest(transcript: string, card: Card) {
-  if (cleanString(transcript) === cleanString(card.term)) {
+  if (exactMatch(transcript, card.term)) {
     console.log("=== Exact match: " + card.term);
     return gradeResp(card, 5, undefined);
   }
@@ -219,7 +219,7 @@ async function dictationTest(transcript: string, card: Card) {
 }
 
 async function listeningTest(transcript: string, card: Card) {
-  if (cleanString(transcript) === cleanString(card.term)) {
+  if (exactMatch(transcript, card.term)) {
     return gradeResp(card, 5, undefined);
   }
   const p = translationPrompt(card.term, transcript);
@@ -228,7 +228,7 @@ async function listeningTest(transcript: string, card: Card) {
 }
 
 async function speakingTest(transcript: string, card: Card) {
-  if (cleanString(transcript) === cleanString(card.definition)) {
+  if (exactMatch(transcript, card.definition)) {
     return gradeResp(card, 5, undefined);
   }
 

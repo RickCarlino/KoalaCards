@@ -1,5 +1,5 @@
 import { prismaClient } from "@/server/prisma-client";
-import { cleanString } from "@/utils/clean-string";
+import { exactMatch } from "@/utils/clean-string";
 import { GetServerSidePropsContext } from "next";
 import { getSession } from "next-auth/react";
 import React from "react";
@@ -25,7 +25,7 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
     })
   )
     .filter((t) => {
-      return cleanString(t.value) !== cleanString(t.card.term);
+      return !exactMatch(t.value, t.card.term);
     })
     .map((t) => {
       return {
