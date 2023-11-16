@@ -254,8 +254,18 @@ const lessonType = z.union([
 
 export const openai = new OpenAI(configuration);
 
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  const timeoutPromise = new Promise<T>((_resolve, reject) => {
+    setTimeout(() => {
+      reject(new Error("Operation timed out"));
+    }, timeoutMs);
+  });
+
+  return Promise.race([promise, timeoutPromise]);
+}
+
 export async function gptCall(opts: ChatCompletionCreateParamsNonStreaming) {
-  return await openai.chat.completions.create(opts);
+  return withTimeout(openai.chat.completions.create(opts), 3333);
 }
 
 const performExamOutput = z.union([
