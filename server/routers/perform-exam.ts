@@ -260,10 +260,13 @@ const lessonType = z.union([
 export const openai = new OpenAI(configuration);
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  let done = false;
   const timeoutPromise = new Promise<T>((_resolve, reject) => {
     setTimeout(() => {
-      apiTimeout.inc();
-      reject(new Error("Operation timed out"));
+      if (!done) {
+        apiTimeout.inc();
+        reject(new Error("Operation timed out"));
+      }
     }, timeoutMs);
   });
 
@@ -271,7 +274,7 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
 }
 
 export async function gptCall(opts: ChatCompletionCreateParamsNonStreaming) {
-  return withTimeout(openai.chat.completions.create(opts), 2900);
+  return withTimeout(openai.chat.completions.create(opts), 3000);
 }
 
 const performExamOutput = z.union([
