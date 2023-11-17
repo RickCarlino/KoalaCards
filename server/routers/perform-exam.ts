@@ -33,6 +33,12 @@ const tokenUsage = SafeCounter({
   labelNames: ["userID"],
 });
 
+const apiTimeout = SafeCounter({
+  name: "api_timeout",
+  help: "Number of OpenAI API timeouts",
+  labelNames: ["userID"],
+});
+
 const GRADED_RESPONSE = {
   name: "grade_quiz",
   parameters: {
@@ -200,8 +206,7 @@ async function gradeResp(
 }
 
 async function dictationTest(transcript: string, card: Card) {
-  if (exactMatch(transcript, card.term)) {
-    console.log("=== Exact match: " + card.term);
+  if (exactMatch(transcript, card.definition)) {
     return gradeResp(card, 5, undefined);
   }
   const [grade, why] = await gradedResponse(
@@ -219,7 +224,7 @@ async function dictationTest(transcript: string, card: Card) {
 }
 
 async function listeningTest(transcript: string, card: Card) {
-  if (exactMatch(transcript, card.term)) {
+  if (exactMatch(transcript, card.definition)) {
     return gradeResp(card, 5, undefined);
   }
   const p = translationPrompt(card.term, transcript);
@@ -228,7 +233,7 @@ async function listeningTest(transcript: string, card: Card) {
 }
 
 async function speakingTest(transcript: string, card: Card) {
-  if (exactMatch(transcript, card.definition)) {
+  if (exactMatch(transcript, card.term)) {
     return gradeResp(card, 5, undefined);
   }
 
@@ -257,6 +262,7 @@ export const openai = new OpenAI(configuration);
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   const timeoutPromise = new Promise<T>((_resolve, reject) => {
     setTimeout(() => {
+      apiTimeout.inc();
       reject(new Error("Operation timed out"));
     }, timeoutMs);
   });
@@ -265,7 +271,7 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
 }
 
 export async function gptCall(opts: ChatCompletionCreateParamsNonStreaming) {
-  return withTimeout(openai.chat.completions.create(opts), 3333);
+  return withTimeout(openai.chat.completions.create(opts), 2900);
 }
 
 const performExamOutput = z.union([
