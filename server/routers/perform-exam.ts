@@ -206,7 +206,7 @@ async function gradeResp(
 }
 
 async function dictationTest(transcript: string, card: Card) {
-  if (exactMatch(transcript, card.definition)) {
+  if (exactMatch(transcript, card.term)) {
     return gradeResp(card, 5, undefined);
   }
   const [grade, why] = await gradedResponse(
