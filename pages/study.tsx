@@ -60,13 +60,10 @@ function CardOverview({ quiz }: { quiz: CurrentQuiz }) {
 }
 
 function Study(props: Props) {
-  const cardsById = props.quizzes.reduce(
-    (acc, quiz) => {
-      acc[quiz.id] = quiz;
-      return acc;
-    },
-    {} as Record<number, Quiz>,
-  );
+  const cardsById = props.quizzes.reduce((acc, quiz) => {
+    acc[quiz.id] = quiz;
+    return acc;
+  }, {} as Record<number, Quiz>);
   const newState = newQuizState({
     cardsById,
     totalCards: props.totalCards,
@@ -80,6 +77,11 @@ function Study(props: Props) {
   const editCard = trpc.editCard.useMutation();
   const getNextQuiz = trpc.getNextQuiz.useMutation();
   const needBetterErrorHandler = (error: any) => {
+    notifications.show({
+      title: "Error!",
+      message: "Unexpected error or timeout.",
+      color: "yellow",
+    });
     console.error(error);
   };
   const quiz = currentQuiz(state);
