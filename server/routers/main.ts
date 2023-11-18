@@ -12,12 +12,14 @@ import { bulkCreateCards } from "./bulk-create-cards";
 import { failCard, performExam } from "./perform-exam";
 import { importCards } from "./import-cards";
 import { flagObnoxious } from "./flag-obnoxious";
+import { editUserSettings } from "./edit-user-settings";
 
 export const appRouter = router({
   bulkCreateCards,
   deleteCard,
   deleteFlaggedCards,
   editCard,
+  editUserSettings,
   exportCards,
   failCard,
   faucet,

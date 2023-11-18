@@ -4,5 +4,5 @@ const cleanString = (str: string) => {
 };
 
 export const exactMatch = (str: string, query: string) => {
-  return cleanString(str) === cleanString(query);;
+  return cleanString(str) === cleanString(query);
 };
