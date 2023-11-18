@@ -297,21 +297,23 @@ function Study(props: Props) {
 
 function StudyLoader() {
   const { data, failureReason } = trpc.getNextQuizzes.useQuery({});
+
+  if (!data) {
+    return <div>Loading data...</div>;
+  }
+
   if (failureReason) {
     return <div>Failed to load: {failureReason.message}</div>;
   }
-  if (data) {
-    return (
-      <Study
-        quizzes={data.quizzes}
-        totalCards={data.totalCards}
-        quizzesDue={data.quizzesDue}
-        newCards={data.newCards}
-      />
-    );
-  } else {
-    return <div>Loading...</div>;
-  }
+
+  return (
+    <Study
+      quizzes={data.quizzes}
+      totalCards={data.totalCards}
+      quizzesDue={data.quizzesDue}
+      newCards={data.newCards}
+    />
+  );
 }
 
 export default function Main() {

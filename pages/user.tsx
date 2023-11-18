@@ -25,7 +25,7 @@ export default function UserSettingsPage(props: Props) {
   // Grab the tRPC editUserSettings mutation:
   const editUserSettings = trpc.editUserSettings.useMutation();
   const handleChange = (value: number | string, name: string) => {
-    setSettings({ ...settings, [name]: value });
+    setSettings({ ...settings, [name]: parseFloat("" + value) });
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {

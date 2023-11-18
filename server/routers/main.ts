@@ -13,6 +13,7 @@ import { failCard, performExam } from "./perform-exam";
 import { importCards } from "./import-cards";
 import { flagObnoxious } from "./flag-obnoxious";
 import { editUserSettings } from "./edit-user-settings";
+import { getUserSettings } from "./get-user-settings";
 
 export const appRouter = router({
   bulkCreateCards,
@@ -29,6 +30,7 @@ export const appRouter = router({
   getNextQuiz,
   getNextQuizzes,
   getOneCard,
+  getUserSettings,
   importCards,
   performExam,
 });
