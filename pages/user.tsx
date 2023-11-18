@@ -1,4 +1,3 @@
-import { prismaClient } from "@/server/prisma-client";
 import { Button, Container, NumberInput, Title } from "@mantine/core";
 import { GetServerSidePropsContext } from "next";
 import { getSession } from "next-auth/react";
@@ -7,26 +6,11 @@ import { UserSettings } from "@prisma/client";
 import React, { useState } from "react";
 import { trpc } from "@/utils/trpc";
 import { notifications } from "@mantine/notifications";
+import { getUserSettingsFromEmail } from "@/server/auth-helpers";
 
 export async function getServerSideProps(context: GetServerSidePropsContext) {
   const session = await getSession({ req: context.req });
-  const userId =
-    "" +
-    (
-      await prismaClient.user.findUnique({
-        where: { email: session?.user?.email || "" },
-      })
-    )?.id;
-  if (!userId) {
-    throw new Error("User not found");
-  }
-
-  const userSettings = await prismaClient.userSettings.upsert({
-    where: { userId: userId },
-    update: {},
-    create: { userId },
-  });
-  // Pass the transcripts to the page via props
+  const userSettings = await getUserSettingsFromEmail(session?.user?.email);
   // TODO: Why does this not work with dates?
   return { props: { userSettings: JSON.parse(JSON.stringify(userSettings)) } };
 }

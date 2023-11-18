@@ -1,16 +1,14 @@
 import { z } from "zod";
 import { procedure } from "../trpc";
 import { prismaClient } from "../prisma-client";
+import { getUserSettings } from "../auth-helpers";
 
 /** Flag cards that are leeches or excessively hard. */
 export const flagObnoxious = procedure
   .input(z.object({}))
   .output(z.object({ message: z.string() }))
   .mutation(async ({ ctx }) => {
-    const userId = ctx.user?.id;
-    if (!userId) {
-      return { message: `["No user ID"]` };
-    }
+    const userId = (await getUserSettings(ctx.user?.id)).user.id;
     const { count } = await prismaClient.card.updateMany({
       where: {
         userId,

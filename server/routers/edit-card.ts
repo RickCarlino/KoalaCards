@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc";
+import { getUserSettings } from "../auth-helpers";
 
 export const editCard = procedure
   .input(
@@ -16,10 +17,7 @@ export const editCard = procedure
     }),
   )
   .mutation(async ({ input, ctx }) => {
-    const userId = ctx.user?.id;
-    if (!userId) {
-      throw new Error("User not found");
-    }
+    const userId = (await getUserSettings(ctx.user?.id)).user.id;
 
     const card = await prismaClient.card.findFirst({
       where: {

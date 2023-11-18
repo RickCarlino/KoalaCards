@@ -1,14 +1,12 @@
 import { z } from "zod";
 import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc";
+import { getUserSettings } from "../auth-helpers";
 
 export const deleteFlaggedCards = procedure
   .input(z.object({}))
   .mutation(async ({ ctx }) => {
-    const userId = ctx.user?.id;
-    if (!userId) {
-      throw new Error("User not found");
-    }
+    const userId = (await getUserSettings(ctx.user?.id)).user.id;
 
     await prismaClient.card.deleteMany({
       where: {

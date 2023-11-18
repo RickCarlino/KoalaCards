@@ -2,15 +2,13 @@ import { z } from "zod";
 import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc";
 import { BACKUP_SCHEMA } from "@/pages/cards";
+import { getUserSettings } from "../auth-helpers";
 
 export const exportCards = procedure
   .input(z.object({}))
   .output(BACKUP_SCHEMA)
   .mutation(async ({ ctx }) => {
-    const userId = ctx.user?.id;
-    if (!userId) {
-      throw new Error("User not found");
-    }
+    const userId = (await getUserSettings(ctx.user?.id)).user.id;
 
     const allCards = prismaClient.card.findMany({
       where: {

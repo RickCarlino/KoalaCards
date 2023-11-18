@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc";
+import { getUserSettings } from "../auth-helpers";
 
 export const editUserSettings = procedure
   .input(
@@ -14,30 +15,7 @@ export const editUserSettings = procedure
     }),
   )
   .mutation(async ({ input, ctx }) => {
-    const userId = ctx.user?.id;
-
-    if (!userId) {
-      throw new Error("User not found");
-    }
-
-    const settings = await prismaClient.userSettings.findFirst({
-      where: {
-        userId: userId,
-        id: input.id,
-      },
-    });
-
-    if (!settings) {
-      // Create new settings object for current user
-      const newSettings = await prismaClient.userSettings.create({
-        data: {
-          ...input,
-          userId: userId,
-        },
-      });
-      return newSettings;
-    }
-
+    const settings = await getUserSettings(ctx.user?.id);
     // Ensure that the user passed the same updatedAt timestamp
     // otherwise invalidate the update since it could be stale
     if (settings.updatedAt.getTime() !== input.updatedAt.getTime()) {
@@ -46,9 +24,7 @@ export const editUserSettings = procedure
 
     // Update settings
     const updatedSettings = await prismaClient.userSettings.update({
-      where: {
-        id: input.id,
-      },
+      where: { id: input.id },
       data: {
         listeningPercentage: input.listeningPercentage,
         playbackSpeed: input.playbackSpeed,
