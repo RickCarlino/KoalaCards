@@ -76,7 +76,7 @@ export async function transcribeB64(
       if (!done) {
         resolve({ kind: "error" });
       }
-    }, 8000),
+    }, 3000),
   );
 
   return Promise.race([transcribePromise, timeoutPromise]);

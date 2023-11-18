@@ -7,7 +7,7 @@ import { procedure } from "../trpc";
 import OpenAI from "openai";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat";
 import { SafeCounter } from "@/utils/counter";
-import { cleanString } from "@/utils/clean-string";
+import { exactMatch } from "@/utils/clean-string";
 
 type Quiz = (
   transcript: string,
@@ -30,6 +30,12 @@ const quizCompletion = SafeCounter({
 const tokenUsage = SafeCounter({
   name: "token_usage",
   help: "Number of OpenAI tokens used",
+  labelNames: ["userID"],
+});
+
+const apiTimeout = SafeCounter({
+  name: "api_timeout",
+  help: "Number of OpenAI API timeouts",
   labelNames: ["userID"],
 });
 
@@ -200,8 +206,7 @@ async function gradeResp(
 }
 
 async function dictationTest(transcript: string, card: Card) {
-  if (cleanString(transcript) === cleanString(card.term)) {
-    console.log("=== Exact match: " + card.term);
+  if (exactMatch(transcript, card.term)) {
     return gradeResp(card, 5, undefined);
   }
   const [grade, why] = await gradedResponse(
@@ -219,7 +224,7 @@ async function dictationTest(transcript: string, card: Card) {
 }
 
 async function listeningTest(transcript: string, card: Card) {
-  if (cleanString(transcript) === cleanString(card.term)) {
+  if (exactMatch(transcript, card.definition)) {
     return gradeResp(card, 5, undefined);
   }
   const p = translationPrompt(card.term, transcript);
@@ -228,7 +233,7 @@ async function listeningTest(transcript: string, card: Card) {
 }
 
 async function speakingTest(transcript: string, card: Card) {
-  if (cleanString(transcript) === cleanString(card.definition)) {
+  if (exactMatch(transcript, card.term)) {
     return gradeResp(card, 5, undefined);
   }
 
@@ -254,8 +259,22 @@ const lessonType = z.union([
 
 export const openai = new OpenAI(configuration);
 
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  let done = false;
+  const timeoutPromise = new Promise<T>((_resolve, reject) => {
+    setTimeout(() => {
+      if (!done) {
+        apiTimeout.inc();
+        reject(new Error("Operation timed out"));
+      }
+    }, timeoutMs);
+  });
+
+  return Promise.race([promise, timeoutPromise]);
+}
+
 export async function gptCall(opts: ChatCompletionCreateParamsNonStreaming) {
-  return await openai.chat.completions.create(opts);
+  return withTimeout(openai.chat.completions.create(opts), 3000);
 }
 
 const performExamOutput = z.union([

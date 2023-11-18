@@ -38,8 +38,6 @@ model Transcript {
   recordedAt DateTime @default(now())
   card       Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
   grade      Float    @default(0)
-
-  @@unique([cardId])
 }
 
 model Account {
