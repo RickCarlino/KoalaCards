@@ -36,6 +36,8 @@ type State = {
   totalCards: number;
   quizzesDue: number;
   newCards: number;
+  listeningPercentage: number;
+  seed: number;
 };
 
 type LessonType = keyof Quiz["audio"];
@@ -69,7 +71,13 @@ export type CurrentQuiz = {
 
 export function gotoNextQuiz(state: State): State {
   const quizIDsForLesson = [...state.quizIDsForLesson.slice(1)];
-  return { ...state, quizIDsForLesson };
+  return {
+    ...state,
+    // Technically not a pure function if we use Math.random()
+    // but I was not happy with pseudorandom number generators
+    seed: Math.random(),
+    quizIDsForLesson,
+  };
 }
 
 export const newQuizState = (state: Partial<State> = {}): State => {
@@ -85,6 +93,8 @@ export const newQuizState = (state: Partial<State> = {}): State => {
     totalCards: 0,
     quizzesDue: 0,
     newCards: 0,
+    listeningPercentage: 0.5,
+    seed: Math.random(),
     ...state,
   };
 };
@@ -101,16 +111,11 @@ export function currentQuiz(state: State): CurrentQuiz | undefined {
   // // makes sense and is an artifact of a previous architecture.
   // // In the future we should calculate this on the backend and only
   // // send audio for the appropriate quiz.
-  const PROGRESSION: LessonType[] = ["dictation", "listening"];
-  const progression = PROGRESSION[quiz.repetitions];
-  if (progression) {
-    lessonType = progression;
+  if (quiz.repetitions) {
+    const listening = state.seed < state.listeningPercentage;
+    lessonType = listening ? "listening" : "speaking";
   } else {
-    // After the nth repetition, the lessonType
-    // oscillates between listening and speaking.
-    const nonce = quiz.id + quiz.repetitions + quiz.lapses;
-    const x = nonce % 2;
-    lessonType = x === 0 ? "listening" : "speaking";
+    lessonType = "dictation";
   }
   return {
     id: quiz.id,

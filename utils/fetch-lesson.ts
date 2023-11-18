@@ -38,7 +38,7 @@ const LESSON_SIZE = 5;
 const SSML: Record<LessonType, string> = {
   dictation: `<speak><prosody rate="x-slow">{{term}}</prosody></speak>`,
   speaking: `<speak><voice language="en-US" gender="female">{{definition}}</voice></speak>`,
-  listening: `<speak>{{term}}</speak>`,
+  listening: `<speak><prosody rate="{{speed}}%">{{term}}</prosody></speak>`,
 };
 
 let CLIENT: TextToSpeechClient;
@@ -108,10 +108,12 @@ async function generateLessonAudio(
   lessonType: LessonType,
   _term: string,
   _definition: string,
+  speed: number,
 ) {
   const ssml = template(SSML[lessonType], {
     term: _term,
     definition: _definition,
+    speed,
   });
   return generateSpeech(ssml);
 }
@@ -171,6 +173,7 @@ export default async function getLessons(p: GetLessonInputParams) {
   const params = { userId, take, notIn: excludedIDs };
   const cards = await getOldCards(now, params);
   const cardsLeft = take - cards.length;
+  const speed = (await getUserSettings(userId)).playbackSpeed * 100;
   if (cardsLeft > 0) {
     const dailyIntake = await newCardsLearnedToday(userId, now);
     const maxPerDay = (await getUserSettings(userId)).cardsPerDayMax;
@@ -189,9 +192,24 @@ export default async function getLessons(p: GetLessonInputParams) {
       repetitions: card.repetitions,
       lapses: card.lapses,
       audio: {
-        dictation: await generateLessonAudio("dictation", term, definition),
-        listening: await generateLessonAudio("listening", term, definition),
-        speaking: await generateLessonAudio("speaking", term, definition),
+        dictation: await generateLessonAudio(
+          "dictation",
+          term,
+          definition,
+          speed,
+        ),
+        listening: await generateLessonAudio(
+          "listening",
+          term,
+          definition,
+          speed,
+        ),
+        speaking: await generateLessonAudio(
+          "speaking",
+          term,
+          definition,
+          speed,
+        ),
       },
     });
   }

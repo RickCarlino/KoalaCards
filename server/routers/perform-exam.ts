@@ -337,7 +337,6 @@ export const performExam = procedure
       where: { id: input.id },
     });
     if (transcript.kind === "error") {
-      console.log(`Transcription error`);
       return {
         result: "error",
         rejectionText: "Transcription error",

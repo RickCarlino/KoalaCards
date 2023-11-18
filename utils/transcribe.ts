@@ -59,6 +59,7 @@ export async function transcribeB64(
           text,
         });
       } catch (error) {
+        done = true;
         console.log("serverside transcription error:");
         console.error(error);
         return resolve({ kind: "error" });
