@@ -1,3 +1,4 @@
+import { getUserSettings } from "@/server/auth-helpers";
 import { prismaClient } from "@/server/prisma-client";
 import textToSpeech, { TextToSpeechClient } from "@google-cloud/text-to-speech";
 import { createHash } from "crypto";
@@ -152,7 +153,6 @@ const getOldCards = (now: number, { userId, take, notIn }: GetCardsParams) => {
 /** 21 hours in milliseconds, rather than 24 hours to account
  * for irregularities in a student's study habits. */
 const ALMOST_A_DAY = 21 * 60 * 60 * 1000;
-const MAX_NEW_PER_DAY = 24;
 
 const newCardsLearnedToday = (userId: string, now: number) => {
   return prismaClient.card.count({
@@ -173,7 +173,8 @@ export default async function getLessons(p: GetLessonInputParams) {
   const cardsLeft = take - cards.length;
   if (cardsLeft > 0) {
     const dailyIntake = await newCardsLearnedToday(userId, now);
-    if (dailyIntake < MAX_NEW_PER_DAY) {
+    const maxPerDay = (await getUserSettings(userId)).cardsPerDayMax;
+    if (dailyIntake < maxPerDay) {
       const newCards = await getNewCards(params);
       newCards.forEach((c) => cards.push(c));
     }

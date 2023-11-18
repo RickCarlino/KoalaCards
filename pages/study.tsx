@@ -17,6 +17,7 @@ import {
 import { QuizFailure, linkToEditPage } from "../components/quiz-failure";
 import { beep } from "@/utils/beep";
 import Link from "next/link";
+import { useUserSettings } from "@/components/settings-provider";
 
 type Props = {
   quizzes: Quiz[];
@@ -60,13 +61,10 @@ function CardOverview({ quiz }: { quiz: CurrentQuiz }) {
 }
 
 function Study(props: Props) {
-  const cardsById = props.quizzes.reduce(
-    (acc, quiz) => {
-      acc[quiz.id] = quiz;
-      return acc;
-    },
-    {} as Record<number, Quiz>,
-  );
+  const cardsById = props.quizzes.reduce((acc, quiz) => {
+    acc[quiz.id] = quiz;
+    return acc;
+  }, {} as Record<number, Quiz>);
   const newState = newQuizState({
     cardsById,
     totalCards: props.totalCards,
@@ -79,6 +77,7 @@ function Study(props: Props) {
   const flagCard = trpc.flagCard.useMutation();
   const editCard = trpc.editCard.useMutation();
   const getNextQuiz = trpc.getNextQuiz.useMutation();
+  const settings = useUserSettings();
   const needBetterErrorHandler = (error: any) => {
     notifications.show({
       title: "Error!",
@@ -139,9 +138,14 @@ function Study(props: Props) {
     return (
       <div>
         <h1>No Cards Due</h1>
-        <p>You must:</p>
+        <p>You can:</p>
         <ul>
-          <li>Not exceed 24 new cards in a 21 hour period.</li>
+          <li>
+            <Link href="/user">
+              Increase max cards per day (current value:{" "}
+              {settings.cardsPerDayMax})
+            </Link>
+          </li>
           <li>
             <Link href="/create">Create new cards</Link>.
           </li>
