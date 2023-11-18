@@ -17,6 +17,7 @@ import {
 import { QuizFailure, linkToEditPage } from "../components/quiz-failure";
 import { beep } from "@/utils/beep";
 import Link from "next/link";
+import { useUserSettings } from "@/components/settings-provider";
 
 type Props = {
   quizzes: Quiz[];
@@ -67,11 +68,13 @@ function Study(props: Props) {
     },
     {} as Record<number, Quiz>,
   );
+  const settings = useUserSettings();
   const newState = newQuizState({
     cardsById,
     totalCards: props.totalCards,
     quizzesDue: props.quizzesDue,
     newCards: props.newCards,
+    listeningPercentage: settings.listeningPercentage,
   });
   const [state, dispatch] = useReducer(quizReducer, newState);
   const performExam = trpc.performExam.useMutation();
@@ -139,9 +142,14 @@ function Study(props: Props) {
     return (
       <div>
         <h1>No Cards Due</h1>
-        <p>You must:</p>
+        <p>You can:</p>
         <ul>
-          <li>Not exceed 24 new cards in a 21 hour period.</li>
+          <li>
+            <Link href="/user">
+              Increase max cards per day (current value:{" "}
+              {settings.cardsPerDayMax})
+            </Link>
+          </li>
           <li>
             <Link href="/create">Create new cards</Link>.
           </li>
@@ -297,21 +305,23 @@ function Study(props: Props) {
 
 function StudyLoader() {
   const { data, failureReason } = trpc.getNextQuizzes.useQuery({});
+
+  if (!data) {
+    return <div>Loading data...</div>;
+  }
+
   if (failureReason) {
     return <div>Failed to load: {failureReason.message}</div>;
   }
-  if (data) {
-    return (
-      <Study
-        quizzes={data.quizzes}
-        totalCards={data.totalCards}
-        quizzesDue={data.quizzesDue}
-        newCards={data.newCards}
-      />
-    );
-  } else {
-    return <div>Loading...</div>;
-  }
+
+  return (
+    <Study
+      quizzes={data.quizzes}
+      totalCards={data.totalCards}
+      quizzesDue={data.quizzesDue}
+      newCards={data.newCards}
+    />
+  );
 }
 
 export default function Main() {

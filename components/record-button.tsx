@@ -2,6 +2,7 @@ import { Button } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import { playAudio } from "./play-button";
 import { useVoiceRecorder } from "@/utils/use-recorder";
+import { useUserSettings } from "./settings-provider";
 
 /**
  * Converts an MP4 audio Blob to a single-channel (mono) WAV audio Blob.
@@ -108,11 +109,12 @@ type Props = {
   disabled?: boolean;
 };
 export function RecordButton(props: Props) {
+  const userSettings = useUserSettings();
   const { isRecording, stop, start } = useVoiceRecorder(async (data) => {
     const wav = await convertBlobToWav(data);
     const b64 = await blobToBase64(wav);
     if (props.lessonType !== "listening") {
-      if (Math.random() < 0.25) {
+      if (Math.random() < userSettings.playbackPercentage) {
         await playAudio(b64); // TODO: Maybe move to onRecord callback in parent.
       }
     }

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { procedure } from "../trpc";
 import getLessons from "@/utils/fetch-lesson";
 import { prismaClient } from "../prisma-client";
+import { getUserSettings } from "../auth-helpers";
 
 const Quiz = z.object({
   id: z.number(),
@@ -70,10 +71,7 @@ export const getNextQuizzes = procedure
   .input(z.object({}))
   .output(QuizList)
   .query(async ({ ctx }) => {
-    const userId = ctx.user?.id;
-    if (!userId) {
-      throw new Error("User not found");
-    }
+    const userId = (await getUserSettings(ctx.user?.id)).user.id;
     return {
       ...(await getLessonMeta(userId)),
       quizzes: await getLessons({ userId }),
@@ -88,11 +86,7 @@ export const getNextQuiz = procedure
   )
   .output(QuizList)
   .mutation(async ({ ctx, input }) => {
-    const userId = ctx.user?.id;
-    if (!userId) {
-      throw new Error("User not found");
-    }
-
+    const userId = (await getUserSettings(ctx.user?.id)).user.id;
     const take = input.notIn.length < 3 ? 3 : 1;
     const quizzes = await getLessons({
       userId,

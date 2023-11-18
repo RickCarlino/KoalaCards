@@ -1,3 +1,4 @@
+import { getUserSettings } from "@/server/auth-helpers";
 import { prismaClient } from "@/server/prisma-client";
 import textToSpeech, { TextToSpeechClient } from "@google-cloud/text-to-speech";
 import { createHash } from "crypto";
@@ -37,7 +38,7 @@ const LESSON_SIZE = 5;
 const SSML: Record<LessonType, string> = {
   dictation: `<speak><prosody rate="x-slow">{{term}}</prosody></speak>`,
   speaking: `<speak><voice language="en-US" gender="female">{{definition}}</voice></speak>`,
-  listening: `<speak>{{term}}</speak>`,
+  listening: `<speak><prosody rate="{{speed}}%">{{term}}</prosody></speak>`,
 };
 
 let CLIENT: TextToSpeechClient;
@@ -107,10 +108,12 @@ async function generateLessonAudio(
   lessonType: LessonType,
   _term: string,
   _definition: string,
+  speed: number,
 ) {
   const ssml = template(SSML[lessonType], {
     term: _term,
     definition: _definition,
+    speed,
   });
   return generateSpeech(ssml);
 }
@@ -152,7 +155,6 @@ const getOldCards = (now: number, { userId, take, notIn }: GetCardsParams) => {
 /** 21 hours in milliseconds, rather than 24 hours to account
  * for irregularities in a student's study habits. */
 const ALMOST_A_DAY = 21 * 60 * 60 * 1000;
-const MAX_NEW_PER_DAY = 24;
 
 const newCardsLearnedToday = (userId: string, now: number) => {
   return prismaClient.card.count({
@@ -171,9 +173,11 @@ export default async function getLessons(p: GetLessonInputParams) {
   const params = { userId, take, notIn: excludedIDs };
   const cards = await getOldCards(now, params);
   const cardsLeft = take - cards.length;
+  const speed = (await getUserSettings(userId)).playbackSpeed * 100;
   if (cardsLeft > 0) {
     const dailyIntake = await newCardsLearnedToday(userId, now);
-    if (dailyIntake < MAX_NEW_PER_DAY) {
+    const maxPerDay = (await getUserSettings(userId)).cardsPerDayMax;
+    if (dailyIntake < maxPerDay) {
       const newCards = await getNewCards(params);
       newCards.forEach((c) => cards.push(c));
     }
@@ -188,9 +192,24 @@ export default async function getLessons(p: GetLessonInputParams) {
       repetitions: card.repetitions,
       lapses: card.lapses,
       audio: {
-        dictation: await generateLessonAudio("dictation", term, definition),
-        listening: await generateLessonAudio("listening", term, definition),
-        speaking: await generateLessonAudio("speaking", term, definition),
+        dictation: await generateLessonAudio(
+          "dictation",
+          term,
+          definition,
+          speed,
+        ),
+        listening: await generateLessonAudio(
+          "listening",
+          term,
+          definition,
+          speed,
+        ),
+        speaking: await generateLessonAudio(
+          "speaking",
+          term,
+          definition,
+          speed,
+        ),
       },
     });
   }

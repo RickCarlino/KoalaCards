@@ -6,6 +6,7 @@ import { trpc } from "@/utils/trpc";
 import { SessionProvider } from "next-auth/react";
 import Navbar from "./_nav";
 import { Notifications } from "@mantine/notifications";
+import { UserSettingsProvider } from "@/components/settings-provider";
 
 function App(props: AppProps) {
   const { Component, pageProps } = props;
@@ -21,11 +22,13 @@ function App(props: AppProps) {
       </Head>
       <SessionProvider session={pageProps.session}>
         <MantineProvider defaultColorScheme="auto">
-          <Notifications />
-          <Navbar />
-          <div style={{ display: "flex", flexDirection: "row" }}>
-            <Component {...pageProps} />
-          </div>
+          <UserSettingsProvider>
+            <Notifications />
+            <Navbar />
+            <div style={{ display: "flex", flexDirection: "row" }}>
+              <Component {...pageProps} />
+            </div>
+          </UserSettingsProvider>
         </MantineProvider>
       </SessionProvider>
     </>
