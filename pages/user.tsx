@@ -72,7 +72,7 @@ export default function UserSettingsPage(props: Props) {
       <Title order={1}>User Settings</Title>
       <form onSubmit={handleSubmit}>
         <NumberInput
-          label="Listening Percentage"
+          label="Percentage of tests that should be listening tests"
           id="listeningPercentage"
           name="listeningPercentage"
           value={settings.listeningPercentage}
@@ -83,7 +83,7 @@ export default function UserSettingsPage(props: Props) {
           required
         />
         <NumberInput
-          label="Playback Speed"
+          label="Audio playback speed percentage (50%-200%)"
           id="playbackSpeed"
           name="playbackSpeed"
           value={settings.playbackSpeed}
@@ -94,7 +94,7 @@ export default function UserSettingsPage(props: Props) {
           required
         />
         <NumberInput
-          label="Cards Per Day Max"
+          label="Maximum new cards introduced in a 21 hour period"
           id="cardsPerDayMax"
           name="cardsPerDayMax"
           value={settings.cardsPerDayMax}
@@ -103,7 +103,7 @@ export default function UserSettingsPage(props: Props) {
           required
         />
         <NumberInput
-          label="Playback Percentage"
+          label="Percentage of user recorded audio played back after a speaking test."
           id="playbackPercentage"
           name="playbackPercentage"
           value={settings.playbackPercentage}
