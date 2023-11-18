@@ -114,18 +114,32 @@ async function generateLessonAudio(
   });
   return generateSpeech(ssml);
 }
-
-export default async function getLessons(p: GetLessonInputParams) {
-  const userId = p.userId;
-  const now = p.now || Date.now();
-  const take = p.take || LESSON_SIZE;
-  const excludedIDs = p.notIn || [];
-  const cards = await prismaClient.card.findMany({
+type GetCardsParams = {
+  userId: string;
+  take: number;
+  notIn: number[];
+};
+const getNewCards = ({ userId, take, notIn }: GetCardsParams) => {
+  return prismaClient.card.findMany({
     where: {
-      id: { notIn: excludedIDs },
+      id: { notIn },
+      flagged: false,
+      userId,
+      AND: [{ lapses: 0 }, { repetitions: 0 }],
+    },
+    orderBy: { createdAt: "asc" },
+    take,
+  });
+};
+
+const getOldCards = (now: number, { userId, take, notIn }: GetCardsParams) => {
+  return prismaClient.card.findMany({
+    where: {
+      id: { notIn },
       flagged: false,
       userId,
       nextReviewAt: { lt: now },
+      OR: [{ lapses: { gt: 0 } }, { repetitions: { gt: 0 } }],
     },
     orderBy: [
       { lapses: "desc" },
@@ -134,6 +148,36 @@ export default async function getLessons(p: GetLessonInputParams) {
     ],
     take,
   });
+};
+/** 21 hours in milliseconds, rather than 24 hours to account
+ * for irregularities in a student's study habits. */
+const ALMOST_A_DAY = 21 * 60 * 60 * 1000;
+const MAX_NEW_PER_DAY = 24;
+
+const newCardsLearnedToday = (userId: string, now: number) => {
+  return prismaClient.card.count({
+    where: {
+      userId,
+      firstReview: { gt: new Date(now - ALMOST_A_DAY) },
+    },
+  });
+};
+
+export default async function getLessons(p: GetLessonInputParams) {
+  const userId = p.userId;
+  const now = p.now || Date.now();
+  const take = p.take || LESSON_SIZE;
+  const excludedIDs = p.notIn || [];
+  const params = { userId, take, notIn: excludedIDs };
+  const cards = await getOldCards(now, params);
+  const cardsLeft = take - cards.length;
+  if (cardsLeft > 0) {
+    const dailyIntake = await newCardsLearnedToday(userId, now);
+    if (dailyIntake < MAX_NEW_PER_DAY) {
+      const newCards = await getNewCards(params);
+      newCards.forEach((c) => cards.push(c));
+    }
+  }
   const output: LocalQuiz[] = [];
   for (const card of cards) {
     const { term, definition } = card;

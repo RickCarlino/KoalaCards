@@ -139,10 +139,16 @@ function Study(props: Props) {
     return (
       <div>
         <h1>No Cards Due</h1>
-        <p>
-          You must <Link href="/create">create new cards</Link> or{" "}
-          <Link href="/cards">import cards from a backup file</Link>.
-        </p>
+        <p>You must:</p>
+        <ul>
+          <li>Not exceed 24 new cards in a 21 hour period.</li>
+          <li>
+            <Link href="/create">Create new cards</Link>.
+          </li>
+          <li>
+            <Link href="/cards">Import cards from a backup file</Link>
+          </li>
+        </ul>
       </div>
     );
   }
