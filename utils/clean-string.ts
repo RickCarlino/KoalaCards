@@ -4,7 +4,5 @@ const cleanString = (str: string) => {
 };
 
 export const exactMatch = (str: string, query: string) => {
-  const isMatch = cleanString(str) === cleanString(query);
-  console.log(`${isMatch ? "OK" : "NO"}: ${str} === ${query}`);
-  return isMatch;
+  return cleanString(str) === cleanString(query);;
 };

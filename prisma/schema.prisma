@@ -81,12 +81,21 @@ model User {
 }
 
 model UserSettings {
-  id                 Int      @id @default(autoincrement())
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId             String   @unique
-  playbackPercentage Float    @default(1)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id                  Int      @id @default(autoincrement())
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId              String   @unique
+  // Value from 0 to 1 representing the percentage chance
+  // that a quiz will be a listening quiz (as opposed to speaking)
+  listeningPercentage Float    @default(0.5)
+  // Audio playback speed min: 0.5 max: 2
+  playbackSpeed       Float    @default(1)
+  // Cards/day max
+  cardsPerDayMax      Int      @default(21)
+  // Value from 0 to 1 representing the percentage liklihood
+  // of a random playback of the user's audio.
+  playbackPercentage  Float    @default(1)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 }
 
 model VerificationToken {
