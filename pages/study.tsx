@@ -61,13 +61,10 @@ function CardOverview({ quiz }: { quiz: CurrentQuiz }) {
 }
 
 function Study(props: Props) {
-  const cardsById = props.quizzes.reduce(
-    (acc, quiz) => {
-      acc[quiz.id] = quiz;
-      return acc;
-    },
-    {} as Record<number, Quiz>,
-  );
+  const cardsById = props.quizzes.reduce((acc, quiz) => {
+    acc[quiz.id] = quiz;
+    return acc;
+  }, {} as Record<number, Quiz>);
   const settings = useUserSettings();
   const newState = newQuizState({
     cardsById,
@@ -117,7 +114,11 @@ function Study(props: Props) {
 
   const f = state.failure;
   if (f) {
-    const clear = () => dispatch({ type: "SET_FAILURE", value: null });
+    const clear = () =>
+      dispatch({
+        type: "REMOVE_FAILURE",
+        id: f.id,
+      });
     const psd = f.previousSpacingData;
     const failProps: Parameters<typeof QuizFailure>[0] = {
       ...f,
@@ -166,7 +167,7 @@ function Study(props: Props) {
     performExam
       .mutateAsync({ id, audio, lessonType })
       .then(async (data) => {
-        dispatch({ type: "SET_FAILURE", value: null });
+        dispatch({ type: "REMOVE_FAILURE", id: quiz.id });
         switch (data.result) {
           case "success":
             const g = Math.round(data.grade);
@@ -193,7 +194,7 @@ function Study(props: Props) {
             lessonType === "speaking" &&
               console.log("Transcript: " + data.userTranscription);
             dispatch({
-              type: "SET_FAILURE",
+              type: "ADD_FAILURE",
               value: {
                 id,
                 term: quiz.term,
