@@ -28,7 +28,6 @@ type Failure = {
 
 type State = {
   numQuizzesAwaitingServerResponse: number;
-  errors: string[];
   quizIDsForLesson: number[];
   cardsById: Record<string, Quiz>;
   isRecording: boolean;
@@ -88,7 +87,6 @@ export const newQuizState = (state: Partial<State> = {}): State => {
     numQuizzesAwaitingServerResponse: 0,
     cardsById,
     quizIDsForLesson: remainingQuizIDs,
-    errors: [],
     isRecording: false,
     failure: null,
     totalCards: 0,
