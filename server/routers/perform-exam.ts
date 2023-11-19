@@ -8,6 +8,7 @@ import OpenAI from "openai";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat";
 import { SafeCounter } from "@/utils/counter";
 import { exactMatch } from "@/utils/clean-string";
+import { errorReport } from "@/utils/error-report";
 
 type Quiz = (
   transcript: string,
@@ -16,7 +17,7 @@ type Quiz = (
 const apiKey = process.env.OPENAI_API_KEY;
 
 if (!apiKey) {
-  throw new Error("Missing ENV Var: OPENAI_API_KEY");
+  errorReport("Missing ENV Var: OPENAI_API_KEY");
 }
 
 const configuration = { apiKey };
@@ -141,7 +142,7 @@ export const gradedResponse = async (
     functions: [GRADED_RESPONSE],
   });
   if (!answer) {
-    throw new Error("No answer");
+    return errorReport("No answer");
   }
   tokenUsage.labels({ userID }).inc(answer.usage?.total_tokens ?? 0);
   type Result = [number, string | undefined];

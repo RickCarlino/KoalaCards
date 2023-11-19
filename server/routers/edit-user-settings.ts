@@ -2,6 +2,7 @@ import { z } from "zod";
 import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc";
 import { getUserSettings } from "../auth-helpers";
+import { errorReport } from "@/utils/error-report";
 
 export const editUserSettings = procedure
   .input(
@@ -19,7 +20,7 @@ export const editUserSettings = procedure
     // Ensure that the user passed the same updatedAt timestamp
     // otherwise invalidate the update since it could be stale
     if (settings.updatedAt.getTime() !== input.updatedAt.getTime()) {
-      throw new Error("Update conflict: the data might be stale");
+      return errorReport("Update conflict: the data might be stale");
     }
 
     // Update settings

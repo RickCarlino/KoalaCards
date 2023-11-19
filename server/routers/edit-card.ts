@@ -2,6 +2,7 @@ import { z } from "zod";
 import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc";
 import { getUserSettings } from "../auth-helpers";
+import { errorReport } from "@/utils/error-report";
 
 export const editCard = procedure
   .input(
@@ -28,7 +29,7 @@ export const editCard = procedure
     });
 
     if (!card) {
-      throw new Error("Card not found");
+      return errorReport("Card not found");
     }
 
     await prismaClient.card.update({

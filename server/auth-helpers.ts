@@ -1,10 +1,11 @@
+import { errorReport } from "@/utils/error-report";
 import { prismaClient } from "./prisma-client";
 
 type UserID = number | string | undefined | null;
 
 export const getUserSettingsFromEmail = async (email?: UserID) => {
   if (!email) {
-    throw new Error("Missing Email");
+    return errorReport("Missing Email");
   }
   const where = { email: "" + email };
   const id = (await prismaClient.user.findUnique({ where }))?.id;
@@ -13,7 +14,7 @@ export const getUserSettingsFromEmail = async (email?: UserID) => {
 
 export const getUserSettings = async (userId?: UserID) => {
   if (!userId) {
-    throw new Error("Missing User ID");
+    return errorReport("Missing User ID");
   }
   const params = { userId: "" + userId };
   return await prismaClient.userSettings.upsert({

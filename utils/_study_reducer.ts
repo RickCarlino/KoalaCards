@@ -47,7 +47,8 @@ type QuizResult = "error" | "failure" | "success";
 type Action =
   | { type: "DID_GRADE"; id: number; result: QuizResult }
   | { type: "FLAG_QUIZ"; id: number }
-  | { type: "SET_FAILURE"; value: null | Failure }
+  | { type: "ADD_FAILURE"; value: Failure }
+  | { type: "REMOVE_FAILURE"; id: number }
   | { type: "SET_RECORDING"; value: boolean }
   | { type: "USER_GAVE_UP"; id: number }
   | { type: "WILL_GRADE"; id: number }
@@ -130,10 +131,15 @@ export function currentQuiz(state: State): CurrentQuiz | undefined {
 
 function reduce(state: State, action: Action): State {
   switch (action.type) {
-    case "SET_FAILURE":
+    case "ADD_FAILURE":
       return {
         ...state,
         failure: action.value,
+      };
+    case "REMOVE_FAILURE":
+      return {
+        ...state,
+        failure: null,
       };
     case "SET_RECORDING":
       return {
@@ -163,11 +169,22 @@ function reduce(state: State, action: Action): State {
           state.numQuizzesAwaitingServerResponse + 1,
       };
     case "DID_GRADE":
+      let quizIDsForLesson = [...state.quizIDsForLesson];
+      let cardsById = { ...state.cardsById };
+      if (action.result === "error") {
+        const id = action.id;
+        console.log(`Need to remove ${id} from state tree:`);
+        console.dir(state);
+        delete cardsById[id];
+        quizIDsForLesson = quizIDsForLesson.filter((x) => x !== id);
+      }
       let numQuizzesAwaitingServerResponse =
         state.numQuizzesAwaitingServerResponse - 1;
       return gotoNextQuiz({
         ...state,
         numQuizzesAwaitingServerResponse,
+        quizIDsForLesson,
+        cardsById,
       });
     case "ADD_MORE":
       const newStuff = action.quizzes.map((x) => x.id);
