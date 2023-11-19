@@ -5,7 +5,7 @@ import { trpc } from "@/utils/trpc";
 import { Button, Container, Grid, Paper } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
-import { useEffect, useReducer } from "react";
+import { useEffect, useState, useReducer } from "react";
 import Authed from "../components/authed";
 import {
   CurrentQuiz,
@@ -81,6 +81,8 @@ function Study(props: Props) {
   const flagCard = trpc.flagCard.useMutation();
   const editCard = trpc.editCard.useMutation();
   const getNextQuiz = trpc.getNextQuiz.useMutation();
+  // TODO: Move into state tree.
+  const [isOK, setOK] = useState(true);
   const needBetterErrorHandler = (error: any) => {
     notifications.show({
       title: "Error!",
@@ -99,12 +101,14 @@ function Study(props: Props) {
   const linterRequiresThis = deps.join(".");
   useEffect(() => {
     if (quiz && noFailures) {
+      setOK(false);
       playAudio(quiz.quizAudio, true);
     }
   }, [linterRequiresThis]);
 
   const doFail = (id: number) => {
     dispatch({ type: "USER_GAVE_UP", id });
+    setOK(true);
     failCard.mutateAsync({ id }).catch(needBetterErrorHandler);
   };
 
@@ -112,11 +116,12 @@ function Study(props: Props) {
    * card or not. */
   const doFlag = (id: number, goToNext = true) => {
     goToNext && dispatch({ type: "FLAG_QUIZ", id });
+    setOK(true);
     return flagCard.mutateAsync({ id }).catch(needBetterErrorHandler);
   };
 
   const f = state.failures[0];
-  if (f && !state.isRecording) {
+  if (f && !state.isRecording && isOK) {
     const clear = () =>
       dispatch({
         type: "REMOVE_FAILURE",
@@ -167,6 +172,7 @@ function Study(props: Props) {
   const { id, lessonType } = quiz;
   const onRecord = (audio: string) => {
     dispatch({ type: "WILL_GRADE", id });
+    setOK(true);
     performExam
       .mutateAsync({ id, audio, lessonType })
       .then(async (data) => {
