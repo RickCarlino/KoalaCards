@@ -217,7 +217,12 @@ function Study(props: Props) {
             if (!data) return;
             dispatch({
               type: "ADD_MORE",
-              quizzes: data.quizzes,
+              quizzes: data.quizzes.map((x) => {
+                return {
+                  ...x,
+                  randomSeed: Math.random(),
+                };
+              }),
               totalCards: data.totalCards,
               quizzesDue: data.quizzesDue,
               newCards: data.newCards,
@@ -273,7 +278,8 @@ function Study(props: Props) {
       <p>{quiz.lapses} lapses</p>
       <p>
         {state.totalCards} cards total, {state.quizzesDue} due, {state.newCards}{" "}
-        new, {state.numQuizzesAwaitingServerResponse} awaiting grades.
+        new, {state.numQuizzesAwaitingServerResponse} awaiting grades,{" "}
+        {Object.keys(state.cardsById).length} in Queue.
       </p>
       <p>{linkToEditPage(quiz.id)}</p>
     </Container>
@@ -293,7 +299,12 @@ function StudyLoader() {
 
   return (
     <Study
-      quizzes={data.quizzes}
+      quizzes={data.quizzes.map((x) => {
+        return {
+          ...x,
+          randomSeed: Math.random(),
+        };
+      })}
       totalCards={data.totalCards}
       quizzesDue={data.quizzesDue}
       newCards={data.newCards}
