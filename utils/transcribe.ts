@@ -4,6 +4,7 @@ import path from "path";
 import { uid } from "radash";
 import { promisify } from "util";
 import { SafeCounter } from "./counter";
+import { errorReport } from "./error-report";
 
 export type Lang = "ko" | "en-US";
 
@@ -11,15 +12,15 @@ export const captureAudio = (dataURI: string): string => {
   const regex = /^data:.+\/(.+);base64,(.*)$/;
   const matches = dataURI.match(regex);
   if (!matches || matches.length !== 3) {
-    throw new Error("Invalid input string");
+    return errorReport("Invalid input string");
   }
   return matches[2];
 };
 
 type TranscriptionResult = { kind: "OK"; text: string } | { kind: "error" };
 
-const PROMPT_KO = "한국어 학생이 한국어로 말씁합니다.";
-const PROMPT_EN = "Korean language learner translates sentences to English.";
+const PROMPT_KO = "한국어 학생이 말하고 있습니다: ";
+const PROMPT_EN = "A Korean language learner translates sentences to English.";
 
 const transcriptionLength = SafeCounter({
   name: "transcriptionLength",

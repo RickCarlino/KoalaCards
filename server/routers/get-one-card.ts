@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc";
+import { errorReport } from "@/utils/error-report";
 
 export const getOneCard = procedure
   .input(
@@ -24,7 +25,7 @@ export const getOneCard = procedure
       },
     });
     if (!card) {
-      throw new Error("Card not found");
+      return errorReport("Card not found");
     }
     return {
       id: card.id,

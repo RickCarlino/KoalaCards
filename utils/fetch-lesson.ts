@@ -6,6 +6,7 @@ import fs, { existsSync, readFileSync } from "fs";
 import path from "path";
 import { draw, template } from "radash";
 import util from "util";
+import { errorReport } from "./error-report";
 
 type LocalQuiz = {
   id: number;
@@ -88,7 +89,7 @@ const generateSpeechFile = async (
     });
 
     if (!response.audioContent) {
-      throw new Error("No audio content");
+      return errorReport("No audio content");
     }
     const writeFile = util.promisify(fs.writeFile);
     await writeFile(p, response.audioContent, "binary");

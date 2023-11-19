@@ -2,6 +2,7 @@ import { z } from "zod";
 import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc";
 import { getUserSettings } from "../auth-helpers";
+import { errorReport } from "@/utils/error-report";
 
 export const deleteCard = procedure
   .input(
@@ -20,7 +21,7 @@ export const deleteCard = procedure
     });
 
     if (!card) {
-      throw new Error("Card not found");
+      return errorReport("Card not found");
     }
 
     await prismaClient.card.delete({
