@@ -15,7 +15,6 @@ import {
   quizReducer,
 } from "../utils/_study_reducer";
 import { QuizFailure, linkToEditPage } from "../components/quiz-failure";
-import { beep } from "@/utils/beep";
 import Link from "next/link";
 import { useUserSettings } from "@/components/settings-provider";
 
@@ -61,10 +60,13 @@ function CardOverview({ quiz }: { quiz: CurrentQuiz }) {
 }
 
 function Study(props: Props) {
-  const cardsById = props.quizzes.reduce((acc, quiz) => {
-    acc[quiz.id] = quiz;
-    return acc;
-  }, {} as Record<number, Quiz>);
+  const cardsById = props.quizzes.reduce(
+    (acc, quiz) => {
+      acc[quiz.id] = quiz;
+      return acc;
+    },
+    {} as Record<number, Quiz>,
+  );
   const settings = useUserSettings();
   const newState = newQuizState({
     cardsById,
@@ -92,11 +94,12 @@ function Study(props: Props) {
     ["x", () => quiz && doFail(quiz.id)],
     ["z", () => quiz && doFlag(quiz.id)],
   ]);
-  const deps = [quiz?.id, quiz?.lessonType, !!state.failure];
+  const noFailures = state.failures.length === 0;
+  const deps = [quiz?.id, quiz?.lessonType, noFailures];
   const linterRequiresThis = deps.join(".");
   useEffect(() => {
-    if (quiz && !state.failure) {
-      playAudio(quiz.quizAudio);
+    if (quiz) {
+      playAudio(quiz.quizAudio, true);
     }
   }, [linterRequiresThis]);
 
@@ -112,8 +115,8 @@ function Study(props: Props) {
     return flagCard.mutateAsync({ id }).catch(needBetterErrorHandler);
   };
 
-  const f = state.failure;
-  if (f) {
+  const f = state.failures[0];
+  if (f && !state.isRecording) {
     const clear = () =>
       dispatch({
         type: "REMOVE_FAILURE",
@@ -168,51 +171,21 @@ function Study(props: Props) {
       .mutateAsync({ id, audio, lessonType })
       .then(async (data) => {
         dispatch({ type: "REMOVE_FAILURE", id: quiz.id });
-        switch (data.result) {
-          case "success":
-            const g = Math.round(data.grade);
-            const colors: Record<number, string> = {
-              3: "#23c91a",
-              4: "#1ac0c9",
-              5: "#1a1ac9",
-            };
-            const color = colors[g] || "#c90ea7";
-            const titles: Record<number, string> = {
-              3: "Close Enough",
-              4: "Correct!",
-              5: "Perfect!",
-            };
-            const title = titles[g] || "OK";
-            notifications.show({
-              title,
-              message: `Grade: ${data.grade.toPrecision(2)}/5`,
-              color,
-            });
-            break;
-          case "failure":
-            await beep();
-            lessonType === "speaking" &&
-              console.log("Transcript: " + data.userTranscription);
-            dispatch({
-              type: "ADD_FAILURE",
-              value: {
-                id,
-                term: quiz.term,
-                definition: quiz.definition,
-                lessonType: quiz.lessonType,
-                userTranscription: data.userTranscription,
-                rejectionText: data.rejectionText,
-                previousSpacingData: data.previousSpacingData,
-              },
-            });
-            break;
-          case "error":
-            notifications.show({
-              title: "Error!",
-              message: "Something went wrong!",
-              color: "yellow",
-            });
-            break;
+        if (data.result === "failure") {
+          lessonType === "speaking" &&
+            console.log("Transcript: " + data.userTranscription);
+          dispatch({
+            type: "ADD_FAILURE",
+            value: {
+              id,
+              term: quiz.term,
+              definition: quiz.definition,
+              lessonType: quiz.lessonType,
+              userTranscription: data.userTranscription,
+              rejectionText: data.rejectionText,
+              previousSpacingData: data.previousSpacingData,
+            },
+          });
         }
         dispatch({
           type: "DID_GRADE",
@@ -252,7 +225,6 @@ function Study(props: Props) {
       <header style={HEADER_STYLES}>
         <span style={{ fontSize: "24px", fontWeight: "bold" }}>
           {HEADER[quiz.lessonType] || "Study"}
-          {!!state.numQuizzesAwaitingServerResponse && "⏳"}
         </span>
       </header>
       <Grid grow justify="center" align="center">
@@ -279,9 +251,7 @@ function Study(props: Props) {
         </Grid.Col>
         <Grid.Col span={4}>
           <RecordButton
-            disabled={
-              state.numQuizzesAwaitingServerResponse > 0 || state.isRecording
-            }
+            disabled={state.isRecording}
             lessonType={quiz.lessonType}
             onStart={() => dispatch({ type: "SET_RECORDING", value: true })}
             onRecord={(data) => {
@@ -297,7 +267,7 @@ function Study(props: Props) {
       <p>{quiz.lapses} lapses</p>
       <p>
         {state.totalCards} cards total, {state.quizzesDue} due, {state.newCards}{" "}
-        new.
+        new, {state.numQuizzesAwaitingServerResponse} awaiting grades.
       </p>
       <p>{linkToEditPage(quiz.id)}</p>
     </Container>

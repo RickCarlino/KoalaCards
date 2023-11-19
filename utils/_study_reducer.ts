@@ -31,7 +31,7 @@ type State = {
   quizIDsForLesson: number[];
   cardsById: Record<string, Quiz>;
   isRecording: boolean;
-  failure: Failure | null;
+  failures: Failure[];
   totalCards: number;
   quizzesDue: number;
   newCards: number;
@@ -88,7 +88,7 @@ export const newQuizState = (state: Partial<State> = {}): State => {
     cardsById,
     quizIDsForLesson: remainingQuizIDs,
     isRecording: false,
-    failure: null,
+    failures: [],
     totalCards: 0,
     quizzesDue: 0,
     newCards: 0,
@@ -127,17 +127,30 @@ export function currentQuiz(state: State): CurrentQuiz | undefined {
   };
 }
 
+function removeCard(state: State, id: number): State {
+  let quizIDsForLesson = [...state.quizIDsForLesson];
+  let cardsById = { ...state.cardsById };
+  cardsById[id] && delete cardsById[id];
+  quizIDsForLesson = quizIDsForLesson.filter((x) => x !== id);
+  return {
+    ...state,
+    quizIDsForLesson,
+    cardsById,
+  };
+}
+
 function reduce(state: State, action: Action): State {
   switch (action.type) {
     case "ADD_FAILURE":
       return {
         ...state,
-        failure: action.value,
+        failures: [...state.failures, action.value],
       };
     case "REMOVE_FAILURE":
       return {
+        // Old code:
         ...state,
-        failure: null,
+        failures: state.failures.filter((x) => x.id !== action.id),
       };
     case "SET_RECORDING":
       return {
@@ -147,43 +160,47 @@ function reduce(state: State, action: Action): State {
     case "USER_GAVE_UP":
       const nextState = gotoNextQuiz(state);
       const card = state.cardsById[action.id];
-      return {
+      const state2 = {
         ...nextState,
-        failure: {
-          id: action.id,
-          term: card.term,
-          definition: card.definition,
-          lessonType: currentQuiz(state)?.lessonType ?? "dictation",
-          userTranscription: "Empty response",
-          rejectionText: "You hit the `Fail` button. Better luck next time!",
-        },
+        failures: [
+          ...state.failures,
+          {
+            id: action.id,
+            term: card.term,
+            definition: card.definition,
+            lessonType: currentQuiz(state)?.lessonType ?? "dictation",
+            userTranscription: "Empty response",
+            rejectionText: "You hit the `Fail` button. Better luck next time!",
+          },
+        ],
       };
+      return removeCard(state2, action.id);
     case "FLAG_QUIZ":
-      return gotoNextQuiz(state);
+      return removeCard(gotoNextQuiz(state), action.id);
     case "WILL_GRADE":
-      return {
+      return gotoNextQuiz({
         ...state,
         numQuizzesAwaitingServerResponse:
           state.numQuizzesAwaitingServerResponse + 1,
-      };
-    case "DID_GRADE":
-      let quizIDsForLesson = [...state.quizIDsForLesson];
-      let cardsById = { ...state.cardsById };
-      if (action.result === "error") {
-        const id = action.id;
-        console.log(`Need to remove ${id} from state tree:`);
-        console.dir(state);
-        delete cardsById[id];
-        quizIDsForLesson = quizIDsForLesson.filter((x) => x !== id);
-      }
-      let numQuizzesAwaitingServerResponse =
-        state.numQuizzesAwaitingServerResponse - 1;
-      return gotoNextQuiz({
-        ...state,
-        numQuizzesAwaitingServerResponse,
-        quizIDsForLesson,
-        cardsById,
       });
+    case "DID_GRADE":
+      const cardToGrade = state.cardsById[action.id];
+      const numQuizzesAwaitingServerResponse =
+        state.numQuizzesAwaitingServerResponse - 1;
+
+      if (cardToGrade) {
+        console.log(
+          `${action.result.toLocaleUpperCase()}: ${cardToGrade.term}`,
+        );
+      } else {
+        console.log(
+          `${action.result.toLocaleUpperCase()}: Card ${action.id} not found`,
+        );
+      }
+      return {
+        ...removeCard(state, action.id),
+        numQuizzesAwaitingServerResponse,
+      };
     case "ADD_MORE":
       const newStuff = action.quizzes.map((x) => x.id);
       const oldStuff = state.quizIDsForLesson;

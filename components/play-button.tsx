@@ -17,7 +17,10 @@ const playAudioBuffer = (buffer: AudioBuffer): Promise<void> => {
   });
 };
 
-export const playAudio = (urlOrDataURI: string): Promise<void> => {
+export const playAudio = (
+  urlOrDataURI: string,
+  pause = false,
+): Promise<void> => {
   return new Promise((resolve, reject) => {
     if (!urlOrDataURI) {
       return resolve();
@@ -43,7 +46,13 @@ export const playAudio = (urlOrDataURI: string): Promise<void> => {
       audioContext.decodeAudioData(
         audioArray.buffer,
         (buffer) => {
-          playAudioBuffer(buffer).then(resolve);
+          const pause500ms = () => new Promise((r) => setTimeout(r, 500));
+          const doIt = () => playAudioBuffer(buffer).then(resolve);
+          if (pause) {
+            pause500ms().then(doIt);
+          } else {
+            doIt();
+          }
         },
         (e) => reject(e),
       );

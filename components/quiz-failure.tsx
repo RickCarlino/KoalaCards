@@ -18,7 +18,7 @@ export function QuizFailure(props: {
   onClose: () => void;
 }) {
   useHotkeys([
-    ["V", () => props.onClose()],
+    ["Z", () => props.onClose()],
     ["X", props.onFlag],
     ["C", () => props.onDiscard?.()],
   ]);
@@ -36,7 +36,7 @@ export function QuizFailure(props: {
           >
             <h1 style={{ fontSize: "24px", fontWeight: "bold" }}>Incorrect</h1>
           </header>
-          <Text>You answered the last question incorrectly.</Text>
+          <Text>You answered a previous question incorrectly.</Text>
           <Grid.Col>
             <Text>
               <strong>Quiz type:</strong> {props.lessonType}
@@ -55,7 +55,7 @@ export function QuizFailure(props: {
             </Text>
             <Text>{linkToEditPage(props.id)}</Text>
             <Button color="green" onClick={props.onClose}>
-              Continue - V
+              Continue - Z
             </Button>
             {props.onDiscard && (
               <Button onClick={props.onDiscard} color="yellow">
