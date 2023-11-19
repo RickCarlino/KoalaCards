@@ -98,7 +98,7 @@ function Study(props: Props) {
   const deps = [quiz?.id, quiz?.lessonType, noFailures];
   const linterRequiresThis = deps.join(".");
   useEffect(() => {
-    if (quiz) {
+    if (quiz && noFailures) {
       playAudio(quiz.quizAudio, true);
     }
   }, [linterRequiresThis]);

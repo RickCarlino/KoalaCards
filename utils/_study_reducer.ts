@@ -128,10 +128,12 @@ export function currentQuiz(state: State): CurrentQuiz | undefined {
 }
 
 function removeCard(state: State, id: number): State {
-  let quizIDsForLesson = [...state.quizIDsForLesson];
-  let cardsById = { ...state.cardsById };
-  cardsById[id] && delete cardsById[id];
-  quizIDsForLesson = quizIDsForLesson.filter((x) => x !== id);
+  let quizIDsForLesson = state.quizIDsForLesson.filter((x) => x !== id);
+  let cardsById: State["cardsById"] = {}; // { ...state.cardsById };
+  // A mark-and-sweep garbage collector of sorts.
+  quizIDsForLesson.forEach((id) => {
+    cardsById[id] = state.cardsById[id];
+  });
   return {
     ...state,
     quizIDsForLesson,
@@ -176,7 +178,7 @@ function reduce(state: State, action: Action): State {
       };
       return removeCard(state2, action.id);
     case "FLAG_QUIZ":
-      return removeCard(gotoNextQuiz(state), action.id);
+      return gotoNextQuiz(state);
     case "WILL_GRADE":
       return gotoNextQuiz({
         ...state,
