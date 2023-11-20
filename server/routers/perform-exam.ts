@@ -275,7 +275,7 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
 }
 
 export async function gptCall(opts: ChatCompletionCreateParamsNonStreaming) {
-  return withTimeout(openai.chat.completions.create(opts), 10000);
+  return withTimeout(openai.chat.completions.create(opts), 11000);
 }
 
 const performExamOutput = z.union([

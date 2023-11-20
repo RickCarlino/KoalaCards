@@ -135,6 +135,7 @@ function removeCard(state: State, id: number): State {
 }
 
 function reduce(state: State, action: Action): State {
+  console.log(`=== ${action.type}`);
   switch (action.type) {
     case "ADD_FAILURE":
       return {
@@ -173,16 +174,17 @@ function reduce(state: State, action: Action): State {
     case "FLAG_QUIZ":
       return gotoNextQuiz(state);
     case "WILL_GRADE":
+      console.log(`PENDING: ${state.cardsById[action.id].term}`);
       return gotoNextQuiz({
         ...state,
         numQuizzesAwaitingServerResponse:
           state.numQuizzesAwaitingServerResponse + 1,
       });
     case "DID_GRADE":
-      const cardToGrade = state.cardsById[action.id];
       const numQuizzesAwaitingServerResponse =
         state.numQuizzesAwaitingServerResponse - 1;
 
+      const cardToGrade = state.cardsById[action.id];
       if (cardToGrade) {
         console.log(
           `${action.result.toLocaleUpperCase()}: ${cardToGrade.term}`,

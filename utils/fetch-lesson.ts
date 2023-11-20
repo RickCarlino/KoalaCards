@@ -153,9 +153,8 @@ const getOldCards = (now: number, { userId, take, notIn }: GetCardsParams) => {
     take,
   });
 };
-/** 21 hours in milliseconds, rather than 24 hours to account
- * for irregularities in a student's study habits. */
-const ALMOST_A_DAY = 21 * 60 * 60 * 1000;
+/** 24 hours in milliseconds */
+const ALMOST_A_DAY = 23 * 60 * 60 * 1000;
 
 const newCardsLearnedToday = (userId: string, now: number) => {
   return prismaClient.card.count({

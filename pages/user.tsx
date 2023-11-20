@@ -1,23 +1,98 @@
-import { Button, Container, NumberInput, Title } from "@mantine/core";
+import { Button, Card, Container, NumberInput, Title } from "@mantine/core";
 import { GetServerSidePropsContext } from "next";
 import { getSession } from "next-auth/react";
 import Authed from "../components/authed";
-import { UserSettings } from "@prisma/client";
 import React, { useState } from "react";
 import { trpc } from "@/utils/trpc";
 import { notifications } from "@mantine/notifications";
 import { getUserSettingsFromEmail } from "@/server/auth-helpers";
+import { prismaClient } from "@/server/prisma-client";
+import { UnwrapPromise } from "@prisma/client/runtime/library";
 
 export async function getServerSideProps(context: GetServerSidePropsContext) {
+  async function getUserCardStatistics(userId: string) {
+    // Calculate the timestamp for 24 hours ago
+    const twentyFourHoursAgo = new Date();
+    twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+
+    // Calculate the timestamp for 1 week ago
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+    // Query the database to retrieve the required statistics
+    const uniqueCardsLast24Hours = await prismaClient.card.count({
+      where: {
+        userId,
+        lastReview: {
+          gte: twentyFourHoursAgo,
+        },
+      },
+    });
+
+    const uniqueCardsLastWeek = await prismaClient.card.count({
+      where: {
+        userId,
+        lastReview: {
+          gte: oneWeekAgo,
+        },
+      },
+    });
+
+    const newCardsLast24Hours = await prismaClient.card.count({
+      where: {
+        userId,
+        firstReview: {
+          gte: twentyFourHoursAgo,
+        },
+      },
+    });
+
+    const newCardsLastWeek = await prismaClient.card.count({
+      where: {
+        userId,
+        firstReview: {
+          gte: oneWeekAgo,
+        },
+      },
+    });
+
+    const currentTimeInSeconds = Math.floor(Date.now() / 1000);
+
+    const cardsDueNext24Hours = await prismaClient.card.count({
+      where: {
+        userId,
+        nextReviewAt: {
+          lte: currentTimeInSeconds + 86400, // 86400 seconds in 24 hours
+        },
+      },
+    });
+
+    // Create an object to store the statistics
+    const statistics = {
+      uniqueCardsLast24Hours,
+      uniqueCardsLastWeek,
+      newCardsLast24Hours,
+      newCardsLastWeek,
+      cardsDueNext24Hours,
+      globalUsers: await prismaClient.user.count(),
+    };
+
+    return statistics;
+  }
+
   const session = await getSession({ req: context.req });
   const userSettings = await getUserSettingsFromEmail(session?.user?.email);
   // TODO: Why does this not work with dates?
-  return { props: { userSettings: JSON.parse(JSON.stringify(userSettings)) } };
+  console.log("==== SERVER OR CLIENT?");
+  return {
+    props: {
+      userSettings: JSON.parse(JSON.stringify(userSettings)),
+      stats: await getUserCardStatistics(userSettings.userId),
+    },
+  };
 }
 
-type Props = {
-  userSettings: UserSettings;
-};
+type Props = UnwrapPromise<ReturnType<typeof getServerSideProps>>["props"];
 
 export default function UserSettingsPage(props: Props) {
   const { userSettings } = props;
@@ -78,7 +153,7 @@ export default function UserSettingsPage(props: Props) {
           required
         />
         <NumberInput
-          label="Maximum new cards introduced in a 21 hour period"
+          label="Maximum new cards introduced in a 24 hour period"
           id="cardsPerDayMax"
           name="cardsPerDayMax"
           value={settings.cardsPerDayMax}
@@ -101,6 +176,25 @@ export default function UserSettingsPage(props: Props) {
           Save Settings
         </Button>
       </form>
+      <div>
+        <h1>Statistics</h1>
+        <Card shadow="xs" padding="md" radius="sm">
+          <p>Users on this server: {props.stats.globalUsers}</p>
+          <p>
+            Unique Cards Studied in Last 24 Hours:{" "}
+            {props.stats.uniqueCardsLast24Hours}
+          </p>
+          <p>
+            New Cards Studied in Last 24 Hours:{" "}
+            {props.stats.newCardsLast24Hours}
+          </p>
+          <p>
+            Unique Cards Studied in Last Week: {props.stats.uniqueCardsLastWeek}
+          </p>
+          <p>New Cards Studied in Last Week: {props.stats.newCardsLastWeek}</p>
+          <p>Cards Due in Next 24 Hours: {props.stats.cardsDueNext24Hours}</p>
+        </Card>
+      </div>
     </Container>,
   );
 }

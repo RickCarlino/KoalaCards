@@ -80,7 +80,7 @@ export async function transcribeB64(
         console.log("serverside transcription timeout");
         resolve({ kind: "error" });
       }
-    }, 10000),
+    }, 11000),
   );
 
   return Promise.race([transcribePromise, timeoutPromise]);
