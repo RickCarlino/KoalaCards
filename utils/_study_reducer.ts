@@ -120,15 +120,18 @@ export function currentQuiz(state: State): CurrentQuiz | undefined {
   };
 }
 
-function removeCard(state: State, id: number): State {
-  let quizIDsForLesson = state.quizIDsForLesson.filter((x) => x !== id);
+function removeCard(oldState: State, id: number): State {
+  let quizIDsForLesson = oldState.quizIDsForLesson.filter((x) => x !== id);
   let cardsById: State["cardsById"] = {}; // { ...state.cardsById };
   // A mark-and-sweep garbage collector of sorts.
   quizIDsForLesson.forEach((id) => {
-    cardsById[id] = state.cardsById[id];
+    cardsById[id] = oldState.cardsById[id];
+  });
+  oldState.failures.forEach((failure) => {
+    cardsById[failure.id] = oldState.cardsById[failure.id];
   });
   return {
-    ...state,
+    ...oldState,
     quizIDsForLesson,
     cardsById,
   };
@@ -144,7 +147,6 @@ function reduce(state: State, action: Action): State {
       };
     case "REMOVE_FAILURE":
       return {
-        // Old code:
         ...state,
         failures: state.failures.filter((x) => x.id !== action.id),
       };
@@ -195,7 +197,7 @@ function reduce(state: State, action: Action): State {
         );
       }
       return {
-        ...removeCard(state, action.id),
+        ...(action.result === "failure" ? state : removeCard(state, action.id)),
         numQuizzesAwaitingServerResponse,
       };
     case "ADD_MORE":

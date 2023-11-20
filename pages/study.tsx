@@ -147,6 +147,13 @@ function Study(props: Props) {
     }
     return <QuizFailure {...failProps} />;
   }
+  // Loading message if quizzesDue > 0
+  if (!quiz && state.quizzesDue > 0) {
+    return <div>
+      <h1>Please Wait</h1>
+      <p>Loading more cards...</p>
+    </div>;
+  }
   if (!quiz) {
     return (
       <div>
@@ -178,8 +185,7 @@ function Study(props: Props) {
       .then(async (data) => {
         dispatch({ type: "REMOVE_FAILURE", id: quiz.id });
         if (data.result === "failure") {
-          lessonType === "speaking" &&
-            console.log("Transcript: " + data.userTranscription);
+          console.log("Transcript: " + data.userTranscription);
           dispatch({
             type: "ADD_FAILURE",
             value: {

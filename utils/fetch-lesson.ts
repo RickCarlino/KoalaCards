@@ -37,7 +37,11 @@ const DATA_DIR = process.env.DATA_DIR || ".";
 const VOICES = ["A", "B", "C", "D"].map((x) => `ko-KR-Wavenet-${x}`);
 const LESSON_SIZE = 5;
 const SSML: Record<LessonType, string> = {
-  dictation: `<speak><prosody rate="x-slow">{{term}}</prosody></speak>`,
+  dictation: `<speak>
+    <voice language="en-US" gender="female">{{definition}}</voice>
+    <break time="0.3s"/>
+    <prosody rate="x-slow">{{term}}</prosody>
+  </speak>`,
   speaking: `<speak><voice language="en-US" gender="female">{{definition}}</voice></speak>`,
   listening: `<speak><prosody rate="{{speed}}%">{{term}}</prosody></speak>`,
 };
