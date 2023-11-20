@@ -4,7 +4,7 @@ import textToSpeech, { TextToSpeechClient } from "@google-cloud/text-to-speech";
 import { createHash } from "crypto";
 import fs, { existsSync, readFileSync } from "fs";
 import path from "path";
-import { draw, template } from "radash";
+import { draw, shuffle, template } from "radash";
 import util from "util";
 import { errorReport } from "./error-report";
 
@@ -123,8 +123,9 @@ type GetCardsParams = {
   take: number;
   notIn: number[];
 };
-const getNewCards = ({ userId, take, notIn }: GetCardsParams) => {
-  return prismaClient.card.findMany({
+const getNewCards = async ({ userId, take, notIn }: GetCardsParams) => {
+  // Shuffle the most recently created 100 cards
+  const allPossibleIDs = await prismaClient.card.findMany({
     where: {
       id: { notIn },
       flagged: false,
@@ -132,7 +133,14 @@ const getNewCards = ({ userId, take, notIn }: GetCardsParams) => {
       AND: [{ lapses: 0 }, { repetitions: 0 }],
     },
     orderBy: { createdAt: "asc" },
-    take,
+    select: {
+      id: true,
+    },
+    take: 100,
+  });
+  const ids = shuffle(allPossibleIDs.map((x) => x.id)).slice(0, take);
+  return prismaClient.card.findMany({
+    where: { id: { in: ids } },
   });
 };
 
