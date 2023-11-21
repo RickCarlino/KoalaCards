@@ -60,10 +60,13 @@ function CardOverview({ quiz }: { quiz: CurrentQuiz }) {
 }
 
 function Study(props: Props) {
-  const cardsById = props.quizzes.reduce((acc, quiz) => {
-    acc[quiz.id] = quiz;
-    return acc;
-  }, {} as Record<number, Quiz>);
+  const cardsById = props.quizzes.reduce(
+    (acc, quiz) => {
+      acc[quiz.id] = quiz;
+      return acc;
+    },
+    {} as Record<number, Quiz>,
+  );
   const settings = useUserSettings();
   const newState = newQuizState({
     cardsById,
@@ -183,6 +186,7 @@ function Study(props: Props) {
     performExam
       .mutateAsync({ id, audio, lessonType })
       .then(async (data) => {
+        // Why did I add this? TODO: Remove after lots of testing...
         dispatch({ type: "REMOVE_FAILURE", id: quiz.id });
         if (data.result === "failure") {
           console.log("Transcript: " + data.userTranscription);
@@ -282,7 +286,8 @@ function Study(props: Props) {
       <p>
         {state.totalCards} cards total, {state.quizzesDue} due, {state.newCards}{" "}
         new, {state.numQuizzesAwaitingServerResponse} awaiting grades,{" "}
-        {Object.keys(state.cardsById).length} in Queue.
+        {Object.keys(state.cardsById).length} in study Queue, $
+        {state.failures.length} in failure queue.
       </p>
       <p>{linkToEditPage(quiz.id)}</p>
     </Container>
