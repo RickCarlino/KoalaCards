@@ -60,13 +60,10 @@ function CardOverview({ quiz }: { quiz: CurrentQuiz }) {
 }
 
 function Study(props: Props) {
-  const cardsById = props.quizzes.reduce(
-    (acc, quiz) => {
-      acc[quiz.id] = quiz;
-      return acc;
-    },
-    {} as Record<number, Quiz>,
-  );
+  const cardsById = props.quizzes.reduce((acc, quiz) => {
+    acc[quiz.id] = quiz;
+    return acc;
+  }, {} as Record<number, Quiz>);
   const settings = useUserSettings();
   const newState = newQuizState({
     cardsById,
@@ -179,7 +176,8 @@ function Study(props: Props) {
     );
   }
   const { id, lessonType } = quiz;
-  const onRecord = (audio: string) => {
+  const processAudio = (audio: string) => {
+    dispatch({ type: "SET_RECORDING", value: false });
     dispatch({ type: "WILL_GRADE", id });
     setOK(true);
     performExam
@@ -273,10 +271,7 @@ function Study(props: Props) {
             disabled={state.isRecording}
             lessonType={quiz.lessonType}
             onStart={() => dispatch({ type: "SET_RECORDING", value: true })}
-            onRecord={(data) => {
-              dispatch({ type: "SET_RECORDING", value: false });
-              onRecord(data);
-            }}
+            onRecord={processAudio}
           />
         </Grid.Col>
       </Grid>

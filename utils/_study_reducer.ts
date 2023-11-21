@@ -138,7 +138,7 @@ function removeCard(oldState: State, id: number): State {
 }
 
 function reduce(state: State, action: Action): State {
-  console.log(`=== ${action.type}`);
+  console.log(action);
   switch (action.type) {
     case "ADD_FAILURE":
       return {
@@ -176,46 +176,29 @@ function reduce(state: State, action: Action): State {
     case "FLAG_QUIZ":
       return gotoNextQuiz(state);
     case "WILL_GRADE":
-      console.log(`PENDING: ${state.cardsById[action.id].term}`);
+      console.log(action);
       return gotoNextQuiz({
         ...state,
         numQuizzesAwaitingServerResponse:
           state.numQuizzesAwaitingServerResponse + 1,
       });
     case "DID_GRADE":
-      const numQuizzesAwaitingServerResponse =
-        state.numQuizzesAwaitingServerResponse - 1;
-
-      const cardToGrade = state.cardsById[action.id];
-      if (cardToGrade) {
-        console.log(
-          `${action.result.toLocaleUpperCase()}: ${cardToGrade.term}`,
-        );
-      } else {
-        console.log(
-          `${action.result.toLocaleUpperCase()}: Card ${action.id} not found`,
-        );
-      }
       return {
-        ...(action.result === "failure" ? state : removeCard(state, action.id)),
-        numQuizzesAwaitingServerResponse,
+        ...removeCard(state, action.id),
+        numQuizzesAwaitingServerResponse:
+          state.numQuizzesAwaitingServerResponse - 1,
       };
     case "ADD_MORE":
       const newStuff = action.quizzes.map((x) => x.id);
       const oldStuff = state.quizIDsForLesson;
       const nextQuizIDsForLesson = [...oldStuff, ...newStuff];
-      const nextcardsById: Record<string, Quiz> = action.quizzes.reduce(
-        (acc, x) => {
-          acc[x.id] = x;
-          return acc;
-        },
-        {} as Record<string, Quiz>,
-      );
-
+      const nextcardsById: Record<string, Quiz> = {};
       nextQuizIDsForLesson.forEach((id) => {
         nextcardsById[id] ??= state.cardsById[id];
       });
-
+      action.quizzes.forEach((card) => {
+        nextcardsById[card.id] = card;
+      });
       return {
         ...state,
         cardsById: nextcardsById,
