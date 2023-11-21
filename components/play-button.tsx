@@ -1,14 +1,16 @@
 import { Button } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 
-let audioContext: AudioContext;
 let currentlyPlaying = false;
 
-const playAudioBuffer = (buffer: AudioBuffer): Promise<void> => {
+const playAudioBuffer = (
+  buffer: AudioBuffer,
+  context: AudioContext,
+): Promise<void> => {
   return new Promise((resolve) => {
-    const source = audioContext.createBufferSource();
+    const source = context.createBufferSource();
     source.buffer = buffer;
-    source.connect(audioContext.destination);
+    source.connect(context.destination);
     source.onended = () => {
       currentlyPlaying = false;
       resolve();
@@ -17,10 +19,8 @@ const playAudioBuffer = (buffer: AudioBuffer): Promise<void> => {
   });
 };
 
-export const playAudio = (
-  urlOrDataURI: string,
-  pause = false,
-): Promise<void> => {
+export const playAudio = (urlOrDataURI: string): Promise<void> => {
+  const audioContext = new AudioContext();
   return new Promise((resolve, reject) => {
     if (!urlOrDataURI) {
       return resolve();
@@ -32,37 +32,19 @@ export const playAudio = (
 
     currentlyPlaying = true;
 
-    if (!audioContext) {
-      audioContext = new AudioContext();
+    const audioData = atob(urlOrDataURI.split(",")[1]);
+    const audioArray = new Uint8Array(audioData.length);
+    for (let i = 0; i < audioData.length; i++) {
+      audioArray[i] = audioData.charCodeAt(i);
     }
 
-    if (urlOrDataURI.startsWith("data:")) {
-      const audioData = atob(urlOrDataURI.split(",")[1]);
-      const audioArray = new Uint8Array(audioData.length);
-      for (let i = 0; i < audioData.length; i++) {
-        audioArray[i] = audioData.charCodeAt(i);
-      }
-
-      audioContext.decodeAudioData(
-        audioArray.buffer,
-        (buffer) => {
-          const pause500ms = () => new Promise((r) => setTimeout(r, 500));
-          const doIt = () => playAudioBuffer(buffer).then(resolve);
-          if (pause) {
-            pause500ms().then(doIt);
-          } else {
-            doIt();
-          }
-        },
-        (e) => reject(e),
-      );
-    } else {
-      fetch(urlOrDataURI)
-        .then((response) => response.arrayBuffer())
-        .then((arrayBuffer) => audioContext.decodeAudioData(arrayBuffer))
-        .then((audioBuffer) => playAudioBuffer(audioBuffer).then(resolve))
-        .catch((e) => reject(e));
-    }
+    audioContext.decodeAudioData(
+      audioArray.buffer,
+      (buffer) => {
+        playAudioBuffer(buffer, audioContext).then(resolve);
+      },
+      (e) => reject(e),
+    );
   });
 };
 

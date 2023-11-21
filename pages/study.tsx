@@ -102,7 +102,7 @@ function Study(props: Props) {
   useEffect(() => {
     if (quiz && noFailures) {
       setOK(false);
-      playAudio(quiz.quizAudio, true);
+      playAudio(quiz.quizAudio);
     }
   }, [linterRequiresThis]);
 
@@ -149,10 +149,12 @@ function Study(props: Props) {
   }
   // Loading message if quizzesDue > 0
   if (!quiz && state.quizzesDue > 0) {
-    return <div>
-      <h1>Please Wait</h1>
-      <p>Loading more cards...</p>
-    </div>;
+    return (
+      <div>
+        <h1>Please Wait</h1>
+        <p>Loading more cards...</p>
+      </div>
+    );
   }
   if (!quiz) {
     return (
