@@ -176,7 +176,6 @@ function reduce(state: State, action: Action): State {
     case "FLAG_QUIZ":
       return gotoNextQuiz(state);
     case "WILL_GRADE":
-      console.log(action);
       return gotoNextQuiz({
         ...state,
         numQuizzesAwaitingServerResponse:
