@@ -1,3 +1,5 @@
+import { unique } from "radash";
+
 export type Quiz = {
   id: number;
   term: string;
@@ -195,13 +197,14 @@ function reduce(state: State, action: Action): State {
     case "ADD_MORE":
       const newStuff = action.quizzes.map((x) => x.id);
       const oldStuff = state.quizIDsForLesson;
-      const nextQuizIDsForLesson = [...oldStuff, ...newStuff];
+      const [head, ...tail] = [...oldStuff, ...newStuff];
+      const nextQuizIDsForLesson = [head, ...unique(tail)];
       const nextcardsById: Record<string, Quiz> = {};
       nextQuizIDsForLesson.forEach((id) => {
         nextcardsById[id] ??= state.cardsById[id];
       });
       action.quizzes.forEach((card) => {
-        nextcardsById[card.id] = card;
+        nextcardsById[card.id] ??= card;
       });
       return {
         ...state,
