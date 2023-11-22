@@ -87,7 +87,7 @@ export const getNextQuiz = procedure
   .output(QuizList)
   .mutation(async ({ ctx, input }) => {
     const userId = (await getUserSettings(ctx.user?.id)).user.id;
-    const take = input.notIn.length < 3 ? 7 : 1;
+    const take = Math.max(0, 10 - input.notIn.length);
     const quizzes = await getLessons({
       userId,
       take,

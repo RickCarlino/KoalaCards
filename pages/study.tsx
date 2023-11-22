@@ -286,7 +286,7 @@ function Study(props: Props) {
       <p>
         {state.totalCards} cards total, {state.quizzesDue} due, {state.newCards}{" "}
         new, {state.numQuizzesAwaitingServerResponse} awaiting grades,{" "}
-        {Object.keys(state.cardsById).length} in study Queue, $
+        {Object.keys(state.cardsById).length} in study Queue, 
         {state.failures.length} in failure queue.
       </p>
       <p>{linkToEditPage(quiz.id)}</p>

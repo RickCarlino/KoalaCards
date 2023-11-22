@@ -70,6 +70,11 @@ export type CurrentQuiz = {
 };
 
 export function gotoNextQuiz(state: State): State {
+  const count = state.quizIDsForLesson.length;
+  const uniqCount = new Set(state.quizIDsForLesson).size;
+  if (count !== uniqCount) {
+    console.warn("=== duplicates detected in study queue. Is this the bug?");
+  }
   const quizIDsForLesson = [...state.quizIDsForLesson.slice(1)];
   return { ...state, quizIDsForLesson };
 }

@@ -82,10 +82,9 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
 
   const session = await getSession({ req: context.req });
   const userSettings = await getUserSettingsFromEmail(session?.user?.email);
-  // TODO: Why does this not work with dates?
-  console.log("==== SERVER OR CLIENT?");
   return {
     props: {
+      // TODO: Why does this not work with dates?
       userSettings: JSON.parse(JSON.stringify(userSettings)),
       stats: await getUserCardStatistics(userSettings.userId),
     },
