@@ -71,14 +71,21 @@ export type CurrentQuiz = {
   lapses: number;
 };
 
-export function gotoNextQuiz(state: State): State {
-  const count = state.quizIDsForLesson.length;
-  const uniqCount = new Set(state.quizIDsForLesson).size;
-  if (count !== uniqCount) {
-    console.warn("=== duplicates detected in study queue. Is this the bug?");
+// Creates a unique array of numbers but keeps the head
+// in the 0th position to avoid changing the current quiz.
+function betterUnique(input: number[]): number[] {
+  if (input.length < 2) {
+    return input;
   }
-  const quizIDsForLesson = [...state.quizIDsForLesson.slice(1)];
-  return { ...state, quizIDsForLesson };
+  const [head, ...tail] = input;
+  return [head, ...unique(tail.filter((x) => x !== head))];
+}
+
+export function gotoNextQuiz(state: State): State {
+  return {
+    ...state,
+    quizIDsForLesson: betterUnique([...state.quizIDsForLesson.slice(1)])
+  };
 }
 
 export const newQuizState = (state: Partial<State> = {}): State => {
@@ -197,8 +204,7 @@ function reduce(state: State, action: Action): State {
     case "ADD_MORE":
       const newStuff = action.quizzes.map((x) => x.id);
       const oldStuff = state.quizIDsForLesson;
-      const [head, ...tail] = [...oldStuff, ...newStuff];
-      const nextQuizIDsForLesson = [head, ...unique(tail)];
+      const nextQuizIDsForLesson = betterUnique([...oldStuff, ...newStuff]);
       const nextcardsById: Record<string, Quiz> = {};
       nextQuizIDsForLesson.forEach((id) => {
         nextcardsById[id] ??= state.cardsById[id];
