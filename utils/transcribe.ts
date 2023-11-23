@@ -43,7 +43,7 @@ export async function transcribeB64(
   });
   await writeFileAsync(fpath, buffer);
   const isEn = lang.slice(0, 2) === "en";
-  let done = false;
+  // let done = false;
   const transcribePromise = new Promise<TranscriptionResult>(
     async (resolve) => {
       try {
@@ -53,14 +53,14 @@ export async function transcribeB64(
           prompt: isEn ? PROMPT_EN : PROMPT_KO,
         });
         const text = y.text || "NO RESPONSE.";
-        done = true;
+        // done = true;
         transcriptionLength.labels({ lang, userID }).inc(y.text.length);
         return resolve({
           kind: "OK",
           text,
         });
       } catch (error) {
-        done = true;
+        // done = true;
         console.log("serverside transcription error:");
         console.error(error);
         return resolve({ kind: "error" });
@@ -74,14 +74,14 @@ export async function transcribeB64(
     },
   );
 
-  const timeoutPromise = new Promise<TranscriptionResult>((resolve, _) =>
-    setTimeout(() => {
-      if (!done) {
-        console.log("serverside transcription timeout");
-        resolve({ kind: "error" });
-      }
-    }, 11000),
-  );
+  // const timeoutPromise = new Promise<TranscriptionResult>((resolve, _) =>
+  //   setTimeout(() => {
+  //     if (!done) {
+  //       console.log("serverside transcription timeout");
+  //       resolve({ kind: "error" });
+  //     }
+  //   }, 11000),
+  // );
 
-  return Promise.race([transcribePromise, timeoutPromise]);
+  return transcribePromise; // Promise.race([transcribePromise, timeoutPromise]);
 }

@@ -90,11 +90,13 @@ export const getNextQuiz = procedure
     const take = Math.max(0, 10 - input.notIn.length);
     // NOTE: If `take` is 0 prisma will ignore the param and
     // return all cards.
-    const quizzes = take ? await getLessons({
-      userId,
-      take,
-      notIn: input.notIn,
-    }) : [];
+    const quizzes = take
+      ? await getLessons({
+          userId,
+          take,
+          notIn: input.notIn,
+        })
+      : [];
     return {
       ...(await getLessonMeta(userId)),
       quizzes,

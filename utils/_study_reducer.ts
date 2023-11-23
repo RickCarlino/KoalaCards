@@ -84,7 +84,7 @@ function betterUnique(input: number[]): number[] {
 export function gotoNextQuiz(state: State): State {
   return {
     ...state,
-    quizIDsForLesson: betterUnique([...state.quizIDsForLesson.slice(1)])
+    quizIDsForLesson: betterUnique([...state.quizIDsForLesson.slice(1)]),
   };
 }
 
