@@ -5,5 +5,14 @@ import { getUserSettings as gus } from "../auth-helpers";
 export const getUserSettings = procedure
   .input(z.object({}))
   .mutation(async ({ ctx }) => {
-    return await gus(ctx.user?.id);
+    try {
+      const id = ctx.user?.id;
+      if (id) {
+        return await gus(id);
+      } else {
+        return null;
+      }
+    } catch (error) {
+      return null;
+    }
   });
