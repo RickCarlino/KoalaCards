@@ -1,7 +1,6 @@
 import { Button, Card, Container, NumberInput, Title } from "@mantine/core";
 import { GetServerSidePropsContext } from "next";
 import { getSession } from "next-auth/react";
-import Authed from "../components/authed";
 import React, { useState } from "react";
 import { trpc } from "@/utils/trpc";
 import { notifications } from "@mantine/notifications";
@@ -125,7 +124,7 @@ export default function UserSettingsPage(props: Props) {
     console.log(settings);
   };
 
-  return Authed(
+  return (
     <Container size="s">
       <Title order={1}>User Settings</Title>
       <form onSubmit={handleSubmit}>
@@ -194,6 +193,6 @@ export default function UserSettingsPage(props: Props) {
           <p>Cards Due in Next 24 Hours: {props.stats.cardsDueNext24Hours}</p>
         </Card>
       </div>
-    </Container>,
+    </Container>
   );
 }

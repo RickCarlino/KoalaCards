@@ -6,7 +6,6 @@ import { Button, Container, Grid, Paper } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { useEffect, useState, useReducer } from "react";
-import Authed from "../components/authed";
 import {
   CurrentQuiz,
   Quiz,
@@ -321,5 +320,5 @@ function StudyLoader() {
 }
 
 export default function Main() {
-  return Authed(MicrophonePermissions(<StudyLoader />));
+  return MicrophonePermissions(<StudyLoader />);
 }

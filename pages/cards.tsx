@@ -1,7 +1,6 @@
 import { CardTable } from "@/components/card-table";
 import { trpc } from "@/utils/trpc";
 import { Button, Container, FileButton } from "@mantine/core";
-import Authed from "../components/authed";
 import { z } from "zod";
 export const BACKUP_SCHEMA = z.array(
   z.object({
@@ -84,7 +83,7 @@ const Edit: React.FC = () => {
     if (!confirm(warning)) return;
     flagObnoxious.mutateAsync({}).then(() => location.reload());
   };
-  return Authed(
+  return (
     <Container size="s">
       <h1>Manage Cards</h1>
       <Button onClick={doDeleteFlagged}>Delete Flagged Cards</Button>
@@ -102,7 +101,7 @@ const Edit: React.FC = () => {
       />
       <hr />
       {content}
-    </Container>,
+    </Container>
   );
 };
 
