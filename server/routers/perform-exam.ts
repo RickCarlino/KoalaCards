@@ -3,12 +3,25 @@ import { gradePerformance } from "@/utils/srs";
 import { Lang, transcribeB64 } from "@/utils/transcribe";
 import { Card } from "@prisma/client";
 import { z } from "zod";
-import { procedure } from "../trpc";
+import { authorizedUsers, procedure } from "../trpc";
 import OpenAI from "openai";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat";
 import { SafeCounter } from "@/utils/counter";
 import { exactMatch } from "@/utils/clean-string";
 import { errorReport } from "@/utils/error-report";
+let approvedUserIDs: string[] = [];
+prismaClient.user
+  .findMany({
+    where: {
+      email: { in: authorizedUsers },
+    },
+  })
+  .then((users) => {
+    approvedUserIDs = users.map((x) => {
+      console.log(`Adding ${x.email} (${x.id}) to approved users.`);
+      return x.id;
+    });
+  });
 
 type Quiz = (
   transcript: string,
@@ -34,11 +47,11 @@ const tokenUsage = SafeCounter({
   labelNames: ["userID"],
 });
 
-const apiTimeout = SafeCounter({
-  name: "api_timeout",
-  help: "Number of OpenAI API timeouts",
-  labelNames: ["userID"],
-});
+// const apiTimeout = SafeCounter({
+//   name: "api_timeout",
+//   help: "Number of OpenAI API timeouts",
+//   labelNames: ["userID"],
+// });
 
 const GRADED_RESPONSE = {
   name: "grade_quiz",
@@ -129,13 +142,20 @@ export const gradedResponse = async (
   input: string,
   userID: string | number,
 ): Promise<[number, string | undefined]> => {
+  userID = userID || "";
+  let model = approvedUserIDs.includes("" + userID)
+    ? "gpt-4-1106-preview"
+    : "gpt-3.5-turbo-1106";
+  if (input.includes("REPEAT AFTER ME TEST")) {
+    model = "gpt-3.5-turbo-1106"; // Don't waste money on dictation tests.
+  }
   const content = input.replace(/^\s+/gm, "");
   const answer = await gptCall({
     messages: [
       { role: "user", content },
       { role: "system", content: SYSTEM_PROMPT },
     ],
-    model: "gpt-3.5-turbo-1106",
+    model,
     n: 1,
     temperature: 0,
     function_call: { name: "grade_quiz" },
@@ -165,7 +185,7 @@ export const gradedResponse = async (
   // Add some jitter to the score
   // to prevent scheduling pileups when
   // the user crams many cards at one time.
-  console.log([result, scaled, explanation].join(" => "));
+  console.log(model + " " + [result, scaled, explanation].join(" => "));
   return [capped, explanation];
 };
 
@@ -260,22 +280,23 @@ const lessonType = z.union([
 
 export const openai = new OpenAI(configuration);
 
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
-  let done = false;
-  const timeoutPromise = new Promise<T>((_resolve, reject) => {
-    setTimeout(() => {
-      if (!done) {
-        apiTimeout.inc();
-        reject(new Error("Operation timed out"));
-      }
-    }, timeoutMs);
-  });
+// function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+//   let done = false;
+//   const timeoutPromise = new Promise<T>((_resolve, reject) => {
+//     setTimeout(() => {
+//       if (!done) {
+//         apiTimeout.inc();
+//         reject(new Error("Operation timed out"));
+//       }
+//     }, timeoutMs);
+//   });
 
-  return Promise.race([promise, timeoutPromise]);
-}
+//   return Promise.race([promise, timeoutPromise]);
+// }
 
 export async function gptCall(opts: ChatCompletionCreateParamsNonStreaming) {
-  return withTimeout(openai.chat.completions.create(opts), 3000);
+  // return withTimeout(openai.chat.completions.create(opts), 11000);
+  return openai.chat.completions.create(opts);
 }
 
 const performExamOutput = z.union([

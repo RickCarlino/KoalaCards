@@ -87,12 +87,16 @@ export const getNextQuiz = procedure
   .output(QuizList)
   .mutation(async ({ ctx, input }) => {
     const userId = (await getUserSettings(ctx.user?.id)).user.id;
-    const take = input.notIn.length < 3 ? 3 : 1;
-    const quizzes = await getLessons({
-      userId,
-      take,
-      notIn: input.notIn,
-    });
+    const take = Math.max(0, 10 - input.notIn.length);
+    // NOTE: If `take` is 0 prisma will ignore the param and
+    // return all cards.
+    const quizzes = take
+      ? await getLessons({
+          userId,
+          take,
+          notIn: input.notIn,
+        })
+      : [];
     return {
       ...(await getLessonMeta(userId)),
       quizzes,

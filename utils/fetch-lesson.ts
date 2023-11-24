@@ -4,7 +4,7 @@ import textToSpeech, { TextToSpeechClient } from "@google-cloud/text-to-speech";
 import { createHash } from "crypto";
 import fs, { existsSync, readFileSync } from "fs";
 import path from "path";
-import { draw, template } from "radash";
+import { draw, shuffle, template } from "radash";
 import util from "util";
 import { errorReport } from "./error-report";
 
@@ -37,9 +37,9 @@ const DATA_DIR = process.env.DATA_DIR || ".";
 const VOICES = ["A", "B", "C", "D"].map((x) => `ko-KR-Wavenet-${x}`);
 const LESSON_SIZE = 5;
 const SSML: Record<LessonType, string> = {
-  dictation: `<speak><prosody rate="x-slow">{{term}}</prosody></speak>`,
-  speaking: `<speak><voice language="en-US" gender="female">{{definition}}</voice></speak>`,
-  listening: `<speak><prosody rate="{{speed}}%">{{term}}</prosody></speak>`,
+  dictation: `<speak><audio clipBegin="0.2s" clipEnd="0.8s" src="https://actions.google.com/sounds/v1/impacts/glass_drop_and_roll.ogg"></audio><voice language="en-US" rate="115%" gender="female">{{definition}}</voice><break time="0.15s"/><prosody rate="x-slow">{{term}}</prosody></speak>`,
+  speaking: `<speak><break time="0.5s"/><voice language="en-US" gender="female">{{definition}}</voice></speak>`,
+  listening: `<speak><break time="0.5s"/><prosody rate="{{speed}}%">{{term}}</prosody></speak>`,
 };
 
 let CLIENT: TextToSpeechClient;
@@ -123,8 +123,9 @@ type GetCardsParams = {
   take: number;
   notIn: number[];
 };
-const getNewCards = ({ userId, take, notIn }: GetCardsParams) => {
-  return prismaClient.card.findMany({
+const getNewCards = async ({ userId, take, notIn }: GetCardsParams) => {
+  // Shuffle the most recently created 100 cards
+  const allPossibleIDs = await prismaClient.card.findMany({
     where: {
       id: { notIn },
       flagged: false,
@@ -132,7 +133,14 @@ const getNewCards = ({ userId, take, notIn }: GetCardsParams) => {
       AND: [{ lapses: 0 }, { repetitions: 0 }],
     },
     orderBy: { createdAt: "asc" },
-    take,
+    select: {
+      id: true,
+    },
+    take: 100,
+  });
+  const ids = shuffle(allPossibleIDs.map((x) => x.id)).slice(0, take);
+  return prismaClient.card.findMany({
+    where: { id: { in: ids } },
   });
 };
 
@@ -153,9 +161,8 @@ const getOldCards = (now: number, { userId, take, notIn }: GetCardsParams) => {
     take,
   });
 };
-/** 21 hours in milliseconds, rather than 24 hours to account
- * for irregularities in a student's study habits. */
-const ALMOST_A_DAY = 21 * 60 * 60 * 1000;
+/** 24 hours in milliseconds */
+const ALMOST_A_DAY = 23 * 60 * 60 * 1000;
 
 const newCardsLearnedToday = (userId: string, now: number) => {
   return prismaClient.card.count({

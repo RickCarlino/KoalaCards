@@ -1,9 +1,9 @@
 import { trpc } from "@/utils/trpc";
+import { Container, Grid, Center, Button } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { UserSettings, User } from "@prisma/client";
+import { UserSettings } from "@prisma/client";
+import { signIn } from "next-auth/react";
 import React, { createContext, useState, useEffect, useContext } from "react";
-
-type LocalUserSettings = UserSettings & { user: User };
 
 interface UserSettingsProviderProps {
   children: React.ReactNode;
@@ -36,15 +36,30 @@ export const UserSettingsProvider = ({
         color: "red",
       });
     };
-    const ok = (userSettings: LocalUserSettings) => {
-      setUserSettings(userSettings);
-    };
-    getUserSettings.mutateAsync({}).then(ok, err);
+    getUserSettings.mutateAsync({}).then((userSettings) => {
+      if (userSettings) {
+        setUserSettings(userSettings);
+      }
+    }, err);
   }, []);
 
+  const login = (
+    <Container size="s">
+      <Grid grow justify="center" align="center">
+        <Center style={{ height: "100%" }}>
+          <Grid.Col>
+            <h1>Not Logged In</h1>
+            <Button onClick={() => signIn()} size="xl">
+              🔑 Click Here To Log In
+            </Button>
+          </Grid.Col>
+        </Center>
+      </Grid>
+    </Container>
+  );
   return (
     <UserSettingsContext.Provider value={userSettings || EMPTY}>
-      {userSettings.id ? children : null}
+      {userSettings.id ? children : login}
     </UserSettingsContext.Provider>
   );
 };

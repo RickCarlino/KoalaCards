@@ -5,8 +5,7 @@ import { trpc } from "@/utils/trpc";
 import { Button, Container, Grid, Paper } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
-import { useEffect, useReducer } from "react";
-import Authed from "../components/authed";
+import { useEffect, useState, useReducer } from "react";
 import {
   CurrentQuiz,
   Quiz,
@@ -15,7 +14,6 @@ import {
   quizReducer,
 } from "../utils/_study_reducer";
 import { QuizFailure, linkToEditPage } from "../components/quiz-failure";
-import { beep } from "@/utils/beep";
 import Link from "next/link";
 import { useUserSettings } from "@/components/settings-provider";
 
@@ -61,10 +59,13 @@ function CardOverview({ quiz }: { quiz: CurrentQuiz }) {
 }
 
 function Study(props: Props) {
-  const cardsById = props.quizzes.reduce((acc, quiz) => {
-    acc[quiz.id] = quiz;
-    return acc;
-  }, {} as Record<number, Quiz>);
+  const cardsById = props.quizzes.reduce(
+    (acc, quiz) => {
+      acc[quiz.id] = quiz;
+      return acc;
+    },
+    {} as Record<number, Quiz>,
+  );
   const settings = useUserSettings();
   const newState = newQuizState({
     cardsById,
@@ -79,6 +80,8 @@ function Study(props: Props) {
   const flagCard = trpc.flagCard.useMutation();
   const editCard = trpc.editCard.useMutation();
   const getNextQuiz = trpc.getNextQuiz.useMutation();
+  // TODO: Move into state tree.
+  const [isOK, setOK] = useState(true);
   const needBetterErrorHandler = (error: any) => {
     notifications.show({
       title: "Error!",
@@ -92,16 +95,19 @@ function Study(props: Props) {
     ["x", () => quiz && doFail(quiz.id)],
     ["z", () => quiz && doFlag(quiz.id)],
   ]);
-  const deps = [quiz?.id, quiz?.lessonType, !!state.failure];
+  const noFailures = state.failures.length === 0;
+  const deps = [quiz?.id, quiz?.lessonType, noFailures];
   const linterRequiresThis = deps.join(".");
   useEffect(() => {
-    if (quiz && !state.failure) {
+    if (quiz && noFailures) {
+      setOK(false);
       playAudio(quiz.quizAudio);
     }
   }, [linterRequiresThis]);
 
   const doFail = (id: number) => {
     dispatch({ type: "USER_GAVE_UP", id });
+    setOK(true);
     failCard.mutateAsync({ id }).catch(needBetterErrorHandler);
   };
 
@@ -109,11 +115,12 @@ function Study(props: Props) {
    * card or not. */
   const doFlag = (id: number, goToNext = true) => {
     goToNext && dispatch({ type: "FLAG_QUIZ", id });
+    setOK(true);
     return flagCard.mutateAsync({ id }).catch(needBetterErrorHandler);
   };
 
-  const f = state.failure;
-  if (f) {
+  const f = state.failures[0];
+  if (f && !state.isRecording && isOK) {
     const clear = () =>
       dispatch({
         type: "REMOVE_FAILURE",
@@ -139,6 +146,15 @@ function Study(props: Props) {
     }
     return <QuizFailure {...failProps} />;
   }
+  // Loading message if quizzesDue > 0
+  if (!quiz && state.quizzesDue > 0) {
+    return (
+      <div>
+        <h1>Please Wait</h1>
+        <p>Loading more cards...</p>
+      </div>
+    );
+  }
   if (!quiz) {
     return (
       <div>
@@ -162,57 +178,29 @@ function Study(props: Props) {
     );
   }
   const { id, lessonType } = quiz;
-  const onRecord = (audio: string) => {
+  const processAudio = (audio: string) => {
+    dispatch({ type: "SET_RECORDING", value: false });
     dispatch({ type: "WILL_GRADE", id });
+    setOK(true);
     performExam
       .mutateAsync({ id, audio, lessonType })
       .then(async (data) => {
+        // Why did I add this? TODO: Remove after lots of testing...
         dispatch({ type: "REMOVE_FAILURE", id: quiz.id });
-        switch (data.result) {
-          case "success":
-            const g = Math.round(data.grade);
-            const colors: Record<number, string> = {
-              3: "#23c91a",
-              4: "#1ac0c9",
-              5: "#1a1ac9",
-            };
-            const color = colors[g] || "#c90ea7";
-            const titles: Record<number, string> = {
-              3: "Close Enough",
-              4: "Correct!",
-              5: "Perfect!",
-            };
-            const title = titles[g] || "OK";
-            notifications.show({
-              title,
-              message: `Grade: ${data.grade.toPrecision(2)}/5`,
-              color,
-            });
-            break;
-          case "failure":
-            await beep();
-            lessonType === "speaking" &&
-              console.log("Transcript: " + data.userTranscription);
-            dispatch({
-              type: "ADD_FAILURE",
-              value: {
-                id,
-                term: quiz.term,
-                definition: quiz.definition,
-                lessonType: quiz.lessonType,
-                userTranscription: data.userTranscription,
-                rejectionText: data.rejectionText,
-                previousSpacingData: data.previousSpacingData,
-              },
-            });
-            break;
-          case "error":
-            notifications.show({
-              title: "Error!",
-              message: "Something went wrong!",
-              color: "yellow",
-            });
-            break;
+        if (data.result === "failure") {
+          console.log("Transcript: " + data.userTranscription);
+          dispatch({
+            type: "ADD_FAILURE",
+            value: {
+              id,
+              term: quiz.term,
+              definition: quiz.definition,
+              lessonType: quiz.lessonType,
+              userTranscription: data.userTranscription,
+              rejectionText: data.rejectionText,
+              previousSpacingData: data.previousSpacingData,
+            },
+          });
         }
         dispatch({
           type: "DID_GRADE",
@@ -238,7 +226,12 @@ function Study(props: Props) {
             if (!data) return;
             dispatch({
               type: "ADD_MORE",
-              quizzes: data.quizzes,
+              quizzes: data.quizzes.map((x) => {
+                return {
+                  ...x,
+                  randomSeed: Math.random(),
+                };
+              }),
               totalCards: data.totalCards,
               quizzesDue: data.quizzesDue,
               newCards: data.newCards,
@@ -252,7 +245,6 @@ function Study(props: Props) {
       <header style={HEADER_STYLES}>
         <span style={{ fontSize: "24px", fontWeight: "bold" }}>
           {HEADER[quiz.lessonType] || "Study"}
-          {!!state.numQuizzesAwaitingServerResponse && "⏳"}
         </span>
       </header>
       <Grid grow justify="center" align="center">
@@ -279,15 +271,10 @@ function Study(props: Props) {
         </Grid.Col>
         <Grid.Col span={4}>
           <RecordButton
-            disabled={
-              state.numQuizzesAwaitingServerResponse > 0 || state.isRecording
-            }
+            disabled={state.isRecording}
             lessonType={quiz.lessonType}
             onStart={() => dispatch({ type: "SET_RECORDING", value: true })}
-            onRecord={(data) => {
-              dispatch({ type: "SET_RECORDING", value: false });
-              onRecord(data);
-            }}
+            onRecord={processAudio}
           />
         </Grid.Col>
       </Grid>
@@ -297,7 +284,9 @@ function Study(props: Props) {
       <p>{quiz.lapses} lapses</p>
       <p>
         {state.totalCards} cards total, {state.quizzesDue} due, {state.newCards}{" "}
-        new.
+        new, {state.numQuizzesAwaitingServerResponse} awaiting grades,{" "}
+        {Object.keys(state.cardsById).length} in study Queue,
+        {state.failures.length} in failure queue.
       </p>
       <p>{linkToEditPage(quiz.id)}</p>
     </Container>
@@ -317,7 +306,12 @@ function StudyLoader() {
 
   return (
     <Study
-      quizzes={data.quizzes}
+      quizzes={data.quizzes.map((x) => {
+        return {
+          ...x,
+          randomSeed: Math.random(),
+        };
+      })}
       totalCards={data.totalCards}
       quizzesDue={data.quizzesDue}
       newCards={data.newCards}
@@ -326,5 +320,5 @@ function StudyLoader() {
 }
 
 export default function Main() {
-  return Authed(MicrophonePermissions(<StudyLoader />));
+  return MicrophonePermissions(<StudyLoader />);
 }
