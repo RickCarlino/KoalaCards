@@ -1,7 +1,7 @@
 # KoalaSRS 🐨
 
 <p align="center">
-  <img width="33%" src="./logo.png" alt="The KoalaSRS Logo (for now)"/>
+  <img width="33%" src="./logo.png" alt="The KoalaSRS Logo"/>
 </p>
 
 Hey there! Welcome to KoalaSRS, a fun and friendly Korean-only [spaced repetition system](https://en.wikipedia.org/wiki/Spaced_repetition) that's all about listening and speaking skills. Koala teaches vocabulary using fully-formed sentences, rather than boring word/definition pairs. KoalaSRS captures your voice input using speech-to-text and uses the super-smart GPT-4 for human-like test assessments and corrections. This has two advantages over traditional spaced repetition systems:
@@ -14,10 +14,10 @@ The app also gives feedback about _why_ you were wrong. 🧠
 ## Demo Video
 
 <p align="center">
-  <a href="https://youtu.be/1myuAsxfk74">
-    Watch a short YouTube demo of the app as of 2023-10-29
+  <a href="https://youtu.be/dVcPh90sG2A">
+    Watch a short YouTube demo of the app as of 2023-11-25
     <br/>
-    <img src="./screenshot.png" alt="The KoalaSRS Logo (for now)"/>
+    <img src="./screenshot.png" alt="KoalaSRS UI screenshot"/>
   </a>
 </p>
 
