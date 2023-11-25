@@ -136,7 +136,7 @@ const getNewCards = async ({ userId, take, notIn }: GetCardsParams) => {
     select: {
       id: true,
     },
-    take: 100,
+    take: 300,
   });
   const ids = shuffle(allPossibleIDs.map((x) => x.id)).slice(0, take);
   return prismaClient.card.findMany({
