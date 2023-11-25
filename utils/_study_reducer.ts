@@ -157,7 +157,7 @@ function reduce(state: State, action: Action): State {
     case "ADD_FAILURE":
       return {
         ...state,
-        failures: [...state.failures, action.value],
+        failures: [action.value, ...state.failures],
       };
     case "REMOVE_FAILURE":
       return {
@@ -175,7 +175,6 @@ function reduce(state: State, action: Action): State {
       const state2 = {
         ...nextState,
         failures: [
-          ...state.failures,
           {
             id: action.id,
             term: card.term,
@@ -184,6 +183,7 @@ function reduce(state: State, action: Action): State {
             userTranscription: "Empty response",
             rejectionText: "You hit the `Fail` button. Better luck next time!",
           },
+          ...state.failures,
         ],
       };
       return removeCard(state2, action.id);

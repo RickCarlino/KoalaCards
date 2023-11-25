@@ -124,7 +124,6 @@ type GetCardsParams = {
   notIn: number[];
 };
 const getNewCards = async ({ userId, take, notIn }: GetCardsParams) => {
-  // Shuffle the most recently created 100 cards
   const allPossibleIDs = await prismaClient.card.findMany({
     where: {
       id: { notIn },
@@ -162,13 +161,13 @@ const getOldCards = (now: number, { userId, take, notIn }: GetCardsParams) => {
   });
 };
 /** 24 hours in milliseconds */
-const ALMOST_A_DAY = 23 * 60 * 60 * 1000;
+const ONE_DAY = 24 * 60 * 60 * 1000;
 
 const newCardsLearnedToday = (userId: string, now: number) => {
   return prismaClient.card.count({
     where: {
       userId,
-      firstReview: { gt: new Date(now - ALMOST_A_DAY) },
+      firstReview: { gt: new Date(now - ONE_DAY) },
     },
   });
 };
@@ -181,10 +180,11 @@ export default async function getLessons(p: GetLessonInputParams) {
   const params = { userId, take, notIn: excludedIDs };
   const cards = await getOldCards(now, params);
   const cardsLeft = take - cards.length;
-  const speed = (await getUserSettings(userId)).playbackSpeed * 100;
+  const settings = await getUserSettings(userId);
+  const speed = (settings).playbackSpeed * 100;
   if (cardsLeft > 0) {
     const dailyIntake = await newCardsLearnedToday(userId, now);
-    const maxPerDay = (await getUserSettings(userId)).cardsPerDayMax;
+    const maxPerDay = (settings).cardsPerDayMax;
     if (dailyIntake < maxPerDay) {
       const newCards = await getNewCards(params);
       newCards.forEach((c) => cards.push(c));
