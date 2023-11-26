@@ -24,7 +24,7 @@ const QuizList = z.object({
   newCards: z.number(),
 });
 
-async function getLessonMeta(userId: string) {
+export async function getLessonMeta(userId: string) {
   const totalCards = await prismaClient.card.count({
     where: {
       flagged: false,

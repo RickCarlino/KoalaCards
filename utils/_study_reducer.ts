@@ -105,6 +105,15 @@ export const newQuizState = (state: Partial<State> = {}): State => {
   };
 };
 
+function getLessonType(quiz: Quiz, listeningPercentage: number): LessonType {
+  if (quiz.lapses >= quiz.repetitions) {
+    // Harder cards need more dictation tests.
+    return "dictation";
+  }
+  const listening = quiz.randomSeed < listeningPercentage;
+  return listening ? "listening" : "speaking";
+}
+
 export function currentQuiz(state: State): CurrentQuiz | undefined {
   const quizID = state.quizIDsForLesson[0];
   const quiz = state.cardsById[quizID];
@@ -112,17 +121,8 @@ export function currentQuiz(state: State): CurrentQuiz | undefined {
     console.log("=== No quiz found for quizID " + (quizID ?? "null"));
     return undefined;
   }
-  let lessonType: LessonType;
-  // // TODO: Calculating the lessonType on the frontend no longer
-  // // makes sense and is an artifact of a previous architecture.
-  // // In the future we should calculate this on the backend and only
-  // // send audio for the appropriate quiz.
-  if (quiz.repetitions) {
-    const listening = quiz.randomSeed < state.listeningPercentage;
-    lessonType = listening ? "listening" : "speaking";
-  } else {
-    lessonType = "dictation";
-  }
+  let lessonType = getLessonType(quiz, state.listeningPercentage);
+
   return {
     id: quiz.id,
     definition: quiz.definition,
@@ -157,7 +157,7 @@ function reduce(state: State, action: Action): State {
     case "ADD_FAILURE":
       return {
         ...state,
-        failures: [...state.failures, action.value],
+        failures: [action.value, ...state.failures],
       };
     case "REMOVE_FAILURE":
       return {
@@ -175,7 +175,6 @@ function reduce(state: State, action: Action): State {
       const state2 = {
         ...nextState,
         failures: [
-          ...state.failures,
           {
             id: action.id,
             term: card.term,
@@ -184,6 +183,7 @@ function reduce(state: State, action: Action): State {
             userTranscription: "Empty response",
             rejectionText: "You hit the `Fail` button. Better luck next time!",
           },
+          ...state.failures,
         ],
       };
       return removeCard(state2, action.id);

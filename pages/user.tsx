@@ -7,6 +7,7 @@ import { notifications } from "@mantine/notifications";
 import { getUserSettingsFromEmail } from "@/server/auth-helpers";
 import { prismaClient } from "@/server/prisma-client";
 import { UnwrapPromise } from "@prisma/client/runtime/library";
+import { getLessonMeta } from "@/server/routers/get-next-quizzes";
 
 export async function getServerSideProps(context: GetServerSidePropsContext) {
   async function getUserCardStatistics(userId: string) {
@@ -68,6 +69,7 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
 
     // Create an object to store the statistics
     const statistics = {
+      ...(await getLessonMeta(userId)),
       uniqueCardsLast24Hours,
       uniqueCardsLastWeek,
       newCardsLast24Hours,
@@ -123,6 +125,18 @@ export default function UserSettingsPage(props: Props) {
       );
     console.log(settings);
   };
+  const stats = props.stats;
+  const labels: [keyof typeof stats, string][] = [
+    ["quizzesDue", "Cards due now"],
+    ["uniqueCardsLast24Hours", "Cards studied today"],
+    ["newCardsLast24Hours", "New cards studied today"],
+    ["uniqueCardsLastWeek", "Cards studied this week"],
+    ["newCardsLastWeek", "New cards studied this week"],
+    ["cardsDueNext24Hours", "Cards due tomorrow"],
+    ["totalCards", "total cards"],
+    ["newCards", "new cards in deck"],
+    ["globalUsers", "users on this server"],
+  ];
 
   return (
     <Container size="s">
@@ -177,20 +191,13 @@ export default function UserSettingsPage(props: Props) {
       <div>
         <h1>Statistics</h1>
         <Card shadow="xs" padding="md" radius="sm">
-          <p>Users on this server: {props.stats.globalUsers}</p>
-          <p>
-            Unique Cards Studied in Last 24 Hours:{" "}
-            {props.stats.uniqueCardsLast24Hours}
-          </p>
-          <p>
-            New Cards Studied in Last 24 Hours:{" "}
-            {props.stats.newCardsLast24Hours}
-          </p>
-          <p>
-            Unique Cards Studied in Last Week: {props.stats.uniqueCardsLastWeek}
-          </p>
-          <p>New Cards Studied in Last Week: {props.stats.newCardsLastWeek}</p>
-          <p>Cards Due in Next 24 Hours: {props.stats.cardsDueNext24Hours}</p>
+          {labels.map(([key, label]) => {
+            return (
+              <div key={key}>
+                <b>{label}</b>: {stats[key]}
+              </div>
+            );
+          })}
         </Card>
       </div>
     </Container>
