@@ -181,10 +181,10 @@ export default async function getLessons(p: GetLessonInputParams) {
   const cards = await getOldCards(now, params);
   const cardsLeft = take - cards.length;
   const settings = await getUserSettings(userId);
-  const speed = (settings).playbackSpeed * 100;
+  const speed = settings.playbackSpeed * 100;
   if (cardsLeft > 0) {
     const dailyIntake = await newCardsLearnedToday(userId, now);
-    const maxPerDay = (settings).cardsPerDayMax;
+    const maxPerDay = settings.cardsPerDayMax;
     if (dailyIntake < maxPerDay) {
       const newCards = await getNewCards(params);
       newCards.forEach((c) => cards.push(c));
