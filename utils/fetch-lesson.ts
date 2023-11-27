@@ -172,24 +172,39 @@ const newCardsLearnedToday = (userId: string, now: number) => {
   });
 };
 
-export default async function getLessons(p: GetLessonInputParams) {
-  const userId = p.userId;
+const applyDefaults = async (p: GetLessonInputParams) => {
+  const notIn = p.notIn || [];
   const now = p.now || Date.now();
-  const take = p.take || LESSON_SIZE;
-  const excludedIDs = p.notIn || [];
-  const params = { userId, take, notIn: excludedIDs };
-  const cards = await getOldCards(now, params);
-  const cardsLeft = take - cards.length;
+  const userId = p.userId;
   const settings = await getUserSettings(userId);
   const speed = settings.playbackSpeed * 100;
-  if (cardsLeft > 0) {
-    const dailyIntake = await newCardsLearnedToday(userId, now);
-    const maxPerDay = settings.cardsPerDayMax;
-    if (dailyIntake < maxPerDay) {
-      const newCards = await getNewCards(params);
-      newCards.forEach((c) => cards.push(c));
-    }
+
+  const totalToday = await newCardsLearnedToday(userId, now);
+  const maxPerDay = settings.cardsPerDayMax;
+  const take = Math.min(p.take || LESSON_SIZE, maxPerDay - totalToday);
+
+  return { notIn, now, speed, take, userId };
+};
+
+export default async function getLessons(p: GetLessonInputParams) {
+  const { notIn, now, speed, take, userId } = await applyDefaults(p);
+  const query = { userId, take, notIn };
+  const cards = await getOldCards(now, query);
+  const remainingSpace = Math.max(take - cards.length, 0);
+  console.group("=== CARD DRAW");
+  console.log(
+    `Pulled ${cards.length} old cards. We have space for ${remainingSpace} more`,
+  );
+  if (remainingSpace > 0) {
+    const newCards = await getNewCards({
+      ...query,
+      take: remainingSpace,
+    });
+    newCards.forEach((c) => cards.push(c));
+    console.log(`Added ${newCards.length} new cards`);
   }
+  console.log(`Final hand size: ${cards.length}`);
+  console.groupEnd();
   const output: LocalQuiz[] = [];
   for (const card of cards) {
     const { term, definition } = card;
