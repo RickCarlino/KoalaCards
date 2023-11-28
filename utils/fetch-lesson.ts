@@ -181,19 +181,24 @@ const applyDefaults = async (p: GetLessonInputParams) => {
 
   const totalToday = await newCardsLearnedToday(userId, now);
   const maxPerDay = settings.cardsPerDayMax;
-  const take = Math.max(
-    Math.min(p.take || LESSON_SIZE, maxPerDay - totalToday),
-    0,
-  );
+  const take = p.take || LESSON_SIZE;
+  const takeNew = Math.max(Math.min(take, maxPerDay - totalToday), 0);
 
-  return { notIn, now, speed, take, userId };
+  return {
+    notIn,
+    now,
+    speed,
+    take,
+    userId,
+    takeNew,
+  };
 };
 
 export default async function getLessons(p: GetLessonInputParams) {
-  const { notIn, now, speed, take, userId } = await applyDefaults(p);
+  const { notIn, now, speed, takeNew, take, userId } = await applyDefaults(p);
   const query = { userId, take, notIn };
   const cards = await getOldCards(now, query);
-  const remainingSpace = Math.max(take - cards.length, 0);
+  const remainingSpace = Math.max(takeNew - cards.length, 0);
   console.group("=== CARD DRAW");
   console.log(
     `Pulled ${cards.length} old cards. We have space for ${remainingSpace} more`,

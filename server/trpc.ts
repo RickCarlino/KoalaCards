@@ -8,6 +8,7 @@ export const superUsers = (process.env.AUTHORIZED_EMAILS || "")
   .split(",")
   .filter((x: string) => x.includes("@"))
   .map((x: string) => x.trim().toLowerCase());
+
 type Ctx = { session: Session | null; user?: User | null };
 
 const t = initTRPC.context<Ctx>().create({ transformer: superjson });

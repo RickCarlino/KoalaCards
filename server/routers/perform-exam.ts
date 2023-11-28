@@ -24,7 +24,7 @@ prismaClient.user.findMany({}).then((users) => {
     }
   });
 });
-console.log("??? Hello?");
+
 type Quiz = (
   transcript: string,
   card: Card,
