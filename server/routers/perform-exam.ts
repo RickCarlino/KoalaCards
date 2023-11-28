@@ -3,26 +3,28 @@ import { gradePerformance } from "@/utils/srs";
 import { Lang, transcribeB64 } from "@/utils/transcribe";
 import { Card } from "@prisma/client";
 import { z } from "zod";
-import { authorizedUsers, procedure } from "../trpc";
+import { superUsers, procedure } from "../trpc";
 import OpenAI from "openai";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat";
 import { SafeCounter } from "@/utils/counter";
 import { exactMatch } from "@/utils/clean-string";
 import { errorReport } from "@/utils/error-report";
 let approvedUserIDs: string[] = [];
-prismaClient.user
-  .findMany({
-    where: {
-      email: { in: authorizedUsers },
-    },
-  })
-  .then((users) => {
-    approvedUserIDs = users.map((x) => {
-      console.log(`Adding ${x.email} (${x.id}) to approved users.`);
-      return x.id;
-    });
+prismaClient.user.findMany({}).then((users) => {
+  users.map(({ email, id }) => {
+    if (!email) {
+      console.log("=== No email for user " + id);
+      return;
+    }
+    if (superUsers.includes(email)) {
+      console.log(`=== Super user: ${email} / ${id}`);
+      approvedUserIDs.push(id);
+    } else {
+      console.log(`=== Normal user: ${email} / ${id}`);
+    }
   });
-
+});
+console.log("??? Hello?");
 type Quiz = (
   transcript: string,
   card: Card,

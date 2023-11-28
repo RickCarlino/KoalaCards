@@ -181,7 +181,10 @@ const applyDefaults = async (p: GetLessonInputParams) => {
 
   const totalToday = await newCardsLearnedToday(userId, now);
   const maxPerDay = settings.cardsPerDayMax;
-  const take = Math.min(p.take || LESSON_SIZE, maxPerDay - totalToday);
+  const take = Math.max(
+    Math.min(p.take || LESSON_SIZE, maxPerDay - totalToday),
+    0,
+  );
 
   return { notIn, now, speed, take, userId };
 };
