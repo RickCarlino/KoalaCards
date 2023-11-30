@@ -163,6 +163,7 @@ export const gradedResponse = async (
     temperature: useGPT4 ? 0.75 : 0,
     function_call: { name: "grade_quiz" },
     functions: [GRADED_RESPONSE],
+    max_tokens: 555,
   });
   if (!answer) {
     return errorReport("No answer");

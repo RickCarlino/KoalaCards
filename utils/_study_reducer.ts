@@ -157,7 +157,7 @@ function reduce(state: State, action: Action): State {
     case "ADD_FAILURE":
       return {
         ...state,
-        failures: [action.value, ...state.failures],
+        failures: [...state.failures, action.value],
       };
     case "REMOVE_FAILURE":
       return {
