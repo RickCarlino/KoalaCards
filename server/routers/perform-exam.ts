@@ -188,6 +188,7 @@ export const gradedResponse = async (
   // to prevent scheduling pileups when
   // the user crams many cards at one time.
   console.log(model + " " + [result, scaled, explanation].join(" => "));
+  console.log(answer.usage || "No usage data");
   return [capped, explanation];
 };
 
