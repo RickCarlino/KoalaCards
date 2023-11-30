@@ -145,7 +145,8 @@ export const gradedResponse = async (
   userID: string | number,
 ): Promise<[number, string | undefined]> => {
   userID = userID || "";
-  let model = approvedUserIDs.includes("" + userID)
+  const useGPT4 = approvedUserIDs.includes("" + userID);
+  let model = useGPT4
     ? "gpt-4-1106-preview"
     : "gpt-3.5-turbo-1106";
   if (input.includes("REPEAT AFTER ME TEST")) {
@@ -159,7 +160,7 @@ export const gradedResponse = async (
     ],
     model,
     n: 1,
-    temperature: 0,
+    temperature: useGPT4 ? 0.75 : 0,
     function_call: { name: "grade_quiz" },
     functions: [GRADED_RESPONSE],
   });
