@@ -30,7 +30,7 @@ type Failure = {
 };
 
 type State = {
-  numQuizzesAwaitingServerResponse: number;
+  idsAwaitingGrades: number[];
   quizIDsForLesson: number[];
   cardsById: Record<string, Quiz>;
   isRecording: boolean;
@@ -92,7 +92,7 @@ export const newQuizState = (state: Partial<State> = {}): State => {
   const cardsById = state.cardsById || {};
   const remainingQuizIDs = Object.keys(cardsById).map((x) => parseInt(x));
   return {
-    numQuizzesAwaitingServerResponse: 0,
+    idsAwaitingGrades: [],
     cardsById,
     quizIDsForLesson: remainingQuizIDs,
     isRecording: false,
@@ -136,7 +136,7 @@ export function currentQuiz(state: State): CurrentQuiz | undefined {
 
 function removeCard(oldState: State, id: number): State {
   let quizIDsForLesson = oldState.quizIDsForLesson.filter((x) => x !== id);
-  let cardsById: State["cardsById"] = {}; // { ...state.cardsById };
+  let cardsById: State["cardsById"] = {};
   // A mark-and-sweep garbage collector of sorts.
   quizIDsForLesson.forEach((id) => {
     cardsById[id] = oldState.cardsById[id];
@@ -157,7 +157,7 @@ function reduce(state: State, action: Action): State {
     case "ADD_FAILURE":
       return {
         ...state,
-        failures: [action.value, ...state.failures],
+        failures: [...state.failures, action.value],
       };
     case "REMOVE_FAILURE":
       return {
@@ -192,15 +192,16 @@ function reduce(state: State, action: Action): State {
     case "WILL_GRADE":
       return gotoNextQuiz({
         ...state,
-        numQuizzesAwaitingServerResponse:
-          state.numQuizzesAwaitingServerResponse + 1,
+        idsAwaitingGrades: [action.id, ...state.idsAwaitingGrades],
       });
     case "DID_GRADE":
-      return {
-        ...removeCard(state, action.id),
-        numQuizzesAwaitingServerResponse:
-          state.numQuizzesAwaitingServerResponse - 1,
-      };
+      const idsAwaitingGrades: number[] = [];
+      state.idsAwaitingGrades.forEach((id) => {
+        if (id !== action.id) {
+          idsAwaitingGrades.push(id);
+        }
+      });
+      return { ...removeCard(state, action.id), idsAwaitingGrades };
     case "ADD_MORE":
       const newStuff = action.quizzes.map((x) => x.id);
       const oldStuff = state.quizIDsForLesson;
@@ -212,6 +213,10 @@ function reduce(state: State, action: Action): State {
       action.quizzes.forEach((card) => {
         nextcardsById[card.id] ??= card;
       });
+      if (!action.quizzes.length) {
+        console.log("=== Got empty hand of cards...");
+        console.dir(state);
+      }
       return {
         ...state,
         cardsById: nextcardsById,

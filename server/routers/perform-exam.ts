@@ -3,25 +3,27 @@ import { gradePerformance } from "@/utils/srs";
 import { Lang, transcribeB64 } from "@/utils/transcribe";
 import { Card } from "@prisma/client";
 import { z } from "zod";
-import { authorizedUsers, procedure } from "../trpc";
+import { superUsers, procedure } from "../trpc";
 import OpenAI from "openai";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat";
 import { SafeCounter } from "@/utils/counter";
 import { exactMatch } from "@/utils/clean-string";
 import { errorReport } from "@/utils/error-report";
 let approvedUserIDs: string[] = [];
-prismaClient.user
-  .findMany({
-    where: {
-      email: { in: authorizedUsers },
-    },
-  })
-  .then((users) => {
-    approvedUserIDs = users.map((x) => {
-      console.log(`Adding ${x.email} (${x.id}) to approved users.`);
-      return x.id;
-    });
+prismaClient.user.findMany({}).then((users) => {
+  users.map(({ email, id }) => {
+    if (!email) {
+      console.log("=== No email for user " + id);
+      return;
+    }
+    if (superUsers.includes(email)) {
+      console.log(`=== Super user: ${email} / ${id}`);
+      approvedUserIDs.push(id);
+    } else {
+      console.log(`=== Normal user: ${email} / ${id}`);
+    }
   });
+});
 
 type Quiz = (
   transcript: string,
@@ -143,7 +145,8 @@ export const gradedResponse = async (
   userID: string | number,
 ): Promise<[number, string | undefined]> => {
   userID = userID || "";
-  let model = approvedUserIDs.includes("" + userID)
+  const useGPT4 = approvedUserIDs.includes("" + userID);
+  let model = useGPT4
     ? "gpt-4-1106-preview"
     : "gpt-3.5-turbo-1106";
   if (input.includes("REPEAT AFTER ME TEST")) {
@@ -157,9 +160,10 @@ export const gradedResponse = async (
     ],
     model,
     n: 1,
-    temperature: 0,
+    temperature: useGPT4 ? 0.75 : 0,
     function_call: { name: "grade_quiz" },
     functions: [GRADED_RESPONSE],
+    max_tokens: 555,
   });
   if (!answer) {
     return errorReport("No answer");
@@ -186,6 +190,7 @@ export const gradedResponse = async (
   // to prevent scheduling pileups when
   // the user crams many cards at one time.
   console.log(model + " " + [result, scaled, explanation].join(" => "));
+  console.log(answer.usage || "No usage data");
   return [capped, explanation];
 };
 
@@ -210,9 +215,9 @@ const translationPrompt = (term: string, transcript: string) => {
   return `
       TRANSLATION TEST
       I was asked to translate the following sentence to English:
-      <<${term}>>.
+      ${term}.
       I said:
-      <<${transcript}>>.
+      ${transcript}.
       ---
       Was I correct?`;
 };
@@ -234,9 +239,9 @@ async function dictationTest(transcript: string, card: Card) {
     `
     REPEAT AFTER ME TEST:
     The system asked me to say:
-    <<${card.term}>>
+    ${card.term}
     I said:
-    <<${transcript}>>
+    ${transcript}
     ---
     Was I correct?`,
     card.userId,
@@ -262,9 +267,9 @@ async function speakingTest(transcript: string, card: Card) {
     `
      SPEAKING TEST:
      I was asked to translate the following sentence to the target language:
-     <<${card.definition}>>
+     ${card.definition}
      I said:
-     <<${transcript}>>
+     ${transcript}
      ---
      Was I correct?`,
     card.userId,

@@ -128,12 +128,12 @@ export default function UserSettingsPage(props: Props) {
   const stats = props.stats;
   const labels: [keyof typeof stats, string][] = [
     ["quizzesDue", "Cards due now"],
-    ["uniqueCardsLast24Hours", "Cards studied today"],
-    ["newCardsLast24Hours", "New cards studied today"],
+    ["uniqueCardsLast24Hours", "Cards studied last 24 hours"],
+    ["newCardsLast24Hours", "New cards studied last 24 hours"],
     ["uniqueCardsLastWeek", "Cards studied this week"],
     ["newCardsLastWeek", "New cards studied this week"],
-    ["cardsDueNext24Hours", "Cards due tomorrow"],
-    ["totalCards", "total cards"],
+    ["cardsDueNext24Hours", "Cards due next 24 hours"],
+    ["totalCards", "total cards studied"],
     ["newCards", "new cards in deck"],
     ["globalUsers", "users on this server"],
   ];

@@ -155,6 +155,16 @@ function Study(props: Props) {
       </div>
     );
   }
+
+  if (!quiz && state.idsAwaitingGrades.length > 0) {
+    return (
+      <div>
+        <h1>Please Wait</h1>
+        <p>Grading the last few cards for this lesson...</p>
+      </div>
+    );
+  }
+
   if (!quiz) {
     return (
       <div>
@@ -219,7 +229,7 @@ function Study(props: Props) {
       .finally(() => {
         getNextQuiz
           .mutateAsync({
-            notIn: state.quizIDsForLesson,
+            notIn: [...state.quizIDsForLesson, ...state.idsAwaitingGrades],
           })
           .catch(needBetterErrorHandler)
           .then((data) => {
@@ -284,7 +294,7 @@ function Study(props: Props) {
       <p>{quiz.lapses} lapses</p>
       <p>
         {state.totalCards} cards total, {state.quizzesDue} due, {state.newCards}{" "}
-        new, {state.numQuizzesAwaitingServerResponse} awaiting grades,{" "}
+        new, {state.idsAwaitingGrades.length} awaiting grades,{" "}
         {Object.keys(state.cardsById).length} in study Queue,
         {state.failures.length} in failure queue.
       </p>
