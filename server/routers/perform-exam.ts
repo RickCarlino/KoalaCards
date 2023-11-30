@@ -215,9 +215,9 @@ const translationPrompt = (term: string, transcript: string) => {
   return `
       TRANSLATION TEST
       I was asked to translate the following sentence to English:
-      <<${term}>>.
+      ${term}.
       I said:
-      <<${transcript}>>.
+      ${transcript}.
       ---
       Was I correct?`;
 };
@@ -239,9 +239,9 @@ async function dictationTest(transcript: string, card: Card) {
     `
     REPEAT AFTER ME TEST:
     The system asked me to say:
-    <<${card.term}>>
+    ${card.term}
     I said:
-    <<${transcript}>>
+    ${transcript}
     ---
     Was I correct?`,
     card.userId,
@@ -267,9 +267,9 @@ async function speakingTest(transcript: string, card: Card) {
     `
      SPEAKING TEST:
      I was asked to translate the following sentence to the target language:
-     <<${card.definition}>>
+     ${card.definition}
      I said:
-     <<${transcript}>>
+     ${transcript}
      ---
      Was I correct?`,
     card.userId,
