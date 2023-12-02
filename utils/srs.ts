@@ -1,17 +1,16 @@
 /** Convert seconds to days */
-const minutes = (m: number) => m / 60 / 24;
+// const minutes = (m: number) => m / 60 / 24;
 const hours = (h: number) => h / 24;
 
 // My flavor of SM-2 departs from the original slightly.
 // I review more often in the beginning.
-const EARLY_REVIEW_INTERVAL_MAPPING: Record<number, number> = {
-  0: minutes(1),
-  1: hours(5),
-  2: hours(25),
-};
+const EARLY_REVIEW_INTERVAL_MAPPING = [
+  hours(2.5),
+  hours(15)
+];
 
 // Define keys for Spaced Repetition System (SRS) data
-type SRSKeys = "repetitions" | "interval" | "ease" | "lapses" | "nextReviewAt";
+type SRSKeys = "repetitions" | "interval" | "ease" | "lapses" | "nextReviewAt" | "lapses";
 
 // Define the SRS data structure using the keys
 type SRSData = Record<SRSKeys, number>;
@@ -45,11 +44,14 @@ function calculateEase(ease: number, grade: number): number {
 
 // Function to update a card's SRS data based on the user's performance grade
 export function gradePerformance(
-  card: SRSData,
+  card: Partial<SRSData>,
   grade: number,
   now = Date.now(),
 ): SRSData {
-  let { repetitions, interval, ease, lapses } = card;
+  let { repetitions, interval, ease, lapses } = {
+    ...DEFAULT_CARD,
+    ...card,
+  };
 
   // If grade is 3 or higher, update repetitions, interval, and ease
   if (grade >= 3) {
@@ -64,22 +66,14 @@ export function gradePerformance(
     ease = calculateEase(ease, grade);
     lapses += 1;
   }
-  const nextReviewAt = now + interval * 24 * 60 * 60 * 1000;
-  const oldCard = {
-    repetitions: card.repetitions,
-    interval: card.interval,
-    ease: card.ease,
-    lapses: card.lapses,
-    nextReviewAt: card.nextReviewAt,
-  };
   // Return the updated card data
   return {
-    ...oldCard,
+    ...card,
     repetitions,
     interval,
     ease,
     lapses,
-    nextReviewAt,
+    nextReviewAt: now + interval * 24 * 60 * 60 * 1000,
   };
 }
 

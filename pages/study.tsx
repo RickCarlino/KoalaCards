@@ -16,6 +16,7 @@ import {
 import { QuizFailure, linkToEditPage } from "../components/quiz-failure";
 import Link from "next/link";
 import { useUserSettings } from "@/components/settings-provider";
+import { gradePerformance } from "@/utils/srs";
 
 type Props = {
   quizzes: Quiz[];
@@ -136,10 +137,13 @@ function Study(props: Props) {
     };
     if (psd) {
       failProps.onDiscard = () => {
+        // Get a random grade between 3 and 5
+        // to prevent pileups.
+        const randomGrade = Math.random() * 2 + 3;
         editCard
           .mutateAsync({
             id: f.id,
-            ...psd,
+            ...gradePerformance(psd, randomGrade),
           })
           .then(clear);
       };

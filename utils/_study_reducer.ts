@@ -233,6 +233,7 @@ function reduce(state: State, action: Action): State {
 
 export function quizReducer(state: State, action: Action): State {
   const nextState = reduce(state, action);
+  console.log(`Cache contains ${Object.keys(state.cardsById)} items.`);
   // Do debugging here:
   // console.log(action.type);
   return nextState;
