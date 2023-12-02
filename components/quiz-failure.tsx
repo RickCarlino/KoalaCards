@@ -1,6 +1,7 @@
 import { Button, Grid, Text, Container } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import Link from "next/link";
+import { Youglish } from "./youglish";
 
 export function linkToEditPage(id: number) {
   return <Link href={["cards", id].join("/")}>Edit Card</Link>;
@@ -42,13 +43,14 @@ export function QuizFailure(props: {
               <strong>Quiz type:</strong> {props.lessonType}
             </Text>
             <Text>
-              <strong>Term:</strong> {props.term}
+              <strong>Term:</strong> {Youglish(props.term)}
             </Text>
             <Text>
               <strong>Definition:</strong> {props.definition}
             </Text>
             <Text>
-              <strong>What you said:</strong> {props.userTranscription}
+              <strong>What you said:</strong>{" "}
+              {Youglish(props.userTranscription)}
             </Text>
             <Text>
               <strong>Why it's wrong:</strong> {props.rejectionText}

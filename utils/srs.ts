@@ -4,13 +4,16 @@ const hours = (h: number) => h / 24;
 
 // My flavor of SM-2 departs from the original slightly.
 // I review more often in the beginning.
-const EARLY_REVIEW_INTERVAL_MAPPING = [
-  hours(2.5),
-  hours(15)
-];
+const EARLY_REVIEW_INTERVAL_MAPPING = [hours(2.5), hours(15)];
 
 // Define keys for Spaced Repetition System (SRS) data
-type SRSKeys = "repetitions" | "interval" | "ease" | "lapses" | "nextReviewAt" | "lapses";
+type SRSKeys =
+  | "repetitions"
+  | "interval"
+  | "ease"
+  | "lapses"
+  | "nextReviewAt"
+  | "lapses";
 
 // Define the SRS data structure using the keys
 type SRSData = Record<SRSKeys, number>;
