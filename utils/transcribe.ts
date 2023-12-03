@@ -74,14 +74,5 @@ export async function transcribeB64(
     },
   );
 
-  // const timeoutPromise = new Promise<TranscriptionResult>((resolve, _) =>
-  //   setTimeout(() => {
-  //     if (!done) {
-  //       console.log("serverside transcription timeout");
-  //       resolve({ kind: "error" });
-  //     }
-  //   }, 11000),
-  // );
-
-  return transcribePromise; // Promise.race([transcribePromise, timeoutPromise]);
+  return transcribePromise;
 }

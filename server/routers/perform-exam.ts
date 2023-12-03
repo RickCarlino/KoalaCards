@@ -11,16 +11,24 @@ import { exactMatch } from "@/utils/clean-string";
 import { errorReport } from "@/utils/error-report";
 let approvedUserIDs: string[] = [];
 prismaClient.user.findMany({}).then((users) => {
-  users.map(({ email, id }) => {
+  users.map((user) => {
+    const { email, id, lastSeen } = user;
+    const daysAgo = lastSeen
+      ? (Date.now() - lastSeen.getTime()) / (1000 * 60 * 60 * 24)
+      : -1;
     if (!email) {
       console.log("=== No email for user " + id);
       return;
     }
     if (superUsers.includes(email)) {
-      console.log(`=== Super user: ${email} / ${id}`);
+      console.log(
+        `=== Super user: ${email} / ${id} (last seen ${daysAgo} days ago)`,
+      );
       approvedUserIDs.push(id);
     } else {
-      console.log(`=== Normal user: ${email} / ${id}`);
+      console.log(
+        `=== Normal user: ${email} / ${id} (last seen ${daysAgo} days ago)`,
+      );
     }
   });
 });
@@ -170,7 +178,7 @@ export const gradedResponse = async (
     .map((x): Result => [x.grade, x.explanation]);
   // sort results by 0th element.
   // Grab median value:
-  const median = results[0][0]; //.sort((a, b) => a[0] - b[0])[1][0];
+  const median = results[0][0];
   const jitter = Math.random() * 0.4;
   const result = median + jitter;
   const explanation = results[0][1] ?? "No explanation";
@@ -191,15 +199,17 @@ const gradeAndUpdateTimestamps = (card: Card, grade: number) => {
 
   return {
     firstReview: new Date(card.lastReview || now),
-    lastReview: new Date(now),
     ...gradePerformance(card, grade, now),
+    lastReview: new Date(now),
   };
 };
 
 const setGrade = async (card: Card, grade: number) => {
+  const data = gradeAndUpdateTimestamps(card, grade);
+  console.log(data);
   await prismaClient.card.update({
     where: { id: card.id },
-    data: gradeAndUpdateTimestamps(card, grade),
+    data,
   });
 };
 

@@ -1,8 +1,11 @@
-export function timeUntil(timestamp: number, now = new Date().getTime()): string {
+export function timeUntil(
+  timestamp: number,
+  now = new Date().getTime(),
+): string {
   let difference = timestamp - now;
 
   if (difference < 0) {
-      return "already past";
+    return "already past";
   }
 
   const secondsInYear = 31536000;
@@ -101,7 +104,6 @@ export function gradePerformance(
   }
   const nextReviewAt = now + interval * 24 * 60 * 60 * 1000;
   console.log(`=== Card will review again in ${timeUntil(nextReviewAt, now)}`);
-  // Return the updated card data
   return {
     ...card,
     repetitions,

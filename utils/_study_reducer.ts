@@ -118,7 +118,6 @@ export function currentQuiz(state: State): CurrentQuiz | undefined {
   const quizID = state.quizIDsForLesson[0];
   const quiz = state.cardsById[quizID];
   if (!quiz) {
-    console.log("=== No quiz found for quizID " + (quizID ?? "null"));
     return undefined;
   }
   let lessonType = getLessonType(quiz, state.listeningPercentage);
@@ -213,10 +212,6 @@ function reduce(state: State, action: Action): State {
       action.quizzes.forEach((card) => {
         nextcardsById[card.id] ??= card;
       });
-      if (!action.quizzes.length) {
-        console.log("=== Got empty hand of cards...");
-        console.dir(state);
-      }
       return {
         ...state,
         cardsById: nextcardsById,
@@ -233,8 +228,5 @@ function reduce(state: State, action: Action): State {
 
 export function quizReducer(state: State, action: Action): State {
   const nextState = reduce(state, action);
-  console.log(`Cache contains ${Object.keys(state.cardsById)} items.`);
-  // Do debugging here:
-  // console.log(action.type);
   return nextState;
 }

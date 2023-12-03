@@ -199,20 +199,13 @@ export default async function getLessons(p: GetLessonInputParams) {
   const query = { userId, take, notIn };
   const cards = await getOldCards(now, query);
   const remainingSpace = Math.max(takeNew - cards.length, 0);
-  console.group("=== CARD DRAW");
-  console.log(
-    `Pulled ${cards.length} old cards. We have space for ${remainingSpace} more`,
-  );
   if (remainingSpace > 0) {
     const newCards = await getNewCards({
       ...query,
       take: remainingSpace,
     });
     newCards.forEach((c) => cards.push(c));
-    console.log(`Added ${newCards.length} new cards`);
   }
-  console.log(`Final hand size: ${cards.length}`);
-  console.groupEnd();
   const output: LocalQuiz[] = [];
   for (const card of cards) {
     const { term, definition } = card;
