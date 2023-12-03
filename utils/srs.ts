@@ -1,10 +1,41 @@
-/** Convert seconds to days */
-// const minutes = (m: number) => m / 60 / 24;
-const hours = (h: number) => h / 24;
+export function timeUntil(timestamp: number, now = new Date().getTime()): string {
+  let difference = timestamp - now;
 
-// My flavor of SM-2 departs from the original slightly.
-// I review more often in the beginning.
-const EARLY_REVIEW_INTERVAL_MAPPING = [hours(2.5), hours(15)];
+  if (difference < 0) {
+      return "already past";
+  }
+
+  const secondsInYear = 31536000;
+  const secondsInDay = 86400;
+  const secondsInHour = 3600;
+  const secondsInMinute = 60;
+
+  // Convert milliseconds to seconds
+  difference = Math.floor(difference / 1000);
+
+  const years = Math.floor(difference / secondsInYear);
+  difference -= years * secondsInYear;
+
+  const days = Math.floor(difference / secondsInDay);
+  difference -= days * secondsInDay;
+
+  const hours = Math.floor(difference / secondsInHour);
+  difference -= hours * secondsInHour;
+
+  const minutes = Math.floor(difference / secondsInMinute);
+  difference -= minutes * secondsInMinute;
+
+  const seconds = difference;
+
+  let result = "";
+  if (years > 0) result += `${years} years `;
+  if (days > 0) result += `${days} days `;
+  if (hours > 0) result += `${hours} hours `;
+  if (minutes > 0) result += `${minutes} minutes `;
+  if (seconds > 0) result += `${seconds} seconds `;
+
+  return result.trim();
+}
 
 // Define keys for Spaced Repetition System (SRS) data
 type SRSKeys =
@@ -58,8 +89,7 @@ export function gradePerformance(
 
   // If grade is 3 or higher, update repetitions, interval, and ease
   if (grade >= 3) {
-    interval = // Don't swap variable order, it matters!
-      EARLY_REVIEW_INTERVAL_MAPPING[repetitions] || Math.ceil(interval * ease);
+    interval = Math.ceil(interval * ease); // Don't swap variable order, it matters!
     repetitions += 1;
     ease = calculateEase(ease, grade);
   } else {
@@ -69,6 +99,8 @@ export function gradePerformance(
     ease = calculateEase(ease, grade);
     lapses += 1;
   }
+  const nextReviewAt = now + interval * 24 * 60 * 60 * 1000;
+  console.log(`=== Card will review again in ${timeUntil(nextReviewAt, now)}`);
   // Return the updated card data
   return {
     ...card,
@@ -76,7 +108,7 @@ export function gradePerformance(
     interval,
     ease,
     lapses,
-    nextReviewAt: now + interval * 24 * 60 * 60 * 1000,
+    nextReviewAt,
   };
 }
 

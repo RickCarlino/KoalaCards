@@ -49,12 +49,6 @@ const tokenUsage = SafeCounter({
   labelNames: ["userID"],
 });
 
-// const apiTimeout = SafeCounter({
-//   name: "api_timeout",
-//   help: "Number of OpenAI API timeouts",
-//   labelNames: ["userID"],
-// });
-
 const GRADED_RESPONSE = {
   name: "grade_quiz",
   parameters: {
@@ -283,22 +277,7 @@ const lessonType = z.union([
 
 export const openai = new OpenAI(configuration);
 
-// function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
-//   let done = false;
-//   const timeoutPromise = new Promise<T>((_resolve, reject) => {
-//     setTimeout(() => {
-//       if (!done) {
-//         apiTimeout.inc();
-//         reject(new Error("Operation timed out"));
-//       }
-//     }, timeoutMs);
-//   });
-
-//   return Promise.race([promise, timeoutPromise]);
-// }
-
 export async function gptCall(opts: ChatCompletionCreateParamsNonStreaming) {
-  // return withTimeout(openai.chat.completions.create(opts), 11000);
   return openai.chat.completions.create(opts);
 }
 
