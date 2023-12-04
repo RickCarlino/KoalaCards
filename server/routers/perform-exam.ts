@@ -198,18 +198,16 @@ const gradeAndUpdateTimestamps = (card: Card, grade: number) => {
   const now = Date.now();
 
   return {
-    firstReview: new Date(card.lastReview || now),
     ...gradePerformance(card, grade, now),
+    firstReview: new Date(card.lastReview || now),
     lastReview: new Date(now),
   };
 };
 
 const setGrade = async (card: Card, grade: number) => {
-  const data = gradeAndUpdateTimestamps(card, grade);
-  console.log(data);
   await prismaClient.card.update({
     where: { id: card.id },
-    data,
+    data: gradeAndUpdateTimestamps(card, grade),
   });
 };
 
