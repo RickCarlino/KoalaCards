@@ -116,6 +116,9 @@ function Study(props: Props) {
   /** goToNext flag controls if the session will skip to next
    * card or not. */
   const doFlag = (id: number, goToNext = true) => {
+    if (!confirm("This will pause reviews. Are you sure?")) {
+      return;
+    }
     goToNext && dispatch({ type: "FLAG_QUIZ", id });
     setOK(true);
     return flagCard.mutateAsync({ id }).catch(needBetterErrorHandler);
