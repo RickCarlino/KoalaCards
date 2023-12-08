@@ -20,7 +20,7 @@ export function QuizFailure(props: {
 }) {
   useHotkeys([
     ["Z", () => props.onClose()],
-    ["X", props.onFlag],
+    ["B", props.onFlag],
     ["C", () => props.onDiscard?.()],
   ]);
   return (
@@ -65,7 +65,7 @@ export function QuizFailure(props: {
               </Button>
             )}
             <Button onClick={props.onFlag} color="red">
-              Flag / Pause - X
+              Flag / Pause - B
             </Button>
           </Grid.Col>
         </Grid.Col>

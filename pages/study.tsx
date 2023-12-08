@@ -136,7 +136,7 @@ function Study(props: Props) {
       ...f,
       onClose: clear,
       onFlag: () => {
-        doFlag(f.id, false).then(clear);
+        doFlag(f.id, false)?.then(clear);
       },
     };
     if (psd) {
