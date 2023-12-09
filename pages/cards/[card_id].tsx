@@ -4,6 +4,7 @@ import { useForm } from "@mantine/form";
 import { useRouter } from "next/router";
 
 function Card({ id }: { id: number }) {
+  const router = useRouter();
   const form = useForm({
     initialValues: {
       definition: "loading...",
@@ -41,12 +42,12 @@ function Card({ id }: { id: number }) {
       term: values.term,
       flagged: values.flagged,
     }).then(() => {
-      location.assign(`/cards`);
+      router.back();
     });
   };
   const deleteCard = () => {
     d.mutate({ id });
-    location.assign(`/cards`);
+    router.back();
   };
   return (
     <div>

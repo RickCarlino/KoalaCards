@@ -142,6 +142,16 @@ const getNewCards = async ({ userId, take, notIn }: GetCardsParams) => {
     where: { id: { in: ids } },
   });
 };
+// Originally, we sorted the cards due via:
+// lapses/desc, repetitions/desc, createdAt/asc,
+// This turn out to be mentally exhausting because the user
+// is forced to review back-to-back difficult cards. Getting
+// multiple cards wrong at the start of a lesson is not fun.
+// As such, I now use a pseudo-shuffle mechanism so that
+// difficult cards are spread out.
+function randomSortOrder(): "desc" | "asc" {
+  return Math.random() > 0.5 ? "desc" : "asc";
+}
 
 const getOldCards = (now: number, { userId, take, notIn }: GetCardsParams) => {
   return prismaClient.card.findMany({
@@ -153,9 +163,9 @@ const getOldCards = (now: number, { userId, take, notIn }: GetCardsParams) => {
       OR: [{ lapses: { gt: 0 } }, { repetitions: { gt: 0 } }],
     },
     orderBy: [
-      { lapses: "desc" },
-      { repetitions: "desc" },
-      { createdAt: "asc" },
+      { lapses: randomSortOrder() },
+      { repetitions: randomSortOrder() },
+      { createdAt: randomSortOrder() },
     ],
     take,
   });
