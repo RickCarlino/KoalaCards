@@ -6,7 +6,7 @@ export function Youglish(children: string) {
     if (!word.match(/[가-힣]/)) return <span>{word + " "}</span>;
     return (
       <a
-        key={i}
+        key={word + i}
         href={`https://youglish.com/pronounce/${word}/korean`}
         target="_blank"
         rel="noreferrer"

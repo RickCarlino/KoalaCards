@@ -103,6 +103,21 @@ const GRADED_RESPONSE = {
   },
 };
 
+const SYSTEM_PROMPT4 = `
+Grading Scale:
+  Grade 0: Completely wrong.
+  Grade 1: Mostly wrong.
+  Grade 2: Correct with minor issues.
+  Grade 3: Perfect.
+
+You grade quizzes in a Korean language learning app.
+The goal is to train the student's to express and understand sentences.
+Use the scale above to grade the student's response.
+Do not nit pick small details.
+Grade are shown to the student, so say "you" and not "the student" when grading.
+Keep explanations short and to the point.
+`;
+
 const SYSTEM_PROMPT = `
 Grading Scale:
 
@@ -156,7 +171,7 @@ export const gradedResponse = async (
   const answer = await gptCall({
     messages: [
       { role: "user", content },
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: useGPT4 ? SYSTEM_PROMPT4 : SYSTEM_PROMPT },
     ],
     model,
     n: 1,
@@ -211,17 +226,6 @@ const setGrade = async (card: Card, grade: number) => {
   });
 };
 
-const translationPrompt = (term: string, transcript: string) => {
-  return `
-      TRANSLATION TEST
-      I was asked to translate the following sentence to English:
-      ${term}.
-      I said:
-      ${transcript}.
-      ---
-      Was I correct?`;
-};
-
 async function gradeResp(
   card: Card,
   grade: number,
@@ -237,13 +241,11 @@ async function dictationTest(transcript: string, card: Card) {
   }
   const [grade, why] = await gradedResponse(
     `
-    REPEAT AFTER ME TEST:
-    The system asked me to say:
-    ${card.term}
-    I said:
-    ${transcript}
+    Asked student to repeat the phrase "${card.term}"
+    Student said: ${transcript}
     ---
-    Was I correct?`,
+    Was the student correct? Keep in mind this was recorded
+    via speech to text, so there may be some errors.`,
     card.userId,
   );
   return gradeResp(card, grade, why);
@@ -253,7 +255,12 @@ async function listeningTest(transcript: string, card: Card) {
   if (exactMatch(transcript, card.definition)) {
     return gradeResp(card, 5, undefined);
   }
-  const p = translationPrompt(card.term, transcript);
+  const p = `
+  Asked student to translate "${card.term}"
+  Correct answer: ${card.definition}
+  Student said: ${transcript}
+  ---
+  Was the student correct?`;
   const [grade, why] = await gradedResponse(p, card.userId);
   return gradeResp(card, grade, why);
 }
@@ -268,6 +275,7 @@ async function speakingTest(transcript: string, card: Card) {
      SPEAKING TEST:
      I was asked to translate the following sentence to the target language:
      ${card.definition}
+     (${card.term})
      I said:
      ${transcript}
      ---
