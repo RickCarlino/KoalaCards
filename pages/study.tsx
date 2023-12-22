@@ -237,7 +237,11 @@ function Study(props: Props) {
       .finally(() => {
         getNextQuiz
           .mutateAsync({
-            notIn: [...state.quizIDsForLesson, ...state.idsAwaitingGrades],
+            notIn: [
+              ...state.quizIDsForLesson,
+              ...state.idsAwaitingGrades,
+              ...state.idsWithErrors,
+            ],
           })
           .catch(needBetterErrorHandler)
           .then((data) => {

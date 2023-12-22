@@ -32,6 +32,7 @@ type Failure = {
 type State = {
   idsAwaitingGrades: number[];
   quizIDsForLesson: number[];
+  idsWithErrors: number[];
   cardsById: Record<string, Quiz>;
   isRecording: boolean;
   failures: Failure[];
@@ -93,10 +94,14 @@ export const newQuizState = (state: Partial<State> = {}): State => {
   const remainingQuizIDs = Object.keys(cardsById).map((x) => parseInt(x));
   return {
     idsAwaitingGrades: [],
+    failures: [],
+    /** Re-trying a quiz after an error is distracting.
+     * Instead of re-quizzing on errors, we just remove them
+     * from the lesson. */
+    idsWithErrors: [],
     cardsById,
     quizIDsForLesson: remainingQuizIDs,
     isRecording: false,
-    failures: [],
     totalCards: 0,
     quizzesDue: 0,
     newCards: 0,
@@ -200,7 +205,15 @@ function reduce(state: State, action: Action): State {
           idsAwaitingGrades.push(id);
         }
       });
-      return { ...removeCard(state, action.id), idsAwaitingGrades };
+      const isError = action.result === "error";
+      const idsWithErrors: number[] = isError
+        ? [...state.idsWithErrors, action.id]
+        : state.idsWithErrors;
+      return {
+        ...removeCard(state, action.id),
+        idsAwaitingGrades,
+        idsWithErrors,
+      };
     case "ADD_MORE":
       const newStuff = action.quizzes.map((x) => x.id);
       const oldStuff = state.quizIDsForLesson;
