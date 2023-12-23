@@ -8,20 +8,17 @@ import { draw, shuffle, template } from "radash";
 import util from "util";
 import { errorReport } from "./error-report";
 
+type LessonType = "dictation" | "listening" | "speaking";
+
 type LocalQuiz = {
   id: number;
   definition: string;
   term: string;
   repetitions: number;
   lapses: number;
-  audio: {
-    dictation: string;
-    listening: string;
-    speaking: string;
-  };
+  lessonType: LessonType;
+  audio: string;
 };
-
-type LessonType = keyof LocalQuiz["audio"];
 
 type GetLessonInputParams = {
   userId: string;
@@ -32,6 +29,18 @@ type GetLessonInputParams = {
   /** IDs that are already in the user's hand. */
   notIn?: number[];
 };
+
+function getLessonType(
+  quiz: { lapses: number; repetitions: number },
+  listeningPercentage: number,
+): LessonType {
+  if (quiz.lapses >= quiz.repetitions) {
+    // Harder cards need more dictation tests.
+    return "dictation";
+  }
+  const listening = Math.random() < listeningPercentage;
+  return listening ? "listening" : "speaking";
+}
 
 const DATA_DIR = process.env.DATA_DIR || ".";
 const VOICES = ["A", "B", "C", "D"].map((x) => `ko-KR-Wavenet-${x}`);
@@ -201,11 +210,14 @@ const applyDefaults = async (p: GetLessonInputParams) => {
     take,
     userId,
     takeNew,
+    listeningPercentage: settings.listeningPercentage,
   };
 };
 
 export default async function getLessons(p: GetLessonInputParams) {
-  const { notIn, now, speed, takeNew, take, userId } = await applyDefaults(p);
+  const defaults = await applyDefaults(p);
+  const { notIn, now, speed, takeNew, take, userId, listeningPercentage } =
+    defaults;
   const query = { userId, take, notIn };
   const cards = await getOldCards(now, query);
   const remainingSpace = Math.max(takeNew - cards.length, 0);
@@ -219,32 +231,15 @@ export default async function getLessons(p: GetLessonInputParams) {
   const output: LocalQuiz[] = [];
   for (const card of cards) {
     const { term, definition } = card;
+    const lessonType = getLessonType(card, listeningPercentage);
     output.push({
       id: card.id,
       definition,
       term,
       repetitions: card.repetitions,
       lapses: card.lapses,
-      audio: {
-        dictation: await generateLessonAudio(
-          "dictation",
-          term,
-          definition,
-          speed,
-        ),
-        listening: await generateLessonAudio(
-          "listening",
-          term,
-          definition,
-          speed,
-        ),
-        speaking: await generateLessonAudio(
-          "speaking",
-          term,
-          definition,
-          speed,
-        ),
-      },
+      lessonType,
+      audio: await generateLessonAudio(lessonType, term, definition, speed),
     });
   }
 

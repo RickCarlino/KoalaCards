@@ -248,12 +248,7 @@ function Study(props: Props) {
             if (!data) return;
             dispatch({
               type: "ADD_MORE",
-              quizzes: data.quizzes.map((x) => {
-                return {
-                  ...x,
-                  randomSeed: Math.random(),
-                };
-              }),
+              quizzes: data.quizzes,
               totalCards: data.totalCards,
               quizzesDue: data.quizzesDue,
               newCards: data.newCards,

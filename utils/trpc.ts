@@ -21,9 +21,7 @@ export const trpc = createTRPCNext<AppRouter>({
         httpBatchLink({
           url: `${getBaseUrl()}/api/trpc`,
           async headers() {
-            return {
-              // authorization: getAuthCookie(),
-            };
+            return {};
           },
         }),
       ],

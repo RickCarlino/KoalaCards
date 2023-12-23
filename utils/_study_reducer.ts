@@ -6,12 +6,8 @@ export type Quiz = {
   definition: string;
   repetitions: number;
   lapses: number;
-  randomSeed: number;
-  audio: {
-    dictation: string;
-    listening: string;
-    speaking: string;
-  };
+  lessonType: "dictation" | "listening" | "speaking";
+  audio: string;
 };
 
 type Failure = {
@@ -41,8 +37,6 @@ type State = {
   newCards: number;
   listeningPercentage: number;
 };
-
-type LessonType = keyof Quiz["audio"];
 
 type QuizResult = "error" | "failure" | "success";
 
@@ -110,29 +104,19 @@ export const newQuizState = (state: Partial<State> = {}): State => {
   };
 };
 
-function getLessonType(quiz: Quiz, listeningPercentage: number): LessonType {
-  if (quiz.lapses >= quiz.repetitions) {
-    // Harder cards need more dictation tests.
-    return "dictation";
-  }
-  const listening = quiz.randomSeed < listeningPercentage;
-  return listening ? "listening" : "speaking";
-}
-
 export function currentQuiz(state: State): CurrentQuiz | undefined {
   const quizID = state.quizIDsForLesson[0];
   const quiz = state.cardsById[quizID];
   if (!quiz) {
     return undefined;
   }
-  let lessonType = getLessonType(quiz, state.listeningPercentage);
 
   return {
     id: quiz.id,
     definition: quiz.definition,
     term: quiz.term,
-    quizAudio: quiz.audio[lessonType],
-    lessonType,
+    quizAudio: quiz.audio,
+    lessonType: quiz.lessonType,
     repetitions: quiz.repetitions,
     lapses: quiz.lapses,
   };
