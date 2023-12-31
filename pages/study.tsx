@@ -1,5 +1,6 @@
 import MicrophonePermissions from "@/components/microphone-permissions";
 import { PlayButton, playAudio } from "@/components/play-button";
+import { Youglish } from "@/components/youglish";
 import { RecordButton } from "@/components/record-button";
 import { trpc } from "@/utils/trpc";
 import { Button, Container, Grid, Paper } from "@mantine/core";
@@ -16,6 +17,7 @@ import {
 import { QuizFailure, linkToEditPage } from "../components/quiz-failure";
 import Link from "next/link";
 import { useUserSettings } from "@/components/settings-provider";
+import { gradePerformance } from "@/utils/srs";
 
 type Props = {
   quizzes: Quiz[];
@@ -37,11 +39,11 @@ const HEADER: Record<string, string> = {
 };
 
 function CardOverview({ quiz }: { quiz: CurrentQuiz }) {
-  let term = "";
+  let term: JSX.Element[] = [];
   let def = "";
   switch (quiz.lessonType) {
     case "dictation":
-      term = quiz.term;
+      term = Youglish(quiz.term);
       def = quiz.definition;
     case "speaking":
       def = quiz.definition;
@@ -114,6 +116,9 @@ function Study(props: Props) {
   /** goToNext flag controls if the session will skip to next
    * card or not. */
   const doFlag = (id: number, goToNext = true) => {
+    if (!confirm("This will pause reviews. Are you sure?")) {
+      return;
+    }
     goToNext && dispatch({ type: "FLAG_QUIZ", id });
     setOK(true);
     return flagCard.mutateAsync({ id }).catch(needBetterErrorHandler);
@@ -131,15 +136,18 @@ function Study(props: Props) {
       ...f,
       onClose: clear,
       onFlag: () => {
-        doFlag(f.id, false).then(clear);
+        doFlag(f.id, false)?.then(clear);
       },
     };
     if (psd) {
       failProps.onDiscard = () => {
+        // Get a random grade between 3 and 5
+        // to prevent pileups.
+        const randomGrade = Math.random() * 2 + 3;
         editCard
           .mutateAsync({
             id: f.id,
-            ...psd,
+            ...gradePerformance(psd, randomGrade),
           })
           .then(clear);
       };
@@ -229,19 +237,18 @@ function Study(props: Props) {
       .finally(() => {
         getNextQuiz
           .mutateAsync({
-            notIn: [...state.quizIDsForLesson, ...state.idsAwaitingGrades],
+            notIn: [
+              ...state.quizIDsForLesson,
+              ...state.idsAwaitingGrades,
+              ...state.idsWithErrors,
+            ],
           })
           .catch(needBetterErrorHandler)
           .then((data) => {
             if (!data) return;
             dispatch({
               type: "ADD_MORE",
-              quizzes: data.quizzes.map((x) => {
-                return {
-                  ...x,
-                  randomSeed: Math.random(),
-                };
-              }),
+              quizzes: data.quizzes,
               totalCards: data.totalCards,
               quizzesDue: data.quizzesDue,
               newCards: data.newCards,

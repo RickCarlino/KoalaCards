@@ -11,16 +11,24 @@ import { exactMatch } from "@/utils/clean-string";
 import { errorReport } from "@/utils/error-report";
 let approvedUserIDs: string[] = [];
 prismaClient.user.findMany({}).then((users) => {
-  users.map(({ email, id }) => {
+  users.map((user) => {
+    const { email, id, lastSeen } = user;
+    const daysAgo = lastSeen
+      ? (Date.now() - lastSeen.getTime()) / (1000 * 60 * 60 * 24)
+      : -1;
     if (!email) {
       console.log("=== No email for user " + id);
       return;
     }
     if (superUsers.includes(email)) {
-      console.log(`=== Super user: ${email} / ${id}`);
+      console.log(
+        `=== Super user: ${email} / ${id} (last seen ${daysAgo} days ago)`,
+      );
       approvedUserIDs.push(id);
     } else {
-      console.log(`=== Normal user: ${email} / ${id}`);
+      console.log(
+        `=== Normal user: ${email} / ${id} (last seen ${daysAgo} days ago)`,
+      );
     }
   });
 });
@@ -48,12 +56,6 @@ const tokenUsage = SafeCounter({
   help: "Number of OpenAI tokens used",
   labelNames: ["userID"],
 });
-
-// const apiTimeout = SafeCounter({
-//   name: "api_timeout",
-//   help: "Number of OpenAI API timeouts",
-//   labelNames: ["userID"],
-// });
 
 const GRADED_RESPONSE = {
   name: "grade_quiz",
@@ -101,6 +103,21 @@ const GRADED_RESPONSE = {
   },
 };
 
+const SYSTEM_PROMPT4 = `
+Grading Scale:
+  Grade 0: Completely wrong.
+  Grade 1: Mostly wrong.
+  Grade 2: Correct with minor issues.
+  Grade 3: Perfect.
+
+You grade quizzes in a Korean language learning app.
+The goal is to train the student's to express and understand sentences.
+Use the scale above to grade the student's response.
+Do not nit pick small details.
+Grade are shown to the student, so say "you" and not "the student" when grading.
+Keep explanations short and to the point.
+`;
+
 const SYSTEM_PROMPT = `
 Grading Scale:
 
@@ -146,9 +163,7 @@ export const gradedResponse = async (
 ): Promise<[number, string | undefined]> => {
   userID = userID || "";
   const useGPT4 = approvedUserIDs.includes("" + userID);
-  let model = useGPT4
-    ? "gpt-4-1106-preview"
-    : "gpt-3.5-turbo-1106";
+  let model = useGPT4 ? "gpt-4-1106-preview" : "gpt-3.5-turbo-1106";
   if (input.includes("REPEAT AFTER ME TEST")) {
     model = "gpt-3.5-turbo-1106"; // Don't waste money on dictation tests.
   }
@@ -156,7 +171,7 @@ export const gradedResponse = async (
   const answer = await gptCall({
     messages: [
       { role: "user", content },
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: useGPT4 ? SYSTEM_PROMPT4 : SYSTEM_PROMPT },
     ],
     model,
     n: 1,
@@ -178,7 +193,7 @@ export const gradedResponse = async (
     .map((x): Result => [x.grade, x.explanation]);
   // sort results by 0th element.
   // Grab median value:
-  const median = results[0][0]; //.sort((a, b) => a[0] - b[0])[1][0];
+  const median = results[0][0];
   const jitter = Math.random() * 0.4;
   const result = median + jitter;
   const explanation = results[0][1] ?? "No explanation";
@@ -198,9 +213,9 @@ const gradeAndUpdateTimestamps = (card: Card, grade: number) => {
   const now = Date.now();
 
   return {
+    ...gradePerformance(card, grade, now),
     firstReview: new Date(card.lastReview || now),
     lastReview: new Date(now),
-    ...gradePerformance(card, grade, now),
   };
 };
 
@@ -209,17 +224,6 @@ const setGrade = async (card: Card, grade: number) => {
     where: { id: card.id },
     data: gradeAndUpdateTimestamps(card, grade),
   });
-};
-
-const translationPrompt = (term: string, transcript: string) => {
-  return `
-      TRANSLATION TEST
-      I was asked to translate the following sentence to English:
-      ${term}.
-      I said:
-      ${transcript}.
-      ---
-      Was I correct?`;
 };
 
 async function gradeResp(
@@ -237,13 +241,11 @@ async function dictationTest(transcript: string, card: Card) {
   }
   const [grade, why] = await gradedResponse(
     `
-    REPEAT AFTER ME TEST:
-    The system asked me to say:
-    ${card.term}
-    I said:
-    ${transcript}
+    Asked student to repeat the phrase "${card.term}"
+    Student said: ${transcript}
     ---
-    Was I correct?`,
+    Was the student correct? Keep in mind this was recorded
+    via speech to text, so there may be some errors.`,
     card.userId,
   );
   return gradeResp(card, grade, why);
@@ -253,7 +255,12 @@ async function listeningTest(transcript: string, card: Card) {
   if (exactMatch(transcript, card.definition)) {
     return gradeResp(card, 5, undefined);
   }
-  const p = translationPrompt(card.term, transcript);
+  const p = `
+  Asked student to translate "${card.term}"
+  Correct answer: ${card.definition}
+  Student said: ${transcript}
+  ---
+  Was the student correct?`;
   const [grade, why] = await gradedResponse(p, card.userId);
   return gradeResp(card, grade, why);
 }
@@ -268,6 +275,7 @@ async function speakingTest(transcript: string, card: Card) {
      SPEAKING TEST:
      I was asked to translate the following sentence to the target language:
      ${card.definition}
+     (${card.term})
      I said:
      ${transcript}
      ---
@@ -285,22 +293,7 @@ const lessonType = z.union([
 
 export const openai = new OpenAI(configuration);
 
-// function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
-//   let done = false;
-//   const timeoutPromise = new Promise<T>((_resolve, reject) => {
-//     setTimeout(() => {
-//       if (!done) {
-//         apiTimeout.inc();
-//         reject(new Error("Operation timed out"));
-//       }
-//     }, timeoutMs);
-//   });
-
-//   return Promise.race([promise, timeoutPromise]);
-// }
-
 export async function gptCall(opts: ChatCompletionCreateParamsNonStreaming) {
-  // return withTimeout(openai.chat.completions.create(opts), 11000);
   return openai.chat.completions.create(opts);
 }
 

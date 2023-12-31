@@ -123,7 +123,6 @@ export default function UserSettingsPage(props: Props) {
           });
         },
       );
-    console.log(settings);
   };
   const stats = props.stats;
   const labels: [keyof typeof stats, string][] = [

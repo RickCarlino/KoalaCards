@@ -10,11 +10,12 @@ const Quiz = z.object({
   term: z.string(),
   repetitions: z.number(),
   lapses: z.number(),
-  audio: z.object({
-    dictation: z.string(),
-    listening: z.string(),
-    speaking: z.string(),
-  }),
+  lessonType: z.union([
+    z.literal("dictation"),
+    z.literal("listening"),
+    z.literal("speaking"),
+  ]),
+  audio: z.string(),
 });
 
 const QuizList = z.object({

@@ -6,12 +6,8 @@ export type Quiz = {
   definition: string;
   repetitions: number;
   lapses: number;
-  randomSeed: number;
-  audio: {
-    dictation: string;
-    listening: string;
-    speaking: string;
-  };
+  lessonType: "dictation" | "listening" | "speaking";
+  audio: string;
 };
 
 type Failure = {
@@ -32,6 +28,7 @@ type Failure = {
 type State = {
   idsAwaitingGrades: number[];
   quizIDsForLesson: number[];
+  idsWithErrors: number[];
   cardsById: Record<string, Quiz>;
   isRecording: boolean;
   failures: Failure[];
@@ -40,8 +37,6 @@ type State = {
   newCards: number;
   listeningPercentage: number;
 };
-
-type LessonType = keyof Quiz["audio"];
 
 type QuizResult = "error" | "failure" | "success";
 
@@ -93,10 +88,14 @@ export const newQuizState = (state: Partial<State> = {}): State => {
   const remainingQuizIDs = Object.keys(cardsById).map((x) => parseInt(x));
   return {
     idsAwaitingGrades: [],
+    failures: [],
+    /** Re-trying a quiz after an error is distracting.
+     * Instead of re-quizzing on errors, we just remove them
+     * from the lesson. */
+    idsWithErrors: [],
     cardsById,
     quizIDsForLesson: remainingQuizIDs,
     isRecording: false,
-    failures: [],
     totalCards: 0,
     quizzesDue: 0,
     newCards: 0,
@@ -105,30 +104,19 @@ export const newQuizState = (state: Partial<State> = {}): State => {
   };
 };
 
-function getLessonType(quiz: Quiz, listeningPercentage: number): LessonType {
-  if (quiz.lapses >= quiz.repetitions) {
-    // Harder cards need more dictation tests.
-    return "dictation";
-  }
-  const listening = quiz.randomSeed < listeningPercentage;
-  return listening ? "listening" : "speaking";
-}
-
 export function currentQuiz(state: State): CurrentQuiz | undefined {
   const quizID = state.quizIDsForLesson[0];
   const quiz = state.cardsById[quizID];
   if (!quiz) {
-    console.log("=== No quiz found for quizID " + (quizID ?? "null"));
     return undefined;
   }
-  let lessonType = getLessonType(quiz, state.listeningPercentage);
 
   return {
     id: quiz.id,
     definition: quiz.definition,
     term: quiz.term,
-    quizAudio: quiz.audio[lessonType],
-    lessonType,
+    quizAudio: quiz.audio,
+    lessonType: quiz.lessonType,
     repetitions: quiz.repetitions,
     lapses: quiz.lapses,
   };
@@ -201,7 +189,15 @@ function reduce(state: State, action: Action): State {
           idsAwaitingGrades.push(id);
         }
       });
-      return { ...removeCard(state, action.id), idsAwaitingGrades };
+      const isError = action.result === "error";
+      const idsWithErrors: number[] = isError
+        ? [...state.idsWithErrors, action.id]
+        : state.idsWithErrors;
+      return {
+        ...removeCard(state, action.id),
+        idsAwaitingGrades,
+        idsWithErrors,
+      };
     case "ADD_MORE":
       const newStuff = action.quizzes.map((x) => x.id);
       const oldStuff = state.quizIDsForLesson;
@@ -213,10 +209,6 @@ function reduce(state: State, action: Action): State {
       action.quizzes.forEach((card) => {
         nextcardsById[card.id] ??= card;
       });
-      if (!action.quizzes.length) {
-        console.log("=== Got empty hand of cards...");
-        console.dir(state);
-      }
       return {
         ...state,
         cardsById: nextcardsById,
@@ -233,7 +225,5 @@ function reduce(state: State, action: Action): State {
 
 export function quizReducer(state: State, action: Action): State {
   const nextState = reduce(state, action);
-  // Do debugging here:
-  // console.log(action.type);
   return nextState;
 }
