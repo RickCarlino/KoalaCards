@@ -191,6 +191,9 @@ function Study(props: Props) {
           <li>
             <Link href="/cards">Import cards from a backup file</Link>
           </li>
+          <li>
+            Refresh this page to load more.
+          </li>
         </ul>
       </div>
     );
