@@ -163,7 +163,8 @@ export const gradedResponse = async (
 ): Promise<[number, string | undefined]> => {
   userID = userID || "";
   const useGPT4 = approvedUserIDs.includes("" + userID);
-  let model = useGPT4 ? "gpt-4-1106-preview" : "gpt-3.5-turbo-1106";
+  const whichGPT = Math.random() > 0.5 ? "gpt-4-0613" : "gpt-4-1106-preview";
+  let model = useGPT4 ? whichGPT : "gpt-3.5-turbo-1106";
   if (input.includes("REPEAT AFTER ME TEST")) {
     model = "gpt-3.5-turbo-1106"; // Don't waste money on dictation tests.
   }
@@ -178,7 +179,7 @@ export const gradedResponse = async (
     temperature: useGPT4 ? 0.75 : 0,
     function_call: { name: "grade_quiz" },
     functions: [GRADED_RESPONSE],
-    max_tokens: 555,
+    max_tokens: 444,
   });
   if (!answer) {
     return errorReport("No answer");

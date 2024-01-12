@@ -19,8 +19,8 @@ export const captureAudio = (dataURI: string): string => {
 
 type TranscriptionResult = { kind: "OK"; text: string } | { kind: "error" };
 
-const PROMPT_KO = "한국어 학생이 말하고 있습니다: ";
-const PROMPT_EN = "A Korean language learner translates sentences to English.";
+const PROMPT_KO = "다양한 예문을 읽는 연습";
+const PROMPT_EN = "Trascript of an example sentence.";
 
 const transcriptionLength = SafeCounter({
   name: "transcriptionLength",
@@ -58,7 +58,7 @@ export async function transcribeB64(
           text,
         });
       } catch (error) {
-        console.log("serverside transcription error:");
+        console.log("server side transcription error:");
         console.error(error);
         return resolve({ kind: "error" });
       } finally {
