@@ -163,8 +163,7 @@ export const gradedResponse = async (
 ): Promise<[number, string | undefined]> => {
   userID = userID || "";
   const useGPT4 = approvedUserIDs.includes("" + userID);
-  const whichGPT = Math.random() > 0.5 ? "gpt-4-0613" : "gpt-4-1106-preview";
-  let model = useGPT4 ? whichGPT : "gpt-3.5-turbo-1106";
+  let model = useGPT4 ? "gpt-4-0613" : "gpt-3.5-turbo-1106";
   if (input.includes("REPEAT AFTER ME TEST")) {
     model = "gpt-3.5-turbo-1106"; // Don't waste money on dictation tests.
   }
