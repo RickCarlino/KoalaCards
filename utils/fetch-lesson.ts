@@ -142,7 +142,7 @@ const getNewCards = async ({ userId, take, notIn }: GetCardsParams) => {
     },
   });
 
-  if (cardsDueNext24Hours > 200) {
+  if (cardsDueNext24Hours > 300) {
     console.log(`=== TODO: Make configurable dailyReviewCap user config. ===`);
     return [];
   }

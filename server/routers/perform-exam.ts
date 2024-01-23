@@ -328,7 +328,7 @@ export const performExam = procedure
   .input(
     z.object({
       lessonType,
-      audio: z.string().max(800000), // 15 seconds max
+      audio: z.string().max(1000000), // 15 seconds max
       id: z.number(),
     }),
   )
