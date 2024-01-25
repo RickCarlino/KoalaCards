@@ -113,7 +113,7 @@ Grading Scale:
 You grade quizzes in a Korean language learning app.
 The goal is to train the student's to express and understand sentences.
 Use the scale above to grade the student's response.
-Do not nit pick small details.
+Sentences must be grammatically correct and convey the main idea of the sentence.
 Grade are shown to the student, so say "you" and not "the student" when grading.
 Keep explanations short and to the point.
 `;
@@ -164,15 +164,17 @@ export const gradedResponse = async (
   userID = userID || "";
   const useGPT4 = approvedUserIDs.includes("" + userID);
   let model = useGPT4 ? "gpt-4-0613" : "gpt-3.5-turbo-1106";
+  let prompt: ChatCompletionCreateParamsNonStreaming["messages"][number] = {
+    role: "system",
+    content: useGPT4 ? SYSTEM_PROMPT4 : SYSTEM_PROMPT,
+  };
   if (input.includes("REPEAT AFTER ME TEST")) {
     model = "gpt-3.5-turbo-1106"; // Don't waste money on dictation tests.
+    prompt.content = SYSTEM_PROMPT;
   }
   const content = input.replace(/^\s+/gm, "");
   const answer = await gptCall({
-    messages: [
-      { role: "user", content },
-      { role: "system", content: useGPT4 ? SYSTEM_PROMPT4 : SYSTEM_PROMPT },
-    ],
+    messages: [{ role: "user", content }, prompt],
     model,
     n: 1,
     temperature: useGPT4 ? 0.75 : 0,
