@@ -155,7 +155,6 @@ correctly.
 
 Do not nit pick word order or small details. The goal is to asses the student's
 ability to express ideas and understand sentences.
-Reply in Korean as much as possible.
 `;
 
 export const gradedResponse = async (
@@ -331,7 +330,7 @@ export const performExam = procedure
   .input(
     z.object({
       lessonType,
-      audio: z.string().max(1000000), // 15 seconds max
+      audio: z.string().max(1000000),
       id: z.number(),
     }),
   )
