@@ -163,7 +163,7 @@ export const gradedResponse = async (
 ): Promise<[number, string | undefined]> => {
   userID = userID || "";
   const useGPT4 = approvedUserIDs.includes("" + userID);
-  let model = useGPT4 ? "gpt-4-0613" : "gpt-3.5-turbo-1106";
+  let model = useGPT4 ? "gpt-4-turbo-preview" : "gpt-3.5-turbo-1106";
   let prompt: ChatCompletionCreateParamsNonStreaming["messages"][number] = {
     role: "system",
     content: useGPT4 ? SYSTEM_PROMPT4 : SYSTEM_PROMPT,
