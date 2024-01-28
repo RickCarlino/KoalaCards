@@ -134,16 +134,16 @@ type GetCardsParams = {
   notIn: number[];
 };
 const getNewCards = async ({ userId, take, notIn }: GetCardsParams) => {
-  const cardsDueNext24Hours = await prismaClient.card.count({
+  const cardsDueNext72Hours = await prismaClient.card.count({
     where: {
       userId,
       nextReviewAt: {
-        lte: Math.floor(Date.now() / 1000) + 86400, // 86400 seconds in 24 hours
+        lte: Math.floor(Date.now() / 1000) + (86400 * 3), // 86400 seconds in 24 hours
       },
     },
   });
 
-  if (cardsDueNext24Hours > 300) {
+  if (cardsDueNext72Hours > 350) {
     console.log(`=== TODO: Make configurable dailyReviewCap user config. ===`);
     return [];
   }
