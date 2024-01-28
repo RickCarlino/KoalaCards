@@ -74,7 +74,7 @@ const GRADED_RESPONSE = {
       explanation: {
         type: "string",
         description:
-          "Explanation for why the grade was given. Only required for a grade of 3 or lower.",
+          "Explanation for why the grade was given. Only required for a grade of 1 or lower.",
       },
     },
     dependencies: {

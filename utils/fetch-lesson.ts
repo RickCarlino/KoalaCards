@@ -47,7 +47,7 @@ const VOICES = ["A", "B", "C", "D"].map((x) => `ko-KR-Wavenet-${x}`);
 const LESSON_SIZE = 5;
 const SSML: Record<LessonType, string> = {
   dictation: `<speak>
-  <audio clipBegin="0.2s" clipEnd="0.8s" src="https://actions.google.com/sounds/v1/impacts/glass_drop_and_roll.ogg"></audio><voice language="en-US" rate="200%" gender="female">{{definition}}</voice><break time="0.15s"/><prosody rate="x-slow">{{term}}</prosody></speak>`,
+  <audio clipBegin="0.2s" clipEnd="0.8s" src="https://actions.google.com/sounds/v1/impacts/glass_drop_and_roll.ogg"></audio><break time="0.08s"/><prosody rate="x-slow">{{term}}</prosody></speak>`,
   speaking: `<speak><break time="0.5s"/><voice language="en-US" gender="female">{{definition}}</voice></speak>`,
   listening: `<speak><break time="0.5s"/><prosody rate="{{speed}}%">{{term}}</prosody></speak>`,
 };
