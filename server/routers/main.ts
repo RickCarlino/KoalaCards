@@ -1,4 +1,4 @@
-import { router } from "../trpc";
+import { procedure, router } from "../trpc";
 import { deleteCard } from "./delete-card";
 import { deleteFlaggedCards } from "./delete-flagged-card";
 import { editCard } from "./edit-card";
@@ -14,6 +14,8 @@ import { importCards } from "./import-cards";
 import { flagObnoxious } from "./flag-obnoxious";
 import { editUserSettings } from "./edit-user-settings";
 import { getUserSettings } from "./get-user-settings";
+import { z } from "zod";
+import { createCardsFromText } from "@/utils/create-cards-from-text";
 
 export const appRouter = router({
   bulkCreateCards,
@@ -33,6 +35,31 @@ export const appRouter = router({
   getUserSettings,
   importCards,
   performExam,
+  parseCards: procedure
+    .input(
+      z.object({
+        text: z.string().max(3000),
+      }),
+    )
+    .output(
+      z.object({
+        cards: z.array(
+          z.object({
+            definition: z.string(),
+            term: z.string(),
+          }),
+        ),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      try {
+        const cards = await createCardsFromText(input.text);
+        return { cards };          
+      } catch (error) {
+        console.error(error);
+        throw new Error("Failed to parse cards");
+      }
+    }),
 });
 
 export type AppRouter = typeof appRouter;

@@ -15,6 +15,7 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
       )?.id || "";
   const transcripts = (
     await prismaClient.transcript.findMany({
+      take: 300,
       where: { card: { userId: userID } },
       orderBy: {
         recordedAt: "desc",

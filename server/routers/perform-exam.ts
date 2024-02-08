@@ -105,7 +105,9 @@ const GRADED_RESPONSE = {
 
 const SYSTEM_PROMPT4 = `
 Grading Scale:
-  Grade 0: Completely wrong.
+  Grade 0:
+    Completely wrong meaning.
+    Has any Korean grammar error (syntax, semantics, etc..).
   Grade 1: Mostly wrong.
   Grade 2: Correct with minor issues.
   Grade 3: Perfect.
@@ -281,7 +283,7 @@ async function speakingTest(transcript: string, card: Card) {
      I said:
      ${transcript}
      ---
-     Was I correct?`,
+     Was I correct? Give 0 points if grammar rules are violated.`,
     card.userId,
   );
   return gradeResp(card, grade, why);
@@ -380,17 +382,15 @@ export const performExam = procedure
     const [grade, reason] = card
       ? await quiz(transcript.text.slice(0, 80), card)
       : [0, "Error"];
-    if (lang == "ko") {
-      prismaClient.transcript
-        .create({
-          data: {
-            value: transcript.text,
-            cardId: card.id,
-            grade,
-          },
-        })
-        .then(() => {});
-    }
+    prismaClient.transcript
+      .create({
+        data: {
+          value: transcript.text,
+          cardId: card.id,
+          grade,
+        },
+      })
+      .then(() => {});
     if (grade < 3) {
       quizCompletion.labels({ result: "failure", userID }).inc();
       return {

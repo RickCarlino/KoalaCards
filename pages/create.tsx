@@ -1,3 +1,4 @@
+import React, { useState, ChangeEvent } from "react";
 import { trpc } from "@/utils/trpc";
 import {
   Textarea,
@@ -6,133 +7,98 @@ import {
   Notification,
   Container,
 } from "@mantine/core";
-import { useState } from "react";
 
 interface Card {
   term: string;
   definition: string;
 }
 
-interface CreateCardProps {}
-
-const CreateCardPage: React.FC<CreateCardProps> = ({}) => {
-  const [text, setText] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+const CreateCardPage: React.FC = () => {
+  const [input, setInput] = useState("");
+  const [cards, setCards] = useState<Card[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<[string, string][]>([]);
-  const importCard = trpc.bulkCreateCards.useMutation();
-  const resetAllState = () => {
-    setIsLoading(false);
-    setError(null);
-    setResult([]);
-  };
-  const handleSubmit = async () => {
-    setIsLoading(true);
-    setError(null);
+  const [buttonText, setButtonText] = useState<string | null>("Continue");
+  const bulkCreateCards = trpc.bulkCreateCards.useMutation();
+  const parseCards = trpc.parseCards.useMutation();
 
-    const lines = text.split("\n");
-    const cards: Card[] = [];
-    let lineIndex = 0;
-    let total = lines.length;
-    for (let line of lines) {
-      lineIndex = lineIndex + 1;
-      if (line.length < 3) continue;
-      if (line.split("\t")[0].length > 80) {
-        setError(
-          `(Line ${lineIndex}/${total}) Is too long. KoalaSRS is optimized for short cards.`,
-        );
-        setIsLoading(false);
-        return;
-      }
-      let [term, english] = line.split("\t");
-
-      if (!term) {
-        setError(
-          `(Line ${lineIndex}/${total}) line must start with a vocabulary word.`,
-        );
-        setIsLoading(false);
-        return;
-      }
-
-      if (!english) {
-        setError(
-          `(Line ${lineIndex}/${total}) A definition is required after a tab character.`,
-        );
-        setIsLoading(false);
-        return;
-      }
-
-      term = term.trim();
-      english = english.trim();
-      cards.push({ term: term, definition: english });
+  const handleInputChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(event.target.value);
+    if (event.target.value.length > 3000) {
+      setError("Input exceeds the maximum limit of 3000 characters.");
+    } else {
+      setError(null);
     }
-
-    importCard.mutateAsync({ input: cards }).then((imports) => {
-      setResult(imports.map((x) => [x.term, x.definition]));
-      setIsLoading(false);
-      setText("");
-    });
   };
-  const start = (
-    <Paper>
-      <h1>Create New Cards</h1>
-      <p>
-        Enter a list of cards below, one per line. Each line has two parts,
-        separated by a tab character. The order is as follows:
-      </p>
-      <ol>
-        <li>Target language term</li>
-        <li>A Tab character</li>
-        <li>The translation</li>
-      </ol>
-      <p>
-        <b>Pro Tip:</b>
-        Edit your cards in a spreadsheet program like Excel or Google Sheets,
-        then copy and paste them here.
-      </p>
-      <h3>Example of card input:</h3>
-      <pre>그는 나를 웃게 했어요. He made me laugh.</pre>
-      <Textarea
-        minRows={10}
-        placeholder="Korean sentence <tab> English translation or example sentence"
-        value={text}
-        onChange={(event) => setText(event.currentTarget.value)}
-      />
-      {error && <Notification color="red">{error}</Notification>}
-      <Button
-        color={isLoading ? "gray" : "blue"}
-        onClick={handleSubmit}
-        style={{ marginTop: "1em" }}
-        disabled={isLoading}
-      >
-        {isLoading ? "Uploading..." : "Import"}
-      </Button>
-    </Paper>
-  );
 
-  const finish = (
-    <Paper>
-      <h1>Imported Cards</h1>
-      <Button onClick={resetAllState}>Add More Cards</Button>
-      <table>
-        <thead>
-          <tr>
-            <th>Term</th>
-            <th>Definition</th>
-          </tr>
-        </thead>
-        <tbody>
-          {result.map((x, i) => (
-            <tr key={i}>
-              <td>{x[0]}</td>
-              <td>{x[1]}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </Paper>
+  const handleContinue = async () => {
+    if (input.length > 3000) {
+      setError("Input exceeds the maximum limit of 3000 characters.");
+      return;
+    }
+    setButtonText("Processing...");
+    try {
+      const result = await parseCards.mutateAsync({ text: input });
+      setCards(result.cards);
+      setInput(
+        result.cards
+          .map(
+            ({ term, definition }) =>
+              `${JSON.stringify(definition)}, ${JSON.stringify(term)}`,
+          )
+          .join("\n"),
+      );
+      setError(null);
+      setButtonText(null);
+    } catch (e) {
+      setError("An error occurred while parsing the cards.");
+      setButtonText("Error - Try Again?");
+      console.error(e);
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      await bulkCreateCards.mutateAsync({ input: cards });
+      setError(null);
+      // Reset input and cards for next entry
+      setInput("");
+      setCards([]);
+    } catch (e) {
+      setError("An error occurred while saving the cards.");
+    }
+  };
+
+  return (
+    <Container>
+      <Paper>
+        <h1>Create New Cards</h1>
+        <p>Enter a list of cards below.</p>
+        <p>
+          <b>Pro Tip:</b> Edit your cards in a spreadsheet program like Excel or
+          Google Sheets, then copy and paste them here.
+        </p>
+        <h3>Example of card input:</h3>
+        <pre>그는 나를 웃게 했어요. He made me laugh.</pre>
+        <Textarea
+          minRows={10}
+          placeholder="Korean sentence <tab> English translation or example sentence"
+          value={input}
+          onChange={handleInputChange}
+        />
+        <Notification color={input.length > 3000 ? "red" : "blue"}>
+          {input.length}/3000 characters
+        </Notification>
+        {error && <Notification color="red">{error}</Notification>}
+        {buttonText && <Button onClick={handleContinue}>{buttonText}</Button>}
+        {cards.length > 0 && (
+          <>
+            {/* Implement the two-column layout for editing cards here */}
+            <Button onClick={handleSave}>Save</Button>
+          </>
+        )}
+      </Paper>
+    </Container>
   );
-  return <Container>{result.length > 0 ? finish : start}</Container>;
 };
 
 export default CreateCardPage;
