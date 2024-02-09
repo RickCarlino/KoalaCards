@@ -6,10 +6,12 @@ import { trpc } from "@/utils/trpc";
 import { Button, Container, Grid, Paper } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
-import { useEffect, useState, useReducer } from "react";
+import { useEffect, useState, useReducer, Dispatch } from "react";
 import {
+  Action,
   CurrentQuiz,
   Quiz,
+  State,
   currentQuiz,
   newQuizState,
   quizReducer,
@@ -76,10 +78,11 @@ type ControlButtonsProps = {
   doFlag: (id: number) => void;
   doFail: (id: number) => void;
   processAudio: (audio: string) => void;
+  dispatch: Dispatch<Action>;
 };
 
 function ControlButtons(props: ControlButtonsProps) {
-  const { quiz, isRecording, doFlag, doFail, processAudio } = props;
+  const { quiz, isRecording, doFlag, doFail, processAudio, dispatch } = props;
   return (
     <Grid grow justify="center" align="center">
       <Grid.Col span={4}>
@@ -115,7 +118,7 @@ function ControlButtons(props: ControlButtonsProps) {
   );
 }
 
-function useQuizState(initialState) {
+function useQuizState(initialState: State) {
   const [state, dispatch] = useReducer(quizReducer, initialState);
   // Include other state-related logic here, such as useEffects, and return necessary data and functions
   return { state, dispatch };
@@ -325,6 +328,7 @@ function Study(props: Props) {
         doFlag={doFlag}
         doFail={doFail}
         processAudio={processAudio}
+        dispatch={dispatch}
       />
       <CardOverview quiz={quiz} />
       <p>Card #{quiz.id} quiz</p>

@@ -25,7 +25,7 @@ type Failure = {
   };
 };
 
-type State = {
+export type State = {
   idsAwaitingGrades: number[];
   quizIDsForLesson: number[];
   idsWithErrors: number[];
@@ -40,7 +40,7 @@ type State = {
 
 type QuizResult = "error" | "failure" | "success";
 
-type Action =
+export type Action =
   | { type: "DID_GRADE"; id: number; result: QuizResult }
   | { type: "FLAG_QUIZ"; id: number }
   | { type: "ADD_FAILURE"; value: Failure }
