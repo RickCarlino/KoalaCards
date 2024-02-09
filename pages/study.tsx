@@ -60,14 +60,72 @@ function CardOverview({ quiz }: { quiz: CurrentQuiz }) {
   );
 }
 
-function Study(props: Props) {
-  const cardsById = props.quizzes.reduce(
-    (acc, quiz) => {
-      acc[quiz.id] = quiz;
-      return acc;
-    },
-    {} as Record<number, Quiz>,
+function StudyHeader({ lessonType }: { lessonType: keyof typeof HEADER }) {
+  return (
+    <header style={HEADER_STYLES}>
+      <span style={{ fontSize: "24px", fontWeight: "bold" }}>
+        {HEADER[lessonType] || "Study"}
+      </span>
+    </header>
   );
+}
+
+type ControlButtonsProps = {
+  quiz: CurrentQuiz;
+  isRecording: boolean;
+  doFlag: (id: number) => void;
+  doFail: (id: number) => void;
+  processAudio: (audio: string) => void;
+};
+
+function ControlButtons(props: ControlButtonsProps) {
+  const { quiz, isRecording, doFlag, doFail, processAudio } = props;
+  return (
+    <Grid grow justify="center" align="center">
+      <Grid.Col span={4}>
+        <PlayButton dataURI={quiz.quizAudio} />
+      </Grid.Col>
+      <Grid.Col span={4}>
+        <Button
+          disabled={isRecording}
+          onClick={() => doFlag(quiz.id)}
+          fullWidth
+        >
+          [Z]🚩Flag Item #{quiz.id}
+        </Button>
+      </Grid.Col>
+      <Grid.Col span={4}>
+        <Button
+          disabled={isRecording}
+          onClick={() => doFail(quiz.id)}
+          fullWidth
+        >
+          [X]❌Fail Item
+        </Button>
+      </Grid.Col>
+      <Grid.Col span={4}>
+        <RecordButton
+          disabled={isRecording}
+          lessonType={quiz.lessonType}
+          onStart={() => dispatch({ type: "SET_RECORDING", value: true })}
+          onRecord={processAudio}
+        />
+      </Grid.Col>
+    </Grid>
+  );
+}
+
+function useQuizState(initialState) {
+  const [state, dispatch] = useReducer(quizReducer, initialState);
+  // Include other state-related logic here, such as useEffects, and return necessary data and functions
+  return { state, dispatch };
+}
+
+function Study(props: Props) {
+  const cardsById = props.quizzes.reduce((acc, quiz) => {
+    acc[quiz.id] = quiz;
+    return acc;
+  }, {} as Record<number, Quiz>);
   const settings = useUserSettings();
   const newState = newQuizState({
     cardsById,
@@ -76,7 +134,7 @@ function Study(props: Props) {
     newCards: props.newCards,
     listeningPercentage: settings.listeningPercentage,
   });
-  const [state, dispatch] = useReducer(quizReducer, newState);
+  const { state, dispatch } = useQuizState(newState);
   const performExam = trpc.performExam.useMutation();
   const failCard = trpc.failCard.useMutation();
   const flagCard = trpc.flagCard.useMutation();
@@ -191,9 +249,7 @@ function Study(props: Props) {
           <li>
             <Link href="/cards">Import cards from a backup file</Link>
           </li>
-          <li>
-            Refresh this page to load more.
-          </li>
+          <li>Refresh this page to load more.</li>
         </ul>
       </div>
     );
@@ -262,42 +318,14 @@ function Study(props: Props) {
 
   return (
     <Container size="xs">
-      <header style={HEADER_STYLES}>
-        <span style={{ fontSize: "24px", fontWeight: "bold" }}>
-          {HEADER[quiz.lessonType] || "Study"}
-        </span>
-      </header>
-      <Grid grow justify="center" align="center">
-        <Grid.Col span={4}>
-          <PlayButton dataURI={quiz.quizAudio} />
-        </Grid.Col>
-        <Grid.Col span={4}>
-          <Button
-            disabled={state.isRecording}
-            onClick={() => doFlag(quiz.id)}
-            fullWidth
-          >
-            [Z]🚩Flag Item #{quiz.id}
-          </Button>
-        </Grid.Col>
-        <Grid.Col span={4}>
-          <Button
-            disabled={state.isRecording}
-            onClick={() => doFail(quiz.id)}
-            fullWidth
-          >
-            [X]❌Fail Item
-          </Button>
-        </Grid.Col>
-        <Grid.Col span={4}>
-          <RecordButton
-            disabled={state.isRecording}
-            lessonType={quiz.lessonType}
-            onStart={() => dispatch({ type: "SET_RECORDING", value: true })}
-            onRecord={processAudio}
-          />
-        </Grid.Col>
-      </Grid>
+      <StudyHeader lessonType={quiz?.lessonType} />
+      <ControlButtons
+        quiz={quiz}
+        isRecording={state.isRecording}
+        doFlag={doFlag}
+        doFail={doFail}
+        processAudio={processAudio}
+      />
       <CardOverview quiz={quiz} />
       <p>Card #{quiz.id} quiz</p>
       <p>{quiz.repetitions} repetitions</p>
