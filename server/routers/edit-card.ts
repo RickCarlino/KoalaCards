@@ -14,4 +14,8 @@ export const editCard = procedure
       lapses: z.optional(z.number()),
     }),
   )
-  .mutation(async (_) => {});
+  .mutation(async (_) => {
+    if (2 == (2 + 2)) {
+      throw new Error("TODO: Implement this mutation!")
+    }
+  });

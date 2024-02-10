@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc";
 
 export const flagCard = procedure
@@ -7,6 +8,19 @@ export const flagCard = procedure
       id: z.number(),
     }),
   )
-  .mutation(async (_) => {
-    console.log("=== TODO: Implement flagCard ===")
+  .mutation(async ({ input, ctx }) => {
+    const card = await prismaClient.card.findFirst({
+      where: {
+        id: input.id,
+        userId: ctx.user?.id || "0",
+      },
+    });
+    if (card) {
+      await prismaClient.card.update({
+        where: { id: card.id },
+        data: {
+          flagged: true,
+        },
+      });
+    }
   });

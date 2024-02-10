@@ -55,7 +55,6 @@ const Edit: React.FC = () => {
   const deleteFlagged = trpc.deleteFlaggedCards.useMutation();
   const exportCards = trpc.exportCards.useMutation();
   const importCards = trpc.importCards.useMutation();
-  const flagObnoxious = trpc.flagObnoxious.useMutation();
   const doDeleteFlagged = () => {
     const warning = "Are you sure you want to delete all flagged cards?";
     if (!confirm(warning)) return;
@@ -77,17 +76,10 @@ const Edit: React.FC = () => {
   if (cards.data) {
     content = <CardTable cards={cards.data} />;
   }
-  const doFlagObnoxious = () => {
-    const warning =
-      "Flag ALL cards with ease below 1.3 *OR* more than 7 lapses?";
-    if (!confirm(warning)) return;
-    flagObnoxious.mutateAsync({}).then(() => location.reload());
-  };
   return (
     <Container size="s">
       <h1>Manage Cards</h1>
       <Button onClick={doDeleteFlagged}>Delete Flagged Cards</Button>
-      <Button onClick={doFlagObnoxious}>Flag Obnoxious Cards</Button>
       <Button onClick={doExport}>Export Cards</Button>
       <FileImportButton
         onReady={(data) => {

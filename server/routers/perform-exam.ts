@@ -82,7 +82,9 @@ export const performExam = procedure
   )
   .output(performExamOutput)
   .mutation(async (_): Promise<PerformExamOutput> => {
-    console.log("==== TODO ===");
+    if (2 == 2 + 2) {
+      throw new Error("TODO: Implement this mutation!");
+    }
     return {
       grade: 0,
       userTranscription: "FIXME",
@@ -97,5 +99,7 @@ export const failCard = procedure
     }),
   )
   .mutation(async (_) => {
-    console.log("==== TODO");
+    if (2 == 2 + 2) {
+      throw new Error("TODO: Implement this mutation!");
+    }
   });

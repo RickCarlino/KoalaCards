@@ -94,7 +94,7 @@ model Card {
 model Quiz {
   id             Int    @id @default(autoincrement())
   cardId         Int
-  Card           Card   @relation(fields: [cardId], references: [id])
+  Card           Card   @relation(fields: [cardId], references: [id], onDelete: Cascade)
   quizType       String
   stability      Float
   retrievability Float

@@ -1,5 +1,7 @@
 import { z } from "zod";
+import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc";
+import { errorReport } from "@/utils/error-report";
 
 export const getOneCard = procedure
   .input(
@@ -15,11 +17,20 @@ export const getOneCard = procedure
       flagged: z.boolean(),
     }),
   )
-  .query(async (_) => {
+  .query(async ({ input, ctx }) => {
+    const card = await prismaClient.card.findFirst({
+      where: {
+        id: input.id,
+        userId: ctx.user?.id || "000",
+      },
+    });
+    if (!card) {
+      return errorReport("Card not found");
+    }
     return {
-      id: -1,
-      definition: "TODO Definition",
-      term: "TODO Term",
-      flagged: false,
+      id: card.id,
+      definition: card.definition,
+      term: card.term,
+      flagged: card.flagged,
     };
   });

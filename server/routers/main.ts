@@ -11,7 +11,6 @@ import { getOneCard } from "./get-one-card";
 import { bulkCreateCards } from "./bulk-create-cards";
 import { failCard, performExam } from "./perform-exam";
 import { importCards } from "./import-cards";
-import { flagObnoxious } from "./flag-obnoxious";
 import { editUserSettings } from "./edit-user-settings";
 import { getUserSettings } from "./get-user-settings";
 import { z } from "zod";
@@ -27,7 +26,6 @@ export const appRouter = router({
   failCard,
   faucet,
   flagCard,
-  flagObnoxious,
   getAllCards,
   getNextQuiz,
   getNextQuizzes,
