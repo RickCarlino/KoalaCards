@@ -103,6 +103,8 @@ model Quiz {
   nextReview     Float
   lapses         Float  @default(0)
   repetitions    Float  @default(0)
+
+  @@unique([cardId, quizType])
 }
 
 // Used to optimize the w params via the FSRS optimizer.

@@ -1,6 +1,5 @@
 import MicrophonePermissions from "@/components/microphone-permissions";
 import { PlayButton, playAudio } from "@/components/play-button";
-import { Youglish } from "@/components/youglish";
 import { RecordButton } from "@/components/record-button";
 import { trpc } from "@/utils/trpc";
 import { Button, Container, Grid, Paper } from "@mantine/core";
@@ -35,7 +34,6 @@ const HEADER_STYLES = {
   marginBottom: "20px",
 };
 const HEADER: Record<string, string> = {
-  dictation: "Repeat After Me",
   speaking: "Say in Korean",
   listening: "Translate to English",
 };
@@ -44,9 +42,6 @@ function CardOverview({ quiz }: { quiz: CurrentQuiz }) {
   let term: JSX.Element[] = [];
   let def = "";
   switch (quiz.lessonType) {
-    case "dictation":
-      term = Youglish(quiz.term);
-      def = quiz.definition;
     case "speaking":
       def = quiz.definition;
   }

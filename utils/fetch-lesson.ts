@@ -1,12 +1,12 @@
 import textToSpeech, { TextToSpeechClient } from "@google-cloud/text-to-speech";
 import { createHash } from "crypto";
-import fs, { existsSync, readFileSync } from "fs";
+import { existsSync, readFileSync, writeFileSync } from "fs";
 import path from "path";
-import { draw, template } from "radash";
-import util from "util";
+import { draw, map, template } from "radash";
 import { errorReport } from "./error-report";
+import { prismaClient } from "@/server/prisma-client";
 
-type LessonType = "dictation" | "listening" | "speaking";
+type LessonType = "listening" | "speaking";
 
 type GetLessonInputParams = {
   userId: string;
@@ -21,8 +21,6 @@ type GetLessonInputParams = {
 const DATA_DIR = process.env.DATA_DIR || ".";
 const VOICES = ["A", "B", "C", "D"].map((x) => `ko-KR-Wavenet-${x}`);
 const SSML: Record<LessonType, string> = {
-  dictation: `<speak>
-  <audio clipBegin="0.2s" clipEnd="0.8s" src="https://actions.google.com/sounds/v1/impacts/glass_drop_and_roll.ogg"></audio><break time="0.08s"/><prosody rate="x-slow">{{term}}</prosody></speak>`,
   speaking: `<speak><break time="0.5s"/><voice language="en-US" gender="female">{{definition}}</voice></speak>`,
   listening: `<speak><break time="0.5s"/><prosody rate="{{speed}}%">{{term}}</prosody></speak>`,
 };
@@ -62,6 +60,8 @@ const generateSpeechFile = async (
 ) => {
   const p = filePathFor(txt, voice);
   if (!existsSync(p)) {
+    console.log("==== " + p);
+    console.log(txt);
     const [response] = await CLIENT.synthesizeSpeech({
       input: { ssml: txt },
       voice: {
@@ -72,12 +72,10 @@ const generateSpeechFile = async (
         audioEncoding: "MP3",
       },
     });
-
     if (!response.audioContent) {
       return errorReport("No audio content");
     }
-    const writeFile = util.promisify(fs.writeFile);
-    await writeFile(p, response.audioContent, "binary");
+    await writeFileSync(p, response.audioContent, "binary");
   }
   return p;
 };
@@ -104,6 +102,48 @@ export async function generateLessonAudio(
   return generateSpeech(ssml);
 }
 
-export default async function getLessons(_: GetLessonInputParams) {
-  return [];
+export default async function getLessons(p: GetLessonInputParams) {
+  const yesterday = new Date().getTime() - 24 * 60 * 60 * 1000;
+
+  const quizzes = await prismaClient.quiz.findMany({
+    where: {
+      Card: {
+        userId: p.userId,
+      },
+      id: {
+        notIn: p.notIn,
+      },
+      quizType: {
+        in: ["listening", "speaking"],
+      },
+      nextReview: {
+        lt: p.now || yesterday,
+      },
+    },
+    orderBy: {
+      nextReview: "asc",
+    },
+    take: Math.max(p.take || 10, 10),
+    include: {
+      Card: true, // Include related Card data in the result
+    },
+  });
+
+  return await map(quizzes, async (quiz) => {
+    const audio = await generateLessonAudio(
+      quiz.quizType as LessonType,
+      quiz.Card.term,
+      quiz.Card.definition,
+      100,
+    );
+    return {
+      id: quiz.Card.id,
+      definition: quiz.Card.definition,
+      term: quiz.Card.term,
+      repetitions: quiz.repetitions,
+      lapses: quiz.lapses,
+      lessonType: quiz.quizType as "listening" | "speaking",
+      audio,
+    };
+  });
 }

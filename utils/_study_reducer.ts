@@ -6,7 +6,7 @@ export type Quiz = {
   definition: string;
   repetitions: number;
   lapses: number;
-  lessonType: "dictation" | "listening" | "speaking";
+  lessonType: "listening" | "speaking";
   audio: string;
 };
 
@@ -61,19 +61,17 @@ export type CurrentQuiz = {
   definition: string;
   term: string;
   quizAudio: string;
-  lessonType: "dictation" | "speaking" | "listening";
+  lessonType: "speaking" | "listening";
   repetitions: number;
   lapses: number;
 };
 
 const stats = {
   count: {
-    dictation: 0,
     listening: 0,
     speaking: 0,
   },
   win: {
-    dictation: 0,
     listening: 0,
     speaking: 0,
   },
@@ -184,7 +182,7 @@ function reduce(state: State, action: Action): State {
             id: action.id,
             term: card.term,
             definition: card.definition,
-            lessonType: currentQuiz(state)?.lessonType ?? "dictation",
+            lessonType: currentQuiz(state)?.lessonType ?? "listening",
             userTranscription: "Empty response",
             rejectionText: "You hit the `Fail` button. Better luck next time!",
           },
@@ -207,7 +205,6 @@ function reduce(state: State, action: Action): State {
           stats.win[x.lessonType] += 1;
         }
         const keys: (keyof typeof stats.count)[] = [
-          "dictation",
           "listening",
           "speaking",
         ];

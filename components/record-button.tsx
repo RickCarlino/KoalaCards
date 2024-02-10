@@ -136,9 +136,6 @@ export function RecordButton(props: Props) {
   ]);
   let buttonText = "Recor[d]";
   switch (props.lessonType) {
-    case "dictation":
-      buttonText = "Dictate Card";
-      break;
     case "listening":
       buttonText = "Translate to EN";
       break;

@@ -37,11 +37,7 @@ if (!apiKey) {
 
 const configuration = { apiKey };
 
-const lessonType = z.union([
-  z.literal("dictation"),
-  z.literal("listening"),
-  z.literal("speaking"),
-]);
+const lessonType = z.union([z.literal("listening"), z.literal("speaking")]);
 
 export const openai = new OpenAI(configuration);
 

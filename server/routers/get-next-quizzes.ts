@@ -2,18 +2,15 @@ import { z } from "zod";
 import { procedure } from "../trpc";
 import getLessons from "@/utils/fetch-lesson";
 import { getUserSettings } from "../auth-helpers";
+import { prismaClient } from "../prisma-client";
 
-const Quiz = z.object({
+export const Quiz = z.object({
   id: z.number(),
   definition: z.string(),
   term: z.string(),
   repetitions: z.number(),
   lapses: z.number(),
-  lessonType: z.union([
-    z.literal("dictation"),
-    z.literal("listening"),
-    z.literal("speaking"),
-  ]),
+  lessonType: z.union([z.literal("listening"), z.literal("speaking")]),
   audio: z.string(),
 });
 
@@ -24,11 +21,44 @@ const QuizList = z.object({
   newCards: z.number(),
 });
 
-export async function getLessonMeta(_userId: string) {
+export async function getLessonMeta(userId: string) {
+  const currentDate = new Date().getTime(); // Current time in milliseconds
+
+  const quizzesDue = await prismaClient.quiz.count({
+    where: {
+      Card: {
+        userId: userId,
+        flagged: false,
+      },
+      nextReview: {
+        lt: currentDate,
+      },
+    },
+  });
+
+  const totalCards = await prismaClient.quiz.count({
+    where: {
+      Card: {
+        userId: userId,
+        flagged: false,
+      },
+    },
+  });
+
+  // Cards that have no quiz yet:
+  const newCards = await prismaClient.card.count({
+    where: {
+      userId: userId,
+      flagged: false,
+      Quiz: {
+        none: {},
+      },
+    },
+  });
   return {
-    totalCards: -1,
-    quizzesDue: -1,
-    newCards: -1,
+    totalCards,
+    quizzesDue,
+    newCards,
   };
 }
 
@@ -50,12 +80,10 @@ export const getNextQuiz = procedure
     }),
   )
   .output(QuizList)
-  .mutation(async (_) => {
-    // const userId = (await getUserSettings(ctx.user?.id)).user.id;
+  .mutation(async ({ ctx }) => {
+    const userId = (await getUserSettings(ctx.user?.id)).user.id;
     return {
       quizzes: [],
-      totalCards: 0,
-      quizzesDue: 0,
-      newCards: 0,
+      ...(await getLessonMeta(userId)),
     };
   });
