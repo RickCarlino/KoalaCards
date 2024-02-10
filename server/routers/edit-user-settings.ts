@@ -25,7 +25,10 @@ export const editUserSettings = procedure
 
     // Update settings
     const updatedSettings = await prismaClient.userSettings.update({
-      where: { id: input.id },
+      where: {
+        id: input.id,
+        userId: ctx.user?.id,
+      },
       data: {
         listeningPercentage: input.listeningPercentage,
         playbackSpeed: input.playbackSpeed,

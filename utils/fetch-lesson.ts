@@ -46,7 +46,8 @@ const DATA_DIR = process.env.DATA_DIR || ".";
 const VOICES = ["A", "B", "C", "D"].map((x) => `ko-KR-Wavenet-${x}`);
 const LESSON_SIZE = 5;
 const SSML: Record<LessonType, string> = {
-  dictation: `<speak><audio clipBegin="0.2s" clipEnd="0.8s" src="https://actions.google.com/sounds/v1/impacts/glass_drop_and_roll.ogg"></audio><voice language="en-US" rate="115%" gender="female">{{definition}}</voice><break time="0.15s"/><prosody rate="x-slow">{{term}}</prosody></speak>`,
+  dictation: `<speak>
+  <audio clipBegin="0.2s" clipEnd="0.8s" src="https://actions.google.com/sounds/v1/impacts/glass_drop_and_roll.ogg"></audio><break time="0.08s"/><prosody rate="x-slow">{{term}}</prosody></speak>`,
   speaking: `<speak><break time="0.5s"/><voice language="en-US" gender="female">{{definition}}</voice></speak>`,
   listening: `<speak><break time="0.5s"/><prosody rate="{{speed}}%">{{term}}</prosody></speak>`,
 };
@@ -133,6 +134,20 @@ type GetCardsParams = {
   notIn: number[];
 };
 const getNewCards = async ({ userId, take, notIn }: GetCardsParams) => {
+  const cardsDueNext72Hours = await prismaClient.card.count({
+    where: {
+      userId,
+      nextReviewAt: {
+        lte: Math.floor(Date.now() / 1000) + (86400 * 3), // 86400 seconds in 24 hours
+      },
+    },
+  });
+
+  if (cardsDueNext72Hours > 350) {
+    console.log(`=== TODO: Make configurable dailyReviewCap user config. ===`);
+    return [];
+  }
+
   const allPossibleIDs = await prismaClient.card.findMany({
     where: {
       id: { notIn },

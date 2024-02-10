@@ -1,8 +1,8 @@
 # KoalaSRS 🐨
-
 <p align="center">
   <img width="33%" src="./logo.png" alt="The KoalaSRS Logo"/>
 </p>
+<a href="https://codeclimate.com/github/RickCarlino/KoalaSRS/maintainability"><img src="https://api.codeclimate.com/v1/badges/b7666624c14bf8dcfb9b/maintainability" /></a>
 
 Hey there! Welcome to KoalaSRS, a fun and friendly Korean-only [spaced repetition system](https://en.wikipedia.org/wiki/Spaced_repetition) that's all about listening and speaking skills. KoalaSRS captures your voice input using speech-to-text and uses the super-smart GPT-4 for human-like test assessments and corrections. This has two advantages over traditional spaced repetition systems:
 

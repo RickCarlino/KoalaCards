@@ -74,7 +74,7 @@ const GRADED_RESPONSE = {
       explanation: {
         type: "string",
         description:
-          "Explanation for why the grade was given. Only required for a grade of 3 or lower.",
+          "Explanation for why the grade was given. Only required for a grade of 1 or lower.",
       },
     },
     dependencies: {
@@ -105,7 +105,9 @@ const GRADED_RESPONSE = {
 
 const SYSTEM_PROMPT4 = `
 Grading Scale:
-  Grade 0: Completely wrong.
+  Grade 0:
+    Completely wrong meaning.
+    Has any Korean grammar error (syntax, semantics, etc..).
   Grade 1: Mostly wrong.
   Grade 2: Correct with minor issues.
   Grade 3: Perfect.
@@ -113,7 +115,7 @@ Grading Scale:
 You grade quizzes in a Korean language learning app.
 The goal is to train the student's to express and understand sentences.
 Use the scale above to grade the student's response.
-Do not nit pick small details.
+Sentences must be grammatically correct and convey the main idea of the sentence.
 Grade are shown to the student, so say "you" and not "the student" when grading.
 Keep explanations short and to the point.
 `;
@@ -163,16 +165,18 @@ export const gradedResponse = async (
 ): Promise<[number, string | undefined]> => {
   userID = userID || "";
   const useGPT4 = approvedUserIDs.includes("" + userID);
-  let model = useGPT4 ? "gpt-4-0613" : "gpt-3.5-turbo-1106";
+  let model = useGPT4 ? "gpt-4-turbo-preview" : "gpt-3.5-turbo-1106";
+  let prompt: ChatCompletionCreateParamsNonStreaming["messages"][number] = {
+    role: "system",
+    content: useGPT4 ? SYSTEM_PROMPT4 : SYSTEM_PROMPT,
+  };
   if (input.includes("REPEAT AFTER ME TEST")) {
     model = "gpt-3.5-turbo-1106"; // Don't waste money on dictation tests.
+    prompt.content = SYSTEM_PROMPT;
   }
   const content = input.replace(/^\s+/gm, "");
   const answer = await gptCall({
-    messages: [
-      { role: "user", content },
-      { role: "system", content: useGPT4 ? SYSTEM_PROMPT4 : SYSTEM_PROMPT },
-    ],
+    messages: [{ role: "user", content }, prompt],
     model,
     n: 1,
     temperature: useGPT4 ? 0.75 : 0,
@@ -279,7 +283,7 @@ async function speakingTest(transcript: string, card: Card) {
      I said:
      ${transcript}
      ---
-     Was I correct?`,
+     Was I correct? Give 0 points if grammar rules are violated.`,
     card.userId,
   );
   return gradeResp(card, grade, why);
@@ -328,7 +332,7 @@ export const performExam = procedure
   .input(
     z.object({
       lessonType,
-      audio: z.string().max(800000), // 15 seconds max
+      audio: z.string().max(1000000),
       id: z.number(),
     }),
   )
@@ -378,17 +382,15 @@ export const performExam = procedure
     const [grade, reason] = card
       ? await quiz(transcript.text.slice(0, 80), card)
       : [0, "Error"];
-    if (lang == "ko") {
-      prismaClient.transcript
-        .create({
-          data: {
-            value: transcript.text,
-            cardId: card.id,
-            grade,
-          },
-        })
-        .then(() => {});
-    }
+    prismaClient.transcript
+      .create({
+        data: {
+          value: transcript.text,
+          cardId: card.id,
+          grade,
+        },
+      })
+      .then(() => {});
     if (grade < 3) {
       quizCompletion.labels({ result: "failure", userID }).inc();
       return {
