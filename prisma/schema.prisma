@@ -48,6 +48,7 @@ model User {
   accounts      Account[]
   sessions      Session[]
   userSettings  UserSettings?
+  Card          Card[]
 }
 
 model UserSettings {
@@ -74,4 +75,42 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model Card {
+  id         Int      @id @default(autoincrement())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  flagged    Boolean  @default(false)
+  term       String
+  definition String
+  langCode   String
+  createdAt  DateTime @default(now())
+  Quiz       Quiz[]
+
+  @@unique([userId, term])
+}
+
+model Quiz {
+  id             Int    @id @default(autoincrement())
+  cardId         Int
+  Card           Card   @relation(fields: [cardId], references: [id])
+  quizType       String
+  stability      Float
+  retrievability Float
+  firstReview    Float
+  lastReview     Float
+  nextReview     Float
+  lapses         Float  @default(0)
+  repetitions    Float  @default(0)
+}
+
+// Used to optimize the w params via the FSRS optimizer.
+model OptimizerLog {
+  id           Int      @id @default(autoincrement())
+  reviewTime   DateTime
+  // reviewRating is an Int. Only legal values are 1,2,3,4:
+  reviewRating Int
+  quizId       Int
+  cardId       Int?
 }
