@@ -3,35 +3,34 @@ import { gradePerformance } from "@/utils/srs";
 import { Lang, transcribeB64 } from "@/utils/transcribe";
 import { Card } from "@prisma/client";
 import { z } from "zod";
-import { superUsers, procedure } from "../trpc";
+import { procedure, superUsers } from "../trpc";
 import OpenAI from "openai";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat";
 import { SafeCounter } from "@/utils/counter";
 import { exactMatch } from "@/utils/clean-string";
 import { errorReport } from "@/utils/error-report";
 let approvedUserIDs: string[] = [];
-prismaClient.user.findMany({}).then((users) => {
-  users.map((user) => {
-    const { email, id, lastSeen } = user;
-    const daysAgo = lastSeen
-      ? (Date.now() - lastSeen.getTime()) / (1000 * 60 * 60 * 24)
-      : -1;
-    if (!email) {
-      console.log("=== No email for user " + id);
-      return;
-    }
-    if (superUsers.includes(email)) {
-      console.log(
-        `=== Super user: ${email} / ${id} (last seen ${daysAgo} days ago)`,
-      );
-      approvedUserIDs.push(id);
-    } else {
-      console.log(
-        `=== Normal user: ${email} / ${id} (last seen ${daysAgo} days ago)`,
-      );
-    }
+(async () => {
+  prismaClient.user.findMany({}).then(async (users) => {
+    users.map(async (user) => {
+      const { email, id, lastSeen } = user;
+      const daysAgo = lastSeen
+        ? (Date.now() - lastSeen.getTime()) / (1000 * 60 * 60 * 24)
+        : -1;
+      if (!email) {
+        console.log("=== No email for user " + id);
+        return;
+      }
+      if (superUsers.includes(email)) {
+        approvedUserIDs.push(id);
+      }
+      const cardCount = await prismaClient.card.count({
+        where: { userId: id },
+      });
+      console.log(`${email} (${cardCount} cards) seen ${daysAgo} days ago`);
+    });
   });
-});
+})();
 
 type Quiz = (
   transcript: string,
