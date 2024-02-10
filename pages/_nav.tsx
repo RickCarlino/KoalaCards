@@ -30,7 +30,6 @@ const NavBar = () => {
     { path: "/study", name: "Study" },
     { path: "/create", name: "Create" },
     { path: "/cards", name: "Edit" },
-    { path: "/history", name: "History" },
     { path: "/user", name: "Settings" },
   ];
 

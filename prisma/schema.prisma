@@ -11,35 +11,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Card {
-  id           Int          @id @default(autoincrement())
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transcripts  Transcript[]
-  flagged      Boolean      @default(false)
-  userId       String
-  term         String
-  definition   String
-  repetitions  Float        @default(0)
-  interval     Float        @default(1)
-  ease         Float        @default(2.5)
-  lapses       Float        @default(0)
-  nextReviewAt Float        @default(0)
-  createdAt    DateTime     @default(now())
-  firstReview  DateTime?
-  lastReview   DateTime?
-
-  @@unique([userId, term])
-}
-
-model Transcript {
-  id         Int      @id @default(autoincrement())
-  cardId     Int
-  value      String
-  recordedAt DateTime @default(now())
-  card       Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
-  grade      Float    @default(0)
-}
-
 model Account {
   id                String  @id @default(cuid())
   userId            String
@@ -76,7 +47,6 @@ model User {
   image         String?
   accounts      Account[]
   sessions      Session[]
-  cards         Card[]
   userSettings  UserSettings?
 }
 

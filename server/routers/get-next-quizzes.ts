@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { procedure } from "../trpc";
 import getLessons from "@/utils/fetch-lesson";
-import { prismaClient } from "../prisma-client";
 import { getUserSettings } from "../auth-helpers";
 
 const Quiz = z.object({
@@ -25,46 +24,11 @@ const QuizList = z.object({
   newCards: z.number(),
 });
 
-export async function getLessonMeta(userId: string) {
-  const totalCards = await prismaClient.card.count({
-    where: {
-      flagged: false,
-      userId,
-      OR: [{ repetitions: { gt: 0 } }, { lapses: { gt: 0 } }],
-    },
-  });
-  // SELECT COUNT()
-  // FROM Card
-  // WHERE nextReviewAt < Date.now()
-  // AND flagged = false
-  // AND userId = ?;
-  // AND repetitions <> 0
-  // ORDER BY repetitions DESC, nextReviewAt DESC;
-  const quizzesDue = await prismaClient.card.count({
-    where: {
-      flagged: false,
-      userId,
-      nextReviewAt: { lte: Date.now() },
-      OR: [{ repetitions: { gt: 0 } }, { lapses: { gt: 0 } }],
-    },
-  });
-  // SELECT COUNT()
-  // FROM Card
-  // WHERE repetitions = 0
-  // AND flagged = false
-  // AND userId = ?;
-  const newCards = await prismaClient.card.count({
-    where: {
-      flagged: false,
-      userId,
-      repetitions: 0,
-      lapses: 0,
-    },
-  });
+export async function getLessonMeta(_userId: string) {
   return {
-    totalCards,
-    quizzesDue,
-    newCards,
+    totalCards: -1,
+    quizzesDue: -1,
+    newCards: -1,
   };
 }
 
@@ -86,20 +50,12 @@ export const getNextQuiz = procedure
     }),
   )
   .output(QuizList)
-  .mutation(async ({ ctx, input }) => {
-    const userId = (await getUserSettings(ctx.user?.id)).user.id;
-    const take = Math.max(0, 10 - input.notIn.length);
-    // NOTE: If `take` is 0 prisma will ignore the param and
-    // return all cards.
-    const quizzes = take
-      ? await getLessons({
-          userId,
-          take,
-          notIn: input.notIn,
-        })
-      : [];
+  .mutation(async (_) => {
+    // const userId = (await getUserSettings(ctx.user?.id)).user.id;
     return {
-      ...(await getLessonMeta(userId)),
-      quizzes,
+      quizzes: [],
+      totalCards: 0,
+      quizzesDue: 0,
+      newCards: 0,
     };
   });

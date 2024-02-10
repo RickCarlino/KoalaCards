@@ -20,52 +20,11 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
     // Query the database to retrieve the required statistics
-    const uniqueCardsLast24Hours = await prismaClient.card.count({
-      where: {
-        userId,
-        lastReview: {
-          gte: twentyFourHoursAgo,
-        },
-      },
-    });
-
-    const uniqueCardsLastWeek = await prismaClient.card.count({
-      where: {
-        userId,
-        lastReview: {
-          gte: oneWeekAgo,
-        },
-      },
-    });
-
-    const newCardsLast24Hours = await prismaClient.card.count({
-      where: {
-        userId,
-        firstReview: {
-          gte: twentyFourHoursAgo,
-        },
-      },
-    });
-
-    const newCardsLastWeek = await prismaClient.card.count({
-      where: {
-        userId,
-        firstReview: {
-          gte: oneWeekAgo,
-        },
-      },
-    });
-
-    const currentTimeInSeconds = Math.floor(Date.now() / 1000);
-
-    const cardsDueNext24Hours = await prismaClient.card.count({
-      where: {
-        userId,
-        nextReviewAt: {
-          lte: currentTimeInSeconds + 86400, // 86400 seconds in 24 hours
-        },
-      },
-    });
+    const cardsDueNext24Hours = -1;
+    const newCardsLast24Hours = -1;
+    const newCardsLastWeek = -1;
+    const uniqueCardsLast24Hours = -1;
+    const uniqueCardsLastWeek = -1;
 
     // Create an object to store the statistics
     const statistics = {

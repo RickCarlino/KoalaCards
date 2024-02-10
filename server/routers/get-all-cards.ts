@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc";
 
 export const getAllCards = procedure
@@ -14,11 +13,6 @@ export const getAllCards = procedure
       }),
     ),
   )
-  .query(async ({ ctx }) => {
-    return await prismaClient.card.findMany({
-      where: { userId: ctx.user?.id || "000" },
-      // ORDER BY ease ASC, lapses DESC;
-      // Hardest cards first
-      orderBy: [{ flagged: "desc" }, { ease: "asc" }, { lapses: "desc" }],
-    });
+  .query(async (_) => {
+    return [];
   });

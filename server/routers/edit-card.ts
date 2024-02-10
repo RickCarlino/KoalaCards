@@ -1,8 +1,5 @@
 import { z } from "zod";
-import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc";
-import { getUserSettings } from "../auth-helpers";
-import { errorReport } from "@/utils/error-report";
 
 export const editCard = procedure
   .input(
@@ -17,27 +14,4 @@ export const editCard = procedure
       lapses: z.optional(z.number()),
     }),
   )
-  .mutation(async ({ input, ctx }) => {
-    const userId = (await getUserSettings(ctx.user?.id)).user.id;
-
-    const card = await prismaClient.card.findFirst({
-      where: {
-        id: input.id,
-        userId,
-        flagged: false,
-      },
-    });
-
-    if (!card) {
-      return errorReport("Card not found");
-    }
-
-    await prismaClient.card.update({
-      where: { id: card.id },
-      data: {
-        ...card,
-        ...input,
-        flagged: input.flagged ?? false,
-      },
-    });
-  });
+  .mutation(async (_) => {});
