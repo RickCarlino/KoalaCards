@@ -37,8 +37,6 @@ if (!apiKey) {
 
 const configuration = { apiKey };
 
-const lessonType = z.union([z.literal("listening"), z.literal("speaking")]);
-
 export const openai = new OpenAI(configuration);
 
 export async function gptCall(opts: ChatCompletionCreateParamsNonStreaming) {
@@ -75,7 +73,6 @@ type PerformExamOutput = z.infer<typeof performExamOutput>;
 export const performExam = procedure
   .input(
     z.object({
-      lessonType,
       audio: z.string().max(1000000),
       id: z.number(),
     }),

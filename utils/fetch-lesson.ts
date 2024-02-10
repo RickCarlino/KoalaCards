@@ -90,15 +90,11 @@ async function generateSpeech(txt: string, voice: string = randomVoice()) {
 
 export async function generateLessonAudio(
   lessonType: LessonType,
-  _term: string,
-  _definition: string,
+  term: string,
+  definition: string,
   speed: number,
 ) {
-  const ssml = template(SSML[lessonType], {
-    term: _term,
-    definition: _definition,
-    speed,
-  });
+  const ssml = template(SSML[lessonType], { term, definition, speed });
   return generateSpeech(ssml);
 }
 
@@ -123,7 +119,7 @@ export default async function getLessons(p: GetLessonInputParams) {
     orderBy: {
       nextReview: "asc",
     },
-    take: Math.max(p.take || 10, 10),
+    take: p.take || 10,
     include: {
       Card: true, // Include related Card data in the result
     },
@@ -137,7 +133,7 @@ export default async function getLessons(p: GetLessonInputParams) {
       100,
     );
     return {
-      id: quiz.Card.id,
+      quizId: quiz.id,
       definition: quiz.Card.definition,
       term: quiz.Card.term,
       repetitions: quiz.repetitions,

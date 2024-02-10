@@ -121,7 +121,7 @@ function useQuizState(initialState: State) {
 
 function Study(props: Props) {
   const cardsById = props.quizzes.reduce((acc, quiz) => {
-    acc[quiz.id] = quiz;
+    acc[quiz.quizId] = quiz;
     return acc;
   }, {} as Record<number, Quiz>);
   const settings = useUserSettings();
@@ -138,7 +138,6 @@ function Study(props: Props) {
   const flagCard = trpc.flagCard.useMutation();
   const editCard = trpc.editCard.useMutation();
   const getNextQuiz = trpc.getNextQuiz.useMutation();
-  // TODO: Move into state tree.
   const [isOK, setOK] = useState(true);
   const needBetterErrorHandler = (error: any) => {
     notifications.show({
@@ -252,13 +251,13 @@ function Study(props: Props) {
       </div>
     );
   }
-  const { id, lessonType } = quiz;
+  const { id } = quiz;
   const processAudio = (audio: string) => {
     dispatch({ type: "SET_RECORDING", value: false });
     dispatch({ type: "WILL_GRADE", id });
     setOK(true);
     performExam
-      .mutateAsync({ id, audio, lessonType })
+      .mutateAsync({ id, audio })
       .then(async (data) => {
         // Why did I add this? TODO: Remove after lots of testing...
         dispatch({ type: "REMOVE_FAILURE", id: quiz.id });

@@ -44,7 +44,6 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
   const userSettings = await getUserSettingsFromEmail(session?.user?.email);
   return {
     props: {
-      // TODO: Why does this not work with dates?
       userSettings: JSON.parse(JSON.stringify(userSettings)),
       stats: await getUserCardStatistics(userSettings.userId),
     },

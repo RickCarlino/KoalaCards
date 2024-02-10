@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { procedure } from "../trpc";
-import { BACKUP_SCHEMA } from "@/pages/cards";
+import { OLD_BACKUP_SCHEMA } from "@/pages/cards";
 import { Grade, createDeck } from "femto-fsrs";
 import { prismaClient } from "../prisma-client";
 import { getUserSettings } from "../auth-helpers";
@@ -36,7 +36,7 @@ function fuzzDate(date: Date) {
 }
 
 export const importCards = procedure
-  .input(BACKUP_SCHEMA)
+  .input(OLD_BACKUP_SCHEMA)
   .output(z.object({ count: z.number() }))
   .mutation(async ({ ctx, input }) => {
     const userId = (await getUserSettings(ctx.user?.id)).user.id;

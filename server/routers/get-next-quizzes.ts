@@ -5,7 +5,7 @@ import { getUserSettings } from "../auth-helpers";
 import { prismaClient } from "../prisma-client";
 
 export const Quiz = z.object({
-  id: z.number(),
+  quizId: z.number(),
   definition: z.string(),
   term: z.string(),
   repetitions: z.number(),

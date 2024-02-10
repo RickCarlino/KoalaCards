@@ -2,7 +2,8 @@ import { CardTable } from "@/components/card-table";
 import { trpc } from "@/utils/trpc";
 import { Button, Container, FileButton } from "@mantine/core";
 import { z } from "zod";
-export const BACKUP_SCHEMA = z.array(
+
+export const OLD_BACKUP_SCHEMA = z.array(
   z.object({
     definition: z.string(),
     term: z.string(),
@@ -17,8 +18,29 @@ export const BACKUP_SCHEMA = z.array(
   }),
 );
 
+export const BACKUP_SCHEMA = z.array(
+  z.object({
+    term: z.string(),
+    definition: z.string(),
+    langCode: z.string(),
+    createdAt: z.coerce.date(),
+    quizzes: z.array(
+      z.object({
+        firstReview: z.number(),
+        lapses: z.number(),
+        lastReview: z.number(),
+        nextReview: z.number(),
+        quizType: z.string(),
+        repetitions: z.number(),
+        retrievability: z.number(),
+        stability: z.number(),
+      }),
+    ),
+  }),
+);
+
 interface FileImportButtonProps {
-  onReady: (data: z.infer<typeof BACKUP_SCHEMA>) => void;
+  onReady: (data: z.infer<typeof OLD_BACKUP_SCHEMA>) => void;
 }
 
 // Create a file import button.
@@ -31,7 +53,7 @@ const FileImportButton = ({ onReady }: FileImportButtonProps) => {
     reader.onload = (e) => {
       const data = e.target?.result as string;
       // Ensure that `data` complies with the backup schema:
-      const parsed = BACKUP_SCHEMA.safeParse(JSON.parse(data));
+      const parsed = OLD_BACKUP_SCHEMA.safeParse(JSON.parse(data));
       if (parsed.success) {
         onReady(parsed.data);
       } else {
@@ -44,7 +66,7 @@ const FileImportButton = ({ onReady }: FileImportButtonProps) => {
   };
   return (
     <FileButton onChange={onChange} accept="application/jpeg">
-      {(props) => <Button {...props}>Import Cards</Button>}
+      {(props) => <Button {...props}>Import Cards (v2)</Button>}
     </FileButton>
   );
 };
@@ -80,7 +102,7 @@ const Edit: React.FC = () => {
     <Container size="s">
       <h1>Manage Cards</h1>
       <Button onClick={doDeleteFlagged}>Delete Flagged Cards</Button>
-      <Button onClick={doExport}>Export Cards</Button>
+      <Button onClick={doExport}>Export Cards (V3)</Button>
       <FileImportButton
         onReady={(data) => {
           const desired = data.length;

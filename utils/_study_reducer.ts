@@ -1,7 +1,7 @@
 import { unique } from "radash";
 
 export type Quiz = {
-  id: number;
+  quizId: number;
   term: string;
   definition: string;
   repetitions: number;
@@ -123,7 +123,7 @@ export function currentQuiz(state: State): CurrentQuiz | undefined {
   }
 
   return {
-    id: quiz.id,
+    id: quiz.quizId,
     definition: quiz.definition,
     term: quiz.term,
     quizAudio: quiz.audio,
@@ -233,7 +233,7 @@ function reduce(state: State, action: Action): State {
         idsWithErrors,
       };
     case "ADD_MORE":
-      const newStuff = action.quizzes.map((x) => x.id);
+      const newStuff = action.quizzes.map((x) => x.quizId);
       const oldStuff = state.quizIDsForLesson;
       const nextQuizIDsForLesson = betterUnique([...oldStuff, ...newStuff]);
       const nextcardsById: Record<string, Quiz> = {};
@@ -241,7 +241,7 @@ function reduce(state: State, action: Action): State {
         nextcardsById[id] ??= state.cardsById[id];
       });
       action.quizzes.forEach((card) => {
-        nextcardsById[card.id] ??= card;
+        nextcardsById[card.quizId] ??= card;
       });
       return {
         ...state,
