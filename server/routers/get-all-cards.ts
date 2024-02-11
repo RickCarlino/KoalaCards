@@ -19,6 +19,6 @@ export const getAllCards = procedure
       where: { userId: ctx.user?.id || "000" },
       // ORDER BY ease ASC, lapses DESC;
       // Hardest cards first
-      orderBy: [{ flagged: "desc" }, { ease: "asc" }, { lapses: "desc" }],
+      orderBy: [{ flagged: "desc" }, { createdAt: "desc" }],
     });
   });

@@ -27,7 +27,7 @@ let approvedUserIDs: string[] = [];
       const cardCount = await prismaClient.card.count({
         where: { userId: id },
       });
-      console.log(`${email} (${cardCount} cards) seen ${daysAgo} days ago`);
+      console.log(`${email} (${cardCount} cards) seen ${daysAgo.toFixed(2)} days ago`);
     });
   });
 })();
