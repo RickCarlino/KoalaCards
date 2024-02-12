@@ -19,6 +19,7 @@ import { QuizFailure, linkToEditPage } from "../components/quiz-failure";
 import Link from "next/link";
 import { useUserSettings } from "@/components/settings-provider";
 import { gradePerformance } from "@/utils/srs";
+import { Grade } from "femto-fsrs";
 
 type Props = {
   quizzes: Quiz[];
@@ -134,7 +135,7 @@ function Study(props: Props) {
   });
   const { state, dispatch } = useQuizState(newState);
   const performExam = trpc.performExam.useMutation();
-  const failCard = trpc.failCard.useMutation();
+  const manuallyGrade = trpc.manuallyGrade.useMutation();
   const flagCard = trpc.flagCard.useMutation();
   const editCard = trpc.editCard.useMutation();
   const getNextQuiz = trpc.getNextQuiz.useMutation();
@@ -165,7 +166,12 @@ function Study(props: Props) {
   const doFail = (id: number) => {
     dispatch({ type: "USER_GAVE_UP", id });
     setOK(true);
-    failCard.mutateAsync({ id }).catch(needBetterErrorHandler);
+    manuallyGrade
+      .mutateAsync({
+        id,
+        grade: Grade.AGAIN,
+      })
+      .catch(needBetterErrorHandler);
   };
 
   /** goToNext flag controls if the session will skip to next

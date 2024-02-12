@@ -89,10 +89,11 @@ export const performExam = procedure
     };
   });
 
-export const failCard = procedure
+export const manuallyGrade = procedure
   .input(
     z.object({
       id: z.number(),
+      grade: z.number(),
     }),
   )
   .mutation(async (_) => {

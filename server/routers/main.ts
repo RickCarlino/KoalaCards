@@ -9,7 +9,7 @@ import { getAllCards } from "./get-all-cards";
 import { getNextQuiz, getNextQuizzes } from "./get-next-quizzes";
 import { getOneCard } from "./get-one-card";
 import { bulkCreateCards } from "./bulk-create-cards";
-import { failCard, performExam } from "./perform-exam";
+import { manuallyGrade, performExam } from "./perform-exam";
 import { importCards } from "./import-cards";
 import { editUserSettings } from "./edit-user-settings";
 import { getUserSettings } from "./get-user-settings";
@@ -23,7 +23,7 @@ export const appRouter = router({
   editCard,
   editUserSettings,
   exportCards,
-  failCard,
+  manuallyGrade,
   faucet,
   flagCard,
   getAllCards,
