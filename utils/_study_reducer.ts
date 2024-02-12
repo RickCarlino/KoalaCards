@@ -151,6 +151,7 @@ function removeCard(oldState: State, id: number): State {
 }
 
 function reduce(state: State, action: Action): State {
+  console.log(`===== ` + action.type);
   console.log(action);
   switch (action.type) {
     case "ADD_FAILURE":
@@ -204,10 +205,7 @@ function reduce(state: State, action: Action): State {
         if (action.result === "success") {
           stats.win[x.lessonType] += 1;
         }
-        const keys: (keyof typeof stats.count)[] = [
-          "listening",
-          "speaking",
-        ];
+        const keys: (keyof typeof stats.count)[] = ["listening", "speaking"];
         keys.map((key) => {
           const win = stats.win[key];
           const count = stats.count[key];

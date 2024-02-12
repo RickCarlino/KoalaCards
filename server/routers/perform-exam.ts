@@ -4,6 +4,8 @@ import { superUsers, procedure } from "../trpc";
 import OpenAI from "openai";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat";
 import { errorReport } from "@/utils/error-report";
+import { getUserSettings } from "../auth-helpers";
+import { setGrade } from "./import-cards";
 
 let approvedUserIDs: string[] = [];
 prismaClient.user.findMany({}).then((users) => {
@@ -17,15 +19,9 @@ prismaClient.user.findMany({}).then((users) => {
       return;
     }
     if (superUsers.includes(email)) {
-      console.log(
-        `=== Super user: ${email} / ${id} (last seen ${daysAgo} days ago)`,
-      );
       approvedUserIDs.push(id);
-    } else {
-      console.log(
-        `=== Normal user: ${email} / ${id} (last seen ${daysAgo} days ago)`,
-      );
     }
+    console.log(`=== ${email} / ${id} (last seen ${daysAgo} days ago)`);
   });
 });
 
@@ -96,8 +92,18 @@ export const manuallyGrade = procedure
       grade: z.number(),
     }),
   )
-  .mutation(async (_) => {
-    if (2 == 2 + 2) {
-      throw new Error("TODO: Implement this mutation!");
+  .mutation(async ({ input, ctx }) => {
+    const userId = (await getUserSettings(ctx.user?.id)).user.id;
+    const quiz = await prismaClient.quiz.findUnique({
+      where: {
+        id: input.id,
+        Card: {
+          userId,
+        },
+      },
+    });
+    if (!quiz) {
+      return errorReport("Quiz not found");
     }
+    await setGrade(quiz, input.grade);
   });

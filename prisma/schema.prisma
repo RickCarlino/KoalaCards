@@ -92,17 +92,17 @@ model Card {
 }
 
 model Quiz {
-  id             Int    @id @default(autoincrement())
-  cardId         Int
-  Card           Card   @relation(fields: [cardId], references: [id], onDelete: Cascade)
-  quizType       String
-  stability      Float
-  retrievability Float
-  firstReview    Float
-  lastReview     Float
-  nextReview     Float
-  lapses         Float  @default(0)
-  repetitions    Float  @default(0)
+  id          Int    @id @default(autoincrement())
+  cardId      Int
+  Card        Card   @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  quizType    String
+  stability   Float
+  difficulty  Float
+  firstReview Float
+  lastReview  Float
+  nextReview  Float
+  lapses      Float  @default(0)
+  repetitions Float  @default(0)
 
   @@unique([cardId, quizType])
 }

@@ -5,8 +5,10 @@ import { Grade, createDeck } from "femto-fsrs";
 import { prismaClient } from "../prisma-client";
 import { getUserSettings } from "../auth-helpers";
 import { timeUntil } from "@/utils/srs";
+import { Quiz } from "@prisma/client";
 
-const DECK = createDeck();
+const FSRS = createDeck();
+const DAYS = 24 * 60 * 60 * 1000;
 
 function getEaseBucket(ease: number): Grade {
   if (ease < 2.2) {
@@ -24,8 +26,31 @@ function getEaseBucket(ease: number): Grade {
 // from the original date
 function fuzzDate(date: Date) {
   const randomOffset = Math.floor(Math.random() * 3);
-  const days = 24 * 60 * 60 * 1000;
-  return new Date(date.getTime() + randomOffset * days).getTime();
+  return new Date(date.getTime() + randomOffset * DAYS).getTime();
+}
+
+export async function setGrade(quiz: Quiz, grade: Grade, now = Date.now()) {
+  const fsrsCard = {
+    D: quiz.difficulty,
+    S: quiz.stability,
+  };
+  const past = (now - quiz.lastReview) / DAYS;
+  const result = FSRS.gradeCard(fsrsCard, past, grade);
+  const nextQuiz = {
+    ...quiz,
+    difficulty: result.D,
+    stability: result.S,
+    firstReview: quiz.firstReview || now,
+    lastReview: now,
+    nextReview: now + result.I * DAYS,
+    lapses: grade === Grade.AGAIN ? quiz.lapses + 1 : quiz.lapses,
+    repetitions: quiz.repetitions + 1,
+  };
+  console.log(`=== Will review Quiz ${quiz.id} again in ${result.I} days ===`);
+  await prismaClient.quiz.update({
+    where: { id: quiz.id },
+    data: nextQuiz,
+  });
 }
 
 export const importCards = procedure
@@ -50,8 +75,8 @@ export const importCards = procedure
 
         ["listening", "speaking"].map(async (quizType) => {
           const grade = getEaseBucket(card.ease);
-          const card0 = DECK.newCard(grade);
-          const schedulingGuess = DECK.gradeCard(card0, card0.I, grade);
+          const card0 = FSRS.newCard(grade);
+          const schedulingGuess = FSRS.gradeCard(card0, card0.I, grade);
           const nextReview = fuzzDate(new Date(card.nextReviewAt));
           console.log(`${cardId} due in ${timeUntil(nextReview)}`);
           await prismaClient.quiz.create({
@@ -59,7 +84,7 @@ export const importCards = procedure
               cardId,
               quizType,
               stability: schedulingGuess.S,
-              retrievability: schedulingGuess.D,
+              difficulty: schedulingGuess.D,
               firstReview: card.firstReview?.getTime() || 0,
               lastReview: card.lastReview?.getTime() || 0,
               nextReview,

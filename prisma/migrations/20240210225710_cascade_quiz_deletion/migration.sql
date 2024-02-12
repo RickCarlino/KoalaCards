@@ -5,7 +5,7 @@ CREATE TABLE "new_Quiz" (
     "cardId" INTEGER NOT NULL,
     "quizType" TEXT NOT NULL,
     "stability" REAL NOT NULL,
-    "retrievability" REAL NOT NULL,
+    "difficulty" REAL NOT NULL,
     "firstReview" REAL NOT NULL,
     "lastReview" REAL NOT NULL,
     "nextReview" REAL NOT NULL,
@@ -13,7 +13,7 @@ CREATE TABLE "new_Quiz" (
     "repetitions" REAL NOT NULL DEFAULT 0,
     CONSTRAINT "Quiz_cardId_fkey" FOREIGN KEY ("cardId") REFERENCES "Card" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
-INSERT INTO "new_Quiz" ("cardId", "firstReview", "id", "lapses", "lastReview", "nextReview", "quizType", "repetitions", "retrievability", "stability") SELECT "cardId", "firstReview", "id", "lapses", "lastReview", "nextReview", "quizType", "repetitions", "retrievability", "stability" FROM "Quiz";
+INSERT INTO "new_Quiz" ("cardId", "firstReview", "id", "lapses", "lastReview", "nextReview", "quizType", "repetitions", "difficulty", "stability") SELECT "cardId", "firstReview", "id", "lapses", "lastReview", "nextReview", "quizType", "repetitions", "difficulty", "stability" FROM "Quiz";
 DROP TABLE "Quiz";
 ALTER TABLE "new_Quiz" RENAME TO "Quiz";
 CREATE UNIQUE INDEX "Quiz_cardId_quizType_key" ON "Quiz"("cardId", "quizType");

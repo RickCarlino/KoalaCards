@@ -16,7 +16,7 @@ CREATE TABLE "Quiz" (
     "cardId" INTEGER NOT NULL,
     "quizType" TEXT NOT NULL,
     "stability" REAL NOT NULL,
-    "retrievability" REAL NOT NULL,
+    "difficulty" REAL NOT NULL,
     "firstReview" REAL NOT NULL,
     "lastReview" REAL NOT NULL,
     "nextReview" REAL NOT NULL,

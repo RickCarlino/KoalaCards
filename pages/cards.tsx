@@ -32,7 +32,7 @@ export const BACKUP_SCHEMA = z.array(
         nextReview: z.number(),
         quizType: z.string(),
         repetitions: z.number(),
-        retrievability: z.number(),
+        difficulty: z.number(),
         stability: z.number(),
       }),
     ),
