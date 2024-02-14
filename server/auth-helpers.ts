@@ -18,10 +18,15 @@ export const getUserSettings = async (userId?: UserID) => {
   }
   const params = { userId: "" + userId };
   // Update users lastSeen field:
-  await prismaClient.user.update({
-    where: { id: "" + userId },
-    data: { lastSeen: new Date() },
-  });
+  prismaClient.user
+    .update({
+      where: { id: "" + userId },
+      data: { lastSeen: new Date() },
+    })
+    .then(
+      () => {},
+      () => {},
+    ); // swallow errors
   return await prismaClient.userSettings.upsert({
     where: params,
     update: {},

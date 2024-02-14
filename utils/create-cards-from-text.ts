@@ -1,4 +1,4 @@
-import { gptCall } from "@/server/routers/perform-exam";
+import { gptCall } from "./openai";
 
 interface Card {
   definition: string;
@@ -43,6 +43,8 @@ export async function createCardsFromText(input: string): Promise<Card[]> {
     temperature: 0.75,
     response_format: { type: "json_object" },
   });
-  const cards: Card[] = JSON.parse(x.choices[0].message.content || "null")?.cards;
+  const cards: Card[] = JSON.parse(
+    x.choices[0].message.content || "null",
+  )?.cards;
   return cards;
 }

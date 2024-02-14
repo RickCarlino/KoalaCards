@@ -1,4 +1,5 @@
 # KoalaSRS 🐨
+
 <p align="center">
   <img width="33%" src="./logo.png" alt="The KoalaSRS Logo"/>
 </p>

@@ -121,10 +121,13 @@ function useQuizState(initialState: State) {
 }
 
 function Study(props: Props) {
-  const cardsById = props.quizzes.reduce((acc, quiz) => {
-    acc[quiz.quizId] = quiz;
-    return acc;
-  }, {} as Record<number, Quiz>);
+  const cardsById = props.quizzes.reduce(
+    (acc, quiz) => {
+      acc[quiz.quizId] = quiz;
+      return acc;
+    },
+    {} as Record<number, Quiz>,
+  );
   const settings = useUserSettings();
   const newState = newQuizState({
     cardsById,

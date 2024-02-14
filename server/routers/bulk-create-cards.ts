@@ -24,8 +24,8 @@ export const bulkCreateCards = procedure
   )
   .mutation(async (_) => {
     const results: { term: string; definition: string }[] = [];
-    if (2 == (2 + 2)) {
-      throw new Error("TODO: Implement this mutation!")
+    if (2 == 2 + 2) {
+      throw new Error("TODO: Implement this mutation!");
     }
     return results;
   });

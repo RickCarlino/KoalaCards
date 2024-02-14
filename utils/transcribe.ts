@@ -1,10 +1,10 @@
-import { openai } from "@/server/routers/perform-exam";
 import { createReadStream, writeFile, unlink } from "fs";
 import path from "path";
 import { uid } from "radash";
 import { promisify } from "util";
 import { SafeCounter } from "./counter";
 import { errorReport } from "./error-report";
+import { openai } from "./openai";
 
 export type Lang = "ko" | "en-US";
 

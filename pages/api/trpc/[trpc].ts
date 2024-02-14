@@ -17,7 +17,10 @@ export default trpcNext.createNextApiHandler({
           where: { id: user.id },
           data: { lastSeen: new Date() },
         })
-        .then(() => {});
+        .then(
+          () => {},
+          () => {},
+        );
     return { session, user };
   },
 });
