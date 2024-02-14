@@ -38,7 +38,7 @@ export type State = {
   listeningPercentage: number;
 };
 
-type QuizResult = "error" | "failure" | "success";
+type QuizResult = "error" | "fail" | "pass";
 
 export type Action =
   | { type: "DID_GRADE"; id: number; result: QuizResult }
@@ -202,7 +202,7 @@ function reduce(state: State, action: Action): State {
       const x = currentQuiz(state);
       if (x) {
         stats.count[x.lessonType] += 1;
-        if (action.result === "success") {
+        if (action.result === "pass") {
           stats.win[x.lessonType] += 1;
         }
         const keys: (keyof typeof stats.count)[] = ["listening", "speaking"];

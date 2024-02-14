@@ -15,7 +15,7 @@ import { getOneCard } from "./get-one-card";
 import { getUserSettings } from "./get-user-settings";
 import { importCards } from "./import-cards";
 import { manuallyGrade } from "./manually-grade";
-import { performExam } from "./perform-exam";
+import { gradeQuiz } from "./grade-quiz";
 
 export const appRouter = router({
   bulkCreateCards,
@@ -33,7 +33,7 @@ export const appRouter = router({
   getOneCard,
   getUserSettings,
   importCards,
-  performExam,
+  performExam: gradeQuiz,
   parseCards: procedure
     .input(
       z.object({

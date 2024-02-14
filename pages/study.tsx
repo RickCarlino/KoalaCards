@@ -270,7 +270,7 @@ function Study(props: Props) {
       .then(async (data) => {
         // Why did I add this? TODO: Remove after lots of testing...
         dispatch({ type: "REMOVE_FAILURE", id: quiz.id });
-        if (data.result === "failure") {
+        if (data.result === "fail") {
           console.log("Transcript: " + data.userTranscription);
           dispatch({
             type: "ADD_FAILURE",
