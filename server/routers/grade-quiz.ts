@@ -2,6 +2,7 @@ import { z } from "zod";
 import { procedure } from "../trpc";
 import { prismaClient } from "../prisma-client";
 import { getQuizEvaluator } from "../quiz-evaluators";
+import { transcribeB64 } from "@/utils/transcribe";
 
 const performExamOutput = z.union([
   z.object({
@@ -58,7 +59,7 @@ export const gradeQuiz = procedure
       },
       include: {
         Card: true,
-      }
+      },
     });
 
     if (!quiz) {
@@ -70,9 +71,21 @@ export const gradeQuiz = procedure
 
     const card = quiz?.Card;
     const evaluator = getQuizEvaluator(quiz.quizType);
+    const audio = await transcribeB64(
+      card.langCode as "ko",
+      x.input.audio,
+      user.id,
+    );
+    if (audio.kind === "error") {
+      return {
+        result: "error",
+        rejectionText: "Transcription error",
+      };
+    }
     const result = await evaluator({
       quiz,
       card,
+      userInput: audio.text,
     });
     switch (result.result) {
       case "pass":

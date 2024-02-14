@@ -3,6 +3,7 @@ import { Quiz, Card } from "@prisma/client";
 export type QuizEvaluatorInput = {
   quiz: Quiz;
   card: Card;
+  userInput: string;
 };
 
 export type QuizEvaluatorOutput = {
