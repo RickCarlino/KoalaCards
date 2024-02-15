@@ -2,24 +2,20 @@ import { gptCall } from "@/utils/openai";
 import { QuizEvaluator } from "./types";
 import { template } from "radash";
 
-const GRAMMAR_PROMPT = `
-The sentence above was entered by the user of a language learning app.
-You grade the grammar of phrases in the app.
-Phrases are not always complete sentences, but they must follow the syntax and semantics of the language.
-For example, "{{target}}" would be considered valid.
-The ISO 639-1:2002 language code of the sentence is '{{langCode}}'.
+const GRAMMAR_PROMPT = `Grade a sentence from a language learning
+app. Answer YES if the sentence is grammatically correct and
+in the specified language (ISO 639-1:2002 code '{{langCode}}').
+Answer NO if it doesn't follow the language's syntax and semantics
+or isn't in the specified language. Avoid vague responses.`;
 
-Answer YES if the following are true:
-
-1. The sentence is 100% grammatically correct.
-2. The sentence is written in the specified language.
-
-Answer NO if the following are true:
-1. Sentence does not follow syntax and semantics of the language.
-2. The sentence is not written in the specified language.
-
-You will be penalized for vague responses.
-`;
+const MEANING_PROMPT = `Grade the equivalence of a translation
+in a language learning app, given the ISO 639-1:2002 language
+code '{{langCode}}'. The original phrase is "{{definition}}",
+with an ideal translation example "{{term}}". Answer
+YES if the student's translation is equivalent, capturing the
+original meaning without changing key details. Answer NO if
+key details are altered or the meaning is not accurately
+conveyed. Avoid vague responses.`;
 
 const YES_OR_NO_FUNCTION = {
   name: "yes_or_no",
@@ -58,14 +54,15 @@ const YES_OR_NO_FUNCTION = {
   description: "Answer a yes or no question.",
 };
 
-const gradeGrammar = async (
+type YesOrNo = { response: "yes" | "no"; whyNot?: string };
+
+const yesOrNo = async (
   userInput: string,
-  target: string,
-  langCode: string,
-) => {
-  const content = template(GRAMMAR_PROMPT, { target, langCode });
+  question: string,
+): Promise<YesOrNo> => {
+  console.log("===");
   console.log(userInput);
-  console.log(content);
+  console.log(question);
   const grammarResp = await gptCall({
     messages: [
       {
@@ -74,7 +71,7 @@ const gradeGrammar = async (
       },
       {
         role: "system",
-        content,
+        content: question,
       },
     ],
     model: "gpt-3.5-turbo",
@@ -88,19 +85,49 @@ const gradeGrammar = async (
     temperature: 0.7,
     tool_choice: { type: "function", function: { name: "yes_or_no" } },
   });
-  console.log("====");
   const jsonString =
     grammarResp?.choices?.[0]?.message?.tool_calls?.[0].function.arguments ||
     "{}";
-  console.log(JSON.parse(jsonString));
-  console.log("TODO: This");
+  return JSON.parse(jsonString);
+};
+const gradeGrammar = async (
+  userInput: string,
+  term: string,
+  definition: string,
+  langCode: string,
+): Promise<YesOrNo> => {
+  const tplData = {
+    term,
+    definition,
+    langCode,
+  };
+  const content = template(GRAMMAR_PROMPT, tplData);
+  const grammarYN = await yesOrNo(userInput, content);
+  if (grammarYN.response === "no") {
+    return grammarYN;
+  }
+
+  const meaningYn = await yesOrNo(userInput, template(MEANING_PROMPT, tplData));
+
+  return meaningYn;
 };
 
 export const speaking: QuizEvaluator = async ({ userInput, card }) => {
   console.log("Speaking exam");
-  await gradeGrammar(userInput, card.term, card.langCode);
+  const result = await gradeGrammar(
+    userInput,
+    card.term,
+    card.definition,
+    card.langCode,
+  );
+  if (result.response === "no") {
+    return {
+      result: "fail",
+      userMessage: result.whyNot || "No reason provided.",
+    };
+  }
   return {
     result: "pass",
-    userMessage: "You passed the listening quiz!",
+    userMessage: result.whyNot || "Passed!",
   };
 };
