@@ -7,7 +7,12 @@ import { getUserSettings } from "../auth-helpers";
 import { timeUntil } from "@/utils/srs";
 import { Quiz } from "@prisma/client";
 
-const FSRS = createDeck();
+const FSRS = createDeck({
+  // This is very low, but it prevents too many cards from
+  // piling up imediately after an import.
+  requestedRetentionRate: 0.79,
+});
+
 const DAYS = 24 * 60 * 60 * 1000;
 
 function getEaseBucket(ease: number): Grade {
