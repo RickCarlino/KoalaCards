@@ -18,7 +18,6 @@ import {
 import { QuizFailure, linkToEditPage } from "../components/quiz-failure";
 import Link from "next/link";
 import { useUserSettings } from "@/components/settings-provider";
-import { gradePerformance } from "@/utils/srs";
 import { Grade } from "femto-fsrs";
 
 type Props = {
@@ -121,13 +120,10 @@ function useQuizState(initialState: State) {
 }
 
 function Study(props: Props) {
-  const cardsById = props.quizzes.reduce(
-    (acc, quiz) => {
-      acc[quiz.quizId] = quiz;
-      return acc;
-    },
-    {} as Record<number, Quiz>,
-  );
+  const cardsById = props.quizzes.reduce((acc, quiz) => {
+    acc[quiz.quizId] = quiz;
+    return acc;
+  }, {} as Record<number, Quiz>);
   const settings = useUserSettings();
   const newState = newQuizState({
     cardsById,
@@ -140,7 +136,6 @@ function Study(props: Props) {
   const performExam = trpc.performExam.useMutation();
   const manuallyGrade = trpc.manuallyGrade.useMutation();
   const flagCard = trpc.flagCard.useMutation();
-  const editCard = trpc.editCard.useMutation();
   const getNextQuiz = trpc.getNextQuiz.useMutation();
   const [isOK, setOK] = useState(true);
   const needBetterErrorHandler = (error: any) => {
@@ -195,7 +190,6 @@ function Study(props: Props) {
         type: "REMOVE_FAILURE",
         id: f.id,
       });
-    const psd = f.previousSpacingData;
     const failProps: Parameters<typeof QuizFailure>[0] = {
       ...f,
       onClose: clear,
@@ -203,19 +197,9 @@ function Study(props: Props) {
         doFlag(f.id, false)?.then(clear);
       },
     };
-    if (psd) {
-      failProps.onDiscard = () => {
-        // Get a random grade between 3 and 5
-        // to prevent pileups.
-        const randomGrade = Math.random() * 2 + 3;
-        editCard
-          .mutateAsync({
-            id: f.id,
-            ...gradePerformance(psd, randomGrade),
-          })
-          .then(clear);
-      };
-    }
+    failProps.onDiscard = () => {
+      alert("TODO: Implement trpc to discard disagreed test results.");
+    };
     return <QuizFailure {...failProps} />;
   }
   // Loading message if quizzesDue > 0
@@ -281,7 +265,6 @@ function Study(props: Props) {
               lessonType: quiz.lessonType,
               userTranscription: data.userTranscription,
               rejectionText: data.rejectionText,
-              previousSpacingData: data.previousSpacingData,
             },
           });
         }

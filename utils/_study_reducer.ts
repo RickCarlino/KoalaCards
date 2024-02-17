@@ -17,12 +17,6 @@ type Failure = {
   lessonType: string;
   userTranscription: string;
   rejectionText: string;
-  previousSpacingData?: {
-    repetitions: number;
-    interval: number;
-    ease: number;
-    lapses: number;
-  };
 };
 
 export type State = {

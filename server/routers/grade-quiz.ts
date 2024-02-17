@@ -3,34 +3,52 @@ import { procedure } from "../trpc";
 import { prismaClient } from "../prisma-client";
 import { getQuizEvaluator } from "../quiz-evaluators";
 import { transcribeB64 } from "@/utils/transcribe";
-
-const performExamOutput = z.union([
-  z.object({
-    grade: z.number(),
-    userTranscription: z.string(),
-    result: z.literal("pass"),
-  }),
-  z.object({
-    // ADD previousSpacingData HERE
-    previousSpacingData: z.object({
-      repetitions: z.number(),
-      interval: z.number(),
-      ease: z.number(),
-      lapses: z.number(),
-    }),
-    grade: z.number(),
-    rejectionText: z.string(),
-    // TODO: Delete this useless field.
-    userTranscription: z.string(),
-    result: z.literal("fail"),
-  }),
-  z.object({
-    rejectionText: z.string(),
-    result: z.literal("error"),
-  }),
-]);
+import { QuizEvaluatorOutput } from "../quiz-evaluators/types";
 
 type PerformExamOutput = z.infer<typeof performExamOutput>;
+type ResultContext = { result: QuizEvaluatorOutput };
+
+const ERROR = z.object({
+  rejectionText: z.string(),
+  result: z.literal("error"),
+});
+
+const FAIL = z.object({
+  grade: z.number(),
+  rejectionText: z.string(),
+  userTranscription: z.string(),
+  result: z.literal("fail"),
+});
+
+const PASS = z.object({
+  grade: z.number(),
+  userTranscription: z.string(),
+  result: z.literal("pass"),
+});
+
+const performExamOutput = z.union([PASS, FAIL, ERROR]);
+
+function processFailure(ctx: ResultContext): z.infer<typeof ERROR> {
+  return {
+    rejectionText: ctx.result.userMessage,
+    result: "error",
+  };
+}
+
+function processError(ctx: ResultContext): z.infer<typeof ERROR> {
+  return {
+    rejectionText: ctx.result.userMessage,
+    result: "error",
+  };
+}
+
+function processPass(_ctx: ResultContext): z.infer<typeof PASS> {
+  return {
+    grade: 0,
+    userTranscription: "OK",
+    result: "pass",
+  };
+}
 
 export const gradeQuiz = procedure
   .input(
@@ -68,7 +86,6 @@ export const gradeQuiz = procedure
         rejectionText: "No quiz found",
       };
     }
-
     const card = quiz?.Card;
     const evaluator = getQuizEvaluator(quiz.quizType);
     const audio = await transcribeB64(
@@ -87,30 +104,14 @@ export const gradeQuiz = procedure
       card,
       userInput: audio.text,
     });
+
+    const resultContext: ResultContext = { result };
     switch (result.result) {
       case "pass":
-        return {
-          grade: 0,
-          userTranscription: result.userMessage,
-          result: "pass",
-        };
+        return processPass(resultContext);
       case "fail":
-        return {
-          previousSpacingData: {
-            repetitions: 0,
-            interval: 0,
-            ease: 0,
-            lapses: 0,
-          },
-          grade: 0,
-          rejectionText: result.userMessage,
-          userTranscription: "FIXME",
-          result: "fail",
-        };
+        return processFailure(resultContext);
       default:
-        return {
-          rejectionText: "FIXME",
-          result: "error",
-        };
+        return processError(resultContext);
     }
   });
