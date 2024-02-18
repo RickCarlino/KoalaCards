@@ -15,7 +15,6 @@ let approvedUserIDs: string[] = [];
         ? (Date.now() - lastSeen.getTime()) / (1000 * 60 * 60 * 24)
         : -1;
       if (!email) {
-        console.log("=== No email for user " + id);
         return;
       }
       if (superUsers.includes(email)) {

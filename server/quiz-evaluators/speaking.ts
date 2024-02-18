@@ -113,7 +113,6 @@ const gradeGrammar = async (
 };
 
 export const speaking: QuizEvaluator = async ({ userInput, card }) => {
-  console.log("Speaking exam");
   const result = await gradeGrammar(
     userInput,
     card.term,
@@ -121,11 +120,13 @@ export const speaking: QuizEvaluator = async ({ userInput, card }) => {
     card.langCode,
   );
   if (result.response === "no") {
+    console.log(`Fail`)
     return {
       result: "fail",
       userMessage: result.whyNot || "No reason provided.",
     };
   }
+  console.log('pass')
   return {
     result: "pass",
     userMessage: result.whyNot || "Passed!",

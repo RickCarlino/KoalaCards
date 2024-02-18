@@ -22,6 +22,5 @@ export const flagCard = procedure
           flagged: true,
         },
       });
-      console.log("OK");
     }
   });

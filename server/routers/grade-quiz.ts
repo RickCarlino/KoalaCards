@@ -4,9 +4,24 @@ import { prismaClient } from "../prisma-client";
 import { getQuizEvaluator } from "../quiz-evaluators";
 import { transcribeB64 } from "@/utils/transcribe";
 import { QuizEvaluatorOutput } from "../quiz-evaluators/types";
+import { draw } from "radash";
+import { Grade } from "femto-fsrs";
+import { setGrade } from "./import-cards";
 
 type PerformExamOutput = z.infer<typeof performExamOutput>;
-type ResultContext = { result: QuizEvaluatorOutput };
+type ResultContext = {
+  result: QuizEvaluatorOutput;
+  daysSinceReview: number;
+  quiz: {
+    id: number;
+    firstReview: number;
+    lastReview: number;
+    difficulty: number;
+    stability: number;
+    lapses: number;
+    repetitions: number;
+  };
+};
 
 const ERROR = z.object({
   rejectionText: z.string(),
@@ -42,7 +57,10 @@ function processError(ctx: ResultContext): z.infer<typeof ERROR> {
   };
 }
 
-function processPass(_ctx: ResultContext): z.infer<typeof PASS> {
+async function processPass(ctx: ResultContext): Promise<z.infer<typeof PASS>> {
+  const grade = draw([Grade.GOOD, Grade.EASY]) || Grade.GOOD;
+  console.log(`=== TODO: Need to actually select GOOD vs. EASY ===`);
+  await setGrade(ctx.quiz, grade);
   return {
     grade: 0,
     userTranscription: "OK",
@@ -104,8 +122,21 @@ export const gradeQuiz = procedure
       card,
       userInput: audio.text,
     });
-
-    const resultContext: ResultContext = { result };
+    const now = new Date().getTime();
+    const lastReview = quiz.lastReview;
+    const resultContext: ResultContext = {
+      result,
+      daysSinceReview: Math.floor((now - lastReview) / (1000 * 60 * 60 * 24)),
+      quiz: {
+        id: quiz.id,
+        firstReview: quiz.firstReview,
+        lastReview: quiz.lastReview,
+        difficulty: quiz.difficulty,
+        stability: quiz.stability,
+        lapses: quiz.lapses,
+        repetitions: quiz.repetitions,
+      },
+    };
     switch (result.result) {
       case "pass":
         return processPass(resultContext);

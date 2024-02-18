@@ -7,6 +7,16 @@ import { getUserSettings } from "../auth-helpers";
 import { timeUntil } from "@/utils/srs";
 import { Quiz } from "@prisma/client";
 
+type QuizGradingFields =
+  | "difficulty"
+  | "firstReview"
+  | "id"
+  | "lapses"
+  | "lastReview"
+  | "repetitions"
+  | "stability";
+type GradedQuiz = Pick<Quiz, QuizGradingFields>;
+
 const FSRS = createDeck({
   // This is very low, but it prevents too many cards from
   // piling up immediately after an import.
@@ -34,7 +44,11 @@ function fuzzDate(date: Date) {
   return new Date(date.getTime() + randomOffset * DAYS).getTime();
 }
 
-async function setGradeFirstTime(quiz: Quiz, grade: Grade, now = Date.now()) {
+async function setGradeFirstTime(
+  quiz: GradedQuiz,
+  grade: Grade,
+  now = Date.now(),
+) {
   const result = FSRS.newCard(grade);
   const nextQuiz = {
     ...quiz,
@@ -46,14 +60,18 @@ async function setGradeFirstTime(quiz: Quiz, grade: Grade, now = Date.now()) {
     lapses: grade === Grade.AGAIN ? quiz.lapses + 1 : quiz.lapses,
     repetitions: 1,
   };
-  console.log(`=== First Quiz for ${quiz.id} again in ${result.I} days ===`);
+  console.log(`=== Second review in ${result.I.toFixed(2)} days (Quiz #${quiz.id}) ===`);
   await prismaClient.quiz.update({
     where: { id: quiz.id },
     data: nextQuiz,
   });
 }
 
-export async function setGrade(quiz: Quiz, grade: Grade, now = Date.now()) {
+export async function setGrade(
+  quiz: GradedQuiz,
+  grade: Grade,
+  now = Date.now(),
+) {
   const fsrsCard = {
     D: quiz.difficulty,
     S: quiz.stability,

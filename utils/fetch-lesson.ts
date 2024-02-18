@@ -60,8 +60,6 @@ const generateSpeechFile = async (
 ) => {
   const p = filePathFor(txt, voice);
   if (!existsSync(p)) {
-    console.log("==== " + p);
-    console.log(txt);
     const [response] = await CLIENT.synthesizeSpeech({
       input: { ssml: txt },
       voice: {
