@@ -9,7 +9,7 @@ import { Quiz } from "@prisma/client";
 
 const FSRS = createDeck({
   // This is very low, but it prevents too many cards from
-  // piling up imediately after an import.
+  // piling up immediately after an import.
   requestedRetentionRate: 0.79,
 });
 
@@ -20,7 +20,7 @@ function getEaseBucket(ease: number): Grade {
     return Grade.HARD;
   }
 
-  if (ease > 2.7) {
+  if (ease > 2.85) {
     return Grade.EASY;
   }
 
@@ -34,11 +34,33 @@ function fuzzDate(date: Date) {
   return new Date(date.getTime() + randomOffset * DAYS).getTime();
 }
 
+async function setGradeFirstTime(quiz: Quiz, grade: Grade, now = Date.now()) {
+  const result = FSRS.newCard(grade);
+  const nextQuiz = {
+    ...quiz,
+    difficulty: result.D,
+    stability: result.S,
+    firstReview: now,
+    lastReview: now,
+    nextReview: now + result.I * DAYS,
+    lapses: grade === Grade.AGAIN ? quiz.lapses + 1 : quiz.lapses,
+    repetitions: 1,
+  };
+  console.log(`=== First Quiz for ${quiz.id} again in ${result.I} days ===`);
+  await prismaClient.quiz.update({
+    where: { id: quiz.id },
+    data: nextQuiz,
+  });
+}
+
 export async function setGrade(quiz: Quiz, grade: Grade, now = Date.now()) {
   const fsrsCard = {
     D: quiz.difficulty,
     S: quiz.stability,
   };
+  if (!quiz.lastReview) {
+    return setGradeFirstTime(quiz, grade, now);
+  }
   const past = (now - quiz.lastReview) / DAYS;
   const result = FSRS.gradeCard(fsrsCard, past, grade);
   const nextQuiz = {
@@ -51,7 +73,11 @@ export async function setGrade(quiz: Quiz, grade: Grade, now = Date.now()) {
     lapses: grade === Grade.AGAIN ? quiz.lapses + 1 : quiz.lapses,
     repetitions: quiz.repetitions + 1,
   };
-  console.log(`=== Will review Quiz ${quiz.id} again in ${result.I} days ===`);
+  console.log(
+    `=== ${past.toFixed(2)} days since review review Quiz ${
+      quiz.id
+    } again in ${result.I.toFixed(2)} days ===`,
+  );
   await prismaClient.quiz.update({
     where: { id: quiz.id },
     data: nextQuiz,
@@ -81,15 +107,14 @@ export const importCards = procedure
         ["listening", "speaking"].map(async (quizType) => {
           const grade = getEaseBucket(card.ease);
           const card0 = FSRS.newCard(grade);
-          const schedulingGuess = FSRS.gradeCard(card0, card0.I, grade);
           const nextReview = fuzzDate(new Date(card.nextReviewAt));
           console.log(`${cardId} due in ${timeUntil(nextReview)}`);
           await prismaClient.quiz.create({
             data: {
               cardId,
               quizType,
-              stability: schedulingGuess.S,
-              difficulty: schedulingGuess.D,
+              stability: card0.S,
+              difficulty: card0.D,
               firstReview: card.firstReview?.getTime() || 0,
               lastReview: card.lastReview?.getTime() || 0,
               nextReview,
