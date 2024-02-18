@@ -58,8 +58,8 @@ function processError(ctx: ResultContext): z.infer<typeof ERROR> {
 }
 
 async function processPass(ctx: ResultContext): Promise<z.infer<typeof PASS>> {
-  const grade = draw([Grade.GOOD, Grade.EASY]) || Grade.GOOD;
-  console.log(`=== TODO: Need to actually select GOOD vs. EASY ===`);
+  const grade = Grade.GOOD;
+  console.log(`=== TODO: Need to actually select GOOD vs. EASY vs. Hard ===`);
   await setGrade(ctx.quiz, grade);
   return {
     grade: 0,
@@ -107,7 +107,7 @@ export const gradeQuiz = procedure
     const card = quiz?.Card;
     const evaluator = getQuizEvaluator(quiz.quizType);
     const audio = await transcribeB64(
-      card.langCode as "ko",
+      quiz.quizType === "listening" ? "en-US" : (card.langCode as "ko"),
       x.input.audio,
       user.id,
     );

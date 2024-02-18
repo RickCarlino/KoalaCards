@@ -1,4 +1,4 @@
-import { gptCall } from "@/utils/openai";
+import { YesOrNo, yesOrNo } from "@/utils/openai";
 import { QuizEvaluator } from "./types";
 import { template } from "radash";
 
@@ -17,79 +17,6 @@ original meaning without changing key details. Answer NO if
 key details are altered or the meaning is not accurately
 conveyed. Avoid vague responses.`;
 
-const YES_OR_NO_FUNCTION = {
-  name: "yes_or_no",
-  parameters: {
-    type: "object",
-    properties: {
-      response: {
-        type: "string",
-        enum: ["yes", "no"],
-      },
-      whyNot: {
-        type: "string",
-      },
-    },
-    dependencies: {
-      response: {
-        oneOf: [
-          {
-            properties: {
-              response: { const: "no" },
-            },
-            required: ["whyNot"],
-          },
-          {
-            properties: {
-              response: { const: "yes" },
-            },
-            not: {
-              required: ["whyNot"],
-            },
-          },
-        ],
-      },
-    },
-  },
-  description: "Answer a yes or no question.",
-};
-
-type YesOrNo = { response: "yes" | "no"; whyNot?: string };
-
-const yesOrNo = async (
-  userInput: string,
-  question: string,
-): Promise<YesOrNo> => {
-  console.log("===");
-  console.log(userInput);
-  console.log(question);
-  const grammarResp = await gptCall({
-    messages: [
-      {
-        role: "user",
-        content: userInput,
-      },
-      {
-        role: "system",
-        content: question,
-      },
-    ],
-    model: "gpt-3.5-turbo",
-    tools: [
-      {
-        type: "function",
-        function: YES_OR_NO_FUNCTION,
-      },
-    ],
-    max_tokens: 300,
-    temperature: 0.7,
-    tool_choice: { type: "function", function: { name: "yes_or_no" } },
-  });
-  const jsonString =
-    grammarResp?.choices?.[0]?.message?.tool_calls?.[0].function.arguments ||
-    "{}";
-  return JSON.parse(jsonString);
-};
 const gradeGrammar = async (
   userInput: string,
   term: string,
@@ -120,13 +47,13 @@ export const speaking: QuizEvaluator = async ({ userInput, card }) => {
     card.langCode,
   );
   if (result.response === "no") {
-    console.log(`Fail`)
+    console.log(`Fail`);
     return {
       result: "fail",
       userMessage: result.whyNot || "No reason provided.",
     };
   }
-  console.log('pass')
+  console.log("pass");
   return {
     result: "pass",
     userMessage: result.whyNot || "Passed!",
