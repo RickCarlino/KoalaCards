@@ -12,6 +12,7 @@ type ResultContext = {
   result: QuizEvaluatorOutput;
   daysSinceReview: number;
   perceivedDifficulty: Grade;
+  userInput: string;
   quiz: {
     id: number;
     firstReview: number;
@@ -43,10 +44,12 @@ const PASS = z.object({
 
 const performExamOutput = z.union([PASS, FAIL, ERROR]);
 
-function processFailure(ctx: ResultContext): z.infer<typeof ERROR> {
+function processFailure(ctx: ResultContext): z.infer<typeof FAIL> {
   return {
+    grade: 0,
+    userTranscription: ctx.userInput,
     rejectionText: ctx.result.userMessage,
-    result: "error",
+    result: "fail",
   };
 }
 
@@ -107,12 +110,12 @@ export const gradeQuiz = procedure
     }
     const card = quiz?.Card;
     const evaluator = getQuizEvaluator(quiz.quizType);
-    const audio = await transcribeB64(
+    const transcript = await transcribeB64(
       quiz.quizType === "listening" ? "en-US" : (card.langCode as "ko"),
       x.input.audio,
       user.id,
     );
-    if (audio.kind === "error") {
+    if (transcript.kind === "error") {
       return {
         result: "error",
         rejectionText: "Transcription error",
@@ -121,7 +124,7 @@ export const gradeQuiz = procedure
     const result = await evaluator({
       quiz,
       card,
-      userInput: audio.text,
+      userInput: transcript.text,
     });
     const now = new Date().getTime();
     const lastReview = quiz.lastReview;
@@ -129,6 +132,7 @@ export const gradeQuiz = procedure
       result,
       daysSinceReview: Math.floor((now - lastReview) / (1000 * 60 * 60 * 24)),
       perceivedDifficulty: x.input.perceivedDifficulty as Grade,
+      userInput: transcript.text,
       quiz: {
         id: quiz.id,
         firstReview: quiz.firstReview,

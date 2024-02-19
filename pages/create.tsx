@@ -58,7 +58,7 @@ const CreateCardPage: React.FC = () => {
 
   const handleSave = async () => {
     try {
-      await bulkCreateCards.mutateAsync({ input: cards });
+      await bulkCreateCards.mutateAsync({ langCode: "ko", input: cards });
       setError(null);
       // Reset input and cards for next entry
       setInput("");

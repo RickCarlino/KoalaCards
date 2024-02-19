@@ -103,6 +103,7 @@ export default async function getLessons(p: GetLessonInputParams) {
     where: {
       Card: {
         userId: p.userId,
+        flagged: false,
       },
       id: {
         notIn: p.notIn,
