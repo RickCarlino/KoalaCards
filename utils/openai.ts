@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources";
 import { errorReport } from "./error-report";
+import { isApprovedUser } from "./is-approved-user";
 
 const apiKey = process.env.OPENAI_API_KEY;
 
@@ -54,11 +55,13 @@ const YES_OR_NO_FUNCTION = {
 };
 
 export type YesOrNo = { response: "yes" | "no"; whyNot?: string };
-
-export const yesOrNo = async (
-  userInput: string,
-  question: string,
-): Promise<YesOrNo> => {
+export type YesOrNoInput = {
+  userInput: string;
+  question: string;
+  userID: string;
+};
+export const yesOrNo = async (input: YesOrNoInput): Promise<YesOrNo> => {
+  const { userInput, question, userID } = input;
   console.log([userInput, question]);
   const grammarResp = await gptCall({
     messages: [
@@ -71,7 +74,7 @@ export const yesOrNo = async (
         content: question,
       },
     ],
-    model: "gpt-3.5-turbo",
+    model: isApprovedUser(userID) ? "gpt-4-turbo-preview" : "gpt-3.5-turbo",
     tools: [
       {
         type: "function",
@@ -80,6 +83,7 @@ export const yesOrNo = async (
     ],
     max_tokens: 300,
     temperature: 0.7,
+    user: userID,
     tool_choice: { type: "function", function: { name: "yes_or_no" } },
   });
   const jsonString =
