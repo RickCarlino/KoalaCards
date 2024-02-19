@@ -2,11 +2,12 @@ export function Youglish(children: string) {
   // Split string on any/all whitespace:
   const words = children.split(/\s+/);
   return words.map((word, i) => {
+    const key = word + i;
     // If it's not hangeul, retrun the chunk as-is:
-    if (!word.match(/[가-힣]/)) return <span>{word + " "}</span>;
+    if (!word.match(/[가-힣]/)) return <span key={key}>{word + " "}</span>;
     return (
       <a
-        key={word + i}
+        key={key}
         href={`https://youglish.com/pronounce/${word}/korean`}
         target="_blank"
         rel="noreferrer"

@@ -1,6 +1,6 @@
 import textToSpeech, { TextToSpeechClient } from "@google-cloud/text-to-speech";
 import { createHash } from "crypto";
-import { existsSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, mkdir, readFileSync, writeFileSync } from "fs";
 import path from "path";
 import { draw, map, template } from "radash";
 import { errorReport } from "./error-report";
@@ -53,6 +53,15 @@ const filePathFor = (text: string, voice: string) => {
     ext: ".mp3",
   });
 };
+const dir = path.join(DATA_DIR, "speech", "ko");
+if (!existsSync(dir)) {
+  // Create the speech/ko/ dir if it doesnt exist:
+  mkdir(dir, { recursive: true }, (err) => {
+    if (err) {
+      console.error(err);
+    }
+  });
+}
 
 const generateSpeechFile = async (
   txt: string,
@@ -70,6 +79,7 @@ const generateSpeechFile = async (
         audioEncoding: "MP3",
       },
     });
+    console.log(txt);
     if (!response.audioContent) {
       return errorReport("No audio content");
     }
@@ -108,11 +118,17 @@ export default async function getLessons(p: GetLessonInputParams) {
       id: {
         notIn: p.notIn,
       },
+      firstReview: {
+        gt: 0,
+      },
       quizType: {
         in: ["listening", "speaking"],
       },
       nextReview: {
-        lt: p.now || yesterday,
+        lt: p.now,
+      },
+      lastReview: {
+        lt: yesterday,
       },
     },
     orderBy: {

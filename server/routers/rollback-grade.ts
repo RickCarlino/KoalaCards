@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getUserSettings } from "../auth-helpers";
 import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc";
+import { timeUntil } from "@/utils/time-until";
 
 export const rollbackGrade = procedure
   .input(
@@ -28,11 +29,13 @@ export const rollbackGrade = procedure
     if (!quiz) {
       return errorReport("Quiz not found");
     }
-    prismaClient.quiz.update({
+    const data = {
       where: { id: input.id },
       data: {
         ...input.schedulingData,
         lapses: Math.max(quiz.lapses - 1, 0),
       },
-    });
+    };
+    console.log(`Rollback grade. Next review: ${timeUntil(data.data.nextReview)}`)
+    prismaClient.quiz.update(data);
   });

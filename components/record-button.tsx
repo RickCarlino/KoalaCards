@@ -137,19 +137,19 @@ export function RecordButton(props: Props) {
   let buttonText = "Recor[d]";
   switch (props.lessonType) {
     case "listening":
-      buttonText = "Translate to EN";
+      buttonText = "Say in English";
       break;
     case "speaking":
-      buttonText = "Translate to KO";
+      buttonText = "Translate";
       break;
   }
   return isRecording ? (
     <Button onClick={stop} color="red" fullWidth disabled={props.disabled}>
-      [V]⏹️Submit Answer
+      [V] Submit Answer
     </Button>
   ) : (
     <Button onClick={start} fullWidth disabled={props.disabled}>
-      [V]⏺️{buttonText}
+      [V] {buttonText}
     </Button>
   );
 }

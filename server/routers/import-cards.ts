@@ -63,7 +63,7 @@ export function calculateSchedulingData(
   };
   const past = (now - quiz.lastReview) / DAYS;
   const result = FSRS.gradeCard(fsrsCard, past, grade);
-  console.log(`=== Starting grade ${grade} => ${result.I.toFixed(2)} days`);
+
   return {
     difficulty: result.D,
     stability: result.S,
@@ -87,9 +87,7 @@ async function setGradeFirstTime(
     lapses: grade === Grade.AGAIN ? quiz.lapses + 1 : quiz.lapses,
     repetitions: 1,
   };
-  console.log(
-    `=== Second review in ${result.I.toFixed(2)} days (Quiz #${quiz.id}) ===`,
-  );
+  console.log(`Set first SRS scheduling: ${timeUntil(nextQuiz.nextReview)}`);
   await prismaClient.quiz.update({
     where: { id: quiz.id },
     data: nextQuiz,
@@ -104,17 +102,19 @@ export async function setGrade(
   if (!quiz.lastReview) {
     return setGradeFirstTime(quiz, grade, now);
   }
-  await prismaClient.quiz.update({
+  const data = {
     where: { id: quiz.id },
     data: {
       ...quiz,
-      ...calculateSchedulingData(quiz, grade, now),
       firstReview: quiz.firstReview || now,
       lastReview: now,
       lapses: grade === Grade.AGAIN ? quiz.lapses + 1 : quiz.lapses,
       repetitions: quiz.repetitions + 1,
+      ...calculateSchedulingData(quiz, grade, now),
     },
-  });
+  };
+  console.log(`(${data.data.id}) Update grade. Next review: ${timeUntil(data.data.nextReview)}`);
+  await prismaClient.quiz.update(data);
 }
 
 export const importCards = procedure

@@ -61,7 +61,7 @@ export function PlayButton({ dataURI }: { dataURI: string }) {
     return (
       <>
         <Button disabled fullWidth>
-          ▶️Loading...
+          Loading...
         </Button>
       </>
     );
@@ -70,7 +70,7 @@ export function PlayButton({ dataURI }: { dataURI: string }) {
   return (
     <>
       <Button onClick={playSound} fullWidth>
-        [C]▶️Play Sentence
+        [C] Play Sentence
       </Button>
     </>
   );

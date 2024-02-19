@@ -33,6 +33,9 @@ export async function getLessonMeta(userId: string) {
       nextReview: {
         lt: currentDate,
       },
+      firstReview: {
+        gt: 0
+      }
     },
   });
 

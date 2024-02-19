@@ -89,7 +89,7 @@ function ControlButtons(props: ControlButtonsProps) {
           onClick={() => doFlag(quiz.id)}
           fullWidth
         >
-          [Z]🚩Flag Item #{quiz.id}
+          [Z] Flag Item #{quiz.id}
         </Button>
       </Grid.Col>
       <Grid.Col span={4}>
@@ -98,7 +98,7 @@ function ControlButtons(props: ControlButtonsProps) {
           onClick={() => doFail(quiz.id)}
           fullWidth
         >
-          [X]❌Fail Item
+          [X] Fail Item
         </Button>
       </Grid.Col>
       <Grid.Col span={4}>

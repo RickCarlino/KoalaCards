@@ -46,8 +46,8 @@ KoalaSRS rocks a minimal GUI because the focus is on what you can _hear_, not wh
 
 Here's how the app works:
 
-1. Korean sentences with English translations are loaded into a SQLite database.
-1. The app schedules a queue of sentences using an SM-2 like algorithm.
+1. Korean sentences with English translations are loaded into a database.
+1. The app schedules a queue of sentences using the FSRS scheduling algorithm.
 1. The app asks the user to take one of three quizzes. All quizzes involve listening to Korean speech or speaking Korean sentences into the microphone. 🎤
 1. The user must pass a quiz to move on to the next card.
 1. Once the quiz is complete, the sentence is played back in Korean and English. The user's audio is also played back to help with pronunciation.
