@@ -113,7 +113,9 @@ export async function setGrade(
       ...calculateSchedulingData(quiz, grade, now),
     },
   };
-  console.log(`(${data.data.id}) Update grade. Next review: ${timeUntil(data.data.nextReview)}`);
+  console.log(
+    `(${data.data.id}) Update grade. Next review: ${timeUntil(data.data.nextReview)}`,
+  );
   await prismaClient.quiz.update(data);
 }
 

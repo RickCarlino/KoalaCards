@@ -7,7 +7,10 @@ export const bulkCreateCards = procedure
     z.object({
       // Koala does not actually support Spanish.
       // It's a placeholder.
-      langCode: z.union([z.literal("ko"), z.literal("TODO: Support other langauges.")]),
+      langCode: z.union([
+        z.literal("ko"),
+        z.literal("TODO: Support other langauges."),
+      ]),
       input: z
         .array(
           z.object({

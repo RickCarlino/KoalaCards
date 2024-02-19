@@ -23,29 +23,39 @@ const gradeGrammar = async (
   term: string,
   definition: string,
   langCode: string,
+  userID: string,
 ): Promise<YesOrNo> => {
   const tplData = {
     term,
     definition,
     langCode,
   };
-  const content = template(GRAMMAR_PROMPT, tplData);
-  const grammarYN = await yesOrNo(userInput, content);
+  const question = template(GRAMMAR_PROMPT, tplData);
+  const grammarYN = await yesOrNo({
+    userInput,
+    question,
+    userID,
+  });
   if (grammarYN.response === "no") {
     return grammarYN;
   }
 
-  const meaningYn = await yesOrNo(userInput, template(MEANING_PROMPT, tplData));
+  const meaningYn = await yesOrNo({
+    userInput,
+    question: template(MEANING_PROMPT, tplData),
+    userID,
+  });
 
   return meaningYn;
 };
 
-export const speaking: QuizEvaluator = async ({ userInput, card }) => {
+export const speaking: QuizEvaluator = async ({ userInput, card, userID }) => {
   const result = await gradeGrammar(
     userInput,
     card.term,
     card.definition,
     card.langCode,
+    userID,
   );
   if (result.response === "no") {
     console.log(`Fail`);

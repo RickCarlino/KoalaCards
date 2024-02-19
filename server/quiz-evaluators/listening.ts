@@ -10,8 +10,12 @@ export const listening: QuizEvaluator = async (ctx) => {
   const { userInput, card } = ctx;
   const { term, definition, langCode } = card;
   const tplData = { term, definition, langCode };
-  const content = template(PROMPT, tplData);
-  const listeningYN = await yesOrNo(userInput, content);
+  const question = template(PROMPT, tplData);
+  const listeningYN = await yesOrNo({
+    userInput,
+    question,
+    userID: ctx.userID,
+  });
 
   if (listeningYN.response === "no") {
     return {

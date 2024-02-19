@@ -36,6 +36,8 @@ export const rollbackGrade = procedure
         lapses: Math.max(quiz.lapses - 1, 0),
       },
     };
-    console.log(`Rollback grade. Next review: ${timeUntil(data.data.nextReview)}`)
+    console.log(
+      `Rollback grade. Next review: ${timeUntil(data.data.nextReview)}`,
+    );
     prismaClient.quiz.update(data);
   });

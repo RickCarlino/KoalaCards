@@ -120,10 +120,13 @@ function useQuizState(initialState: State) {
 }
 
 function Study(props: Props) {
-  const cardsById = props.quizzes.reduce((acc, quiz) => {
-    acc[quiz.quizId] = quiz;
-    return acc;
-  }, {} as Record<number, Quiz>);
+  const cardsById = props.quizzes.reduce(
+    (acc, quiz) => {
+      acc[quiz.quizId] = quiz;
+      return acc;
+    },
+    {} as Record<number, Quiz>,
+  );
   const settings = useUserSettings();
   const newState = newQuizState({
     cardsById,
@@ -199,10 +202,12 @@ function Study(props: Props) {
     };
     failProps.onDiscard = () => {
       if (f.rollbackData) {
-        rollbackGrade.mutateAsync({
-          id: f.id,
-          schedulingData: f.rollbackData,
-        }).then(clear);
+        rollbackGrade
+          .mutateAsync({
+            id: f.id,
+            schedulingData: f.rollbackData,
+          })
+          .then(clear);
       } else {
         alert("No rollback data found. This is a bug.");
       }

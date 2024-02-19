@@ -132,6 +132,7 @@ export const gradeQuiz = procedure
       quiz,
       card,
       userInput: transcript.text,
+      userID: user.id,
     });
     const now = new Date().getTime();
     const lastReview = quiz.lastReview;
