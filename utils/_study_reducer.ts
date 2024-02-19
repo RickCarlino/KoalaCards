@@ -17,6 +17,11 @@ type Failure = {
   lessonType: string;
   userTranscription: string;
   rejectionText: string;
+  rollbackData?: {
+    difficulty: number;
+    stability: number;
+    nextReview: number;
+  };
 };
 
 export type State = {
@@ -178,6 +183,7 @@ function reduce(state: State, action: Action): State {
             lessonType: currentQuiz(state)?.lessonType ?? "listening",
             userTranscription: "Empty response",
             rejectionText: "You hit the `Fail` button. Better luck next time!",
+            rollbackData: undefined,
           },
           ...state.failures,
         ],

@@ -132,8 +132,9 @@ function Study(props: Props) {
     newCards: props.newCards,
   });
   const { state, dispatch } = useQuizState(newState);
-  const performExam = trpc.performExam.useMutation();
+  const performExam = trpc.gradeQuiz.useMutation();
   const manuallyGrade = trpc.manuallyGrade.useMutation();
+  const rollbackGrade = trpc.rollbackGrade.useMutation();
   const flagCard = trpc.flagCard.useMutation();
   const getNextQuiz = trpc.getNextQuiz.useMutation();
   const [isOK, setOK] = useState(true);
@@ -197,7 +198,14 @@ function Study(props: Props) {
       },
     };
     failProps.onDiscard = () => {
-      alert("TODO: Implement trpc to discard disagreed test results.");
+      if (f.rollbackData) {
+        rollbackGrade.mutateAsync({
+          id: f.id,
+          schedulingData: f.rollbackData,
+        }).then(clear);
+      } else {
+        alert("No rollback data found. This is a bug.");
+      }
     };
     return <QuizFailure {...failProps} />;
   }
@@ -248,7 +256,7 @@ function Study(props: Props) {
     dispatch({ type: "SET_RECORDING", value: false });
     dispatch({ type: "WILL_GRADE", id });
     setOK(true);
-    console.log(`TODO: perceivedDifficulty is hard coded to ${perceivedDifficulty}`)
+    console.log(`TODO: get perceivedDifficulty. ${perceivedDifficulty}`);
     performExam
       .mutateAsync({ id, audio, perceivedDifficulty })
       .then(async (data) => {
@@ -265,6 +273,7 @@ function Study(props: Props) {
               lessonType: quiz.lessonType,
               userTranscription: data.userTranscription,
               rejectionText: data.rejectionText,
+              rollbackData: data.rollbackData,
             },
           });
         }
