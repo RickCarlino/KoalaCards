@@ -1,6 +1,4 @@
-import { createCardsFromText } from "@/utils/create-cards-from-text";
-import { z } from "zod";
-import { procedure, router } from "../trpc";
+import { router } from "../trpc";
 import { bulkCreateCards } from "./bulk-create-cards";
 import { deleteCard } from "./delete-card";
 import { deleteFlaggedCards } from "./delete-flagged-card";
@@ -13,9 +11,11 @@ import { getAllCards } from "./get-all-cards";
 import { getNextQuiz, getNextQuizzes } from "./get-next-quizzes";
 import { getOneCard } from "./get-one-card";
 import { getUserSettings } from "./get-user-settings";
+import { gradeQuiz } from "./grade-quiz";
 import { importCards } from "./import-cards";
 import { manuallyGrade } from "./manually-grade";
-import { gradeQuiz } from "./grade-quiz";
+import { parseCards } from "./parse-cards";
+import { rollbackGrade } from "./rollback-grade";
 
 export const appRouter = router({
   bulkCreateCards,
@@ -24,7 +24,6 @@ export const appRouter = router({
   editCard,
   editUserSettings,
   exportCards,
-  manuallyGrade,
   faucet,
   flagCard,
   getAllCards,
@@ -32,33 +31,11 @@ export const appRouter = router({
   getNextQuizzes,
   getOneCard,
   getUserSettings,
+  gradeQuiz,
   importCards,
-  performExam: gradeQuiz,
-  parseCards: procedure
-    .input(
-      z.object({
-        text: z.string().max(3000),
-      }),
-    )
-    .output(
-      z.object({
-        cards: z.array(
-          z.object({
-            definition: z.string(),
-            term: z.string(),
-          }),
-        ),
-      }),
-    )
-    .mutation(async ({ input }) => {
-      try {
-        const cards = await createCardsFromText(input.text);
-        return { cards };
-      } catch (error) {
-        console.error(error);
-        throw new Error("Failed to parse cards");
-      }
-    }),
+  manuallyGrade,
+  parseCards,
+  rollbackGrade,
 });
 
 export type AppRouter = typeof appRouter;
