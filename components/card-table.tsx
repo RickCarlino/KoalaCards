@@ -1,7 +1,8 @@
+import { trpc } from "@/utils/trpc";
 import { Button, Table } from "@mantine/core";
-import { IconPencil } from "@tabler/icons-react";
+import { IconPencil, IconTrash } from "@tabler/icons-react";
 import { useRouter } from "next/router";
-import React from "react";
+import React, { useState } from "react";
 
 type Card = {
   id: number;
@@ -13,8 +14,41 @@ interface CardTableProps {
   cards: Card[];
 }
 
-export const CardTable: React.FC<CardTableProps> = ({ cards }) => {
+type CardRowProps = {
+  card: Card;
+};
+const CardRow = ({ card }: CardRowProps) => {
   const router = useRouter();
+  const deleteCard = trpc.deleteCard.useMutation();
+  const [color, setColor] = useState("red");
+
+  return (
+    <tr key={card.id}>
+      <td>{card.id}</td>
+      <td>{card.flagged ? "🚩" : ""}</td>
+      <td>{card.definition}</td>
+      <td>{card.term}</td>
+      <td>
+        <Button
+          color={color}
+          onClick={() => {
+            deleteCard.mutate({ id: card.id });
+            setColor("gray");
+          }}
+        >
+          <IconTrash stroke={1.5} />
+        </Button>
+      </td>
+      <td>
+        <Button onClick={() => router.push(`/cards/${card.id}`)}>
+          <IconPencil stroke={1.5} />
+        </Button>
+      </td>
+    </tr>
+  );
+};
+
+export const CardTable: React.FC<CardTableProps> = ({ cards }) => {
   return (
     <Table>
       <thead>
@@ -23,22 +57,13 @@ export const CardTable: React.FC<CardTableProps> = ({ cards }) => {
           <th>Flagged</th>
           <th>Definition</th>
           <th>Term</th>
+          <th>Delete</th>
           <th>Edit</th>
         </tr>
       </thead>
       <tbody>
-        {cards.map((card) => (
-          <tr key={card.id}>
-            <td>{card.id}</td>
-            <td>{card.flagged ? "🚩" : ""}</td>
-            <td>{card.definition}</td>
-            <td>{card.term}</td>
-            <td>
-              <Button onClick={() => router.push(`/cards/${card.id}`)}>
-                <IconPencil stroke={1.5} />
-              </Button>
-            </td>
-          </tr>
+        {cards.map((c) => (
+          <CardRow card={c} key={c.id} />
         ))}
       </tbody>
     </Table>
