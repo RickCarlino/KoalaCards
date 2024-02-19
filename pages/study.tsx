@@ -245,12 +245,13 @@ function Study(props: Props) {
     );
   }
   const { id } = quiz;
-  const processAudio = (audio: string) => {
+  const processAudio = (audio: string, perceivedDifficulty = Grade.GOOD) => {
     dispatch({ type: "SET_RECORDING", value: false });
     dispatch({ type: "WILL_GRADE", id });
     setOK(true);
+    console.log(`TODO: perceivedDifficulty is hard coded to ${perceivedDifficulty}`)
     performExam
-      .mutateAsync({ id, audio })
+      .mutateAsync({ id, audio, perceivedDifficulty })
       .then(async (data) => {
         // Why did I add this? TODO: Remove after lots of testing...
         dispatch({ type: "REMOVE_FAILURE", id: quiz.id });

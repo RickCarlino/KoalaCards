@@ -4,7 +4,6 @@ import { prismaClient } from "../prisma-client";
 import { getQuizEvaluator } from "../quiz-evaluators";
 import { transcribeB64 } from "@/utils/transcribe";
 import { QuizEvaluatorOutput } from "../quiz-evaluators/types";
-import { draw } from "radash";
 import { Grade } from "femto-fsrs";
 import { setGrade } from "./import-cards";
 
@@ -12,6 +11,7 @@ type PerformExamOutput = z.infer<typeof performExamOutput>;
 type ResultContext = {
   result: QuizEvaluatorOutput;
   daysSinceReview: number;
+  perceivedDifficulty: Grade;
   quiz: {
     id: number;
     firstReview: number;
@@ -58,7 +58,7 @@ function processError(ctx: ResultContext): z.infer<typeof ERROR> {
 }
 
 async function processPass(ctx: ResultContext): Promise<z.infer<typeof PASS>> {
-  const grade = Grade.GOOD;
+  const grade = ctx.perceivedDifficulty;
   console.log(`=== TODO: Need to actually select GOOD vs. EASY vs. Hard ===`);
   await setGrade(ctx.quiz, grade);
   return {
@@ -71,6 +71,7 @@ async function processPass(ctx: ResultContext): Promise<z.infer<typeof PASS>> {
 export const gradeQuiz = procedure
   .input(
     z.object({
+      perceivedDifficulty: z.number().min(1).max(4).int(),
       audio: z.string().max(1000000),
       id: z.number(),
     }),
@@ -127,6 +128,7 @@ export const gradeQuiz = procedure
     const resultContext: ResultContext = {
       result,
       daysSinceReview: Math.floor((now - lastReview) / (1000 * 60 * 60 * 24)),
+      perceivedDifficulty: x.input.perceivedDifficulty as Grade,
       quiz: {
         id: quiz.id,
         firstReview: quiz.firstReview,
