@@ -6,7 +6,8 @@ const GRAMMAR_PROMPT = `Grade a sentence from a language learning
 app. Answer YES if the sentence is grammatically correct and
 in the specified language (ISO 639-1:2002 code '{{langCode}}').
 Answer NO if it doesn't follow the language's syntax and semantics
-or isn't in the specified language. Avoid vague responses.`;
+or isn't in the specified language. Avoid vague responses.
+Incomplete sentences are OK if they are grammatically correct.`;
 
 const MEANING_PROMPT = `Grade the equivalence of a translation
 in a language learning app, given the ISO 639-1:2002 language

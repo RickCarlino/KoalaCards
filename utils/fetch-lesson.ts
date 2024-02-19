@@ -5,6 +5,7 @@ import path from "path";
 import { draw, map, template } from "radash";
 import { errorReport } from "./error-report";
 import { prismaClient } from "@/server/prisma-client";
+import { timeUntil } from "./time-until";
 
 type LessonType = "listening" | "speaking";
 
@@ -134,6 +135,9 @@ export default async function getLessons(p: GetLessonInputParams) {
     orderBy: {
       nextReview: "asc",
     },
+    // Don't select quizzes from the same card.
+    // Prevents hinting.
+    distinct: ["cardId"],
     take: p.take || 10,
     include: {
       Card: true, // Include related Card data in the result

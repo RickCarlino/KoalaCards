@@ -34,7 +34,7 @@ const HEADER_STYLES = {
   marginBottom: "20px",
 };
 const HEADER: Record<string, string> = {
-  speaking: "Say in Korean",
+  speaking: "Say in target language",
   listening: "Translate to English",
 };
 

@@ -81,7 +81,7 @@ const CreateCardPage: React.FC = () => {
         <pre>그는 나를 웃게 했어요. He made me laugh.</pre>
         <Textarea
           minRows={10}
-          placeholder="Korean sentence <tab> English translation or example sentence"
+          placeholder="Foreign language sentence <tab> English translation or example sentence"
           value={input}
           onChange={handleInputChange}
         />

@@ -48,8 +48,9 @@ const PASS = z.object({
 });
 
 const performExamOutput = z.union([PASS, FAIL, ERROR]);
-
-function processFailure(ctx: ResultContext): z.infer<typeof FAIL> {
+type FailResult = z.infer<typeof FAIL>;
+async function processFailure(ctx: ResultContext): Promise<FailResult> {
+  await setGrade(ctx.quiz, Grade.AGAIN);
   return {
     result: "fail",
     grade: 0,
