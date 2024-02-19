@@ -4,8 +4,8 @@ import { OLD_BACKUP_SCHEMA } from "@/pages/cards";
 import { Grade, createDeck } from "femto-fsrs";
 import { prismaClient } from "../prisma-client";
 import { getUserSettings } from "../auth-helpers";
-import { timeUntil } from "@/utils/srs";
 import { Quiz } from "@prisma/client";
+import { timeUntil } from "@/utils/time-until";
 
 type QuizGradingFields =
   | "difficulty"
@@ -44,6 +44,33 @@ function fuzzDate(date: Date) {
   return new Date(date.getTime() + randomOffset * DAYS).getTime();
 }
 
+type SchedulingData = {
+  difficulty: number;
+  stability: number;
+  nextReview: number;
+};
+
+type PartialQuiz = Pick<Quiz, "difficulty" | "stability" | "lastReview">;
+
+export function calculateSchedulingData(
+  quiz: PartialQuiz,
+  grade: Grade,
+  now = Date.now(),
+): SchedulingData {
+  const fsrsCard = {
+    D: quiz.difficulty,
+    S: quiz.stability,
+  };
+  const past = (now - quiz.lastReview) / DAYS;
+  const result = FSRS.gradeCard(fsrsCard, past, grade);
+  console.log(`=== Starting grade ${grade} => ${result.I.toFixed(2)} days`);
+  return {
+    difficulty: result.D,
+    stability: result.S,
+    nextReview: now + result.I * DAYS,
+  };
+}
+
 async function setGradeFirstTime(
   quiz: GradedQuiz,
   grade: Grade,
@@ -60,7 +87,9 @@ async function setGradeFirstTime(
     lapses: grade === Grade.AGAIN ? quiz.lapses + 1 : quiz.lapses,
     repetitions: 1,
   };
-  console.log(`=== Second review in ${result.I.toFixed(2)} days (Quiz #${quiz.id}) ===`);
+  console.log(
+    `=== Second review in ${result.I.toFixed(2)} days (Quiz #${quiz.id}) ===`,
+  );
   await prismaClient.quiz.update({
     where: { id: quiz.id },
     data: nextQuiz,
@@ -72,33 +101,19 @@ export async function setGrade(
   grade: Grade,
   now = Date.now(),
 ) {
-  const fsrsCard = {
-    D: quiz.difficulty,
-    S: quiz.stability,
-  };
   if (!quiz.lastReview) {
     return setGradeFirstTime(quiz, grade, now);
   }
-  const past = (now - quiz.lastReview) / DAYS;
-  const result = FSRS.gradeCard(fsrsCard, past, grade);
-  const nextQuiz = {
-    ...quiz,
-    difficulty: result.D,
-    stability: result.S,
-    firstReview: quiz.firstReview || now,
-    lastReview: now,
-    nextReview: now + result.I * DAYS,
-    lapses: grade === Grade.AGAIN ? quiz.lapses + 1 : quiz.lapses,
-    repetitions: quiz.repetitions + 1,
-  };
-  console.log(
-    `=== ${past.toFixed(2)} days since review review Quiz ${
-      quiz.id
-    } again in ${result.I.toFixed(2)} days ===`,
-  );
   await prismaClient.quiz.update({
     where: { id: quiz.id },
-    data: nextQuiz,
+    data: {
+      ...quiz,
+      ...calculateSchedulingData(quiz, grade, now),
+      firstReview: quiz.firstReview || now,
+      lastReview: now,
+      lapses: grade === Grade.AGAIN ? quiz.lapses + 1 : quiz.lapses,
+      repetitions: quiz.repetitions + 1,
+    },
   });
 }
 

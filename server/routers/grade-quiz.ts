@@ -5,7 +5,7 @@ import { getQuizEvaluator } from "../quiz-evaluators";
 import { transcribeB64 } from "@/utils/transcribe";
 import { QuizEvaluatorOutput } from "../quiz-evaluators/types";
 import { Grade } from "femto-fsrs";
-import { setGrade } from "./import-cards";
+import { calculateSchedulingData, setGrade } from "./import-cards";
 
 type PerformExamOutput = z.infer<typeof performExamOutput>;
 type ResultContext = {
@@ -34,6 +34,11 @@ const FAIL = z.object({
   rejectionText: z.string(),
   userTranscription: z.string(),
   result: z.literal("fail"),
+  rollbackData: z.object({
+    difficulty: z.number(),
+    stability: z.number(),
+    nextReview: z.number(),
+  }),
 });
 
 const PASS = z.object({
@@ -46,10 +51,11 @@ const performExamOutput = z.union([PASS, FAIL, ERROR]);
 
 function processFailure(ctx: ResultContext): z.infer<typeof FAIL> {
   return {
+    result: "fail",
     grade: 0,
     userTranscription: ctx.userInput,
     rejectionText: ctx.result.userMessage,
-    result: "fail",
+    rollbackData: calculateSchedulingData(ctx.quiz, ctx.perceivedDifficulty),
   };
 }
 
