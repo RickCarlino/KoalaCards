@@ -8,7 +8,6 @@ export const editUserSettings = procedure
   .input(
     z.object({
       id: z.optional(z.number()),
-      listeningPercentage: z.number().min(0).max(1),
       playbackSpeed: z.number().min(0.5).max(2),
       cardsPerDayMax: z.number().min(1),
       playbackPercentage: z.number().min(0).max(1),
@@ -30,7 +29,6 @@ export const editUserSettings = procedure
         userId: ctx.user?.id,
       },
       data: {
-        listeningPercentage: input.listeningPercentage,
         playbackSpeed: input.playbackSpeed,
         cardsPerDayMax: input.cardsPerDayMax,
         playbackPercentage: input.playbackPercentage,

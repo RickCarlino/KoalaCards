@@ -130,7 +130,6 @@ function Study(props: Props) {
     totalCards: props.totalCards,
     quizzesDue: props.quizzesDue,
     newCards: props.newCards,
-    listeningPercentage: settings.listeningPercentage,
   });
   const { state, dispatch } = useQuizState(newState);
   const performExam = trpc.performExam.useMutation();

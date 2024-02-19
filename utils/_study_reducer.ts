@@ -29,7 +29,6 @@ export type State = {
   totalCards: number;
   quizzesDue: number;
   newCards: number;
-  listeningPercentage: number;
 };
 
 type QuizResult = "error" | "fail" | "pass";
@@ -104,7 +103,6 @@ export const newQuizState = (state: Partial<State> = {}): State => {
     totalCards: 0,
     quizzesDue: 0,
     newCards: 0,
-    listeningPercentage: 0.5,
     ...state,
   };
 };

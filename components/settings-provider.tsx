@@ -11,7 +11,6 @@ interface UserSettingsProviderProps {
 const EMPTY: UserSettings = {
   id: 0,
   userId: "0",
-  listeningPercentage: 0.5,
   playbackSpeed: 1,
   cardsPerDayMax: 21,
   playbackPercentage: 0.5,

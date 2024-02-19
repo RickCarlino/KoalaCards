@@ -42,7 +42,6 @@ CREATE TABLE "User" (
 CREATE TABLE "UserSettings" (
     "id" SERIAL NOT NULL,
     "userId" TEXT NOT NULL,
-    "listeningPercentage" DOUBLE PRECISION NOT NULL DEFAULT 0.5,
     "playbackSpeed" DOUBLE PRECISION NOT NULL DEFAULT 1,
     "cardsPerDayMax" INTEGER NOT NULL DEFAULT 21,
     "playbackPercentage" DOUBLE PRECISION NOT NULL DEFAULT 1,

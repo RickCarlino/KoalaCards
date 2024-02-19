@@ -55,9 +55,6 @@ model UserSettings {
   id                  Int      @id @default(autoincrement())
   user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId              String   @unique
-  // Value from 0 to 1 representing the percentage chance
-  // that a quiz will be a listening quiz (as opposed to speaking)
-  listeningPercentage Float    @default(0.5)
   // Audio playback speed min: 0.5 max: 2
   playbackSpeed       Float    @default(1)
   // Cards/day max

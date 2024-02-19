@@ -100,17 +100,6 @@ export default function UserSettingsPage(props: Props) {
       <Title order={1}>User Settings</Title>
       <form onSubmit={handleSubmit}>
         <NumberInput
-          label="Percentage of tests that should be listening tests"
-          id="listeningPercentage"
-          name="listeningPercentage"
-          value={settings.listeningPercentage}
-          onChange={(value) => handleChange(value, "listeningPercentage")}
-          min={0}
-          max={1}
-          step={0.05}
-          required
-        />
-        <NumberInput
           label="Audio playback speed percentage (50%-200%)"
           id="playbackSpeed"
           name="playbackSpeed"
