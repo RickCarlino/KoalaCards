@@ -5,7 +5,6 @@ import path from "path";
 import { draw, map, template } from "radash";
 import { errorReport } from "./error-report";
 import { prismaClient } from "@/server/prisma-client";
-import { timeUntil } from "./time-until";
 
 type LessonType = "listening" | "speaking";
 
