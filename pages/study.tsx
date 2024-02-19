@@ -114,6 +114,9 @@ function ControlButtons(props: ControlButtonsProps) {
           onRecord={processAudio}
         />
       </Grid.Col>
+      <Grid.Col span={8}>
+        <p>BACKUP YOUR CARDS NOW!!! This server is only used by a few people. I will be doing a non-backwards compatible upgrade soon. Instead of doing a complicated data migration, I have decided to just to start the database over. When the new version deploys, you will need to create a new account and use the backup from your old account.</p>
+      </Grid.Col>
     </Grid>
   );
 }
