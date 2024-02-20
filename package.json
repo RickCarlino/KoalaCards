@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "build": "next build",
-    "dev": "next dev",
+    "migrate-local": "npx --env=.env prisma migrate dev",
+    "dev": "npx --env=.env next dev",
     "lint": "next lint",
     "reset": "rm -rf node_modules && rm -rf package-lock.json && npm install && npx prisma migrate dev && npx ts-node seeds/ingest.ts",
     "start": "npx prisma migrate deploy && next start",

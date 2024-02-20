@@ -62,7 +62,6 @@ export type YesOrNoInput = {
 };
 export const yesOrNo = async (input: YesOrNoInput): Promise<YesOrNo> => {
   const { userInput, question, userID } = input;
-  console.log([userInput, question]);
   const grammarResp = await gptCall({
     messages: [
       {
