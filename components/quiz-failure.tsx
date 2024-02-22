@@ -9,6 +9,7 @@ export function linkToEditPage(id: number) {
 
 export function QuizFailure(props: {
   id: number;
+  cardId: number;
   term: string;
   definition: string;
   lessonType: string;
@@ -55,7 +56,7 @@ export function QuizFailure(props: {
             <Text>
               <strong>Why it's wrong:</strong> {props.rejectionText}
             </Text>
-            <Text>{linkToEditPage(props.id)}</Text>
+            <Text>{linkToEditPage(props.cardId)}</Text>
             <Button color="green" onClick={props.onClose}>
               Continue - Z
             </Button>

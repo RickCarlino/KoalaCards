@@ -2,6 +2,7 @@ import { unique } from "radash";
 
 export type Quiz = {
   quizId: number;
+  cardId: number;
   term: string;
   definition: string;
   repetitions: number;
@@ -12,6 +13,7 @@ export type Quiz = {
 
 type Failure = {
   id: number;
+  cardId: number;
   term: string;
   definition: string;
   lessonType: string;
@@ -40,7 +42,7 @@ type QuizResult = "error" | "fail" | "pass";
 
 export type Action =
   | { type: "DID_GRADE"; id: number; result: QuizResult }
-  | { type: "FLAG_QUIZ"; id: number }
+  | { type: "FLAG_QUIZ"; cardId: number }
   | { type: "ADD_FAILURE"; value: Failure }
   | { type: "REMOVE_FAILURE"; id: number }
   | { type: "SET_RECORDING"; value: boolean }
@@ -56,6 +58,7 @@ export type Action =
 
 export type CurrentQuiz = {
   id: number;
+  cardId: number;
   definition: string;
   term: string;
   quizAudio: string;
@@ -103,13 +106,20 @@ export const newQuizState = (state: Partial<State> = {}): State => {
 
 export function currentQuiz(state: State): CurrentQuiz | undefined {
   const quizID = state.quizIDsForLesson[0];
+  if (!quizID) {
+    console.log(`No quizID found in state:`, state);
+    return undefined;
+  }
+
   const quiz = state.cardsById[quizID];
   if (!quiz) {
+    console.log(`No quiz found in state:`, state);
     return undefined;
   }
 
   return {
     id: quiz.quizId,
+    cardId: quiz.cardId,
     definition: quiz.definition,
     term: quiz.term,
     quizAudio: quiz.audio,
@@ -167,6 +177,7 @@ function reduce(state: State, action: Action): State {
         failures: [
           {
             id: action.id,
+            cardId: card.cardId,
             term: card.term,
             definition: card.definition,
             lessonType: currentQuiz(state)?.lessonType ?? "listening",

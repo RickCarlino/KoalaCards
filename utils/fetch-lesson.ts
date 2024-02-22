@@ -151,6 +151,7 @@ export default async function getLessons(p: GetLessonInputParams) {
     );
     return {
       quizId: quiz.id,
+      cardId: quiz.cardId,
       definition: quiz.Card.definition,
       term: quiz.Card.term,
       repetitions: quiz.repetitions,

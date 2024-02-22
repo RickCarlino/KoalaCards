@@ -6,6 +6,7 @@ import { prismaClient } from "../prisma-client";
 
 export const Quiz = z.object({
   quizId: z.number(),
+  cardId: z.number(),
   definition: z.string(),
   term: z.string(),
   repetitions: z.number(),

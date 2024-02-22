@@ -40,11 +40,7 @@ const HEADER: Record<string, string> = {
 
 function CardOverview({ quiz }: { quiz: CurrentQuiz }) {
   let term: JSX.Element[] = [];
-  let def = "";
-  switch (quiz.lessonType) {
-    case "speaking":
-      def = quiz.definition;
-  }
+  let def = quiz.lessonType == "speaking" ? quiz.definition : "";
   return (
     <Grid grow justify="center" align="center">
       <Grid.Col span={4}>
@@ -86,7 +82,7 @@ function ControlButtons(props: ControlButtonsProps) {
       <Grid.Col span={4}>
         <Button
           disabled={isRecording}
-          onClick={() => doFlag(quiz.id)}
+          onClick={() => doFlag(quiz.cardId)}
           fullWidth
         >
           [Z] Flag Item #{quiz.id}
@@ -152,7 +148,7 @@ function Study(props: Props) {
   const quiz = currentQuiz(state);
   useHotkeys([
     ["x", () => quiz && doFail(quiz.id)],
-    ["z", () => quiz && doFlag(quiz.id)],
+    ["z", () => quiz && doFlag(quiz.cardId)],
   ]);
   const noFailures = state.failures.length === 0;
   const deps = [quiz?.id, quiz?.lessonType, noFailures];
@@ -177,11 +173,11 @@ function Study(props: Props) {
 
   /** goToNext flag controls if the session will skip to next
    * card or not. */
-  const doFlag = (id: number, goToNext = true) => {
+  const doFlag = (cardId: number, goToNext = true) => {
     if (!confirm("This will pause reviews. Are you sure?")) {
       return;
     }
-    goToNext && dispatch({ type: "FLAG_QUIZ", id });
+    goToNext && dispatch({ type: "FLAG_QUIZ", cardId });
     setOK(true);
     return flagCard.mutateAsync({ id }).catch(needBetterErrorHandler);
   };
@@ -197,7 +193,7 @@ function Study(props: Props) {
       ...f,
       onClose: clear,
       onFlag: () => {
-        doFlag(f.id, false)?.then(clear);
+        doFlag(f.cardId, false)?.then(clear);
       },
     };
     failProps.onDiscard = () => {
@@ -273,6 +269,7 @@ function Study(props: Props) {
             type: "ADD_FAILURE",
             value: {
               id,
+              cardId: quiz.cardId,
               term: quiz.term,
               definition: quiz.definition,
               lessonType: quiz.lessonType,
@@ -340,7 +337,7 @@ function Study(props: Props) {
         {Object.keys(state.cardsById).length} in study Queue,
         {state.failures.length} in failure queue.
       </p>
-      <p>{linkToEditPage(quiz.id)}</p>
+      <p>{linkToEditPage(quiz.cardId)}</p>
     </Container>
   );
 }
@@ -358,12 +355,7 @@ function StudyLoader() {
 
   return (
     <Study
-      quizzes={data.quizzes.map((x) => {
-        return {
-          ...x,
-          randomSeed: Math.random(),
-        };
-      })}
+      quizzes={data.quizzes}
       totalCards={data.totalCards}
       quizzesDue={data.quizzesDue}
       newCards={data.newCards}
