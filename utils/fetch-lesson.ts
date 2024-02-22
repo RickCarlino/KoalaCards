@@ -79,7 +79,6 @@ const generateSpeechFile = async (
         audioEncoding: "MP3",
       },
     });
-    console.log(txt);
     if (!response.audioContent) {
       return errorReport("No audio content");
     }

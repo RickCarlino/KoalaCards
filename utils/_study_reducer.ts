@@ -64,17 +64,6 @@ export type CurrentQuiz = {
   lapses: number;
 };
 
-const stats = {
-  count: {
-    listening: 0,
-    speaking: 0,
-  },
-  win: {
-    listening: 0,
-    speaking: 0,
-  },
-};
-
 // Creates a unique array of numbers but keeps the head
 // in the 0th position to avoid changing the current quiz.
 function betterUnique(input: number[]): number[] {
@@ -150,6 +139,10 @@ function removeCard(oldState: State, id: number): State {
 function reduce(state: State, action: Action): State {
   console.log(`===== ` + action.type);
   console.log(action);
+  console.dir({
+    ...state,
+    cardsById: Object.keys(state.cardsById),
+  });
   switch (action.type) {
     case "ADD_FAILURE":
       return {
@@ -167,10 +160,6 @@ function reduce(state: State, action: Action): State {
         isRecording: action.value,
       };
     case "USER_GAVE_UP":
-      const y = currentQuiz(state);
-      if (y) {
-        stats.count[y.lessonType] += 1;
-      }
       const nextState = gotoNextQuiz(state);
       const card = state.cardsById[action.id];
       const state2 = {
@@ -197,22 +186,6 @@ function reduce(state: State, action: Action): State {
         idsAwaitingGrades: [action.id, ...state.idsAwaitingGrades],
       });
     case "DID_GRADE":
-      const x = currentQuiz(state);
-      if (x) {
-        stats.count[x.lessonType] += 1;
-        if (action.result === "pass") {
-          stats.win[x.lessonType] += 1;
-        }
-        const keys: (keyof typeof stats.count)[] = ["listening", "speaking"];
-        keys.map((key) => {
-          const win = stats.win[key];
-          const count = stats.count[key];
-          const percentage = win / count;
-          console.log(
-            `${key}: ${Math.round(percentage * 100) || 0}% of ${count}`,
-          );
-        });
-      }
       const idsAwaitingGrades: number[] = [];
       state.idsAwaitingGrades.forEach((id) => {
         if (id !== action.id) {

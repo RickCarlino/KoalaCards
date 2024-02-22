@@ -219,7 +219,7 @@ function Study(props: Props) {
     return (
       <div>
         <h1>Please Wait</h1>
-        <p>Loading more cards...</p>
+        <p>Awaiting {state.idsAwaitingGrades} card(s).</p>
       </div>
     );
   }
