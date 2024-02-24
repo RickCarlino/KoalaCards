@@ -5,7 +5,6 @@ import { blobToBase64, convertBlobToWav } from "@/components/record-button";
 import { useUserSettings } from "@/components/settings-provider";
 import {
   Action,
-  Failure,
   Quiz,
   State,
   gotoNextQuiz,
@@ -81,6 +80,7 @@ function useBusinessLogic(state: State, dispatch: Dispatch<Action>) {
   const userSettings = useUserSettings();
   const [perceivedDifficulty, setGrade] = useState(Grade.GOOD);
   const quiz = currentQuiz(state);
+  const rollbackData = trpc.rollbackGrade.useMutation();
 
   const onRecord = async (audio: string) => {
     assertQuiz(quiz);
@@ -191,6 +191,20 @@ function useBusinessLogic(state: State, dispatch: Dispatch<Action>) {
         dispatch({ type: "BEGIN_RECORDING" });
         start();
       }
+    },
+    async rollbackGrade() {
+      const curr = state.currentItem;
+      if (curr.type !== "failure") {
+        throw new Error("Not a failure?");
+      }
+      const id = curr.value.id;
+      const schedulingData = curr.value.rollbackData;
+      schedulingData &&
+        rollbackData.mutateAsync({
+          id,
+          schedulingData,
+        });
+      dispatch({ type: "REMOVE_FAILURE", id });
     },
   };
 }
@@ -314,21 +328,6 @@ function QuizView(props: QuizViewProps) {
   );
 }
 
-type FailurePanelProps = {
-  failure: Failure;
-  onClose: () => void;
-  onFlag: () => void;
-};
-
-function FailurePanel(props: FailurePanelProps) {
-  const { failure } = props;
-  const todo = {
-    onFlag: props.onFlag,
-    onDiscard: () => alert("TODO"),
-    onClose: props.onClose,
-  };
-  return <QuizFailure {...failure} {...todo} />;
-}
 function LoadedStudyPage(props: QuizData) {
   const everything = useQuizState(props);
   const { state } = everything;
@@ -356,8 +355,9 @@ function LoadedStudyPage(props: QuizData) {
     case "failure":
       const failure = curr.value;
       el = (
-        <FailurePanel
-          failure={failure}
+        <QuizFailure
+          {...failure}
+          onDiscard={everything.rollbackGrade}
           onClose={() => {
             everything.dispatch({ type: "REMOVE_FAILURE", id: failure.id });
           }}
