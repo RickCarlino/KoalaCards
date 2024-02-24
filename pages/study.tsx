@@ -310,8 +310,6 @@ function QuizView(props: QuizViewProps) {
         {props.pendingFailures} in failure queue.
       </p>
       <p>{linkToEditPage(quiz.cardId)}</p>
-      <p>Delete this later: {quiz.term}</p>
-      <p>Delete this later: {quiz.definition}</p>
     </>
   );
 }

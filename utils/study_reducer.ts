@@ -165,9 +165,8 @@ function reduce(state: State, action: Action): State {
         throw new Error("Expected a quiz");
       }
       const card = curr.value;
-      const nextState = gotoNextQuiz(state);
-      const state2 = {
-        ...nextState,
+      const state2 = gotoNextQuiz({
+        ...state,
         failures: [
           {
             id: action.id,
@@ -181,7 +180,7 @@ function reduce(state: State, action: Action): State {
           },
           ...state.failures,
         ],
-      };
+      });
       return removeCard(state2, action.id);
     case "FLAG_QUIZ":
       return gotoNextQuiz(state);
