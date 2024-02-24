@@ -8,8 +8,10 @@ export const bulkCreateCards = procedure
       // Koala does not actually support Spanish.
       // It's a placeholder.
       langCode: z.union([
+        z.literal("es"),
+        z.literal("fr"),
+        z.literal("it"),
         z.literal("ko"),
-        z.literal("TODO: Support other langauges."),
       ]),
       input: z
         .array(
@@ -41,13 +43,15 @@ export const bulkCreateCards = procedure
           },
         });
         if (!alreadyExists) {
+          const data = {
+            userId,
+            langCode: input.langCode,
+            term: foreignLanguage,
+            definition: english,
+          };
+          console.log("Creating card:", data);
           await prismaClient.card.create({
-            data: {
-              userId,
-              langCode: input.langCode,
-              term: foreignLanguage,
-              definition: english,
-            },
+            data,
           });
           results.push({
             term: foreignLanguage,

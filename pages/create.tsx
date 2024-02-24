@@ -1,104 +1,199 @@
-import React, { useState, ChangeEvent } from "react";
-import { trpc } from "@/utils/trpc";
+import { useState, useReducer } from "react";
 import {
+  Stepper,
+  Select,
   Textarea,
   Button,
-  Paper,
-  Notification,
-  Container,
+  Group,
+  TextInput,
 } from "@mantine/core";
+import { trpc } from "@/utils/trpc";
+type ProcessedCard = { term: string; definition: string };
 
-interface Card {
-  term: string;
-  definition: string;
+type LangCode = "ko" | "es" | "it" | "fr";
+
+type Action =
+  | { type: "ADD_CARD"; card: ProcessedCard }
+  | { type: "EDIT_CARD"; card: ProcessedCard; index: number }
+  | { type: "REMOVE_CARD"; index: number }
+  | { type: "SET_LANGUAGE"; language: LangCode }
+  | { type: "SET_PROCESSED_CARDS"; processedCards: ProcessedCard[] }
+  | { type: "SET_RAW_INPUT"; rawInput: string };
+
+interface State {
+  language: LangCode;
+  rawInput: string;
+  processedCards: ProcessedCard[];
 }
 
-const CreateCardPage: React.FC = () => {
-  const [input, setInput] = useState("");
-  const [cards, setCards] = useState<Card[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [buttonText, setButtonText] = useState<string | null>("Continue");
-  const bulkCreateCards = trpc.bulkCreateCards.useMutation();
+const INITIAL_STATE: State = {
+  language: "ko",
+  rawInput: "",
+  processedCards: [],
+};
+
+function reducer(state: State, action: Action): State {
+  switch (action.type) {
+    case "ADD_CARD":
+      return {
+        ...state,
+        processedCards: [...state.processedCards, action.card],
+      };
+    case "EDIT_CARD":
+      const newCards = [...state.processedCards];
+      newCards[action.index] = action.card;
+      return { ...state, processedCards: newCards };
+    case "REMOVE_CARD":
+      return {
+        ...state,
+        processedCards: state.processedCards.filter(
+          (_card, index) => index !== action.index,
+        ),
+      };
+    case "SET_LANGUAGE":
+      return { ...state, language: action.language };
+    case "SET_PROCESSED_CARDS":
+      return { ...state, processedCards: action.processedCards };
+    case "SET_RAW_INPUT":
+      return { ...state, rawInput: action.rawInput };
+    default:
+      return state;
+  }
+}
+
+function LanguageInputPage() {
+  const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
+  const [activeStep, setActiveStep] = useState(0);
+  const [loading, setLoading] = useState(false);
   const parseCards = trpc.parseCards.useMutation();
+  const bulkCreateCards = trpc.bulkCreateCards.useMutation();
 
-  const handleInputChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
-    setInput(event.target.value);
-    if (event.target.value.length > 3000) {
-      setError("Input exceeds the maximum limit of 3000 characters.");
-    } else {
-      setError(null);
-    }
+  // Handler for language selection
+  const handleLanguageChange = (language: LangCode) => {
+    dispatch({ type: "SET_LANGUAGE", language });
   };
 
-  const handleContinue = async () => {
-    if (input.length > 3000) {
-      setError("Input exceeds the maximum limit of 3000 characters.");
-      return;
-    }
-    setButtonText("Processing...");
-    try {
-      const result = await parseCards.mutateAsync({ text: input });
-      setCards(result.cards);
-      setInput(
-        result.cards
-          .map(
-            ({ term, definition }) =>
-              `${JSON.stringify(definition)}, ${JSON.stringify(term)}`,
-          )
-          .join("\n"),
-      );
-      setError(null);
-      setButtonText(null);
-    } catch (e) {
-      setError("An error occurred while parsing the cards.");
-      setButtonText("Error - Try Again?");
-      console.error(e);
-    }
+  // Handler for raw input submission
+  const handleRawInputSubmit = async () => {
+    setLoading(true);
+    parseCards
+      .mutateAsync({
+        text: state.rawInput,
+      })
+      .then(({ cards }) => {
+        dispatch({ type: "SET_PROCESSED_CARDS", processedCards: cards });
+        setActiveStep((current) => current + 1);
+      })
+      .catch((error) => {
+        console.error(error);
+        alert("Error???");
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   };
 
+  // Handler for adding, editing, and removing cards
+  const handleCardChange = (action: Action) => {
+    dispatch(action);
+  };
+
+  // Save the processed cards
   const handleSave = async () => {
-    try {
-      await bulkCreateCards.mutateAsync({ langCode: "ko", input: cards });
-      setError(null);
-      // Reset input and cards for next entry
-      setInput("");
-      setCards([]);
-    } catch (e) {
-      setError("An error occurred while saving the cards.");
-    }
+    setLoading(true);
+    bulkCreateCards
+      .mutateAsync({
+        langCode: state.language,
+        input: state.processedCards,
+      })
+      .then(() => {
+        // Reset and start over:
+        dispatch({ type: "SET_PROCESSED_CARDS", processedCards: [] });
+        dispatch({ type: "SET_RAW_INPUT", rawInput: "" });
+        setActiveStep(0);
+      })
+      .catch((error) => {
+        console.error(error);
+        alert("Error???");
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   };
 
   return (
-    <Container>
-      <Paper>
-        <h1>Create New Cards</h1>
-        <p>Enter a list of cards below.</p>
-        <p>
-          <b>Pro Tip:</b> Edit your cards in a spreadsheet program like Excel or
-          Google Sheets, then copy and paste them here.
-        </p>
-        <h3>Example of card input:</h3>
-        <pre>그는 나를 웃게 했어요. He made me laugh.</pre>
-        <Textarea
-          minRows={10}
-          placeholder="Foreign language sentence <tab> English translation or example sentence"
-          value={input}
-          onChange={handleInputChange}
+    <Stepper active={activeStep} onStepClick={setActiveStep}>
+      <Stepper.Step label="Select language">
+        <Select
+          label="Language"
+          placeholder="Choose"
+          value={state.language}
+          onChange={(value) => value && handleLanguageChange(value as LangCode)}
+          data={[
+            { value: "ko", label: "Korean" },
+            // { value: "es", label: "Spanish" },
+            // { value: "it", label: "Italian" },
+            // { value: "fr", label: "French" },
+          ]}
         />
-        <Notification color={input.length > 3000 ? "red" : "blue"}>
-          {input.length}/3000 characters
-        </Notification>
-        {error && <Notification color="red">{error}</Notification>}
-        {buttonText && <Button onClick={handleContinue}>{buttonText}</Button>}
-        {cards.length > 0 && (
-          <>
-            {/* Implement the two-column layout for editing cards here */}
-            <Button onClick={handleSave}>Save</Button>
-          </>
-        )}
-      </Paper>
-    </Container>
+        <Button onClick={() => setActiveStep((current) => current + 1)}>
+          Next
+        </Button>
+      </Stepper.Step>
+      <Stepper.Step label="Input text">
+        <Textarea
+          label="Paste your text here"
+          autosize
+          minRows={5}
+          value={state.rawInput}
+          onChange={(event) =>
+            dispatch({
+              type: "SET_RAW_INPUT",
+              rawInput: event.currentTarget.value,
+            })
+          }
+        />
+        <Button onClick={handleRawInputSubmit} loading={loading}>
+          Process
+        </Button>
+      </Stepper.Step>
+      <Stepper.Step label="Edit cards">
+        {state.processedCards.map((card, index) => (
+          <Group key={index}>
+            <TextInput
+              value={card.term}
+              onChange={(event) =>
+                handleCardChange({
+                  type: "EDIT_CARD",
+                  card: { ...card, term: event.currentTarget.value },
+                  index,
+                })
+              }
+            />
+            <TextInput
+              value={card.definition}
+              onChange={(event) =>
+                handleCardChange({
+                  type: "EDIT_CARD",
+                  card: { ...card, definition: event.currentTarget.value },
+                  index,
+                })
+              }
+            />
+            <Button
+              color="red"
+              onClick={() => handleCardChange({ type: "REMOVE_CARD", index })}
+            >
+              Remove
+            </Button>
+          </Group>
+        ))}
+        <Button onClick={handleSave} loading={loading}>
+          Save
+        </Button>
+      </Stepper.Step>
+    </Stepper>
   );
-};
+}
 
-export default CreateCardPage;
+export default LanguageInputPage;

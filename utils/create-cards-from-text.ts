@@ -24,10 +24,14 @@ const SYSTEM_PROMPT = `
     }
 
   INSTRUCTIONS:
-  The user of a Korean flashcard app is attempting to enter
-  unstructured learning data into the app. Your task is to
-  structure this data into a JSON array of objects that
-  contain term/definition string attributes.
+  The user of a multi-language flashcard app for English speakers
+  is attempting to enter unstructured learning data into the app.
+  Your task is to structure this data into a JSON array of
+  objects that contain term/definition string attributes.
+
+  Your JSON output will be directly used in the app, so be
+  sure to verify the order of term/definition (definition is
+  always English), remove headers (if any), etc...
   `;
 
 /** Ingests a body of text containing card data and asynchronously returns
