@@ -23,5 +23,7 @@ export const flagCard = procedure
           flagged: true,
         },
       });
+    } else {
+      throw new Error(`=== Bad card ID provided.`);
     }
   });

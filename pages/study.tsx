@@ -164,10 +164,10 @@ function useBusinessLogic(state: State, dispatch: Dispatch<Action>) {
       let id = 0;
       switch (curr.type) {
         case "quiz":
-          id = curr.value.quizId;
+          id = curr.value.cardId;
           break;
         case "failure":
-          id = curr.value.id;
+          id = curr.value.cardId;
           break;
       }
       dispatch({ type: "FLAG_QUIZ", cardId: id });
