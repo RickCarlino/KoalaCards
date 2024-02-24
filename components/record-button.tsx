@@ -21,7 +21,7 @@ import { useUserSettings } from "./settings-provider";
  * const audioElement = new Audio(audioURL);
  * audioElement.play();
  */
-async function convertBlobToWav(
+export async function convertBlobToWav(
   blob: Blob,
   targetSampleRate = 16000,
 ): Promise<Blob> {
@@ -95,13 +95,14 @@ async function convertBlobToWav(
   return new Blob([view], { type: "audio/wav" });
 }
 
-function blobToBase64(blob: Blob): Promise<string> {
+export function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, _) => {
     const reader = new FileReader();
     reader.onloadend = () => resolve(reader.result as string);
     reader.readAsDataURL(blob);
   });
 }
+
 type Props = {
   onStart?: () => void;
   onRecord: (data: string) => void;

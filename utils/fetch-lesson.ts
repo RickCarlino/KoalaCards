@@ -79,7 +79,6 @@ const generateSpeechFile = async (
         audioEncoding: "MP3",
       },
     });
-    console.log(txt);
     if (!response.audioContent) {
       return errorReport("No audio content");
     }
@@ -152,6 +151,7 @@ export default async function getLessons(p: GetLessonInputParams) {
     );
     return {
       quizId: quiz.id,
+      cardId: quiz.cardId,
       definition: quiz.Card.definition,
       term: quiz.Card.term,
       repetitions: quiz.repetitions,

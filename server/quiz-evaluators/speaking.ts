@@ -7,16 +7,18 @@ app. Answer YES if the sentence is grammatically correct and
 in the specified language (ISO 639-1:2002 code '{{langCode}}').
 Answer NO if it doesn't follow the language's syntax and semantics
 or isn't in the specified language. Avoid vague responses.
-Incomplete sentences are OK if they are grammatically correct.`;
+Incomplete sentences are OK if they are grammatically correct.
+Do not grade spacing. You will be penalized for vague "NO"
+responses.`;
 
-const MEANING_PROMPT = `Grade the equivalence of a translation
-in a language learning app, given the ISO 639-1:2002 language
-code '{{langCode}}'. The original phrase is "{{definition}}",
-with an ideal translation example "{{term}}". Answer
-YES if the student's translation is equivalent, capturing the
-original meaning without changing key details. Answer NO if
-key details are altered or the meaning is not accurately
-conveyed. Avoid vague responses.`;
+const MEANING_PROMPT = `
+Sentence B: "{{term}}" ({{langCode}})
+Sentence C: "{{definition}}" (EN)
+
+When translated, is sentence A MOSTLY equivalent to sentence B and C?
+The meaning is more important than the words used.
+If "NO", why not?
+`;
 
 const gradeGrammar = async (
   userInput: string,
@@ -41,7 +43,7 @@ const gradeGrammar = async (
   }
 
   const meaningYn = await yesOrNo({
-    userInput,
+    userInput: `Sentence A: ${userInput} (${langCode})`,
     question: template(MEANING_PROMPT, tplData),
     userID,
   });

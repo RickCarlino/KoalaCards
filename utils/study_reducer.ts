@@ -1,22 +1,24 @@
 import { unique } from "radash";
 
 export type Quiz = {
-  quizId: number;
-  term: string;
-  definition: string;
-  repetitions: number;
-  lapses: number;
   lessonType: "listening" | "speaking";
+  definition: string;
+  term: string;
   audio: string;
+  cardId: number;
+  lapses: number;
+  quizId: number;
+  repetitions: number;
 };
 
-type Failure = {
+export type Failure = {
   id: number;
-  term: string;
+  cardId: number;
   definition: string;
   lessonType: string;
-  userTranscription: string;
   rejectionText: string;
+  term: string;
+  userTranscription: string;
   rollbackData?: {
     difficulty: number;
     stability: number;
@@ -24,28 +26,35 @@ type Failure = {
   };
 };
 
+type CurrentItem =
+  | { type: "quiz"; value: Quiz }
+  | { type: "failure"; value: Failure }
+  | { type: "loading"; value: undefined }
+  | { type: "none"; value: undefined };
+
 export type State = {
-  idsAwaitingGrades: number[];
-  quizIDsForLesson: number[];
-  idsWithErrors: number[];
   cardsById: Record<string, Quiz>;
-  isRecording: boolean;
   failures: Failure[];
-  totalCards: number;
-  quizzesDue: number;
+  isRecording: boolean;
+  idsAwaitingGrades: number[];
+  idsWithErrors: number[];
+  quizIDsForLesson: number[];
   newCards: number;
+  quizzesDue: number;
+  totalCards: number;
+  currentItem: CurrentItem;
 };
 
 type QuizResult = "error" | "fail" | "pass";
 
 export type Action =
   | { type: "DID_GRADE"; id: number; result: QuizResult }
-  | { type: "FLAG_QUIZ"; id: number }
+  | { type: "FLAG_QUIZ"; cardId: number }
   | { type: "ADD_FAILURE"; value: Failure }
   | { type: "REMOVE_FAILURE"; id: number }
-  | { type: "SET_RECORDING"; value: boolean }
+  | { type: "BEGIN_RECORDING" }
   | { type: "USER_GAVE_UP"; id: number }
-  | { type: "WILL_GRADE"; id: number }
+  | { type: "END_RECORDING"; id: number }
   | {
       type: "ADD_MORE";
       quizzes: Quiz[];
@@ -53,27 +62,6 @@ export type Action =
       quizzesDue: number;
       newCards: number;
     };
-
-export type CurrentQuiz = {
-  id: number;
-  definition: string;
-  term: string;
-  quizAudio: string;
-  lessonType: "speaking" | "listening";
-  repetitions: number;
-  lapses: number;
-};
-
-const stats = {
-  count: {
-    listening: 0,
-    speaking: 0,
-  },
-  win: {
-    listening: 0,
-    speaking: 0,
-  },
-};
 
 // Creates a unique array of numbers but keeps the head
 // in the 0th position to avoid changing the current quiz.
@@ -86,9 +74,31 @@ function betterUnique(input: number[]): number[] {
 }
 
 export function gotoNextQuiz(state: State): State {
+  console.log("=== Changing quizzes ===");
+  if (state.isRecording) {
+    throw new Error("Cannot change quizzes while recording");
+  }
+
+  const [nextFailure, ...restFailures] = state.failures;
+  if (nextFailure) {
+    return {
+      ...state,
+      currentItem: { type: "failure", value: nextFailure },
+      failures: restFailures,
+    };
+  }
+  const [nextQuizID, ...restQuizIDs] = state.quizIDsForLesson;
+  const nextQuiz = state.cardsById[nextQuizID];
+  if (nextQuiz) {
+    return {
+      ...state,
+      currentItem: { type: "quiz", value: nextQuiz },
+      quizIDsForLesson: betterUnique([...restQuizIDs, nextQuizID]),
+    };
+  }
   return {
     ...state,
-    quizIDsForLesson: betterUnique([...state.quizIDsForLesson.slice(1)]),
+    currentItem: { type: "none", value: undefined },
   };
 }
 
@@ -96,49 +106,33 @@ export const newQuizState = (state: Partial<State> = {}): State => {
   const cardsById = state.cardsById || {};
   const remainingQuizIDs = Object.keys(cardsById).map((x) => parseInt(x));
   return {
-    idsAwaitingGrades: [],
-    failures: [],
     /** Re-trying a quiz after an error is distracting.
      * Instead of re-quizzing on errors, we just remove them
      * from the lesson. */
     idsWithErrors: [],
+    idsAwaitingGrades: [],
+    failures: [],
     cardsById,
     quizIDsForLesson: remainingQuizIDs,
     isRecording: false,
     totalCards: 0,
     quizzesDue: 0,
     newCards: 0,
+    currentItem: { type: "loading", value: undefined },
     ...state,
   };
 };
 
-export function currentQuiz(state: State): CurrentQuiz | undefined {
-  const quizID = state.quizIDsForLesson[0];
-  const quiz = state.cardsById[quizID];
-  if (!quiz) {
-    return undefined;
-  }
-
-  return {
-    id: quiz.quizId,
-    definition: quiz.definition,
-    term: quiz.term,
-    quizAudio: quiz.audio,
-    lessonType: quiz.lessonType,
-    repetitions: quiz.repetitions,
-    lapses: quiz.lapses,
-  };
-}
-
 function removeCard(oldState: State, id: number): State {
   let quizIDsForLesson = oldState.quizIDsForLesson.filter((x) => x !== id);
   let cardsById: State["cardsById"] = {};
+  const old = oldState.cardsById;
   // A mark-and-sweep garbage collector of sorts.
   quizIDsForLesson.forEach((id) => {
-    cardsById[id] = oldState.cardsById[id];
+    cardsById[id] = old[id];
   });
   oldState.failures.forEach((failure) => {
-    cardsById[failure.id] = oldState.cardsById[failure.id];
+    cardsById[failure.id] = old[failure.id];
   });
   return {
     ...oldState,
@@ -148,7 +142,6 @@ function removeCard(oldState: State, id: number): State {
 }
 
 function reduce(state: State, action: Action): State {
-  console.log(`===== ` + action.type);
   console.log(action);
   switch (action.type) {
     case "ADD_FAILURE":
@@ -157,30 +150,31 @@ function reduce(state: State, action: Action): State {
         failures: [...state.failures, action.value],
       };
     case "REMOVE_FAILURE":
-      return {
+      return gotoNextQuiz({
         ...state,
         failures: state.failures.filter((x) => x.id !== action.id),
-      };
-    case "SET_RECORDING":
+      });
+    case "BEGIN_RECORDING":
       return {
         ...state,
-        isRecording: action.value,
+        isRecording: true,
       };
     case "USER_GAVE_UP":
-      const y = currentQuiz(state);
-      if (y) {
-        stats.count[y.lessonType] += 1;
+      const curr = state.currentItem;
+      if (curr.type !== "quiz") {
+        throw new Error("Expected a quiz");
       }
+      const card = curr.value;
       const nextState = gotoNextQuiz(state);
-      const card = state.cardsById[action.id];
       const state2 = {
         ...nextState,
         failures: [
           {
             id: action.id,
+            cardId: card.cardId,
             term: card.term,
             definition: card.definition,
-            lessonType: currentQuiz(state)?.lessonType ?? "listening",
+            lessonType: card.lessonType,
             userTranscription: "Empty response",
             rejectionText: "You hit the `Fail` button. Better luck next time!",
             rollbackData: undefined,
@@ -191,28 +185,17 @@ function reduce(state: State, action: Action): State {
       return removeCard(state2, action.id);
     case "FLAG_QUIZ":
       return gotoNextQuiz(state);
-    case "WILL_GRADE":
+    case "END_RECORDING":
+      const arr = [...state.idsAwaitingGrades, action.id];
+      const set = new Set(arr);
       return gotoNextQuiz({
         ...state,
-        idsAwaitingGrades: [action.id, ...state.idsAwaitingGrades],
+        isRecording: false,
+        idsAwaitingGrades: arr,
+        failures: state.failures.filter((x) => !set.has(x.id)),
+        quizIDsForLesson: state.quizIDsForLesson.filter((x) => !set.has(x)),
       });
     case "DID_GRADE":
-      const x = currentQuiz(state);
-      if (x) {
-        stats.count[x.lessonType] += 1;
-        if (action.result === "pass") {
-          stats.win[x.lessonType] += 1;
-        }
-        const keys: (keyof typeof stats.count)[] = ["listening", "speaking"];
-        keys.map((key) => {
-          const win = stats.win[key];
-          const count = stats.count[key];
-          const percentage = win / count;
-          console.log(
-            `${key}: ${Math.round(percentage * 100) || 0}% of ${count}`,
-          );
-        });
-      }
       const idsAwaitingGrades: number[] = [];
       state.idsAwaitingGrades.forEach((id) => {
         if (id !== action.id) {

@@ -20,7 +20,7 @@ let approvedUserIDs: string[] = [];
       if (superUsers.includes(email)) {
         approvedUserIDs.push(id);
       }
-      console.log(`=== ${email} / ${id} (last seen ${daysAgo} days ago)`);
+      console.log(`=== ${email} / ${id} (last seen ${daysAgo.toFixed(2)} days ago)`);
     });
   }))();
 

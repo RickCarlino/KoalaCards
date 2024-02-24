@@ -24,6 +24,7 @@ export const UserSettingsProvider = ({
   children,
 }: UserSettingsProviderProps) => {
   const [userSettings, setUserSettings] = useState<UserSettings>(EMPTY);
+  const [loading, setLoading] = useState(true);
   const getUserSettings = trpc.getUserSettings.useMutation();
 
   useEffect(() => {
@@ -39,7 +40,7 @@ export const UserSettingsProvider = ({
       if (userSettings) {
         setUserSettings(userSettings);
       }
-    }, err);
+    }, err).finally(() => setLoading(false));
   }, []);
 
   const clickLogin = () => {
@@ -65,9 +66,11 @@ export const UserSettingsProvider = ({
       </Grid>
     </Container>
   );
+  const a = <div>Loading...</div>;
+  const b = (userSettings.id ? children : login);
   return (
     <UserSettingsContext.Provider value={userSettings || EMPTY}>
-      {userSettings.id ? children : login}
+      {loading ? a : b}
     </UserSettingsContext.Provider>
   );
 };

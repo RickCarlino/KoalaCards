@@ -3,8 +3,12 @@ import { QuizEvaluator } from "./types";
 import { yesOrNo } from "@/utils/openai";
 
 const PROMPT = `
-ISO 639-1:2002 language code: '{{langCode}}'.
-Is the phrase above a correct translation of the phrase "{{term}}"?
+Sentence B: "{{term}}" ({{langCode}})
+Sentence C: "{{definition}}" (EN)
+
+When translated, is sentence A MOSTLY equivalent to sentence B and C?
+The meaning is more important than the words used.
+If "NO", why not?
 `;
 export const listening: QuizEvaluator = async (ctx) => {
   const { userInput, card } = ctx;
@@ -12,7 +16,7 @@ export const listening: QuizEvaluator = async (ctx) => {
   const tplData = { term, definition, langCode };
   const question = template(PROMPT, tplData);
   const listeningYN = await yesOrNo({
-    userInput,
+    userInput: `Sentence A: ${userInput} (EN)`,
     question,
     userID: ctx.userID,
   });

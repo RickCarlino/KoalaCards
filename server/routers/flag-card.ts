@@ -9,6 +9,7 @@ export const flagCard = procedure
     }),
   )
   .mutation(async ({ input, ctx }) => {
+    console.log("Need to add cardID to the input object");
     const card = await prismaClient.card.findFirst({
       where: {
         id: input.id,
