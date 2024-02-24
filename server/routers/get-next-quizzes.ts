@@ -69,7 +69,7 @@ export async function getLessonMeta(userId: string) {
 export const getNextQuizzes = procedure
   .input(z.object({}))
   .output(QuizList)
-  .query(async ({ ctx }) => {
+  .mutation(async ({ ctx }) => {
     const userId = (await getUserSettings(ctx.user?.id)).user.id;
     return {
       ...(await getLessonMeta(userId)),

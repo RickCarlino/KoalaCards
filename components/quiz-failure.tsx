@@ -39,36 +39,33 @@ export function QuizFailure(props: {
             <h1 style={{ fontSize: "24px", fontWeight: "bold" }}>Incorrect</h1>
           </header>
           <Text>You answered a previous question incorrectly.</Text>
-          <Grid.Col>
-            <Text>
-              <strong>Quiz type:</strong> {props.lessonType}
-            </Text>
-            <Text>
-              <strong>Term:</strong> {Youglish(props.term)}
-            </Text>
-            <Text>
-              <strong>Definition:</strong> {props.definition}
-            </Text>
-            <Text>
-              <strong>What you said:</strong>{" "}
-              {Youglish(props.userTranscription)}
-            </Text>
-            <Text>
-              <strong>Why it's wrong:</strong> {props.rejectionText}
-            </Text>
-            <Text>{linkToEditPage(props.cardId)}</Text>
-            <Button color="green" onClick={props.onClose}>
-              Continue - Z
-            </Button>
-            {props.onDiscard && (
-              <Button onClick={props.onDiscard} color="yellow">
-                Disagree - C
-              </Button>
-            )}
-            <Button onClick={props.onFlag} color="red">
-              Flag / Pause - B
-            </Button>
-          </Grid.Col>
+          <Text>
+            <strong>Quiz type:</strong> {props.lessonType}
+          </Text>
+          <Text>
+            <strong>Term:</strong> {Youglish(props.term)}
+          </Text>
+          <Text>
+            <strong>Definition:</strong> {props.definition}
+          </Text>
+          <Text>
+            <strong>What you said:</strong> {Youglish(props.userTranscription)}
+          </Text>
+          <Text>
+            <strong>Why it's wrong:</strong> {props.rejectionText}
+          </Text>
+          <Text>{linkToEditPage(props.cardId)}</Text>
+          <Grid grow justify="center" align="stretch" gutter="xs">
+            <Grid.Col span={4}>
+              <Button onClick={props.onClose}>Continue</Button>
+            </Grid.Col>
+            <Grid.Col span={4}>
+              <Button onClick={props.onDiscard}>Disagree</Button>
+            </Grid.Col>
+            <Grid.Col span={4}>
+              <Button onClick={props.onFlag}>Flag / Pause</Button>
+            </Grid.Col>
+          </Grid>
         </Grid.Col>
       </Grid>
     </Container>
