@@ -69,7 +69,6 @@ function processError(ctx: ResultContext): z.infer<typeof ERROR> {
 
 async function processPass(ctx: ResultContext): Promise<z.infer<typeof PASS>> {
   const grade = ctx.perceivedDifficulty;
-  console.log(`=== TODO: Need to actually select GOOD vs. EASY vs. Hard ===`);
   await setGrade(ctx.quiz, grade);
   return {
     grade: 0,

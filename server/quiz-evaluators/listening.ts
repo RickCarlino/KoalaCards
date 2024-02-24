@@ -8,6 +8,7 @@ Sentence C: "{{definition}}" (EN)
 
 When translated, is sentence A MOSTLY equivalent to sentence B and C?
 The meaning is more important than the words used.
+Punctuation and spacing do not matter for the sake of this question.
 If "NO", why not?
 `;
 export const listening: QuizEvaluator = async (ctx) => {

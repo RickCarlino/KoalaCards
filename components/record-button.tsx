@@ -116,7 +116,7 @@ export function RecordButton(props: Props) {
     const b64 = await blobToBase64(wav);
     if (props.lessonType !== "listening") {
       if (Math.random() < userSettings.playbackPercentage) {
-        await playAudio(b64); // TODO: Maybe move to onRecord callback in parent.
+        await playAudio(b64);
       }
     }
     props.onRecord(b64);
