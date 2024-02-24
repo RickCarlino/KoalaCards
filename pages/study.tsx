@@ -1,5 +1,5 @@
 import MicrophonePermissions from "@/components/microphone-permissions";
-import { playAudio } from "@/components/play-button";
+import { playAudio } from "@/components/play-audio";
 import { QuizFailure, linkToEditPage } from "@/components/quiz-failure";
 import { blobToBase64, convertBlobToWav } from "@/components/record-button";
 import { useUserSettings } from "@/components/settings-provider";
@@ -14,6 +14,7 @@ import {
 import { trpc } from "@/utils/trpc";
 import { useVoiceRecorder } from "@/utils/use-recorder";
 import { Button, Container, Grid } from "@mantine/core";
+import { useHotkeys } from "@mantine/hooks";
 import { Grade } from "femto-fsrs";
 import Link from "next/link";
 import { Dispatch, useEffect, useReducer, useState } from "react";
@@ -30,7 +31,7 @@ type QuizViewProps = {
   pendingFailures: number;
   isRecording: boolean;
   playQuizAudio: () => Promise<void>;
-  flagQuiz: (goToNext: boolean) => Promise<void>;
+  flagQuiz: () => Promise<void>;
   startRecording(grade: Grade): Promise<void>;
   stopRecording: () => Promise<void>;
 };
@@ -45,6 +46,16 @@ const HEADER_STYLES = {
 const HEADER: Record<string, string> = {
   speaking: "Say in target language",
   listening: "Translate to English",
+};
+
+const HOTKEYS: Record<string, string> = {
+  FAIL: "a",
+  HARD: "s",
+  GOOD: "d",
+  EASY: "f",
+  FLAG: "z",
+  PLAY: "v",
+  SUBMIT: "g",
 };
 
 function StudyHeader({ lessonType }: { lessonType: keyof typeof HEADER }) {
@@ -156,7 +167,7 @@ function useBusinessLogic(state: State, dispatch: Dispatch<Action>) {
       assertQuiz(quiz);
       await playAudio(quiz.audio);
     },
-    async flagQuiz(_: boolean) {
+    async flagQuiz() {
       if (!confirm("This will pause reviews. Are you sure?")) {
         return;
       }
@@ -263,36 +274,57 @@ function QuizView(props: QuizViewProps) {
   useEffect(() => {
     props.playQuizAudio();
   }, [props.quiz.quizId]);
+  useHotkeys([
+    [HOTKEYS.PLAY, props.playQuizAudio],
+    [HOTKEYS.FLAG, props.flagQuiz],
+    [
+      HOTKEYS.FAIL,
+      () => !props.isRecording && props.startRecording(Grade.AGAIN),
+    ],
+    [
+      HOTKEYS.HARD,
+      () => !props.isRecording && props.startRecording(Grade.HARD),
+    ],
+    [
+      HOTKEYS.GOOD,
+      () => !props.isRecording && props.startRecording(Grade.GOOD),
+    ],
+    [
+      HOTKEYS.EASY,
+      () => !props.isRecording && props.startRecording(Grade.EASY),
+    ],
+    [HOTKEYS.SUBMIT, () => props.isRecording && props.stopRecording()],
+  ]);
   let buttonCluster = (
     <Grid grow justify="center" align="stretch" gutter="xs">
       <Grid.Col span={6}>
         <Button fullWidth onClick={props.playQuizAudio}>
-          Play Audio
+          Play Audio ({HOTKEYS.PLAY})
         </Button>
       </Grid.Col>
       <Grid.Col span={6}>
-        <Button fullWidth onClick={() => props.flagQuiz(true)}>
-          Pause Reviews
+        <Button fullWidth onClick={props.flagQuiz}>
+          Pause Reviews ({HOTKEYS.FLAG})
         </Button>
       </Grid.Col>
       <Grid.Col span={GRID_SIZE}>
         <Button fullWidth onClick={() => props.startRecording(Grade.AGAIN)}>
-          Fail
+          Fail ({HOTKEYS.FAIL})
         </Button>
       </Grid.Col>
       <Grid.Col span={GRID_SIZE}>
         <Button fullWidth onClick={() => props.startRecording(Grade.HARD)}>
-          Hard
+          Hard ({HOTKEYS.HARD})
         </Button>
       </Grid.Col>
       <Grid.Col span={GRID_SIZE}>
         <Button fullWidth onClick={() => props.startRecording(Grade.GOOD)}>
-          Good
+          Good ({HOTKEYS.GOOD})
         </Button>
       </Grid.Col>
       <Grid.Col span={GRID_SIZE}>
         <Button fullWidth onClick={() => props.startRecording(Grade.EASY)}>
-          Easy
+          Easy ({HOTKEYS.EASY})
         </Button>
       </Grid.Col>
     </Grid>
@@ -303,7 +335,7 @@ function QuizView(props: QuizViewProps) {
       <Grid grow justify="center" align="stretch" gutter="xs">
         <Grid.Col span={12}>
           <Button fullWidth onClick={props.stopRecording}>
-            Stop Recording
+            Stop Recording ({HOTKEYS.SUBMIT})
           </Button>
         </Grid.Col>
       </Grid>
@@ -361,7 +393,7 @@ function LoadedStudyPage(props: QuizData) {
           onClose={() => {
             everything.dispatch({ type: "REMOVE_FAILURE", id: failure.id });
           }}
-          onFlag={() => everything.flagQuiz(true)}
+          onFlag={everything.flagQuiz}
         />
       );
       break;

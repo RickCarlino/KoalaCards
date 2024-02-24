@@ -1,9 +1,3 @@
-import { Button } from "@mantine/core";
-import { useHotkeys } from "@mantine/hooks";
-import { playAudio } from "./play-button";
-import { useVoiceRecorder } from "@/utils/use-recorder";
-import { useUserSettings } from "./settings-provider";
-
 /**
  * Converts an MP4 audio Blob to a single-channel (mono) WAV audio Blob.
  *
@@ -101,56 +95,4 @@ export function blobToBase64(blob: Blob): Promise<string> {
     reader.onloadend = () => resolve(reader.result as string);
     reader.readAsDataURL(blob);
   });
-}
-
-type Props = {
-  onStart?: () => void;
-  onRecord: (data: string) => void;
-  lessonType: string;
-  disabled?: boolean;
-};
-export function RecordButton(props: Props) {
-  const userSettings = useUserSettings();
-  const { isRecording, stop, start } = useVoiceRecorder(async (data) => {
-    const wav = await convertBlobToWav(data);
-    const b64 = await blobToBase64(wav);
-    if (props.lessonType !== "listening") {
-      if (Math.random() < userSettings.playbackPercentage) {
-        await playAudio(b64);
-      }
-    }
-    props.onRecord(b64);
-  });
-  const doStart = () => {
-    if (!props.disabled) {
-      props.onStart?.();
-      start();
-    }
-  };
-  useHotkeys([
-    [
-      "v",
-      () => {
-        (isRecording ? stop : doStart)();
-      },
-    ],
-  ]);
-  let buttonText = "Recor[d]";
-  switch (props.lessonType) {
-    case "listening":
-      buttonText = "Say in English";
-      break;
-    case "speaking":
-      buttonText = "Translate";
-      break;
-  }
-  return isRecording ? (
-    <Button onClick={stop} color="red" fullWidth disabled={props.disabled}>
-      [V] Submit Answer
-    </Button>
-  ) : (
-    <Button onClick={start} fullWidth disabled={props.disabled}>
-      [V] {buttonText}
-    </Button>
-  );
 }

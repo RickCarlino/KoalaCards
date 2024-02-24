@@ -1,6 +1,3 @@
-import { Button } from "@mantine/core";
-import { useHotkeys } from "@mantine/hooks";
-
 let currentlyPlaying = false;
 
 const playAudioBuffer = (
@@ -47,32 +44,3 @@ export const playAudio = (urlOrDataURI: string): Promise<void> => {
     );
   });
 };
-
-type PlayButtonProps = { dataURI: string };
-/** A React component  */
-export function PlayButton({ dataURI }: PlayButtonProps) {
-  const playSound = async () => {
-    if (dataURI) {
-      await playAudio(dataURI);
-    }
-  };
-  useHotkeys([["c", playSound]]);
-
-  if (!dataURI) {
-    return (
-      <>
-        <Button disabled fullWidth>
-          Loading...
-        </Button>
-      </>
-    );
-  }
-
-  return (
-    <>
-      <Button onClick={playSound} fullWidth>
-        [C] Play Sentence
-      </Button>
-    </>
-  );
-}
