@@ -11,6 +11,7 @@ import {
   newQuizState,
   quizReducer,
 } from "@/koala/study_reducer";
+import { timeUntil } from "@/koala/time-until";
 import { trpc } from "@/koala/trpc-config";
 import { useVoiceRecorder } from "@/koala/use-recorder";
 import { Button, Container, Grid } from "@mantine/core";
@@ -364,6 +365,7 @@ function QuizView(props: QuizViewProps) {
     );
   }
 
+  const when = quiz.lastReview ? timeUntil(quiz.lastReview) : "never";
   return (
     <>
       <StudyHeader
@@ -371,9 +373,10 @@ function QuizView(props: QuizViewProps) {
         langCode={props.quiz.langCode}
       />
       {buttonCluster}
-      <p>Card #{quiz.quizId} quiz</p>
+      <p>Quiz #{quiz.quizId}</p>
       <p>{quiz.repetitions} repetitions</p>
       <p>{quiz.lapses} lapses</p>
+      <p>Last seen: {when}</p>
       <p>
         {props.totalCards} cards total, {props.quizzesDue} due, {props.newCards}{" "}
         new, {props.awaitingGrades} awaiting grades, {props.queueSize} in study
@@ -423,6 +426,11 @@ function LoadedStudyPage(props: QuizData) {
       );
       break;
     case "none":
+      const willGrade = state.idsAwaitingGrades.length;
+      if (willGrade) {
+        el = <div>Waiting for the server to grade ${willGrade} quizzes.</div>;
+        break;
+      }
       el = <NoQuizDue />;
       break;
     case "loading":

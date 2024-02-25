@@ -1,9 +1,5 @@
-import { z } from "zod";
-import { procedure } from "../trpc-procedure";
-import { OLD_BACKUP_SCHEMA } from "@/pages/cards";
 import { Grade, createDeck } from "femto-fsrs";
 import { prismaClient } from "../prisma-client";
-import { getUserSettings } from "../auth-helpers";
 import { Quiz } from "@prisma/client";
 import { timeUntil } from "@/koala/time-until";
 
@@ -115,53 +111,3 @@ export async function setGrade(
     `Quiz ${data.data.id} next review: ${timeUntil(data.data.nextReview)}`,
   );
 }
-
-export const importCards = procedure
-  .input(OLD_BACKUP_SCHEMA)
-  .output(z.object({ count: z.number() }))
-  .mutation(async ({ ctx, input }) => {
-    const userId = (await getUserSettings(ctx.user?.id)).user.id;
-    let count = 0;
-    for (const x of input) {
-      const card = {
-        term: x.term,
-        definition: x.definition,
-        gender: "N",
-      };
-      const where = { userId, term: card.term };
-      const existingCard = await prismaClient.card.count({
-        where,
-      });
-      if (!existingCard) {
-        const { id: cardId } = await prismaClient.card.create({
-          data: {
-            flagged: false,
-            definition: card.definition,
-            term: card.term,
-            langCode: "ko",
-            userId,
-            gender: "N",
-          },
-        });
-
-        ["listening", "speaking"].map(async (quizType) => {
-          await prismaClient.quiz.create({
-            data: {
-              cardId: cardId,
-              quizType,
-              stability: 0,
-              difficulty: 0,
-              firstReview: 0,
-              lastReview: 0,
-              nextReview: 0,
-              lapses: 0,
-              repetitions: 0,
-            },
-          });
-        });
-        count = count + 1;
-      }
-    }
-
-    return { count };
-  });

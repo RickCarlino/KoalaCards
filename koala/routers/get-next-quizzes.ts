@@ -14,6 +14,7 @@ export const Quiz = z.object({
   lessonType: z.union([z.literal("listening"), z.literal("speaking")]),
   audio: z.string(),
   langCode: z.string(),
+  lastReview: z.number(),
 });
 
 const QuizList = z.object({

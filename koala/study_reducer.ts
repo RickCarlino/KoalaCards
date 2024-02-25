@@ -10,6 +10,7 @@ export type Quiz = {
   quizId: number;
   repetitions: number;
   langCode: string;
+  lastReview: number;
 };
 
 export type Failure = {

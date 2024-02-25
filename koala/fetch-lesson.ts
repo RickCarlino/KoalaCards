@@ -217,6 +217,7 @@ export default async function getLessons(p: GetLessonInputParams) {
       lessonType: quiz.quizType as "listening" | "speaking",
       audio,
       langCode: quiz.Card.langCode,
+      lastReview: quiz.lastReview || 0,
     };
   });
 }

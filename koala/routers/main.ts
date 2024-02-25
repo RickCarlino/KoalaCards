@@ -12,7 +12,6 @@ import { getNextQuiz, getNextQuizzes } from "./get-next-quizzes";
 import { getOneCard } from "./get-one-card";
 import { getUserSettings } from "./get-user-settings";
 import { gradeQuiz } from "./grade-quiz";
-import { importCards } from "./import-cards";
 import { manuallyGrade } from "./manually-grade";
 import { parseCards } from "./parse-cards";
 import { rollbackGrade } from "./rollback-grade";
@@ -32,7 +31,6 @@ export const appRouter = router({
   getOneCard,
   getUserSettings,
   gradeQuiz,
-  importCards,
   manuallyGrade,
   parseCards,
   rollbackGrade,
