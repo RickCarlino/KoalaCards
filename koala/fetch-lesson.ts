@@ -175,7 +175,7 @@ export default async function getLessons(p: GetLessonInputParams) {
     where: {
       Card: {
         userId: p.userId,
-        flagged: false,
+        flagged: { not: true },
       },
       id: {
         notIn: p.notIn,
@@ -190,10 +190,7 @@ export default async function getLessons(p: GetLessonInputParams) {
         lt: yesterday,
       },
     },
-    orderBy: [
-      { Card: { langCode: "desc" } },
-      { nextReview: "desc" },
-    ],
+    orderBy: [{ Card: { langCode: "desc" } }, { nextReview: "desc" }],
     // Don't select quizzes from the same card.
     // Prevents hinting.
     distinct: ["cardId"],
