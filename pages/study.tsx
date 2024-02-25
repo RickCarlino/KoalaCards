@@ -48,7 +48,7 @@ const HEADER: Record<string, string> = {
   listening: "Translate to English",
 };
 
-const HOTKEYS: Record<string, string> = {
+export const HOTKEYS: Record<string, string> = {
   FAIL: "a",
   HARD: "s",
   GOOD: "d",
@@ -56,6 +56,8 @@ const HOTKEYS: Record<string, string> = {
   FLAG: "z",
   PLAY: "v",
   SUBMIT: "g",
+  DISAGREE: "x",
+  CONTINUE: "c",
 };
 
 type StudyHeaderProps = {
@@ -274,9 +276,26 @@ function NoQuizDue(_: {}) {
   );
 }
 
+const GRID_SIZE = 2;
+
+type HotkeyButtonProps = {
+  hotkey: string;
+  label: string;
+  onClick: () => void;
+};
+
+function HotkeyButton(props: HotkeyButtonProps) {
+  return (
+    <Grid.Col span={GRID_SIZE}>
+      <Button fullWidth onClick={props.onClick}>
+        {props.label} ({props.hotkey})
+      </Button>
+    </Grid.Col>
+  );
+}
+
 function QuizView(props: QuizViewProps) {
   const { quiz } = props;
-  const GRID_SIZE = 2;
   useEffect(() => {
     props.playQuizAudio();
   }, [props.quiz.quizId]);
@@ -301,6 +320,28 @@ function QuizView(props: QuizViewProps) {
     ],
     [HOTKEYS.SUBMIT, () => props.isRecording && props.stopRecording()],
   ]);
+  const buttons: HotkeyButtonProps[] = [
+    {
+      onClick: () => props.startRecording(Grade.AGAIN),
+      label: "FAIL",
+      hotkey: HOTKEYS.FAIL,
+    },
+    {
+      onClick: () => props.startRecording(Grade.HARD),
+      label: "Hard",
+      hotkey: HOTKEYS.HARD,
+    },
+    {
+      onClick: () => props.startRecording(Grade.GOOD),
+      label: "Good",
+      hotkey: HOTKEYS.GOOD,
+    },
+    {
+      onClick: () => props.startRecording(Grade.EASY),
+      label: "Easy",
+      hotkey: HOTKEYS.EASY,
+    },
+  ];
   let buttonCluster = (
     <Grid grow justify="center" align="stretch" gutter="xs">
       <Grid.Col span={6}>
@@ -313,26 +354,9 @@ function QuizView(props: QuizViewProps) {
           Pause Reviews ({HOTKEYS.FLAG})
         </Button>
       </Grid.Col>
-      <Grid.Col span={GRID_SIZE}>
-        <Button fullWidth onClick={() => props.startRecording(Grade.AGAIN)}>
-          Fail ({HOTKEYS.FAIL})
-        </Button>
-      </Grid.Col>
-      <Grid.Col span={GRID_SIZE}>
-        <Button fullWidth onClick={() => props.startRecording(Grade.HARD)}>
-          Hard ({HOTKEYS.HARD})
-        </Button>
-      </Grid.Col>
-      <Grid.Col span={GRID_SIZE}>
-        <Button fullWidth onClick={() => props.startRecording(Grade.GOOD)}>
-          Good ({HOTKEYS.GOOD})
-        </Button>
-      </Grid.Col>
-      <Grid.Col span={GRID_SIZE}>
-        <Button fullWidth onClick={() => props.startRecording(Grade.EASY)}>
-          Easy ({HOTKEYS.EASY})
-        </Button>
-      </Grid.Col>
+      {buttons.map((p) => (
+        <HotkeyButton {...p} key={p.label} />
+      ))}
     </Grid>
   );
 

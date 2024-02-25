@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc";
+import { getCardOrFail } from "@/utils/get-card-or-fail";
 
 export const flagCard = procedure
   .input(
@@ -10,20 +11,11 @@ export const flagCard = procedure
   )
   .mutation(async ({ input, ctx }) => {
     console.log("Need to add cardID to the input object");
-    const card = await prismaClient.card.findFirst({
-      where: {
-        id: input.id,
-        userId: ctx.user?.id || "0",
+    const card = await getCardOrFail(input.id, ctx.user?.id);
+    await prismaClient.card.update({
+      where: { id: card.id },
+      data: {
+        flagged: true,
       },
     });
-    if (card) {
-      await prismaClient.card.update({
-        where: { id: card.id },
-        data: {
-          flagged: true,
-        },
-      });
-    } else {
-      throw new Error(`=== Bad card ID provided.`);
-    }
   });

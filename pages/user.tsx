@@ -85,13 +85,13 @@ export default function UserSettingsPage(props: Props) {
   const stats = props.stats;
   const labels: [keyof typeof stats, string][] = [
     ["quizzesDue", "Cards due now"],
-    ["uniqueCardsLast24Hours", "Cards studied last 24 hours"],
-    ["newCardsLast24Hours", "New cards studied last 24 hours"],
-    ["uniqueCardsLastWeek", "Cards studied this week"],
-    ["newCardsLastWeek", "New cards studied this week"],
-    ["cardsDueNext24Hours", "Cards due next 24 hours"],
+    // ["uniqueCardsLast24Hours", "Cards studied last 24 hours"],
+    // ["newCardsLast24Hours", "New cards studied last 24 hours"],
+    // ["uniqueCardsLastWeek", "Cards studied this week"],
+    // ["newCardsLastWeek", "New cards studied this week"],
+    // ["cardsDueNext24Hours", "Cards due next 24 hours"],
     ["totalCards", "total cards studied"],
-    ["newCards", "new cards in deck"],
+    // ["newCards", "new cards in deck"],
     ["globalUsers", "users on this server"],
   ];
 
@@ -99,7 +99,7 @@ export default function UserSettingsPage(props: Props) {
     <Container size="s">
       <Title order={1}>User Settings</Title>
       <form onSubmit={handleSubmit}>
-        <NumberInput
+        {/* <NumberInput
           label="Audio playback speed percentage (50%-200%)"
           id="playbackSpeed"
           name="playbackSpeed"
@@ -118,7 +118,7 @@ export default function UserSettingsPage(props: Props) {
           onChange={(value) => handleChange(value, "cardsPerDayMax")}
           min={1}
           required
-        />
+        /> */}
         <NumberInput
           label="Percentage of user recorded audio played back after a speaking test."
           id="playbackPercentage"

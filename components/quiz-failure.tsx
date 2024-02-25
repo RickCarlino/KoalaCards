@@ -1,3 +1,4 @@
+import { HOTKEYS } from "@/pages/study";
 import { Button, Grid, Text, Container } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import Link from "next/link";
@@ -19,9 +20,9 @@ export function QuizFailure(props: {
   onClose: () => void;
 }) {
   useHotkeys([
-    ["Z", () => props.onClose()],
-    ["B", props.onFlag],
-    ["C", () => props.onDiscard?.()],
+    [HOTKEYS.CONTINUE, () => props.onClose()],
+    [HOTKEYS.FLAG, props.onFlag],
+    [HOTKEYS.DISAGREE, () => props.onDiscard?.()],
   ]);
   return (
     <Container size="xs">
@@ -56,13 +57,19 @@ export function QuizFailure(props: {
           <Text>{linkToEditPage(props.cardId)}</Text>
           <Grid grow justify="center" align="stretch" gutter="xs">
             <Grid.Col span={4}>
-              <Button onClick={props.onClose}>Continue</Button>
+              <Button onClick={props.onClose}>
+                Continue ({HOTKEYS.CONTINUE})
+              </Button>
             </Grid.Col>
             <Grid.Col span={4}>
-              <Button onClick={props.onDiscard}>Disagree</Button>
+              <Button onClick={props.onDiscard}>
+                Disagree ({HOTKEYS.DISAGREE})
+              </Button>
             </Grid.Col>
             <Grid.Col span={4}>
-              <Button onClick={props.onFlag}>Flag / Pause</Button>
+              <Button onClick={props.onFlag}>
+                Flag / Pause ({HOTKEYS.FLAG})
+              </Button>
             </Grid.Col>
           </Grid>
         </Grid.Col>
