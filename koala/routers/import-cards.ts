@@ -113,10 +113,12 @@ export async function setGrade(
       ...calculateSchedulingData(quiz, grade, now),
     },
   };
-  console.log(
-    `(${data.data.id}) Update grade. Next review: ${timeUntil(data.data.nextReview)}`,
-  );
-  await prismaClient.quiz.update(data);
+  const ok = () =>
+    console.log(
+      `Quiz ${data.data.id} next review: ${timeUntil(data.data.nextReview)}`,
+    );
+  const no = (error: any) => console.error("Error setting grade", error);
+  await prismaClient.quiz.update(data).then(ok, no);
 }
 
 export const importCards = procedure

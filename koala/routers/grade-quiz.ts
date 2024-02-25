@@ -155,7 +155,9 @@ export const gradeQuiz = procedure
         return processPass(resultContext);
       case "fail":
         return processFailure(resultContext);
-      default:
+      case "error":
         return processError(resultContext);
+      default:
+        throw new Error(`Unknown result: ${result.result}`);
     }
   });

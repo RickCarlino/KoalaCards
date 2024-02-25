@@ -201,7 +201,6 @@ export default async function getLessons(p: GetLessonInputParams) {
   });
 
   return await map(quizzes, async (quiz) => {
-    console.log(`TODO: Lesson speed.`);
     const audio = await generateLessonAudio({
       card: quiz.Card,
       lessonType: quiz.quizType as LessonType,

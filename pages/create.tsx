@@ -37,6 +37,37 @@ const INITIAL_STATE: State = {
   processedCards: [],
 };
 
+const SAMPLES = {
+  ko: [
+    "안녕하세요? (Hello, how are you?)",
+    "저는 학생입니다. (I am a student.)",
+    "한국어를 배우고 있어요. (I am learning Korean.)",
+    "감사합니다! (Thank you!)",
+    "이것은 얼마입니까? (How much is this?)",
+  ].join("\n"),
+  es: [
+    "¿Cómo estás? (How are you?)",
+    "Soy profesor. (I am a teacher.)",
+    "Estoy aprendiendo español. (I am learning Spanish.)",
+    "¡Muchas gracias! (Thank you very much!)",
+    "¿Cuánto cuesta esto? (How much does this cost?)",
+  ].join("\n"),
+  it: [
+    "Come stai? (How are you?)",
+    "Sono uno studente. (I am a student.)",
+    "Sto imparando l'italiano. (I am learning Italian.)",
+    "Grazie mille! (Thank",
+    "you very much!)",
+    "Quanto costa questo? (How much does this cost?)",
+  ].join("\n"),
+  fr: [
+    "Comment ça va ? (How are you?)",
+    "Je suis enseignant. (I am a teacher.)",
+    "J'apprends le français. (I am learning French.)",
+    "Merci beaucoup ! (Thank you very much!)",
+    "Combien coûte ceci ? (How much does this cost?)",
+  ].join("\n"),
+};
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case "ADD_CARD":
@@ -126,8 +157,14 @@ function LanguageInputPage() {
       });
   };
 
+  const pasteExample = () => {
+    dispatch({
+      type: "SET_RAW_INPUT",
+      rawInput: SAMPLES[state.language] || SAMPLES["ko"],
+    });
+  };
   return (
-    <Container size="m">
+    <Container size="sm">
       <h1>Create New Cards</h1>
       <Stepper active={activeStep} onStepClick={setActiveStep}>
         <Stepper.Step label="Select language">
@@ -171,35 +208,9 @@ function LanguageInputPage() {
             phrase and an English translation. KoalaSRS will figure out the
             rest.
           </p>
-          <p>Not sure what to add? Try some of these:</p>
-          <h3>한국어</h3>
-          <p>
-            안녕하세요? (Hello, how are you?) 저는 학생입니다. (I am a student.)
-            한국어를 배우고 있어요. (I am learning Korean.) 감사합니다! (Thank
-            you!) 이것은 얼마입니까? (How much is this?)
-          </p>
-
-          <h3>Español</h3>
-          <p>
-            ¿Cómo estás? (How are you?) Soy profesor. (I am a teacher.) Estoy
-            aprendiendo español. (I am learning Spanish.) ¡Muchas gracias!
-            (Thank you very much!) ¿Cuánto cuesta esto? (How much does this
-            cost?)
-          </p>
-          <h3>Italiano</h3>
-          <p>
-            Come stai? (How are you?) Sono uno studente. (I am a student.) Sto
-            imparando l'italiano. (I am learning Italian.) Grazie mille! (Thank
-            you very much!) Quanto costa questo? (How much does this cost?)
-          </p>
-
-          <h3>Français</h3>
-          <p>
-            Comment ça va ? (How are you?) Je suis enseignant. (I am a teacher.)
-            J'apprends le français. (I am learning French.) Merci beaucoup !
-            (Thank you very much!) Combien coûte ceci ? (How much does this
-            cost?)
-          </p>
+          <Button size="xs" onClick={pasteExample}>
+            Paste Example Input
+          </Button>
         </Stepper.Step>
         <Stepper.Step label="Edit cards">
           {state.processedCards.map((card, index) => (
