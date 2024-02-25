@@ -1,6 +1,7 @@
 import { YesOrNo, yesOrNo } from "@/koala/openai";
 import { QuizEvaluator } from "./types";
 import { template } from "radash";
+import { FOOTER } from "./footer";
 
 const GRAMMAR_PROMPT = `Grade a sentence from a language learning
 app. Answer YES if the sentence is grammatically correct and
@@ -9,7 +10,7 @@ Answer NO if it doesn't follow the language's syntax and semantics
 or isn't in the specified language. Avoid vague responses.
 Incomplete sentences are OK if they are grammatically correct.
 Do not grade spacing. You will be penalized for vague "NO"
-responses.`;
+responses.` + FOOTER;
 
 const MEANING_PROMPT = `
 Sentence B: "{{term}}" ({{langCode}})

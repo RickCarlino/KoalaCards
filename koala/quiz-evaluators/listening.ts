@@ -1,6 +1,7 @@
 import { template } from "radash";
 import { QuizEvaluator } from "./types";
 import { yesOrNo } from "@/koala/openai";
+import { FOOTER } from "./footer";
 
 const PROMPT = `
 Sentence B: "{{term}}" ({{langCode}})
@@ -10,7 +11,7 @@ When translated, is sentence A equivalent in meaning to sentence B and C?
 The meaning is more important than the words used.
 Punctuation and spacing do not matter for the sake of this question.
 If "NO", why not?
-`;
+` + FOOTER;
 export const listening: QuizEvaluator = async (ctx) => {
   const { userInput, card } = ctx;
   const { term, definition, langCode } = card;
