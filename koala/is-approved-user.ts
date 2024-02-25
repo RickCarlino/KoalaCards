@@ -1,4 +1,4 @@
-import { prismaClient } from "@/server/prisma-client";
+import { prismaClient } from "@/koala/prisma-client";
 
 // Users that are allowed to use GPT-4, etc..
 export const superUsers = (process.env.AUTHORIZED_EMAILS || "")

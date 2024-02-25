@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { prismaClient } from "../prisma-client";
-import { procedure } from "../trpc";
+import { procedure } from "../trpc-procedure";
 import { getUserSettings } from "../auth-helpers";
-import { errorReport } from "@/utils/error-report";
+import { errorReport } from "@/koala/error-report";
 
 export const editCard = procedure
   .input(

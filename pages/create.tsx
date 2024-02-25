@@ -7,7 +7,7 @@ import {
   Group,
   TextInput,
 } from "@mantine/core";
-import { trpc } from "@/utils/trpc";
+import { trpc } from "@/koala/trpc-config";
 type ProcessedCard = {
   term: string;
   definition: string;

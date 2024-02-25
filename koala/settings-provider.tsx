@@ -1,4 +1,4 @@
-import { trpc } from "@/utils/trpc";
+import { trpc } from "@/koala/trpc-config";
 import { Container, Grid, Center, Button } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { UserSettings } from "@prisma/client";

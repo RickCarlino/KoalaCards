@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { procedure } from "../trpc";
-import { getCardOrFail } from "@/utils/get-card-or-fail";
+import { procedure } from "../trpc-procedure";
+import { getCardOrFail } from "@/koala/get-card-or-fail";
 
 export const getOneCard = procedure
   .input(

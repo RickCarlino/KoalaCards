@@ -1,11 +1,11 @@
 import { z } from "zod";
-import { procedure } from "../trpc";
+import { procedure } from "../trpc-procedure";
 import { OLD_BACKUP_SCHEMA } from "@/pages/cards";
 import { Grade, createDeck } from "femto-fsrs";
 import { prismaClient } from "../prisma-client";
 import { getUserSettings } from "../auth-helpers";
 import { Quiz } from "@prisma/client";
-import { timeUntil } from "@/utils/time-until";
+import { timeUntil } from "@/koala/time-until";
 
 type QuizGradingFields =
   | "difficulty"

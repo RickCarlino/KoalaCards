@@ -2,11 +2,11 @@ import "@mantine/core/styles.css";
 import { AppProps } from "next/app";
 import Head from "next/head";
 import { MantineProvider } from "@mantine/core";
-import { trpc } from "@/utils/trpc";
+import { trpc } from "@/koala/trpc-config";
 import { SessionProvider } from "next-auth/react";
 import Navbar from "./_nav";
 import { Notifications } from "@mantine/notifications";
-import { UserSettingsProvider } from "@/components/settings-provider";
+import { UserSettingsProvider } from "@/koala/settings-provider";
 
 function App(props: AppProps) {
   const { Component, pageProps } = props;

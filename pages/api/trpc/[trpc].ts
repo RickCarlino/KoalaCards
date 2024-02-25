@@ -1,8 +1,8 @@
 import * as trpcNext from "@trpc/server/adapters/next";
-import { appRouter } from "../../../server/routers/main";
+import { appRouter } from "../../../koala/routers/main";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]";
-import { prismaClient } from "@/server/prisma-client";
+import { prismaClient } from "@/koala/prisma-client";
 
 export default trpcNext.createNextApiHandler({
   router: appRouter,

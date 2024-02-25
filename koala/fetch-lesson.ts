@@ -4,7 +4,7 @@ import { existsSync, mkdir, readFileSync, writeFileSync } from "fs";
 import path from "path";
 import { draw, map, template } from "radash";
 import { errorReport } from "./error-report";
-import { prismaClient } from "@/server/prisma-client";
+import { prismaClient } from "@/koala/prisma-client";
 import { Card } from "@prisma/client";
 
 type LessonType = "listening" | "speaking";

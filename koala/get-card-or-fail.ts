@@ -1,4 +1,4 @@
-import { prismaClient } from "@/server/prisma-client";
+import { prismaClient } from "@/koala/prisma-client";
 import { errorReport } from "./error-report";
 
 export async function getCardOrFail(id: number, userId?: string) {

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { procedure } from "../trpc";
+import { procedure } from "../trpc-procedure";
 import { BACKUP_SCHEMA } from "@/pages/cards";
 
 export const exportCards = procedure

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prismaClient } from "../prisma-client";
-import { procedure } from "../trpc";
+import { procedure } from "../trpc-procedure";
 
 export const bulkCreateCards = procedure
   .input(

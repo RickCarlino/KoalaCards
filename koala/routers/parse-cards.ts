@@ -1,6 +1,6 @@
-import { createCardsFromText } from "@/utils/create-cards-from-text";
+import { createCardsFromText } from "@/koala/create-cards-from-text";
 import { z } from "zod";
-import { procedure } from "../trpc";
+import { procedure } from "../trpc-procedure";
 
 export const parseCards = procedure
   .input(

@@ -1,9 +1,9 @@
-import { errorReport } from "@/utils/error-report";
+import { errorReport } from "@/koala/error-report";
 import { z } from "zod";
 import { getUserSettings } from "../auth-helpers";
 import { prismaClient } from "../prisma-client";
-import { procedure } from "../trpc";
-import { timeUntil } from "@/utils/time-until";
+import { procedure } from "../trpc-procedure";
+import { timeUntil } from "@/koala/time-until";
 
 export const rollbackGrade = procedure
   .input(

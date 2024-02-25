@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { procedure } from "../trpc";
-import getLessons from "@/utils/fetch-lesson";
+import { procedure } from "../trpc-procedure";
+import getLessons from "@/koala/fetch-lesson";
 import { getUserSettings } from "../auth-helpers";
 import { prismaClient } from "../prisma-client";
 

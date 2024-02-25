@@ -1,4 +1,4 @@
-import { YesOrNo, yesOrNo } from "@/utils/openai";
+import { YesOrNo, yesOrNo } from "@/koala/openai";
 import { QuizEvaluator } from "./types";
 import { template } from "radash";
 

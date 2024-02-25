@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { procedure } from "../trpc";
+import { procedure } from "../trpc-procedure";
 import { getUserSettings as gus } from "../auth-helpers";
 
 export const getUserSettings = procedure

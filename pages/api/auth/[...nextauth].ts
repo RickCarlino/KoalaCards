@@ -1,4 +1,4 @@
-import { prismaClient } from "@/server/prisma-client";
+import { prismaClient } from "@/koala/prisma-client";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import NextAuth, { AuthOptions } from "next-auth";
 import EmailProvider from "next-auth/providers/email";

@@ -1,5 +1,5 @@
 import React from "react";
-import { trpc } from "@/utils/trpc";
+import { trpc } from "@/koala/trpc-config";
 
 /** The faucet component has a button that when clicked
  * calls the "faucet" trpc mutation:

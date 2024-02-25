@@ -1,4 +1,4 @@
-import { router } from "../trpc";
+import { router } from "../trpc-procedure";
 import { bulkCreateCards } from "./bulk-create-cards";
 import { deleteCard } from "./delete-card";
 import { deleteFlaggedCards } from "./delete-flagged-card";

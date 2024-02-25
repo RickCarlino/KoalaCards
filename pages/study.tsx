@@ -1,8 +1,8 @@
-import MicrophonePermissions from "@/components/microphone-permissions";
-import { playAudio } from "@/components/play-audio";
-import { QuizFailure, linkToEditPage } from "@/components/quiz-failure";
-import { blobToBase64, convertBlobToWav } from "@/components/record-button";
-import { useUserSettings } from "@/components/settings-provider";
+import MicrophonePermissions from "@/koala/microphone-permissions";
+import { playAudio } from "@/koala/play-audio";
+import { QuizFailure, linkToEditPage } from "@/koala/quiz-failure";
+import { blobToBase64, convertBlobToWav } from "@/koala/record-button";
+import { useUserSettings } from "@/koala/settings-provider";
 import {
   Action,
   Quiz,
@@ -10,9 +10,9 @@ import {
   gotoNextQuiz,
   newQuizState,
   quizReducer,
-} from "@/utils/study_reducer";
-import { trpc } from "@/utils/trpc";
-import { useVoiceRecorder } from "@/utils/use-recorder";
+} from "@/koala/study_reducer";
+import { trpc } from "@/koala/trpc-config";
+import { useVoiceRecorder } from "@/koala/use-recorder";
 import { Button, Container, Grid } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import { Grade } from "femto-fsrs";
@@ -34,6 +34,16 @@ type QuizViewProps = {
   flagQuiz: () => Promise<void>;
   startRecording(grade: Grade): Promise<void>;
   stopRecording: () => Promise<void>;
+};
+type StudyHeaderProps = {
+  lessonType: keyof typeof HEADER;
+  langCode: string;
+};
+type QuizAssertion = (q: Quiz | undefined) => asserts q is Quiz;
+type HotkeyButtonProps = {
+  hotkey: string;
+  label: string;
+  onClick: () => void;
 };
 
 const HEADER_STYLES = {
@@ -60,10 +70,7 @@ export const HOTKEYS: Record<string, string> = {
   CONTINUE: "c",
 };
 
-type StudyHeaderProps = {
-  lessonType: keyof typeof HEADER;
-  langCode: string;
-};
+const GRID_SIZE = 2;
 
 function StudyHeader({ lessonType, langCode }: StudyHeaderProps) {
   const isSpeaking = lessonType === "speaking";
@@ -84,7 +91,6 @@ const currentQuiz = (state: State) => {
   return curr.value;
 };
 
-type QuizAssertion = (q: Quiz | undefined) => asserts q is Quiz;
 const assertQuiz: QuizAssertion = (q) => {
   if (!q) {
     throw new Error("No quiz found");
@@ -275,14 +281,6 @@ function NoQuizDue(_: {}) {
     </div>
   );
 }
-
-const GRID_SIZE = 2;
-
-type HotkeyButtonProps = {
-  hotkey: string;
-  label: string;
-  onClick: () => void;
-};
 
 function HotkeyButton(props: HotkeyButtonProps) {
   return (

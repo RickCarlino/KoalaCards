@@ -1,6 +1,6 @@
 import { template } from "radash";
 import { QuizEvaluator } from "./types";
-import { yesOrNo } from "@/utils/openai";
+import { yesOrNo } from "@/koala/openai";
 
 const PROMPT = `
 Sentence B: "{{term}}" ({{langCode}})

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { prismaClient } from "../prisma-client";
-import { procedure } from "../trpc";
-import { getCardOrFail } from "@/utils/get-card-or-fail";
+import { procedure } from "../trpc-procedure";
+import { getCardOrFail } from "@/koala/get-card-or-fail";
 
 export const flagCard = procedure
   .input(

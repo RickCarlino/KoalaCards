@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { procedure } from "../trpc";
+import { procedure } from "../trpc-procedure";
 import { prismaClient } from "../prisma-client";
 import { getQuizEvaluator } from "../quiz-evaluators";
-import { transcribeB64 } from "@/utils/transcribe";
+import { transcribeB64 } from "@/koala/transcribe";
 import { QuizEvaluatorOutput } from "../quiz-evaluators/types";
 import { Grade } from "femto-fsrs";
 import { calculateSchedulingData, setGrade } from "./import-cards";

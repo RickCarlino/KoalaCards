@@ -1,4 +1,4 @@
-import { errorReport } from "@/utils/error-report";
+import { errorReport } from "@/koala/error-report";
 import { listening } from "./listening";
 import { speaking } from "./speaking";
 import { QuizEvaluator } from "./types";

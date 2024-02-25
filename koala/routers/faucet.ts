@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { procedure } from "../trpc";
+import { procedure } from "../trpc-procedure";
 import { getUserSettings } from "../auth-helpers";
 
 /** The `faucet` route is a mutation that returns a "Hello, world" string

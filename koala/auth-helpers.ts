@@ -1,4 +1,4 @@
-import { errorReport } from "@/utils/error-report";
+import { errorReport } from "@/koala/error-report";
 import { prismaClient } from "./prisma-client";
 
 type UserID = number | string | undefined | null;

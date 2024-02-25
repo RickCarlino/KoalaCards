@@ -1,5 +1,5 @@
-import { CardTable } from "@/components/card-table";
-import { trpc } from "@/utils/trpc";
+import { CardTable } from "@/koala/card-table";
+import { trpc } from "@/koala/trpc-config";
 import { Button, Container, FileButton } from "@mantine/core";
 import { z } from "zod";
 

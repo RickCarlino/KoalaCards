@@ -2,12 +2,12 @@ import { Button, Card, Container, NumberInput, Title } from "@mantine/core";
 import { GetServerSidePropsContext } from "next";
 import { getSession } from "next-auth/react";
 import React, { useState } from "react";
-import { trpc } from "@/utils/trpc";
+import { trpc } from "@/koala/trpc-config";
 import { notifications } from "@mantine/notifications";
-import { getUserSettingsFromEmail } from "@/server/auth-helpers";
-import { prismaClient } from "@/server/prisma-client";
+import { getUserSettingsFromEmail } from "@/koala/auth-helpers";
+import { prismaClient } from "@/koala/prisma-client";
 import { UnwrapPromise } from "@prisma/client/runtime/library";
-import { getLessonMeta } from "@/server/routers/get-next-quizzes";
+import { getLessonMeta } from "@/koala/routers/get-next-quizzes";
 
 export async function getServerSideProps(context: GetServerSidePropsContext) {
   async function getUserCardStatistics(userId: string) {
