@@ -7,6 +7,9 @@ export async function getCardOrFail(id: number, userId?: string) {
       id,
       userId: userId || "000",
     },
+    include: {
+      Quiz: true,
+    },
   });
   if (!card) {
     return errorReport("Card not found");

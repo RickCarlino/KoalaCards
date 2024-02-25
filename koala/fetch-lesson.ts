@@ -7,7 +7,7 @@ import { errorReport } from "./error-report";
 import { prismaClient } from "@/koala/prisma-client";
 import { Card } from "@prisma/client";
 
-type LessonType = "listening" | "speaking";
+export type LessonType = "listening" | "speaking";
 
 type GetLessonInputParams = {
   userId: string;
