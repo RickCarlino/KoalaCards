@@ -8,7 +8,11 @@ import {
   TextInput,
 } from "@mantine/core";
 import { trpc } from "@/utils/trpc";
-type ProcessedCard = { term: string; definition: string };
+type ProcessedCard = {
+  term: string;
+  definition: string;
+  gender: "M" | "F" | "N";
+};
 
 type LangCode = "ko" | "es" | "it" | "fr";
 
@@ -131,9 +135,9 @@ function LanguageInputPage() {
           onChange={(value) => value && handleLanguageChange(value as LangCode)}
           data={[
             { value: "ko", label: "Korean" },
-            // { value: "es", label: "Spanish" },
-            // { value: "it", label: "Italian" },
-            // { value: "fr", label: "French" },
+            { value: "es", label: "Spanish" },
+            { value: "it", label: "Italian" },
+            { value: "fr", label: "French" },
           ]}
         />
         <Button onClick={() => setActiveStep((current) => current + 1)}>

@@ -44,7 +44,7 @@ const HEADER_STYLES = {
 };
 
 const HEADER: Record<string, string> = {
-  speaking: "Say in target language",
+  speaking: "Speaking Quiz: ",
   listening: "Translate to English",
 };
 
@@ -58,12 +58,18 @@ const HOTKEYS: Record<string, string> = {
   SUBMIT: "g",
 };
 
-function StudyHeader({ lessonType }: { lessonType: keyof typeof HEADER }) {
+type StudyHeaderProps = {
+  lessonType: keyof typeof HEADER;
+  langCode: string;
+};
+
+function StudyHeader({ lessonType, langCode }: StudyHeaderProps) {
+  const isSpeaking = lessonType === "speaking";
+  const suffix = isSpeaking ? langCode.toUpperCase() : "";
+  const header = HEADER[lessonType] + suffix;
   return (
     <header style={HEADER_STYLES}>
-      <span style={{ fontSize: "24px", fontWeight: "bold" }}>
-        {HEADER[lessonType] || "Study"}
-      </span>
+      <span style={{ fontSize: "24px", fontWeight: "bold" }}>{header}</span>
     </header>
   );
 }
@@ -344,7 +350,10 @@ function QuizView(props: QuizViewProps) {
 
   return (
     <>
-      <StudyHeader lessonType={quiz?.lessonType} />
+      <StudyHeader
+        lessonType={quiz?.lessonType}
+        langCode={props.quiz.langCode}
+      />
       {buttonCluster}
       <p>Card #{quiz.quizId} quiz</p>
       <p>{quiz.repetitions} repetitions</p>

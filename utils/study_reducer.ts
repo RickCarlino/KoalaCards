@@ -9,6 +9,7 @@ export type Quiz = {
   lapses: number;
   quizId: number;
   repetitions: number;
+  langCode: string;
 };
 
 export type Failure = {

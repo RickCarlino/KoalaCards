@@ -13,6 +13,7 @@ export const Quiz = z.object({
   lapses: z.number(),
   lessonType: z.union([z.literal("listening"), z.literal("speaking")]),
   audio: z.string(),
+  langCode: z.string(),
 });
 
 const QuizList = z.object({

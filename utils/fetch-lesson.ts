@@ -5,6 +5,7 @@ import path from "path";
 import { draw, map, template } from "radash";
 import { errorReport } from "./error-report";
 import { prismaClient } from "@/server/prisma-client";
+import { Card } from "@prisma/client";
 
 type LessonType = "listening" | "speaking";
 
@@ -18,8 +19,60 @@ type GetLessonInputParams = {
   notIn?: number[];
 };
 
+type Gender = "F" | "M" | "N";
+type LangCode = "ko" | "es" | "it" | "fr";
+
+type LangLookTable = Record<LangCode, Record<Gender, string[]>>;
+
+const Voices: LangLookTable = {
+  ko: {
+    F: [
+      "ko-KR-Wavenet-A",
+      "ko-KR-Wavenet-B",
+      "ko-KR-Wavenet-C",
+      "ko-KR-Wavenet-D",
+    ],
+    M: [
+      "ko-KR-Wavenet-A",
+      "ko-KR-Wavenet-B",
+      "ko-KR-Wavenet-C",
+      "ko-KR-Wavenet-D",
+    ],
+    N: [
+      "ko-KR-Wavenet-A",
+      "ko-KR-Wavenet-B",
+      "ko-KR-Wavenet-C",
+      "ko-KR-Wavenet-D",
+    ],
+  },
+  es: {
+    F: ["es-ES-Wavenet-C", "es-ES-Wavenet-D"],
+    M: ["es-ES-Wavenet-B"],
+    N: ["es-ES-Wavenet-B", "es-ES-Wavenet-C", "es-ES-Wavenet-D"],
+  },
+  it: {
+    F: ["it-IT-Wavenet-A", "it-IT-Wavenet-B"],
+    M: ["it-IT-Wavenet-C", "it-IT-Wavenet-D"],
+    N: [
+      "it-IT-Wavenet-A",
+      "it-IT-Wavenet-B",
+      "it-IT-Wavenet-C",
+      "it-IT-Wavenet-D",
+    ],
+  },
+  fr: {
+    F: ["fr-FR-Wavenet-A", "fr-FR-Wavenet-C"],
+    M: ["fr-FR-Wavenet-B", "fr-FR-Wavenet-D"],
+    N: [
+      "fr-FR-Wavenet-A",
+      "fr-FR-Wavenet-B",
+      "fr-FR-Wavenet-C",
+      "fr-FR-Wavenet-D",
+    ],
+  },
+};
+
 const DATA_DIR = process.env.DATA_DIR || ".";
-const VOICES = ["A", "B", "C", "D"].map((x) => `ko-KR-Wavenet-${x}`);
 const SSML: Record<LessonType, string> = {
   speaking: `<speak><break time="0.5s"/><voice language="en-US" gender="female">{{definition}}</voice></speak>`,
   listening: `<speak><break time="0.5s"/><prosody rate="{{speed}}%">{{term}}</prosody></speak>`,
@@ -39,7 +92,11 @@ if (creds) {
 /** My main focus is Korean, so I randomly pick
  * one of Google's Korean voices if no voice is
  * explicitly provided. */
-const randomVoice = () => draw(VOICES) || VOICES[0];
+const randomVoice = (langCode: string, gender: string) => {
+  const l1 = Voices[langCode as LangCode] || Voices.ko;
+  const l2 = l1[gender as Gender] || l1.N;
+  return draw(l2) || l2[0];
+};
 
 /** Generates a file path for where to store the MP3
  * file. The path is combination of the language code
@@ -53,20 +110,19 @@ const filePathFor = (text: string, voice: string) => {
     ext: ".mp3",
   });
 };
-const dir = path.join(DATA_DIR, "speech", "ko");
-if (!existsSync(dir)) {
-  // Create the speech/ko/ dir if it doesnt exist:
-  mkdir(dir, { recursive: true }, (err) => {
-    if (err) {
-      console.error(err);
-    }
-  });
-}
+["ko", "es", "it", "fr"].forEach((langCode) => {
+  const dir = path.join(DATA_DIR, "speech", langCode);
+  if (!existsSync(dir)) {
+    // Create the speech/lang dir if it doesnt exist:
+    mkdir(dir, { recursive: true }, (err) => {
+      if (err) {
+        console.error(err);
+      }
+    });
+  }
+});
 
-const generateSpeechFile = async (
-  txt: string,
-  voice: string = randomVoice(),
-) => {
+const generateSpeechFile = async (txt: string, voice: string) => {
   const p = filePathFor(txt, voice);
   if (!existsSync(p)) {
     const [response] = await CLIENT.synthesizeSpeech({
@@ -90,19 +146,26 @@ const generateSpeechFile = async (
 /** Create and play a text to speech MP3 via Google Cloud.
  * Stores previously synthesized speech in a cache directory
  * to improve latency. */
-async function generateSpeech(txt: string, voice: string = randomVoice()) {
+async function generateSpeech(txt: string, voice: string) {
   const p = await generateSpeechFile(txt, voice);
   return `data:audio/mpeg;base64,${readFileSync(p, { encoding: "base64" })}`;
 }
 
-export async function generateLessonAudio(
-  lessonType: LessonType,
-  term: string,
-  definition: string,
-  speed: number,
-) {
-  const ssml = template(SSML[lessonType], { term, definition, speed });
-  return generateSpeech(ssml);
+type AudioLessonParams = {
+  card: Card;
+  lessonType: LessonType;
+  speed?: number;
+};
+
+export async function generateLessonAudio(params: AudioLessonParams) {
+  const tpl = SSML[params.lessonType];
+  const ssml = template(tpl, {
+    term: params.card.term,
+    definition: params.card.definition,
+    speed: params.speed || 100,
+  });
+  const voice = randomVoice(params.card.langCode, params.card.gender);
+  return generateSpeech(ssml, voice);
 }
 
 export default async function getLessons(p: GetLessonInputParams) {
@@ -117,9 +180,6 @@ export default async function getLessons(p: GetLessonInputParams) {
       id: {
         notIn: p.notIn,
       },
-      firstReview: {
-        gt: 0,
-      },
       quizType: {
         in: ["listening", "speaking"],
       },
@@ -130,9 +190,10 @@ export default async function getLessons(p: GetLessonInputParams) {
         lt: yesterday,
       },
     },
-    orderBy: {
-      nextReview: "asc",
-    },
+    orderBy: [
+      { Card: { langCode: "desc" } },
+      { nextReview: "desc" },
+    ],
     // Don't select quizzes from the same card.
     // Prevents hinting.
     distinct: ["cardId"],
@@ -143,12 +204,12 @@ export default async function getLessons(p: GetLessonInputParams) {
   });
 
   return await map(quizzes, async (quiz) => {
-    const audio = await generateLessonAudio(
-      quiz.quizType as LessonType,
-      quiz.Card.term,
-      quiz.Card.definition,
-      100,
-    );
+    console.log(`TODO: Lesson speed.`);
+    const audio = await generateLessonAudio({
+      card: quiz.Card,
+      lessonType: quiz.quizType as LessonType,
+      speed: 100,
+    });
     return {
       quizId: quiz.id,
       cardId: quiz.cardId,
@@ -158,6 +219,7 @@ export default async function getLessons(p: GetLessonInputParams) {
       lapses: quiz.lapses,
       lessonType: quiz.quizType as "listening" | "speaking",
       audio,
+      langCode: quiz.Card.langCode,
     };
   });
 }
