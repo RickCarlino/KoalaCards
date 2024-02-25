@@ -183,7 +183,13 @@ function reduce(state: State, action: Action): State {
       });
       return removeCard(state2, action.id);
     case "FLAG_QUIZ":
-      return gotoNextQuiz(state);
+      const filter = (quizID: number) =>
+        state.cardsById[quizID]?.cardId !== action.cardId;
+      return gotoNextQuiz({
+        ...state,
+        // Remove all quizzes with this cardID
+        quizIDsForLesson: state.quizIDsForLesson.filter(filter),
+      });
     case "END_RECORDING":
       const arr = [...state.idsAwaitingGrades, action.id];
       const set = new Set(arr);
