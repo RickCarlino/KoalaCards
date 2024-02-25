@@ -98,7 +98,7 @@ const assertQuiz: QuizAssertion = (q) => {
 
 function useBusinessLogic(state: State, dispatch: Dispatch<Action>) {
   const flagCard = trpc.flagCard.useMutation();
-  const performExam = trpc.gradeQuiz.useMutation();
+  const gradeQuiz = trpc.gradeQuiz.useMutation();
   const getNextQuiz = trpc.getNextQuizzes.useMutation();
   const manuallyGade = trpc.manuallyGrade.useMutation();
   const userSettings = useUserSettings();
@@ -110,7 +110,7 @@ function useBusinessLogic(state: State, dispatch: Dispatch<Action>) {
     assertQuiz(quiz);
     const id = quiz.quizId;
     dispatch({ type: "END_RECORDING", id: quiz.quizId });
-    performExam
+    gradeQuiz
       .mutateAsync({ id, audio, perceivedDifficulty })
       .then(async (data) => {
         if (data.result === "fail") {
@@ -298,9 +298,9 @@ function QuizView(props: QuizViewProps) {
   }, [props.quiz.quizId]);
   const gradeWith = (g: Grade) => () => {
     if (props.isRecording) {
-      props.startRecording(g);
-    } else {
       props.stopRecording();
+    } else {
+      props.startRecording(g);
     }
   };
   useHotkeys([
