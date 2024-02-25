@@ -115,9 +115,7 @@ const filePathFor = (text: string, voice: string) => {
   if (!existsSync(dir)) {
     // Create the speech/lang dir if it doesnt exist:
     mkdir(dir, { recursive: true }, (err) => {
-      if (err) {
-        console.error(err);
-      }
+      err && console.error(err);
     });
   }
 });
@@ -175,7 +173,7 @@ export default async function getLessons(p: GetLessonInputParams) {
     where: {
       Card: {
         userId: p.userId,
-        flagged: false,
+        flagged: { not: true },
       },
       id: {
         notIn: p.notIn,
@@ -190,10 +188,7 @@ export default async function getLessons(p: GetLessonInputParams) {
         lt: yesterday,
       },
     },
-    orderBy: [
-      { Card: { langCode: "desc" } },
-      { nextReview: "desc" },
-    ],
+    orderBy: [{ Card: { langCode: "desc" } }, { nextReview: "desc" }],
     // Don't select quizzes from the same card.
     // Prevents hinting.
     distinct: ["cardId"],
@@ -204,7 +199,6 @@ export default async function getLessons(p: GetLessonInputParams) {
   });
 
   return await map(quizzes, async (quiz) => {
-    console.log(`TODO: Lesson speed.`);
     const audio = await generateLessonAudio({
       card: quiz.Card,
       lessonType: quiz.quizType as LessonType,

@@ -49,21 +49,37 @@ type SchedulingData = {
   stability: number;
   nextReview: number;
 };
+type PartialQuizKeys =
+  | "difficulty"
+  | "stability"
+  | "lastReview"
+  | "lapses"
+  | "repetitions";
+type PartialQuiz = Pick<Quiz, PartialQuizKeys>;
 
-type PartialQuiz = Pick<Quiz, "difficulty" | "stability" | "lastReview">;
+function scheduleNewCard(grade: Grade, now = Date.now()): SchedulingData {
+  const x = FSRS.newCard(grade);
+  return {
+    difficulty: x.D,
+    stability: x.S,
+    nextReview: now + x.I * DAYS,
+  };
+}
 
 export function calculateSchedulingData(
   quiz: PartialQuiz,
   grade: Grade,
   now = Date.now(),
 ): SchedulingData {
+  if (quiz.lapses + quiz.repetitions === 0) {
+    return scheduleNewCard(grade, now);
+  }
   const fsrsCard = {
     D: quiz.difficulty,
     S: quiz.stability,
   };
   const past = (now - quiz.lastReview) / DAYS;
   const result = FSRS.gradeCard(fsrsCard, past, grade);
-
   return {
     difficulty: result.D,
     stability: result.S,
@@ -113,10 +129,10 @@ export async function setGrade(
       ...calculateSchedulingData(quiz, grade, now),
     },
   };
-  console.log(
-    `(${data.data.id}) Update grade. Next review: ${timeUntil(data.data.nextReview)}`,
-  );
   await prismaClient.quiz.update(data);
+  console.log(
+    `Quiz ${data.data.id} next review: ${timeUntil(data.data.nextReview)}`,
+  );
 }
 
 export const importCards = procedure

@@ -15,7 +15,7 @@ const MEANING_PROMPT = `
 Sentence B: "{{term}}" ({{langCode}})
 Sentence C: "{{definition}}" (EN)
 
-When translated, is sentence A MOSTLY equivalent to sentence B and C?
+When translated, is sentence A equivalent to sentence B and C?
 The meaning is more important than the words used.
 If "NO", why not?
 Punctuation and spacing do not matter for the sake of this question.
@@ -61,13 +61,11 @@ export const speaking: QuizEvaluator = async ({ userInput, card, userID }) => {
     userID,
   );
   if (result.response === "no") {
-    console.log(`Fail`);
     return {
       result: "fail",
       userMessage: result.whyNot || "No reason provided.",
     };
   }
-  console.log("pass");
   return {
     result: "pass",
     userMessage: result.whyNot || "Passed!",

@@ -10,10 +10,11 @@ export const flagCard = procedure
     }),
   )
   .mutation(async ({ input, ctx }) => {
-    console.log("Need to add cardID to the input object");
     const card = await getCardOrFail(input.id, ctx.user?.id);
     await prismaClient.card.update({
-      where: { id: card.id },
+      where: {
+        id: card.id,
+      },
       data: {
         flagged: true,
       },

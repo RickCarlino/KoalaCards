@@ -6,6 +6,7 @@ import {
   Button,
   Group,
   TextInput,
+  Container,
 } from "@mantine/core";
 import { trpc } from "@/koala/trpc-config";
 type ProcessedCard = {
@@ -36,6 +37,42 @@ const INITIAL_STATE: State = {
   processedCards: [],
 };
 
+const errorHandler = (error: any) => {
+  console.error(error);
+  alert("Error. Please report this on Github.");
+};
+
+const SAMPLES = {
+  ko: [
+    "안녕하세요? (Hello, how are you?)",
+    "저는 학생입니다. (I am a student.)",
+    "한국어를 배우고 있어요. (I am learning Korean.)",
+    "감사합니다! (Thank you!)",
+    "이것은 얼마입니까? (How much is this?)",
+  ].join("\n"),
+  es: [
+    "¿Cómo estás? (How are you?)",
+    "Soy profesor. (I am a teacher.)",
+    "Estoy aprendiendo español. (I am learning Spanish.)",
+    "¡Muchas gracias! (Thank you very much!)",
+    "¿Cuánto cuesta esto? (How much does this cost?)",
+  ].join("\n"),
+  it: [
+    "Come stai? (How are you?)",
+    "Sono uno studente. (I am a student.)",
+    "Sto imparando l'italiano. (I am learning Italian.)",
+    "Grazie mille! (Thank",
+    "you very much!)",
+    "Quanto costa questo? (How much does this cost?)",
+  ].join("\n"),
+  fr: [
+    "Comment ça va ? (How are you?)",
+    "Je suis enseignant. (I am a teacher.)",
+    "J'apprends le français. (I am learning French.)",
+    "Merci beaucoup ! (Thank you very much!)",
+    "Combien coûte ceci ? (How much does this cost?)",
+  ].join("\n"),
+};
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case "ADD_CARD":
@@ -88,10 +125,7 @@ function LanguageInputPage() {
         dispatch({ type: "SET_PROCESSED_CARDS", processedCards: cards });
         setActiveStep((current) => current + 1);
       })
-      .catch((error) => {
-        console.error(error);
-        alert("Error???");
-      })
+      .catch(errorHandler)
       .finally(() => {
         setLoading(false);
       });
@@ -116,87 +150,104 @@ function LanguageInputPage() {
         dispatch({ type: "SET_RAW_INPUT", rawInput: "" });
         setActiveStep(0);
       })
-      .catch((error) => {
-        console.error(error);
-        alert("Error???");
-      })
+      .catch(errorHandler)
       .finally(() => {
         setLoading(false);
       });
   };
 
+  const pasteExample = () => {
+    dispatch({
+      type: "SET_RAW_INPUT",
+      rawInput: SAMPLES[state.language] || SAMPLES["ko"],
+    });
+  };
   return (
-    <Stepper active={activeStep} onStepClick={setActiveStep}>
-      <Stepper.Step label="Select language">
-        <Select
-          label="Language"
-          placeholder="Choose"
-          value={state.language}
-          onChange={(value) => value && handleLanguageChange(value as LangCode)}
-          data={[
-            { value: "ko", label: "Korean" },
-            { value: "es", label: "Spanish" },
-            { value: "it", label: "Italian" },
-            { value: "fr", label: "French" },
-          ]}
-        />
-        <Button onClick={() => setActiveStep((current) => current + 1)}>
-          Next
-        </Button>
-      </Stepper.Step>
-      <Stepper.Step label="Input text">
-        <Textarea
-          label="Paste your text here"
-          autosize
-          minRows={5}
-          value={state.rawInput}
-          onChange={(event) =>
-            dispatch({
-              type: "SET_RAW_INPUT",
-              rawInput: event.currentTarget.value,
-            })
-          }
-        />
-        <Button onClick={handleRawInputSubmit} loading={loading}>
-          Process
-        </Button>
-      </Stepper.Step>
-      <Stepper.Step label="Edit cards">
-        {state.processedCards.map((card, index) => (
-          <Group key={index}>
-            <TextInput
-              value={card.term}
-              onChange={(event) =>
-                handleCardChange({
-                  type: "EDIT_CARD",
-                  card: { ...card, term: event.currentTarget.value },
-                  index,
-                })
-              }
-            />
-            <TextInput
-              value={card.definition}
-              onChange={(event) =>
-                handleCardChange({
-                  type: "EDIT_CARD",
-                  card: { ...card, definition: event.currentTarget.value },
-                  index,
-                })
-              }
-            />
-            <Button
-              color="red"
-              onClick={() => handleCardChange({ type: "REMOVE_CARD", index })}
-            >
-              Remove
-            </Button>
-          </Group>
-        ))}
-        <Button onClick={handleSave} loading={loading}>
-          Save
-        </Button>
-      </Stepper.Step>
-    </Stepper>
+    <Container size="sm">
+      <h1>Create New Cards</h1>
+      <Stepper active={activeStep} onStepClick={setActiveStep}>
+        <Stepper.Step label="Select language">
+          <Select
+            label="Language"
+            placeholder="Choose"
+            value={state.language}
+            onChange={(value) =>
+              value && handleLanguageChange(value as LangCode)
+            }
+            data={[
+              { value: "ko", label: "Korean" },
+              { value: "es", label: "Spanish" },
+              { value: "it", label: "Italian" },
+              { value: "fr", label: "French" },
+            ]}
+          />
+          <Button onClick={() => setActiveStep((current) => current + 1)}>
+            Next
+          </Button>
+        </Stepper.Step>
+        <Stepper.Step label="Input text">
+          <Textarea
+            label="Paste your text here"
+            autosize
+            minRows={5}
+            value={state.rawInput}
+            onChange={(event) =>
+              dispatch({
+                type: "SET_RAW_INPUT",
+                rawInput: event.currentTarget.value,
+              })
+            }
+          />
+          <Button onClick={handleRawInputSubmit} loading={loading}>
+            Process
+          </Button>
+          <p>
+            NOTE: Cards can be input in most computer readable text formats such
+            as CSV, TSV, JSON. Ensure that each entry has a target language
+            phrase and an English translation. KoalaSRS will figure out the
+            rest.
+          </p>
+          <Button size="xs" onClick={pasteExample}>
+            Paste Example Input
+          </Button>
+        </Stepper.Step>
+        <Stepper.Step label="Edit cards">
+          {state.processedCards.map((card, index) => (
+            <Group key={index}>
+              <TextInput
+                value={card.term}
+                onChange={(event) =>
+                  handleCardChange({
+                    type: "EDIT_CARD",
+                    card: { ...card, term: event.currentTarget.value },
+                    index,
+                  })
+                }
+              />
+              <TextInput
+                value={card.definition}
+                onChange={(event) =>
+                  handleCardChange({
+                    type: "EDIT_CARD",
+                    card: { ...card, definition: event.currentTarget.value },
+                    index,
+                  })
+                }
+              />
+              <Button
+                color="red"
+                onClick={() => handleCardChange({ type: "REMOVE_CARD", index })}
+              >
+                Remove
+              </Button>
+            </Group>
+          ))}
+          <Button onClick={handleSave} loading={loading}>
+            Save
+          </Button>
+        </Stepper.Step>
+      </Stepper>
+    </Container>
   );
 }
 

@@ -58,16 +58,15 @@ const HEADER: Record<string, string> = {
   listening: "Translate to English",
 };
 
-export const HOTKEYS: Record<string, string> = {
+export const HOTKEYS = {
   FAIL: "a",
   HARD: "s",
   GOOD: "d",
   EASY: "f",
-  FLAG: "z",
-  PLAY: "v",
-  SUBMIT: "g",
-  DISAGREE: "x",
-  CONTINUE: "c",
+  PLAY: "j",
+  FLAG: "h",
+  DISAGREE: "l",
+  CONTINUE: "k",
 };
 
 const GRID_SIZE = 2;
@@ -99,7 +98,7 @@ const assertQuiz: QuizAssertion = (q) => {
 
 function useBusinessLogic(state: State, dispatch: Dispatch<Action>) {
   const flagCard = trpc.flagCard.useMutation();
-  const performExam = trpc.gradeQuiz.useMutation();
+  const gradeQuiz = trpc.gradeQuiz.useMutation();
   const getNextQuiz = trpc.getNextQuizzes.useMutation();
   const manuallyGade = trpc.manuallyGrade.useMutation();
   const userSettings = useUserSettings();
@@ -111,7 +110,7 @@ function useBusinessLogic(state: State, dispatch: Dispatch<Action>) {
     assertQuiz(quiz);
     const id = quiz.quizId;
     dispatch({ type: "END_RECORDING", id: quiz.quizId });
-    performExam
+    gradeQuiz
       .mutateAsync({ id, audio, perceivedDifficulty })
       .then(async (data) => {
         if (data.result === "fail") {
@@ -297,26 +296,20 @@ function QuizView(props: QuizViewProps) {
   useEffect(() => {
     props.playQuizAudio();
   }, [props.quiz.quizId]);
+  const gradeWith = (g: Grade) => () => {
+    if (props.isRecording) {
+      props.stopRecording();
+    } else {
+      props.startRecording(g);
+    }
+  };
   useHotkeys([
     [HOTKEYS.PLAY, props.playQuizAudio],
     [HOTKEYS.FLAG, props.flagQuiz],
-    [
-      HOTKEYS.FAIL,
-      () => !props.isRecording && props.startRecording(Grade.AGAIN),
-    ],
-    [
-      HOTKEYS.HARD,
-      () => !props.isRecording && props.startRecording(Grade.HARD),
-    ],
-    [
-      HOTKEYS.GOOD,
-      () => !props.isRecording && props.startRecording(Grade.GOOD),
-    ],
-    [
-      HOTKEYS.EASY,
-      () => !props.isRecording && props.startRecording(Grade.EASY),
-    ],
-    [HOTKEYS.SUBMIT, () => props.isRecording && props.stopRecording()],
+    [HOTKEYS.FAIL, gradeWith(Grade.AGAIN)],
+    [HOTKEYS.HARD, gradeWith(Grade.HARD)],
+    [HOTKEYS.GOOD, gradeWith(Grade.GOOD)],
+    [HOTKEYS.EASY, gradeWith(Grade.EASY)],
   ]);
   const buttons: HotkeyButtonProps[] = [
     {
@@ -359,11 +352,12 @@ function QuizView(props: QuizViewProps) {
   );
 
   if (props.isRecording) {
+    const keys = [HOTKEYS.FAIL, HOTKEYS.HARD, HOTKEYS.GOOD, HOTKEYS.EASY];
     buttonCluster = (
       <Grid grow justify="center" align="stretch" gutter="xs">
         <Grid.Col span={12}>
           <Button fullWidth onClick={props.stopRecording}>
-            Stop Recording ({HOTKEYS.SUBMIT})
+            Stop Recording ({keys.join(", ")})
           </Button>
         </Grid.Col>
       </Grid>

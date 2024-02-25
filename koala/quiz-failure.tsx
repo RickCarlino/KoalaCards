@@ -43,13 +43,13 @@ export function QuizFailure(props: {
             <strong>Quiz type:</strong> {props.lessonType}
           </Text>
           <Text>
-            <strong>Term:</strong> {props.term}
+            <strong>(A) What you said:</strong> {props.userTranscription}
           </Text>
           <Text>
-            <strong>Definition:</strong> {props.definition}
+            <strong>(B) Term:</strong> {props.term}
           </Text>
           <Text>
-            <strong>What you said:</strong> {props.userTranscription}
+            <strong>(C) Definition:</strong> {props.definition}
           </Text>
           <Text>
             <strong>Why it's wrong:</strong> {props.rejectionText}

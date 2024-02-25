@@ -42,7 +42,6 @@ const FAIL = z.object({
 });
 
 const PASS = z.object({
-  grade: z.number(),
   userTranscription: z.string(),
   result: z.literal("pass"),
 });
@@ -71,7 +70,6 @@ async function processPass(ctx: ResultContext): Promise<z.infer<typeof PASS>> {
   const grade = ctx.perceivedDifficulty;
   await setGrade(ctx.quiz, grade);
   return {
-    grade: 0,
     userTranscription: "OK",
     result: "pass",
   };
@@ -87,9 +85,9 @@ export const gradeQuiz = procedure
   )
   .output(performExamOutput)
   .mutation(async (x): Promise<PerformExamOutput> => {
-    // const userSettings = await getUserSettings("" + x.ctx.user?.id);
     const user = x.ctx.user;
     if (!user) {
+      console.log(`=== User not logged in?`);
       return {
         rejectionText: "You are not logged in",
         result: "error",
@@ -155,7 +153,9 @@ export const gradeQuiz = procedure
         return processPass(resultContext);
       case "fail":
         return processFailure(resultContext);
-      default:
+      case "error":
         return processError(resultContext);
+      default:
+        throw new Error(`Unknown result: ${result.result}`);
     }
   });
