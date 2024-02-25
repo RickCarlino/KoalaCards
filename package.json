@@ -52,7 +52,7 @@
     "nodemailer": "^6.9.7",
     "openai": "^4.17.4",
     "prom-client": "^15.0.0",
-    "radash": "^11.0.0",
+    "radash": "^12.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "superjson": "^2.2.1",
