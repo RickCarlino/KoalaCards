@@ -51,13 +51,16 @@ export async function getLessonMeta(userId: string) {
   });
 
   // Cards that have no quiz yet:
-  const newCards = await prismaClient.card.count({
+  // Count of Quizzes where repetitions and lapses are 0
+  // by distinct cardID
+  const newCards = await prismaClient.quiz.count({
     where: {
-      userId: userId,
-      flagged: false,
-      Quiz: {
-        none: {},
+      Card: {
+        userId: userId,
+        flagged: false,
       },
+      repetitions: 0,
+      lapses: 0,
     },
   });
   return {

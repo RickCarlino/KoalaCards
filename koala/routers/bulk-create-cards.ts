@@ -16,8 +16,8 @@ export const bulkCreateCards = procedure
       input: z
         .array(
           z.object({
-            term: z.string().max(1000),
-            definition: z.string(),
+            term: z.string().max(200),
+            definition: z.string().max(200),
             gender: z.union([z.literal("M"), z.literal("F"), z.literal("N")]),
           }),
         )

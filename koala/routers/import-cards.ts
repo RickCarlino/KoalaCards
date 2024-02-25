@@ -25,25 +25,6 @@ const FSRS = createDeck({
 
 const DAYS = 24 * 60 * 60 * 1000;
 
-function getEaseBucket(ease: number): Grade {
-  if (ease < 2.2) {
-    return Grade.HARD;
-  }
-
-  if (ease > 2.85) {
-    return Grade.EASY;
-  }
-
-  return Grade.GOOD;
-}
-
-// Take a date and create a new date that is randomly 0-3 days
-// from the original date
-function fuzzDate(date: Date) {
-  const randomOffset = Math.floor(Math.random() * 3);
-  return new Date(date.getTime() + randomOffset * DAYS).getTime();
-}
-
 type SchedulingData = {
   difficulty: number;
   stability: number;
@@ -141,36 +122,40 @@ export const importCards = procedure
   .mutation(async ({ ctx, input }) => {
     const userId = (await getUserSettings(ctx.user?.id)).user.id;
     let count = 0;
-    for (const card of input) {
+    for (const x of input) {
+      const card = {
+        term: x.term,
+        definition: x.definition,
+        gender: "N",
+      };
       const where = { userId, term: card.term };
       const existingCard = await prismaClient.card.count({
         where,
       });
       if (!existingCard) {
-        const data = {
-          flagged: false,
-          definition: card.definition,
-          langCode: "ko",
-          ...where,
-        };
-        const { id: cardId } = await prismaClient.card.create({ data });
+        const { id: cardId } = await prismaClient.card.create({
+          data: {
+            flagged: false,
+            definition: card.definition,
+            term: card.term,
+            langCode: "ko",
+            userId,
+            gender: "N",
+          },
+        });
 
         ["listening", "speaking"].map(async (quizType) => {
-          const grade = getEaseBucket(card.ease);
-          const card0 = FSRS.newCard(grade);
-          const nextReview = fuzzDate(new Date(card.nextReviewAt));
-          console.log(`${cardId} due in ${timeUntil(nextReview)}`);
           await prismaClient.quiz.create({
             data: {
-              cardId,
+              cardId: cardId,
               quizType,
-              stability: card0.S,
-              difficulty: card0.D,
-              firstReview: card.firstReview?.getTime() || 0,
-              lastReview: card.lastReview?.getTime() || 0,
-              nextReview,
-              lapses: card.lapses,
-              repetitions: card.repetitions,
+              stability: 0,
+              difficulty: 0,
+              firstReview: 0,
+              lastReview: 0,
+              nextReview: 0,
+              lapses: 0,
+              repetitions: 0,
             },
           });
         });
