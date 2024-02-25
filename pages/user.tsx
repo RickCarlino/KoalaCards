@@ -73,7 +73,6 @@ export default function UserSettingsPage(props: Props) {
           location.reload();
         },
         (error: unknown) => {
-          console.log(error);
           notifications.show({
             title: "Error",
             message: `Error: ${JSON.stringify(error).slice(0, 100)}`,

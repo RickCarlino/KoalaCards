@@ -61,13 +61,11 @@ export const speaking: QuizEvaluator = async ({ userInput, card, userID }) => {
     userID,
   );
   if (result.response === "no") {
-    console.log(`Fail`);
     return {
       result: "fail",
       userMessage: result.whyNot || "No reason provided.",
     };
   }
-  console.log("pass");
   return {
     result: "pass",
     userMessage: result.whyNot || "Passed!",

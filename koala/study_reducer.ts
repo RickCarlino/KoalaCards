@@ -75,7 +75,6 @@ function betterUnique(input: number[]): number[] {
 }
 
 export function gotoNextQuiz(state: State): State {
-  console.log("=== Changing quizzes ===");
   if (state.isRecording) {
     throw new Error("Cannot change quizzes while recording");
   }

@@ -115,9 +115,7 @@ const filePathFor = (text: string, voice: string) => {
   if (!existsSync(dir)) {
     // Create the speech/lang dir if it doesnt exist:
     mkdir(dir, { recursive: true }, (err) => {
-      if (err) {
-        console.error(err);
-      }
+      err && console.error(err);
     });
   }
 });

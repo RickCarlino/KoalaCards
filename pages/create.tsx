@@ -37,6 +37,11 @@ const INITIAL_STATE: State = {
   processedCards: [],
 };
 
+const errorHandler = (error: any) => {
+  console.error(error);
+  alert("Error. Please report this on Github.");
+};
+
 const SAMPLES = {
   ko: [
     "안녕하세요? (Hello, how are you?)",
@@ -120,10 +125,7 @@ function LanguageInputPage() {
         dispatch({ type: "SET_PROCESSED_CARDS", processedCards: cards });
         setActiveStep((current) => current + 1);
       })
-      .catch((error) => {
-        console.error(error);
-        alert("Error???");
-      })
+      .catch(errorHandler)
       .finally(() => {
         setLoading(false);
       });
@@ -148,10 +150,7 @@ function LanguageInputPage() {
         dispatch({ type: "SET_RAW_INPUT", rawInput: "" });
         setActiveStep(0);
       })
-      .catch((error) => {
-        console.error(error);
-        alert("Error???");
-      })
+      .catch(errorHandler)
       .finally(() => {
         setLoading(false);
       });
