@@ -58,17 +58,17 @@ export function QuizFailure(props: {
           <Grid grow justify="center" align="stretch" gutter="xs">
             <Grid.Col span={4}>
               <Button onClick={props.onClose}>
-                Continue ({HOTKEYS.CONTINUE})
+                Continue ({HOTKEYS.CONTINUE.toUpperCase()})
               </Button>
             </Grid.Col>
             <Grid.Col span={4}>
               <Button onClick={props.onDiscard}>
-                Disagree ({HOTKEYS.DISAGREE})
+                Disagree ({HOTKEYS.DISAGREE.toUpperCase()})
               </Button>
             </Grid.Col>
             <Grid.Col span={4}>
               <Button onClick={props.onFlag}>
-                Flag / Pause ({HOTKEYS.FLAG})
+                Flag / Pause ({HOTKEYS.FLAG.toUpperCase()})
               </Button>
             </Grid.Col>
           </Grid>

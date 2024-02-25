@@ -285,7 +285,7 @@ function HotkeyButton(props: HotkeyButtonProps) {
   return (
     <Grid.Col span={GRID_SIZE}>
       <Button fullWidth onClick={props.onClick}>
-        {props.label} ({props.hotkey})
+        {props.label} ({props.hotkey.toUpperCase()})
       </Button>
     </Grid.Col>
   );
@@ -337,12 +337,12 @@ function QuizView(props: QuizViewProps) {
     <Grid grow justify="center" align="stretch" gutter="xs">
       <Grid.Col span={6}>
         <Button fullWidth onClick={props.playQuizAudio}>
-          Play Audio ({HOTKEYS.PLAY})
+          Play Audio ({HOTKEYS.PLAY.toUpperCase()})
         </Button>
       </Grid.Col>
       <Grid.Col span={6}>
         <Button fullWidth onClick={props.flagQuiz}>
-          Pause Reviews ({HOTKEYS.FLAG})
+          Pause Reviews ({HOTKEYS.FLAG.toUpperCase()})
         </Button>
       </Grid.Col>
       {buttons.map((p) => (
