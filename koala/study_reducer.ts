@@ -35,9 +35,9 @@ type CurrentItem =
   | { type: "none"; value: undefined };
 
 export type State = {
+  isRecording: boolean;
   cardsById: Record<string, Quiz>;
   failures: Failure[];
-  isRecording: boolean;
   idsAwaitingGrades: number[];
   idsWithErrors: number[];
   quizIDsForLesson: number[];
@@ -85,6 +85,7 @@ export function gotoNextQuiz(state: State): State {
     return {
       ...state,
       currentItem: { type: "failure", value: nextFailure },
+      quizIDsForLesson: betterUnique(state.quizIDsForLesson),
       failures: restFailures,
     };
   }

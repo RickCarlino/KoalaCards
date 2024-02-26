@@ -1,7 +1,7 @@
 import { template } from "radash";
 import { QuizEvaluator } from "./types";
 import { yesOrNo } from "@/koala/openai";
-import { FOOTER } from "./footer";
+import { FOOTER, strip } from "./evaluator-utils";
 
 const PROMPT = `
 Sentence B: "{{term}}" ({{langCode}})
@@ -17,6 +17,15 @@ export const listening: QuizEvaluator = async (ctx) => {
   const { term, definition, langCode } = card;
   const tplData = { term, definition, langCode };
   const question = template(PROMPT, tplData);
+
+  if (strip(userInput) === strip(definition)) {
+    console.log(`=== Exact match!`);
+    return {
+      result: "pass",
+      userMessage: "Exact match. Nice work!",
+    };
+  }
+
   const listeningYN = await yesOrNo({
     userInput: `Sentence A: ${userInput} (EN)`,
     question,
