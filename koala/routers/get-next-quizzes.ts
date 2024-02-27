@@ -26,15 +26,22 @@ const QuizList = z.object({
 
 export async function getLessonMeta(userId: string) {
   const currentDate = new Date().getTime(); // Current time in milliseconds
+  const yesterday = currentDate - 24 * 60 * 60 * 1000;
 
   const quizzesDue = await prismaClient.quiz.count({
     where: {
       Card: {
         userId: userId,
-        flagged: false,
+        flagged: { not: true },
+      },
+      quizType: {
+        in: ["listening", "speaking"],
       },
       nextReview: {
         lt: currentDate,
+      },
+      lastReview: {
+        lt: yesterday,
       },
       firstReview: {
         gt: 0,
