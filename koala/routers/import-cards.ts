@@ -106,8 +106,8 @@ export async function setGrade(
       ...calculateSchedulingData(quiz, grade, now),
     },
   };
-  await prismaClient.quiz.update(data);
+  const x = await prismaClient.quiz.update(data);
   console.log(
-    `Quiz ${data.data.id} next review: ${timeUntil(data.data.nextReview)}`,
+    `Quiz ${data.data.id} next review: ${timeUntil(x.nextReview)}`,
   );
 }

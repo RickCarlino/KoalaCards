@@ -182,7 +182,7 @@ export default async function getLessons(p: GetLessonInputParams) {
         in: ["listening", "speaking"],
       },
       nextReview: {
-        lt: p.now,
+        lt: p.now || Date.now(),
       },
       lastReview: {
         lt: yesterday,
