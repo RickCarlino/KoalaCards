@@ -190,7 +190,7 @@ export default async function getLessons(p: GetLessonInputParams) {
     },
     orderBy: [
       { Card: { langCode: "desc" } },
-      { nextReview: Math.random() > 0.5 ? "desc" : "asc" }
+      { nextReview: Math.random() > 0.5 ? "desc" : "asc" },
     ],
     // Don't select quizzes from the same card.
     // Prevents hinting.

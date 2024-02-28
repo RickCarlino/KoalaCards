@@ -36,11 +36,14 @@ export const UserSettingsProvider = ({
         color: "red",
       });
     };
-    getUserSettings.mutateAsync({}).then((userSettings) => {
-      if (userSettings) {
-        setUserSettings(userSettings);
-      }
-    }, err).finally(() => setLoading(false));
+    getUserSettings
+      .mutateAsync({})
+      .then((userSettings) => {
+        if (userSettings) {
+          setUserSettings(userSettings);
+        }
+      }, err)
+      .finally(() => setLoading(false));
   }, []);
 
   const clickLogin = () => {
@@ -67,7 +70,7 @@ export const UserSettingsProvider = ({
     </Container>
   );
   const a = <div>Loading...</div>;
-  const b = (userSettings.id ? children : login);
+  const b = userSettings.id ? children : login;
   return (
     <UserSettingsContext.Provider value={userSettings || EMPTY}>
       {loading ? a : b}

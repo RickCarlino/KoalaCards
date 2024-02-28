@@ -88,7 +88,7 @@ export const yesOrNo = async (input: YesOrNoInput): Promise<YesOrNo> => {
   const jsonString =
     grammarResp?.choices?.[0]?.message?.tool_calls?.[0].function.arguments ||
     "{}";
-  console.log(`===`)
+  console.log(`===`);
   console.log(userInput);
   console.log(question);
   console.log(jsonString);

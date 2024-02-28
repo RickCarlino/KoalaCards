@@ -3,7 +3,8 @@ import { QuizEvaluator } from "./types";
 import { yesOrNo } from "@/koala/openai";
 import { FOOTER, strip } from "./evaluator-utils";
 
-const PROMPT = `
+const PROMPT =
+  `
 Sentence B: "{{term}}" ({{langCode}})
 Sentence C: "{{definition}}" (EN)
 

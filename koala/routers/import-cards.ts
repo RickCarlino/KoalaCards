@@ -80,11 +80,11 @@ async function setGradeFirstTime(
     lapses: grade === Grade.AGAIN ? quiz.lapses + 1 : quiz.lapses,
     repetitions: 1,
   };
-  console.log(`Set first SRS scheduling: ${timeUntil(nextQuiz.nextReview)}`);
   await prismaClient.quiz.update({
     where: { id: quiz.id },
     data: nextQuiz,
   });
+  console.log(`Set first SRS scheduling: ${timeUntil(nextQuiz.nextReview)}`);
 }
 
 export async function setGrade(

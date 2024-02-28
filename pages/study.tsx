@@ -235,10 +235,13 @@ function useBusinessLogic(state: State, dispatch: Dispatch<Action>) {
 }
 
 function useQuizState(props: QuizData) {
-  const cardsById = props.quizzes.reduce((acc, quiz) => {
-    acc[quiz.quizId] = quiz;
-    return acc;
-  }, {} as Record<number, Quiz>);
+  const cardsById = props.quizzes.reduce(
+    (acc, quiz) => {
+      acc[quiz.quizId] = quiz;
+      return acc;
+    },
+    {} as Record<number, Quiz>,
+  );
   const newState = gotoNextQuiz(
     newQuizState({
       cardsById,
@@ -428,7 +431,7 @@ function LoadedStudyPage(props: QuizData) {
     case "none":
       const willGrade = state.idsAwaitingGrades.length;
       if (willGrade) {
-        el = <div>Waiting for the server to grade ${willGrade} quizzes.</div>;
+        el = <div>Waiting for the server to grade {willGrade} quizzes.</div>;
         break;
       }
       el = <NoQuizDue />;
