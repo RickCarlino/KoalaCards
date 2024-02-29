@@ -19,8 +19,13 @@ export const captureAudio = (dataURI: string): string => {
 
 type TranscriptionResult = { kind: "OK"; text: string } | { kind: "error" };
 
-const PROMPT_KO = "다양한 예문을 읽는 연습";
-const PROMPT_EN = "Trascript of an example sentence.";
+const PROMPTS: Record<string, string> = {
+  ko: "다양한 한국어 예문을 읽는 연습",
+  en: "Reading diverse example sentences in English ",
+  it: "Esercizio di lettura di frasi esemplificative in italiano",
+  fr: "Exercice de lecture de phrases d'exemple en français",
+  es: "Ejercicio de lectura de frases de ejemplo en español",
+};
 
 const transcriptionLength = SafeCounter({
   name: "transcriptionLength",
@@ -42,14 +47,14 @@ export async function transcribeB64(
     ext: ".wav",
   });
   await writeFileAsync(fpath, buffer);
-  const isEn = lang.slice(0, 2) === "en";
+  const prompt = PROMPTS[lang.slice(0, 2)] || PROMPTS.ko;
   const transcribePromise = new Promise<TranscriptionResult>(
     async (resolve) => {
       try {
         const y = await openai.audio.transcriptions.create({
           file: createReadStream(fpath) as any,
           model: "whisper-1",
-          prompt: isEn ? PROMPT_EN : PROMPT_KO,
+          prompt,
         });
         const text = y.text || "NO RESPONSE.";
         transcriptionLength.labels({ lang, userID }).inc(y.text.length);
