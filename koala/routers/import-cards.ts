@@ -107,7 +107,5 @@ export async function setGrade(
     },
   };
   const x = await prismaClient.quiz.update(data);
-  console.log(
-    `Quiz ${data.data.id} next review: ${timeUntil(x.nextReview)}`,
-  );
+  console.log(`Quiz ${data.data.id} next review: ${timeUntil(x.nextReview)}`);
 }
