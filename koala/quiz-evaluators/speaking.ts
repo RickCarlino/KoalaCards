@@ -1,17 +1,20 @@
 import { YesOrNo, yesOrNo } from "@/koala/openai";
 import { QuizEvaluator } from "./types";
 import { template } from "radash";
+import { FOOTER, strip } from "./evaluator-utils";
 
-const GRAMMAR_PROMPT = `Grade a sentence from a language learning
+const GRAMMAR_PROMPT =
+  `Grade a sentence from a language learning
 app. Answer YES if the sentence is grammatically correct and
 in the specified language (ISO 639-1:2002 code '{{langCode}}').
 Answer NO if it doesn't follow the language's syntax and semantics
 or isn't in the specified language. Avoid vague responses.
 Incomplete sentences are OK if they are grammatically correct.
 Do not grade spacing. You will be penalized for vague "NO"
-responses.`;
+responses.` + FOOTER;
 
-const MEANING_PROMPT = `
+const MEANING_PROMPT =
+  `
 Sentence B: "{{term}}" ({{langCode}})
 Sentence C: "{{definition}}" (EN)
 
@@ -19,7 +22,7 @@ When translated, is sentence A equivalent to sentence B and C?
 The meaning is more important than the words used.
 If "NO", why not?
 Punctuation and spacing do not matter for the sake of this question.
-`;
+` + FOOTER;
 
 const gradeGrammar = async (
   userInput: string,
@@ -53,6 +56,14 @@ const gradeGrammar = async (
 };
 
 export const speaking: QuizEvaluator = async ({ userInput, card, userID }) => {
+  if (strip(userInput) === strip(card.term)) {
+    console.log(`=== Exact match!`);
+    return {
+      result: "pass",
+      userMessage: "Exact match. Nice work!",
+    };
+  }
+
   const result = await gradeGrammar(
     userInput,
     card.term,

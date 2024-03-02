@@ -11,6 +11,7 @@ import {
   newQuizState,
   quizReducer,
 } from "@/koala/study_reducer";
+import { timeUntil } from "@/koala/time-until";
 import { trpc } from "@/koala/trpc-config";
 import { useVoiceRecorder } from "@/koala/use-recorder";
 import { Button, Container, Grid } from "@mantine/core";
@@ -44,6 +45,7 @@ type HotkeyButtonProps = {
   hotkey: string;
   label: string;
   onClick: () => void;
+  disabled?: boolean;
 };
 
 const HEADER_STYLES = {
@@ -234,10 +236,13 @@ function useBusinessLogic(state: State, dispatch: Dispatch<Action>) {
 }
 
 function useQuizState(props: QuizData) {
-  const cardsById = props.quizzes.reduce((acc, quiz) => {
-    acc[quiz.quizId] = quiz;
-    return acc;
-  }, {} as Record<number, Quiz>);
+  const cardsById = props.quizzes.reduce(
+    (acc, quiz) => {
+      acc[quiz.quizId] = quiz;
+      return acc;
+    },
+    {} as Record<number, Quiz>,
+  );
   const newState = gotoNextQuiz(
     newQuizState({
       cardsById,
@@ -284,8 +289,8 @@ function NoQuizDue(_: {}) {
 function HotkeyButton(props: HotkeyButtonProps) {
   return (
     <Grid.Col span={GRID_SIZE}>
-      <Button fullWidth onClick={props.onClick}>
-        {props.label} ({props.hotkey})
+      <Button fullWidth onClick={props.onClick} disabled={props.disabled}>
+        {props.label} ({props.hotkey.toUpperCase()})
       </Button>
     </Grid.Col>
   );
@@ -293,6 +298,14 @@ function HotkeyButton(props: HotkeyButtonProps) {
 
 function QuizView(props: QuizViewProps) {
   const { quiz } = props;
+  const [maxGrade, setMaxGrade] = useState(Grade.EASY);
+  // Reduce maxGrade after a 5 second timeout:
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setMaxGrade(maxGrade - 1);
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, [maxGrade]);
   useEffect(() => {
     props.playQuizAudio();
   }, [props.quiz.quizId]);
@@ -316,33 +329,43 @@ function QuizView(props: QuizViewProps) {
       onClick: () => props.startRecording(Grade.AGAIN),
       label: "FAIL",
       hotkey: HOTKEYS.FAIL,
+      disabled: false,
     },
     {
       onClick: () => props.startRecording(Grade.HARD),
       label: "Hard",
       hotkey: HOTKEYS.HARD,
+      disabled: false,
     },
     {
       onClick: () => props.startRecording(Grade.GOOD),
       label: "Good",
       hotkey: HOTKEYS.GOOD,
+      disabled: maxGrade < Grade.GOOD,
     },
     {
       onClick: () => props.startRecording(Grade.EASY),
       label: "Easy",
       hotkey: HOTKEYS.EASY,
+      disabled: maxGrade < Grade.EASY,
     },
   ];
   let buttonCluster = (
     <Grid grow justify="center" align="stretch" gutter="xs">
       <Grid.Col span={6}>
-        <Button fullWidth onClick={props.playQuizAudio}>
-          Play Audio ({HOTKEYS.PLAY})
+        <Button
+          fullWidth
+          onClick={() => {
+            setMaxGrade(maxGrade - 1);
+            props.playQuizAudio();
+          }}
+        >
+          Play Audio ({HOTKEYS.PLAY.toUpperCase()})
         </Button>
       </Grid.Col>
       <Grid.Col span={6}>
         <Button fullWidth onClick={props.flagQuiz}>
-          Pause Reviews ({HOTKEYS.FLAG})
+          Pause Reviews ({HOTKEYS.FLAG.toUpperCase()})
         </Button>
       </Grid.Col>
       {buttons.map((p) => (
@@ -364,6 +387,7 @@ function QuizView(props: QuizViewProps) {
     );
   }
 
+  const when = quiz.lastReview ? timeUntil(quiz.lastReview) : "never";
   return (
     <>
       <StudyHeader
@@ -371,9 +395,10 @@ function QuizView(props: QuizViewProps) {
         langCode={props.quiz.langCode}
       />
       {buttonCluster}
-      <p>Card #{quiz.quizId} quiz</p>
+      <p>Quiz #{quiz.quizId}</p>
       <p>{quiz.repetitions} repetitions</p>
       <p>{quiz.lapses} lapses</p>
+      <p>Last seen: {when}</p>
       <p>
         {props.totalCards} cards total, {props.quizzesDue} due, {props.newCards}{" "}
         new, {props.awaitingGrades} awaiting grades, {props.queueSize} in study
@@ -423,6 +448,11 @@ function LoadedStudyPage(props: QuizData) {
       );
       break;
     case "none":
+      const willGrade = state.idsAwaitingGrades.length;
+      if (willGrade) {
+        el = <div>Waiting for the server to grade {willGrade} quizzes.</div>;
+        break;
+      }
       el = <NoQuizDue />;
       break;
     case "loading":

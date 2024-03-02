@@ -95,11 +95,11 @@ model Quiz {
   cardId      Int
   Card        Card   @relation(fields: [cardId], references: [id], onDelete: Cascade)
   quizType    String
-  stability   Float
-  difficulty  Float
-  firstReview Float
-  lastReview  Float
-  nextReview  Float
+  stability   Float  @default(0)
+  difficulty  Float  @default(0)
+  firstReview Float  @default(0)
+  lastReview  Float  @default(0)
+  nextReview  Float  @default(0)
   lapses      Float  @default(0)
   repetitions Float  @default(0)
 

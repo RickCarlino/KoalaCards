@@ -14,6 +14,7 @@ export const Quiz = z.object({
   lessonType: z.union([z.literal("listening"), z.literal("speaking")]),
   audio: z.string(),
   langCode: z.string(),
+  lastReview: z.number(),
 });
 
 const QuizList = z.object({
@@ -25,16 +26,23 @@ const QuizList = z.object({
 
 export async function getLessonMeta(userId: string) {
   const currentDate = new Date().getTime(); // Current time in milliseconds
+  // const yesterday = currentDate - 24 * 60 * 60 * 1000;
 
   const quizzesDue = await prismaClient.quiz.count({
     where: {
       Card: {
         userId: userId,
-        flagged: false,
+        flagged: { not: true },
+      },
+      quizType: {
+        in: ["listening", "speaking"],
       },
       nextReview: {
         lt: currentDate,
       },
+      // lastReview: {
+      //   lt: yesterday,
+      // },
       firstReview: {
         gt: 0,
       },
@@ -51,13 +59,16 @@ export async function getLessonMeta(userId: string) {
   });
 
   // Cards that have no quiz yet:
-  const newCards = await prismaClient.card.count({
+  // Count of Quizzes where repetitions and lapses are 0
+  // by distinct cardID
+  const newCards = await prismaClient.quiz.count({
     where: {
-      userId: userId,
-      flagged: false,
-      Quiz: {
-        none: {},
+      Card: {
+        userId: userId,
+        flagged: false,
       },
+      repetitions: 0,
+      lapses: 0,
     },
   });
   return {

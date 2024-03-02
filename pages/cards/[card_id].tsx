@@ -1,7 +1,27 @@
+import { timeUntil } from "@/koala/time-until";
 import { trpc } from "@/koala/trpc-config";
 import { Button, Checkbox, Container, Paper, TextInput } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useRouter } from "next/router";
+
+type LocalQuiz = {
+  repetitions: number;
+  lapses: number;
+  lessonType: string;
+  lastReview: number;
+};
+
+function CardQuiz(props: LocalQuiz) {
+  const when = props.lastReview ? timeUntil(props.lastReview) : "never";
+  return (
+    <div>
+      <h2>{props.lessonType.toUpperCase()}</h2>
+      <p>Repetitions: {props.repetitions}</p>
+      <p>Lapses: {props.lapses}</p>
+      <p>Last Review: {when}</p>
+    </div>
+  );
+}
 
 function Card({ id }: { id: number }) {
   const router = useRouter();
@@ -54,6 +74,7 @@ function Card({ id }: { id: number }) {
       <Paper shadow="xs">
         <form onSubmit={form.onSubmit(updateForm)}>
           <Container size="md">
+            <h1>Card {card.data.id}</h1>
             <TextInput
               label="Definition"
               placeholder="Enter Definition"
@@ -77,6 +98,10 @@ function Card({ id }: { id: number }) {
             Delete
           </Button>
         </form>
+        <h1>Quiz Data</h1>
+        {card.data.quizzes.map((quiz) => {
+          return <CardQuiz key={quiz.quizId} {...quiz} />;
+        })}
       </Paper>
     </div>
   );

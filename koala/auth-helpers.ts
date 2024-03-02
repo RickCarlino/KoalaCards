@@ -17,7 +17,6 @@ export const getUserSettings = async (userId?: UserID) => {
     return errorReport("Missing User ID");
   }
   const params = { userId: "" + userId };
-  // Update users lastSeen field:
   prismaClient.user
     .update({
       where: { id: "" + userId },

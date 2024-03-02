@@ -10,6 +10,7 @@ export type Quiz = {
   quizId: number;
   repetitions: number;
   langCode: string;
+  lastReview: number;
 };
 
 export type Failure = {
@@ -34,9 +35,9 @@ type CurrentItem =
   | { type: "none"; value: undefined };
 
 export type State = {
+  isRecording: boolean;
   cardsById: Record<string, Quiz>;
   failures: Failure[];
-  isRecording: boolean;
   idsAwaitingGrades: number[];
   idsWithErrors: number[];
   quizIDsForLesson: number[];
@@ -44,6 +45,7 @@ export type State = {
   quizzesDue: number;
   totalCards: number;
   currentItem: CurrentItem;
+  failureReviewMode: boolean;
 };
 
 type QuizResult = "error" | "fail" | "pass";
@@ -74,32 +76,68 @@ function betterUnique(input: number[]): number[] {
   return [head, ...unique(tail.filter((x) => x !== head))];
 }
 
-export function gotoNextQuiz(state: State): State {
-  if (state.isRecording) {
+const FAILURE_REVIEW_CUTOFF = 5;
+
+function maybeEnterFailureReview(state: State): State {
+  // Reasons to enter failure mode:
+  // 1. There are > FAILURE_REVIEW_CUTOFF failures to review.
+  // 2. There are no more quizzes to review.
+
+  const lotsOfFailures = state.failures.length >= FAILURE_REVIEW_CUTOFF;
+  const anyFailures = state.failures.length > 0;
+  const noQuizzes = !state.cardsById[state.quizIDsForLesson[0]];
+  if (lotsOfFailures || (anyFailures && noQuizzes)) {
+    return {
+      ...state,
+      failureReviewMode: true,
+    };
+  }
+
+  return state;
+}
+
+function maybeExitFailureReview(state: State): State {
+  // Reasons to exit failure mode:
+  // 1. There are no more failures to review.
+
+  if (state.failures.length === 0) {
+    return {
+      ...state,
+      failureReviewMode: false,
+    };
+  }
+  return state;
+}
+
+export function gotoNextQuiz(oldState: State): State {
+  if (oldState.isRecording) {
     throw new Error("Cannot change quizzes while recording");
   }
 
+  const state = maybeEnterFailureReview(oldState);
+
   const [nextFailure, ...restFailures] = state.failures;
-  if (nextFailure) {
-    return {
+  if (nextFailure && state.failureReviewMode) {
+    return maybeExitFailureReview({
       ...state,
       currentItem: { type: "failure", value: nextFailure },
+      quizIDsForLesson: betterUnique(state.quizIDsForLesson),
       failures: restFailures,
-    };
+    });
   }
   const [nextQuizID, ...restQuizIDs] = state.quizIDsForLesson;
   const nextQuiz = state.cardsById[nextQuizID];
   if (nextQuiz) {
-    return {
+    return maybeExitFailureReview({
       ...state,
       currentItem: { type: "quiz", value: nextQuiz },
       quizIDsForLesson: betterUnique([...restQuizIDs, nextQuizID]),
-    };
+    });
   }
-  return {
+  return maybeExitFailureReview({
     ...state,
     currentItem: { type: "none", value: undefined },
-  };
+  });
 }
 
 export const newQuizState = (state: Partial<State> = {}): State => {
@@ -119,6 +157,7 @@ export const newQuizState = (state: Partial<State> = {}): State => {
     quizzesDue: 0,
     newCards: 0,
     currentItem: { type: "loading", value: undefined },
+    failureReviewMode: false,
     ...state,
   };
 };
@@ -174,7 +213,7 @@ function reduce(state: State, action: Action): State {
             term: card.term,
             definition: card.definition,
             lessonType: card.lessonType,
-            userTranscription: "Empty response",
+            userTranscription: "You hit 'FAIL' without recording anything.",
             rejectionText: "You hit the `Fail` button. Better luck next time!",
             rollbackData: undefined,
           },
@@ -183,7 +222,13 @@ function reduce(state: State, action: Action): State {
       });
       return removeCard(state2, action.id);
     case "FLAG_QUIZ":
-      return gotoNextQuiz(state);
+      const filter = (quizID: number) =>
+        state.cardsById[quizID]?.cardId !== action.cardId;
+      return gotoNextQuiz({
+        ...state,
+        // Remove all quizzes with this cardID
+        quizIDsForLesson: state.quizIDsForLesson.filter(filter),
+      });
     case "END_RECORDING":
       const arr = [...state.idsAwaitingGrades, action.id];
       const set = new Set(arr);

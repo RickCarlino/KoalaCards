@@ -7,7 +7,7 @@ import { errorReport } from "./error-report";
 import { prismaClient } from "@/koala/prisma-client";
 import { Card } from "@prisma/client";
 
-type LessonType = "listening" | "speaking";
+export type LessonType = "listening" | "speaking";
 
 type GetLessonInputParams = {
   userId: string;
@@ -182,13 +182,17 @@ export default async function getLessons(p: GetLessonInputParams) {
         in: ["listening", "speaking"],
       },
       nextReview: {
-        lt: p.now,
+        lt: p.now || Date.now(),
       },
       lastReview: {
         lt: yesterday,
       },
     },
-    orderBy: [{ Card: { langCode: "desc" } }, { nextReview: "desc" }],
+    orderBy: [
+      { Card: { langCode: "desc" } },
+      // 90% old cards, 10% new, for now.
+      { nextReview: Math.random() < 0.9 ? "desc" : "asc" },
+    ],
     // Don't select quizzes from the same card.
     // Prevents hinting.
     distinct: ["cardId"],
@@ -214,6 +218,7 @@ export default async function getLessons(p: GetLessonInputParams) {
       lessonType: quiz.quizType as "listening" | "speaking",
       audio,
       langCode: quiz.Card.langCode,
+      lastReview: quiz.lastReview || 0,
     };
   });
 }
