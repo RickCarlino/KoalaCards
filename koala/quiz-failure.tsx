@@ -26,7 +26,7 @@ export function QuizFailure(props: {
   ]);
   return (
     <Container size="xs">
-      <Grid grow justify="center" align="center">
+      <Grid justify="center" align="center">
         <Grid.Col>
           <header
             style={{
@@ -76,7 +76,7 @@ export function QuizFailure(props: {
               </tr>
             </tbody>
           </Table>
-          <Grid grow justify="center" align="stretch" gutter="xs">
+          <Grid>
             <Grid.Col span={4}>
               <Button onClick={props.onClose}>
                 Continue ({HOTKEYS.CONTINUE.toUpperCase()})

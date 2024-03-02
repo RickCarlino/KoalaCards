@@ -45,6 +45,7 @@ type HotkeyButtonProps = {
   hotkey: string;
   label: string;
   onClick: () => void;
+  disabled?: boolean;
 };
 
 const HEADER_STYLES = {
@@ -288,7 +289,7 @@ function NoQuizDue(_: {}) {
 function HotkeyButton(props: HotkeyButtonProps) {
   return (
     <Grid.Col span={GRID_SIZE}>
-      <Button fullWidth onClick={props.onClick}>
+      <Button fullWidth onClick={props.onClick} disabled={props.disabled}>
         {props.label} ({props.hotkey.toUpperCase()})
       </Button>
     </Grid.Col>
@@ -297,6 +298,14 @@ function HotkeyButton(props: HotkeyButtonProps) {
 
 function QuizView(props: QuizViewProps) {
   const { quiz } = props;
+  const [maxGrade, setMaxGrade] = useState(Grade.EASY);
+  // Reduce maxGrade after a 5 second timeout:
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setMaxGrade(maxGrade - 1);
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, [maxGrade]);
   useEffect(() => {
     props.playQuizAudio();
   }, [props.quiz.quizId]);
@@ -320,27 +329,37 @@ function QuizView(props: QuizViewProps) {
       onClick: () => props.startRecording(Grade.AGAIN),
       label: "FAIL",
       hotkey: HOTKEYS.FAIL,
+      disabled: false,
     },
     {
       onClick: () => props.startRecording(Grade.HARD),
       label: "Hard",
       hotkey: HOTKEYS.HARD,
+      disabled: false,
     },
     {
       onClick: () => props.startRecording(Grade.GOOD),
       label: "Good",
       hotkey: HOTKEYS.GOOD,
+      disabled: maxGrade < Grade.GOOD,
     },
     {
       onClick: () => props.startRecording(Grade.EASY),
       label: "Easy",
       hotkey: HOTKEYS.EASY,
+      disabled: maxGrade < Grade.EASY,
     },
   ];
   let buttonCluster = (
     <Grid grow justify="center" align="stretch" gutter="xs">
       <Grid.Col span={6}>
-        <Button fullWidth onClick={props.playQuizAudio}>
+        <Button
+          fullWidth
+          onClick={() => {
+            setMaxGrade(maxGrade - 1);
+            props.playQuizAudio();
+          }}
+        >
           Play Audio ({HOTKEYS.PLAY.toUpperCase()})
         </Button>
       </Grid.Col>
