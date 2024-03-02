@@ -1,5 +1,5 @@
 import { HOTKEYS } from "@/pages/study";
-import { Button, Grid, Text, Container } from "@mantine/core";
+import { Button, Grid, Text, Container, Table } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import Link from "next/link";
 
@@ -39,22 +39,43 @@ export function QuizFailure(props: {
             <h1 style={{ fontSize: "24px", fontWeight: "bold" }}>Incorrect</h1>
           </header>
           <Text>You answered a previous question incorrectly.</Text>
-          <Text>
-            <strong>Quiz type:</strong> {props.lessonType}
-          </Text>
-          <Text>
-            <strong>(A) What you said:</strong> {props.userTranscription}
-          </Text>
-          <Text>
-            <strong>(B) Term:</strong> {props.term}
-          </Text>
-          <Text>
-            <strong>(C) Definition:</strong> {props.definition}
-          </Text>
-          <Text>
-            <strong>Why it's wrong:</strong> {props.rejectionText}
-          </Text>
-          <Text>{linkToEditPage(props.cardId)}</Text>
+          <Table>
+            <tbody>
+              <tr>
+                <td>
+                  <strong>Quiz type:</strong>
+                </td>
+                <td>{props.lessonType}</td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>(A) What you said:</strong>
+                </td>
+                <td>{props.userTranscription}</td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>(B) Term:</strong>
+                </td>
+                <td>{props.term}</td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>(C) Definition:</strong>
+                </td>
+                <td>{props.definition}</td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>Why it's wrong:</strong>
+                </td>
+                <td>{props.rejectionText}</td>
+              </tr>
+              <tr>
+                <td colSpan={2}>{linkToEditPage(props.cardId)}</td>
+              </tr>
+            </tbody>
+          </Table>
           <Grid grow justify="center" align="stretch" gutter="xs">
             <Grid.Col span={4}>
               <Button onClick={props.onClose}>
