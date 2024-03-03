@@ -4,14 +4,14 @@ import { template } from "radash";
 import { FOOTER, strip } from "./evaluator-utils";
 
 const GRAMMAR_PROMPT =
-  `Grade a sentence from a language learning
-app. Answer YES if the sentence is grammatically correct and
-in the specified language (ISO 639-1:2002 code '{{langCode}}').
-Answer NO if it doesn't follow the language's syntax and semantics
-or isn't in the specified language. Avoid vague responses.
-Incomplete sentences are OK if they are grammatically correct.
-Do not grade spacing. You will be penalized for vague "NO"
-responses.` + FOOTER;
+  `Grade a sentence (spoken via speech-to-text) from a
+language learning app. Answer YES if the sentence is
+grammatically correct and in the specified language
+(ISO 639-1:2002 code '{{langCode}}'). Answer NO if it doesn't
+follow the language's syntax and semantics or isn't in the
+specified language. Avoid vague responses. Incomplete
+sentences are OK if they are grammatically correct. Do not
+grade spacing. You will be penalized for vague "NO" responses.` + FOOTER;
 
 const MEANING_PROMPT =
   `

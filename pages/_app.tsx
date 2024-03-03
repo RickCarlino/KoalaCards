@@ -11,6 +11,9 @@ import { UserSettingsProvider } from "@/koala/settings-provider";
 function App(props: AppProps) {
   const { Component, pageProps } = props;
 
+  if (props.router.pathname === "/auth/email") {
+    return <Component {...pageProps} />;
+  }
   return (
     <>
       <Head>

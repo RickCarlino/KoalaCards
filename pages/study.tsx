@@ -299,21 +299,31 @@ function HotkeyButton(props: HotkeyButtonProps) {
 function QuizView(props: QuizViewProps) {
   const { quiz } = props;
   const [maxGrade, setMaxGrade] = useState(Grade.EASY);
-  // Reduce maxGrade after a 5 second timeout:
+  // Reduce maxGrade after a timeout
+  // Cancel timer when quizID changes:
+  const quizID = props.quiz.quizId;
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setMaxGrade(maxGrade - 1);
     }, 8000);
-    return () => clearTimeout(timer);
-  }, [maxGrade]);
+    return () => {
+      console.log("=== Restart timer");
+      clearTimeout(timer);
+    };
+  }, [maxGrade, quizID]);
+
   useEffect(() => {
+    setMaxGrade(Grade.EASY);
     props.playQuizAudio();
-  }, [props.quiz.quizId]);
+  }, [quizID]);
   const gradeWith = (g: Grade) => () => {
+    const grade = Math.min(g, maxGrade);
     if (props.isRecording) {
       props.stopRecording();
     } else {
-      props.startRecording(g);
+      console.log(`=== Grading with ${grade}`);
+      props.startRecording(grade);
     }
   };
   useHotkeys([
@@ -350,16 +360,14 @@ function QuizView(props: QuizViewProps) {
       disabled: maxGrade < Grade.EASY,
     },
   ];
+  const playAudio = () => {
+    setMaxGrade(maxGrade - 1);
+    props.playQuizAudio();
+  };
   let buttonCluster = (
     <Grid grow justify="center" align="stretch" gutter="xs">
       <Grid.Col span={6}>
-        <Button
-          fullWidth
-          onClick={() => {
-            setMaxGrade(maxGrade - 1);
-            props.playQuizAudio();
-          }}
-        >
+        <Button fullWidth onClick={playAudio}>
           Play Audio ({HOTKEYS.PLAY.toUpperCase()})
         </Button>
       </Grid.Col>
