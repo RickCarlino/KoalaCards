@@ -8,7 +8,7 @@ import { exportCards } from "./export-cards";
 import { faucet } from "./faucet";
 import { flagCard } from "./flag-card";
 import { getAllCards } from "./get-all-cards";
-import { getNextQuiz, getNextQuizzes } from "./get-next-quizzes";
+import { getNextQuizzes } from "./get-next-quizzes";
 import { getOneCard } from "./get-one-card";
 import { getUserSettings } from "./get-user-settings";
 import { gradeQuiz } from "./grade-quiz";
@@ -26,7 +26,6 @@ export const appRouter = router({
   faucet,
   flagCard,
   getAllCards,
-  getNextQuiz,
   getNextQuizzes,
   getOneCard,
   getUserSettings,

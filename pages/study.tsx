@@ -146,6 +146,7 @@ function useBusinessLogic(state: State, dispatch: Dispatch<Action>) {
         });
       })
       .finally(() => {
+        const isFull = state.quizIDsForLesson.length >= 10;
         getNextQuiz
           .mutateAsync({
             notIn: [
@@ -153,6 +154,7 @@ function useBusinessLogic(state: State, dispatch: Dispatch<Action>) {
               ...state.idsAwaitingGrades,
               ...state.idsWithErrors,
             ],
+            take: isFull ? 1 : 7,
           })
           .then((data) => {
             dispatch({
@@ -476,7 +478,7 @@ export default function StudyPage() {
   const mutation = trpc.getNextQuizzes.useMutation();
   let el = <div>Loading...</div>;
   useEffect(() => {
-    mutation.mutate({});
+    mutation.mutate({ notIn: [], take: 10 });
   }, []);
 
   if (mutation.isError) {

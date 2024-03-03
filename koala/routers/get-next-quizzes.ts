@@ -24,6 +24,11 @@ const QuizList = z.object({
   newCards: z.number(),
 });
 
+const QuizInput = z.object({
+  notIn: z.array(z.number()),
+  take: z.number(),
+});
+
 export async function getLessonMeta(userId: string) {
   const currentDate = new Date().getTime(); // Current time in milliseconds
   // const yesterday = currentDate - 24 * 60 * 60 * 1000;
@@ -79,27 +84,17 @@ export async function getLessonMeta(userId: string) {
 }
 
 export const getNextQuizzes = procedure
-  .input(z.object({}))
+  .input(QuizInput)
   .output(QuizList)
-  .mutation(async ({ ctx }) => {
+  .mutation(async ({ ctx, input }) => {
     const userId = (await getUserSettings(ctx.user?.id)).user.id;
     return {
       ...(await getLessonMeta(userId)),
-      quizzes: await getLessons({ userId }),
-    };
-  });
-
-export const getNextQuiz = procedure
-  .input(
-    z.object({
-      notIn: z.array(z.number()),
-    }),
-  )
-  .output(QuizList)
-  .mutation(async ({ ctx }) => {
-    const userId = (await getUserSettings(ctx.user?.id)).user.id;
-    return {
-      quizzes: [],
-      ...(await getLessonMeta(userId)),
+      quizzes: await getLessons({
+        userId,
+        notIn: input.notIn,
+        now: Date.now(),
+        take: input.take,
+      }),
     };
   });
