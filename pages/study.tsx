@@ -236,10 +236,13 @@ function useBusinessLogic(state: State, dispatch: Dispatch<Action>) {
 }
 
 function useQuizState(props: QuizData) {
-  const cardsById = props.quizzes.reduce((acc, quiz) => {
-    acc[quiz.quizId] = quiz;
-    return acc;
-  }, {} as Record<number, Quiz>);
+  const cardsById = props.quizzes.reduce(
+    (acc, quiz) => {
+      acc[quiz.quizId] = quiz;
+      return acc;
+    },
+    {} as Record<number, Quiz>,
+  );
   const newState = gotoNextQuiz(
     newQuizState({
       cardsById,
