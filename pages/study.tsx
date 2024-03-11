@@ -68,7 +68,7 @@ export const HOTKEYS = {
   PLAY: "j",
   FLAG: "h",
   DISAGREE: "l",
-  CONTINUE: "k",
+  AGREE: "k",
 };
 
 const GRID_SIZE = 2;
