@@ -17,8 +17,8 @@ Hey there! Welcome to KoalaSRS, a fun and friendly [spaced repetition system](ht
 ## Demo Video
 
 <p align="center">
-  <a href="https://youtu.be/dVcPh90sG2A">
-    Watch a short YouTube demo of the app as of 2023-11-25
+  <a href="https://www.youtube.com/watch?v=qX9xj5OR3gY">
+    Watch a short YouTube demo of the app as of 2024-03-15
     <br/>
     <img src="./screenshot.png" alt="KoalaSRS UI screenshot"/>
   </a>

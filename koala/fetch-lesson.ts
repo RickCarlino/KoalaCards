@@ -12,11 +12,11 @@ export type LessonType = "listening" | "speaking";
 type GetLessonInputParams = {
   userId: string;
   /** Current time */
-  now?: number;
+  now: number;
   /** Max number of cards to return */
-  take?: number;
+  take: number;
   /** IDs that are already in the user's hand. */
-  notIn?: number[];
+  notIn: number[];
 };
 
 type Gender = "F" | "M" | "N";
@@ -166,18 +166,39 @@ export async function generateLessonAudio(params: AudioLessonParams) {
   return generateSpeech(ssml, voice);
 }
 
+async function getExcludedIDs(notIn: number[]): Promise<number[]> {
+  const excluded = new Set(notIn);
+  const results = new Set<number>();
+  if (excluded.size) {
+    const cardIDs = new Set<number>();
+    const query = {
+      where: { id: { in: Array.from(excluded) } },
+      select: { cardId: true },
+    };
+    const result1 = await prismaClient.quiz.findMany(query);
+    result1.map(({ cardId }) => cardIDs.add(cardId));
+    const query2 = {
+      where: {
+        cardId: { in: Array.from(cardIDs) },
+      },
+      select: { id: true },
+    };
+    const result2 = await prismaClient.quiz.findMany(query2);
+    result2.map(({ id }) => excluded.add(id));
+  }
+  return Array.from(results);
+}
+
 export default async function getLessons(p: GetLessonInputParams) {
   const yesterday = new Date().getTime() - 24 * 60 * 60 * 1000;
-
+  const excluded = await getExcludedIDs(p.notIn);
   const quizzes = await prismaClient.quiz.findMany({
     where: {
       Card: {
         userId: p.userId,
         flagged: { not: true },
       },
-      id: {
-        notIn: p.notIn,
-      },
+      ...(excluded.length ? { id: { notIn: excluded } } : {}),
       quizType: {
         in: ["listening", "speaking"],
       },
@@ -196,7 +217,7 @@ export default async function getLessons(p: GetLessonInputParams) {
     // Don't select quizzes from the same card.
     // Prevents hinting.
     distinct: ["cardId"],
-    take: p.take || 10,
+    take: p.take,
     include: {
       Card: true, // Include related Card data in the result
     },
