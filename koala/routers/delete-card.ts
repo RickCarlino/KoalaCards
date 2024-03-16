@@ -20,18 +20,13 @@ export const deleteCard = procedure
       },
     });
 
-    const quizzes = await prismaClient.quiz.findMany({
-      where: {
-        cardId: input.id,
-      },
-    });
     if (!card) {
       return errorReport("Card not found");
     }
 
     await prismaClient.quiz.deleteMany({
       where: {
-        cardId: { in: quizzes.map((q) => q.id) },
+        cardId: card.id,
       },
     });
 
