@@ -48,7 +48,7 @@ const Edit: React.FC = () => {
   };
   let content = <div>Loading...</div>;
   if (cards.data) {
-    content = <CardTable cards={cards.data} />;
+    content = <CardTable onDelete={() => cards.refetch()} cards={cards.data} />;
   }
   return (
     <Container size="s">
