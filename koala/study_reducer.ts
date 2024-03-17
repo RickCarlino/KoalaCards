@@ -214,7 +214,7 @@ function reduce(state: State, action: Action): State {
             definition: card.definition,
             lessonType: card.lessonType,
             userTranscription: "You hit 'FAIL' without recording anything.",
-            rejectionText: "You hit the `Fail` button. Better luck next time!",
+            rejectionText: "You hit the `Fail` button. Review for next time.",
             rollbackData: undefined,
           },
           ...state.failures,
