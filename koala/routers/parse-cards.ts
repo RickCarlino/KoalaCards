@@ -1,10 +1,12 @@
 import { createCardsFromText } from "@/koala/create-cards-from-text";
 import { z } from "zod";
 import { procedure } from "../trpc-procedure";
+import { LANG_CODES } from "./bulk-create-cards";
 
 export const parseCards = procedure
   .input(
     z.object({
+      langCode: LANG_CODES,
       text: z.string().max(3000),
     }),
   )
@@ -21,7 +23,7 @@ export const parseCards = procedure
   )
   .mutation(async ({ input }) => {
     try {
-      const cards = await createCardsFromText(input.text);
+      const cards = await createCardsFromText(input.langCode, input.text);
       return { cards };
     } catch (error) {
       console.error(error);

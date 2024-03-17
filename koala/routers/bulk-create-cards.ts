@@ -2,17 +2,17 @@ import { z } from "zod";
 import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc-procedure";
 
+export const LANG_CODES = z.union([
+  z.literal("es"),
+  z.literal("fr"),
+  z.literal("it"),
+  z.literal("ko"),
+]);
+
 export const bulkCreateCards = procedure
   .input(
     z.object({
-      // Koala does not actually support Spanish.
-      // It's a placeholder.
-      langCode: z.union([
-        z.literal("es"),
-        z.literal("fr"),
-        z.literal("it"),
-        z.literal("ko"),
-      ]),
+      langCode: LANG_CODES,
       input: z
         .array(
           z.object({
@@ -21,7 +21,7 @@ export const bulkCreateCards = procedure
             gender: z.union([z.literal("M"), z.literal("F"), z.literal("N")]),
           }),
         )
-        .max(1000),
+        .max(3000),
     }),
   )
   .output(

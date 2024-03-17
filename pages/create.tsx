@@ -119,6 +119,7 @@ function LanguageInputPage() {
     setLoading(true);
     parseCards
       .mutateAsync({
+        langCode: state.language,
         text: state.rawInput,
       })
       .then(({ cards }) => {
@@ -171,9 +172,10 @@ function LanguageInputPage() {
             label="Language"
             placeholder="Choose"
             value={state.language}
-            onChange={(value) =>
-              value && handleLanguageChange(value as LangCode)
-            }
+            onChange={(selection) => {
+              const value = selection || state.language;
+              value && handleLanguageChange(value as LangCode);
+            }}
             data={[
               { value: "ko", label: "Korean" },
               { value: "es", label: "Spanish" },
@@ -181,7 +183,12 @@ function LanguageInputPage() {
               { value: "fr", label: "French" },
             ]}
           />
-          <Button onClick={() => setActiveStep((current) => current + 1)}>
+          <Button
+            disabled={!state.language}
+            onClick={() => {
+              setActiveStep((current) => current + 1);
+            }}
+          >
             Next
           </Button>
         </Stepper.Step>
