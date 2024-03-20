@@ -108,7 +108,7 @@ export default function UserSettingsPage(props: Props) {
           max={2}
           step={0.05}
           required
-        />
+        /> */}
         <NumberInput
           label="Maximum new cards introduced in a 24 hour period"
           id="cardsPerDayMax"
@@ -117,7 +117,7 @@ export default function UserSettingsPage(props: Props) {
           onChange={(value) => handleChange(value, "cardsPerDayMax")}
           min={1}
           required
-        /> */}
+        />
         <NumberInput
           label="Percentage of user recorded audio played back after a speaking test."
           id="playbackPercentage"

@@ -65,10 +65,10 @@ export const HOTKEYS = {
   HARD: "s",
   GOOD: "d",
   EASY: "f",
-  PLAY: "j",
+  PLAY: "v",
   FLAG: "h",
-  DISAGREE: "l",
-  AGREE: "k",
+  DISAGREE: "k",
+  AGREE: "j",
 };
 
 const GRID_SIZE = 2;
@@ -128,6 +128,7 @@ function useBusinessLogic(state: State, dispatch: Dispatch<Action>) {
               userTranscription: data.userTranscription,
               rejectionText: data.rejectionText,
               rollbackData: data.rollbackData,
+              audio: data.audio,
             },
           });
         }

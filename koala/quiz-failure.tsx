@@ -2,6 +2,7 @@ import { HOTKEYS } from "@/pages/study";
 import { Button, Grid, Text, Container, Table } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import Link from "next/link";
+import { playAudio } from "./play-audio";
 
 export function linkToEditPage(id: number) {
   return <Link href={["cards", id].join("/")}>Edit Card</Link>;
@@ -83,12 +84,18 @@ export function QuizFailure(props: {
   lessonType: string;
   userTranscription: string;
   rejectionText: string;
+  audio: string;
   onFlag: () => void;
   onDiscard?: () => void;
   onClose: () => void;
 }) {
+  const doClose = async () => {
+    await playAudio(props.audio);
+    await playAudio(props.audio);
+    props.onClose();
+  };
   useHotkeys([
-    [HOTKEYS.AGREE, () => props.onClose()],
+    [HOTKEYS.AGREE, doClose],
     [HOTKEYS.FLAG, props.onFlag],
     [HOTKEYS.DISAGREE, () => props.onDiscard?.()],
   ]);
@@ -110,7 +117,7 @@ export function QuizFailure(props: {
           <FailureTable {...props} />
           <Grid>
             <Grid.Col span={4}>
-              <Button onClick={props.onClose}>
+              <Button onClick={doClose}>
                 Agree ({HOTKEYS.AGREE.toUpperCase()})
               </Button>
             </Grid.Col>
