@@ -57,7 +57,7 @@ async function processFailure(ctx: ResultContext): Promise<FailResult> {
   await setGrade(ctx.quiz, Grade.AGAIN);
   const audio = await generateLessonAudio({
     card: ctx.card,
-    lessonType: "speaking",
+    lessonType: "listening",
     speed: 90,
   });
   return {
