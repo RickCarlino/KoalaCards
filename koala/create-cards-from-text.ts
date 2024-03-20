@@ -43,10 +43,13 @@ const SYSTEM_PROMPT = `
 
 /** Ingests a body of text containing card data and asynchronously returns
  * structured term/definition pairs. */
-export async function createCardsFromText(langCode: string, input: string): Promise<Card[]> {
+export async function createCardsFromText(
+  langCode: string,
+  input: string,
+): Promise<Card[]> {
   const x = await gptCall({
     messages: [
-      { role: "system", content: SYSTEM_PROMPT + langCode},
+      { role: "system", content: SYSTEM_PROMPT + langCode },
       { role: "user", content: input.slice(0, 3000) },
     ],
     model: "gpt-3.5-turbo-1106",

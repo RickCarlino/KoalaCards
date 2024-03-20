@@ -1,10 +1,12 @@
+import { transcribeB64 } from "@/koala/transcribe";
+import { Card } from "@prisma/client";
+import { Grade } from "femto-fsrs";
 import { z } from "zod";
-import { procedure } from "../trpc-procedure";
+import { generateLessonAudio } from "../fetch-lesson";
 import { prismaClient } from "../prisma-client";
 import { getQuizEvaluator } from "../quiz-evaluators";
-import { transcribeB64 } from "@/koala/transcribe";
 import { QuizEvaluatorOutput } from "../quiz-evaluators/types";
-import { Grade } from "femto-fsrs";
+import { procedure } from "../trpc-procedure";
 import { calculateSchedulingData, setGrade } from "./import-cards";
 
 type PerformExamOutput = z.infer<typeof performExamOutput>;
@@ -13,6 +15,7 @@ type ResultContext = {
   daysSinceReview: number;
   perceivedDifficulty: Grade;
   userInput: string;
+  card: Card;
   quiz: {
     id: number;
     firstReview: number;
@@ -21,6 +24,7 @@ type ResultContext = {
     stability: number;
     lapses: number;
     repetitions: number;
+    quizType: "listening" | "speaking";
   };
 };
 
@@ -34,6 +38,7 @@ const FAIL = z.object({
   rejectionText: z.string(),
   userTranscription: z.string(),
   result: z.literal("fail"),
+  audio: z.string(),
   rollbackData: z.object({
     difficulty: z.number(),
     stability: z.number(),
@@ -50,12 +55,18 @@ const performExamOutput = z.union([PASS, FAIL, ERROR]);
 type FailResult = z.infer<typeof FAIL>;
 async function processFailure(ctx: ResultContext): Promise<FailResult> {
   await setGrade(ctx.quiz, Grade.AGAIN);
+  const audio = await generateLessonAudio({
+    card: ctx.card,
+    lessonType: "speaking",
+    speed: 90,
+  });
   return {
     result: "fail",
     grade: 0,
     userTranscription: ctx.userInput,
     rejectionText: ctx.result.userMessage,
     rollbackData: calculateSchedulingData(ctx.quiz, ctx.perceivedDifficulty),
+    audio,
   };
 }
 
@@ -138,6 +149,7 @@ export const gradeQuiz = procedure
       daysSinceReview: Math.floor((now - lastReview) / (1000 * 60 * 60 * 24)),
       perceivedDifficulty: x.input.perceivedDifficulty as Grade,
       userInput: transcript.text,
+      card,
       quiz: {
         id: quiz.id,
         firstReview: quiz.firstReview,
@@ -146,6 +158,7 @@ export const gradeQuiz = procedure
         stability: quiz.stability,
         lapses: quiz.lapses,
         repetitions: quiz.repetitions,
+        quizType: quiz.quizType as "listening" | "speaking",
       },
     };
     switch (result.result) {

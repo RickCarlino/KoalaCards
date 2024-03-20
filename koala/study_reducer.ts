@@ -21,6 +21,7 @@ export type Failure = {
   rejectionText: string;
   term: string;
   userTranscription: string;
+  audio: string;
   rollbackData?: {
     difficulty: number;
     stability: number;
@@ -215,6 +216,7 @@ function reduce(state: State, action: Action): State {
             lessonType: card.lessonType,
             userTranscription: "You hit 'FAIL' without recording anything.",
             rejectionText: "You hit the `Fail` button. Review for next time.",
+            audio: card.audio,
             rollbackData: undefined,
           },
           ...state.failures,
