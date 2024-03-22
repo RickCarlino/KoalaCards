@@ -60,6 +60,11 @@ export type YesOrNoInput = {
   question: string;
   userID: string;
 };
+
+// Usage is currently low enough that we can afford to use
+// the more expensive model
+const TEMPORARY_DEMO = true;
+
 export const yesOrNo = async (input: YesOrNoInput): Promise<YesOrNo> => {
   const { userInput, question, userID } = input;
   const grammarResp = await gptCall({
@@ -73,7 +78,10 @@ export const yesOrNo = async (input: YesOrNoInput): Promise<YesOrNo> => {
         content: question,
       },
     ],
-    model: isApprovedUser(userID) ? "gpt-4-turbo-preview" : "gpt-3.5-turbo",
+    model:
+      isApprovedUser(userID) || TEMPORARY_DEMO
+        ? "gpt-4-turbo-preview"
+        : "gpt-3.5-turbo",
     tools: [
       {
         type: "function",
