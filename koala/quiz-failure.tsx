@@ -84,14 +84,14 @@ export function QuizFailure(props: {
   lessonType: string;
   userTranscription: string;
   rejectionText: string;
-  audio: string;
+  playbackAudio: string;
   onFlag: () => void;
   onDiscard?: () => void;
   onClose: () => void;
 }) {
   const doClose = async () => {
-    await playAudio(props.audio);
-    await playAudio(props.audio);
+    await playAudio(props.playbackAudio);
+    await playAudio(props.playbackAudio);
     props.onClose();
   };
   useHotkeys([

@@ -73,9 +73,10 @@ const Voices: LangLookTable = {
 };
 
 const DATA_DIR = process.env.DATA_DIR || ".";
-const SSML: Record<LessonType, string> = {
+const SSML: Record<LessonType | "playback", string> = {
   speaking: `<speak><break time="0.5s"/><voice language="en-US" gender="female">{{definition}}</voice></speak>`,
   listening: `<speak><break time="0.5s"/><prosody rate="{{speed}}%">{{term}}</prosody></speak>`,
+  playback: `<speak><break time="0.4s"/><prosody rate="{{speed}}%">{{term}}</prosody><break time="0.4s"/><voice language="en-US" gender="female">{{definition}}</voice></speak>`,
 };
 
 let CLIENT: TextToSpeechClient;
@@ -151,7 +152,7 @@ async function generateSpeech(txt: string, voice: string) {
 
 type AudioLessonParams = {
   card: Card;
-  lessonType: LessonType;
+  lessonType: LessonType | "playback";
   speed?: number;
 };
 

@@ -21,7 +21,7 @@ export type Failure = {
   rejectionText: string;
   term: string;
   userTranscription: string;
-  audio: string;
+  playbackAudio: string;
   rollbackData?: {
     difficulty: number;
     stability: number;
@@ -57,7 +57,7 @@ export type Action =
   | { type: "ADD_FAILURE"; value: Failure }
   | { type: "REMOVE_FAILURE"; id: number }
   | { type: "BEGIN_RECORDING" }
-  | { type: "USER_GAVE_UP"; id: number }
+  | { type: "USER_GAVE_UP"; id: number; playbackAudio: string }
   | { type: "END_RECORDING"; id: number }
   | {
       type: "ADD_MORE";
@@ -216,7 +216,7 @@ function reduce(state: State, action: Action): State {
             lessonType: card.lessonType,
             userTranscription: "You hit 'FAIL' without recording anything.",
             rejectionText: "You hit the `Fail` button. Review for next time.",
-            audio: card.audio,
+            playbackAudio: action.playbackAudio,
             rollbackData: undefined,
           },
           ...state.failures,
