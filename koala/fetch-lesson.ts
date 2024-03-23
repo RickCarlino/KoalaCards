@@ -218,9 +218,14 @@ const maybeFilterNewCards: MFNC = async (userId, quizzes) => {
   let allowed = await newQuizzesAllowedToday(userId);
   const output: typeof quizzes = [];
   for (const quiz of quizzes) {
-    if (quiz.firstReview && allowed > 0) {
+    if (quiz.firstReview) {
+      // We don't care about old cards
       output.push(quiz);
-      allowed--;
+    } else {
+      if (allowed) {
+        output.push(quiz);
+        allowed--; // Reduce card limit by one.
+      }
     }
   }
   return output;
