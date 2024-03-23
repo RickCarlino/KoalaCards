@@ -3,6 +3,7 @@ import { Button, Grid, Text, Container, Table } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import Link from "next/link";
 import { playAudio } from "./play-audio";
+import { YOU_HIT_FAIL } from "./study_reducer";
 
 export function linkToEditPage(id: number) {
   return <Link href={["cards", id].join("/")}>Edit Card</Link>;
@@ -84,20 +85,21 @@ export function QuizFailure(props: {
   lessonType: string;
   userTranscription: string;
   rejectionText: string;
-  audio: string;
+  playbackAudio: string;
   onFlag: () => void;
   onDiscard?: () => void;
   onClose: () => void;
 }) {
+  const youHitFail = props.rejectionText == YOU_HIT_FAIL;
   const doClose = async () => {
-    await playAudio(props.audio);
-    await playAudio(props.audio);
+    await playAudio(props.playbackAudio);
+    await playAudio(props.playbackAudio);
     props.onClose();
   };
   useHotkeys([
     [HOTKEYS.AGREE, doClose],
     [HOTKEYS.FLAG, props.onFlag],
-    [HOTKEYS.DISAGREE, () => props.onDiscard?.()],
+    [HOTKEYS.DISAGREE, () => !youHitFail && props.onDiscard?.()],
   ]);
   return (
     <Container size="xs">
@@ -122,7 +124,7 @@ export function QuizFailure(props: {
               </Button>
             </Grid.Col>
             <Grid.Col span={4}>
-              <Button onClick={props.onDiscard}>
+              <Button disabled={youHitFail} onClick={props.onDiscard}>
                 Disagree ({HOTKEYS.DISAGREE.toUpperCase()})
               </Button>
             </Grid.Col>

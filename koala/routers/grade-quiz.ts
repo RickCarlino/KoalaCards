@@ -38,7 +38,7 @@ const FAIL = z.object({
   rejectionText: z.string(),
   userTranscription: z.string(),
   result: z.literal("fail"),
-  audio: z.string(),
+  playbackAudio: z.string(),
   rollbackData: z.object({
     difficulty: z.number(),
     stability: z.number(),
@@ -55,9 +55,9 @@ const performExamOutput = z.union([PASS, FAIL, ERROR]);
 type FailResult = z.infer<typeof FAIL>;
 async function processFailure(ctx: ResultContext): Promise<FailResult> {
   await setGrade(ctx.quiz, Grade.AGAIN);
-  const audio = await generateLessonAudio({
+  const playbackAudio = await generateLessonAudio({
     card: ctx.card,
-    lessonType: "listening",
+    lessonType: "playback",
     speed: 90,
   });
   return {
@@ -66,7 +66,7 @@ async function processFailure(ctx: ResultContext): Promise<FailResult> {
     userTranscription: ctx.userInput,
     rejectionText: ctx.result.userMessage,
     rollbackData: calculateSchedulingData(ctx.quiz, ctx.perceivedDifficulty),
-    audio,
+    playbackAudio,
   };
 }
 

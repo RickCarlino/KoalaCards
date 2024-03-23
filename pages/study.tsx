@@ -107,7 +107,7 @@ function useBusinessLogic(state: State, dispatch: Dispatch<Action>) {
   const [perceivedDifficulty, setGrade] = useState(Grade.GOOD);
   const quiz = currentQuiz(state);
   const rollbackData = trpc.rollbackGrade.useMutation();
-
+  const getPlaybackAudio = trpc.getPlaybackAudio.useMutation();
   const onRecord = async (audio: string) => {
     assertQuiz(quiz);
     const id = quiz.quizId;
@@ -128,7 +128,7 @@ function useBusinessLogic(state: State, dispatch: Dispatch<Action>) {
               userTranscription: data.userTranscription,
               rejectionText: data.rejectionText,
               rollbackData: data.rollbackData,
-              audio: data.audio,
+              playbackAudio: data.playbackAudio,
             },
           });
         }
@@ -209,11 +209,12 @@ function useBusinessLogic(state: State, dispatch: Dispatch<Action>) {
       assertQuiz(quiz);
       const id = quiz.quizId;
       if (perceivedDifficulty === Grade.AGAIN) {
-        dispatch({ type: "USER_GAVE_UP", id });
         manuallyGade.mutateAsync({
           id,
           grade: Grade.AGAIN,
         });
+        const { playbackAudio } = await getPlaybackAudio.mutateAsync({ id });
+        dispatch({ type: "USER_GAVE_UP", id, playbackAudio });
         return;
       } else {
         setGrade(perceivedDifficulty);

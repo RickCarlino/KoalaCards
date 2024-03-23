@@ -10,6 +10,7 @@ import { flagCard } from "./flag-card";
 import { getAllCards } from "./get-all-cards";
 import { getNextQuizzes } from "./get-next-quizzes";
 import { getOneCard } from "./get-one-card";
+import { getPlaybackAudio } from "./get-playback-audio";
 import { getUserSettings } from "./get-user-settings";
 import { gradeQuiz } from "./grade-quiz";
 import { manuallyGrade } from "./manually-grade";
@@ -28,6 +29,7 @@ export const appRouter = router({
   getAllCards,
   getNextQuizzes,
   getOneCard,
+  getPlaybackAudio,
   getUserSettings,
   gradeQuiz,
   manuallyGrade,

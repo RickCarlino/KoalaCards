@@ -12,7 +12,7 @@ export default function EmailSignin() {
       <h2>Having trouble signing in?</h2>
       <p>
         Please{" "}
-        <a href="https://github.com/RickCarlino/KoalaSRS/issues/new?title=login%20issues">
+        <a href="https://github.com/RickCarlino/KoalaCards/issues/new?title=login%20issues">
           raise an issue on Github.
         </a>
       </p>

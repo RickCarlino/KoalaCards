@@ -21,7 +21,7 @@ export type Failure = {
   rejectionText: string;
   term: string;
   userTranscription: string;
-  audio: string;
+  playbackAudio: string;
   rollbackData?: {
     difficulty: number;
     stability: number;
@@ -57,7 +57,7 @@ export type Action =
   | { type: "ADD_FAILURE"; value: Failure }
   | { type: "REMOVE_FAILURE"; id: number }
   | { type: "BEGIN_RECORDING" }
-  | { type: "USER_GAVE_UP"; id: number }
+  | { type: "USER_GAVE_UP"; id: number; playbackAudio: string }
   | { type: "END_RECORDING"; id: number }
   | {
       type: "ADD_MORE";
@@ -66,6 +66,8 @@ export type Action =
       quizzesDue: number;
       newCards: number;
     };
+
+export const YOU_HIT_FAIL = "You hit fail";
 
 // Creates a unique array of numbers but keeps the head
 // in the 0th position to avoid changing the current quiz.
@@ -214,9 +216,9 @@ function reduce(state: State, action: Action): State {
             term: card.term,
             definition: card.definition,
             lessonType: card.lessonType,
-            userTranscription: "You hit 'FAIL' without recording anything.",
-            rejectionText: "You hit the `Fail` button. Review for next time.",
-            audio: card.audio,
+            userTranscription: YOU_HIT_FAIL,
+            rejectionText: YOU_HIT_FAIL,
+            playbackAudio: action.playbackAudio,
             rollbackData: undefined,
           },
           ...state.failures,
