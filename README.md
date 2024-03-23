@@ -2,14 +2,14 @@
 
 (2/24/24) Beta support for non-Korean languages (ES, IT, FR) has landed. Testing is ongoing.
 
-# KoalaSRS 🐨
+# KoalaCards 🐨
 
 <p align="center">
-  <img width="33%" src="./logo.png" alt="The KoalaSRS Logo"/>
+  <img width="33%" src="./logo.png" alt="The KoalaCards Logo"/>
 </p>
-<a href="https://codeclimate.com/github/RickCarlino/KoalaSRS/maintainability"><img src="https://api.codeclimate.com/v1/badges/b7666624c14bf8dcfb9b/maintainability" /></a>
+<a href="https://codeclimate.com/github/RickCarlino/KoalaCards/maintainability"><img src="https://api.codeclimate.com/v1/badges/b7666624c14bf8dcfb9b/maintainability" /></a>
 
-Hey there! Welcome to KoalaSRS, a fun and friendly [spaced repetition system](https://en.wikipedia.org/wiki/Spaced_repetition) that's all about listening and speaking skills. KoalaSRS captures your voice input using speech-to-text and GPT-4 for human-like test assessments and corrections. This has two advantages over traditional spaced repetition systems:
+Hey there! Welcome to KoalaCards, a fun and friendly [spaced repetition system](https://en.wikipedia.org/wiki/Spaced_repetition) that's all about listening and speaking skills. KoalaCards captures your voice input using speech-to-text and GPT-4 for human-like test assessments and corrections. This has two advantages over traditional spaced repetition systems:
 
 1. Self-grading of quizzes is reinforced with machine-assisted grading. Results are recorded objectively.
 2. Although responses are graded, it is not a verbatim sentence memorization quiz. "Close enough" answers that match the meaning of the target sentence and which demonstrate understanding will be accepted.
@@ -20,13 +20,13 @@ Hey there! Welcome to KoalaSRS, a fun and friendly [spaced repetition system](ht
   <a href="https://www.youtube.com/watch?v=qX9xj5OR3gY">
     Watch a short YouTube demo of the app as of 2024-03-15
     <br/>
-    <img src="./screenshot.png" alt="KoalaSRS UI screenshot"/>
+    <img src="./screenshot.png" alt="KoalaCards UI screenshot"/>
   </a>
 </p>
 
 ## Demo Server / Accounts
 
-I host a demo instance of the app [here](https://koala.vaporsoft.xyz/user) but please keep in mind I may **turn off the server during peak usage** to reduce costs. I have set up a [Patreon](https://www.patreon.com/rickcarlino) to help offset hosting costs. Please consider donating if you find the app useful.
+I host a demo instance of the app [here](https://app.koala.cards/user) but please keep in mind I may **turn off the server during peak usage** to reduce costs. I have set up a [Patreon](https://www.patreon.com/rickcarlino) to help offset hosting costs. Please consider donating if you find the app useful.
 
 **NOTE TO DEMO USERS:** Free accounts use GPT-3.5 because GPT-4 is too expensive to offer in a ree app. The grading ability is significantly more accurate with GPT-4. Consider self-hosting or donating on Patreon to use GPT-4 for grading.
 
@@ -38,7 +38,7 @@ The app is now stable enough to be used for serious studying. If you want to use
 
 - [Demo](#Demo)
 - [Features](#features)
-- [Why Another SRS?](#why-another-srs)
+- [Another Spaced Repetition System?](#Another-Spaced-Repetition-System?)
 - [Developer Setup](#developer-setup)
 - [Contribution Guidelines](#contribution-guidelines)
 - [Project Status and Limitations](#project-status-and-limitations)
@@ -61,7 +61,7 @@ The app has two types of quizzes:
 
 Other types of quizzes, such as listening comprehension, may be added in the future.
 
-## Why Another SRS? 🤔
+## Another Spaced Repetition System?
 
 I studied Korean at university and did self-study for many years before that. I saw lots of flaws in existing solutions but couldn't build alternatives because software tools weren't ready yet. I've been dreaming about building this spaced repetition system for over a decade! Finally, in 2023, it became possible thanks to large language models (LLMs) like GPT and affordable, high-quality text-to-speech and speech-to-text APIs. 🎉
 

@@ -211,7 +211,7 @@ function LanguageInputPage() {
           <p>
             NOTE: Cards can be input in most computer readable text formats such
             as CSV, TSV, JSON. Ensure that each entry has a target language
-            phrase and an English translation. KoalaSRS will figure out the
+            phrase and an English translation. Koala Cards will figure out the
             rest.
           </p>
           <Button size="xs" onClick={pasteExample}>

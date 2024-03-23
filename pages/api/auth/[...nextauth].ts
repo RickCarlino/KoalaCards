@@ -43,10 +43,10 @@ export const EMAIL_SERVER_OPTIONS: Partial<EmailUserConfig> = {
     const result = await createTransport(server).sendMail({
       to: identifier,
       from: provider.from,
-      subject: `KoalaSRS Sign In Link`,
-      text: `Sign in to KoalaSRS here: ${signInURL}`,
+      subject: `Koala Cards Sign In Link`,
+      text: `Sign in to Koala Cards here: ${signInURL}`,
       html: [
-        `<a href="${signInURL}" target="_blank">Click here to sign in to KoalaSRS</a>`,
+        `<a href="${signInURL}" target="_blank">Click here to sign in to Koala Cards</a>`,
         `<p>If you can't click the link, copy and paste the following URL into your browser:</p>`,
         `<p>${signInURL}</p>`,
       ].join("\n"),
