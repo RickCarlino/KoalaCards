@@ -14,6 +14,16 @@ Hey there! Welcome to KoalaCards, a fun and friendly [spaced repetition system](
 1. Self-grading of quizzes is reinforced with machine-assisted grading. Results are recorded objectively.
 2. Although responses are graded, it is not a verbatim sentence memorization quiz. "Close enough" answers that match the meaning of the target sentence and which demonstrate understanding will be accepted.
 
+## Table of Contents 📑
+
+- [Demo](#demo-video)
+- [Features](#features-)
+- [Another Spaced Repetition System?](#another-spaced-repetition-system)
+- [Developer Setup](#developer-setup-%EF%B8%8F)
+- [Contribution Guidelines](#contribution-guidelines-)
+- [Project Status and Limitations](#project-status-and-limitations-%EF%B8%8F)
+- [Help Needed](#help-needed-)
+
 ## Demo Video
 
 <p align="center">
@@ -33,16 +43,6 @@ I host a demo instance of the app [here](https://app.koala.cards/user) but pleas
 ## ~~ALPHA~~ Beta Software
 
 The app is now stable enough to be used for serious studying. If you want to use the app but are hitting stability issues, please reach out.
-
-## Table of Contents 📑
-
-- [Demo](#Demo)
-- [Features](#features)
-- [Another Spaced Repetition System?](#Another-Spaced-Repetition-System?)
-- [Developer Setup](#developer-setup)
-- [Contribution Guidelines](#contribution-guidelines)
-- [Project Status and Limitations](#project-status-and-limitations)
-- [Help Needed](#help-needed)
 
 ## Features 💡
 
