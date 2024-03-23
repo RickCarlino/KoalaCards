@@ -67,6 +67,8 @@ export type Action =
       newCards: number;
     };
 
+export const YOU_HIT_FAIL = "You hit fail";
+
 // Creates a unique array of numbers but keeps the head
 // in the 0th position to avoid changing the current quiz.
 function betterUnique(input: number[]): number[] {
@@ -214,8 +216,8 @@ function reduce(state: State, action: Action): State {
             term: card.term,
             definition: card.definition,
             lessonType: card.lessonType,
-            userTranscription: "You hit 'FAIL' without recording anything.",
-            rejectionText: "You hit the `Fail` button. Review for next time.",
+            userTranscription: YOU_HIT_FAIL,
+            rejectionText: YOU_HIT_FAIL,
             playbackAudio: action.playbackAudio,
             rollbackData: undefined,
           },
