@@ -6,6 +6,7 @@ import { draw, map, template } from "radash";
 import { errorReport } from "./error-report";
 import { prismaClient } from "@/koala/prisma-client";
 import { Card } from "@prisma/client";
+import { getUserSettings } from "./auth-helpers";
 
 export type LessonType = "listening" | "speaking";
 
@@ -190,6 +191,41 @@ async function getExcludedIDs(notIn: number[]): Promise<number[]> {
   return Array.from(results);
 }
 
+const newQuizzesInLast24Hours = async (userId: string) => {
+  const yesterday = new Date().getTime() - 24 * 60 * 60 * 1000;
+  return prismaClient.quiz.count({
+    where: {
+      Card: {
+        userId,
+        flagged: false,
+      },
+      firstReview: {
+        gt: yesterday,
+      },
+    },
+  });
+};
+
+const newQuizzesAllowedToday = async (userId: string) => {
+  const actual = await newQuizzesInLast24Hours(userId);
+  const allowed = (await getUserSettings(userId)).cardsPerDayMax || 60;
+  return Math.max(allowed - actual, 0);
+};
+
+type QuizLike = { firstReview: number };
+type MFNC = <T extends QuizLike>(userId: string, quizzes: T[]) => Promise<T[]>;
+const maybeFilterNewCards: MFNC = async (userId, quizzes) => {
+  let allowed = await newQuizzesAllowedToday(userId);
+  const output: typeof quizzes = [];
+  for (const quiz of quizzes) {
+    if (quiz.firstReview && allowed > 0) {
+      output.push(quiz);
+      allowed--;
+    }
+  }
+  return output;
+};
+
 export default async function getLessons(p: GetLessonInputParams) {
   const yesterday = new Date().getTime() - 24 * 60 * 60 * 1000;
   const excluded = await getExcludedIDs(p.notIn);
@@ -224,7 +260,8 @@ export default async function getLessons(p: GetLessonInputParams) {
     },
   });
 
-  return await map(quizzes, async (quiz) => {
+  const filtered = await maybeFilterNewCards(p.userId, quizzes);
+  return await map(filtered, async (quiz) => {
     const audio = await generateLessonAudio({
       card: quiz.Card,
       lessonType: quiz.quizType as LessonType,

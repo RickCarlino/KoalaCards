@@ -12,7 +12,7 @@ const EMPTY: UserSettings = {
   id: 0,
   userId: "0",
   playbackSpeed: 1,
-  cardsPerDayMax: 21,
+  cardsPerDayMax: 42,
   playbackPercentage: 0.5,
   createdAt: new Date(),
   updatedAt: new Date(),
