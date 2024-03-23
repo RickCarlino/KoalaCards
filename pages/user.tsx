@@ -9,23 +9,64 @@ import { prismaClient } from "@/koala/prisma-client";
 import { UnwrapPromise } from "@prisma/client/runtime/library";
 import { getLessonMeta } from "@/koala/routers/get-next-quizzes";
 
+const ONE_DAY = 24 * 60 * 60 * 1000;
+const ONE_WEEK = 7 * ONE_DAY;
+
 export async function getServerSideProps(context: GetServerSidePropsContext) {
   async function getUserCardStatistics(userId: string) {
     // Calculate the timestamp for 24 hours ago
-    const twentyFourHoursAgo = new Date();
-    twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+    const today = Date.now();
+    const oneWeekAgo = today - ONE_WEEK;
+    const yesterday = today - ONE_DAY;
+    const tomorrow = today + ONE_DAY;
 
-    // Calculate the timestamp for 1 week ago
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-
+    const BASE_QUERY = {
+      Card: {
+        userId: userId,
+        flagged: { not: true },
+      },
+    };
     // Query the database to retrieve the required statistics
-    const cardsDueNext24Hours = -1;
-    const newCardsLast24Hours = -1;
-    const newCardsLastWeek = -1;
-    const uniqueCardsLast24Hours = -1;
-    const uniqueCardsLastWeek = -1;
-
+    const cardsDueNext24Hours = await prismaClient.quiz.count({
+      where: {
+        ...BASE_QUERY,
+        nextReview: {
+          lte: tomorrow,
+        },
+      },
+    });
+    const newCardsLast24Hours = await prismaClient.quiz.count({
+      where: {
+        ...BASE_QUERY,
+        firstReview: {
+          gte: yesterday,
+        },
+      },
+    });
+    const newCardsLastWeek = await prismaClient.quiz.count({
+      where: {
+        ...BASE_QUERY,
+        firstReview: {
+          gte: oneWeekAgo,
+        },
+      },
+    });
+    const uniqueCardsLast24Hours = await prismaClient.quiz.count({
+      where: {
+        ...BASE_QUERY,
+        lastReview: {
+          gte: yesterday,
+        },
+      },
+    });
+    const uniqueCardsLastWeek = await prismaClient.quiz.count({
+      where: {
+        ...BASE_QUERY,
+        lastReview: {
+          gte: oneWeekAgo,
+        },
+      },
+    });
     // Create an object to store the statistics
     const statistics = {
       ...(await getLessonMeta(userId)),
@@ -83,14 +124,14 @@ export default function UserSettingsPage(props: Props) {
   };
   const stats = props.stats;
   const labels: [keyof typeof stats, string][] = [
-    ["quizzesDue", "Cards due now"],
-    // ["uniqueCardsLast24Hours", "Cards studied last 24 hours"],
-    // ["newCardsLast24Hours", "New cards studied last 24 hours"],
-    // ["uniqueCardsLastWeek", "Cards studied this week"],
-    // ["newCardsLastWeek", "New cards studied this week"],
-    // ["cardsDueNext24Hours", "Cards due next 24 hours"],
     ["totalCards", "total cards studied"],
-    // ["newCards", "new cards in deck"],
+    ["quizzesDue", "Cards due now"],
+    ["cardsDueNext24Hours", "Cards due next 24 hours"],
+    ["newCards", "new cards in deck"],
+    ["newCardsLast24Hours", "New cards studied last 24 hours"],
+    ["newCardsLastWeek", "New cards studied this week"],
+    ["uniqueCardsLast24Hours", "Cards studied last 24 hours"],
+    ["uniqueCardsLastWeek", "Cards studied this week"],
     ["globalUsers", "users on this server"],
   ];
 

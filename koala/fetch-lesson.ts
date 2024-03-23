@@ -246,11 +246,7 @@ export default async function getLessons(p: GetLessonInputParams) {
         lt: yesterday,
       },
     },
-    orderBy: [
-      { Card: { langCode: "desc" } },
-      // 90% old cards, 10% new, for now.
-      { nextReview: Math.random() < 0.9 ? "desc" : "asc" },
-    ],
+    orderBy: [{ Card: { langCode: "desc" } }, { nextReview: "desc" }],
     // Don't select quizzes from the same card.
     // Prevents hinting.
     distinct: ["cardId"],
