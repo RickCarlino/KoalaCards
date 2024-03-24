@@ -168,27 +168,27 @@ export async function generateLessonAudio(params: AudioLessonParams) {
   return generateSpeech(ssml, voice);
 }
 
-async function getExcludedIDs(notIn: number[]): Promise<number[]> {
-  const excluded = new Set(notIn);
-  const results = new Set<number>();
-  if (excluded.size) {
-    const cardIDs = new Set<number>();
-    const query = {
-      where: { id: { in: Array.from(excluded) } },
-      select: { cardId: true },
-    };
-    const result1 = await prismaClient.quiz.findMany(query);
-    result1.map(({ cardId }) => cardIDs.add(cardId));
-    const query2 = {
+async function getExcludedIDs(wantToExclude: number[]) {
+  if (!wantToExclude.length) return Promise.resolve([]);
+  const quizzes = prismaClient.quiz;
+
+  return (
+    await quizzes.findMany({
       where: {
-        cardId: { in: Array.from(cardIDs) },
+        cardId: {
+          in: (
+            await quizzes.findMany({
+              where: {
+                id: { in: wantToExclude },
+              },
+              select: { cardId: true },
+            })
+          ).map(({ cardId }) => cardId),
+        },
       },
       select: { id: true },
-    };
-    const result2 = await prismaClient.quiz.findMany(query2);
-    result2.map(({ id }) => excluded.add(id));
-  }
-  return Array.from(results);
+    })
+  ).map(({ id }) => id);
 }
 
 const newQuizzesInLast24Hours = async (userId: string) => {

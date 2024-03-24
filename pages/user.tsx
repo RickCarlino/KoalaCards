@@ -31,8 +31,14 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
       where: {
         ...BASE_QUERY,
         nextReview: {
-          lte: tomorrow,
+          lt: tomorrow,
         },
+        lastReview: {
+          lt: today,
+        },
+        firstReview: {
+          gt: 0,
+        },  
       },
     });
     const newCardsLast24Hours = await prismaClient.quiz.count({
@@ -125,9 +131,9 @@ export default function UserSettingsPage(props: Props) {
   const stats = props.stats;
   const labels: [keyof typeof stats, string][] = [
     ["totalCards", "total cards studied"],
+    ["newCards", "new cards in deck"],
     ["quizzesDue", "Cards due now"],
     ["cardsDueNext24Hours", "Cards due next 24 hours"],
-    ["newCards", "new cards in deck"],
     ["newCardsLast24Hours", "New cards studied last 24 hours"],
     ["newCardsLastWeek", "New cards studied this week"],
     ["uniqueCardsLast24Hours", "Cards studied last 24 hours"],

@@ -47,12 +47,13 @@ export const UserSettingsProvider = ({
   }, []);
 
   const clickLogin = () => {
-    // alert([
-    //   "NOTE TO NEW USERS: ",
-    //   "Demo accounts use GPT-3.5 because GPT-4 is too expensive to give away for free.",
-    //   "If you want to use GPT-4, please self-host or donate on Patreon.",
-    //   "GPT-3.5 is still very good, but it sometimes requires user intervention to correct mistakes.",
-    // ]);
+    alert(
+      [
+        "Thanks for trying out Koala 🎉",
+        "It is still in beta, and I would really appreciate your feedback.",
+        "Please consider contacting me with issues or suggestions.",
+      ].join("\n"),
+    );
     signIn();
   };
   const login = (
