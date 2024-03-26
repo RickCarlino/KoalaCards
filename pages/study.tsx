@@ -35,7 +35,10 @@ type QuizViewProps = {
   flagQuiz: () => Promise<void>;
   startRecording(grade: Grade): Promise<void>;
   stopRecording: () => Promise<void>;
+  totalComplete: number;
+  totalFailed: number;
 };
+
 type StudyHeaderProps = {
   lessonType: keyof typeof HEADER;
   langCode: string;
@@ -72,6 +75,39 @@ export const HOTKEYS = {
 };
 
 const GRID_SIZE = 2;
+
+function numberToColorHSL(input: number): string {
+  // Ensure input is between 0 and 1
+  const normalizedInput = Math.min(Math.max(input, 0), 1);
+
+  // Map the input to the hue range (0 to 360)
+  const hue = Math.round((normalizedInput / 2) * 360);
+
+  console.log(`Failure percentage: ${Math.round(input * 100)}%`);
+  // Return the HSL color string
+  // Adjust saturation and lightness values as needed
+  if (input === 0 || input === 1) {
+    return "hsl(0%, 0%, 0%, 0%)";
+  }
+  return `hsl(${hue}, 100%, 50%)`;
+}
+
+function ColorOrb({ a, b }: { a: number; b: number }) {
+  const hsl = numberToColorHSL((a || 1) / (b || 1));
+  // Return a 20x20 circle that changes color and has soft round edged:
+  return (
+    <div
+      style={{
+        backgroundColor: hsl,
+        // Add a slight gradient fade to transparent on the edges:
+        background: `radial-gradient(circle, ${hsl}, transparent)`,
+        display: "inline-block",
+      }}
+    >
+      {a && b ? Math.round((a / b) * 100) : ""}
+    </div>
+  );
+}
 
 function StudyHeader({ lessonType, langCode }: StudyHeaderProps) {
   const isSpeaking = lessonType === "speaking";
@@ -240,13 +276,10 @@ function useBusinessLogic(state: State, dispatch: Dispatch<Action>) {
 }
 
 function useQuizState(props: QuizData) {
-  const cardsById = props.quizzes.reduce(
-    (acc, quiz) => {
-      acc[quiz.quizId] = quiz;
-      return acc;
-    },
-    {} as Record<number, Quiz>,
-  );
+  const cardsById = props.quizzes.reduce((acc, quiz) => {
+    acc[quiz.quizId] = quiz;
+    return acc;
+  }, {} as Record<number, Quiz>);
   const newState = gotoNextQuiz(
     newQuizState({
       cardsById,
@@ -312,7 +345,6 @@ function QuizView(props: QuizViewProps) {
       setMaxGrade(maxGrade - 1);
     }, 8000);
     return () => {
-      console.log("=== Restart timer");
       clearTimeout(timer);
     };
   }, [maxGrade, quizID]);
@@ -418,6 +450,7 @@ function QuizView(props: QuizViewProps) {
         {props.pendingFailures} in failure queue.
       </p>
       <p>{linkToEditPage(quiz.cardId)}</p>
+      <ColorOrb a={props.totalFailed} b={props.totalComplete} />
     </>
   );
 }
@@ -443,6 +476,8 @@ function LoadedStudyPage(props: QuizData) {
         flagQuiz: everything.flagQuiz,
         startRecording: everything.startRecording,
         stopRecording: everything.stopRecording,
+        totalComplete: everything.state.totalComplete,
+        totalFailed: everything.state.totalFailed,
       };
       el = <QuizView {...quizViewProps} />;
       break;
