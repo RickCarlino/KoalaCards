@@ -2,7 +2,7 @@ import textToSpeech, { TextToSpeechClient } from "@google-cloud/text-to-speech";
 import { createHash } from "crypto";
 import { existsSync, mkdir, readFileSync, writeFileSync } from "fs";
 import path from "path";
-import { draw, map, template } from "radash";
+import { draw, map, template, unique } from "radash";
 import { errorReport } from "./error-report";
 import { prismaClient } from "@/koala/prisma-client";
 import { Card } from "@prisma/client";
@@ -232,6 +232,10 @@ const forceListeningBeforeSpeaking: MFNC = async (rawQuizzes, _, take) => {
   const quizzes: typeof rawQuizzes = [];
   console.group("== forceListeningBeforeSpeaking ==");
   for (const quiz of rawQuizzes) {
+    if (quizzes.length >= take) {
+      console.log("== Reached take limit. Breaking. ==");
+      break;
+    }
     if (quiz.quizType !== "speaking") {
       // We only care about listening quizzes.
       console.log(`== ${quiz.cardId} is not a speaking quiz. Adding. ==`);
@@ -256,10 +260,10 @@ const forceListeningBeforeSpeaking: MFNC = async (rawQuizzes, _, take) => {
     }
 
     // Find highest repetition count among siblings:
-    const maxReps = Math.max(...siblings.map((s) => s.repetitions));
+    const maxReps = Math.max(...siblings.map((s) => s.repetitions - s.lapses));
     if (maxReps > 2) {
       console.log(
-        `== ${quiz.cardId} has > ${maxReps} listening reps. Adding. ==`,
+        `== ${quiz.cardId} has ${maxReps} net listening reps. Adding. ==`,
       );
       quizzes.push(quiz);
       continue;
@@ -292,6 +296,9 @@ const maybeFilterNewCards: MFNC = async (rawQuizzes, userId, take) => {
 };
 
 export default async function getLessons(p: GetLessonInputParams) {
+  if (p.take > 30) {
+    return errorReport("Too many cards requested.");
+  }
   const yesterday = new Date().getTime() - 24 * 60 * 60 * 1000;
   const excluded = await getExcludedIDs(p.notIn);
   // SELECT * from public."Quiz" order by "nextReview" desc, "cardId" desc, "quizType" asc;
@@ -311,25 +318,26 @@ export default async function getLessons(p: GetLessonInputParams) {
       lastReview: {
         lt: yesterday,
       },
+      // EXPERIMENT: Auto-ignore overly difficult cards.
+      difficulty: {
+        lt: 9,
+      },
     },
-    // Prefer to do listening quizzes first to improve quiz
-    // success rate.
-    orderBy: [
-      { Card: { langCode: "desc" } },
-      { nextReview: "desc" },
-      { cardId: "asc" },
-      { quizType: "asc" },
-    ],
+    orderBy: [{ Card: { langCode: "desc" } }, { nextReview: "desc" }],
     // Don't select quizzes from the same card.
     // Prevents hinting.
     distinct: ["cardId"],
-    take: p.take * 2, // Will be filtered to correct length later.
+    take: 300, // Will be filtered to correct length later.
     include: {
       Card: true, // Include related Card data in the result
     },
   });
 
-  const filtered = await maybeFilterNewCards(quizzes, p.userId, p.take);
+  const raw = await maybeFilterNewCards(quizzes, p.userId, p.take);
+  const filtered = unique(
+    unique(raw, (q) => q.cardId),
+    (q) => q.id,
+  );
   return await map(filtered, async (quiz) => {
     const audio = await generateLessonAudio({
       card: quiz.Card,
