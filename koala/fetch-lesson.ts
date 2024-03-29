@@ -212,11 +212,71 @@ const newQuizzesAllowedToday = async (userId: string) => {
   return Math.max(allowed - actual, 0);
 };
 
-type QuizLike = { firstReview: number };
-type MFNC = <T extends QuizLike>(userId: string, quizzes: T[]) => Promise<T[]>;
-const maybeFilterNewCards: MFNC = async (userId, quizzes) => {
+type QuizLike = {
+  firstReview: number;
+  quizType: string;
+  cardId: number;
+};
+type MFNC = <T extends QuizLike>(
+  quizzes: T[],
+  userId: string,
+  take: number,
+) => Promise<T[]>;
+
+const forceListeningBeforeSpeaking: MFNC = async (rawQuizzes, _, take) => {
+  // Create a new array.
+  // Check each quiz.
+  // If it's a speaking quiz, make sure the user has done at least
+  // two repetitions of the listening quiz with the matching card, assuming
+  // the card *has* a listening quiz.
+  const quizzes: typeof rawQuizzes = [];
+  console.group("== forceListeningBeforeSpeaking ==");
+  for (const quiz of rawQuizzes) {
+    if (quiz.quizType !== "speaking") {
+      // We only care about listening quizzes.
+      console.log(`== ${quiz.cardId} is not a speaking quiz. Adding. ==`);
+      quizzes.push(quiz);
+      continue;
+    }
+
+    const siblings = await prismaClient.quiz.findMany({
+      where: {
+        cardId: quiz.cardId,
+        quizType: {
+          notIn: ["speaking"],
+        },
+      },
+    });
+
+    if (!siblings.length) {
+      // No listening quiz for this card.
+      console.log(`== ${quiz.cardId} has no listening quiz. Adding. ==`);
+      quizzes.push(quiz);
+      continue;
+    }
+
+    // Find highest repetition count among siblings:
+    const maxReps = Math.max(...siblings.map((s) => s.repetitions));
+    if (maxReps > 2) {
+      console.log(
+        `== ${quiz.cardId} has > ${maxReps} listening reps. Adding. ==`,
+      );
+      quizzes.push(quiz);
+      continue;
+    }
+
+    console.log(
+      `== ${quiz.cardId} only has ${maxReps} listening reps. Skipping. ==`,
+    );
+  }
+  console.groupEnd();
+  return quizzes.slice(0, take);
+};
+
+const maybeFilterNewCards: MFNC = async (rawQuizzes, userId, take) => {
   let allowed = await newQuizzesAllowedToday(userId);
-  const output: typeof quizzes = [];
+  const quizzes = await forceListeningBeforeSpeaking(rawQuizzes, userId, take);
+  const output: typeof rawQuizzes = [];
   for (const quiz of quizzes) {
     if (quiz.firstReview) {
       // We don't care about old cards
@@ -234,6 +294,7 @@ const maybeFilterNewCards: MFNC = async (userId, quizzes) => {
 export default async function getLessons(p: GetLessonInputParams) {
   const yesterday = new Date().getTime() - 24 * 60 * 60 * 1000;
   const excluded = await getExcludedIDs(p.notIn);
+  // SELECT * from public."Quiz" order by "nextReview" desc, "cardId" desc, "quizType" asc;
   const quizzes = await prismaClient.quiz.findMany({
     where: {
       Card: {
@@ -251,17 +312,24 @@ export default async function getLessons(p: GetLessonInputParams) {
         lt: yesterday,
       },
     },
-    orderBy: [{ Card: { langCode: "desc" } }, { nextReview: "desc" }],
+    // Prefer to do listening quizzes first to improve quiz
+    // success rate.
+    orderBy: [
+      { Card: { langCode: "desc" } },
+      { nextReview: "desc" },
+      { cardId: "asc" },
+      { quizType: "asc" },
+    ],
     // Don't select quizzes from the same card.
     // Prevents hinting.
     distinct: ["cardId"],
-    take: p.take,
+    take: p.take * 2, // Will be filtered to correct length later.
     include: {
       Card: true, // Include related Card data in the result
     },
   });
 
-  const filtered = await maybeFilterNewCards(p.userId, quizzes);
+  const filtered = await maybeFilterNewCards(quizzes, p.userId, p.take);
   return await map(filtered, async (quiz) => {
     const audio = await generateLessonAudio({
       card: quiz.Card,
