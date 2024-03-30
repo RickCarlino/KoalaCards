@@ -76,37 +76,9 @@ export const HOTKEYS = {
 
 const GRID_SIZE = 2;
 
-function numberToColorHSL(input: number): string {
-  // Ensure input is between 0 and 1
-  const normalizedInput = Math.min(Math.max(input, 0), 1);
-
-  // Map the input to the hue range (0 to 360)
-  const hue = Math.round((normalizedInput / 2) * 360);
-
-  console.log(`Failure percentage: ${Math.round(input * 100)}%`);
-  // Return the HSL color string
-  // Adjust saturation and lightness values as needed
-  if (input === 0 || input === 1) {
-    return "hsl(0%, 0%, 0%, 0%)";
-  }
-  return `hsl(${hue}, 100%, 50%)`;
-}
-
-function ColorOrb({ a, b }: { a: number; b: number }) {
-  const hsl = numberToColorHSL((a || 1) / (b || 1));
-  // Return a 20x20 circle that changes color and has soft round edged:
-  return (
-    <div
-      style={{
-        backgroundColor: hsl,
-        // Add a slight gradient fade to transparent on the edges:
-        background: `radial-gradient(circle, ${hsl}, transparent)`,
-        display: "inline-block",
-      }}
-    >
-      {a && b ? Math.round((a / b) * 100) : ""}
-    </div>
-  );
+function winRate(failed: number, total: number) {
+  const pct = 100 - Math.round(((failed || 1) / (total || 1)) * 100);
+  return `${pct}%`;
 }
 
 function StudyHeader({ lessonType, langCode }: StudyHeaderProps) {
@@ -276,10 +248,13 @@ function useBusinessLogic(state: State, dispatch: Dispatch<Action>) {
 }
 
 function useQuizState(props: QuizData) {
-  const cardsById = props.quizzes.reduce((acc, quiz) => {
-    acc[quiz.quizId] = quiz;
-    return acc;
-  }, {} as Record<number, Quiz>);
+  const cardsById = props.quizzes.reduce(
+    (acc, quiz) => {
+      acc[quiz.quizId] = quiz;
+      return acc;
+    },
+    {} as Record<number, Quiz>,
+  );
   const newState = gotoNextQuiz(
     newQuizState({
       cardsById,
@@ -447,10 +422,10 @@ function QuizView(props: QuizViewProps) {
         {props.totalCards} cards total, {props.quizzesDue} due, {props.newCards}{" "}
         new, {props.awaitingGrades} awaiting grades, {props.queueSize} in study
         Queue,
-        {props.pendingFailures} in failure queue.
+        {props.pendingFailures} in failure queue,{" "}
+        {winRate(props.totalFailed, props.totalComplete)} win rate.
       </p>
       <p>{linkToEditPage(quiz.cardId)}</p>
-      <ColorOrb a={props.totalFailed} b={props.totalComplete} />
     </>
   );
 }

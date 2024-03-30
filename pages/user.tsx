@@ -38,7 +38,7 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
         },
         firstReview: {
           gt: 0,
-        },  
+        },
       },
     });
     const newCardsLast24Hours = await prismaClient.quiz.count({
