@@ -35,7 +35,10 @@ type QuizViewProps = {
   flagQuiz: () => Promise<void>;
   startRecording(grade: Grade): Promise<void>;
   stopRecording: () => Promise<void>;
+  totalComplete: number;
+  totalFailed: number;
 };
+
 type StudyHeaderProps = {
   lessonType: keyof typeof HEADER;
   langCode: string;
@@ -72,6 +75,11 @@ export const HOTKEYS = {
 };
 
 const GRID_SIZE = 2;
+
+function winRate(failed: number, total: number) {
+  const pct = 100 - Math.round(((failed || 1) / (total || 1)) * 100);
+  return `${pct}%`;
+}
 
 function StudyHeader({ lessonType, langCode }: StudyHeaderProps) {
   const isSpeaking = lessonType === "speaking";
@@ -312,7 +320,6 @@ function QuizView(props: QuizViewProps) {
       setMaxGrade(maxGrade - 1);
     }, 8000);
     return () => {
-      console.log("=== Restart timer");
       clearTimeout(timer);
     };
   }, [maxGrade, quizID]);
@@ -415,7 +422,8 @@ function QuizView(props: QuizViewProps) {
         {props.totalCards} cards total, {props.quizzesDue} due, {props.newCards}{" "}
         new, {props.awaitingGrades} awaiting grades, {props.queueSize} in study
         Queue,
-        {props.pendingFailures} in failure queue.
+        {props.pendingFailures} in failure queue,{" "}
+        {winRate(props.totalFailed, props.totalComplete)} win rate.
       </p>
       <p>{linkToEditPage(quiz.cardId)}</p>
     </>
@@ -443,6 +451,8 @@ function LoadedStudyPage(props: QuizData) {
         flagQuiz: everything.flagQuiz,
         startRecording: everything.startRecording,
         stopRecording: everything.stopRecording,
+        totalComplete: everything.state.totalComplete,
+        totalFailed: everything.state.totalFailed,
       };
       el = <QuizView {...quizViewProps} />;
       break;

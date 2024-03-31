@@ -47,6 +47,8 @@ export type State = {
   totalCards: number;
   currentItem: CurrentItem;
   failureReviewMode: boolean;
+  totalComplete: number;
+  totalFailed: number;
 };
 
 type QuizResult = "error" | "fail" | "pass";
@@ -161,6 +163,8 @@ export const newQuizState = (state: Partial<State> = {}): State => {
     newCards: 0,
     currentItem: { type: "loading", value: undefined },
     failureReviewMode: false,
+    totalComplete: 0,
+    totalFailed: 0,
     ...state,
   };
 };
@@ -258,6 +262,8 @@ function reduce(state: State, action: Action): State {
         ...removeCard(state, action.id),
         idsAwaitingGrades,
         idsWithErrors,
+        totalFailed: state.totalFailed + (action.result === "fail" ? 1 : 0),
+        totalComplete: state.totalComplete + 1,
       };
     case "ADD_MORE":
       const newStuff = action.quizzes.map((x) => x.quizId);
