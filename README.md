@@ -38,8 +38,6 @@ Hey there! Welcome to KoalaCards, a fun and friendly [spaced repetition system](
 
 I host a demo instance of the app [here](https://app.koala.cards/user) but please keep in mind I may **turn off the server during peak usage** to reduce costs. I have set up a [Patreon](https://www.patreon.com/rickcarlino) to help offset hosting costs. Please consider donating if you find the app useful.
 
-**NOTE TO DEMO USERS:** Free accounts use GPT-3.5 because GPT-4 is too expensive to offer in a ree app. The grading ability is significantly more accurate with GPT-4. Consider self-hosting or donating on Patreon to use GPT-4 for grading.
-
 ## ~~ALPHA~~ Beta Software
 
 The app is now stable enough to be used for serious studying. If you want to use the app but are hitting stability issues, please reach out.
