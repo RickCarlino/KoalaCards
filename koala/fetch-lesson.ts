@@ -261,7 +261,7 @@ const forceListeningBeforeSpeaking: MFNC = async (rawQuizzes, _, take) => {
 
     // Find highest repetition count among siblings:
     const maxReps = Math.max(...siblings.map((s) => s.repetitions - s.lapses));
-    if (maxReps > 2) {
+    if (maxReps > 1) {
       console.log(
         `== ${quiz.cardId} has ${maxReps} net listening reps. Adding. ==`,
       );
@@ -317,10 +317,6 @@ export default async function getLessons(p: GetLessonInputParams) {
       },
       lastReview: {
         lt: yesterday,
-      },
-      // EXPERIMENT: Auto-ignore overly difficult cards.
-      difficulty: {
-        lt: 9,
       },
     },
     orderBy: [{ Card: { langCode: "desc" } }, { nextReview: "desc" }],
