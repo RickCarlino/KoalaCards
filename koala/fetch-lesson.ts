@@ -6,7 +6,7 @@ import { draw, map, template, unique } from "radash";
 import { errorReport } from "./error-report";
 import { prismaClient } from "@/koala/prisma-client";
 import { Card } from "@prisma/client";
-import { getUserSettings } from "./auth-helpers";
+// import { getUserSettings } from "./auth-helpers";
 
 export type LessonType = "listening" | "speaking";
 
@@ -191,112 +191,55 @@ async function getExcludedIDs(wantToExclude: number[]) {
   ).map(({ id }) => id);
 }
 
-const newQuizzesInLast24Hours = async (userId: string) => {
-  const yesterday = new Date().getTime() - 24 * 60 * 60 * 1000;
-  return prismaClient.quiz.count({
-    where: {
-      Card: {
-        userId,
-        flagged: false,
-      },
-      firstReview: {
-        gt: yesterday,
-      },
-    },
-  });
-};
+// const newQuizzesInLast24Hours = async (userId: string) => {
+//   const yesterday = new Date().getTime() - 24 * 60 * 60 * 1000;
+//   return prismaClient.quiz.count({
+//     where: {
+//       Card: {
+//         userId,
+//         flagged: false,
+//       },
+//       firstReview: {
+//         gt: yesterday,
+//       },
+//     },
+//   });
+// };
 
-const newQuizzesAllowedToday = async (userId: string) => {
-  const actual = await newQuizzesInLast24Hours(userId);
-  const allowed = (await getUserSettings(userId)).cardsPerDayMax || 60;
-  return Math.max(allowed - actual, 0);
-};
+// const newQuizzesAllowedToday = async (userId: string) => {
+//   const actual = await newQuizzesInLast24Hours(userId);
+//   const allowed = (await getUserSettings(userId)).cardsPerDayMax || 60;
+//   return Math.max(allowed - actual, 0);
+// };
 
-type QuizLike = {
-  firstReview: number;
-  quizType: string;
-  cardId: number;
-};
-type MFNC = <T extends QuizLike>(
-  quizzes: T[],
-  userId: string,
-  take: number,
-) => Promise<T[]>;
+// type QuizLike = {
+//   firstReview: number;
+//   quizType: string;
+//   cardId: number;
+// };
 
-const forceListeningBeforeSpeaking: MFNC = async (rawQuizzes, _, take) => {
-  // Create a new array.
-  // Check each quiz.
-  // If it's a speaking quiz, make sure the user has done at least
-  // two repetitions of the listening quiz with the matching card, assuming
-  // the card *has* a listening quiz.
-  const quizzes: typeof rawQuizzes = [];
-  console.group("== forceListeningBeforeSpeaking ==");
-  for (const quiz of rawQuizzes) {
-    if (quizzes.length >= take) {
-      console.log("== Reached take limit. Breaking. ==");
-      break;
-    }
-    if (quiz.quizType !== "speaking") {
-      // We only care about listening quizzes.
-      console.log(`== ${quiz.cardId} is not a speaking quiz. Adding. ==`);
-      quizzes.push(quiz);
-      continue;
-    }
+// type MFNC = <T extends QuizLike>(quizzes: T[], userId: string) => Promise<T[]>;
 
-    const siblings = await prismaClient.quiz.findMany({
-      where: {
-        cardId: quiz.cardId,
-        quizType: {
-          notIn: ["speaking"],
-        },
-      },
-    });
-
-    if (!siblings.length) {
-      // No listening quiz for this card.
-      console.log(`== ${quiz.cardId} has no listening quiz. Adding. ==`);
-      quizzes.push(quiz);
-      continue;
-    }
-
-    // Find highest repetition count among siblings:
-    const maxReps = Math.max(...siblings.map((s) => s.repetitions - s.lapses));
-    if (maxReps > 1) {
-      console.log(
-        `== ${quiz.cardId} has ${maxReps} net listening reps. Adding. ==`,
-      );
-      quizzes.push(quiz);
-      continue;
-    }
-
-    console.log(
-      `== ${quiz.cardId} only has ${maxReps} listening reps. Skipping. ==`,
-    );
-  }
-  console.groupEnd();
-  return quizzes.slice(0, take);
-};
-
-const maybeFilterNewCards: MFNC = async (rawQuizzes, userId, take) => {
-  let allowed = await newQuizzesAllowedToday(userId);
-  const quizzes = await forceListeningBeforeSpeaking(rawQuizzes, userId, take);
-  const output: typeof rawQuizzes = [];
-  for (const quiz of quizzes) {
-    if (quiz.firstReview) {
-      // We don't care about old cards
-      output.push(quiz);
-    } else {
-      if (allowed) {
-        output.push(quiz);
-        allowed--; // Reduce card limit by one.
-      }
-    }
-  }
-  return output;
-};
+// const maybeFilterNewCards: MFNC = async (quizzes, userId) => {
+//   let allowed = await newQuizzesAllowedToday(userId);
+//   const output: typeof quizzes = [];
+//   for (const quiz of quizzes) {
+//     if (quiz.firstReview) {
+//       // We don't care about old cards
+//       output.push(quiz);
+//     } else {
+//       if (allowed > 0) {
+//         output.push(quiz);
+//         allowed--; // Reduce card limit by one.
+//         break;
+//       }
+//     }
+//   }
+//   return output;
+// };
 
 export default async function getLessons(p: GetLessonInputParams) {
-  if (p.take > 30) {
+  if (p.take > 15) {
     return errorReport("Too many cards requested.");
   }
   const yesterday = new Date().getTime() - 24 * 60 * 60 * 1000;
@@ -309,9 +252,6 @@ export default async function getLessons(p: GetLessonInputParams) {
         flagged: { not: true },
       },
       ...(excluded.length ? { id: { notIn: excluded } } : {}),
-      quizType: {
-        in: ["listening", "speaking"],
-      },
       nextReview: {
         lt: p.now || Date.now(),
       },
@@ -323,17 +263,13 @@ export default async function getLessons(p: GetLessonInputParams) {
     // Don't select quizzes from the same card.
     // Prevents hinting.
     distinct: ["cardId"],
-    take: 300, // Will be filtered to correct length later.
+    take: 45, // Will be filtered to correct length later.
     include: {
       Card: true, // Include related Card data in the result
     },
   });
 
-  const raw = await maybeFilterNewCards(quizzes, p.userId, p.take);
-  const filtered = unique(
-    unique(raw, (q) => q.cardId),
-    (q) => q.id,
-  );
+  const filtered = unique(quizzes, (q) => q.cardId).slice(0, p.take);
   return await map(filtered, async (quiz) => {
     const audio = await generateLessonAudio({
       card: quiz.Card,
