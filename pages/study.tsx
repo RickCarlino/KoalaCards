@@ -124,7 +124,6 @@ function useBusinessLogic(state: State, dispatch: Dispatch<Action>) {
       .mutateAsync({ id, audio, perceivedDifficulty })
       .then(async (data) => {
         if (data.result === "fail") {
-          console.log("Transcript: " + data.userTranscription);
           dispatch({
             type: "ADD_FAILURE",
             value: {
@@ -147,7 +146,7 @@ function useBusinessLogic(state: State, dispatch: Dispatch<Action>) {
         });
       })
       .catch((error) => {
-        console.error("Error grading quiz", error);
+        console.error(error, "Error grading quiz");
         dispatch({
           type: "DID_GRADE",
           id,
@@ -333,7 +332,6 @@ function QuizView(props: QuizViewProps) {
     if (props.isRecording) {
       props.stopRecording();
     } else {
-      console.log(`=== Grading with ${grade}`);
       props.startRecording(grade);
     }
   };

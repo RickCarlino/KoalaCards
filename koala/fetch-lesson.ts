@@ -258,6 +258,7 @@ export default async function getLessons(p: GetLessonInputParams) {
       lastReview: {
         lt: yesterday,
       },
+      quizType: "speaking",
     },
     orderBy: [{ Card: { langCode: "desc" } }, { nextReview: "desc" }],
     // Don't select quizzes from the same card.
