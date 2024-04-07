@@ -191,53 +191,6 @@ async function getExcludedIDs(wantToExclude: number[]) {
   ).map(({ id }) => id);
 }
 
-// const newQuizzesInLast24Hours = async (userId: string) => {
-//   const yesterday = new Date().getTime() - 24 * 60 * 60 * 1000;
-//   return prismaClient.quiz.count({
-//     where: {
-//       Card: {
-//         userId,
-//         flagged: false,
-//       },
-//       firstReview: {
-//         gt: yesterday,
-//       },
-//     },
-//   });
-// };
-
-// const newQuizzesAllowedToday = async (userId: string) => {
-//   const actual = await newQuizzesInLast24Hours(userId);
-//   const allowed = (await getUserSettings(userId)).cardsPerDayMax || 60;
-//   return Math.max(allowed - actual, 0);
-// };
-
-// type QuizLike = {
-//   firstReview: number;
-//   quizType: string;
-//   cardId: number;
-// };
-
-// type MFNC = <T extends QuizLike>(quizzes: T[], userId: string) => Promise<T[]>;
-
-// const maybeFilterNewCards: MFNC = async (quizzes, userId) => {
-//   let allowed = await newQuizzesAllowedToday(userId);
-//   const output: typeof quizzes = [];
-//   for (const quiz of quizzes) {
-//     if (quiz.firstReview) {
-//       // We don't care about old cards
-//       output.push(quiz);
-//     } else {
-//       if (allowed > 0) {
-//         output.push(quiz);
-//         allowed--; // Reduce card limit by one.
-//         break;
-//       }
-//     }
-//   }
-//   return output;
-// };
-
 export default async function getLessons(p: GetLessonInputParams) {
   if (p.take > 15) {
     return errorReport("Too many cards requested.");
@@ -258,12 +211,8 @@ export default async function getLessons(p: GetLessonInputParams) {
       lastReview: {
         lt: yesterday,
       },
-      quizType: "speaking",
     },
     orderBy: [{ Card: { langCode: "desc" } }, { nextReview: "desc" }],
-    // Don't select quizzes from the same card.
-    // Prevents hinting.
-    distinct: ["cardId"],
     take: 45, // Will be filtered to correct length later.
     include: {
       Card: true, // Include related Card data in the result
