@@ -98,7 +98,6 @@ export const gradeQuiz = procedure
   .mutation(async (x): Promise<PerformExamOutput> => {
     const user = x.ctx.user;
     if (!user) {
-      console.log(`=== User not logged in?`);
       return {
         rejectionText: "You are not logged in",
         result: "error",

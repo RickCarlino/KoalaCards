@@ -1,30 +1,18 @@
-import { YesOrNo, yesOrNo } from "@/koala/openai";
+import { YesOrNo, translateToEnglish, yesOrNo } from "@/koala/openai";
 import { QuizEvaluator } from "./types";
 import { template } from "radash";
 import { FOOTER, strip } from "./evaluator-utils";
 
-const GRAMMAR_PROMPT =
-  `Grade a sentence (spoken via speech-to-text) from a
-language learning app. Answer YES if the sentence is
-grammatically correct and in the specified language
-(ISO 639-1:2002 code '{{langCode}}'). Answer NO if it doesn't
-follow the language's syntax and semantics or isn't in the
-specified language. Avoid vague responses. Incomplete
-sentences are OK if they are grammatically correct. Do not
-grade spacing. You will be penalized for vague "NO" responses.` + FOOTER;
-
 const MEANING_PROMPT =
-  `
-Sentence B: "{{term}}" ({{langCode}})
-Sentence C: "{{definition}}" (EN)
+  `Sentence B: ({{langCode}}): {{term}} / {{definition}}
 
-When translated, is sentence A equivalent to sentence B and C?
+When translated, is sentence A equivalent to sentence B?
 The meaning is more important than the words used.
-If "NO", why not?
+If "NO", why not? You must explain your reason.
 Punctuation and spacing do not matter for the sake of this question.
 ` + FOOTER;
 
-const gradeGrammar = async (
+const doGrade = async (
   userInput: string,
   term: string,
   definition: string,
@@ -36,22 +24,15 @@ const gradeGrammar = async (
     definition,
     langCode,
   };
-  const question = template(GRAMMAR_PROMPT, tplData);
-  const grammarYN = await yesOrNo({
-    userInput,
-    question,
-    userID,
-  });
-  if (grammarYN.response === "no") {
-    return grammarYN;
-  }
+  const englishTranslation = await translateToEnglish(userInput, langCode);
 
   const meaningYn = await yesOrNo({
-    userInput: `Sentence A: ${userInput} (${langCode})`,
+    userInput: `Sentence A (${langCode}): ${userInput} / ${englishTranslation}`,
     question: template(MEANING_PROMPT, tplData),
     userID,
   });
 
+  meaningYn.whyNot = `Your sentences means '${englishTranslation}', rather than '${definition}'.`
   return meaningYn;
 };
 
@@ -64,21 +45,25 @@ export const speaking: QuizEvaluator = async ({ userInput, card, userID }) => {
     };
   }
 
-  const result = await gradeGrammar(
+  const result = await doGrade(
     userInput,
     card.term,
     card.definition,
     card.langCode,
     userID,
   );
+
+  const userMessage = result.whyNot || "";
+
   if (result.response === "no") {
     return {
       result: "fail",
-      userMessage: result.whyNot || "No reason provided.",
+      userMessage,
     };
   }
+
   return {
     result: "pass",
-    userMessage: result.whyNot || "Passed!",
+    userMessage,
   };
 };

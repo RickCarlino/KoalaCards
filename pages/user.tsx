@@ -33,9 +33,6 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
         nextReview: {
           lt: tomorrow,
         },
-        lastReview: {
-          lt: today,
-        },
         firstReview: {
           gt: 0,
         },
