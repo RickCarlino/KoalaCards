@@ -214,8 +214,9 @@ export default async function getLessons(p: GetLessonInputParams) {
     },
     orderBy: [
       { Card: { langCode: "desc" } },
-      { quizType: "asc" },
       { nextReview: "desc" },
+      { cardId: "asc" },
+      { quizType: "asc" },
     ],
     take: 45, // Will be filtered to correct length later.
     include: {
