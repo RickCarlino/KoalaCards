@@ -59,8 +59,8 @@ const HEADER_STYLES = {
 };
 
 const HEADER: Record<string, string> = {
-  speaking: "Speaking Quiz: ",
-  listening: "Translate to English",
+  speaking: "say in ",
+  listening: "translate to English",
 };
 
 export const HOTKEYS = {
@@ -81,13 +81,24 @@ function winRate(failed: number, total: number) {
   return `${pct}%`;
 }
 
+const LANG_CODE_NAMES: Record<string, string> = {
+  EN: "English",
+  IT: "Italian",
+  FR: "French",
+  ES: "Spanish",
+  KO: "Korean",
+};
+
 function StudyHeader({ lessonType, langCode }: StudyHeaderProps) {
   const isSpeaking = lessonType === "speaking";
-  const suffix = isSpeaking ? langCode.toUpperCase() : "";
+  const key = langCode.toUpperCase();
+  const suffix = isSpeaking ? LANG_CODE_NAMES[key] || key : "";
   const header = HEADER[lessonType] + suffix;
   return (
     <header style={HEADER_STYLES}>
-      <span style={{ fontSize: "24px", fontWeight: "bold" }}>{header}</span>
+      <span style={{ fontSize: "18px", fontWeight: "bold" }}>
+        Select difficulty then {header}
+      </span>
     </header>
   );
 }
@@ -247,13 +258,10 @@ function useBusinessLogic(state: State, dispatch: Dispatch<Action>) {
 }
 
 function useQuizState(props: QuizData) {
-  const cardsById = props.quizzes.reduce(
-    (acc, quiz) => {
-      acc[quiz.quizId] = quiz;
-      return acc;
-    },
-    {} as Record<number, Quiz>,
-  );
+  const cardsById = props.quizzes.reduce((acc, quiz) => {
+    acc[quiz.quizId] = quiz;
+    return acc;
+  }, {} as Record<number, Quiz>);
   const newState = gotoNextQuiz(
     newQuizState({
       cardsById,
@@ -397,7 +405,7 @@ function QuizView(props: QuizViewProps) {
       <Grid grow justify="center" align="stretch" gutter="xs">
         <Grid.Col span={12}>
           <Button fullWidth onClick={props.stopRecording}>
-            Stop Recording ({keys.join(", ")})
+            Finish Recording ({keys.join(", ")})
           </Button>
         </Grid.Col>
       </Grid>
