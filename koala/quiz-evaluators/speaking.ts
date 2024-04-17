@@ -32,7 +32,7 @@ const doGrade = async (
     userID,
   });
 
-  meaningYn.whyNot = `Your sentences means '${englishTranslation}', rather than '${definition}'.`
+  meaningYn.whyNot = `Your sentences means '${englishTranslation}', rather than '${definition}'.`;
   return meaningYn;
 };
 

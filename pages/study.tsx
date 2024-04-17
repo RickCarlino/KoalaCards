@@ -216,17 +216,17 @@ function useBusinessLogic(state: State, dispatch: Dispatch<Action>) {
       assertQuiz(quiz);
       const id = quiz.quizId;
       if (perceivedDifficulty === Grade.AGAIN) {
+        const { playbackAudio } = await getPlaybackAudio.mutateAsync({ id });
+        dispatch({ type: "USER_GAVE_UP", id, playbackAudio });
         manuallyGade.mutateAsync({
           id,
           grade: Grade.AGAIN,
         });
-        const { playbackAudio } = await getPlaybackAudio.mutateAsync({ id });
-        dispatch({ type: "USER_GAVE_UP", id, playbackAudio });
         return;
       } else {
         setGrade(perceivedDifficulty);
         dispatch({ type: "BEGIN_RECORDING" });
-        start();
+        await start();
       }
     },
     async rollbackGrade() {
@@ -327,12 +327,12 @@ function QuizView(props: QuizViewProps) {
     setMaxGrade(Grade.EASY);
     props.playQuizAudio();
   }, [quizID]);
-  const gradeWith = (g: Grade) => () => {
+  const gradeWith = (g: Grade) => async () => {
     const grade = Math.min(g, maxGrade);
     if (props.isRecording) {
-      props.stopRecording();
+      await props.stopRecording();
     } else {
-      props.startRecording(grade);
+      await props.startRecording(grade);
     }
   };
   useHotkeys([
@@ -345,25 +345,25 @@ function QuizView(props: QuizViewProps) {
   ]);
   const buttons: HotkeyButtonProps[] = [
     {
-      onClick: () => props.startRecording(Grade.AGAIN),
+      onClick: gradeWith(Grade.AGAIN),
       label: "FAIL",
       hotkey: HOTKEYS.FAIL,
       disabled: false,
     },
     {
-      onClick: () => props.startRecording(Grade.HARD),
+      onClick: gradeWith(Grade.HARD),
       label: "Hard",
       hotkey: HOTKEYS.HARD,
       disabled: false,
     },
     {
-      onClick: () => props.startRecording(Grade.GOOD),
+      onClick: gradeWith(Grade.GOOD),
       label: "Good",
       hotkey: HOTKEYS.GOOD,
       disabled: maxGrade < Grade.GOOD,
     },
     {
-      onClick: () => props.startRecording(Grade.EASY),
+      onClick: gradeWith(Grade.EASY),
       label: "Easy",
       hotkey: HOTKEYS.EASY,
       disabled: maxGrade < Grade.EASY,
