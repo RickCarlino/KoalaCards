@@ -97,7 +97,7 @@ function StudyHeader({ lessonType, langCode }: StudyHeaderProps) {
   return (
     <header style={HEADER_STYLES}>
       <span style={{ fontSize: "18px", fontWeight: "bold" }}>
-        Select difficulty then {header}
+      🔊 Listen, Select difficulty, {header}
       </span>
     </header>
   );
