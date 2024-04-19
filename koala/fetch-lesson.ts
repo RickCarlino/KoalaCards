@@ -2,7 +2,7 @@ import textToSpeech, { TextToSpeechClient } from "@google-cloud/text-to-speech";
 import { createHash } from "crypto";
 import { existsSync, mkdir, readFileSync, writeFileSync } from "fs";
 import path from "path";
-import { draw, map, template, unique, zip } from "radash";
+import { draw, map, template, unique } from "radash";
 import { errorReport } from "./error-report";
 import { prismaClient } from "@/koala/prisma-client";
 import { Card } from "@prisma/client";
