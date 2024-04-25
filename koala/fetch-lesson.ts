@@ -212,7 +212,12 @@ export default async function getLessons(p: GetLessonInputParams) {
         lt: yesterday,
       },
     },
-    orderBy: [{ Card: { langCode: "desc" } }, { nextReview: "desc" }],
+    orderBy: [
+      { Card: { langCode: "desc" } },
+      { nextReview: "desc" },
+      { cardId: "asc" },
+      { quizType: "asc" },
+    ],
     take: 45, // Will be filtered to correct length later.
     include: {
       Card: true, // Include related Card data in the result

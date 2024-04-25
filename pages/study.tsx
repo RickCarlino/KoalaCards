@@ -59,8 +59,8 @@ const HEADER_STYLES = {
 };
 
 const HEADER: Record<string, string> = {
-  speaking: "Speaking Quiz: ",
-  listening: "Translate to English",
+  speaking: "say in ",
+  listening: "translate to English",
 };
 
 export const HOTKEYS = {
@@ -81,13 +81,24 @@ function winRate(failed: number, total: number) {
   return `${pct}%`;
 }
 
+const LANG_CODE_NAMES: Record<string, string> = {
+  EN: "English",
+  IT: "Italian",
+  FR: "French",
+  ES: "Spanish",
+  KO: "Korean",
+};
+
 function StudyHeader({ lessonType, langCode }: StudyHeaderProps) {
   const isSpeaking = lessonType === "speaking";
-  const suffix = isSpeaking ? langCode.toUpperCase() : "";
+  const key = langCode.toUpperCase();
+  const suffix = isSpeaking ? LANG_CODE_NAMES[key] || key : "";
   const header = HEADER[lessonType] + suffix;
   return (
     <header style={HEADER_STYLES}>
-      <span style={{ fontSize: "24px", fontWeight: "bold" }}>{header}</span>
+      <span style={{ fontSize: "18px", fontWeight: "bold" }}>
+      🔊 Listen, Select difficulty, {header}
+      </span>
     </header>
   );
 }
@@ -216,17 +227,17 @@ function useBusinessLogic(state: State, dispatch: Dispatch<Action>) {
       assertQuiz(quiz);
       const id = quiz.quizId;
       if (perceivedDifficulty === Grade.AGAIN) {
+        const { playbackAudio } = await getPlaybackAudio.mutateAsync({ id });
+        dispatch({ type: "USER_GAVE_UP", id, playbackAudio });
         manuallyGade.mutateAsync({
           id,
           grade: Grade.AGAIN,
         });
-        const { playbackAudio } = await getPlaybackAudio.mutateAsync({ id });
-        dispatch({ type: "USER_GAVE_UP", id, playbackAudio });
         return;
       } else {
         setGrade(perceivedDifficulty);
         dispatch({ type: "BEGIN_RECORDING" });
-        start();
+        await start();
       }
     },
     async rollbackGrade() {
@@ -247,13 +258,10 @@ function useBusinessLogic(state: State, dispatch: Dispatch<Action>) {
 }
 
 function useQuizState(props: QuizData) {
-  const cardsById = props.quizzes.reduce(
-    (acc, quiz) => {
-      acc[quiz.quizId] = quiz;
-      return acc;
-    },
-    {} as Record<number, Quiz>,
-  );
+  const cardsById = props.quizzes.reduce((acc, quiz) => {
+    acc[quiz.quizId] = quiz;
+    return acc;
+  }, {} as Record<number, Quiz>);
   const newState = gotoNextQuiz(
     newQuizState({
       cardsById,
@@ -327,12 +335,12 @@ function QuizView(props: QuizViewProps) {
     setMaxGrade(Grade.EASY);
     props.playQuizAudio();
   }, [quizID]);
-  const gradeWith = (g: Grade) => () => {
+  const gradeWith = (g: Grade) => async () => {
     const grade = Math.min(g, maxGrade);
     if (props.isRecording) {
-      props.stopRecording();
+      await props.stopRecording();
     } else {
-      props.startRecording(grade);
+      await props.startRecording(grade);
     }
   };
   useHotkeys([
@@ -345,25 +353,25 @@ function QuizView(props: QuizViewProps) {
   ]);
   const buttons: HotkeyButtonProps[] = [
     {
-      onClick: () => props.startRecording(Grade.AGAIN),
+      onClick: gradeWith(Grade.AGAIN),
       label: "FAIL",
       hotkey: HOTKEYS.FAIL,
       disabled: false,
     },
     {
-      onClick: () => props.startRecording(Grade.HARD),
+      onClick: gradeWith(Grade.HARD),
       label: "Hard",
       hotkey: HOTKEYS.HARD,
       disabled: false,
     },
     {
-      onClick: () => props.startRecording(Grade.GOOD),
+      onClick: gradeWith(Grade.GOOD),
       label: "Good",
       hotkey: HOTKEYS.GOOD,
       disabled: maxGrade < Grade.GOOD,
     },
     {
-      onClick: () => props.startRecording(Grade.EASY),
+      onClick: gradeWith(Grade.EASY),
       label: "Easy",
       hotkey: HOTKEYS.EASY,
       disabled: maxGrade < Grade.EASY,
@@ -397,7 +405,7 @@ function QuizView(props: QuizViewProps) {
       <Grid grow justify="center" align="stretch" gutter="xs">
         <Grid.Col span={12}>
           <Button fullWidth onClick={props.stopRecording}>
-            Stop Recording ({keys.join(", ")})
+            Finish Recording ({keys.join(", ")})
           </Button>
         </Grid.Col>
       </Grid>

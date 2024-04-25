@@ -39,7 +39,9 @@ const INITIAL_STATE: State = {
 
 const errorHandler = (error: any) => {
   console.error(error);
-  alert("Error. Please report this on Github.");
+  alert(
+    "Error. Please try again or report this on Github if the error continues.",
+  );
 };
 
 const SAMPLES = {
@@ -219,6 +221,9 @@ function LanguageInputPage() {
           </Button>
         </Stepper.Step>
         <Stepper.Step label="Edit cards">
+          <Button onClick={handleSave} loading={loading}>
+            Save
+          </Button>
           {state.processedCards.map((card, index) => (
             <Group key={index}>
               <TextInput
@@ -249,9 +254,6 @@ function LanguageInputPage() {
               </Button>
             </Group>
           ))}
-          <Button onClick={handleSave} loading={loading}>
-            Save
-          </Button>
         </Stepper.Step>
       </Stepper>
     </Container>
