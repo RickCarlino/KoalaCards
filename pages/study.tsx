@@ -51,6 +51,12 @@ type HotkeyButtonProps = {
   disabled?: boolean;
 };
 
+const debugGrade = (grade: number, label: string) => {
+  if (![1, 2, 3, 4].includes(grade)) {
+    console.log(`(${label}) Invalid perceived difficulty: ${grade ?? "?"}`);
+  }
+};
+
 const HEADER_STYLES = {
   display: "flex",
   alignItems: "center",
@@ -97,7 +103,7 @@ function StudyHeader({ lessonType, langCode }: StudyHeaderProps) {
   return (
     <header style={HEADER_STYLES}>
       <span style={{ fontSize: "18px", fontWeight: "bold" }}>
-      🔊 Listen, Select difficulty, {header}
+        🔊 Listen, Select difficulty, {header}
       </span>
     </header>
   );
@@ -127,10 +133,12 @@ function useBusinessLogic(state: State, dispatch: Dispatch<Action>) {
   const quiz = currentQuiz(state);
   const rollbackData = trpc.rollbackGrade.useMutation();
   const getPlaybackAudio = trpc.getPlaybackAudio.useMutation();
+  debugGrade(perceivedDifficulty, "136");
   const onRecord = async (audio: string) => {
     assertQuiz(quiz);
     const id = quiz.quizId;
     dispatch({ type: "END_RECORDING", id: quiz.quizId });
+    debugGrade(perceivedDifficulty, "141");
     gradeQuiz
       .mutateAsync({ id, audio, perceivedDifficulty })
       .then(async (data) => {
@@ -226,6 +234,7 @@ function useBusinessLogic(state: State, dispatch: Dispatch<Action>) {
     async startRecording(perceivedDifficulty: Grade) {
       assertQuiz(quiz);
       const id = quiz.quizId;
+      debugGrade(perceivedDifficulty, "237");
       if (perceivedDifficulty === Grade.AGAIN) {
         const { playbackAudio } = await getPlaybackAudio.mutateAsync({ id });
         dispatch({ type: "USER_GAVE_UP", id, playbackAudio });
