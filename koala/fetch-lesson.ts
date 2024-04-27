@@ -2,11 +2,10 @@ import textToSpeech, { TextToSpeechClient } from "@google-cloud/text-to-speech";
 import { createHash } from "crypto";
 import { existsSync, mkdir, readFileSync, writeFileSync } from "fs";
 import path from "path";
-import { draw, map, template, unique } from "radash";
+import { draw, map, shuffle, template, unique } from "radash";
 import { errorReport } from "./error-report";
 import { prismaClient } from "@/koala/prisma-client";
 import { Card } from "@prisma/client";
-// import { getUserSettings } from "./auth-helpers";
 
 export type LessonType = "listening" | "speaking";
 
@@ -191,6 +190,29 @@ async function getExcludedIDs(wantToExclude: number[]) {
   ).map(({ id }) => id);
 }
 
+export const numberOfCardsCanStudy = async (
+  userId: string,
+  yesterday: number,
+) => {
+  const settings = await prismaClient.userSettings.findFirst({
+    where: { userId },
+  });
+  const maxCards = settings?.cardsPerDayMax || 1000;
+  const actualCards = await prismaClient.quiz.count({
+    where: {
+      Card: {
+        userId,
+        flagged: { not: true },
+      },
+      lastReview: {
+        gte: yesterday,
+      },
+    },
+  });
+  const allowedCards = maxCards - actualCards;
+  return Math.max(allowedCards, 0);
+};
+
 export default async function getLessons(p: GetLessonInputParams) {
   if (p.take > 15) {
     return errorReport("Too many cards requested.");
@@ -224,7 +246,10 @@ export default async function getLessons(p: GetLessonInputParams) {
     },
   });
 
-  const filtered = unique(quizzes, (q) => q.cardId).slice(0, p.take);
+  const maxCards = await numberOfCardsCanStudy(p.userId, yesterday);
+  const filtered = unique(shuffle(quizzes), (q) => q.cardId)
+    .slice(0, maxCards)
+    .slice(0, p.take);
   return await map(filtered, async (quiz) => {
     const audio = await generateLessonAudio({
       card: quiz.Card,
