@@ -13,26 +13,13 @@ const configuration = { apiKey };
 
 export const openai = new OpenAI(configuration);
 
-function max80Columns(input: string) {
-  return input.replace(/(.{80})/g, "$1\n");
-}
 export async function gptCall(opts: ChatCompletionCreateParamsNonStreaming) {
-  const key = Math.random().toString(36).substring(7).toUpperCase();
-  console.time(key);
   const result = await openai.chat.completions.create(opts);
-  console.timeEnd(key);
-  const msg = result.choices[0];
-  const x = max80Columns(opts.messages.map((m) => m.content).join("\n")).split(
-    "\n",
-  );
-  const y =
-    msg.message.content || msg.message.tool_calls?.[0].function.arguments;
-  const meta = {
-    ...x,
-    ANSWER: max80Columns(y || ""),
-    TOKENS: result.usage?.total_tokens || -1,
-  };
-  console.table(meta);
+  console.log(`=== GPT CALL ===`);
+  console.log(opts.messages.map((x) => x.content || "").join("\n"));
+  console.log(`=== GPT RESP ===`);
+  const resp = result.choices[0].message || {};
+  console.log(JSON.stringify(resp.content || resp.tool_calls?.[0], null, 2));
   return result;
 }
 
