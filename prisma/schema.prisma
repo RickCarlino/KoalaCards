@@ -105,13 +105,3 @@ model Quiz {
 
   @@unique([cardId, quizType])
 }
-
-// Used to optimize the w params via the FSRS optimizer.
-model OptimizerLog {
-  id           Int      @id @default(autoincrement())
-  reviewTime   DateTime
-  // reviewRating is an Int. Only legal values are 1,2,3,4:
-  reviewRating Int
-  quizId       Int
-  cardId       Int?
-}
