@@ -213,6 +213,35 @@ export const numberOfCardsCanStudy = async (
   return Math.max(allowedCards, 0);
 };
 
+type Quizable = { quizType: string };
+
+function redistributeQuizzes<T extends Quizable>(quizzes: T[]): T[] {
+  // Step 1: Categorize quizzes into separate arrays based on `quizType`.
+  const categorized: Record<string, T[]> = {};
+
+  quizzes.forEach((quiz) => {
+    if (!categorized[quiz.quizType]) {
+      categorized[quiz.quizType] = [];
+    }
+    categorized[quiz.quizType].push(quiz);
+  });
+
+  // Step 2: Rebuild the array by picking elements in a round robin fashion.
+  const result: T[] = [];
+  let keys = Object.keys(categorized);
+  let index = 0;
+
+  while (keys.some((key) => categorized[key].length > 0)) {
+    const currentKey = keys[index % keys.length];
+    if (categorized[currentKey].length > 0) {
+      result.push(categorized[currentKey].shift()!);
+    }
+    index++;
+  }
+
+  return result;
+}
+
 export default async function getLessons(p: GetLessonInputParams) {
   if (p.take > 15) {
     return errorReport("Too many cards requested.");
@@ -247,7 +276,8 @@ export default async function getLessons(p: GetLessonInputParams) {
   });
 
   const maxCards = await numberOfCardsCanStudy(p.userId, yesterday);
-  const filtered = unique(shuffle(quizzes), (q) => q.cardId)
+  const shuffled = unique(shuffle(quizzes), (q) => q.cardId);
+  const filtered = redistributeQuizzes(shuffled)
     .slice(0, maxCards)
     .slice(0, p.take);
   return await map(filtered, async (quiz) => {
