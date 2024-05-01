@@ -91,17 +91,32 @@ model Card {
 }
 
 model Quiz {
-  id          Int    @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   cardId      Int
-  Card        Card   @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  Card        Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
   quizType    String
-  stability   Float  @default(0)
-  difficulty  Float  @default(0)
-  firstReview Float  @default(0)
-  lastReview  Float  @default(0)
-  nextReview  Float  @default(0)
-  lapses      Float  @default(0)
-  repetitions Float  @default(0)
+  stability   Float    @default(0)
+  difficulty  Float    @default(0)
+  firstReview Float    @default(0)
+  lastReview  Float    @default(0)
+  nextReview  Float    @default(0)
+  lapses      Float    @default(0)
+  repetitions Float    @default(0)
+  RevLog      RevLog[]
 
   @@unique([cardId, quizType])
+}
+
+model RevLog {
+  id          Int      @id @default(autoincrement())
+  quiz        Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  quizId      Int
+  lapses      Float
+  repetitions Float
+  difficulty  Float
+  stability   Float
+  firstReview Float
+  lastReview  Float
+  gradedAt    Float
+  createdAt   DateTime @default(now())
 }
