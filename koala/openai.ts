@@ -108,7 +108,7 @@ export const yesOrNo = async (input: YesOrNoInput): Promise<YesOrNo> => {
 export const translateToEnglish = async (content: string, langCode: string) => {
   const prompt = `You will be provided with a foreign language sentence (lang code: ${langCode}), and your task is to translate it into English.`;
   const hm = await gptCall({
-    model: "gpt-4",
+    model: "gpt-4-turbo-preview",
     messages: [
       {
         role: "system",
