@@ -3,7 +3,7 @@ import { z } from "zod";
 import { getUserSettings } from "../auth-helpers";
 import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc-procedure";
-import { generateLessonAudio } from "../fetch-lesson";
+import { generateLessonAudio } from "../speech";
 
 export const getPlaybackAudio = procedure
   .input(

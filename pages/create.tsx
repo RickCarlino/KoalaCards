@@ -9,13 +9,12 @@ import {
   Container,
 } from "@mantine/core";
 import { trpc } from "@/koala/trpc-config";
+import { Gender, LangCode } from "@/koala/shared-types";
 type ProcessedCard = {
   term: string;
   definition: string;
-  gender: "M" | "F" | "N";
+  gender: Gender;
 };
-
-type LangCode = "ko" | "es" | "it" | "fr";
 
 type Action =
   | { type: "ADD_CARD"; card: ProcessedCard }

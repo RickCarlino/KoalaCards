@@ -17,7 +17,7 @@ const FSRS = createDeck({
   // Updated from 0.79 to 0.85 on 2024-04-27
   // TODO Re-evaluate results on 2024-06-26
   // This was originally very low because the
-  // SM-2 => FSRS conversion created a review pileup. 
+  // SM-2 => FSRS conversion created a review pileup.
   requestedRetentionRate: 0.85,
 });
 

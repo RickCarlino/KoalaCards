@@ -1,4 +1,4 @@
-import { YesOrNo, translateToEnglish, yesOrNo } from "@/koala/openai";
+import { Explanation, translateToEnglish, yesOrNo } from "@/koala/openai";
 import { QuizEvaluator } from "./types";
 import { template } from "radash";
 import { FOOTER, strip } from "./evaluator-utils";
@@ -18,7 +18,7 @@ const doGrade = async (
   definition: string,
   langCode: string,
   userID: string,
-): Promise<YesOrNo> => {
+): Promise<Explanation> => {
   const tplData = {
     term,
     definition,

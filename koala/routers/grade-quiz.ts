@@ -2,12 +2,13 @@ import { transcribeB64 } from "@/koala/transcribe";
 import { Card } from "@prisma/client";
 import { Grade } from "femto-fsrs";
 import { z } from "zod";
-import { generateLessonAudio } from "../fetch-lesson";
 import { prismaClient } from "../prisma-client";
 import { getQuizEvaluator } from "../quiz-evaluators";
 import { QuizEvaluatorOutput } from "../quiz-evaluators/types";
 import { procedure } from "../trpc-procedure";
 import { calculateSchedulingData, setGrade } from "./import-cards";
+import { LessonType } from "../shared-types";
+import { generateLessonAudio } from "../speech";
 
 type PerformExamOutput = z.infer<typeof performExamOutput>;
 type ResultContext = {
@@ -24,7 +25,7 @@ type ResultContext = {
     stability: number;
     lapses: number;
     repetitions: number;
-    quizType: "listening" | "speaking";
+    quizType: LessonType;
   };
 };
 
@@ -157,7 +158,7 @@ export const gradeQuiz = procedure
         stability: quiz.stability,
         lapses: quiz.lapses,
         repetitions: quiz.repetitions,
-        quizType: quiz.quizType as "listening" | "speaking",
+        quizType: quiz.quizType as LessonType,
       },
     };
     switch (result.result) {

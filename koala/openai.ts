@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources";
 import { errorReport } from "./error-report";
 import { isApprovedUser } from "./is-approved-user";
+import { YesNo } from "./shared-types";
 
 const apiKey = process.env.OPENAI_API_KEY;
 
@@ -60,7 +61,7 @@ const YES_OR_NO_FUNCTION = {
   description: "Answer a yes or no question.",
 };
 
-export type YesOrNo = { response: "yes" | "no"; whyNot?: string };
+export type Explanation = { response: YesNo; whyNot?: string };
 export type YesOrNoInput = {
   userInput: string;
   question: string;
@@ -71,7 +72,7 @@ export type YesOrNoInput = {
 // the more expensive model
 const TEMPORARY_DEMO = true;
 
-export const yesOrNo = async (input: YesOrNoInput): Promise<YesOrNo> => {
+export const yesOrNo = async (input: YesOrNoInput): Promise<Explanation> => {
   const { userInput, question, userID } = input;
   const grammarResp = await gptCall({
     messages: [

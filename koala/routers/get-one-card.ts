@@ -2,7 +2,7 @@ import { z } from "zod";
 import { procedure } from "../trpc-procedure";
 import { getCardOrFail } from "@/koala/get-card-or-fail";
 import { Quiz } from "./get-next-quizzes";
-import { LessonType } from "../fetch-lesson";
+import { LessonType } from "../shared-types";
 
 export const getOneCard = procedure
   .input(

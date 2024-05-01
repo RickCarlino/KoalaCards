@@ -1,7 +1,8 @@
 import { unique } from "radash";
+import { LessonType, QuizResult } from "./shared-types";
 
 export type Quiz = {
-  lessonType: "listening" | "speaking";
+  lessonType: LessonType;
   definition: string;
   term: string;
   audio: string;
@@ -50,8 +51,6 @@ export type State = {
   totalComplete: number;
   totalFailed: number;
 };
-
-type QuizResult = "error" | "fail" | "pass";
 
 export type Action =
   | { type: "DID_GRADE"; id: number; result: QuizResult }

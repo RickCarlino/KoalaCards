@@ -1,4 +1,5 @@
 import { Quiz, Card } from "@prisma/client";
+import { QuizResult } from "../shared-types";
 
 export type QuizEvaluatorInput = {
   quiz: Quiz;
@@ -8,7 +9,7 @@ export type QuizEvaluatorInput = {
 };
 
 export type QuizEvaluatorOutput = {
-  result: "pass" | "fail" | "error";
+  result: QuizResult;
   userMessage: string;
 };
 
