@@ -75,17 +75,18 @@ model VerificationToken {
 }
 
 model Card {
-  id         Int      @id @default(autoincrement())
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId     String
-  flagged    Boolean  @default(false)
-  term       String
-  definition String
-  langCode   String
-  // Gender can be Male, Female, or Neutral
-  gender     String   @default("N")
-  createdAt  DateTime @default(now())
-  Quiz       Quiz[]
+  id          Int      @id @default(autoincrement())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  flagged     Boolean  @default(false)
+  term        String
+  definition  String
+  langCode    String
+  // Gender can be "M"ale, "F"emale, or "N"eutral
+  gender      String   @default("N")
+  createdAt   DateTime @default(now())
+  Quiz        Quiz[]
+  imageBlobId String?
 
   @@unique([userId, term])
 }

@@ -28,6 +28,7 @@
   },
   "dependencies": {
     "@google-cloud/language": "^6.1.1",
+    "@google-cloud/storage": "^7.10.2",
     "@google-cloud/text-to-speech": "^5.0.1",
     "@google-cloud/translate": "^8.0.2",
     "@mantine/core": "^7.1.2",

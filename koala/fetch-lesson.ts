@@ -3,6 +3,7 @@ import { errorReport } from "./error-report";
 import { prismaClient } from "@/koala/prisma-client";
 import { generateLessonAudio } from "./speech";
 import { LessonType } from "./shared-types";
+import { maybeGetCardImageUrl } from "./image";
 
 type GetLessonInputParams = {
   userId: string;
@@ -144,6 +145,7 @@ export default async function getLessons(p: GetLessonInputParams) {
       audio,
       langCode: quiz.Card.langCode,
       lastReview: quiz.lastReview || 0,
+      imageURL: await maybeGetCardImageUrl(quiz.Card),
     };
   });
 }
