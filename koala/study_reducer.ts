@@ -12,6 +12,7 @@ export type Quiz = {
   repetitions: number;
   langCode: string;
   lastReview: number;
+  imageURL?: string;
 };
 
 export type Failure = {

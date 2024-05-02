@@ -444,6 +444,7 @@ function QuizView(props: QuizViewProps) {
         {winRate(props.totalFailed, props.totalComplete)} win rate.
       </p>
       <p>{linkToEditPage(quiz.cardId)}</p>
+      {quiz.imageURL && <img width={"90%"} src={quiz.imageURL} alt="quiz" />}
     </>
   );
 }

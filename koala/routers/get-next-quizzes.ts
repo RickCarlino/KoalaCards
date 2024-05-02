@@ -15,6 +15,7 @@ export const Quiz = z.object({
   audio: z.string(),
   langCode: z.string(),
   lastReview: z.number(),
+  imageURL: z.string().optional(),
 });
 
 const QuizList = z.object({

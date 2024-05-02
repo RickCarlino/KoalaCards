@@ -145,7 +145,7 @@ export default async function getLessons(p: GetLessonInputParams) {
       audio,
       langCode: quiz.Card.langCode,
       lastReview: quiz.lastReview || 0,
-      imageURL: await maybeGetCardImageUrl(quiz.Card),
+      imageURL: await maybeGetCardImageUrl(quiz.Card.imageBlobId),
     };
   });
 }

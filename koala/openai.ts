@@ -169,5 +169,5 @@ export const createDallEImage = async (prompt: string) => {
     n: 1,
     size: "1024x1024",
   });
-  return response.data[0].url;
+  return response.data[0].url || "";
 };

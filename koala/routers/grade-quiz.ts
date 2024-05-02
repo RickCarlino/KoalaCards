@@ -9,6 +9,8 @@ import { procedure } from "../trpc-procedure";
 import { calculateSchedulingData, setGrade } from "./import-cards";
 import { LessonType } from "../shared-types";
 import { generateLessonAudio } from "../speech";
+import { isApprovedUser } from "../is-approved-user";
+import { maybeAddImages } from "../image";
 
 type PerformExamOutput = z.infer<typeof performExamOutput>;
 type ResultContext = {
@@ -161,6 +163,11 @@ export const gradeQuiz = procedure
         quizType: quiz.quizType as LessonType,
       },
     };
+
+    // Temporary experiment: Add 3 DALL-E images per review.
+    if (isApprovedUser(user.id)) {
+      maybeAddImages(user.id, 3);
+    }
     switch (result.result) {
       case "pass":
         return processPass(resultContext);
