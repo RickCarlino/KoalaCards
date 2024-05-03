@@ -1,5 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  typescript: {
+    // Production server does not install devDependencies
+    // including @types/*.
+    ignoreBuildErrors: true,
+  },
   reactStrictMode: true,
   async rewrites() {
     return [
