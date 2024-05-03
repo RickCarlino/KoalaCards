@@ -1,4 +1,4 @@
-import { YesOrNo, translateToEnglish, yesOrNo } from "@/koala/openai";
+import { Explanation, translateToEnglish, yesOrNo } from "@/koala/openai";
 import { QuizEvaluator } from "./types";
 import { template } from "radash";
 import { FOOTER, strip } from "./evaluator-utils";
@@ -18,13 +18,25 @@ const doGrade = async (
   definition: string,
   langCode: string,
   userID: string,
-): Promise<YesOrNo> => {
+): Promise<Explanation> => {
   const tplData = {
     term,
     definition,
     langCode,
   };
+
+  if (strip(userInput) === strip(term)) {
+    console.log(`=== Exact match! (29)`);
+    return { response: "yes" };
+  }
+
   const englishTranslation = await translateToEnglish(userInput, langCode);
+  const exactTranslation = strip(englishTranslation) === strip(definition);
+
+  if (exactTranslation) {
+    console.log(`=== Exact match! (37)`);
+    return { response: "yes" };
+  }
 
   const meaningYn = await yesOrNo({
     userInput: `Sentence A (${langCode}): ${userInput} / ${englishTranslation}`,
@@ -38,7 +50,7 @@ const doGrade = async (
 
 export const speaking: QuizEvaluator = async ({ userInput, card, userID }) => {
   if (strip(userInput) === strip(card.term)) {
-    console.log(`=== Exact match!`);
+    console.log(`=== Exact match! (53)`);
     return {
       result: "pass",
       userMessage: "Exact match. Nice work!",

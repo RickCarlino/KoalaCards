@@ -5,8 +5,7 @@ import { promisify } from "util";
 import { SafeCounter } from "./counter";
 import { errorReport } from "./error-report";
 import { openai } from "./openai";
-
-export type Lang = "ko" | "en-US";
+import { LangCode } from "./shared-types";
 
 export const captureAudio = (dataURI: string): string => {
   const regex = /^data:.+\/(.+);base64,(.*)$/;
@@ -34,7 +33,7 @@ const transcriptionLength = SafeCounter({
 });
 
 export async function transcribeB64(
-  lang: Lang,
+  lang: LangCode | "en-US",
   dataURI: string,
   userID: string | number,
 ): Promise<TranscriptionResult> {

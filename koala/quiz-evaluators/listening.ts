@@ -20,7 +20,7 @@ export const listening: QuizEvaluator = async (ctx) => {
   const question = template(PROMPT, tplData);
 
   if (strip(userInput) === strip(definition)) {
-    console.log(`=== Exact match!`);
+    console.log(`=== Exact match! (23)`);
     return {
       result: "pass",
       userMessage: "Exact match. Nice work!",

@@ -1,9 +1,10 @@
 import { gptCall } from "./openai";
+import { Gender } from "./shared-types";
 
 interface Card {
   definition: string;
   term: string;
-  gender: "M" | "F" | "N";
+  gender: Gender;
 }
 
 const SYSTEM_PROMPT = `

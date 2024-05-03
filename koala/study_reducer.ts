@@ -1,7 +1,8 @@
 import { unique } from "radash";
+import { LessonType, QuizResult } from "./shared-types";
 
 export type Quiz = {
-  lessonType: "listening" | "speaking";
+  lessonType: LessonType;
   definition: string;
   term: string;
   audio: string;
@@ -11,6 +12,7 @@ export type Quiz = {
   repetitions: number;
   langCode: string;
   lastReview: number;
+  imageURL?: string;
 };
 
 export type Failure = {
@@ -51,8 +53,6 @@ export type State = {
   totalFailed: number;
 };
 
-type QuizResult = "error" | "fail" | "pass";
-
 export type Action =
   | { type: "DID_GRADE"; id: number; result: QuizResult }
   | { type: "FLAG_QUIZ"; cardId: number }
@@ -81,7 +81,7 @@ function betterUnique(input: number[]): number[] {
   return [head, ...unique(tail.filter((x) => x !== head))];
 }
 
-const FAILURE_REVIEW_CUTOFF = 5;
+const FAILURE_REVIEW_CUTOFF = 3;
 
 function maybeEnterFailureReview(state: State): State {
   // Reasons to enter failure mode:

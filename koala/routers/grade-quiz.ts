@@ -2,12 +2,15 @@ import { transcribeB64 } from "@/koala/transcribe";
 import { Card } from "@prisma/client";
 import { Grade } from "femto-fsrs";
 import { z } from "zod";
-import { generateLessonAudio } from "../fetch-lesson";
 import { prismaClient } from "../prisma-client";
 import { getQuizEvaluator } from "../quiz-evaluators";
 import { QuizEvaluatorOutput } from "../quiz-evaluators/types";
 import { procedure } from "../trpc-procedure";
 import { calculateSchedulingData, setGrade } from "./import-cards";
+import { LessonType } from "../shared-types";
+import { generateLessonAudio } from "../speech";
+import { isApprovedUser } from "../is-approved-user";
+import { maybeAddImages } from "../image";
 
 type PerformExamOutput = z.infer<typeof performExamOutput>;
 type ResultContext = {
@@ -24,7 +27,7 @@ type ResultContext = {
     stability: number;
     lapses: number;
     repetitions: number;
-    quizType: "listening" | "speaking";
+    quizType: LessonType;
   };
 };
 
@@ -157,9 +160,14 @@ export const gradeQuiz = procedure
         stability: quiz.stability,
         lapses: quiz.lapses,
         repetitions: quiz.repetitions,
-        quizType: quiz.quizType as "listening" | "speaking",
+        quizType: quiz.quizType as LessonType,
       },
     };
+
+    // Temporary experiment: Add 3 DALL-E images per review.
+    if (isApprovedUser(user.id)) {
+      maybeAddImages(user.id, 3);
+    }
     switch (result.result) {
       case "pass":
         return processPass(resultContext);

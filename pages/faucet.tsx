@@ -19,7 +19,7 @@ export default function Faucet(_props: {}) {
   return (
     <div>
       <button onClick={onClick}>Again</button>
-      <p>{result}</p>
+      {result && <img src={result} />}
     </div>
   );
 }

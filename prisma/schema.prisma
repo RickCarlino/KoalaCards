@@ -75,43 +75,49 @@ model VerificationToken {
 }
 
 model Card {
-  id         Int      @id @default(autoincrement())
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId     String
-  flagged    Boolean  @default(false)
-  term       String
-  definition String
-  langCode   String
-  // Gender can be Male, Female, or Neutral
-  gender     String   @default("N")
-  createdAt  DateTime @default(now())
-  Quiz       Quiz[]
+  id          Int      @id @default(autoincrement())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  flagged     Boolean  @default(false)
+  term        String
+  definition  String
+  langCode    String
+  // Gender can be "M"ale, "F"emale, or "N"eutral
+  gender      String   @default("N")
+  createdAt   DateTime @default(now())
+  Quiz        Quiz[]
+  imageBlobId String?
 
   @@unique([userId, term])
 }
 
 model Quiz {
-  id          Int    @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   cardId      Int
-  Card        Card   @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  Card        Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
   quizType    String
-  stability   Float  @default(0)
-  difficulty  Float  @default(0)
-  firstReview Float  @default(0)
-  lastReview  Float  @default(0)
-  nextReview  Float  @default(0)
-  lapses      Float  @default(0)
-  repetitions Float  @default(0)
+  stability   Float    @default(0)
+  difficulty  Float    @default(0)
+  firstReview Float    @default(0)
+  lastReview  Float    @default(0)
+  nextReview  Float    @default(0)
+  lapses      Float    @default(0)
+  repetitions Float    @default(0)
+  RevLog      RevLog[]
 
   @@unique([cardId, quizType])
 }
 
-// Used to optimize the w params via the FSRS optimizer.
-model OptimizerLog {
-  id           Int      @id @default(autoincrement())
-  reviewTime   DateTime
-  // reviewRating is an Int. Only legal values are 1,2,3,4:
-  reviewRating Int
-  quizId       Int
-  cardId       Int?
+model RevLog {
+  id          Int      @id @default(autoincrement())
+  quiz        Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  quizId      Int
+  lapses      Float
+  repetitions Float
+  difficulty  Float
+  stability   Float
+  firstReview Float
+  lastReview  Float
+  gradedAt    Float
+  createdAt   DateTime @default(now())
 }
