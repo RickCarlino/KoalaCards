@@ -1,7 +1,3 @@
-# !!! BIG NEWS !!!
-
-(2/24/24) Beta support for non-Korean languages (ES, IT, FR) has landed. Testing is ongoing.
-
 # KoalaCards 🐨
 
 <p align="center">
