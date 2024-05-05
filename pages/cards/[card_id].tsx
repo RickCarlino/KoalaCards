@@ -97,6 +97,9 @@ function Card({ id }: { id: number }) {
           <Button color="red" type="submit" onClick={deleteCard}>
             Delete
           </Button>
+          {card.data.imageURL && (
+              <img width={"100%"} src={card.data.imageURL} alt={"Card illustration"} />
+            )}
         </form>
         <h1>Quiz Data</h1>
         {card.data.quizzes.map((quiz) => {
