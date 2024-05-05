@@ -137,7 +137,8 @@ export const createDallEPrompt = async (term: string, definition: string) => {
     `You are creating a comic to help users remember the flashcard above.`,
     `It is a fun, single-frame, black and white comic that illustrates the sentence.`,
     `Create a DALL-e prompt to create this comic for the card above.`,
-    `Make sure the comics are free of all text.`,
+    `It is critical that comics do not contain text or speech bubbles.`,
+    `All characters must be Koalas.`,
   ].join("\n");
   const hm = await gptCall({
     model: "gpt-4-turbo-preview",
