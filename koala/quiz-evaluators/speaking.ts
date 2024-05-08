@@ -1,16 +1,22 @@
 import { Explanation, translateToEnglish, yesOrNo } from "@/koala/openai";
 import { QuizEvaluator } from "./types";
 import { template } from "radash";
-import { FOOTER, strip } from "./evaluator-utils";
+import { strip } from "./evaluator-utils";
 
-const MEANING_PROMPT =
-  `Sentence B: ({{langCode}}): {{term}} / {{definition}}
+// The previous prompt had a real world success rate of 72%.
+// Let's see how this one does.
+const MEANING_PROMPT = `Sentence B: ({{langCode}}): {{term}} / {{definition}}
+  ---
 
-When translated, is sentence A equivalent to sentence B?
-The meaning is more important than the words used.
-If "NO", why not? You must explain your reason.
-Punctuation and spacing do not matter for the sake of this question.
-` + FOOTER;
+  Consider the two sentences above. I have added English
+  translations for clarity, but I only care about the original
+  language ({{langCode}}).
+  
+  YOUR TASK:
+  If the meanings of these two sentences are mostly the same,
+  respond with 'YES.' If they are completely unrelated, respond
+  with 'NO.' and explain why.
+`; // + FOOTER;
 
 const doGrade = async (
   userInput: string,
