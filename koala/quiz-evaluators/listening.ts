@@ -3,15 +3,14 @@ import { QuizEvaluator } from "./types";
 import { yesOrNo } from "@/koala/openai";
 import { strip } from "./evaluator-utils";
 
-const PROMPT =
-  `
-The user was asked to translate the sentence "{{term}}"
-(lang code: {{langCode}}) to English. This to "{{definition}}"
-in English.
-
-Is the user's translation mostly correct? Say "YES" if so.
-If "NO", explain why it is not correct.
+const PROMPT = `
+This should roughly translate to "{{definition}}" in English.
+Evaluate the user's translation.
+Is this translation generally accurate?
+Say "YES" if it captures the meaning effectively.
+Say "NO" if it is completely incorrect. Explain why if "NO".
 `;
+
 export const listening: QuizEvaluator = async (ctx) => {
   const { userInput, card } = ctx;
   const { term, definition, langCode } = card;
@@ -27,7 +26,7 @@ export const listening: QuizEvaluator = async (ctx) => {
   }
 
   const listeningYN = await yesOrNo({
-    userInput: `User provided translation: ${userInput} (EN)`,
+    userInput: `The user translated the sentence "{{term}}" (lang code: {{langCode}}) to English as "{{userInput}}".`,
     question,
     userID: ctx.userID,
   });
