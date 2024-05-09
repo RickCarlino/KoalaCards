@@ -16,7 +16,7 @@ const MEANING_PROMPT = `Sentence B: ({{langCode}}): {{term}} / {{definition}}
   If the meanings of these two sentences are mostly the same,
   respond with 'YES.' If they are completely unrelated, respond
   with 'NO.' and explain why.
-`; // + FOOTER;
+`;
 
 const doGrade = async (
   userInput: string,
