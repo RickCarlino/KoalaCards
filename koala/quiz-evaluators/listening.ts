@@ -5,16 +5,18 @@ import { strip } from "./evaluator-utils";
 
 const PROMPT = `
 This should roughly translate to "{{definition}}" in English.
-Evaluate the user's translation.
-Is this translation generally accurate?
-Say "YES" if it captures the meaning effectively.
-Say "NO" if it is completely incorrect. Explain why if "NO".
+Evaluate the user's translation. Say "YES" if the translation
+captures the general meaning effectively, even if it's not a
+perfect match. Say "NO" if it fails to capture the intended meaning.
+Explain why if "NO".
 `;
+
+const PROMPT2 = `The user translated the sentence "{{term}}" (lang code: {{langCode}}) to English as "{{userInput}}".`;
 
 export const listening: QuizEvaluator = async (ctx) => {
   const { userInput, card } = ctx;
   const { term, definition, langCode } = card;
-  const tplData = { term, definition, langCode };
+  const tplData = { term, definition, langCode, userInput };
   const question = template(PROMPT, tplData);
 
   if (strip(userInput) === strip(definition)) {
@@ -26,7 +28,7 @@ export const listening: QuizEvaluator = async (ctx) => {
   }
 
   const listeningYN = await yesOrNo({
-    userInput: `The user translated the sentence "{{term}}" (lang code: {{langCode}}) to English as "{{userInput}}".`,
+    userInput: template(PROMPT2, tplData),
     question,
     userID: ctx.userID,
   });
@@ -34,7 +36,7 @@ export const listening: QuizEvaluator = async (ctx) => {
   if (listeningYN.response === "no") {
     return {
       result: "fail",
-      userMessage: listeningYN.response,
+      userMessage: listeningYN.whyNot || "No explanation provided.",
     };
   }
 

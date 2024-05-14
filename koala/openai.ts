@@ -109,7 +109,7 @@ export const yesOrNo = async (input: YesOrNoInput): Promise<Explanation> => {
 export const translateToEnglish = async (content: string, langCode: string) => {
   const prompt = `You will be provided with a foreign language sentence (lang code: ${langCode}), and your task is to translate it into English.`;
   const hm = await gptCall({
-    model: "gpt-4-turbo-preview",
+    model: "gpt-4o",
     messages: [
       {
         role: "system",
@@ -141,7 +141,7 @@ export const createDallEPrompt = async (term: string, definition: string) => {
     `All characters must be Koalas.`,
   ].join("\n");
   const hm = await gptCall({
-    model: "gpt-4-turbo-preview",
+    model: "gpt-4o",
     messages: [
       {
         role: "user",
