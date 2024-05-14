@@ -6,6 +6,7 @@ import { draw, template } from "radash";
 import { errorReport } from "./error-report";
 import { Card } from "@prisma/client";
 import { Gender, LangCode, LessonType } from "./shared-types";
+import { removeParens } from "./quiz-evaluators/evaluator-utils";
 
 type AudioLessonParams = {
   card: Card;
@@ -124,7 +125,7 @@ const generateSpeechFile = async (txt: string, voice: string) => {
   const p = filePathFor(txt, voice);
   if (!existsSync(p)) {
     const [response] = await CLIENT.synthesizeSpeech({
-      input: { ssml: txt },
+      input: { ssml: removeParens(txt) },
       voice: {
         languageCode: "ko",
         name: voice,

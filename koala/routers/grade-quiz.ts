@@ -166,8 +166,18 @@ export const gradeQuiz = procedure
 
     // Temporary experiment: Add 3 DALL-E images per review.
     if (isApprovedUser(user.id)) {
-      maybeAddImages(user.id, 3);
+      maybeAddImages(user.id, 1);
     }
+    console.log({
+      "===": "===",
+      ...{
+        quiz,
+        card,
+        userInput: transcript.text,
+        userID: user.id,
+      },
+      ...result,
+    });
     switch (result.result) {
       case "pass":
         return processPass(resultContext);

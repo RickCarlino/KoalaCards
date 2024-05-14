@@ -14,11 +14,11 @@ type QuizGradingFields =
 type GradedQuiz = Pick<Quiz, QuizGradingFields>;
 
 const FSRS = createDeck({
-  // Updated from 0.79 to 0.85 on 2024-04-27
+  // Updated from 0.79 to 0.89 on 2024-04-27
   // TODO Re-evaluate results on 2024-06-26
   // This was originally very low because the
   // SM-2 => FSRS conversion created a review pileup.
-  requestedRetentionRate: 0.85,
+  requestedRetentionRate: 0.89,
 });
 
 const DAYS = 24 * 60 * 60 * 1000;

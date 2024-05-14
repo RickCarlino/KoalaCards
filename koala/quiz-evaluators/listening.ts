@@ -1,22 +1,22 @@
 import { template } from "radash";
 import { QuizEvaluator } from "./types";
 import { yesOrNo } from "@/koala/openai";
-import { FOOTER, strip } from "./evaluator-utils";
+import { strip } from "./evaluator-utils";
 
-const PROMPT =
-  `
-Sentence B: "{{term}}" ({{langCode}})
-Sentence C: "{{definition}}" (EN)
+const PROMPT = `
+This should roughly translate to "{{definition}}" in English.
+Evaluate the user's translation. Say "YES" if the translation
+captures the general meaning effectively, even if it's not a
+perfect match. Say "NO" if it fails to capture the intended meaning.
+Explain why if "NO".
+`;
 
-When translated, is sentence A equivalent in meaning to sentence B and C?
-The meaning is more important than the words used.
-Punctuation and spacing do not matter for the sake of this question.
-If "NO", why not?
-` + FOOTER;
+const PROMPT2 = `The user translated the sentence "{{term}}" (lang code: {{langCode}}) to English as "{{userInput}}".`;
+
 export const listening: QuizEvaluator = async (ctx) => {
   const { userInput, card } = ctx;
   const { term, definition, langCode } = card;
-  const tplData = { term, definition, langCode };
+  const tplData = { term, definition, langCode, userInput };
   const question = template(PROMPT, tplData);
 
   if (strip(userInput) === strip(definition)) {
@@ -28,7 +28,7 @@ export const listening: QuizEvaluator = async (ctx) => {
   }
 
   const listeningYN = await yesOrNo({
-    userInput: `Sentence A: ${userInput} (EN)`,
+    userInput: template(PROMPT2, tplData),
     question,
     userID: ctx.userID,
   });
@@ -36,7 +36,7 @@ export const listening: QuizEvaluator = async (ctx) => {
   if (listeningYN.response === "no") {
     return {
       result: "fail",
-      userMessage: listeningYN.response,
+      userMessage: listeningYN.whyNot || "No explanation provided.",
     };
   }
 
