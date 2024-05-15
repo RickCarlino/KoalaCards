@@ -53,7 +53,7 @@ export async function createCardsFromText(
       { role: "system", content: SYSTEM_PROMPT + langCode },
       { role: "user", content: input.slice(0, 3000) },
     ],
-    model: "gpt-3.5-turbo-1106",
+    model: "gpt-4o",
     n: 1,
     temperature: 0.75,
     response_format: { type: "json_object" },

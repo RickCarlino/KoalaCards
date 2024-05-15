@@ -81,7 +81,7 @@ function betterUnique(input: number[]): number[] {
   return [head, ...unique(tail.filter((x) => x !== head))];
 }
 
-const FAILURE_REVIEW_CUTOFF = 3;
+const FAILURE_REVIEW_CUTOFF = 1;
 
 function maybeEnterFailureReview(state: State): State {
   // Reasons to enter failure mode:

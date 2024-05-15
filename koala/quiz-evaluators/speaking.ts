@@ -2,6 +2,7 @@ import { Explanation, translateToEnglish, yesOrNo } from "@/koala/openai";
 import { QuizEvaluator } from "./types";
 import { template } from "radash";
 import { strip } from "./evaluator-utils";
+import { captureTrainingData } from "./capture-training-data";
 
 // The previous prompt had a real world success rate of 72%.
 // Let's see how this one does.
@@ -50,7 +51,17 @@ const doGrade = async (
     userID,
   });
 
-  meaningYn.whyNot = `Your sentences means '${englishTranslation}', rather than '${definition}'.`;
+  captureTrainingData({
+    quizType: "speaking",
+    yesNo: meaningYn.response,
+    explanation: meaningYn.whyNot || "",
+    term,
+    definition,
+    langCode,
+    userInput,
+    englishTranslation,
+  });
+
   return meaningYn;
 };
 
@@ -71,7 +82,7 @@ export const speaking: QuizEvaluator = async ({ userInput, card, userID }) => {
     userID,
   );
 
-  const userMessage = result.whyNot || "? Not provided ?";
+  const userMessage = result.whyNot || "";
 
   if (result.response === "no") {
     return {

@@ -8,5 +8,8 @@ export function strip(input: string): string {
 
 export const removeParens = (input: string): string => {
   // Replace parents and double whitespace
-  return input.replace(/\(.*?\)/g, "").replace(/\s{2,}/g, " ").trim();
-}
+  return input
+    .replace(/\(.*?\)/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+};
