@@ -265,13 +265,10 @@ function useBusinessLogic(state: State, dispatch: Dispatch<Action>) {
 }
 
 function useQuizState(props: QuizData) {
-  const cardsById = props.quizzes.reduce(
-    (acc, quiz) => {
-      acc[quiz.quizId] = quiz;
-      return acc;
-    },
-    {} as Record<number, Quiz>,
-  );
+  const cardsById = props.quizzes.reduce((acc, quiz) => {
+    acc[quiz.quizId] = quiz;
+    return acc;
+  }, {} as Record<number, Quiz>);
   const newState = gotoNextQuiz(
     newQuizState({
       cardsById,
@@ -433,6 +430,7 @@ function QuizView(props: QuizViewProps) {
         isRecording={props.isRecording}
       />
       {buttonCluster}
+      {quiz.lessonType === "dictation" && <h2>{quiz.term}</h2>}
       <p>Quiz #{quiz.quizId}</p>
       <p>{quiz.repetitions} repetitions</p>
       <p>{quiz.lapses} lapses</p>
