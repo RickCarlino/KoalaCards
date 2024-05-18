@@ -42,6 +42,7 @@ type QuizViewProps = {
 type StudyHeaderProps = {
   lessonType: keyof typeof HEADER;
   langCode: string;
+  isRecording: boolean;
 };
 type QuizAssertion = (q: Quiz | undefined) => asserts q is Quiz;
 type HotkeyButtonProps = {
@@ -95,18 +96,26 @@ const LANG_CODE_NAMES: Record<string, string> = {
   KO: "Korean",
 };
 
-function StudyHeader({ lessonType, langCode }: StudyHeaderProps) {
+function StudyHeader(props: StudyHeaderProps) {
+  const { lessonType, langCode, isRecording } = props;
+  const text = (t: string) => {
+    return (
+      <header style={HEADER_STYLES}>
+        <span style={{ fontSize: "18px", fontWeight: "bold" }}>{t}</span>
+      </header>
+    );
+  };
+
+  if (isRecording) {
+    return text("🎤 Record your response now");
+  }
+
   const isSpeaking = lessonType === "speaking";
   const key = langCode.toUpperCase();
   const suffix = isSpeaking ? LANG_CODE_NAMES[key] || key : "";
   const header = HEADER[lessonType] + suffix;
-  return (
-    <header style={HEADER_STYLES}>
-      <span style={{ fontSize: "18px", fontWeight: "bold" }}>
-        🔊 Listen, Select difficulty, {header}
-      </span>
-    </header>
-  );
+
+  return text(`🔊 Listen, Select difficulty, ${header}`);
 }
 
 const currentQuiz = (state: State) => {
@@ -267,13 +276,10 @@ function useBusinessLogic(state: State, dispatch: Dispatch<Action>) {
 }
 
 function useQuizState(props: QuizData) {
-  const cardsById = props.quizzes.reduce(
-    (acc, quiz) => {
-      acc[quiz.quizId] = quiz;
-      return acc;
-    },
-    {} as Record<number, Quiz>,
-  );
+  const cardsById = props.quizzes.reduce((acc, quiz) => {
+    acc[quiz.quizId] = quiz;
+    return acc;
+  }, {} as Record<number, Quiz>);
   const newState = gotoNextQuiz(
     newQuizState({
       cardsById,
@@ -430,6 +436,7 @@ function QuizView(props: QuizViewProps) {
       <StudyHeader
         lessonType={quiz?.lessonType}
         langCode={props.quiz.langCode}
+        isRecording={props.isRecording}
       />
       {buttonCluster}
       <p>Quiz #{quiz.quizId}</p>

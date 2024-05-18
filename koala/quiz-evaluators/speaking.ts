@@ -15,8 +15,8 @@ const MEANING_PROMPT = `Sentence B: ({{langCode}}): {{term}} / {{definition}}
   
   YOUR TASK:
   If the meanings of these two sentences are mostly the same,
-  respond with 'YES.' If they are completely unrelated, respond
-  with 'NO.' and explain why.
+  respond with 'YES.' If they are completely unrelated,
+  respond with 'NO' and tell the student why.
 `;
 
 const doGrade = async (
@@ -82,7 +82,7 @@ export const speaking: QuizEvaluator = async ({ userInput, card, userID }) => {
     userID,
   );
 
-  const userMessage = result.whyNot || "";
+  const userMessage = `Your said '${userInput}'`;
 
   if (result.response === "no") {
     return {

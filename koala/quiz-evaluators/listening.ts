@@ -9,7 +9,7 @@ This should roughly translate to "{{definition}}" in English.
 Evaluate the user's translation. Say "YES" if the translation
 captures the general meaning effectively, even if it's not a
 perfect match. Say "NO" if it fails to capture the intended meaning.
-Explain why if "NO".
+Briefly tell the student why they are wrong if answer is "NO".
 `;
 
 const PROMPT2 = `The user translated the sentence "{{term}}" (lang code: {{langCode}}) to English as "{{userInput}}".`;
