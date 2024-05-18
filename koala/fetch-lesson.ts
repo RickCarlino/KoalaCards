@@ -127,7 +127,16 @@ export default async function getLessons(p: GetLessonInputParams) {
   const shuffled = unique(shuffle(quizzes), (q) => q.cardId);
   const filtered = redistributeQuizzes(shuffled)
     .slice(0, maxCards)
-    .slice(0, p.take);
+    .slice(0, p.take)
+    .map((q) => {
+      if (q.repetitions + q.lapses < 1) {
+        return {
+          ...q,
+          quizType: "dictation",
+        };
+      }
+      return q;
+    });
   return await map(filtered, async (quiz) => {
     const audio = await generateLessonAudio({
       card: quiz.Card,

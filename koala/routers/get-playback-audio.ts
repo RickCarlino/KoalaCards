@@ -34,7 +34,7 @@ export const getPlaybackAudio = procedure
     }
     const playbackAudio = await generateLessonAudio({
       card: quiz.Card,
-      lessonType: "playback",
+      lessonType: "dictation",
     });
     return { playbackAudio };
   });

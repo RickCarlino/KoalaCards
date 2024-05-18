@@ -14,11 +14,7 @@ type QuizGradingFields =
 type GradedQuiz = Pick<Quiz, QuizGradingFields>;
 
 const FSRS = createDeck({
-  // Updated from 0.79 to 0.89 on 2024-04-27
-  // TODO Re-evaluate results on 2024-06-26
-  // This was originally very low because the
-  // SM-2 => FSRS conversion created a review pileup.
-  requestedRetentionRate: 0.89,
+  requestedRetentionRate: 0.87,
 });
 
 const DAYS = 24 * 60 * 60 * 1000;
@@ -51,6 +47,7 @@ export function calculateSchedulingData(
   now = Date.now(),
 ): SchedulingData {
   if (quiz.lapses + quiz.repetitions === 0) {
+    console.log(`=== Does this ever get hit? ===`);
     return scheduleNewCard(grade, now);
   }
   const fsrsCard = {
