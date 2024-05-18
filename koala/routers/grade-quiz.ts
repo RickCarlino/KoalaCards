@@ -60,7 +60,7 @@ async function processFailure(ctx: ResultContext): Promise<FailResult> {
   await setGrade(ctx.quiz, Grade.AGAIN);
   const playbackAudio = await generateLessonAudio({
     card: ctx.card,
-    lessonType: "playback",
+    lessonType: "dictation",
     speed: 90,
   });
   return {
@@ -126,7 +126,10 @@ export const gradeQuiz = procedure
       };
     }
     const card = quiz?.Card;
-    const evaluator = getQuizEvaluator(quiz.quizType);
+    // I don't like how implicit this is. Would be better to pass the quizType in.
+    const isNew = quiz.repetitions === 0 && quiz.lapses === 0;
+    const quizType = (isNew ? "dictation" : quiz.quizType) as LessonType;
+    let evaluator = getQuizEvaluator(quizType);
     const transcript = await transcribeB64(
       quiz.quizType === "listening" ? "en-US" : (card.langCode as "ko"),
       x.input.audio,

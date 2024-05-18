@@ -36,7 +36,6 @@ type QuizViewProps = {
   startRecording(grade: Grade): Promise<void>;
   stopRecording: () => Promise<void>;
   totalComplete: number;
-  totalFailed: number;
 };
 
 type StudyHeaderProps = {
@@ -52,22 +51,31 @@ type HotkeyButtonProps = {
   disabled?: boolean;
 };
 
-const debugGrade = (grade: number, label: string) => {
-  if (![1, 2, 3, 4].includes(grade)) {
-    console.log(`(${label}) Invalid perceived difficulty: ${grade ?? "?"}`);
-  }
-};
-
 const HEADER_STYLES = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
   marginBottom: "20px",
 };
+const LANG_CODE_NAMES: Record<string, string> = {
+  EN: "English",
+  IT: "Italian",
+  FR: "French",
+  ES: "Spanish",
+  KO: "Korean",
+};
 
-const HEADER: Record<string, string> = {
-  speaking: "say in ",
-  listening: "translate to English",
+const DEFAULT = (_lang: string) => "";
+const HEADER: Record<string, (lang: string) => string> = {
+  speaking: (lang) => {
+    const name = LANG_CODE_NAMES[lang] || "the target language";
+    return `How would you say this in ${name}?`;
+  },
+  listening: () => "Translate this phrase to English",
+  dictation: (lang) => {
+    const name = LANG_CODE_NAMES[lang] || "the target language";
+    return "Select difficulty and repeat in " + name;
+  },
 };
 
 export const HOTKEYS = {
@@ -83,19 +91,6 @@ export const HOTKEYS = {
 
 const GRID_SIZE = 2;
 
-function winRate(failed: number, total: number) {
-  const pct = 100 - Math.round(((failed || 1) / (total || 1)) * 100);
-  return `${pct}%`;
-}
-
-const LANG_CODE_NAMES: Record<string, string> = {
-  EN: "English",
-  IT: "Italian",
-  FR: "French",
-  ES: "Spanish",
-  KO: "Korean",
-};
-
 function StudyHeader(props: StudyHeaderProps) {
   const { lessonType, langCode, isRecording } = props;
   const text = (t: string) => {
@@ -110,12 +105,9 @@ function StudyHeader(props: StudyHeaderProps) {
     return text("🎤 Record your response now");
   }
 
-  const isSpeaking = lessonType === "speaking";
-  const key = langCode.toUpperCase();
-  const suffix = isSpeaking ? LANG_CODE_NAMES[key] || key : "";
-  const header = HEADER[lessonType] + suffix;
+  const header = (HEADER[lessonType] || DEFAULT)(langCode);
 
-  return text(`🔊 Listen, Select difficulty, ${header}`);
+  return text(header);
 }
 
 const currentQuiz = (state: State) => {
@@ -142,12 +134,10 @@ function useBusinessLogic(state: State, dispatch: Dispatch<Action>) {
   const quiz = currentQuiz(state);
   const rollbackData = trpc.rollbackGrade.useMutation();
   const getPlaybackAudio = trpc.getPlaybackAudio.useMutation();
-  debugGrade(perceivedDifficulty, "136");
   const onRecord = async (audio: string) => {
     assertQuiz(quiz);
     const id = quiz.quizId;
     dispatch({ type: "END_RECORDING", id: quiz.quizId });
-    debugGrade(perceivedDifficulty, "141");
     gradeQuiz
       .mutateAsync({ id, audio, perceivedDifficulty })
       .then(async (data) => {
@@ -243,7 +233,6 @@ function useBusinessLogic(state: State, dispatch: Dispatch<Action>) {
     async startRecording(perceivedDifficulty: Grade) {
       assertQuiz(quiz);
       const id = quiz.quizId;
-      debugGrade(perceivedDifficulty, "237");
       if (perceivedDifficulty === Grade.AGAIN) {
         const { playbackAudio } = await getPlaybackAudio.mutateAsync({ id });
         dispatch({ type: "USER_GAVE_UP", id, playbackAudio });
@@ -342,7 +331,9 @@ function QuizView(props: QuizViewProps) {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setMaxGrade(maxGrade - 1);
+      if (quiz.lessonType !== "dictation") {
+        setMaxGrade(maxGrade - 1);
+      }
     }, 8000);
     return () => {
       clearTimeout(timer);
@@ -439,6 +430,7 @@ function QuizView(props: QuizViewProps) {
         isRecording={props.isRecording}
       />
       {buttonCluster}
+      {quiz.lessonType === "dictation" && <h2>{quiz.term}</h2>}
       <p>Quiz #{quiz.quizId}</p>
       <p>{quiz.repetitions} repetitions</p>
       <p>{quiz.lapses} lapses</p>
@@ -448,7 +440,6 @@ function QuizView(props: QuizViewProps) {
         new, {props.awaitingGrades} awaiting grades, {props.queueSize} in study
         Queue,
         {props.pendingFailures} in failure queue,{" "}
-        {winRate(props.totalFailed, props.totalComplete)} win rate.
       </p>
       <p>{linkToEditPage(quiz.cardId)}</p>
       {quiz.imageURL && <img width={"90%"} src={quiz.imageURL} alt="quiz" />}
@@ -478,7 +469,6 @@ function LoadedStudyPage(props: QuizData) {
         startRecording: everything.startRecording,
         stopRecording: everything.stopRecording,
         totalComplete: everything.state.totalComplete,
-        totalFailed: everything.state.totalFailed,
       };
       el = <QuizView {...quizViewProps} />;
       break;

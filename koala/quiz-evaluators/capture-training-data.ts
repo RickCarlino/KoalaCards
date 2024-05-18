@@ -1,7 +1,8 @@
 import { prismaClient } from "../prisma-client";
+import { LessonType } from "../shared-types";
 
 type TrainingData = {
-  quizType: string;
+  quizType: LessonType;
   yesNo: string;
   explanation: string;
   term: string;

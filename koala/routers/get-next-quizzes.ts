@@ -11,7 +11,11 @@ export const Quiz = z.object({
   term: z.string(),
   repetitions: z.number(),
   lapses: z.number(),
-  lessonType: z.union([z.literal("listening"), z.literal("speaking")]),
+  lessonType: z.union([
+    z.literal("listening"),
+    z.literal("speaking"),
+    z.literal("dictation"),
+  ]),
   audio: z.string(),
   langCode: z.string(),
   lastReview: z.number(),

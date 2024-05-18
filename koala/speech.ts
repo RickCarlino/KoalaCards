@@ -10,7 +10,7 @@ import { removeParens } from "./quiz-evaluators/evaluator-utils";
 
 type AudioLessonParams = {
   card: Card;
-  lessonType: LessonType | "playback";
+  lessonType: LessonType | "dictation";
   speed?: number;
 };
 
@@ -75,10 +75,10 @@ if (creds) {
 } else {
   CLIENT = new textToSpeech.TextToSpeechClient();
 }
-const SSML: Record<LessonType | "playback", string> = {
+const SSML: Record<LessonType, string> = {
   speaking: `<speak><voice language="en-US" gender="female">{{definition}}</voice></speak>`,
   listening: `<speak><prosody rate="{{speed}}%">{{term}}</prosody></speak>`,
-  playback: `<speak><prosody rate="{{speed}}%">{{term}}</prosody><break time="0.4s"/><voice language="en-US" gender="female">{{definition}}</voice><break time="0.4s"/></speak>`,
+  dictation: `<speak><prosody rate="{{speed}}%">{{term}}</prosody><break time="0.4s"/><voice language="en-US" gender="female">{{definition}}</voice><break time="0.4s"/></speak>`,
 };
 
 const randomVoice = (langCode: string, gender: string) => {
@@ -98,6 +98,7 @@ const randomVoice = (langCode: string, gender: string) => {
 });
 
 export async function generateLessonAudio(params: AudioLessonParams) {
+  console.log(`Create audio for ${params.lessonType}`);
   const tpl = SSML[params.lessonType];
   const ssml = template(tpl, {
     term: params.card.term,

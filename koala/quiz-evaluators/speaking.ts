@@ -82,7 +82,7 @@ export const speaking: QuizEvaluator = async ({ userInput, card, userID }) => {
     userID,
   );
 
-  const userMessage = `Your said '${userInput}'`;
+  const userMessage = result.whyNot || "No response";
 
   if (result.response === "no") {
     return {
