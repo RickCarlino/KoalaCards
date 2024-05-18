@@ -168,7 +168,6 @@ export const gradeQuiz = procedure
     if (isApprovedUser(user.id)) {
       maybeAddImages(user.id, 1);
     }
-
     switch (result.result) {
       case "pass":
         return processPass(resultContext);
