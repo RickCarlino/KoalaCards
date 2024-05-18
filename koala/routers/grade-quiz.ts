@@ -168,16 +168,6 @@ export const gradeQuiz = procedure
     if (isApprovedUser(user.id)) {
       maybeAddImages(user.id, 1);
     }
-    console.log({
-      "===": "===",
-      ...{
-        quiz,
-        card,
-        userInput: transcript.text,
-        userID: user.id,
-      },
-      ...result,
-    });
     switch (result.result) {
       case "pass":
         return processPass(resultContext);

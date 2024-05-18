@@ -121,3 +121,16 @@ model RevLog {
   gradedAt    Float
   createdAt   DateTime @default(now())
 }
+
+model TrainingData {
+  id                 Int      @id @default(autoincrement())
+  createdAt          DateTime @default(now())
+  quizType           String
+  yesNo              String
+  explanation        String
+  term               String
+  definition         String
+  langCode           String
+  userInput          String
+  englishTranslation String
+}
