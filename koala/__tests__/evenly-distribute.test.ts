@@ -21,7 +21,7 @@ describe("evenlyDistribute", () => {
       { value: 37, id: "LAST" },
     ]);
 
-    const actual = evenlyDistribute(input, "value");
+    const actual = evenlyDistribute(input, "value", 24, 37);
     expect(actual[0].id).toEqual("FIRST");
     expect(actual[0].value).toEqual(24);
     expect(actual[1].id).toEqual("SECOND");
@@ -45,7 +45,14 @@ describe("evenlyDistribute", () => {
 
     testCases.forEach(({ input, output }) => {
       const createFakes = (value: number) => ({ value });
-      const actual = evenlyDistribute(input.map(createFakes), "value");
+      const min = Math.min(...input);
+      const max = Math.max(...input);
+      const actual = evenlyDistribute(
+        input.map(createFakes),
+        "value",
+        min,
+        max,
+      );
       const expected = output.map(createFakes);
       expect(actual).toEqual(expected);
     });

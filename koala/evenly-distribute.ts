@@ -1,18 +1,21 @@
 import { prismaClient } from "./prisma-client";
 
+const ONE_DAY = 24 * 60 * 60 * 1000;
+const ONE_WEEK = 7 * ONE_DAY;
+
 export function evenlyDistribute<
   T extends { [P in K]: number },
   K extends keyof T,
->(input: T[], key: K): T[] {
+>(input: T[], key: K, min: number, max: number): T[] {
   const n = input.length;
   if (n < 3) {
     return input;
   }
+  if (min > max) {
+    throw new Error("min must be less than max");
+  }
   const copy = input.map((item) => ({ ...item }));
   copy.sort((a, b) => a[key] - b[key]);
-  const values = copy.map((item) => item[key]);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
   const range = max - min;
   const step = range / (n - 1);
   for (let i = 0; i < n; i++) {
@@ -22,7 +25,6 @@ export function evenlyDistribute<
 }
 
 export const eligibleForLeveling = async (userID: string) => {
-  const ONE_WEEK = 7 * 24 * 60 * 60 * 1000;
   const all = await prismaClient.quiz.findMany({
     where: {
       Card: {
@@ -30,16 +32,17 @@ export const eligibleForLeveling = async (userID: string) => {
         flagged: { not: true },
       },
       firstReview: {
-        gt: Date.now() - ONE_WEEK,
+        gt: 0,
+        lt: Date.now() - ONE_DAY * 2,
       },
       nextReview: {
         lt: Date.now() + ONE_WEEK,
       },
       repetitions: {
-        gte: 2,
+        gte: 1,
       },
     },
-    orderBy: [{ nextReview: "desc" }],
+    orderBy: [{ nextReview: "asc" }],
     take: 1000,
   });
 
@@ -53,7 +56,14 @@ export const levelReviews = async (userID: string) => {
     id: quiz.id,
     nextReview: quiz.nextReview,
   }));
-  const evenlyDistributed = evenlyDistribute(eligible, "nextReview");
+  const now = Date.now();
+  const later = now + ONE_WEEK;
+  const evenlyDistributed = evenlyDistribute(
+    eligible,
+    "nextReview",
+    now,
+    later,
+  );
   const updates = evenlyDistributed.map(({ id, nextReview }) => {
     return prismaClient.quiz.update({
       where: { id },
@@ -61,4 +71,5 @@ export const levelReviews = async (userID: string) => {
     });
   });
   await prismaClient.$transaction(updates);
+  console.log(`=== Leveled ${eligible.length} quizzes ===`);
 };
