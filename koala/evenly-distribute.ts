@@ -70,6 +70,6 @@ export const levelReviews = async (userID: string) => {
       data: { nextReview },
     });
   });
-  await prismaClient.$transaction(updates);
-  console.log(`=== Leveled ${eligible.length} quizzes ===`);
+  const result = await prismaClient.$transaction(updates);
+  return result.length;
 };
