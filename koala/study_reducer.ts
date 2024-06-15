@@ -206,7 +206,8 @@ function reduce(state: State, action: Action): State {
     case "USER_GAVE_UP":
       const curr = state.currentItem;
       if (curr.type !== "quiz") {
-        throw new Error("Expected a quiz");
+        console.log(curr);
+        throw new Error("Expected a quiz, got " + curr.type || "nullish value");
       }
       const card = curr.value;
       const state2 = gotoNextQuiz({

@@ -26,6 +26,11 @@ export async function maybeGetCardImageUrl(
 }
 
 export async function maybeAddImageToCard(card: Card) {
+  if (Math.random() < 0.33) {
+    // Only create images 1/3rd of the time.
+    return `Skipping ${card.term}`;
+  }
+
   if (card.imageBlobId) {
     return await maybeGetCardImageUrl(card.imageBlobId);
   }

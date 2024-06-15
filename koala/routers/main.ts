@@ -13,6 +13,7 @@ import { getOneCard } from "./get-one-card";
 import { getPlaybackAudio } from "./get-playback-audio";
 import { getUserSettings } from "./get-user-settings";
 import { gradeQuiz } from "./grade-quiz";
+import { levelReviews } from "./level-reviews";
 import { manuallyGrade } from "./manually-grade";
 import { parseCards } from "./parse-cards";
 import { rollbackGrade } from "./rollback-grade";
@@ -35,6 +36,7 @@ export const appRouter = router({
   manuallyGrade,
   parseCards,
   rollbackGrade,
+  levelReviews,
 });
 
 export type AppRouter = typeof appRouter;

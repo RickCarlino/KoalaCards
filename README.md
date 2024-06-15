@@ -23,7 +23,7 @@ Hey there! Welcome to KoalaCards, a fun and friendly [spaced repetition system](
 ## Demo Video
 
 <p align="center">
-  <a href="https://www.youtube.com/watch?v=qX9xj5OR3gY">
+  <a href="https://www.youtube.com/watch?v=-VmGF_rgQ1s&t=142s">
     Watch a short YouTube demo of the app as of 2024-03-15
     <br/>
     <img src="./screenshot.png" alt="KoalaCards UI screenshot"/>

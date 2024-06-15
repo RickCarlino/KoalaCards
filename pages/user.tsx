@@ -138,6 +138,7 @@ export default function UserSettingsPage(props: Props) {
     ["globalUsers", "users on this server"],
   ];
 
+  const lr = trpc.levelReviews.useMutation();
   return (
     <Container size="s">
       <Title order={1}>User Settings</Title>
@@ -187,6 +188,30 @@ export default function UserSettingsPage(props: Props) {
               </div>
             );
           })}
+        </Card>
+      </div>
+      levelReviews
+      <div>
+        <h1>Level Reviews</h1>
+        <Card shadow="xs" padding="md" radius="sm">
+          If you have too many cards due, you can "level" your review, which
+          causes all older cards to be evenly spread over the next 7 days.
+          <br />
+          This operation is IRREVERSIBLE.
+          <Button
+            onClick={() =>
+              lr.mutateAsync({}).then(
+                ({ count }) => {
+                  alert(`Leveled ${count} cards.`);
+                },
+                () => {
+                  alert("Error leveling cards.");
+                },
+              )
+            }
+          >
+            Level Reviews
+          </Button>
         </Card>
       </div>
     </Container>

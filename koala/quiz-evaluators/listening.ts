@@ -12,7 +12,7 @@ perfect match. Say "NO" if it fails to capture the intended meaning.
 Briefly tell the student why they are wrong if answer is "NO".
 `;
 
-const PROMPT2 = `The user translated the sentence "{{term}}" (lang code: {{langCode}}) to English as "{{userInput}}".`;
+const PROMPT2 = `The user translated the sentence "{{term}}" (lang code: {{langCode}}) to English as "{{userInput}}". Keep in mind that this was transcribed via text-to-speech, so transcription errors are possible.`;
 
 export const listening: QuizEvaluator = async (ctx) => {
   const { userInput, card } = ctx;
