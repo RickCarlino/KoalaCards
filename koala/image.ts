@@ -25,9 +25,11 @@ export async function maybeGetCardImageUrl(
   return await expiringUrl(bucket.file(blobID));
 }
 
+const CHEAPNESS = 6;
+
 export async function maybeAddImageToCard(card: Card) {
-  if (Math.random() < 0.33) {
-    // Only create images 1/3rd of the time.
+  if (Math.random() < (1 / CHEAPNESS)) {
+    // Only create images 1/6 of the time.
     return `Skipping ${card.term}`;
   }
 

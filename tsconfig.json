@@ -21,11 +21,5 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules"],
-  "ts-node": {
-    "esm": true,
-    "compilerOptions": {
-      "module": "nodenext"
-    }
-  }
+  "exclude": ["node_modules"]
 }

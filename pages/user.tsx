@@ -190,7 +190,6 @@ export default function UserSettingsPage(props: Props) {
           })}
         </Card>
       </div>
-      levelReviews
       <div>
         <h1>Level Reviews</h1>
         <Card shadow="xs" padding="md" radius="sm">
