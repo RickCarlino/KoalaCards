@@ -36,6 +36,7 @@ export async function transcribeB64(
   lang: LangCode | "en-US",
   dataURI: string,
   userID: string | number,
+  prompt = PROMPTS[lang.slice(0, 2)] || PROMPTS.ko,
 ): Promise<TranscriptionResult> {
   const writeFileAsync = promisify(writeFile);
   const base64Data = dataURI.split(";base64,").pop() || "";
@@ -46,7 +47,6 @@ export async function transcribeB64(
     ext: ".wav",
   });
   await writeFileAsync(fpath, buffer);
-  const prompt = PROMPTS[lang.slice(0, 2)] || PROMPTS.ko;
   const transcribePromise = new Promise<TranscriptionResult>(
     async (resolve) => {
       try {

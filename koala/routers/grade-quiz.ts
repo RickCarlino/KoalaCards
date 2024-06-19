@@ -130,10 +130,23 @@ export const gradeQuiz = procedure
     const isNew = quiz.repetitions === 0 && quiz.lapses === 0;
     const quizType = (isNew ? "dictation" : quiz.quizType) as LessonType;
     let evaluator = getQuizEvaluator(quizType);
+    let prompt = ``;
+    switch (quizType) {
+      case "dictation":
+      case "speaking":
+        prompt = card.term;
+        break;
+      case "listening":
+        prompt = card.definition;
+        break;
+      default:
+        throw new Error(`Unknown quiz type: ${quizType}`);
+    }
     const transcript = await transcribeB64(
       quiz.quizType === "listening" ? "en-US" : (card.langCode as "ko"),
       x.input.audio,
       user.id,
+      prompt,
     );
     if (transcript.kind === "error") {
       return {
