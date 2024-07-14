@@ -68,7 +68,7 @@ export type Action =
       newCards: number;
     };
 
-export const YOU_HIT_FAIL = "You hit fail";
+export const YOU_HIT_FAIL = "Not provided.";
 
 // Creates a unique array of numbers but keeps the head
 // in the 0th position to avoid changing the current quiz.

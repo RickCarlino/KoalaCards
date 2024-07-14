@@ -75,7 +75,7 @@ function FailureTable(props: {
         key: "6",
       },
       {
-        title: "Response Translation",
+        title: "Yours means",
         value: props.rejectionText, // EN
         key: "7",
       },
