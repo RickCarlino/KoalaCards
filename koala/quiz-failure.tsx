@@ -22,43 +22,65 @@ function FailureTable(props: {
     value: string;
     key: string;
   };
+  const IS_LISTENING = props.lessonType === "listening";
   const start: RowProps = {
-    title: "Quiz type",
-    value: props.lessonType,
+    title: "Task",
+    value: IS_LISTENING ? "Translate to English" : "Say in Target Language",
     key: "lessonType",
   };
-  const end: RowProps = {
-    title: "Why it's wrong",
-    value: props.rejectionText,
-    key: "rejectionText",
-  };
-  const userTranscription: RowProps = {
-    title: "(A) What you said",
-    value: props.userTranscription,
-    key: "userTranscription",
-  };
-  const term = { title: "(B) Term", value: props.term, key: "term" };
-  const definition = {
-    title: "(C) Definition",
-    value: props.definition,
-    key: "definition",
-  };
-  const IS_LISTENING = props.lessonType === "listening";
   /**
    * You answered a previous question incorrectly.
-Quiz type	speaking
-Why it's wrong	The input sentence is incomplete and does not provide enough context to determine if it is grammatically correct in Korean.
-(A) What you said	몰라요.
-(C) Definition	How much is this?
-(B) Term	이것은 얼마입니까?
+   Quiz type	speaking
+   Why it's wrong	The input sentence is incomplete and does not provide enough context to determine if it is grammatically correct in Korean.
+   (A) What you said	몰라요.
+   (C) Definition	How much is this?
+   (B) Term	이것은 얼마입니까?
    */
-  const rows = [
-    start,
-    userTranscription,
-    IS_LISTENING ? definition : term,
-    IS_LISTENING ? term : definition,
-    end,
-  ];
+  let rows: RowProps[];
+  if (IS_LISTENING) {
+    rows = [
+      start,
+      {
+        title: "Prompt",
+        value: props.term,
+        key: "1",
+      },
+      {
+        title: "Response",
+        value: props.userTranscription,
+        key: "2",
+      },
+      {
+        title: "Expected",
+        value: props.definition,
+        key: "3",
+      },
+    ];
+  } else {
+    rows = [
+      start,
+      {
+        title: "Prompt",
+        value: props.term, // KO
+        key: "4",
+      },
+      {
+        title: "Response",
+        value: props.userTranscription, // KO
+        key: "5",
+      },
+      {
+        title: "Expected",
+        value: props.definition, // EN
+        key: "6",
+      },
+      {
+        title: "Response Translation",
+        value: props.rejectionText, // EN
+        key: "7",
+      },
+    ];
+  }
   return (
     <Table>
       <tbody>
