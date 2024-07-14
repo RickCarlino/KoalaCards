@@ -18,6 +18,7 @@ import { levelReviews } from "./level-reviews";
 import { manuallyGrade } from "./manually-grade";
 import { parseCards } from "./parse-cards";
 import { rollbackGrade } from "./rollback-grade";
+import { viewTrainingData } from "./view-training-data";
 
 export const appRouter = router({
   bulkCreateCards,
@@ -39,6 +40,7 @@ export const appRouter = router({
   rollbackGrade,
   levelReviews,
   getRadioItem,
+  viewTrainingData,
 });
 
 export type AppRouter = typeof appRouter;
