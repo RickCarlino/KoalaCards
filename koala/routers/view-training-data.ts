@@ -1,4 +1,4 @@
-import { errorReport } from "@/koala/error-report";
+// import { errorReport } from "@/koala/error-report";
 import { z } from "zod";
 import { getUserSettings } from "../auth-helpers";
 import { prismaClient } from "../prisma-client";

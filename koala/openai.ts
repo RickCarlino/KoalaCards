@@ -1,7 +1,6 @@
 import OpenAI from "openai";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources";
 import { errorReport } from "./error-report";
-import { isApprovedUser } from "./is-approved-user";
 import { YesNo } from "./shared-types";
 
 const apiKey = process.env.OPENAI_API_KEY;
@@ -24,42 +23,6 @@ export async function gptCall(opts: ChatCompletionCreateParamsNonStreaming) {
   return result;
 }
 
-const YES_OR_NO_FUNCTION = {
-  name: "yes_or_no",
-  parameters: {
-    type: "object",
-    properties: {
-      response: {
-        type: "string",
-        enum: ["yes", "no"],
-      },
-      whyNot: {
-        type: "string",
-      },
-    },
-    dependencies: {
-      response: {
-        oneOf: [
-          {
-            properties: {
-              response: { const: "no" },
-            },
-            required: ["whyNot"],
-          },
-          {
-            properties: {
-              response: { const: "yes" },
-            },
-            not: {
-              required: ["whyNot"],
-            },
-          },
-        ],
-      },
-    },
-  },
-  description: "Answer a yes or no question.",
-};
 const SIMPLE_YES_OR_NO = {
   name: "yes_or_no",
   parameters: {
@@ -97,16 +60,12 @@ export type YesOrNoInput = {
   userID: string;
 };
 
-// Usage is currently low enough that we can afford to use
-// the more expensive model
-const TEMPORARY_DEMO = true;
-
 export const testEquivalence = async (
   left: string,
   right: string,
 ): Promise<YesNo> => {
-  const model = "ft:gpt-3.5-turbo-1106:personal:koala3:9qA2lgBl";
-  const content = [left, right].map((s,i) => `${i+1}: ${s}`).join("\n");
+  const model = process.env.GPT_MODEL || "gpt-4o";
+  const content = [left, right].map((s, i) => `${i + 1}: ${s}`).join("\n");
   const resp = await gptCall({
     messages: [
       {
@@ -130,43 +89,9 @@ export const testEquivalence = async (
     tool_choice: { type: "function", function: { name: "yes_or_no" } },
   });
   const jsonString =
-    resp?.choices?.[0]?.message?.tool_calls?.[0].function.arguments ||
-    "{}";
-  return JSON.parse(jsonString);
-};
-
-export const yesOrNo = async (input: YesOrNoInput): Promise<Explanation> => {
-  const { userInput, question, userID } = input;
-  const grammarResp = await gptCall({
-    messages: [
-      {
-        role: "user",
-        content: userInput,
-      },
-      {
-        role: "system",
-        content: question,
-      },
-    ],
-    model:
-      isApprovedUser(userID) || TEMPORARY_DEMO
-        ? "gpt-4-turbo-preview"
-        : "gpt-4o",
-    tools: [
-      {
-        type: "function",
-        function: YES_OR_NO_FUNCTION,
-      },
-    ],
-    max_tokens: 300,
-    temperature: 0.7,
-    user: userID,
-    tool_choice: { type: "function", function: { name: "yes_or_no" } },
-  });
-  const jsonString =
-    grammarResp?.choices?.[0]?.message?.tool_calls?.[0].function.arguments ||
-    "{}";
-  return JSON.parse(jsonString);
+    resp?.choices?.[0]?.message?.tool_calls?.[0].function.arguments || "{}";
+  const raw: any = JSON.parse(jsonString);
+  return raw.response as YesNo;
 };
 
 export const translateToEnglish = async (content: string, langCode: string) => {
