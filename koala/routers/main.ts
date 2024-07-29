@@ -11,12 +11,14 @@ import { getAllCards } from "./get-all-cards";
 import { getNextQuizzes } from "./get-next-quizzes";
 import { getOneCard } from "./get-one-card";
 import { getPlaybackAudio } from "./get-playback-audio";
+import { getRadioItem } from "./get-radio-item";
 import { getUserSettings } from "./get-user-settings";
 import { gradeQuiz } from "./grade-quiz";
 import { levelReviews } from "./level-reviews";
 import { manuallyGrade } from "./manually-grade";
 import { parseCards } from "./parse-cards";
 import { rollbackGrade } from "./rollback-grade";
+import { viewTrainingData } from "./view-training-data";
 
 export const appRouter = router({
   bulkCreateCards,
@@ -37,6 +39,8 @@ export const appRouter = router({
   parseCards,
   rollbackGrade,
   levelReviews,
+  getRadioItem,
+  viewTrainingData,
 });
 
 export type AppRouter = typeof appRouter;

@@ -25,15 +25,28 @@ export async function maybeGetCardImageUrl(
   return await expiringUrl(bucket.file(blobID));
 }
 
+const CHEAPNESS = 2;
+
 export async function maybeAddImageToCard(card: Card) {
-  if (Math.random() < 0.33) {
-    // Only create images 1/3rd of the time.
+  if (Math.random() < 1 / CHEAPNESS) {
+    // Only create images 1/6 of the time.
     return `Skipping ${card.term}`;
   }
 
   if (card.imageBlobId) {
     return await maybeGetCardImageUrl(card.imageBlobId);
   }
+
+  const quizzes = await prismaClient.quiz.findMany({
+    where: { cardId: card.id },
+  });
+
+  const reps = quizzes.map((x) => x.repetitions).reduce((a, b) => a + b, 0);
+  if (reps < 3) {
+    console.log(`Skipping ${card.term} with ${reps} reps`);
+    return;
+  }
+
   const prompt = await createDallEPrompt(card.definition, card.term);
   const url = await createDallEImage(prompt);
   const filePath = createBlobID("card-images", card.term, "jpg");

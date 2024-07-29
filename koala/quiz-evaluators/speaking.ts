@@ -62,7 +62,10 @@ const doGrade = async (
     englishTranslation,
   });
 
-  return meaningYn;
+  return {
+    ...meaningYn,
+    whyNot: englishTranslation,
+  };
 };
 
 export const speaking: QuizEvaluator = async ({ userInput, card, userID }) => {
