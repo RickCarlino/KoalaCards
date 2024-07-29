@@ -60,6 +60,35 @@ const YES_OR_NO_FUNCTION = {
   },
   description: "Answer a yes or no question.",
 };
+const SIMPLE_YES_OR_NO = {
+  name: "yes_or_no",
+  parameters: {
+    type: "object",
+    properties: {
+      response: {
+        type: "string",
+        enum: ["yes", "no"],
+      },
+    },
+    dependencies: {
+      response: {
+        oneOf: [
+          {
+            properties: {
+              response: { const: "no" },
+            },
+          },
+          {
+            properties: {
+              response: { const: "yes" },
+            },
+          },
+        ],
+      },
+    },
+  },
+  description: "Answer a yes or no question.",
+};
 
 export type Explanation = { response: YesNo; whyNot?: string };
 export type YesOrNoInput = {
@@ -71,6 +100,40 @@ export type YesOrNoInput = {
 // Usage is currently low enough that we can afford to use
 // the more expensive model
 const TEMPORARY_DEMO = true;
+
+export const testEquivalence = async (
+  left: string,
+  right: string,
+): Promise<YesNo> => {
+  const model = "ft:gpt-3.5-turbo-1106:personal:koala3:9qA2lgBl";
+  const content = [left, right].map((s,i) => `${i+1}: ${s}`).join("\n");
+  const resp = await gptCall({
+    messages: [
+      {
+        role: "user",
+        content,
+      },
+      {
+        role: "system",
+        content: "Are these two sentences equivalent?",
+      },
+    ],
+    model,
+    tools: [
+      {
+        type: "function",
+        function: SIMPLE_YES_OR_NO,
+      },
+    ],
+    max_tokens: 100,
+    temperature: 0.7,
+    tool_choice: { type: "function", function: { name: "yes_or_no" } },
+  });
+  const jsonString =
+    resp?.choices?.[0]?.message?.tool_calls?.[0].function.arguments ||
+    "{}";
+  return JSON.parse(jsonString);
+};
 
 export const yesOrNo = async (input: YesOrNoInput): Promise<Explanation> => {
   const { userInput, question, userID } = input;

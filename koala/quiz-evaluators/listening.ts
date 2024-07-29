@@ -1,6 +1,6 @@
 import { template } from "radash";
 import { QuizEvaluator } from "./types";
-import { yesOrNo } from "@/koala/openai";
+import { testEquivalence, yesOrNo } from "@/koala/openai";
 import { strip } from "./evaluator-utils";
 import { captureTrainingData } from "./capture-training-data";
 
@@ -34,6 +34,22 @@ export const listening: QuizEvaluator = async (ctx) => {
     userID: ctx.userID,
   });
 
+  const trialData = await testEquivalence(definition, userInput);
+  if (trialData === listeningYN.response) {
+    console.log(`=== old and new models agree.`);
+  } else {
+    console.log(`=== old and new models disagree!`);
+    console.log({
+      type: "listening",
+      fineTuned: trialData,
+      gpt4: listeningYN.response,
+      term,
+      definition,
+      langCode,
+      userInput,
+      response: listeningYN.response,
+    });
+  }
   captureTrainingData({
     quizType: "listening",
     yesNo: listeningYN.response,

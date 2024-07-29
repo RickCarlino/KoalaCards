@@ -1,4 +1,4 @@
-import { Explanation, translateToEnglish, yesOrNo } from "@/koala/openai";
+import { Explanation, testEquivalence, translateToEnglish, yesOrNo } from "@/koala/openai";
 import { QuizEvaluator } from "./types";
 import { template } from "radash";
 import { strip } from "./evaluator-utils";
@@ -61,6 +61,22 @@ const doGrade = async (
     userInput,
     englishTranslation,
   });
+  const trialData = await testEquivalence(term, userInput);
+  if (trialData === meaningYn.response) {
+    console.log(`=== old and new models agree.`);
+  } else {
+    console.log(`=== old and new models disagree!`);
+    console.log({
+      type: "speaking",
+      fineTuned: trialData,
+      gpt4: meaningYn.response,
+      term,
+      definition,
+      langCode,
+      userInput,
+      response: meaningYn.response,
+    });
+  }
 
   return {
     ...meaningYn,
