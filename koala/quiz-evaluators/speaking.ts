@@ -5,6 +5,7 @@ import {
 } from "@/koala/openai";
 import { QuizEvaluator } from "./types";
 import { strip } from "./evaluator-utils";
+import { captureTrainingData } from "./capture-training-data";
 
 const doGrade = async (
   userInput: string,
@@ -25,7 +26,21 @@ const doGrade = async (
     return { response: "yes" };
   }
 
-  const response = await testEquivalence(term, userInput);
+  const response = await testEquivalence(
+    `${term} (${definition})`,
+    `${userInput} (${englishTranslation})`,
+  );
+
+  captureTrainingData({
+    quizType: "speaking",
+    yesNo: response,
+    explanation: process.env.GPT_MODEL || "gpt-4o",
+    term,
+    definition,
+    langCode,
+    userInput,
+    englishTranslation,
+  });
 
   return {
     response: response,
