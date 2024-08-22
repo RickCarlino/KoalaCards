@@ -1,23 +1,11 @@
-import { template } from "radash";
 import { QuizEvaluator } from "./types";
-import { yesOrNo } from "@/koala/openai";
+import { testEquivalence } from "@/koala/openai";
 import { strip } from "./evaluator-utils";
 import { captureTrainingData } from "./capture-training-data";
 
-const PROMPT = `
-This should roughly translate to "{{definition}}" in English.
-Evaluate the user's translation. Say "YES" if the translation
-captures the general meaning effectively, even if it's not a
-perfect match. Say "NO" if it fails to capture the intended meaning.
-Briefly tell the student why they are wrong if answer is "NO".
-`;
-
-const PROMPT2 = `The user translated the sentence "{{term}}" (lang code: {{langCode}}) to English as "{{userInput}}". Keep in mind that this was transcribed via text-to-speech, so transcription errors are possible.`;
-
 export const listening: QuizEvaluator = async (ctx) => {
   const { userInput, card } = ctx;
-  const { term, definition, langCode } = card;
-  const tplData = { term, definition, langCode, userInput };
+  const { definition, term, langCode } = card;
 
   if (strip(userInput) === strip(definition)) {
     console.log(`=== Exact match! (23)`);
@@ -27,17 +15,12 @@ export const listening: QuizEvaluator = async (ctx) => {
     };
   }
 
-  const question = template(PROMPT, tplData);
-  const listeningYN = await yesOrNo({
-    userInput: template(PROMPT2, tplData),
-    question,
-    userID: ctx.userID,
-  });
+  const response = await testEquivalence(definition, userInput);
 
   captureTrainingData({
-    quizType: "listening",
-    yesNo: listeningYN.response,
-    explanation: listeningYN.whyNot || "",
+    quizType: "speaking",
+    yesNo: response,
+    explanation: process.env.GPT_MODEL || "gpt-4o",
     term,
     definition,
     langCode,
@@ -45,10 +28,10 @@ export const listening: QuizEvaluator = async (ctx) => {
     englishTranslation: "",
   });
 
-  if (listeningYN.response === "no") {
+  if (response === "no") {
     return {
       result: "fail",
-      userMessage: listeningYN.whyNot || "No explanation provided.",
+      userMessage: "Deprecated in FT model", // listeningYN.whyNot || "No explanation provided.",
     };
   }
 

@@ -5,10 +5,10 @@
 </p>
 <a href="https://codeclimate.com/github/RickCarlino/KoalaCards/maintainability"><img src="https://api.codeclimate.com/v1/badges/b7666624c14bf8dcfb9b/maintainability" /></a>
 
-Hey there! Welcome to KoalaCards, a fun and friendly [spaced repetition system](https://en.wikipedia.org/wiki/Spaced_repetition) that's all about listening and speaking skills. KoalaCards captures your voice input using speech-to-text and GPT-4 for human-like test assessments and corrections. This has two advantages over traditional spaced repetition systems:
+Hey there! Welcome to KoalaCards, a fun and friendly [spaced repetition system](https://en.wikipedia.org/wiki/Spaced_repetition) that focuses on listening and speaking skills. KoalaCards captures your voice input using speech-to-text and large language models for human-like test assessments. This has two advantages over traditional spaced repetition systems:
 
-1. Self-grading of quizzes is reinforced with machine-assisted grading. Results are recorded objectively.
-2. Although responses are graded, it is not a verbatim sentence memorization quiz. "Close enough" answers that match the meaning of the target sentence and which demonstrate understanding will be accepted.
+1. Results are recorded objectively via machine-assisted grading rather than self-grading.
+2. "Close enough" answers that match the meaning of the target sentence and which demonstrate understanding will be accepted. This captures the flexibility of self-grading with the objectivity of external grading.
 
 ## Table of Contents 📑
 

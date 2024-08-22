@@ -1,37 +1,18 @@
-import { Explanation, translateToEnglish, yesOrNo } from "@/koala/openai";
+import {
+  Explanation,
+  testEquivalence,
+  translateToEnglish,
+} from "@/koala/openai";
 import { QuizEvaluator } from "./types";
-import { template } from "radash";
 import { strip } from "./evaluator-utils";
 import { captureTrainingData } from "./capture-training-data";
-
-// The previous prompt had a real world success rate of 72%.
-// Let's see how this one does.
-const MEANING_PROMPT = `Sentence B: ({{langCode}}): {{term}} / {{definition}}
-  ---
-
-  Consider the two sentences above. I have added English
-  translations for clarity, but I only care about the original
-  language ({{langCode}}).
-  
-  YOUR TASK:
-  If the meanings of these two sentences are mostly the same,
-  respond with 'YES.' If they are completely unrelated,
-  respond with 'NO' and tell the student why.
-`;
 
 const doGrade = async (
   userInput: string,
   term: string,
   definition: string,
   langCode: string,
-  userID: string,
 ): Promise<Explanation> => {
-  const tplData = {
-    term,
-    definition,
-    langCode,
-  };
-
   if (strip(userInput) === strip(term)) {
     console.log(`=== Exact match! (29)`);
     return { response: "yes" };
@@ -45,16 +26,15 @@ const doGrade = async (
     return { response: "yes" };
   }
 
-  const meaningYn = await yesOrNo({
-    userInput: `Sentence A (${langCode}): ${userInput} / ${englishTranslation}`,
-    question: template(MEANING_PROMPT, tplData),
-    userID,
-  });
+  const response = await testEquivalence(
+    `${term} (${definition})`,
+    `${userInput} (${englishTranslation})`,
+  );
 
   captureTrainingData({
     quizType: "speaking",
-    yesNo: meaningYn.response,
-    explanation: meaningYn.whyNot || "",
+    yesNo: response,
+    explanation: process.env.GPT_MODEL || "gpt-4o",
     term,
     definition,
     langCode,
@@ -63,12 +43,12 @@ const doGrade = async (
   });
 
   return {
-    ...meaningYn,
+    response: response,
     whyNot: englishTranslation,
   };
 };
 
-export const speaking: QuizEvaluator = async ({ userInput, card, userID }) => {
+export const speaking: QuizEvaluator = async ({ userInput, card }) => {
   if (strip(userInput) === strip(card.term)) {
     console.log(`=== Exact match! (53)`);
     return {
@@ -82,7 +62,6 @@ export const speaking: QuizEvaluator = async ({ userInput, card, userID }) => {
     card.term,
     card.definition,
     card.langCode,
-    userID,
   );
 
   const userMessage = result.whyNot || "No response";

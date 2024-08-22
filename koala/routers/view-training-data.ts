@@ -1,4 +1,4 @@
-import { errorReport } from "@/koala/error-report";
+// import { errorReport } from "@/koala/error-report";
 import { z } from "zod";
 import { getUserSettings } from "../auth-helpers";
 import { prismaClient } from "../prisma-client";
@@ -30,7 +30,9 @@ export const viewTrainingData = procedure
     }
     // Return the last 100 training data entries
     const data = await prismaClient.trainingData.findMany({
-      where: {},
+      where: {
+        explanation: process.env.GPT_MODEL || "gpt-4o",
+      },
       orderBy: {
         createdAt: "desc",
       },

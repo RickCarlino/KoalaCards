@@ -43,12 +43,11 @@ function formatTrainingData(props: {}) {
             <td>{trainingData.id}</td>
             <td>{trainingData.langCode}</td>
             <td>{trainingData.createdAt.toLocaleDateString()}</td>
-            <td>{trainingData.quizType}</td>
+            <td>{trainingData.quizType[0].toUpperCase()}</td>
             <td>{trainingData.definition}</td>
             <td>{trainingData.term}</td>
             <td>{trainingData.userInput}</td>
             <td>{trainingData.englishTranslation}</td>
-            {/* <td>{trainingData.explanation}</td> */}
           </tr>
         ))}
       </tbody>
