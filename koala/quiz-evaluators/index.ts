@@ -1,5 +1,6 @@
 import { errorReport } from "@/koala/error-report";
 import { listening } from "./listening";
+import { cloze } from "./cloze";
 import { speaking } from "./speaking";
 import { QuizEvaluator } from "./types";
 import { dictation } from "./dictation";
@@ -9,6 +10,7 @@ const QUIZ_EVALUATORS: Record<LessonType, QuizEvaluator> = {
   listening,
   speaking,
   dictation,
+  cloze,
 };
 
 export const getQuizEvaluator = (kind: LessonType): QuizEvaluator => {

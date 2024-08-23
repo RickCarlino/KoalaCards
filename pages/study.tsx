@@ -19,6 +19,7 @@ import { useHotkeys } from "@mantine/hooks";
 import { Grade } from "femto-fsrs";
 import Link from "next/link";
 import { Dispatch, useEffect, useReducer, useState } from "react";
+import { renderClozeDeletion, renderSolution } from "./cloze-parsers";
 
 type MutationData = ReturnType<typeof trpc.getNextQuizzes.useMutation>;
 type QuizData = NonNullable<MutationData["data"]>;
@@ -67,6 +68,9 @@ const LANG_CODE_NAMES: Record<string, string> = {
 
 const DEFAULT = (_lang: string) => "";
 const HEADER: Record<string, (lang: string) => string> = {
+  cloze: () => {
+    return "Fill in the blank";
+  },
   speaking: (lang) => {
     const name = LANG_CODE_NAMES[lang] || "the target language";
     return `How would you say this in ${name}?`;
@@ -433,7 +437,17 @@ function QuizView(props: QuizViewProps) {
         isRecording={props.isRecording}
       />
       {buttonCluster}
-      {quiz.lessonType === "dictation" && <h2>{quiz.term}</h2>}
+      {quiz.lessonType === "cloze" && (
+        <>
+          <p>
+            {renderClozeDeletion(1, quiz.term)}
+          </p>
+          <p>
+            {quiz.definition}
+          </p>
+        </>
+      )}
+      {quiz.lessonType === "dictation" && <h2>{renderSolution(quiz.term)}</h2>}
       <p>Quiz #{quiz.quizId}</p>
       <p>{quiz.repetitions} repetitions</p>
       <p>{quiz.lapses} lapses</p>

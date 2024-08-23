@@ -110,6 +110,7 @@ export default async function getLessons(p: GetLessonInputParams) {
       lastReview: {
         lt: yesterday,
       },
+      quizType: "cloze" // For testing purposes.
     },
     orderBy: [
       { Card: { langCode: "desc" } },
@@ -129,7 +130,9 @@ export default async function getLessons(p: GetLessonInputParams) {
     .slice(0, maxCards)
     .slice(0, p.take)
     .map((q) => {
-      if (q.repetitions + q.lapses < 1) {
+      let isNew = q.repetitions + q.lapses < 1;
+      isNew = false; // temporary.
+      if (isNew) {
         return {
           ...q,
           quizType: "dictation",

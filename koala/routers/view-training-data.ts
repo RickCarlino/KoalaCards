@@ -4,6 +4,7 @@ import { getUserSettings } from "../auth-helpers";
 import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc-procedure";
 import { isApprovedUser } from "../is-approved-user";
+import { renderSolution } from "@/pages/cloze-parsers";
 
 export const viewTrainingData = procedure
   .input(z.object({}))
@@ -50,7 +51,7 @@ export const viewTrainingData = procedure
         quizType: trainingData.quizType,
         langCode: trainingData.langCode,
         yesNo: trainingData.yesNo,
-        term: trainingData.term,
+        term: renderSolution(trainingData.term),
       };
     });
   });

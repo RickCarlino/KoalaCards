@@ -17,6 +17,7 @@ const playAudioBuffer = (
 };
 
 export const playAudio = (urlOrDataURI: string): Promise<void> => {
+  console.log("playAudio");
   const audioContext = new AudioContext();
   return new Promise((resolve, reject) => {
     if (!urlOrDataURI) {

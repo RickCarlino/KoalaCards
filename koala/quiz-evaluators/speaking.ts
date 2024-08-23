@@ -6,6 +6,7 @@ import {
 import { QuizEvaluator } from "./types";
 import { strip } from "./evaluator-utils";
 import { captureTrainingData } from "./capture-training-data";
+import { renderSolution } from "@/pages/cloze-parsers";
 
 const doGrade = async (
   userInput: string,
@@ -49,7 +50,7 @@ const doGrade = async (
 };
 
 export const speaking: QuizEvaluator = async ({ userInput, card }) => {
-  if (strip(userInput) === strip(card.term)) {
+  if (strip(userInput) === strip(renderSolution(card.term))) {
     console.log(`=== Exact match! (53)`);
     return {
       result: "pass",

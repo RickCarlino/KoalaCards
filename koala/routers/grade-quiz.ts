@@ -11,6 +11,7 @@ import { LessonType } from "../shared-types";
 import { generateLessonAudio } from "../speech";
 import { isApprovedUser } from "../is-approved-user";
 import { maybeAddImages } from "../image";
+import { renderSolution } from "@/pages/cloze-parsers";
 
 type PerformExamOutput = z.infer<typeof performExamOutput>;
 type ResultContext = {
@@ -127,14 +128,15 @@ export const gradeQuiz = procedure
     }
     const card = quiz?.Card;
     // I don't like how implicit this is. Would be better to pass the quizType in.
-    const isNew = quiz.repetitions === 0 && quiz.lapses === 0;
+    const isNew = false; // quiz.repetitions === 0 && quiz.lapses === 0;
     const quizType = (isNew ? "dictation" : quiz.quizType) as LessonType;
     let evaluator = getQuizEvaluator(quizType);
     let prompt = ``;
     switch (quizType) {
       case "dictation":
       case "speaking":
-        prompt = card.term;
+      case "cloze":
+        prompt = renderSolution(card.term);
         break;
       case "listening":
         prompt = card.definition;

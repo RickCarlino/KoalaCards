@@ -47,7 +47,6 @@ export function calculateSchedulingData(
   now = Date.now(),
 ): SchedulingData {
   if (quiz.lapses + quiz.repetitions === 0) {
-    console.log(`=== Does this ever get hit? ===`);
     return scheduleNewCard(grade, now);
   }
   const fsrsCard = {

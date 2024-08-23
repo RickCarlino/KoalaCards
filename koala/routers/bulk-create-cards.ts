@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc-procedure";
+import { isCloze } from "@/pages/cloze-parsers";
 
 export const LANG_CODES = z.union([
   z.literal("es"),
@@ -16,8 +17,8 @@ export const bulkCreateCards = procedure
       input: z
         .array(
           z.object({
-            term: z.string().max(200),
-            definition: z.string().max(200),
+            term: z.string().max(400),
+            definition: z.string().max(400),
             gender: z.union([z.literal("M"), z.literal("F"), z.literal("N")]),
           }),
         )
@@ -56,7 +57,10 @@ export const bulkCreateCards = procedure
           const card = await prismaClient.card.create({
             data,
           });
-          ["listening", "speaking"].map(async (quizType) => {
+
+          const backSide = isCloze(foreignLanguage) ? "cloze" : "definition";
+          ["listening", backSide].map(async (quizType) => {
+            console.log(`Don't forget to deduplicate Cloze types!`);
             await prismaClient.quiz.create({
               data: {
                 cardId: card.id,

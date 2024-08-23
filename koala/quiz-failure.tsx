@@ -4,6 +4,7 @@ import { useHotkeys } from "@mantine/hooks";
 import Link from "next/link";
 import { playAudio } from "./play-audio";
 import { YOU_HIT_FAIL } from "./study_reducer";
+import { renderSolution } from "@/pages/cloze-parsers";
 
 export function linkToEditPage(id: number) {
   return <Link href={["cards", id].join("/")}>Edit Card</Link>;
@@ -42,7 +43,7 @@ function FailureTable(props: {
       start,
       {
         title: "Prompt",
-        value: props.term,
+        value: renderSolution(props.term),
         key: "1",
       },
       {
@@ -61,7 +62,7 @@ function FailureTable(props: {
       start,
       {
         title: "Prompt",
-        value: props.term, // KO
+        value: renderSolution(props.term),
         key: "4",
       },
       {
@@ -114,6 +115,7 @@ export function QuizFailure(props: {
 }) {
   const youHitFail = props.rejectionText == YOU_HIT_FAIL;
   const doClose = async () => {
+    console.log("=== doClose")
     await playAudio(props.playbackAudio);
     await playAudio(props.playbackAudio);
     props.onClose();

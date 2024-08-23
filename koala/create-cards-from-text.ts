@@ -1,3 +1,4 @@
+import { getClozeIDs } from "@/pages/cloze-parsers";
 import { gptCall } from "./openai";
 import { Gender } from "./shared-types";
 
@@ -13,8 +14,7 @@ const SYSTEM_PROMPT = `
     저는 간호사예요.: I am a nurse.
     오늘 날씨가 좋네요. / The weather is nice today.
     오늘 날씨가 좋네요. (The weather is nice today.)
-    저는 간호사예요.
-      I am a nurse.
+    저는 {{c1::간호사}}예요. I am a nurse.
     저는 간호사예요., I am a nurse.
     저는 의사예요.; I am a doctor.
     저는 의사예요. I am a doctor.
@@ -22,7 +22,7 @@ const SYSTEM_PROMPT = `
   EXAMPLE OUTPUT:
     {
       "cards": [
-        {"term": 저는 간호사예요.", "definition": "I am a nurse."gender": "F"},
+        {"term": 저는 {{c1::간호사}}예요.", "definition": "a nurse.", "gender": "F"},
         {"term": 저는 의사예요.", "definition": "I am a doctor., "gender": "M"},
         {"term": 오늘 날씨가 좋네요.", "definition": "The weather is nice today., "gender": "N"}
       ]
@@ -39,6 +39,11 @@ const SYSTEM_PROMPT = `
   following the schema above. Ensure the term is in the
   target language and the definition in English, without
   altering their content.
+
+  Note about Anki Cloze: If the card is in {{c1::Anki Cloze}}
+  format, make sure that the definition defines only the cloze word.
+  Also, you will be penalized if you include {{c1::cloze symbols}}
+  in the definition.
 
   The target language for this upload is: `;
 
@@ -58,8 +63,9 @@ export async function createCardsFromText(
     temperature: 0.75,
     response_format: { type: "json_object" },
   });
-  const cards: Card[] = JSON.parse(
-    x.choices[0].message.content || "null",
-  )?.cards;
+  const cards: Card[] =
+    JSON.parse(x.choices[0].message.content || "null")?.cards.filter(
+      (x: Card) => getClozeIDs(x.term).length < 2,
+    ) || [];
   return cards;
 }

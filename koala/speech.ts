@@ -7,6 +7,7 @@ import { errorReport } from "./error-report";
 import { Card } from "@prisma/client";
 import { Gender, LangCode, LessonType } from "./shared-types";
 import { removeParens } from "./quiz-evaluators/evaluator-utils";
+import { renderSolution } from "@/pages/cloze-parsers";
 
 type AudioLessonParams = {
   card: Card;
@@ -77,6 +78,7 @@ if (creds) {
 }
 const SSML: Record<LessonType, string> = {
   speaking: `<speak><voice language="en-US" gender="female">{{definition}}</voice></speak>`,
+  cloze: `<speak><voice language="en-US" gender="female">{{definition}}</voice></speak>`,
   listening: `<speak><prosody rate="{{speed}}%">{{term}}</prosody></speak>`,
   dictation: `<speak><prosody rate="{{speed}}%">{{term}}</prosody><break time="0.4s"/><voice language="en-US" gender="female">{{definition}}</voice><break time="0.4s"/></speak>`,
 };
@@ -101,7 +103,7 @@ export async function generateLessonAudio(params: AudioLessonParams) {
   console.log(`Create audio for ${params.lessonType}`);
   const tpl = SSML[params.lessonType];
   const ssml = template(tpl, {
-    term: params.card.term,
+    term: renderSolution(params.card.term),
     definition: params.card.definition,
     speed: params.speed || 100,
   });

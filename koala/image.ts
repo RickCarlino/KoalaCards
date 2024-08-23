@@ -1,3 +1,4 @@
+import { renderSolution } from "@/pages/cloze-parsers";
 import { createDallEPrompt, createDallEImage } from "./openai";
 import { prismaClient } from "./prisma-client";
 import {
@@ -30,7 +31,7 @@ const CHEAPNESS = 2;
 export async function maybeAddImageToCard(card: Card) {
   if (Math.random() < 1 / CHEAPNESS) {
     // Only create images 1/6 of the time.
-    return `Skipping ${card.term}`;
+    return `Skipping ${renderSolution(card.term)}`;
   }
 
   if (card.imageBlobId) {
@@ -43,13 +44,13 @@ export async function maybeAddImageToCard(card: Card) {
 
   const reps = quizzes.map((x) => x.repetitions).reduce((a, b) => a + b, 0);
   if (reps < 3) {
-    console.log(`Skipping ${card.term} with ${reps} reps`);
+    console.log(`Skipping ${renderSolution(card.term)} with ${reps} reps`);
     return;
   }
 
   const prompt = await createDallEPrompt(card.definition, card.term);
   const url = await createDallEImage(prompt);
-  const filePath = createBlobID("card-images", card.term, "jpg");
+  const filePath = createBlobID("card-images", renderSolution(card.term), "jpg");
   await storeURLGoogleCloud(url, filePath);
   await prismaClient.card.update({
     where: { id: card.id },
@@ -75,6 +76,6 @@ export async function maybeAddImages(userId: string, take: number) {
   }
   console.log(`=== Adding images to ${cards.length} cards ===`);
   const x = await Promise.all(cards.map(maybeAddImageToCard));
-  console.log(cards.map((x) => x.term).join("\n"));
+  console.log(cards.map((x) => renderSolution(x.term)).join("\n"));
   console.log(x.join("\n"));
 }
