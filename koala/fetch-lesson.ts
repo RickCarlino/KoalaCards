@@ -4,6 +4,7 @@ import { prismaClient } from "@/koala/prisma-client";
 import { generateLessonAudio } from "./speech";
 import { LessonType } from "./shared-types";
 import { maybeGetCardImageUrl } from "./image";
+import { getUserSettings } from "./auth-helpers";
 
 type GetLessonInputParams = {
   userId: string;
@@ -38,6 +39,34 @@ async function getExcludedIDs(wantToExclude: number[]) {
   ).map(({ id }) => id);
 }
 
+type MaybeFilterNewCards = <T extends { firstReview?: number }>(
+  cards: T[],
+  userId: string,
+) => Promise<T[]>;
+
+const maybeFilterNewCards: MaybeFilterNewCards = async (cards, userId) => {
+  const limit = (await getUserSettings(userId)).cardsPerDayMax;
+  let newCards = await prismaClient.quiz.count({
+    where: {
+      Card: {
+        userId: userId,
+      },
+      firstReview: {
+        gte: Date.now() - 24 * 60 * 60 * 1000,
+      },
+    },
+  });
+  return cards.filter((c) => {
+    const isNew = !!c.firstReview;
+    if (isNew) {
+      newCards++;
+      return newCards <= limit;
+    } else {
+      return true;
+    }
+  });
+};
+
 export default async function getLessons(p: GetLessonInputParams) {
   if (p.take > 15) {
     return errorReport("Too many cards requested.");
@@ -63,10 +92,11 @@ export default async function getLessons(p: GetLessonInputParams) {
     },
   });
 
-  return await map(shuffle(quizzes).slice(0, p.take), async (q) => {
+  const filtered = await maybeFilterNewCards(shuffle(quizzes), p.userId);
+  return await map(filtered.slice(0, p.take), async (q) => {
     const quiz = {
       ...q,
-      quizType: q.lastReview ? q.quizType : "dictation",
+      quizType: q.repetitions ? q.quizType : "dictation",
     };
 
     const audio = await generateLessonAudio({
