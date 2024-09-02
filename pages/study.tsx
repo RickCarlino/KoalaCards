@@ -1,3 +1,4 @@
+import { errorReport } from "@/koala/error-report";
 import MicrophonePermissions from "@/koala/microphone-permissions";
 import { playAudio } from "@/koala/play-audio";
 import { QuizFailure, linkToEditPage } from "@/koala/quiz-failure";
@@ -120,7 +121,7 @@ const currentQuiz = (state: State) => {
 
 const assertQuiz: QuizAssertion = (q) => {
   if (!q) {
-    throw new Error("No quiz found");
+    return errorReport("No quiz found");
   }
 };
 
@@ -250,7 +251,7 @@ function useBusinessLogic(state: State, dispatch: Dispatch<Action>) {
     async rollbackGrade() {
       const curr = state.currentItem;
       if (curr.type !== "failure") {
-        throw new Error("Not a failure?");
+        return errorReport("Not a failure?");
       }
       const id = curr.value.id;
       const schedulingData = curr.value.rollbackData;
@@ -500,7 +501,7 @@ function LoadedStudyPage(props: QuizData) {
       el = <div>Loading...</div>;
       break;
     default:
-      throw new Error("Unexpected current item " + JSON.stringify(curr));
+      return errorReport("Unexpected current item " + JSON.stringify(curr));
   }
   return <Container size="xs">{el}</Container>;
 }

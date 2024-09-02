@@ -38,10 +38,7 @@ async function getExcludedIDs(wantToExclude: number[]) {
   ).map(({ id }) => id);
 }
 
-export const numberOfCardsCanStudy = async (
-  userId: string,
-  now: number,
-) => {
+export const numberOfCardsCanStudy = async (userId: string, now: number) => {
   const settings = await prismaClient.userSettings.findFirst({
     where: { userId },
   });

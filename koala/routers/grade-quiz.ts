@@ -11,6 +11,7 @@ import { LessonType } from "../shared-types";
 import { generateLessonAudio } from "../speech";
 import { isApprovedUser } from "../is-approved-user";
 import { maybeAddImages } from "../image";
+import { errorReport } from "../error-report";
 
 type PerformExamOutput = z.infer<typeof performExamOutput>;
 type ResultContext = {
@@ -140,7 +141,7 @@ export const gradeQuiz = procedure
         prompt = card.definition;
         break;
       default:
-        throw new Error(`Unknown quiz type: ${quizType}`);
+        return errorReport(`Unknown quiz type: ${quizType}`);
     }
     const transcript = await transcribeB64(
       quiz.quizType === "listening" ? "en-US" : (card.langCode as "ko"),
@@ -192,6 +193,6 @@ export const gradeQuiz = procedure
       case "error":
         return processError(resultContext);
       default:
-        throw new Error(`Unknown result: ${result.result}`);
+        return errorReport(`Unknown result: ${result.result}`);
     }
   });

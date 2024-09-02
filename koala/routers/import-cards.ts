@@ -2,6 +2,7 @@ import { Grade, createDeck } from "femto-fsrs";
 import { prismaClient } from "../prisma-client";
 import { Quiz } from "@prisma/client";
 import { timeUntil } from "@/koala/time-until";
+import { errorReport } from "../error-report";
 
 type QuizGradingFields =
   | "difficulty"
@@ -34,10 +35,23 @@ type PartialQuiz = Pick<Quiz, PartialQuizKeys>;
 
 function scheduleNewCard(grade: Grade, now = Date.now()): SchedulingData {
   const x = FSRS.newCard(grade);
+  const MINUTE = 60000;
+  const grades: Record<Grade, number> = {
+    [Grade.AGAIN]: 1 * MINUTE,
+    [Grade.HARD]: 6 * MINUTE,
+    [Grade.GOOD]: 10 * MINUTE,
+    [Grade.EASY]: x.I * DAYS,
+  };
+  const nextReview = now + grades[grade];
+
+  if (!nextReview || nextReview < now) {
+    return errorReport(`Invalid new card grade: ${grade}`);
+  }
+
   return {
     difficulty: x.D,
     stability: x.S,
-    nextReview: now + x.I * DAYS,
+    nextReview,
   };
 }
 
@@ -50,6 +64,7 @@ export function calculateSchedulingData(
     console.log(`=== Does this ever get hit? ===`);
     return scheduleNewCard(grade, now);
   }
+  console.log(`=== NOPE! ===`);
   const fsrsCard = {
     D: quiz.difficulty,
     S: quiz.stability,

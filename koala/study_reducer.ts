@@ -1,5 +1,6 @@
 import { unique } from "radash";
 import { LessonType, QuizResult } from "./shared-types";
+import { errorReport } from "./error-report";
 
 export type Quiz = {
   lessonType: LessonType;
@@ -115,7 +116,7 @@ function maybeExitFailureReview(state: State): State {
 
 export function gotoNextQuiz(oldState: State): State {
   if (oldState.isRecording) {
-    throw new Error("Cannot change quizzes while recording");
+    return errorReport("Cannot change quizzes while recording");
   }
 
   const state = maybeEnterFailureReview(oldState);
@@ -226,7 +227,9 @@ function reduce(state: State, action: Action): State {
         });
         return removeCard(state2, action.id);
       }
-      throw new Error("Expected a quiz, got " + curr.type || "nullish value");
+      return errorReport(
+        "Expected a quiz, got " + curr.type || "nullish value",
+      );
     case "FLAG_QUIZ":
       const filter = (quizID: number) =>
         state.cardsById[quizID]?.cardId !== action.cardId;
