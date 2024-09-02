@@ -80,7 +80,7 @@ const HEADER: Record<string, (lang: string) => string> = {
 };
 
 export const HOTKEYS = {
-  FAIL: "a",
+  AGAIN: "a",
   HARD: "s",
   GOOD: "d",
   EASY: "f",
@@ -359,7 +359,7 @@ function QuizView(props: QuizViewProps) {
   useHotkeys([
     [HOTKEYS.PLAY, props.playQuizAudio],
     [HOTKEYS.FLAG, props.flagQuiz],
-    [HOTKEYS.FAIL, gradeWith(Grade.AGAIN)],
+    [HOTKEYS.AGAIN, gradeWith(Grade.AGAIN)],
     [HOTKEYS.HARD, gradeWith(Grade.HARD)],
     [HOTKEYS.GOOD, gradeWith(Grade.GOOD)],
     [HOTKEYS.EASY, gradeWith(Grade.EASY)],
@@ -367,8 +367,8 @@ function QuizView(props: QuizViewProps) {
   const buttons: HotkeyButtonProps[] = [
     {
       onClick: gradeWith(Grade.AGAIN),
-      label: "FAIL",
-      hotkey: HOTKEYS.FAIL,
+      label: "Again",
+      hotkey: HOTKEYS.AGAIN,
       disabled: false,
     },
     {
@@ -413,7 +413,7 @@ function QuizView(props: QuizViewProps) {
   );
 
   if (props.isRecording) {
-    const keys = [HOTKEYS.FAIL, HOTKEYS.HARD, HOTKEYS.GOOD, HOTKEYS.EASY];
+    const keys = [HOTKEYS.AGAIN, HOTKEYS.HARD, HOTKEYS.GOOD, HOTKEYS.EASY];
     buttonCluster = (
       <Grid grow justify="center" align="stretch" gutter="xs">
         <Grid.Col span={12}>

@@ -40,7 +40,7 @@ function scheduleNewCard(grade: Grade, now = Date.now()): SchedulingData {
     [Grade.AGAIN]: 1 * MINUTE,
     [Grade.HARD]: 6 * MINUTE,
     [Grade.GOOD]: 10 * MINUTE,
-    [Grade.EASY]: x.I * DAYS,
+    [Grade.EASY]: 16 * DAYS,
   };
   const nextReview = now + grades[grade];
 
@@ -61,10 +61,8 @@ export function calculateSchedulingData(
   now = Date.now(),
 ): SchedulingData {
   if (quiz.lapses + quiz.repetitions === 0) {
-    console.log(`=== Does this ever get hit? ===`);
     return scheduleNewCard(grade, now);
   }
-  console.log(`=== NOPE! ===`);
   const fsrsCard = {
     D: quiz.difficulty,
     S: quiz.stability,
@@ -78,48 +76,18 @@ export function calculateSchedulingData(
   };
 }
 
-async function setGradeFirstTime(
-  quiz: GradedQuiz,
-  grade: Grade,
-  now = Date.now(),
-) {
-  const result = FSRS.newCard(grade);
-  const nextQuiz = {
-    ...quiz,
-    difficulty: result.D,
-    stability: result.S,
-    firstReview: now,
-    lastReview: now,
-    nextReview: now + result.I * DAYS,
-    lapses: grade === Grade.AGAIN ? quiz.lapses + 1 : quiz.lapses,
-    repetitions: 1,
-  };
-  await prismaClient.quiz.update({
-    where: { id: quiz.id },
-    data: nextQuiz,
-  });
-  console.log(`Set first SRS scheduling: ${timeUntil(nextQuiz.nextReview)}`);
-}
-
 export async function setGrade(
   quiz: GradedQuiz,
   grade: Grade,
   now = Date.now(),
 ) {
-  if (!quiz.lastReview) {
-    return setGradeFirstTime(quiz, grade, now);
-  }
-  const data = {
+  const { id, nextReview } = await prismaClient.quiz.update({
     where: { id: quiz.id },
     data: {
       ...quiz,
-      firstReview: quiz.firstReview || now,
-      lastReview: now,
-      lapses: grade === Grade.AGAIN ? quiz.lapses + 1 : quiz.lapses,
-      repetitions: quiz.repetitions + 1,
       ...calculateSchedulingData(quiz, grade, now),
+      repetitions: (quiz.repetitions || 0) + 1,
     },
-  };
-  const x = await prismaClient.quiz.update(data);
-  console.log(`Quiz ${data.data.id} next review: ${timeUntil(x.nextReview)}`);
+  });
+  console.log(`Quiz ${id} next review: ${timeUntil(nextReview)}`);
 }
