@@ -114,7 +114,7 @@ export const translateToEnglish = async (content: string, langCode: string) => {
   });
   const val = hm.choices[0].message.content;
   if (!val) {
-    throw new Error("No translation response from GPT-4.");
+    return errorReport("No translation response from GPT-4.");
   }
   return val;
 };
@@ -145,7 +145,7 @@ export const createDallEPrompt = async (term: string, definition: string) => {
   });
   const val = hm.choices[0].message.content;
   if (!val) {
-    throw new Error("No comic response from GPT-4.");
+    return errorReport("No comic response from GPT-4.");
   }
   return val;
 };

@@ -1,3 +1,4 @@
+import { errorReport } from "./error-report";
 import { prismaClient } from "./prisma-client";
 
 const ONE_DAY = 24 * 60 * 60 * 1000;
@@ -12,7 +13,7 @@ export function evenlyDistribute<
     return input;
   }
   if (min > max) {
-    throw new Error("min must be less than max");
+    return errorReport("min must be less than max");
   }
   const copy = input.map((item) => ({ ...item }));
   copy.sort((a, b) => a[key] - b[key]);

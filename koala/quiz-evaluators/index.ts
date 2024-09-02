@@ -14,7 +14,7 @@ const QUIZ_EVALUATORS: Record<LessonType, QuizEvaluator> = {
 export const getQuizEvaluator = (kind: LessonType): QuizEvaluator => {
   const evaluator = QUIZ_EVALUATORS[kind];
   if (!evaluator) {
-    errorReport(`No evaluator found for quiz kind "${kind}"`);
+    return errorReport(`No evaluator found for quiz kind "${kind}"`);
   }
   return evaluator;
 };

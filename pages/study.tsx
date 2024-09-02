@@ -1,3 +1,4 @@
+import { errorReport } from "@/koala/error-report";
 import MicrophonePermissions from "@/koala/microphone-permissions";
 import { playAudio } from "@/koala/play-audio";
 import { QuizFailure, linkToEditPage } from "@/koala/quiz-failure";
@@ -79,7 +80,7 @@ const HEADER: Record<string, (lang: string) => string> = {
 };
 
 export const HOTKEYS = {
-  FAIL: "a",
+  AGAIN: "a",
   HARD: "s",
   GOOD: "d",
   EASY: "f",
@@ -120,7 +121,7 @@ const currentQuiz = (state: State) => {
 
 const assertQuiz: QuizAssertion = (q) => {
   if (!q) {
-    throw new Error("No quiz found");
+    return errorReport("No quiz found");
   }
 };
 
@@ -250,7 +251,7 @@ function useBusinessLogic(state: State, dispatch: Dispatch<Action>) {
     async rollbackGrade() {
       const curr = state.currentItem;
       if (curr.type !== "failure") {
-        throw new Error("Not a failure?");
+        return errorReport("Not a failure?");
       }
       const id = curr.value.id;
       const schedulingData = curr.value.rollbackData;
@@ -358,7 +359,7 @@ function QuizView(props: QuizViewProps) {
   useHotkeys([
     [HOTKEYS.PLAY, props.playQuizAudio],
     [HOTKEYS.FLAG, props.flagQuiz],
-    [HOTKEYS.FAIL, gradeWith(Grade.AGAIN)],
+    [HOTKEYS.AGAIN, gradeWith(Grade.AGAIN)],
     [HOTKEYS.HARD, gradeWith(Grade.HARD)],
     [HOTKEYS.GOOD, gradeWith(Grade.GOOD)],
     [HOTKEYS.EASY, gradeWith(Grade.EASY)],
@@ -366,8 +367,8 @@ function QuizView(props: QuizViewProps) {
   const buttons: HotkeyButtonProps[] = [
     {
       onClick: gradeWith(Grade.AGAIN),
-      label: "FAIL",
-      hotkey: HOTKEYS.FAIL,
+      label: "Again",
+      hotkey: HOTKEYS.AGAIN,
       disabled: false,
     },
     {
@@ -412,7 +413,7 @@ function QuizView(props: QuizViewProps) {
   );
 
   if (props.isRecording) {
-    const keys = [HOTKEYS.FAIL, HOTKEYS.HARD, HOTKEYS.GOOD, HOTKEYS.EASY];
+    const keys = [HOTKEYS.AGAIN, HOTKEYS.HARD, HOTKEYS.GOOD, HOTKEYS.EASY];
     buttonCluster = (
       <Grid grow justify="center" align="stretch" gutter="xs">
         <Grid.Col span={12}>
@@ -500,7 +501,7 @@ function LoadedStudyPage(props: QuizData) {
       el = <div>Loading...</div>;
       break;
     default:
-      throw new Error("Unexpected current item " + JSON.stringify(curr));
+      return errorReport("Unexpected current item " + JSON.stringify(curr));
   }
   return <Container size="xs">{el}</Container>;
 }

@@ -38,10 +38,7 @@ async function getExcludedIDs(wantToExclude: number[]) {
   ).map(({ id }) => id);
 }
 
-export const numberOfCardsCanStudy = async (
-  userId: string,
-  yesterday: number,
-) => {
+export const numberOfCardsCanStudy = async (userId: string, now: number) => {
   const settings = await prismaClient.userSettings.findFirst({
     where: { userId },
   });
@@ -53,7 +50,7 @@ export const numberOfCardsCanStudy = async (
         flagged: { not: true },
       },
       lastReview: {
-        gte: yesterday,
+        gte: now,
       },
     },
   });
@@ -94,7 +91,7 @@ export default async function getLessons(p: GetLessonInputParams) {
   if (p.take > 15) {
     return errorReport("Too many cards requested.");
   }
-  const yesterday = new Date().getTime() - 24 * 60 * 60 * 1000;
+  const now = p.now || Date.now();
   const excluded = await getExcludedIDs(p.notIn);
   // SELECT * from public."Quiz" order by "nextReview" desc, "cardId" desc, "quizType" asc;
   const quizzes = await prismaClient.quiz.findMany({
@@ -105,10 +102,7 @@ export default async function getLessons(p: GetLessonInputParams) {
       },
       ...(excluded.length ? { id: { notIn: excluded } } : {}),
       nextReview: {
-        lt: p.now || Date.now(),
-      },
-      lastReview: {
-        lt: yesterday,
+        lt: now,
       },
     },
     orderBy: [
@@ -123,7 +117,7 @@ export default async function getLessons(p: GetLessonInputParams) {
     },
   });
 
-  const maxCards = await numberOfCardsCanStudy(p.userId, yesterday);
+  const maxCards = await numberOfCardsCanStudy(p.userId, now);
   const shuffled = unique(shuffle(quizzes), (q) => q.cardId);
   const filtered = redistributeQuizzes(shuffled)
     .slice(0, maxCards)

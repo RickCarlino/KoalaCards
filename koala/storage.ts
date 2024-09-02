@@ -1,16 +1,17 @@
 import { File, Storage } from "@google-cloud/storage";
-import fetch from "node-fetch";
 import { createHash } from "crypto";
+import fetch from "node-fetch";
+import { errorReport } from "./error-report";
 
 const creds = JSON.parse(process.env.GCP_JSON_CREDS || "false");
 const bucketName = process.env.GCS_BUCKET_NAME || "";
 
 if (!bucketName) {
-  throw new Error("Missing ENV Var: GCS_BUCKET_NAME");
+  errorReport("Missing ENV Var: GCS_BUCKET_NAME");
 }
 
 if (!creds) {
-  throw new Error("Missing GCP_JSON_CREDS");
+  errorReport("Missing GCP_JSON_CREDS");
 }
 
 export const storage = new Storage({
@@ -41,7 +42,7 @@ export async function storeURLGoogleCloud(
   try {
     const response = await fetch(url);
     if (!response.ok)
-      throw new Error(`Failed to fetch ${url}: ${response.statusText}`);
+      return errorReport(`Failed to fetch ${url}: ${response.statusText}`);
 
     const blob = bucket.file(destination);
     blob.cloudStorageURI;

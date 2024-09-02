@@ -2,6 +2,7 @@ import { createCardsFromText } from "@/koala/create-cards-from-text";
 import { z } from "zod";
 import { procedure } from "../trpc-procedure";
 import { LANG_CODES } from "./bulk-create-cards";
+import { errorReport } from "../error-report";
 
 export const parseCards = procedure
   .input(
@@ -27,6 +28,6 @@ export const parseCards = procedure
       return { cards };
     } catch (error) {
       console.error(error);
-      throw new Error("Failed to parse cards");
+      return errorReport("Failed to parse cards");
     }
   });

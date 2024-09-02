@@ -1,3 +1,4 @@
+import { errorReport } from "@/koala/error-report";
 import { prismaClient } from "@/koala/prisma-client";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import NextAuth, { AuthOptions } from "next-auth";
@@ -14,7 +15,7 @@ import { createTransport } from "nodemailer";
   "EMAIL_FROM",
 ].map((key) => {
   if (!process.env[key]) {
-    throw new Error(`Missing env ${key}`);
+    return errorReport(`Missing env ${key}`);
   }
 });
 const server: EmailConfig["server"] = {
@@ -53,7 +54,7 @@ export const EMAIL_SERVER_OPTIONS: Partial<EmailUserConfig> = {
     });
     const failed = result.rejected.concat(result.pending).filter(Boolean);
     if (failed.length) {
-      throw new Error(`Email(s) (${failed.join(", ")}) could not be sent`);
+      return errorReport(`Email(s) (${failed.join(", ")}) could not be sent`);
     }
   },
 };

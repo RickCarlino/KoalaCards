@@ -1,5 +1,6 @@
 import { unique } from "radash";
 import { LessonType, QuizResult } from "./shared-types";
+import { errorReport } from "./error-report";
 
 export type Quiz = {
   lessonType: LessonType;
@@ -115,7 +116,7 @@ function maybeExitFailureReview(state: State): State {
 
 export function gotoNextQuiz(oldState: State): State {
   if (oldState.isRecording) {
-    throw new Error("Cannot change quizzes while recording");
+    return errorReport("Cannot change quizzes while recording");
   }
 
   const state = maybeEnterFailureReview(oldState);
@@ -205,29 +206,30 @@ function reduce(state: State, action: Action): State {
       };
     case "USER_GAVE_UP":
       const curr = state.currentItem;
-      if (curr.type !== "quiz") {
-        console.log(curr);
-        throw new Error("Expected a quiz, got " + curr.type || "nullish value");
+      if (curr.type === "quiz" || curr.type === "failure") {
+        const card = curr.value;
+        const state2 = gotoNextQuiz({
+          ...state,
+          failures: [
+            {
+              id: action.id,
+              cardId: card.cardId,
+              term: card.term,
+              definition: card.definition,
+              lessonType: card.lessonType,
+              userTranscription: YOU_HIT_FAIL,
+              rejectionText: YOU_HIT_FAIL,
+              playbackAudio: action.playbackAudio,
+              rollbackData: undefined,
+            },
+            ...state.failures,
+          ],
+        });
+        return removeCard(state2, action.id);
       }
-      const card = curr.value;
-      const state2 = gotoNextQuiz({
-        ...state,
-        failures: [
-          {
-            id: action.id,
-            cardId: card.cardId,
-            term: card.term,
-            definition: card.definition,
-            lessonType: card.lessonType,
-            userTranscription: YOU_HIT_FAIL,
-            rejectionText: YOU_HIT_FAIL,
-            playbackAudio: action.playbackAudio,
-            rollbackData: undefined,
-          },
-          ...state.failures,
-        ],
-      });
-      return removeCard(state2, action.id);
+      return errorReport(
+        "Expected a quiz, got " + curr.type || "nullish value",
+      );
     case "FLAG_QUIZ":
       const filter = (quizID: number) =>
         state.cardsById[quizID]?.cardId !== action.cardId;
