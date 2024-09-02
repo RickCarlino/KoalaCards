@@ -1,4 +1,4 @@
-import { map, shuffle, unique } from "radash";
+import { map, shuffle } from "radash";
 import { errorReport } from "./error-report";
 import { prismaClient } from "@/koala/prisma-client";
 import { generateLessonAudio } from "./speech";
@@ -38,62 +38,11 @@ async function getExcludedIDs(wantToExclude: number[]) {
   ).map(({ id }) => id);
 }
 
-export const numberOfCardsCanStudy = async (userId: string, now: number) => {
-  const settings = await prismaClient.userSettings.findFirst({
-    where: { userId },
-  });
-  const maxCards = settings?.cardsPerDayMax || 1000;
-  const actualCards = await prismaClient.quiz.count({
-    where: {
-      Card: {
-        userId,
-        flagged: { not: true },
-      },
-      lastReview: {
-        gte: now,
-      },
-    },
-  });
-  const allowedCards = maxCards - actualCards;
-  return Math.max(allowedCards, 0);
-};
-
-type QuizLike = { quizType: string };
-
-function redistributeQuizzes<T extends QuizLike>(quizzes: T[]): T[] {
-  // Step 1: Categorize quizzes into separate arrays based on `quizType`.
-  const categorized: Record<string, T[]> = {};
-
-  quizzes.forEach((quiz) => {
-    if (!categorized[quiz.quizType]) {
-      categorized[quiz.quizType] = [];
-    }
-    categorized[quiz.quizType].push(quiz);
-  });
-
-  // Step 2: Rebuild the array by picking elements in a round robin fashion.
-  const result: T[] = [];
-  let keys = Object.keys(categorized);
-  let index = 0;
-
-  while (keys.some((key) => categorized[key].length > 0)) {
-    const currentKey = keys[index % keys.length];
-    if (categorized[currentKey].length > 0) {
-      result.push(categorized[currentKey].shift()!);
-    }
-    index++;
-  }
-
-  return result;
-}
-
 export default async function getLessons(p: GetLessonInputParams) {
   if (p.take > 15) {
     return errorReport("Too many cards requested.");
   }
-  const now = p.now || Date.now();
   const excluded = await getExcludedIDs(p.notIn);
-  // SELECT * from public."Quiz" order by "nextReview" desc, "cardId" desc, "quizType" asc;
   const quizzes = await prismaClient.quiz.findMany({
     where: {
       Card: {
@@ -102,36 +51,19 @@ export default async function getLessons(p: GetLessonInputParams) {
       },
       ...(excluded.length ? { id: { notIn: excluded } } : {}),
       nextReview: {
-        lt: now,
+        lt: p.now || Date.now(),
       },
     },
-    orderBy: [
-      { Card: { langCode: "desc" } },
-      { nextReview: "desc" },
-      { cardId: "asc" },
-      { quizType: "asc" },
-    ],
+    // Unique by cardId
+    distinct: ["cardId"],
+    orderBy: [{ nextReview: "desc" }],
     take: 45, // Will be filtered to correct length later.
     include: {
       Card: true, // Include related Card data in the result
     },
   });
 
-  const maxCards = await numberOfCardsCanStudy(p.userId, now);
-  const shuffled = unique(shuffle(quizzes), (q) => q.cardId);
-  const filtered = redistributeQuizzes(shuffled)
-    .slice(0, maxCards)
-    .slice(0, p.take)
-    .map((q) => {
-      if (q.repetitions + q.lapses < 1) {
-        return {
-          ...q,
-          quizType: "dictation",
-        };
-      }
-      return q;
-    });
-  return await map(filtered, async (quiz) => {
+  return await map(shuffle(quizzes).slice(0, p.take), async (quiz) => {
     const audio = await generateLessonAudio({
       card: quiz.Card,
       lessonType: quiz.quizType as LessonType,
