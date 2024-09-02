@@ -63,7 +63,12 @@ export default async function getLessons(p: GetLessonInputParams) {
     },
   });
 
-  return await map(shuffle(quizzes).slice(0, p.take), async (quiz) => {
+  return await map(shuffle(quizzes).slice(0, p.take), async (q) => {
+    const quiz = {
+      ...q,
+      quizType: q.lastReview ? q.quizType : "dictation",
+    };
+
     const audio = await generateLessonAudio({
       card: quiz.Card,
       lessonType: quiz.quizType as LessonType,
