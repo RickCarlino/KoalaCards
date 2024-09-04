@@ -39,25 +39,28 @@ async function getExcludedIDs(wantToExclude: number[]) {
   ).map(({ id }) => id);
 }
 
-type MaybeFilterNewCards = <T extends { firstReview?: number }>(
+type CardLike = { repetitions?: number };
+
+type MaybeFilterNewCards = <T extends CardLike>(
   cards: T[],
   userId: string,
 ) => Promise<T[]>;
 
 const maybeFilterNewCards: MaybeFilterNewCards = async (cards, userId) => {
   const limit = (await getUserSettings(userId)).cardsPerDayMax;
+  const ONE_DAY = 1000 * 60 * 60 * 24;
   let newCards = await prismaClient.quiz.count({
     where: {
       Card: {
         userId: userId,
       },
       firstReview: {
-        gte: Date.now() - 24 * 60 * 60 * 1000,
+        gte: Date.now() - ONE_DAY,
       },
     },
   });
   return cards.filter((c) => {
-    const isNew = !!c.firstReview;
+    const isNew = (c.repetitions || 0) === 0;
     if (isNew) {
       newCards++;
       return newCards <= limit;
@@ -71,6 +74,28 @@ export default async function getLessons(p: GetLessonInputParams) {
   if (p.take > 15) {
     return errorReport("Too many cards requested.");
   }
+
+  // Before we get started, let's flag all cards where
+  // repetitions > 4 and difficulty > 8.9:
+  const cardsToFlag = await prismaClient.quiz.findMany({
+    where: {
+      Card: {
+        userId: p.userId,
+      },
+      repetitions: { gt: 4 },
+      difficulty: { gt: 8.9 },
+    },
+    select: { cardId: true },
+  });
+
+  // Now flag:
+  await prismaClient.card.updateMany({
+    where: {
+      id: { in: cardsToFlag.map((c) => c.cardId) },
+    },
+    data: { flagged: true },
+  });
+
   const excluded = await getExcludedIDs(p.notIn);
   const quizzes = await prismaClient.quiz.findMany({
     where: {
@@ -85,14 +110,14 @@ export default async function getLessons(p: GetLessonInputParams) {
     },
     // Unique by cardId
     distinct: ["cardId"],
-    orderBy: [{ nextReview: "desc" }],
+    orderBy: [{ firstReview: "desc" }],
     take: 45, // Will be filtered to correct length later.
     include: {
       Card: true, // Include related Card data in the result
     },
   });
 
-  const filtered = await maybeFilterNewCards(shuffle(quizzes), p.userId);
+  const filtered = await maybeFilterNewCards(quizzes, p.userId);
   return await map(filtered.slice(0, p.take), async (q) => {
     const quiz = {
       ...q,
