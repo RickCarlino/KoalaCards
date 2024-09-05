@@ -15,7 +15,7 @@ type QuizGradingFields =
 type GradedQuiz = Pick<Quiz, QuizGradingFields>;
 
 const FSRS = createDeck({
-  requestedRetentionRate: 0.85,
+  requestedRetentionRate: 0.87,
 });
 
 const DAYS = 24 * 60 * 60 * 1000;

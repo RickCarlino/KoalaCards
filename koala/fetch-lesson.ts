@@ -70,20 +70,20 @@ const maybeFilterNewCards: MaybeFilterNewCards = async (cards, userId) => {
   });
 };
 
-export default async function getLessons(p: GetLessonInputParams) {
-  if (p.take > 15) {
-    return errorReport("Too many cards requested.");
-  }
-
+async function flagCertainCards(userId: string) {
   // Before we get started, let's flag all cards where
   // repetitions > 4 and difficulty > 8.9:
   const cardsToFlag = await prismaClient.quiz.findMany({
     where: {
       Card: {
-        userId: p.userId,
+        userId: userId,
       },
-      repetitions: { gt: 4 },
-      difficulty: { gt: 8.9 },
+      OR: [
+        // Too easy, consider these "learned":
+        { AND: [{ stability: { gt: 200 } }, { repetitions: { gt: 3 } }] },
+        // Too hard, consider these "leeches":
+        { AND: [{ difficulty: { gt: 9 } }, { repetitions: { gt: 6 } }] },
+      ],
     },
     select: { cardId: true },
   });
@@ -95,30 +95,63 @@ export default async function getLessons(p: GetLessonInputParams) {
     },
     data: { flagged: true },
   });
+}
 
-  const excluded = await getExcludedIDs(p.notIn);
-  const quizzes = await prismaClient.quiz.findMany({
+async function getReviewCards(userId: string, notIn: number[], now: number) {
+  const excluded = await getExcludedIDs(notIn);
+  return await prismaClient.quiz.findMany({
     where: {
       Card: {
-        userId: p.userId,
+        userId: userId,
         flagged: { not: true },
       },
       ...(excluded.length ? { id: { notIn: excluded } } : {}),
       nextReview: {
-        lt: p.now || Date.now(),
+        lt: now,
+      },
+      repetitions: {
+        gt: 0,
       },
     },
-    // Unique by cardId
     distinct: ["cardId"],
-    orderBy: [{ firstReview: "desc" }],
-    take: 45, // Will be filtered to correct length later.
+    orderBy: [{ quizType: "asc" }],
+    take: 15,
     include: {
       Card: true, // Include related Card data in the result
     },
   });
+}
 
-  const filtered = await maybeFilterNewCards(quizzes, p.userId);
-  return await map(filtered.slice(0, p.take), async (q) => {
+async function getNewCards(userId: string) {
+  const cards = await prismaClient.quiz.findMany({
+    where: {
+      Card: {
+        userId: userId,
+        flagged: { not: true },
+      },
+      repetitions: 0,
+    },
+    distinct: ["cardId"],
+    orderBy: [{ quizType: "asc" }],
+    take: 5,
+    include: {
+      Card: true, // Include related Card data in the result
+    },
+  });
+  return maybeFilterNewCards(cards, userId);
+}
+
+export default async function getLessons(p: GetLessonInputParams) {
+  if (p.take > 15) {
+    return errorReport("Too many cards requested.");
+  }
+
+  flagCertainCards(p.userId);
+  const reviewCards = await getReviewCards(p.userId, p.notIn, p.now);
+  const newCards = await getNewCards(p.userId);
+  // 25% of cards are new cards.
+  const combined = shuffle([...reviewCards, ...newCards]).slice(0, p.take);
+  return await map(combined, async (q) => {
     const quiz = {
       ...q,
       quizType: q.repetitions ? q.quizType : "dictation",
