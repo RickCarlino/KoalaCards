@@ -97,3 +97,20 @@ The project could use help in the following areas:
 1. UI/UX needs an overall and has not been a priority due to time constraints. If you would like to improve the UI, please reach out.
 1. If you have a background in linguistics or Korean language education, please reach out.
 1. The app relies heavily on Google Cloud and OpenAI for text-to-speech and AI features. I would be interested in exploring other options, such as different TTS or LLM providers.
+
+## CORS Setup on Google Cloud
+
+```json
+// Run `gsutil cors set cors.json gs://my-bucket`
+[
+  {
+    "origin": [
+      "https://app.koala.cards"
+    ],
+    "method": ["GET", "HEAD", "PUT", "POST"],
+    "responseHeader": ["Content-Type"],
+    "maxAgeSeconds": 3600
+  }
+]
+```
+
