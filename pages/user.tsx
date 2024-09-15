@@ -155,7 +155,7 @@ export default function UserSettingsPage(props: Props) {
           required
         /> */}
         <NumberInput
-          label="Maximum quizzes in a 24 hour period (prevent over scheduling)"
+          label="Maximum new quizzes (usually 2 per card) in a 24 hour period"
           id="cardsPerDayMax"
           name="cardsPerDayMax"
           value={settings.cardsPerDayMax}

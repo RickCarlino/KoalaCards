@@ -15,7 +15,7 @@ type QuizGradingFields =
 type GradedQuiz = Pick<Quiz, QuizGradingFields>;
 
 const FSRS = createDeck({
-  requestedRetentionRate: 0.85,
+  requestedRetentionRate: 0.87,
 });
 
 const DAYS = 24 * 60 * 60 * 1000;
@@ -40,7 +40,7 @@ function scheduleNewCard(grade: Grade, now = Date.now()): SchedulingData {
     [Grade.AGAIN]: 1 * MINUTE,
     [Grade.HARD]: 6 * MINUTE,
     [Grade.GOOD]: 10 * MINUTE,
-    [Grade.EASY]: 16 * DAYS,
+    [Grade.EASY]: 5 * DAYS,
   };
   const nextReview = now + grades[grade];
 
@@ -87,6 +87,9 @@ export async function setGrade(
       ...quiz,
       ...calculateSchedulingData(quiz, grade, now),
       repetitions: (quiz.repetitions || 0) + 1,
+      lastReview: now,
+      firstReview: quiz.firstReview || now,
+      lapses: (quiz.lapses || 0) + (grade === Grade.AGAIN ? 1 : 0),
     },
   });
   console.log(`Quiz ${id} next review: ${timeUntil(nextReview)}`);

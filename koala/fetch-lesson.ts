@@ -1,9 +1,10 @@
-import { map, shuffle, unique } from "radash";
+import { map, shuffle } from "radash";
 import { errorReport } from "./error-report";
 import { prismaClient } from "@/koala/prisma-client";
 import { generateLessonAudio } from "./speech";
 import { LessonType } from "./shared-types";
 import { maybeGetCardImageUrl } from "./image";
+import { getUserSettings } from "./auth-helpers";
 
 type GetLessonInputParams = {
   userId: string;
@@ -38,100 +39,124 @@ async function getExcludedIDs(wantToExclude: number[]) {
   ).map(({ id }) => id);
 }
 
-export const numberOfCardsCanStudy = async (userId: string, now: number) => {
-  const settings = await prismaClient.userSettings.findFirst({
-    where: { userId },
-  });
-  const maxCards = settings?.cardsPerDayMax || 1000;
-  const actualCards = await prismaClient.quiz.count({
+type CardLike = { repetitions?: number };
+
+type MaybeFilterNewCards = <T extends CardLike>(
+  cards: T[],
+  userId: string,
+) => Promise<T[]>;
+
+const maybeFilterNewCards: MaybeFilterNewCards = async (cards, userId) => {
+  const limit = (await getUserSettings(userId)).cardsPerDayMax;
+  const ONE_DAY = 1000 * 60 * 60 * 24;
+  let newCards = await prismaClient.quiz.count({
     where: {
       Card: {
-        userId,
-        flagged: { not: true },
+        userId: userId,
       },
-      lastReview: {
-        gte: now,
+      firstReview: {
+        gte: Date.now() - ONE_DAY,
       },
     },
   });
-  const allowedCards = maxCards - actualCards;
-  return Math.max(allowedCards, 0);
+  return cards.filter((c) => {
+    const isNew = (c.repetitions || 0) === 0;
+    if (isNew) {
+      newCards++;
+      return newCards <= limit;
+    } else {
+      return true;
+    }
+  });
 };
 
-type QuizLike = { quizType: string };
-
-function redistributeQuizzes<T extends QuizLike>(quizzes: T[]): T[] {
-  // Step 1: Categorize quizzes into separate arrays based on `quizType`.
-  const categorized: Record<string, T[]> = {};
-
-  quizzes.forEach((quiz) => {
-    if (!categorized[quiz.quizType]) {
-      categorized[quiz.quizType] = [];
-    }
-    categorized[quiz.quizType].push(quiz);
-  });
-
-  // Step 2: Rebuild the array by picking elements in a round robin fashion.
-  const result: T[] = [];
-  let keys = Object.keys(categorized);
-  let index = 0;
-
-  while (keys.some((key) => categorized[key].length > 0)) {
-    const currentKey = keys[index % keys.length];
-    if (categorized[currentKey].length > 0) {
-      result.push(categorized[currentKey].shift()!);
-    }
-    index++;
-  }
-
-  return result;
-}
-
-export default async function getLessons(p: GetLessonInputParams) {
-  if (p.take > 15) {
-    return errorReport("Too many cards requested.");
-  }
-  const now = p.now || Date.now();
-  const excluded = await getExcludedIDs(p.notIn);
-  // SELECT * from public."Quiz" order by "nextReview" desc, "cardId" desc, "quizType" asc;
-  const quizzes = await prismaClient.quiz.findMany({
+async function flagCertainCards(userId: string) {
+  // Before we get started, let's flag all cards where
+  // repetitions > 4 and difficulty > 8.9:
+  const cardsToFlag = await prismaClient.quiz.findMany({
     where: {
       Card: {
-        userId: p.userId,
+        userId: userId,
+      },
+      OR: [
+        // Too easy, consider these "learned":
+        { AND: [{ stability: { gt: 200 } }, { repetitions: { gt: 3 } }] },
+        // Too hard, consider these "leeches":
+        { AND: [{ difficulty: { gt: 9 } }, { repetitions: { gt: 6 } }] },
+      ],
+    },
+    select: { cardId: true },
+  });
+
+  // Now flag:
+  await prismaClient.card.updateMany({
+    where: {
+      id: { in: cardsToFlag.map((c) => c.cardId) },
+    },
+    data: { flagged: true },
+  });
+}
+
+async function getReviewCards(userId: string, notIn: number[], now: number) {
+  const excluded = await getExcludedIDs(notIn);
+  return await prismaClient.quiz.findMany({
+    where: {
+      Card: {
+        userId: userId,
         flagged: { not: true },
       },
       ...(excluded.length ? { id: { notIn: excluded } } : {}),
       nextReview: {
         lt: now,
       },
+      repetitions: {
+        gt: 0,
+      },
     },
-    orderBy: [
-      { Card: { langCode: "desc" } },
-      { nextReview: "desc" },
-      { cardId: "asc" },
-      { quizType: "asc" },
-    ],
-    take: 45, // Will be filtered to correct length later.
+    distinct: ["cardId"],
+    orderBy: [{ quizType: "asc" }],
+    take: 15,
     include: {
       Card: true, // Include related Card data in the result
     },
   });
+}
 
-  const maxCards = await numberOfCardsCanStudy(p.userId, now);
-  const shuffled = unique(shuffle(quizzes), (q) => q.cardId);
-  const filtered = redistributeQuizzes(shuffled)
-    .slice(0, maxCards)
-    .slice(0, p.take)
-    .map((q) => {
-      if (q.repetitions + q.lapses < 1) {
-        return {
-          ...q,
-          quizType: "dictation",
-        };
-      }
-      return q;
-    });
-  return await map(filtered, async (quiz) => {
+async function getNewCards(userId: string) {
+  const cards = await prismaClient.quiz.findMany({
+    where: {
+      Card: {
+        userId: userId,
+        flagged: { not: true },
+      },
+      repetitions: 0,
+    },
+    distinct: ["cardId"],
+    orderBy: [{ quizType: "asc" }],
+    take: 5,
+    include: {
+      Card: true, // Include related Card data in the result
+    },
+  });
+  return maybeFilterNewCards(cards, userId);
+}
+
+export default async function getLessons(p: GetLessonInputParams) {
+  if (p.take > 15) {
+    return errorReport("Too many cards requested.");
+  }
+
+  flagCertainCards(p.userId);
+  const reviewCards = await getReviewCards(p.userId, p.notIn, p.now);
+  const newCards = await getNewCards(p.userId);
+  // 25% of cards are new cards.
+  const combined = shuffle([...reviewCards, ...newCards]).slice(0, p.take);
+  return await map(combined, async (q) => {
+    const quiz = {
+      ...q,
+      quizType: q.repetitions ? q.quizType : "dictation",
+    };
+
     const audio = await generateLessonAudio({
       card: quiz.Card,
       lessonType: quiz.quizType as LessonType,

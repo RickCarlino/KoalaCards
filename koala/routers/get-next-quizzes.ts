@@ -43,9 +43,6 @@ export async function getLessonMeta(userId: string) {
         userId: userId,
         flagged: { not: true },
       },
-      quizType: {
-        in: ["listening", "speaking"],
-      },
       nextReview: {
         lt: currentDate,
       },
