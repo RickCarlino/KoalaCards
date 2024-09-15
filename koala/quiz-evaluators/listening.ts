@@ -18,7 +18,7 @@ export const listening: QuizEvaluator = async (ctx) => {
   const response = await testEquivalence(definition, userInput);
 
   captureTrainingData({
-    quizType: "speaking",
+    quizType: "listening",
     yesNo: response,
     explanation: process.env.GPT_MODEL || "gpt-4o",
     term,
