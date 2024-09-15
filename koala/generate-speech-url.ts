@@ -91,42 +91,45 @@ const randomVoice = (langCode: string, gender: string) => {
   return draw(l2) || l2[0];
 };
 
-// Generate Text to Speech audio, store in Google Cloud Storage, and return the URL to the audio file.
-export async function speakText(params: AudioLessonParams): Promise<string> {
+const VERSION = "v1"; // Bust cache with this. Be careful with changing this.
+
+export async function generateSpeechURL(params: AudioLessonParams): Promise<string> {
   console.log(`Create audio: ${params.text}`);
 
   const lang = params.langCode.slice(0, 2).toLocaleLowerCase();
   const voice = randomVoice(lang, params.gender);
 
-  // Compute a URL-safe MD5 hash of text+lang+gender
   const hashInput = `${params.text}|${params.langCode}|${params.gender}`;
   const md5Hash = createHash("md5").update(hashInput).digest();
-  const base64UrlHash = md5Hash
-    .toString("base64")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
+  const base64UrlHash =
+    VERSION +
+    md5Hash
+      .toString("base64")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
 
-  // Create a unique file name based on the hash
   const fileName = `lesson-audio/${base64UrlHash}.mp3`;
 
-  // Get a reference to the GCS bucket and the file
   const file = bucket.file(fileName);
 
-  // Check if the file already exists
   const [exists] = await file.exists();
 
   if (exists) {
-    // Return the public URL to the existing file
-    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
-    console.log(`Audio file already exists at: ${publicUrl}`);
-    return publicUrl;
+    const [signedUrl] = await file.getSignedUrl({
+      action: "read",
+      expires: Date.now() + 1000 * 60 * 60,
+    });
+    console.log(`Audio file already exists at: ${signedUrl}`);
+    return signedUrl;
   }
 
-  // Setup the request for TTS API
+  const p = params.text.includes("<speak>")
+    ? { ssml: params.text }
+    : { text: params.text };
   const request: protos.google.cloud.texttospeech.v1.ISynthesizeSpeechRequest =
     {
-      input: { text: params.text },
+      input: p,
       voice: {
         languageCode: params.langCode,
         name: voice,
@@ -141,20 +144,18 @@ export async function speakText(params: AudioLessonParams): Promise<string> {
       },
     };
 
-  // Generate the audio from the Text-to-Speech API
   const [response] = await CLIENT.synthesizeSpeech(request);
 
-  // Save the audio content to the GCS file
   await file.save(response.audioContent as Buffer, {
     metadata: { contentType: "audio/mpeg" },
   });
 
-  // Make the file publicly accessible
-  await file.makePublic();
+  const [signedUrl] = await file.getSignedUrl({
+    version: "v4",
+    action: "read",
+    expires: Date.now() + 1000 * 60 * 60,
+  });
 
-  // Return the public URL to the file
-  const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
-  console.log(`Audio file stored at: ${publicUrl}`);
-
-  return publicUrl;
+  console.log(`Audio file stored at: ${signedUrl}`);
+  return signedUrl;
 }

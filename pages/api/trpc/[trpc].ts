@@ -1,5 +1,5 @@
 import * as trpcNext from "@trpc/server/adapters/next";
-import { appRouter } from "../../../koala/routers/main";
+import { appRouter } from "../../../koala/routes/main";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]";
 import { prismaClient } from "@/koala/prisma-client";

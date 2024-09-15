@@ -43,7 +43,7 @@ export default function Mirror() {
 
       // Speak the original English transcription via TTS
       const { url: audioEN } = await speakText.mutateAsync({
-        lang: "en-US",
+        lang: "en",
         text: translatedText,
       });
 
