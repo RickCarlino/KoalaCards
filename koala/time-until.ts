@@ -1,16 +1,13 @@
-export function timeUntil(
-  timestamp: number,
-  now = new Date().getTime(),
-): string {
+const secondsInYear = 31536000;
+const secondsInDay = 86400;
+const secondsInHour = 3600;
+const secondsInMinute = 60;
+
+const calculateDiff = (timestamp: number, now: number) => {
   let difference = timestamp - now;
 
   const isPast = difference < 0;
   difference = Math.abs(difference);
-
-  const secondsInYear = 31536000;
-  const secondsInDay = 86400;
-  const secondsInHour = 3600;
-  const secondsInMinute = 60;
 
   // Convert milliseconds to seconds
   difference = Math.floor(difference / 1000);
@@ -29,12 +26,29 @@ export function timeUntil(
 
   const seconds = difference;
 
+  return {
+    isPast,
+    times: {
+      // Order matters.
+      years,
+      days,
+      minutes,
+      hours,
+      seconds,
+    },
+  };
+};
+
+export function timeUntil(
+  timestamp: number,
+  now = new Date().getTime(),
+): string {
+  const { isPast, times } = calculateDiff(timestamp, now);
+
   let result = "";
-  if (years > 0) result += `${years} years `;
-  if (days > 0) result += `${days} days `;
-  if (hours > 0) result += `${hours} hours `;
-  if (minutes > 0) result += `${minutes} minutes `;
-  if (seconds > 0) result += `${seconds} seconds `;
+  Object.entries(times).forEach(([key, value]) => {
+    if (value > 0) result += `${value} ${key} `;
+  });
 
   return isPast ? `${result.trim()} ago` : result.trim();
 }
