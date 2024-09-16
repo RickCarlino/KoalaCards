@@ -18,6 +18,9 @@ import { levelReviews } from "./level-reviews";
 import { manuallyGrade } from "./manually-grade";
 import { parseCards } from "./parse-cards";
 import { rollbackGrade } from "./rollback-grade";
+import { speakText } from "./speak-text";
+import { transcribeAudio } from "./transcribe-audio";
+import { translateText } from "./translate-text";
 import { viewTrainingData } from "./view-training-data";
 
 export const appRouter = router({
@@ -33,13 +36,16 @@ export const appRouter = router({
   getNextQuizzes,
   getOneCard,
   getPlaybackAudio,
+  getRadioItem,
   getUserSettings,
   gradeQuiz,
+  levelReviews,
   manuallyGrade,
   parseCards,
   rollbackGrade,
-  levelReviews,
-  getRadioItem,
+  speakText,
+  transcribeAudio,
+  translateText,
   viewTrainingData,
 });
 

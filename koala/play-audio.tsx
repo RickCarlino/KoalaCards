@@ -16,31 +16,44 @@ const playAudioBuffer = (
   });
 };
 
-export const playAudio = (urlOrDataURI: string): Promise<void> => {
+export const playAudio = async (urlOrDataURI: string): Promise<void> => {
+  if (!urlOrDataURI) {
+    return;
+  }
+
+  if (currentlyPlaying) {
+    return;
+  }
+
+  currentlyPlaying = true;
   const audioContext = new AudioContext();
-  return new Promise((resolve, reject) => {
-    if (!urlOrDataURI) {
-      return resolve();
+
+  try {
+    let arrayBuffer: ArrayBuffer;
+
+    if (urlOrDataURI.startsWith("data:")) {
+      // Handle Base64 Data URI
+      const base64Data = urlOrDataURI.split(",")[1];
+      const binaryString = atob(base64Data);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      arrayBuffer = bytes.buffer;
+    } else {
+      // Handle external URL
+      const response = await fetch(urlOrDataURI);
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+      arrayBuffer = await response.arrayBuffer();
     }
 
-    if (currentlyPlaying) {
-      return resolve();
-    }
-
-    currentlyPlaying = true;
-
-    const audioData = atob(urlOrDataURI.split(",")[1]);
-    const audioArray = new Uint8Array(audioData.length);
-    for (let i = 0; i < audioData.length; i++) {
-      audioArray[i] = audioData.charCodeAt(i);
-    }
-
-    audioContext.decodeAudioData(
-      audioArray.buffer,
-      (buffer) => {
-        playAudioBuffer(buffer, audioContext).then(resolve);
-      },
-      (e) => reject(e),
-    );
-  });
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+    await playAudioBuffer(audioBuffer, audioContext);
+  } catch (e) {
+    currentlyPlaying = false;
+    throw e;
+  }
 };
