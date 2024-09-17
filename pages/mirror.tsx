@@ -24,6 +24,7 @@ export default function Mirror() {
       const { result: korean } = await transcribeAudio.mutateAsync({
         audio: base64Audio,
         lang: "ko",
+        targetText: "사람들이 한국말로 말해요."
       });
       setTranscription(korean);
 

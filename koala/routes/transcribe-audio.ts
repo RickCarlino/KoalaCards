@@ -8,6 +8,7 @@ import { errorReport } from "../error-report";
 export const transcribeAudio = procedure
   .input(
     z.object({
+      targetText: z.string(),
       audio: z.string().max(1000000),
       lang: LANG_CODES,
     }),
@@ -19,7 +20,7 @@ export const transcribeAudio = procedure
   )
   .mutation(async ({ ctx, input }) => {
     const us = await getUserSettings(ctx.user?.id);
-    const result = await transcribeB64(input.lang, input.audio, us.userId);
+    const result = await transcribeB64(input.audio, us.userId, input.targetText);
 
     if (result.kind !== "OK") {
       return errorReport('result.kind !== "OK"');

@@ -5,7 +5,6 @@ import { promisify } from "util";
 import { SafeCounter } from "./counter";
 import { errorReport } from "./error-report";
 import { openai } from "./openai";
-import { LangCode } from "./shared-types";
 
 export const captureAudio = (dataURI: string): string => {
   const regex = /^data:.+\/(.+);base64,(.*)$/;
@@ -18,25 +17,16 @@ export const captureAudio = (dataURI: string): string => {
 
 type TranscriptionResult = { kind: "OK"; text: string } | { kind: "error" };
 
-const PROMPTS: Record<string, string> = {
-  ko: "다양한 한국어 예문을 읽는 연습",
-  en: "Reading diverse example sentences in English ",
-  it: "Esercizio di lettura di frasi esemplificative in italiano",
-  fr: "Exercice de lecture de phrases d'exemple en français",
-  es: "Ejercicio de lectura de frases de ejemplo en español",
-};
-
 const transcriptionLength = SafeCounter({
   name: "transcriptionLength",
   help: "Number of characters transcribed.",
-  labelNames: ["lang", "userID"],
+  labelNames: ["userID"],
 });
 
 export async function transcribeB64(
-  lang: LangCode | "en-US",
   dataURI: string,
   userID: string | number,
-  prompt = PROMPTS[lang.slice(0, 2)] || PROMPTS.ko,
+  prompt: string,
 ): Promise<TranscriptionResult> {
   const writeFileAsync = promisify(writeFile);
   const base64Data = dataURI.split(";base64,").pop() || "";
@@ -56,7 +46,7 @@ export async function transcribeB64(
           prompt,
         });
         const text = y.text || "NO RESPONSE.";
-        transcriptionLength.labels({ lang, userID }).inc(y.text.length);
+        transcriptionLength.labels({ userID }).inc(y.text.length);
         return resolve({
           kind: "OK",
           text,
