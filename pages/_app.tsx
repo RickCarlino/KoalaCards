@@ -1,18 +1,16 @@
+import { UserSettingsProvider } from "@/koala/settings-provider";
+import { trpc } from "@/koala/trpc-config";
+import { MantineProvider } from "@mantine/core";
 import "@mantine/core/styles.css";
+import { Notifications } from "@mantine/notifications";
+import { SessionProvider } from "next-auth/react";
 import { AppProps } from "next/app";
 import Head from "next/head";
-import { MantineProvider } from "@mantine/core";
-import { trpc } from "@/koala/trpc-config";
-import { SessionProvider } from "next-auth/react";
 import Navbar from "./_nav";
-import { Notifications } from "@mantine/notifications";
-import { UserSettingsProvider } from "@/koala/settings-provider";
 
 function App(props: AppProps) {
-  const { Component, pageProps } = props;
-
   if (props.router.pathname === "/auth/email") {
-    return <Component {...pageProps} />;
+    return <props.Component {...props.pageProps} />;
   }
   return (
     <>
@@ -23,13 +21,13 @@ function App(props: AppProps) {
           content="minimum-scale=1, initial-scale=1, width=device-width"
         />
       </Head>
-      <SessionProvider session={pageProps.session}>
+      <SessionProvider session={props.pageProps.session}>
         <MantineProvider defaultColorScheme="auto">
           <UserSettingsProvider>
             <Notifications />
             <Navbar />
             <div style={{ display: "flex", flexDirection: "row" }}>
-              <Component {...pageProps} />
+              <props.Component {...props.pageProps} />
             </div>
           </UserSettingsProvider>
         </MantineProvider>
