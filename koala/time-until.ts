@@ -32,8 +32,8 @@ const calculateDiff = (timestamp: number, now: number) => {
       // Order matters.
       years,
       days,
-      minutes,
       hours,
+      minutes,
       seconds,
     },
   };
