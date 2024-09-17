@@ -65,8 +65,9 @@ export const useVoiceRecorder = (cb: (result: Blob) => void): ReturnedSig => {
     const recorder = state.recorder;
     dispatch({ type: "stop" });
     if (recorder) {
-      if (recorder.state !== "inactive") recorder.stop();
+      recorder.stop();
       recorder.removeEventListener("dataavailable", finishRecording);
+      recorder.stream.getAudioTracks().forEach((s) => s.stop());
     }
   };
 
