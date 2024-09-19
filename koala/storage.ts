@@ -14,7 +14,7 @@ if (!creds) {
   errorReport("Missing GCP_JSON_CREDS");
 }
 
-export const storage = new Storage({
+const storage = new Storage({
   projectId: creds.project_id,
   credentials: creds,
 });

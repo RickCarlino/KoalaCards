@@ -3,17 +3,7 @@ import path from "path";
 import { uid } from "radash";
 import { promisify } from "util";
 import { SafeCounter } from "./counter";
-import { errorReport } from "./error-report";
 import { openai } from "./openai";
-
-export const captureAudio = (dataURI: string): string => {
-  const regex = /^data:.+\/(.+);base64,(.*)$/;
-  const matches = dataURI.match(regex);
-  if (!matches || matches.length !== 3) {
-    return errorReport("Invalid input string");
-  }
-  return matches[2];
-};
 
 type TranscriptionResult = { kind: "OK"; text: string } | { kind: "error" };
 

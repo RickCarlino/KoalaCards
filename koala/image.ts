@@ -27,7 +27,7 @@ export async function maybeGetCardImageUrl(
 
 const CHEAPNESS = 2;
 
-export async function maybeAddImageToCard(card: Card) {
+async function maybeAddImageToCard(card: Card) {
   if (Math.random() < 1 / CHEAPNESS) {
     // Only create images 1/6 of the time.
     return `Skipping ${card.term}`;

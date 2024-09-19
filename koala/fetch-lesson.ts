@@ -1,10 +1,12 @@
-import { map, shuffle } from "radash";
-import { errorReport } from "./error-report";
 import { prismaClient } from "@/koala/prisma-client";
-import { generateLessonAudio } from "./speech";
-import { LessonType } from "./shared-types";
-import { maybeGetCardImageUrl } from "./image";
+import { Grade } from "femto-fsrs";
+import { map, shuffle } from "radash";
 import { getUserSettings } from "./auth-helpers";
+import { errorReport } from "./error-report";
+import { maybeGetCardImageUrl } from "./image";
+import { calculateSchedulingData } from "./routes/import-cards";
+import { LessonType } from "./shared-types";
+import { generateLessonAudio } from "./speech";
 
 type GetLessonInputParams = {
   userId: string;
@@ -70,31 +72,65 @@ const maybeFilterNewCards: MaybeFilterNewCards = async (cards, userId) => {
   });
 };
 
-async function flagCertainCards(userId: string) {
-  // Before we get started, let's flag all cards where
-  // repetitions > 4 and difficulty > 8.9:
-  const cardsToFlag = await prismaClient.quiz.findMany({
+async function archiveOld(userId: string) {
+  const TOO_EASY = {
+    AND: [{ stability: { gt: 200 } }, { repetitions: { gt: 3 } }],
+  };
+  const fullyLearned = await prismaClient.quiz.findMany({
     where: {
       Card: {
         userId: userId,
       },
-      OR: [
-        // Too easy, consider these "learned":
-        { AND: [{ stability: { gt: 200 } }, { repetitions: { gt: 3 } }] },
-        // Too hard, consider these "leeches":
-        { AND: [{ difficulty: { gt: 9 } }, { repetitions: { gt: 6 } }] },
-      ],
+      ...TOO_EASY,
     },
     select: { cardId: true },
   });
-
   // Now flag:
   await prismaClient.card.updateMany({
     where: {
-      id: { in: cardsToFlag.map((c) => c.cardId) },
+      id: { in: fullyLearned.map((c) => c.cardId) },
     },
     data: { flagged: true },
   });
+}
+
+async function resetHard(userId: string) {
+  // Before we get started, let's flag all cards where
+  // repetitions > 4 and difficulty > 8.9:
+
+  const tooHard = await prismaClient.quiz.findMany({
+    where: {
+      Card: {
+        userId: userId,
+      },
+      difficulty: { gt: 9 },
+      repetitions: { gt: 6 },
+    },
+  });
+
+  const reset = {
+    lapses: 0,
+    stability: 0,
+    difficulty: 0,
+    lastReview: 0,
+    nextReview: 0,
+    firstReview: 0,
+    repetitions: 0,
+  };
+
+  prismaClient.quiz.updateMany({
+    where: {
+      id: { in: tooHard.map((c) => c.id) },
+    },
+    data: {
+      ...reset,
+      ...calculateSchedulingData(reset, Grade.AGAIN),
+    },
+  });
+}
+
+async function pruneOldAndHardQuizzes(userId: string) {
+  await Promise.all([archiveOld(userId), resetHard(userId)]);
 }
 
 async function getReviewCards(userId: string, notIn: number[], now: number) {
@@ -146,7 +182,7 @@ export default async function getLessons(p: GetLessonInputParams) {
     return errorReport("Too many cards requested.");
   }
 
-  flagCertainCards(p.userId);
+  pruneOldAndHardQuizzes(p.userId);
   const reviewCards = await getReviewCards(p.userId, p.notIn, p.now);
   const newCards = await getNewCards(p.userId);
   // 25% of cards are new cards.

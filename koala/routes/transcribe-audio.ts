@@ -20,7 +20,11 @@ export const transcribeAudio = procedure
   )
   .mutation(async ({ ctx, input }) => {
     const us = await getUserSettings(ctx.user?.id);
-    const result = await transcribeB64(input.audio, us.userId, input.targetText);
+    const result = await transcribeB64(
+      input.audio,
+      us.userId,
+      input.targetText,
+    );
 
     if (result.kind !== "OK") {
       return errorReport('result.kind !== "OK"');

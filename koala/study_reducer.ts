@@ -16,7 +16,7 @@ export type Quiz = {
   imageURL?: string;
 };
 
-export type Failure = {
+type Failure = {
   id: number;
   cardId: number;
   definition: string;

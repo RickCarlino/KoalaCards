@@ -93,7 +93,9 @@ const randomVoice = (langCode: string, gender: string) => {
 
 const VERSION = "v1"; // Bust cache with this. Be careful with changing this.
 
-export async function generateSpeechURL(params: AudioLessonParams): Promise<string> {
+export async function generateSpeechURL(
+  params: AudioLessonParams,
+): Promise<string> {
   console.log(`Create audio: ${params.text}`);
 
   const lang = params.langCode.slice(0, 2).toLocaleLowerCase();

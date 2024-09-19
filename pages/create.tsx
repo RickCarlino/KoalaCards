@@ -234,9 +234,18 @@ function LanguageInputPage() {
               dispatch({ type: "SET_CARD_TYPE", cardType: value })
             }
           >
-            <Radio value="listening" label="Listening" />
-            <Radio value="speaking" label="Speaking" />
-            <Radio value="both" label="Both" />
+            <Radio
+              value="listening"
+              label="Listening only - Good for long sentences."
+            />
+            <Radio
+              value="speaking"
+              label="Speaking only - Good for single words and set words (colors, numbers)"
+            />
+            <Radio
+              value="both"
+              label="Both - Good for medium length phrases and sentences"
+            />
           </Radio.Group>
           <Button
             disabled={!state.cardType}
