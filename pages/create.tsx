@@ -240,7 +240,7 @@ function LanguageInputPage() {
             />
             <Radio
               value="speaking"
-              label="Speaking only - Good for single words and set words (colors, numbers)"
+              label="Speaking only - Good for single sets of words (nouns, colors, numbers)"
             />
             <Radio
               value="both"

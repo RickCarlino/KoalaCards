@@ -24,6 +24,7 @@ export const transcribeAudio = procedure
       input.audio,
       us.userId,
       input.targetText,
+      input.lang,
     );
 
     if (result.kind !== "OK") {
