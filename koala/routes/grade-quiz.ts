@@ -143,12 +143,7 @@ export const gradeQuiz = procedure
       default:
         return errorReport(`Unknown quiz type: ${quizType}`);
     }
-    const transcript = await transcribeB64(
-      quiz.quizType === "listening" ? "en-US" : (card.langCode as "ko"),
-      x.input.audio,
-      user.id,
-      prompt,
-    );
+    const transcript = await transcribeB64(x.input.audio, user.id, prompt);
     if (transcript.kind === "error") {
       return {
         result: "error",

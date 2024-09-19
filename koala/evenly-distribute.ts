@@ -25,7 +25,7 @@ export function evenlyDistribute<
   return copy;
 }
 
-export const eligibleForLeveling = async (userID: string) => {
+const eligibleForLeveling = async (userID: string) => {
   const all = await prismaClient.quiz.findMany({
     where: {
       Card: {

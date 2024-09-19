@@ -2,7 +2,7 @@ import { prismaClient } from "@/koala/prisma-client";
 import { timeUntil } from "./time-until";
 
 // Users that are allowed to use GPT-4, etc..
-export const superUsers = (process.env.AUTHORIZED_EMAILS || "")
+const superUsers = (process.env.AUTHORIZED_EMAILS || "")
   .split(",")
   .filter((x: string) => x.includes("@"))
   .map((x: string) => x.trim().toLowerCase());

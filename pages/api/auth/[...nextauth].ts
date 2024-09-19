@@ -26,7 +26,8 @@ const server: EmailConfig["server"] = {
     pass: process.env.EMAIL_SERVER_PASSWORD || "",
   },
 };
-export const EMAIL_SERVER_OPTIONS: Partial<EmailUserConfig> = {
+
+const EMAIL_SERVER_OPTIONS: Partial<EmailUserConfig> = {
   server,
   from: process.env.EMAIL_FROM,
   generateVerificationToken() {

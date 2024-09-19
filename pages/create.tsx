@@ -1,15 +1,16 @@
-import { useState, useReducer } from "react";
-import {
-  Stepper,
-  Select,
-  Textarea,
-  Button,
-  Group,
-  TextInput,
-  Container,
-} from "@mantine/core";
-import { trpc } from "@/koala/trpc-config";
 import { Gender, LangCode } from "@/koala/shared-types";
+import { trpc } from "@/koala/trpc-config";
+import {
+  Button,
+  Container,
+  Group,
+  Radio,
+  Select,
+  Stepper,
+  TextInput,
+  Textarea,
+} from "@mantine/core";
+import { useReducer, useState } from "react";
 type ProcessedCard = {
   term: string;
   definition: string;
@@ -22,18 +23,21 @@ type Action =
   | { type: "REMOVE_CARD"; index: number }
   | { type: "SET_LANGUAGE"; language: LangCode }
   | { type: "SET_PROCESSED_CARDS"; processedCards: ProcessedCard[] }
-  | { type: "SET_RAW_INPUT"; rawInput: string };
+  | { type: "SET_RAW_INPUT"; rawInput: string }
+  | { type: "SET_CARD_TYPE"; cardType: string };
 
 interface State {
   language: LangCode;
   rawInput: string;
   processedCards: ProcessedCard[];
+  cardType: string;
 }
 
 const INITIAL_STATE: State = {
   language: "ko",
   rawInput: "",
   processedCards: [],
+  cardType: "both",
 };
 
 const errorHandler = (error: any) => {
@@ -98,6 +102,8 @@ function reducer(state: State, action: Action): State {
       return { ...state, processedCards: action.processedCards };
     case "SET_RAW_INPUT":
       return { ...state, rawInput: action.rawInput };
+    case "SET_CARD_TYPE":
+      return { ...state, cardType: action.cardType };
     default:
       return state;
   }
@@ -145,6 +151,7 @@ function LanguageInputPage() {
       .mutateAsync({
         langCode: state.language,
         input: state.processedCards,
+        cardType: state.cardType,
       })
       .then(() => {
         // Reset and start over:
@@ -217,6 +224,34 @@ function LanguageInputPage() {
           </p>
           <Button size="xs" onClick={pasteExample}>
             Paste Example Input
+          </Button>
+        </Stepper.Step>
+        <Stepper.Step label="Set card type">
+          <Radio.Group
+            label="Select the type of cards"
+            value={state.cardType}
+            onChange={(value) =>
+              dispatch({ type: "SET_CARD_TYPE", cardType: value })
+            }
+          >
+            <Radio
+              value="listening"
+              label="Listening only - Good for long sentences."
+            />
+            <Radio
+              value="speaking"
+              label="Speaking only - Good for single words and set words (colors, numbers)"
+            />
+            <Radio
+              value="both"
+              label="Both - Good for medium length phrases and sentences"
+            />
+          </Radio.Group>
+          <Button
+            disabled={!state.cardType}
+            onClick={() => setActiveStep((current) => current + 1)}
+          >
+            Next
           </Button>
         </Stepper.Step>
         <Stepper.Step label="Edit cards">

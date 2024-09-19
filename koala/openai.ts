@@ -54,11 +54,6 @@ const SIMPLE_YES_OR_NO = {
 };
 
 export type Explanation = { response: YesNo; whyNot?: string };
-export type YesOrNoInput = {
-  userInput: string;
-  question: string;
-  userID: string;
-};
 
 export const testEquivalence = async (
   left: string,

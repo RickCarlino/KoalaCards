@@ -1,7 +1,7 @@
 import { Quiz, Card } from "@prisma/client";
 import { QuizResult } from "../shared-types";
 
-export type QuizEvaluatorInput = {
+type QuizEvaluatorInput = {
   quiz: Quiz;
   card: Card;
   userInput: string;

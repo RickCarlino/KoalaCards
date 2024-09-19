@@ -12,6 +12,7 @@ export const LANG_CODES = z.union([
 export const bulkCreateCards = procedure
   .input(
     z.object({
+      cardType: z.string(),
       langCode: LANG_CODES,
       input: z
         .array(
@@ -56,7 +57,16 @@ export const bulkCreateCards = procedure
           const card = await prismaClient.card.create({
             data,
           });
-          ["listening", "speaking"].map(async (quizType) => {
+          const DEFAULTS = ["listening", "speaking"];
+          const TYPES: Record<string, string[]> = {
+            listening: ["listening"],
+            speaking: ["speaking"],
+          };
+          const quizTypes = TYPES[input.cardType] || DEFAULTS;
+          console.log(
+            `=== CREATE QUIZES FOR ${quizTypes.sort().join(", ")} ===`,
+          );
+          quizTypes.map(async (quizType) => {
             await prismaClient.quiz.create({
               data: {
                 cardId: card.id,
