@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getUserSettings } from "../auth-helpers";
 import { procedure } from "../trpc-procedure";
 import { generateSpeechURL } from "../generate-speech-url";
+import { removeParens } from "../quiz-evaluators/evaluator-utils";
 
 const LANG_CODES = z.union([
   z.literal("en"),
@@ -27,7 +28,7 @@ export const speakText = procedure
   .mutation(async ({ ctx, input }) => {
     await getUserSettings(ctx.user?.id);
     const url = await generateSpeechURL({
-      text: input.text,
+      text: removeParens(input.text),
       langCode: input.lang,
       gender: draw(["F", "M", "N"] as const) || "N",
     });
