@@ -96,8 +96,6 @@ const VERSION = "v1"; // Bust cache with this. Be careful with changing this.
 export async function generateSpeechURL(
   params: AudioLessonParams,
 ): Promise<string> {
-  console.log(`Create audio: ${params.text}`);
-
   const lang = params.langCode.slice(0, 2).toLocaleLowerCase();
   const voice = randomVoice(lang, params.gender);
 
@@ -122,7 +120,6 @@ export async function generateSpeechURL(
       action: "read",
       expires: Date.now() + 1000 * 60 * 60,
     });
-    console.log(`Audio file already exists at: ${signedUrl}`);
     return signedUrl;
   }
 
@@ -158,6 +155,5 @@ export async function generateSpeechURL(
     expires: Date.now() + 1000 * 60 * 60,
   });
 
-  console.log(`Audio file stored at: ${signedUrl}`);
   return signedUrl;
 }
