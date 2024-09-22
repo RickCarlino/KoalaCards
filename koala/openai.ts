@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources";
 import { errorReport } from "./error-report";
+import { strip } from "./quiz-evaluators/evaluator-utils";
 import { YesNo } from "./shared-types";
 
 const apiKey = process.env.OPENAI_API_KEY;
@@ -59,7 +60,7 @@ export const testEquivalence = async (
   left: string,
   right: string,
 ): Promise<YesNo> => {
-  const model = process.env.GPT_MODEL || "gpt-4o";
+  const model = "gpt-4o";
   const content = [left, right].map((s, i) => `${i + 1}: ${s}`).join("\n");
   const resp = await gptCall({
     messages: [
@@ -87,6 +88,53 @@ export const testEquivalence = async (
     resp?.choices?.[0]?.message?.tool_calls?.[0].function.arguments || "{}";
   const raw: any = JSON.parse(jsonString);
   return raw.response as YesNo;
+};
+
+type GrammarCorrrectionProps = {
+  term: string;
+  definition: string;
+  langCode: string;
+  userInput: string;
+};
+
+export const grammarCorrection = async (
+  props: GrammarCorrrectionProps,
+): Promise<string | undefined> => {
+  const model = process.env.GPT_MODEL || "gpt-4o";
+  const { term, definition, langCode, userInput } = props;
+  console.log(props);
+  const prompt = [
+    `I'm a language learner (${langCode}).`,
+    `I want to say '${definition}' (${term}).`,
+    `Is '${userInput}' correct, too?`,
+    `Fix grammar and naturalness issues.`,
+    `If my response is fine as-is, repeat it back to me.`,
+    `Provided a corrected version and nothing else!`,
+  ].join("\n");
+
+  const resp = await gptCall({
+    messages: [
+      {
+        role: "user",
+        content: prompt,
+      },
+    ],
+    model,
+    tools: [
+      {
+        type: "function",
+        function: SIMPLE_YES_OR_NO,
+      },
+    ],
+    max_tokens: 150,
+    top_p: 1,
+    frequency_penalty: 0,
+    stop: ["\n"],
+    temperature: 0.2,
+  });
+  const correction = resp?.choices?.[0]?.message.content || "OK";
+  const exactMatch = strip(correction) === strip(userInput);
+  return exactMatch ? undefined : correction;
 };
 
 export const translateToEnglish = async (content: string, langCode: string) => {
