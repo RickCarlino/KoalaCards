@@ -33,16 +33,23 @@ type PartialQuizKeys =
   | "repetitions";
 type PartialQuiz = Pick<Quiz, PartialQuizKeys>;
 
+function fuzzNumber(num: number) {
+  let pct = num * 0.2;
+  let fuzzFactor = (Math.random() * 2 - 1) * pct;
+
+  return num + fuzzFactor;
+}
+
 function scheduleNewCard(grade: Grade, now = Date.now()): SchedulingData {
   const x = FSRS.newCard(grade);
   const MINUTE = 60000;
   const grades: Record<Grade, number> = {
     [Grade.AGAIN]: 1 * MINUTE,
-    [Grade.HARD]: 6 * MINUTE,
-    [Grade.GOOD]: 10 * MINUTE,
-    [Grade.EASY]: 5 * DAYS,
+    [Grade.HARD]: 3 * MINUTE,
+    [Grade.GOOD]: 5 * MINUTE,
+    [Grade.EASY]: 3 * DAYS,
   };
-  const nextReview = now + grades[grade];
+  const nextReview = now + fuzzNumber(grades[grade]);
 
   if (!nextReview || nextReview < now) {
     return errorReport(`Invalid new card grade: ${grade}`);
@@ -72,7 +79,7 @@ export function calculateSchedulingData(
   return {
     difficulty: result.D,
     stability: result.S,
-    nextReview: now + result.I * DAYS,
+    nextReview: now + fuzzNumber(result.I * DAYS),
   };
 }
 

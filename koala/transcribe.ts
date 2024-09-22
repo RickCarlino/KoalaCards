@@ -17,6 +17,7 @@ export async function transcribeB64(
   dataURI: string,
   userID: string | number,
   prompt: string,
+  language: "en" | "ko" | "es" | "fr" | "it",
 ): Promise<TranscriptionResult> {
   const writeFileAsync = promisify(writeFile);
   const base64Data = dataURI.split(";base64,").pop() || "";
@@ -34,6 +35,7 @@ export async function transcribeB64(
           file: createReadStream(fpath) as any,
           model: "whisper-1",
           prompt,
+          language,
         });
         const text = y.text || "NO RESPONSE.";
         transcriptionLength.labels({ userID }).inc(y.text.length);
