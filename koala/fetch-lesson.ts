@@ -74,7 +74,7 @@ const maybeFilterNewCards: MaybeFilterNewCards = async (cards, userId) => {
 
 async function archiveOld(userId: string) {
   const TOO_EASY = {
-    AND: [{ stability: { gt: 200 } }, { repetitions: { gt: 3 } }],
+    AND: [{ stability: { gt: 365 } }, { repetitions: { gt: 3 } }],
   };
   const fullyLearned = await prismaClient.quiz.findMany({
     where: {

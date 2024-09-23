@@ -20,14 +20,18 @@ const doGrade = async (
     return { response: "yes" };
   }
 
+  console.log(`=== 1`);
   const englishTranslation = await translateToEnglish(userInput, langCode);
   const exactTranslation = strip(englishTranslation) === strip(definition);
 
   if (exactTranslation) {
+    console.log(`=== 2`);
     console.log(`=== Exact match! (37)`);
     return { response: "yes" };
   }
 
+  console.log(`=== SPEAKING EVALUATOR ===`);
+  console.log(`=== 3`);
   const response = await testEquivalence(
     `${term} (${definition})`,
     `${userInput} (${englishTranslation})`,
@@ -93,6 +97,7 @@ export const speaking: QuizEvaluator = async ({ userInput, card }) => {
   if (prevResp) {
     return gradeWithGrammarCorrection(prevResp, "cached");
   }
+  console.log(`=== 0`);
 
   const result = await doGrade(
     userInput,
@@ -100,15 +105,18 @@ export const speaking: QuizEvaluator = async ({ userInput, card }) => {
     card.definition,
     card.langCode,
   );
+  console.log(`=== 4`);
 
   const userMessage = result.whyNot || "No response";
 
   if (result.response === "no") {
+    console.log(`=== 5`);
     return {
       result: "fail",
       userMessage,
     };
   }
+  console.log(`=== 6`);
 
   const corrected = await grammarCorrection({
     userInput,
@@ -116,6 +124,7 @@ export const speaking: QuizEvaluator = async ({ userInput, card }) => {
     term: card.term,
     definition: card.definition,
   });
+  console.log(`=== 7`);
 
   return gradeWithGrammarCorrection(
     await prismaClient.speakingCorrection.create({

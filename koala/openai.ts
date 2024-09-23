@@ -17,11 +17,11 @@ export const openai = new OpenAI(configuration);
 
 export async function gptCall(opts: ChatCompletionCreateParamsNonStreaming) {
   const result = await openai.chat.completions.create(opts);
-  console.log(`=== GPT CALL ===`);
-  console.log(opts.messages.map((x) => x.content || "").join("\n"));
-  console.log(`=== GPT RESP ===`);
-  const resp = result.choices[0].message || {};
-  console.log(JSON.stringify(resp.content || resp.tool_calls?.[0], null, 2));
+  // console.log(`=== GPT CALL ===`);
+  // console.log(opts.messages.map((x) => x.content || "").join("\n"));
+  // console.log(`=== GPT RESP ===`);
+  // const resp = result.choices[0].message || {};
+  // console.log(JSON.stringify(resp.content || resp.tool_calls?.[0], null, 2));
   return result;
 }
 
@@ -71,7 +71,7 @@ export const testEquivalence = async (
   left: string,
   right: string,
 ): Promise<YesNo> => {
-  const model = "gpt-4o";
+  const model = process.env.GPT_MODEL || "gpt-4o";
   const content = [left, right].map((s, i) => `${i + 1}: ${s}`).join("\n");
   const resp = await gptCall({
     messages: [
@@ -111,7 +111,7 @@ type GrammarCorrrectionProps = {
 export const grammarCorrection = async (
   props: GrammarCorrrectionProps,
 ): Promise<string | undefined> => {
-  const model = process.env.GPT_MODEL || "gpt-4o";
+  const model = "gpt-4o";
   const { userInput } = props;
   const prompt = [
     `I want to say '${props.definition}' in language: ${props.langCode}.`,
@@ -137,12 +137,15 @@ export const grammarCorrection = async (
   const correct_sentence = resp.choices[0].message.parsed;
   if (correct_sentence) {
     if (correct_sentence.userWasCorrect) {
+      console.log(`### 1`);
       return undefined;
     } else {
+      console.log(`### 2`);
       return correct_sentence.correctedSentence;
     }
   } else {
-    throw new Error("No sentence correction respons!!!");
+    console.log(`### 3`);
+    throw new Error("No sentence correction response!!!");
   }
 };
 
@@ -171,15 +174,26 @@ export const translateToEnglish = async (content: string, langCode: string) => {
   return val;
 };
 
+const SENTENCE = [
+  `You are a language learning flash card app.`,
+  `You are creating a comic to help users remember the flashcard above.`,
+  `It is a fun, single-frame, black and white comic that illustrates the sentence.`,
+  `Create a DALL-e prompt to create this comic for the card above.`,
+  `Do not add speech bubbles or text. It will give away the answer!`,
+  `All characters must be Koalas.`,
+].join("\n");
+
+const SINGLE_WORD = [
+  `You are a language learning flash card app.`,
+  `Create a DALL-e prompt to generate an image of the foreign language word above.`,
+  `Make it as realistic and accurate to the words meaning as possible.`,
+  `The illustration must convey the word's meaning to the student.`,
+  `Do not add text. It will give away the answer!`,
+].join("\n");
+
 export const createDallEPrompt = async (term: string, definition: string) => {
-  const prompt = [
-    `You are a language learning flash card app.`,
-    `You are creating a comic to help users remember the flashcard above.`,
-    `It is a fun, single-frame, black and white comic that illustrates the sentence.`,
-    `Create a DALL-e prompt to create this comic for the card above.`,
-    `Do not add speech bubbles or text. It will give away the answer!`,
-    `All characters must be Koalas.`,
-  ].join("\n");
+  const shortCard = term.split(" ").length < 2;
+  const prompt = shortCard ? SINGLE_WORD : SENTENCE;
   const hm = await gptCall({
     model: "gpt-4o",
     messages: [
