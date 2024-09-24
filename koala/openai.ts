@@ -1,8 +1,9 @@
 import OpenAI from "openai";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources";
 import { errorReport } from "./error-report";
-import { strip } from "./quiz-evaluators/evaluator-utils";
 import { YesNo } from "./shared-types";
+import { z } from "zod";
+import { zodResponseFormat } from "openai/helpers/zod";
 
 const apiKey = process.env.OPENAI_API_KEY;
 
@@ -15,13 +16,7 @@ const configuration = { apiKey };
 export const openai = new OpenAI(configuration);
 
 export async function gptCall(opts: ChatCompletionCreateParamsNonStreaming) {
-  const result = await openai.chat.completions.create(opts);
-  console.log(`=== GPT CALL ===`);
-  console.log(opts.messages.map((x) => x.content || "").join("\n"));
-  console.log(`=== GPT RESP ===`);
-  const resp = result.choices[0].message || {};
-  console.log(JSON.stringify(resp.content || resp.tool_calls?.[0], null, 2));
-  return result;
+  return await openai.chat.completions.create(opts);
 }
 
 const SIMPLE_YES_OR_NO = {
@@ -54,13 +49,25 @@ const SIMPLE_YES_OR_NO = {
   description: "Answer a yes or no question.",
 };
 
+const zodYesOrNo = z.object({
+  response: z.union([
+    z.object({
+      userWasCorrect: z.literal(true),
+    }),
+    z.object({
+      userWasCorrect: z.literal(false),
+      correctedSentence: z.string(),
+    }),
+  ]),
+});
+
 export type Explanation = { response: YesNo; whyNot?: string };
 
 export const testEquivalence = async (
   left: string,
   right: string,
 ): Promise<YesNo> => {
-  const model = "gpt-4o";
+  const model = process.env.GPT_MODEL || "gpt-4o";
   const content = [left, right].map((s, i) => `${i + 1}: ${s}`).join("\n");
   const resp = await gptCall({
     messages: [
@@ -100,19 +107,17 @@ type GrammarCorrrectionProps = {
 export const grammarCorrection = async (
   props: GrammarCorrrectionProps,
 ): Promise<string | undefined> => {
-  const model = process.env.GPT_MODEL || "gpt-4o";
-  const { term, definition, langCode, userInput } = props;
-  console.log(props);
+  // Latest snapshot that supports Structured Outputs
+  // TODO: Get on mainline 4o when it supports Structured Outputs
+  const model = "gpt-4o-2024-08-06";
+  const { userInput } = props;
   const prompt = [
-    `I'm a language learner (${langCode}).`,
-    `I want to say '${definition}' (${term}).`,
-    `Is '${userInput}' correct, too?`,
-    `Fix grammar and naturalness issues.`,
-    `If my response is fine as-is, repeat it back to me.`,
-    `Provided a corrected version and nothing else!`,
+    `I want to say '${props.definition}' in language: ${props.langCode}.`,
+    `Is '${userInput}' OK?`,
+    `Correct awkwardness or major grammatical issues, if any.`,
   ].join("\n");
 
-  const resp = await gptCall({
+  const resp = await openai.beta.chat.completions.parse({
     messages: [
       {
         role: "user",
@@ -120,21 +125,19 @@ export const grammarCorrection = async (
       },
     ],
     model,
-    tools: [
-      {
-        type: "function",
-        function: SIMPLE_YES_OR_NO,
-      },
-    ],
     max_tokens: 150,
     top_p: 1,
     frequency_penalty: 0,
     stop: ["\n"],
     temperature: 0.2,
+    response_format: zodResponseFormat(zodYesOrNo, "correct_sentence"),
   });
-  const correction = resp?.choices?.[0]?.message.content || "OK";
-  const exactMatch = strip(correction) === strip(userInput);
-  return exactMatch ? undefined : correction;
+  const correct_sentence = resp.choices[0].message.parsed;
+  if (correct_sentence) {
+    if (!correct_sentence.response.userWasCorrect) {
+      return correct_sentence.response.correctedSentence;
+    }
+  }
 };
 
 export const translateToEnglish = async (content: string, langCode: string) => {
@@ -162,15 +165,26 @@ export const translateToEnglish = async (content: string, langCode: string) => {
   return val;
 };
 
+const SENTENCE = [
+  `You are a language learning flash card app.`,
+  `You are creating a comic to help users remember the flashcard above.`,
+  `It is a fun, single-frame, black and white comic that illustrates the sentence.`,
+  `Create a DALL-e prompt to create this comic for the card above.`,
+  `Do not add speech bubbles or text. It will give away the answer!`,
+  `All characters must be Koalas.`,
+].join("\n");
+
+const SINGLE_WORD = [
+  `You are a language learning flash card app.`,
+  `Create a DALL-e prompt to generate an image of the foreign language word above.`,
+  `Make it as realistic and accurate to the words meaning as possible.`,
+  `The illustration must convey the word's meaning to the student.`,
+  `Do not add text. It will give away the answer!`,
+].join("\n");
+
 export const createDallEPrompt = async (term: string, definition: string) => {
-  const prompt = [
-    `You are a language learning flash card app.`,
-    `You are creating a comic to help users remember the flashcard above.`,
-    `It is a fun, single-frame, black and white comic that illustrates the sentence.`,
-    `Create a DALL-e prompt to create this comic for the card above.`,
-    `Do not add speech bubbles or text. It will give away the answer!`,
-    `All characters must be Koalas.`,
-  ].join("\n");
+  const shortCard = term.split(" ").length < 2;
+  const prompt = shortCard ? SINGLE_WORD : SENTENCE;
   const hm = await gptCall({
     model: "gpt-4o",
     messages: [

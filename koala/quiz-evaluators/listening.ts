@@ -15,6 +15,7 @@ export const listening: QuizEvaluator = async (ctx) => {
     };
   }
 
+  console.log(`=== LISTENING EVALUATOR ===`);
   const response = await testEquivalence(definition, userInput);
 
   captureTrainingData({
@@ -31,7 +32,7 @@ export const listening: QuizEvaluator = async (ctx) => {
   if (response === "no") {
     return {
       result: "fail",
-      userMessage: "Deprecated in FT model", // listeningYN.whyNot || "No explanation provided.",
+      userMessage: "",
     };
   }
 

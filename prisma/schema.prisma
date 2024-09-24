@@ -75,18 +75,19 @@ model VerificationToken {
 }
 
 model Card {
-  id          Int      @id @default(autoincrement())
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId      String
-  flagged     Boolean  @default(false)
-  term        String
-  definition  String
-  langCode    String
+  id                 Int                  @id @default(autoincrement())
+  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId             String
+  flagged            Boolean              @default(false)
+  term               String
+  definition         String
+  langCode           String
   // Gender can be "M"ale, "F"emale, or "N"eutral
-  gender      String   @default("N")
-  createdAt   DateTime @default(now())
-  Quiz        Quiz[]
-  imageBlobId String?
+  gender             String               @default("N")
+  createdAt          DateTime             @default(now())
+  Quiz               Quiz[]
+  imageBlobId        String?
+  SpeakingCorrection SpeakingCorrection[]
 
   @@unique([userId, term])
 }
@@ -133,4 +134,16 @@ model TrainingData {
   langCode           String
   userInput          String
   englishTranslation String
+}
+
+model SpeakingCorrection {
+  id                 Int      @id @default(autoincrement())
+  cardId             Int
+  Card               Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  createdAt          DateTime @default(now())
+  isCorrect          Boolean
+  term               String
+  definition         String
+  userInput          String
+  correction         String   @default("")
 }

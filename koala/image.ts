@@ -29,8 +29,7 @@ const CHEAPNESS = 2;
 
 async function maybeAddImageToCard(card: Card) {
   if (Math.random() < 1 / CHEAPNESS) {
-    // Only create images 1/6 of the time.
-    return `Skipping ${card.term}`;
+    return;
   }
 
   if (card.imageBlobId) {
@@ -43,7 +42,6 @@ async function maybeAddImageToCard(card: Card) {
 
   const reps = quizzes.map((x) => x.repetitions).reduce((a, b) => a + b, 0);
   if (reps < 3) {
-    console.log(`Skipping ${card.term} with ${reps} reps`);
     return;
   }
 
@@ -70,10 +68,10 @@ export async function maybeAddImages(userId: string, take: number) {
   });
 
   if (!cards.length) {
-    console.log(`=== No cards left to illustrate ===`);
+    // console.log(`=== No cards left to illustrate ===`);
     return;
   }
-  console.log(`=== Adding images to ${cards.length} cards ===`);
+  // console.log(`=== Adding images to ${cards.length} cards ===`);
   const x = await Promise.all(cards.map(maybeAddImageToCard));
   console.log(cards.map((x) => x.term).join("\n"));
   console.log(x.join("\n"));

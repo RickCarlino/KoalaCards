@@ -1,11 +1,13 @@
 import {
   Explanation,
+  grammarCorrection,
   testEquivalence,
   translateToEnglish,
 } from "@/koala/openai";
-import { QuizEvaluator } from "./types";
+import { QuizEvaluator, QuizEvaluatorOutput } from "./types";
 import { strip } from "./evaluator-utils";
 import { captureTrainingData } from "./capture-training-data";
+import { prismaClient } from "../prisma-client";
 
 const doGrade = async (
   userInput: string,
@@ -14,7 +16,6 @@ const doGrade = async (
   langCode: string,
 ): Promise<Explanation> => {
   if (strip(userInput) === strip(term)) {
-    console.log(`=== Exact match! (29)`);
     return { response: "yes" };
   }
 
@@ -22,7 +23,6 @@ const doGrade = async (
   const exactTranslation = strip(englishTranslation) === strip(definition);
 
   if (exactTranslation) {
-    console.log(`=== Exact match! (37)`);
     return { response: "yes" };
   }
 
@@ -48,6 +48,26 @@ const doGrade = async (
   };
 };
 
+type X = {
+  userInput: string;
+  correction: string;
+  isCorrect: boolean;
+};
+
+function gradeWithGrammarCorrection(i: X, what: 1 | 2): QuizEvaluatorOutput {
+  if (i.isCorrect || strip(i.correction) === strip(i.userInput)) {
+    return {
+      result: "pass",
+      userMessage: "Previously correct answer.",
+    };
+  } else {
+    return {
+      result: "fail",
+      userMessage: `Correct, but say "${i.correction}" instead of "${i.userInput}" (${what}).`,
+    };
+  }
+}
+
 export const speaking: QuizEvaluator = async ({ userInput, card }) => {
   if (strip(userInput) === strip(card.term)) {
     console.log(`=== Exact match! (53)`);
@@ -55,6 +75,17 @@ export const speaking: QuizEvaluator = async ({ userInput, card }) => {
       result: "pass",
       userMessage: "Exact match. Nice work!",
     };
+  }
+
+  const prevResp = await prismaClient.speakingCorrection.findFirst({
+    where: {
+      cardId: card.id,
+      userInput,
+    },
+  });
+
+  if (prevResp) {
+    return gradeWithGrammarCorrection(prevResp, 1);
   }
 
   const result = await doGrade(
@@ -73,8 +104,24 @@ export const speaking: QuizEvaluator = async ({ userInput, card }) => {
     };
   }
 
-  return {
-    result: "pass",
-    userMessage,
-  };
+  const corrected = await grammarCorrection({
+    userInput,
+    langCode: card.langCode,
+    term: card.term,
+    definition: card.definition,
+  });
+
+  return gradeWithGrammarCorrection(
+    await prismaClient.speakingCorrection.create({
+      data: {
+        cardId: card.id,
+        isCorrect: !corrected,
+        definition: card.definition,
+        term: card.term,
+        userInput,
+        correction: corrected || userInput,
+      },
+    }),
+    2,
+  );
 };
