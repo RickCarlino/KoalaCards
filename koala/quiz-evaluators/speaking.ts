@@ -16,22 +16,16 @@ const doGrade = async (
   langCode: string,
 ): Promise<Explanation> => {
   if (strip(userInput) === strip(term)) {
-    console.log(`=== Exact match! (29)`);
     return { response: "yes" };
   }
 
-  console.log(`=== 1`);
   const englishTranslation = await translateToEnglish(userInput, langCode);
   const exactTranslation = strip(englishTranslation) === strip(definition);
 
   if (exactTranslation) {
-    console.log(`=== 2`);
-    console.log(`=== Exact match! (37)`);
     return { response: "yes" };
   }
 
-  console.log(`=== SPEAKING EVALUATOR ===`);
-  console.log(`=== 3`);
   const response = await testEquivalence(
     `${term} (${definition})`,
     `${userInput} (${englishTranslation})`,
@@ -60,12 +54,8 @@ type X = {
   isCorrect: boolean;
 };
 
-function gradeWithGrammarCorrection(i: X, what: string): QuizEvaluatorOutput {
-  console.log(
-    `=== Grading ${what} grammar correction:`,
-    JSON.stringify(i, null, 2),
-  );
-  if (i.isCorrect) {
+function gradeWithGrammarCorrection(i: X, what: 1 | 2): QuizEvaluatorOutput {
+  if (i.isCorrect || strip(i.correction) === strip(i.userInput)) {
     return {
       result: "pass",
       userMessage: "Previously correct answer.",
@@ -73,7 +63,7 @@ function gradeWithGrammarCorrection(i: X, what: string): QuizEvaluatorOutput {
   } else {
     return {
       result: "fail",
-      userMessage: `Say "${i.correction}" instead of "${i.userInput}".`,
+      userMessage: `Correct, but say "${i.correction}" instead of "${i.userInput}" (${what}).`,
     };
   }
 }
@@ -95,9 +85,8 @@ export const speaking: QuizEvaluator = async ({ userInput, card }) => {
   });
 
   if (prevResp) {
-    return gradeWithGrammarCorrection(prevResp, "cached");
+    return gradeWithGrammarCorrection(prevResp, 1);
   }
-  console.log(`=== 0`);
 
   const result = await doGrade(
     userInput,
@@ -105,18 +94,15 @@ export const speaking: QuizEvaluator = async ({ userInput, card }) => {
     card.definition,
     card.langCode,
   );
-  console.log(`=== 4`);
 
   const userMessage = result.whyNot || "No response";
 
   if (result.response === "no") {
-    console.log(`=== 5`);
     return {
       result: "fail",
       userMessage,
     };
   }
-  console.log(`=== 6`);
 
   const corrected = await grammarCorrection({
     userInput,
@@ -124,7 +110,6 @@ export const speaking: QuizEvaluator = async ({ userInput, card }) => {
     term: card.term,
     definition: card.definition,
   });
-  console.log(`=== 7`);
 
   return gradeWithGrammarCorrection(
     await prismaClient.speakingCorrection.create({
@@ -137,6 +122,6 @@ export const speaking: QuizEvaluator = async ({ userInput, card }) => {
         correction: corrected || userInput,
       },
     }),
-    "new",
+    2,
   );
 };

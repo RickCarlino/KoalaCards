@@ -16,13 +16,7 @@ const configuration = { apiKey };
 export const openai = new OpenAI(configuration);
 
 export async function gptCall(opts: ChatCompletionCreateParamsNonStreaming) {
-  const result = await openai.chat.completions.create(opts);
-  // console.log(`=== GPT CALL ===`);
-  // console.log(opts.messages.map((x) => x.content || "").join("\n"));
-  // console.log(`=== GPT RESP ===`);
-  // const resp = result.choices[0].message || {};
-  // console.log(JSON.stringify(resp.content || resp.tool_calls?.[0], null, 2));
-  return result;
+  return await openai.chat.completions.create(opts);
 }
 
 const SIMPLE_YES_OR_NO = {
@@ -55,15 +49,17 @@ const SIMPLE_YES_OR_NO = {
   description: "Answer a yes or no question.",
 };
 
-const zodYesOrNo = z.union([
-  z.object({
-    userWasCorrect: z.literal(true),
-  }),
-  z.object({
-    userWasCorrect: z.literal(false),
-    correctedSentence: z.string(),
-  }),
-]);
+const zodYesOrNo = z.object({
+  response: z.union([
+    z.object({
+      userWasCorrect: z.literal(true),
+    }),
+    z.object({
+      userWasCorrect: z.literal(false),
+      correctedSentence: z.string(),
+    }),
+  ]),
+});
 
 export type Explanation = { response: YesNo; whyNot?: string };
 
@@ -111,7 +107,9 @@ type GrammarCorrrectionProps = {
 export const grammarCorrection = async (
   props: GrammarCorrrectionProps,
 ): Promise<string | undefined> => {
-  const model = "gpt-4o";
+  // Latest snapshot that supports Structured Outputs
+  // TODO: Get on mainline 4o when it supports Structured Outputs
+  const model = "gpt-4o-2024-08-06";
   const { userInput } = props;
   const prompt = [
     `I want to say '${props.definition}' in language: ${props.langCode}.`,
@@ -136,16 +134,9 @@ export const grammarCorrection = async (
   });
   const correct_sentence = resp.choices[0].message.parsed;
   if (correct_sentence) {
-    if (correct_sentence.userWasCorrect) {
-      console.log(`### 1`);
-      return undefined;
-    } else {
-      console.log(`### 2`);
-      return correct_sentence.correctedSentence;
+    if (!correct_sentence.response.userWasCorrect) {
+      return correct_sentence.response.correctedSentence;
     }
-  } else {
-    console.log(`### 3`);
-    throw new Error("No sentence correction response!!!");
   }
 };
 
