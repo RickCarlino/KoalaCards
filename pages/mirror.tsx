@@ -4,11 +4,20 @@ import { playAudio } from "@/koala/play-audio";
 import { blobToBase64, convertBlobToWav } from "@/koala/record-button";
 import { trpc } from "@/koala/trpc-config";
 
+type Card = {
+  term: string;
+  definition: string;
+  translationAudioUrl: string;
+  audioUrl: string;
+};
+
 const TranslationDisplay = ({
   translation,
+  // Not used yet - please auto play the audio.
+  translationAudioUrl,
 }: {
-  text: string;
   translation: string;
+  translationAudioUrl: string;
 }) => (
   <div>
     <h2>Translation</h2>
@@ -39,9 +48,7 @@ const RecordingControls = ({
 
   return (
     <div>
-      <button onClick={handleClick}>
-        {message}
-      </button>
+      <button onClick={handleClick}>{message}</button>
       <p>{successfulAttempts} of 3 attempts OK</p>
     </div>
   );
@@ -53,7 +60,7 @@ export const SentenceQuiz = ({
   onNextSentence,
   setErrorMessage,
 }: {
-  card: { term: string; definition: string; audioUrl: string };
+  card: Card;
   onNextSentence: () => void;
   setErrorMessage: (error: string) => void;
 }) => {
@@ -127,7 +134,10 @@ export const SentenceQuiz = ({
     return (
       <div>
         <button onClick={onNextSentence}>Next Sentence</button>
-        <TranslationDisplay text={card.term} translation={card.definition} />
+        <TranslationDisplay
+          translation={card.definition}
+          translationAudioUrl={card.translationAudioUrl}
+        />
       </div>
     );
   }
@@ -143,11 +153,6 @@ export const SentenceQuiz = ({
       {successfulAttempts < 3 && card.term}
     </div>
   );
-};
-type Card = {
-  term: string;
-  definition: string;
-  audioUrl: string;
 };
 
 export default function Mirror() {

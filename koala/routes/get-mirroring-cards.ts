@@ -13,6 +13,7 @@ export const getMirrorCards = procedure
         term: z.string(),
         definition: z.string(),
         audioUrl: z.string(),
+        translationAudioUrl: z.string(),
         langCode: z.string(),
       }),
     ),
@@ -32,6 +33,10 @@ export const getMirrorCards = procedure
         term: card.term,
         definition: card.definition,
         langCode: card.langCode,
+        translationAudioUrl: await generateLessonAudio({
+          card,
+          lessonType: "speaking",
+        }),
         audioUrl: await generateLessonAudio({
           card,
           lessonType: "listening",
