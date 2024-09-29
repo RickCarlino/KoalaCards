@@ -5,46 +5,25 @@ import { blobToBase64, convertBlobToWav } from "@/koala/record-button";
 import { trpc } from "@/koala/trpc-config";
 
 // List of target sentences
-const TARGET_SENTENCES = ["사람들이 한국말로 말해요.", "한국어로 말해주세요."];
-const TARGET_SENTENCE = TARGET_SENTENCES[0]; // Current target sentence
+const TARGET_SENTENCES = [
+  "사람들이 한국말로 말해요.",
+  "한국어로 말해주세요.",
+  // Add more sentences as needed
+];
 
 // Component to display the translation
 const TranslationDisplay = ({
-  text,
-  setError,
+  // text,
+  translation,
 }: {
   text: string;
-  setError: (error: string) => void;
-}) => {
-  const [translation, setTranslation] = useState<string | null>(null);
-  const translateText = trpc.translateText.useMutation();
-
-  useEffect(() => {
-    const fetchTranslation = async () => {
-      try {
-        const { result: translatedText } = await translateText.mutateAsync({
-          text,
-          lang: "ko",
-        });
-        setTranslation(translatedText);
-      } catch (err) {
-        setError("Failed to fetch translation.");
-      }
-    };
-    fetchTranslation();
-  }, [text]);
-
-  if (!translation) {
-    return <div>Loading translation...</div>;
-  }
-
-  return (
-    <div>
-      <h2>Translation</h2>
-      <p>{translation}</p>
-    </div>
-  );
-};
+  translation: string;
+}) => (
+  <div>
+    <h2>Translation</h2>
+    <p>{translation}</p>
+  </div>
+);
 
 // Component to handle recording controls
 const RecordingControls = ({
@@ -70,26 +49,43 @@ const RecordingControls = ({
   </div>
 );
 
-export default function Mirror() {
+// Component to handle quizzing for a single sentence
+export const SentenceQuiz = ({
+  term,
+  onNextSentence,
+  setErrorMessage,
+}: {
+  term: { term: string; definition: string };
+  onNextSentence: () => void;
+  setErrorMessage: (error: string) => void;
+}) => {
   // State variables
   const [successfulAttempts, setSuccessfulAttempts] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessingRecording, setIsProcessingRecording] = useState(false);
   const [hasCompletedAttempts, setHasCompletedAttempts] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [targetAudioUrl, setTargetAudioUrl] = useState<string | null>(null);
 
   // TRPC mutations
   const transcribeAudio = trpc.transcribeAudio.useMutation();
   const speakText = trpc.speakText.useMutation();
 
-  // Fetch target audio on component mount
+  // Reset state variables when the term changes
+  useEffect(() => {
+    setSuccessfulAttempts(0);
+    setIsRecording(false);
+    setIsProcessingRecording(false);
+    setHasCompletedAttempts(false);
+    setTargetAudioUrl(null);
+  }, [term.term]);
+
+  // Fetch target audio when the component mounts or when the term changes
   useEffect(() => {
     const fetchTargetAudio = async () => {
       try {
         const { url: audioUrl } = await speakText.mutateAsync({
           lang: "ko",
-          text: TARGET_SENTENCE,
+          text: term.term,
         });
         setTargetAudioUrl(audioUrl);
       } catch (err) {
@@ -97,7 +93,7 @@ export default function Mirror() {
       }
     };
     fetchTargetAudio();
-  }, []);
+  }, [term.term]);
 
   // Handle the result after recording is finished
   const handleRecordingResult = async (audioBlob: Blob) => {
@@ -111,11 +107,11 @@ export default function Mirror() {
       const { result: transcription } = await transcribeAudio.mutateAsync({
         audio: base64Audio,
         lang: "ko",
-        targetText: TARGET_SENTENCE,
+        targetText: term.term,
       });
 
       // Compare the transcription with the target sentence
-      if (transcription.trim() === TARGET_SENTENCE.trim()) {
+      if (transcription.trim() === term.term.trim()) {
         setSuccessfulAttempts((prev) => prev + 1);
       }
     } catch (err) {
@@ -153,14 +149,11 @@ export default function Mirror() {
     }
   };
 
-  if (errorMessage) {
-    return <div>Error: {errorMessage}</div>;
-  }
-
   if (hasCompletedAttempts) {
     return (
       <div>
-        <TranslationDisplay text={TARGET_SENTENCE} setError={setErrorMessage} />
+        <button onClick={onNextSentence}>Next Sentence</button>
+        <TranslationDisplay text={term.term} translation={term.definition} />
       </div>
     );
   }
@@ -174,5 +167,65 @@ export default function Mirror() {
         handleClick={handleClick}
       />
     </div>
+  );
+};
+
+export default function Mirror() {
+  // State variables
+  const [terms, setTerms] = useState<{ term: string; definition: string }[]>(
+    [],
+  );
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // TRPC mutation
+  const translateText = trpc.translateText.useMutation();
+
+  // Fetch translations for all sentences
+  useEffect(() => {
+    const translateSentences = async () => {
+      try {
+        const translatedTerms = await Promise.all(
+          TARGET_SENTENCES.map(async (sentence) => {
+            const { result: translation } = await translateText.mutateAsync({
+              text: sentence,
+              lang: "ko",
+            });
+            return { term: sentence, definition: translation };
+          }),
+        );
+        setTerms(translatedTerms);
+      } catch (err) {
+        setErrorMessage("Failed to translate sentences.");
+      }
+    };
+    translateSentences();
+  }, []);
+
+  if (errorMessage) {
+    return <div>Error: {errorMessage}</div>;
+  }
+
+  if (terms.length === 0) {
+    return <div>Loading sentences...</div>;
+  }
+
+  if (currentIndex >= terms.length) {
+    return (
+      <div>
+        <button onClick={() => setCurrentIndex(0)}>Start Over</button>
+        <p>All sentences completed!</p>
+      </div>
+    );
+  }
+
+  const currentTerm = terms[currentIndex];
+
+  return (
+    <SentenceQuiz
+      term={currentTerm}
+      onNextSentence={() => setCurrentIndex(currentIndex + 1)}
+      setErrorMessage={setErrorMessage}
+    />
   );
 }
