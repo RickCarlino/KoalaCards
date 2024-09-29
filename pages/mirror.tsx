@@ -4,18 +4,7 @@ import { playAudio } from "@/koala/play-audio";
 import { blobToBase64, convertBlobToWav } from "@/koala/record-button";
 import { trpc } from "@/koala/trpc-config";
 
-// List of target sentences
-const TARGET_SENTENCES = [
-  "사람들이 한국말로 말해요.",
-  "한국어로 말해주세요.",
-  // Add more sentences as needed
-];
-
-// Component to display the translation
-const TranslationDisplay = ({
-  // text,
-  translation,
-}: {
+const TranslationDisplay = ({ translation}: {
   text: string;
   translation: string;
 }) => (
@@ -51,11 +40,11 @@ const RecordingControls = ({
 
 // Component to handle quizzing for a single sentence
 export const SentenceQuiz = ({
-  term,
+  card,
   onNextSentence,
   setErrorMessage,
 }: {
-  term: { term: string; definition: string };
+  card: { term: string; definition: string; audioUrl: string };
   onNextSentence: () => void;
   setErrorMessage: (error: string) => void;
 }) => {
@@ -64,11 +53,9 @@ export const SentenceQuiz = ({
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessingRecording, setIsProcessingRecording] = useState(false);
   const [hasCompletedAttempts, setHasCompletedAttempts] = useState(false);
-  const [targetAudioUrl, setTargetAudioUrl] = useState<string | null>(null);
 
   // TRPC mutations
   const transcribeAudio = trpc.transcribeAudio.useMutation();
-  const speakText = trpc.speakText.useMutation();
 
   // Reset state variables when the term changes
   useEffect(() => {
@@ -76,24 +63,7 @@ export const SentenceQuiz = ({
     setIsRecording(false);
     setIsProcessingRecording(false);
     setHasCompletedAttempts(false);
-    setTargetAudioUrl(null);
-  }, [term.term]);
-
-  // Fetch target audio when the component mounts or when the term changes
-  useEffect(() => {
-    const fetchTargetAudio = async () => {
-      try {
-        const { url: audioUrl } = await speakText.mutateAsync({
-          lang: "ko",
-          text: term.term,
-        });
-        setTargetAudioUrl(audioUrl);
-      } catch (err) {
-        setErrorMessage("Failed to fetch target audio.");
-      }
-    };
-    fetchTargetAudio();
-  }, [term.term]);
+  }, [card.term]);
 
   // Handle the result after recording is finished
   const handleRecordingResult = async (audioBlob: Blob) => {
@@ -107,11 +77,11 @@ export const SentenceQuiz = ({
       const { result: transcription } = await transcribeAudio.mutateAsync({
         audio: base64Audio,
         lang: "ko",
-        targetText: term.term,
+        targetText: card.term,
       });
 
       // Compare the transcription with the target sentence
-      if (transcription.trim() === term.term.trim()) {
+      if (transcription.trim() === card.term.trim()) {
         setSuccessfulAttempts((prev) => prev + 1);
       }
     } catch (err) {
@@ -137,12 +107,7 @@ export const SentenceQuiz = ({
       voiceRecorder.stop();
       setIsRecording(false);
     } else {
-      // Play the target audio
-      if (targetAudioUrl) {
-        playAudio(targetAudioUrl);
-      } else {
-        setErrorMessage("Target audio is not available.");
-      }
+      playAudio(card.audioUrl);
       // Start recording
       setIsRecording(true);
       voiceRecorder.start();
@@ -153,7 +118,7 @@ export const SentenceQuiz = ({
     return (
       <div>
         <button onClick={onNextSentence}>Next Sentence</button>
-        <TranslationDisplay text={term.term} translation={term.definition} />
+        <TranslationDisplay text={card.term} translation={card.definition} />
       </div>
     );
   }
@@ -169,37 +134,30 @@ export const SentenceQuiz = ({
     </div>
   );
 };
+type Card = {
+  term: string;
+  definition: string;
+  audioUrl: string;
+};
 
 export default function Mirror() {
   // State variables
-  const [terms, setTerms] = useState<{ term: string; definition: string }[]>(
-    [],
-  );
+  const [terms, setTerms] = useState<Card[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // TRPC mutation
-  const translateText = trpc.translateText.useMutation();
-
+  const getMirrorCards = trpc.getMirrorCards.useMutation({});
   // Fetch translations for all sentences
   useEffect(() => {
-    const translateSentences = async () => {
+    const getSentences = async () => {
       try {
-        const translatedTerms = await Promise.all(
-          TARGET_SENTENCES.map(async (sentence) => {
-            const { result: translation } = await translateText.mutateAsync({
-              text: sentence,
-              lang: "ko",
-            });
-            return { term: sentence, definition: translation };
-          }),
-        );
+        const translatedTerms = await getMirrorCards.mutateAsync({});
         setTerms(translatedTerms);
       } catch (err) {
         setErrorMessage("Failed to translate sentences.");
       }
     };
-    translateSentences();
+    getSentences();
   }, []);
 
   if (errorMessage) {
@@ -223,7 +181,7 @@ export default function Mirror() {
 
   return (
     <SentenceQuiz
-      term={currentTerm}
+      card={currentTerm}
       onNextSentence={() => setCurrentIndex(currentIndex + 1)}
       setErrorMessage={setErrorMessage}
     />
