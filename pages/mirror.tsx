@@ -1,24 +1,89 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useVoiceRecorder } from "@/koala/use-recorder";
 import { playAudio } from "@/koala/play-audio";
 import { blobToBase64, convertBlobToWav } from "@/koala/record-button";
 import { trpc } from "@/koala/trpc-config";
 
+// List of target sentences
 const TARGET_SENTENCES = ["사람들이 한국말로 말해요.", "한국어로 말해주세요."];
-const TARGET_SENTENCE = TARGET_SENTENCES[0]; // Just an example
+const TARGET_SENTENCE = TARGET_SENTENCES[0]; // Current target sentence
+
+// Component to display the translation
+const TranslationDisplay = ({
+  text,
+  setError,
+}: {
+  text: string;
+  setError: (error: string) => void;
+}) => {
+  const [translation, setTranslation] = useState<string | null>(null);
+  const translateText = trpc.translateText.useMutation();
+
+  useEffect(() => {
+    const fetchTranslation = async () => {
+      try {
+        const { result: translatedText } = await translateText.mutateAsync({
+          text,
+          lang: "ko",
+        });
+        setTranslation(translatedText);
+      } catch (err) {
+        setError("Failed to fetch translation.");
+      }
+    };
+    fetchTranslation();
+  }, [text]);
+
+  if (!translation) {
+    return <div>Loading translation...</div>;
+  }
+
+  return (
+    <div>
+      <h2>Translation</h2>
+      <p>{translation}</p>
+    </div>
+  );
+};
+
+// Component to handle recording controls
+const RecordingControls = ({
+  isRecording,
+  isProcessing,
+  successfulAttempts,
+  handleClick,
+}: {
+  isRecording: boolean;
+  isProcessing: boolean;
+  successfulAttempts: number;
+  handleClick: () => void;
+}) => (
+  <div>
+    <button onClick={handleClick} disabled={isProcessing}>
+      {isRecording
+        ? "Stop Recording"
+        : successfulAttempts >= 3
+        ? "GOOD JOB! Click here to see the translation."
+        : "Start Recording"}
+    </button>
+    <p>{successfulAttempts} of 3 attempts OK</p>
+  </div>
+);
 
 export default function Mirror() {
-  const [attempts, setAttempts] = useState(0);
+  // State variables
+  const [successfulAttempts, setSuccessfulAttempts] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [showTranslation, setShowTranslation] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isProcessingRecording, setIsProcessingRecording] = useState(false);
+  const [hasCompletedAttempts, setHasCompletedAttempts] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [targetAudioUrl, setTargetAudioUrl] = useState<string | null>(null);
 
+  // TRPC mutations
   const transcribeAudio = trpc.transcribeAudio.useMutation();
-  const translateText = trpc.translateText.useMutation();
   const speakText = trpc.speakText.useMutation();
 
+  // Fetch target audio on component mount
   useEffect(() => {
     const fetchTargetAudio = async () => {
       try {
@@ -28,16 +93,17 @@ export default function Mirror() {
         });
         setTargetAudioUrl(audioUrl);
       } catch (err) {
-        setError("Failed to fetch target audio.");
+        setErrorMessage("Failed to fetch target audio.");
       }
     };
     fetchTargetAudio();
   }, []);
 
+  // Handle the result after recording is finished
   const handleRecordingResult = async (audioBlob: Blob) => {
-    setIsProcessing(true);
+    setIsProcessingRecording(true);
     try {
-      // Convert blob to base64 WAV format
+      // Convert the recorded audio blob to WAV and then to base64
       const wavBlob = await convertBlobToWav(audioBlob);
       const base64Audio = await blobToBase64(wavBlob);
 
@@ -48,95 +114,65 @@ export default function Mirror() {
         targetText: TARGET_SENTENCE,
       });
 
-      console.log("Transcription:", transcription);
-      console.log("Target sentence:", TARGET_SENTENCE);
-      // Compare transcription with target sentence
+      // Compare the transcription with the target sentence
       if (transcription.trim() === TARGET_SENTENCE.trim()) {
-        setAttempts((prev) => prev + 1);
+        setSuccessfulAttempts((prev) => prev + 1);
       }
     } catch (err) {
-      setError("Error processing the recording.");
+      setErrorMessage("Error processing the recording.");
     } finally {
-      setIsProcessing(false);
+      setIsProcessingRecording(false);
     }
   };
 
-  const vr = useVoiceRecorder(handleRecordingResult);
+  // Voice recorder hook
+  const voiceRecorder = useVoiceRecorder(handleRecordingResult);
 
+  // Handle button click
   const handleClick = async () => {
-    if (attempts >= 3) {
-      // User has completed the task
-      setShowTranslation(true);
+    if (successfulAttempts >= 3) {
+      // User has completed the required number of attempts
+      setHasCompletedAttempts(true);
       return;
     }
 
     if (isRecording) {
       // Stop recording
-      vr.stop();
+      voiceRecorder.stop();
       setIsRecording(false);
     } else {
-      // Play the target audio (don't wait for it to finish)
+      // Play the target audio
       if (targetAudioUrl) {
         playAudio(targetAudioUrl);
       } else {
-        setError("Target audio is not available.");
+        setErrorMessage("Target audio is not available.");
       }
+      // Start recording
       setIsRecording(true);
-      vr.start();
+      voiceRecorder.start();
     }
   };
 
-  const TranslationDisplay = () => {
-    const [translation, setTranslation] = useState<string | null>(null);
+  if (errorMessage) {
+    return <div>Error: {errorMessage}</div>;
+  }
 
-    useEffect(() => {
-      const fetchTranslation = async () => {
-        try {
-          const { result: translatedText } = await translateText.mutateAsync({
-            text: TARGET_SENTENCE,
-            lang: "ko",
-          });
-          setTranslation(translatedText);
-        } catch (err) {
-          setError("Failed to fetch translation.");
-        }
-      };
-      fetchTranslation();
-    }, []);
-
-    if (error) {
-      return <div>Error: {error}</div>;
-    }
-
-    if (!translation) {
-      return <div>Loading translation...</div>;
-    }
-
+  if (hasCompletedAttempts) {
     return (
       <div>
-        <h2>Translation</h2>
-        <p>{translation}</p>
+        <TranslationDisplay text={TARGET_SENTENCE} setError={setErrorMessage} />
       </div>
     );
-  };
+  }
 
   return (
     <div>
-      {error && <div>Recording error: {error}</div>}
-      {showTranslation ? (
-        <TranslationDisplay />
-      ) : (
-        <div>
-          <button onClick={handleClick} disabled={isProcessing}>
-            {isRecording
-              ? "Stop Recording"
-              : attempts >= 3
-              ? "GOOD JOB! Click here to see the translation."
-              : "Start Recording"}
-          </button>
-          <p>{attempts} of 3 attempts OK</p>
-        </div>
-      )}
+      <RecordingControls
+        isRecording={isRecording}
+        isProcessing={isProcessingRecording}
+        successfulAttempts={successfulAttempts}
+        handleClick={handleClick}
+      />
     </div>
   );
 }
