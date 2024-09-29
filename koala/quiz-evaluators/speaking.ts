@@ -1,6 +1,5 @@
 import {
   Explanation,
-  grammarCorrection,
   testEquivalence,
   translateToEnglish,
 } from "@/koala/openai";
@@ -8,6 +7,7 @@ import { QuizEvaluator, QuizEvaluatorOutput } from "./types";
 import { strip } from "./evaluator-utils";
 import { captureTrainingData } from "./capture-training-data";
 import { prismaClient } from "../prisma-client";
+import { grammarCorrection } from "../grammar";
 
 const doGrade = async (
   userInput: string,
@@ -63,7 +63,7 @@ function gradeWithGrammarCorrection(i: X, what: 1 | 2): QuizEvaluatorOutput {
   } else {
     return {
       result: "fail",
-      userMessage: `Correct, but say "${i.correction}" instead of "${i.userInput}" (${what}).`,
+      userMessage: `Say "${i.correction}" instead of "${i.userInput}" (${what}).`,
     };
   }
 }

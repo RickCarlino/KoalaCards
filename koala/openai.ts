@@ -2,8 +2,6 @@ import OpenAI from "openai";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources";
 import { errorReport } from "./error-report";
 import { YesNo } from "./shared-types";
-import { z } from "zod";
-import { zodResponseFormat } from "openai/helpers/zod";
 
 const apiKey = process.env.OPENAI_API_KEY;
 
@@ -49,18 +47,6 @@ const SIMPLE_YES_OR_NO = {
   description: "Answer a yes or no question.",
 };
 
-const zodYesOrNo = z.object({
-  response: z.union([
-    z.object({
-      userWasCorrect: z.literal(true),
-    }),
-    z.object({
-      userWasCorrect: z.literal(false),
-      correctedSentence: z.string(),
-    }),
-  ]),
-});
-
 export type Explanation = { response: YesNo; whyNot?: string };
 
 export const testEquivalence = async (
@@ -95,49 +81,6 @@ export const testEquivalence = async (
     resp?.choices?.[0]?.message?.tool_calls?.[0].function.arguments || "{}";
   const raw: any = JSON.parse(jsonString);
   return raw.response as YesNo;
-};
-
-type GrammarCorrrectionProps = {
-  term: string;
-  definition: string;
-  langCode: string;
-  userInput: string;
-};
-
-export const grammarCorrection = async (
-  props: GrammarCorrrectionProps,
-): Promise<string | undefined> => {
-  // Latest snapshot that supports Structured Outputs
-  // TODO: Get on mainline 4o when it supports Structured Outputs
-  const model = "gpt-4o-2024-08-06";
-  const { userInput } = props;
-  const prompt = [
-    `I want to say '${props.definition}' in language: ${props.langCode}.`,
-    `Is '${userInput}' OK?`,
-    `Correct awkwardness or major grammatical issues, if any.`,
-  ].join("\n");
-
-  const resp = await openai.beta.chat.completions.parse({
-    messages: [
-      {
-        role: "user",
-        content: prompt,
-      },
-    ],
-    model,
-    max_tokens: 150,
-    top_p: 1,
-    frequency_penalty: 0,
-    stop: ["\n"],
-    temperature: 0.2,
-    response_format: zodResponseFormat(zodYesOrNo, "correct_sentence"),
-  });
-  const correct_sentence = resp.choices[0].message.parsed;
-  if (correct_sentence) {
-    if (!correct_sentence.response.userWasCorrect) {
-      return correct_sentence.response.correctedSentence;
-    }
-  }
 };
 
 export const translateToEnglish = async (content: string, langCode: string) => {
