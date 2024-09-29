@@ -26,7 +26,7 @@ export const getMirrorCards = procedure
     });
     // Order by length of 'term' field:
     cards.sort((a, b) => b.term.length - a.term.length);
-    const shortList = shuffle(cards.slice(0, 100)).slice(0, 10);
+    const shortList = shuffle(cards.slice(0, 100)).slice(0, 5);
     return await map(shortList, async (card) => {
       return {
         id: card.id,

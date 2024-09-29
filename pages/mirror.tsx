@@ -11,29 +11,17 @@ type Card = {
   audioUrl: string;
 };
 
-const TranslationDisplay = ({
-  translation,
-  // Not used yet - please auto play the audio.
-  translationAudioUrl,
-}: {
-  translation: string;
-  translationAudioUrl: string;
-}) => (
-  <div>
-    <h2>Translation</h2>
-    <p>{translation}</p>
-  </div>
-);
-
-// Component to handle recording controls
 const RecordingControls = ({
   isRecording,
   successfulAttempts,
+  failedAttempts,
+  isProcessingRecording,
   handleClick,
 }: {
   isRecording: boolean;
-  isProcessing: boolean;
   successfulAttempts: number;
+  failedAttempts: number;
+  isProcessingRecording: boolean;
   handleClick: () => void;
 }) => {
   let message: string;
@@ -42,14 +30,16 @@ const RecordingControls = ({
   } else {
     message = "Start recording";
   }
-  if (successfulAttempts >= 3) {
-    message = "Next";
-  }
 
   return (
     <div>
-      <button onClick={handleClick}>{message}</button>
-      <p>{successfulAttempts} of 3 attempts OK</p>
+      <button onClick={handleClick} disabled={successfulAttempts >= 3}>
+        {message}
+      </button>
+      <p>{successfulAttempts} repetitions correct.</p>
+      <p>{isProcessingRecording ? 1 : 0} repetitions awaiting grade.</p>
+      <p>{failedAttempts} repetitions failed.</p>
+      <p>{3 - successfulAttempts} repetitions left.</p>
     </div>
   );
 };
@@ -57,18 +47,18 @@ const RecordingControls = ({
 // Component to handle quizzing for a single sentence
 export const SentenceQuiz = ({
   card,
-  onNextSentence,
   setErrorMessage,
+  onCardCompleted,
 }: {
   card: Card;
-  onNextSentence: () => void;
   setErrorMessage: (error: string) => void;
+  onCardCompleted: () => void;
 }) => {
   // State variables
   const [successfulAttempts, setSuccessfulAttempts] = useState(0);
+  const [failedAttempts, setFailedAttempts] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessingRecording, setIsProcessingRecording] = useState(false);
-  const [hasCompletedAttempts, setHasCompletedAttempts] = useState(false);
 
   // TRPC mutations
   const transcribeAudio = trpc.transcribeAudio.useMutation();
@@ -76,9 +66,9 @@ export const SentenceQuiz = ({
   // Reset state variables when the term changes
   useEffect(() => {
     setSuccessfulAttempts(0);
+    setFailedAttempts(0);
     setIsRecording(false);
     setIsProcessingRecording(false);
-    setHasCompletedAttempts(false);
   }, [card.term]);
 
   // Handle the result after recording is finished
@@ -99,6 +89,8 @@ export const SentenceQuiz = ({
       // Compare the transcription with the target sentence
       if (transcription.trim() === card.term.trim()) {
         setSuccessfulAttempts((prev) => prev + 1);
+      } else {
+        setFailedAttempts((prev) => prev + 1);
       }
     } catch (err) {
       setErrorMessage("Error processing the recording.");
@@ -113,8 +105,7 @@ export const SentenceQuiz = ({
   // Handle button click
   const handleClick = async () => {
     if (successfulAttempts >= 3) {
-      // User has completed the required number of attempts
-      setHasCompletedAttempts(true);
+      // Do nothing if already completed
       return;
     }
 
@@ -130,27 +121,27 @@ export const SentenceQuiz = ({
     }
   };
 
-  if (hasCompletedAttempts) {
-    return (
-      <div>
-        <button onClick={onNextSentence}>Next Sentence</button>
-        <TranslationDisplay
-          translation={card.definition}
-          translationAudioUrl={card.translationAudioUrl}
-        />
-      </div>
-    );
-  }
+  // Effect to handle successful completion
+  useEffect(() => {
+    if (successfulAttempts >= 3) {
+      // Play the translation audio
+      playAudio(card.translationAudioUrl).then(() => {
+        // After audio finishes, proceed to next sentence
+        onCardCompleted();
+      });
+    }
+  }, [successfulAttempts]);
 
   return (
     <div>
       <RecordingControls
         isRecording={isRecording}
-        isProcessing={isProcessingRecording}
+        isProcessingRecording={isProcessingRecording}
         successfulAttempts={successfulAttempts}
+        failedAttempts={failedAttempts}
         handleClick={handleClick}
       />
-      {successfulAttempts < 3 && card.term}
+      {successfulAttempts < 3 && <p>{card.term}</p>}
     </div>
   );
 };
@@ -163,17 +154,31 @@ export default function Mirror() {
 
   const getMirrorCards = trpc.getMirrorCards.useMutation({});
   // Fetch translations for all sentences
+  const fetchCards = async () => {
+    try {
+      const translatedTerms = await getMirrorCards.mutateAsync({});
+      setTerms(translatedTerms);
+      setCurrentIndex(0);
+    } catch (err) {
+      setErrorMessage("Failed to fetch sentences.");
+    }
+  };
+
   useEffect(() => {
-    const getSentences = async () => {
-      try {
-        const translatedTerms = await getMirrorCards.mutateAsync({});
-        setTerms(translatedTerms);
-      } catch (err) {
-        setErrorMessage("Failed to translate sentences.");
-      }
-    };
-    getSentences();
+    fetchCards();
   }, []);
+
+  const handleCardCompleted = () => {
+    setCurrentIndex((prevIndex) => prevIndex + 1);
+  };
+
+  // When the list is emptied, re-fetch more cards from the server
+  useEffect(() => {
+    if (currentIndex >= terms.length) {
+      // Re-fetch more cards from the server
+      fetchCards();
+    }
+  }, [currentIndex, terms.length]);
 
   if (errorMessage) {
     return <div>Error: {errorMessage}</div>;
@@ -183,21 +188,12 @@ export default function Mirror() {
     return <div>Loading sentences...</div>;
   }
 
-  if (currentIndex >= terms.length) {
-    return (
-      <div>
-        <button onClick={() => setCurrentIndex(0)}>Start Over</button>
-        <p>All sentences completed!</p>
-      </div>
-    );
-  }
-
   const currentTerm = terms[currentIndex];
 
   return (
     <SentenceQuiz
       card={currentTerm}
-      onNextSentence={() => setCurrentIndex(currentIndex + 1)}
+      onCardCompleted={handleCardCompleted}
       setErrorMessage={setErrorMessage}
     />
   );
