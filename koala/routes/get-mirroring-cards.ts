@@ -2,7 +2,7 @@ import { z } from "zod";
 import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc-procedure";
 import { generateLessonAudio } from "../speech";
-import { map } from "radash";
+import { map, shuffle } from "radash";
 
 export const getMirrorCards = procedure
   .input(z.object({}))
@@ -24,8 +24,9 @@ export const getMirrorCards = procedure
       take: 200,
     });
     // Order by length of 'term' field:
-    cards.sort((a, b) => a.term.length - b.term.length);
-    return await map(cards.slice(0, 50), async (card) => {
+    cards.sort((a, b) => b.term.length - a.term.length);
+    const shortList = shuffle(cards.slice(0, 100)).slice(0, 10);
+    return await map(shortList, async (card) => {
       return {
         id: card.id,
         term: card.term,

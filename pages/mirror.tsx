@@ -4,7 +4,9 @@ import { playAudio } from "@/koala/play-audio";
 import { blobToBase64, convertBlobToWav } from "@/koala/record-button";
 import { trpc } from "@/koala/trpc-config";
 
-const TranslationDisplay = ({ translation}: {
+const TranslationDisplay = ({
+  translation,
+}: {
   text: string;
   translation: string;
 }) => (
@@ -17,7 +19,6 @@ const TranslationDisplay = ({ translation}: {
 // Component to handle recording controls
 const RecordingControls = ({
   isRecording,
-  isProcessing,
   successfulAttempts,
   handleClick,
 }: {
@@ -25,18 +26,26 @@ const RecordingControls = ({
   isProcessing: boolean;
   successfulAttempts: number;
   handleClick: () => void;
-}) => (
-  <div>
-    <button onClick={handleClick} disabled={isProcessing}>
-      {isRecording
-        ? "Stop Recording"
-        : successfulAttempts >= 3
-        ? "GOOD JOB! Click here to see the translation."
-        : "Start Recording"}
-    </button>
-    <p>{successfulAttempts} of 3 attempts OK</p>
-  </div>
-);
+}) => {
+  let message: string;
+  if (isRecording) {
+    message = "Recording...";
+  } else {
+    message = "Start recording";
+  }
+  if (successfulAttempts >= 3) {
+    message = "Next";
+  }
+
+  return (
+    <div>
+      <button onClick={handleClick}>
+        {message}
+      </button>
+      <p>{successfulAttempts} of 3 attempts OK</p>
+    </div>
+  );
+};
 
 // Component to handle quizzing for a single sentence
 export const SentenceQuiz = ({
@@ -131,6 +140,7 @@ export const SentenceQuiz = ({
         successfulAttempts={successfulAttempts}
         handleClick={handleClick}
       />
+      {successfulAttempts < 3 && card.term}
     </div>
   );
 };
