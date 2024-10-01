@@ -21,7 +21,7 @@ export const getMirrorCards = procedure
   .mutation(async ({ ctx }) => {
     const cards = await prismaClient.card.findMany({
       where: { userId: ctx.user?.id || "000", flagged: false },
-      orderBy: [{ createdAt: "desc" }],
+      orderBy: [{ mirrorRepetitionCount: "asc" }],
       take: 200,
     });
     // Order by length of 'term' field:

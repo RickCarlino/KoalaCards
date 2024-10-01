@@ -3,6 +3,7 @@ import { useVoiceRecorder } from "@/koala/use-recorder";
 import { playAudio } from "@/koala/play-audio";
 import { blobToBase64, convertBlobToWav } from "@/koala/record-button";
 import { trpc } from "@/koala/trpc-config";
+import { useHotkeys } from "@mantine/hooks";
 
 type Card = {
   term: string;
@@ -63,6 +64,31 @@ export const SentenceQuiz = ({
   // TRPC mutations
   const transcribeAudio = trpc.transcribeAudio.useMutation();
 
+  // Voice recorder hook
+  const voiceRecorder = useVoiceRecorder(handleRecordingResult);
+
+  // Handle button click
+  const handleClick = async () => {
+    if (successfulAttempts >= 3) {
+      // Do nothing if already completed
+      return;
+    }
+
+    if (isRecording) {
+      // Stop recording
+      voiceRecorder.stop();
+      setIsRecording(false);
+    } else {
+      playAudio(card.audioUrl);
+      // Start recording
+      setIsRecording(true);
+      voiceRecorder.start();
+    }
+  };
+
+  // Use hotkeys to trigger handleClick on space bar press
+  useHotkeys([["space", handleClick]]);
+
   // Reset state variables when the term changes
   useEffect(() => {
     setSuccessfulAttempts(0);
@@ -72,7 +98,7 @@ export const SentenceQuiz = ({
   }, [card.term]);
 
   // Handle the result after recording is finished
-  const handleRecordingResult = async (audioBlob: Blob) => {
+  async function handleRecordingResult(audioBlob: Blob) {
     setIsProcessingRecording(true);
     try {
       // Convert the recorded audio blob to WAV and then to base64
@@ -97,29 +123,7 @@ export const SentenceQuiz = ({
     } finally {
       setIsProcessingRecording(false);
     }
-  };
-
-  // Voice recorder hook
-  const voiceRecorder = useVoiceRecorder(handleRecordingResult);
-
-  // Handle button click
-  const handleClick = async () => {
-    if (successfulAttempts >= 3) {
-      // Do nothing if already completed
-      return;
-    }
-
-    if (isRecording) {
-      // Stop recording
-      voiceRecorder.stop();
-      setIsRecording(false);
-    } else {
-      playAudio(card.audioUrl);
-      // Start recording
-      setIsRecording(true);
-      voiceRecorder.start();
-    }
-  };
+  }
 
   // Effect to handle successful completion
   useEffect(() => {
@@ -141,7 +145,7 @@ export const SentenceQuiz = ({
         failedAttempts={failedAttempts}
         handleClick={handleClick}
       />
-      {successfulAttempts < 3 && <p>{card.term}</p>}
+      {successfulAttempts === 0 && <p>{card.term}</p>}
     </div>
   );
 };
