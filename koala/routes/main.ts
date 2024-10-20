@@ -8,6 +8,7 @@ import { exportCards } from "./export-cards";
 import { faucet } from "./faucet";
 import { flagCard } from "./flag-card";
 import { getAllCards } from "./get-all-cards";
+import { getMirrorCards } from "./get-mirroring-cards";
 import { getNextQuizzes } from "./get-next-quizzes";
 import { getOneCard } from "./get-one-card";
 import { getPlaybackAudio } from "./get-playback-audio";
@@ -47,6 +48,7 @@ export const appRouter = router({
   transcribeAudio,
   translateText,
   viewTrainingData,
+  getMirrorCards,
 });
 
 export type AppRouter = typeof appRouter;
