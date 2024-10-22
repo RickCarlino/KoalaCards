@@ -97,23 +97,3 @@ If the user wants to exit a session early, they can click "End Session," which w
 ## Editing Cards
 
 The user can edit the currently displayed card at any time. This is useful for fixing typos or making quick changes.
-
-## Quiz, As Sent from Server
-
-```typescript
-export type LessonType = "listening" | "speaking" | "dictation";
-
-export type Quiz = {
-  lessonType: LessonType;
-  definition: string;
-  term: string;
-  audio: string;
-  cardId: number;
-  lapses: number;
-  quizId: number;
-  repetitions: number;
-  langCode: string;
-  lastReview: number;
-  imageURL?: string;
-};
-```
