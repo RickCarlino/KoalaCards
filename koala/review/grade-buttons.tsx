@@ -20,7 +20,7 @@ export const DifficultyButtons: React.FC<DifficultyButtonsProps> = ({
           disabled={current === Grade[grade]}
           onClick={() => onSelectDifficulty(Grade[grade])}
         >
-          {grade}{current === Grade[grade] ? " (selected)" : ""}
+          {grade}
         </button>
       ))}
     </div>

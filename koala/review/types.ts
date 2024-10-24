@@ -24,7 +24,7 @@ export interface Props {
 
 export interface QuizProps {
   quiz: Quiz;
-  onComplete: () => void;
+  onComplete: (grade: Grade) => void;
 }
 
 export type QuizComp = React.FC<QuizProps>;
@@ -64,7 +64,7 @@ export interface ReviewState {
 export type Action =
   | { type: "LOAD_QUIZZES"; quizzes: Quiz[] }
   | { type: "SUBMIT_RESPONSE"; response: string }
-  | { type: "SELECT_DIFFICULTY"; grade: Grade }
+  | { type: "SET_GRADE"; grade: Grade }
   | { type: "GIVE_UP" }
   | { type: "FLAG_CARD" }
   | { type: "ADD_NOTE"; note: string }

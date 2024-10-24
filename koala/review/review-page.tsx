@@ -1,13 +1,20 @@
 import { quizReducer } from "@/koala/review/review-reducer";
-import { useEffect, useReducer } from "react";
-import { Props, Quiz, QuizComp, QuizProps } from "./types";
+import { Grade } from "femto-fsrs";
+import { useEffect, useReducer, useState } from "react";
 import { DifficultyButtons } from "./grade-buttons";
+import { Props, Quiz, QuizComp, QuizProps } from "./types";
 
-const UnknownQuiz: QuizComp = (_) => {
+const UnknownQuiz: QuizComp = (props) => {
+  const [currentGrade, setGrade] = useState<Grade>();
+  const hmm = (grade: Grade) => {
+    setGrade(grade);
+    props.onComplete(grade);
+  };
   return (
     <div>
       <h2>Unknown Quiz</h2>
-      <p>Will fill this out later.</p>
+      <p>{props.quiz.definition}</p>
+      <DifficultyButtons current={currentGrade} onSelectDifficulty={hmm} />
     </div>
   );
 };
@@ -37,19 +44,14 @@ export const ReviewPage = (props: Props) => {
     const LessonComponent = quizComponents[quiz.lessonType] || UnknownQuiz;
     const props: QuizProps = {
       quiz: currentQuizState.quiz,
-      onComplete() {
-        alert("TODO");
+      onComplete(grade) {
+        dispatch({ type: "SET_GRADE", grade });
+        dispatch({ type: "NEXT_QUIZ" });
       },
     };
     return (
       <div>
         <LessonComponent {...props} />
-        <DifficultyButtons
-          current={currentQuizState.grade}
-          onSelectDifficulty={(grade) => {
-            dispatch({ type: "SELECT_DIFFICULTY", grade });
-          }}
-        />
       </div>
     );
   } else {

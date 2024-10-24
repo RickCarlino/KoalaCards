@@ -28,7 +28,7 @@ export function quizReducer(state: ReviewState, action: Action): ReviewState {
         ),
       };
 
-    case "SELECT_DIFFICULTY":
+    case "SET_GRADE":
       const updatedQuizzes = state.quizzes.map((q, index) => {
         if (index === state.currentQuizIndex) {
           const isCompleted = q.response !== undefined;
@@ -172,8 +172,7 @@ export function quizReducer(state: ReviewState, action: Action): ReviewState {
       const nextIndex = state.currentQuizIndex + 1;
       return {
         ...state,
-        currentQuizIndex:
-          nextIndex < state.quizzes.length ? nextIndex : state.currentQuizIndex,
+        currentQuizIndex: nextIndex < state.quizzes.length ? nextIndex : state.quizzes.length,
       };
 
     case "PREVIOUS_QUIZ":
