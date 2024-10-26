@@ -193,11 +193,6 @@ export default async function getLessons(p: GetLessonInputParams) {
       quizType: q.repetitions ? q.quizType : "dictation",
     };
 
-    const audio = await generateLessonAudio({
-      card: quiz.Card,
-      lessonType: quiz.quizType as LessonType,
-      speed: 100,
-    });
     return {
       quizId: quiz.id,
       cardId: quiz.cardId,
@@ -206,8 +201,12 @@ export default async function getLessons(p: GetLessonInputParams) {
       repetitions: quiz.repetitions,
       lapses: quiz.lapses,
       lessonType: quiz.quizType as LessonType,
-      audio,
-      translationAudioUrl: await generateLessonAudio({
+      definitionAudio: await generateLessonAudio({
+        card: quiz.Card,
+        lessonType: "listening",
+        speed: 100,
+      }),
+      termAudio: await generateLessonAudio({
         card: quiz.Card,
         lessonType: "speaking",
       }),

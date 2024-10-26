@@ -11,8 +11,8 @@ export type Quiz = {
   quizId: number;
   cardId: number;
   lessonType: "listening" | "speaking" | "dictation";
-  audio: string;
-  translationAudioUrl: string;
+  definitionAudio: string;
+  termAudio: string;
   imageURL?: string | undefined;
 };
 

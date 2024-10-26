@@ -38,8 +38,8 @@ export const getOneCard = procedure
           repetitions: quiz.repetitions,
           lapses: quiz.lapses,
           lessonType: quiz.quizType as LessonType,
-          audio: "",
-          translationAudioUrl: "",
+          definitionAudio: "",
+          termAudio: "",
           langCode: card.langCode,
           lastReview: quiz.lastReview,
         };

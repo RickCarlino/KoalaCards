@@ -13,7 +13,7 @@ const UnknownQuiz: QuizComp = (props) => {
   };
   return (
     <div>
-      <h2>Unknown Quiz</h2>
+      <h2>Unknown Quiz ({props.quiz.lessonType})</h2>
       <p>{props.quiz.definition}</p>
       <DifficultyButtons current={currentGrade} onSelectDifficulty={hmm} />
     </div>
@@ -56,6 +56,11 @@ export const ReviewPage = (props: Props) => {
       </div>
     );
   } else {
-    return <div>TODO: Submit grades.</div>;
+    return (
+      <div>
+        TODO: Submit grades.
+        <pre>{JSON.stringify(state, null, 2)}</pre>
+      </div>
+    );
   }
 };

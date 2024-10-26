@@ -27,8 +27,7 @@ const NavBar = () => {
   };
 
   const links = [
-    { path: "/study", name: "Study" },
-    { path: "/review", name: "Studyv4" },
+    { path: "/review", name: "Review" },
     { path: "/create", name: "Add" },
     { path: "/cards", name: "Cards" },
     { path: "/user", name: "Settings" },

@@ -69,7 +69,7 @@ export const ListeningQuiz: QuizComp = (props) => {
       voiceRecorder.stop();
       setIsRecording(false);
     } else {
-      playAudio(card.audio);
+      playAudio(card.definitionAudio);
       // Start recording
       setIsRecording(true);
       voiceRecorder.start();
@@ -117,7 +117,7 @@ export const ListeningQuiz: QuizComp = (props) => {
   useEffect(() => {
     if (successfulAttempts >= 3) {
       // Play the translation audio
-      playAudio(card.translationAudioUrl).then(() => {
+      playAudio(card.termAudio).then(() => {
         props.onComplete(grade);
       });
     }

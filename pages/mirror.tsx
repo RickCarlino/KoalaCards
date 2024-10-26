@@ -8,7 +8,7 @@ import { useHotkeys } from "@mantine/hooks";
 type Card = {
   term: string;
   definition: string;
-  translationAudioUrl: string;
+  termAudio: string;
   audioUrl: string;
 };
 
@@ -129,7 +129,7 @@ export const SentenceQuiz = ({
   useEffect(() => {
     if (successfulAttempts >= 3) {
       // Play the translation audio
-      playAudio(card.translationAudioUrl).then(() => {
+      playAudio(card.termAudio).then(() => {
         // After audio finishes, proceed to next sentence
         onCardCompleted();
       });
