@@ -17,6 +17,7 @@ export const Quiz = z.object({
     z.literal("dictation"),
   ]),
   audio: z.string(),
+  translationAudioUrl: z.string(),
   langCode: z.string(),
   lastReview: z.number(),
   imageURL: z.string().optional(),

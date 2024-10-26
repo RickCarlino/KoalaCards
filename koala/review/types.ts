@@ -12,6 +12,7 @@ export type Quiz = {
   cardId: number;
   lessonType: "listening" | "speaking" | "dictation";
   audio: string;
+  translationAudioUrl: string;
   imageURL?: string | undefined;
 };
 

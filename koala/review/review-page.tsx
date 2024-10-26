@@ -3,6 +3,7 @@ import { Grade } from "femto-fsrs";
 import { useEffect, useReducer, useState } from "react";
 import { DifficultyButtons } from "./grade-buttons";
 import { Props, Quiz, QuizComp, QuizProps } from "./types";
+import { ListeningQuiz } from "./listening-quiz";
 
 const UnknownQuiz: QuizComp = (props) => {
   const [currentGrade, setGrade] = useState<Grade>();
@@ -21,9 +22,9 @@ const UnknownQuiz: QuizComp = (props) => {
 
 // Lookup table for quiz components
 const quizComponents: Record<Quiz["lessonType"], QuizComp> = {
-  listening: UnknownQuiz,
+  listening: ListeningQuiz,
   speaking: UnknownQuiz,
-  dictation: UnknownQuiz,
+  dictation: ListeningQuiz,
 };
 
 export const ReviewPage = (props: Props) => {

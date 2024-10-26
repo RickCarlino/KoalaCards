@@ -39,6 +39,7 @@ export const getOneCard = procedure
           lapses: quiz.lapses,
           lessonType: quiz.quizType as LessonType,
           audio: "",
+          translationAudioUrl: "",
           langCode: card.langCode,
           lastReview: quiz.lastReview,
         };

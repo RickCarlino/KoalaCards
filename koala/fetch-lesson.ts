@@ -207,6 +207,10 @@ export default async function getLessons(p: GetLessonInputParams) {
       lapses: quiz.lapses,
       lessonType: quiz.quizType as LessonType,
       audio,
+      translationAudioUrl: await generateLessonAudio({
+        card: quiz.Card,
+        lessonType: "speaking",
+      }),
       langCode: quiz.Card.langCode,
       lastReview: quiz.lastReview || 0,
       imageURL: await maybeGetCardImageUrl(quiz.Card.imageBlobId),
