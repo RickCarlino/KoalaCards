@@ -1,22 +1,29 @@
 import { quizReducer } from "@/koala/review/review-reducer";
 import { Grade } from "femto-fsrs";
 import { useEffect, useReducer, useState } from "react";
+import { Card, Title, Text, Stack, Image, Center } from "@mantine/core";
 import { DifficultyButtons } from "./grade-buttons";
 import { Props, Quiz, QuizComp, QuizProps } from "./types";
 import { ListeningQuiz } from "./listening-quiz";
+import { ReviewOver } from "./review-over";
 
 const UnknownQuiz: QuizComp = (props) => {
   const [currentGrade, setGrade] = useState<Grade>();
-  const hmm = (grade: Grade) => {
+  const handleGrade = (grade: Grade) => {
     setGrade(grade);
     props.onComplete(grade);
   };
   return (
-    <div>
-      <h2>Unknown Quiz ({props.quiz.lessonType})</h2>
-      <p>{props.quiz.definition}</p>
-      <DifficultyButtons current={currentGrade} onSelectDifficulty={hmm} />
-    </div>
+    <Card shadow="sm" padding="lg" radius="md" withBorder>
+      <Stack>
+        <Title order={2}>Unknown Quiz ({props.quiz.lessonType})</Title>
+        <Text>{props.quiz.definition}</Text>
+        <DifficultyButtons
+          current={currentGrade}
+          onSelectDifficulty={handleGrade}
+        />
+      </Stack>
+    </Card>
   );
 };
 
@@ -43,24 +50,29 @@ export const ReviewPage = (props: Props) => {
   if (currentQuizState) {
     const quiz = currentQuizState.quiz;
     const LessonComponent = quizComponents[quiz.lessonType] || UnknownQuiz;
-    const props: QuizProps = {
+    const quizProps: QuizProps = {
       quiz: currentQuizState.quiz,
       onComplete(grade) {
         dispatch({ type: "SET_GRADE", grade });
         dispatch({ type: "NEXT_QUIZ" });
       },
     };
+    const illustration = quiz.imageURL ? (
+      <Card.Section>
+        <Image src={quiz.imageURL} height={160} />
+      </Card.Section>
+    ) : null;
+
     return (
-      <div>
-        <LessonComponent {...props} />
-      </div>
+      // Center the content both vertically and horizontally
+      <Center style={{ width: "100%" }}>
+        <Card shadow="sm" padding="lg" radius="md" withBorder>
+          {illustration}
+          <LessonComponent {...quizProps} />
+        </Card>
+      </Center>
     );
   } else {
-    return (
-      <div>
-        TODO: Submit grades.
-        <pre>{JSON.stringify(state, null, 2)}</pre>
-      </div>
-    );
+    return <ReviewOver state={state.quizzes} />;
   }
 };

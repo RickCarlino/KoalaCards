@@ -45,11 +45,11 @@ type QuizStatus =
 // Define the state for each quiz in the session
 export interface QuizState {
   quiz: Quiz;
-  response?: any; // User's response (text, audio, etc.)
+  response?: string; // User's response (text, audio, etc.)
   grade?: Grade;
   status: QuizStatus;
   serverGradingResult?: "correct" | "incorrect" | "error";
-  serverResponse?: any; // Response from the server (e.g., transcription)
+  serverResponse?: string; // Response from the server (e.g., transcription)
   flagged: boolean;
   notes: string[];
 }

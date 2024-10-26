@@ -1,95 +1,55 @@
-import React, { useState, useEffect } from "react";
-import { useVoiceRecorder } from "@/koala/use-recorder";
 import { playAudio } from "@/koala/play-audio";
 import { blobToBase64, convertBlobToWav } from "@/koala/record-button";
 import { trpc } from "@/koala/trpc-config";
+import { useVoiceRecorder } from "@/koala/use-recorder";
+import { Button, Stack, Text } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
-import { QuizComp } from "./types";
 import { Grade } from "femto-fsrs";
+import { useEffect, useState } from "react";
 import { DifficultyButtons } from "./grade-buttons";
+import { QuizComp } from "./types";
 
-const RecordingControls = ({
-  isRecording,
-  successfulAttempts,
-  failedAttempts,
-  isProcessingRecording,
-  handleClick,
-}: {
-  isRecording: boolean;
-  successfulAttempts: number;
-  failedAttempts: number;
-  isProcessingRecording: boolean;
-  handleClick: () => void;
-}) => {
-  let message: string;
-  if (isRecording) {
-    message = "Recording...";
-  } else {
-    message = "Start recording";
-  }
-
-  return (
-    <div>
-      <button onClick={handleClick} disabled={successfulAttempts >= 3}>
-        {message}
-      </button>
-      <p>{successfulAttempts} repetitions correct.</p>
-      <p>{isProcessingRecording ? 1 : 0} repetitions awaiting grade.</p>
-      <p>{failedAttempts} repetitions failed.</p>
-      <p>{3 - successfulAttempts} repetitions left.</p>
-    </div>
-  );
-};
-
-// Component to handle quizzing for a single sentence
 export const ListeningQuiz: QuizComp = (props) => {
-  const card = props.quiz;
+  const { quiz: card } = props;
+
   // State variables
   const [successfulAttempts, setSuccessfulAttempts] = useState(0);
-  const [failedAttempts, setFailedAttempts] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
-  const [isProcessingRecording, setIsProcessingRecording] = useState(false);
-  const [grade, setGrade] = useState<Grade>(Grade.GOOD);
+  const [phase, setPhase] = useState<"play" | "record" | "done">("play");
 
-  // TRPC mutations
+  // Constants
+  const REPETITIONS = 3;
+
+  // TRPC mutation for transcribing audio
   const transcribeAudio = trpc.transcribeAudio.useMutation();
 
   // Voice recorder hook
   const voiceRecorder = useVoiceRecorder(handleRecordingResult);
 
-  // Handle button click
-  const handleClick = async () => {
-    if (successfulAttempts >= 3) {
-      // Do nothing if already completed
-      return;
-    }
+  // Handle Play button click
+  const handlePlayClick = async () => {
+    await playAudio(card.definitionAudio);
+    // After audio has finished playing, move to 'record' phase
+    setPhase("record");
+  };
 
+  // Handle Record button click
+  const handleRecordClick = () => {
     if (isRecording) {
       // Stop recording
       voiceRecorder.stop();
       setIsRecording(false);
     } else {
-      playAudio(card.definitionAudio);
       // Start recording
       setIsRecording(true);
       voiceRecorder.start();
     }
   };
 
-  // Use hotkeys to trigger handleClick on space bar press
-  useHotkeys([["space", handleClick]]);
-
-  // Reset state variables when the term changes
-  useEffect(() => {
-    setSuccessfulAttempts(0);
-    setFailedAttempts(0);
-    setIsRecording(false);
-    setIsProcessingRecording(false);
-  }, [card.term]);
-
-  // Handle the result after recording is finished
+  // Handle recording result
   async function handleRecordingResult(audioBlob: Blob) {
-    setIsProcessingRecording(true);
+    setIsRecording(false);
+    // Process the recording
     try {
       // Convert the recorded audio blob to WAV and then to base64
       const wavBlob = await convertBlobToWav(audioBlob);
@@ -105,35 +65,93 @@ export const ListeningQuiz: QuizComp = (props) => {
       // Compare the transcription with the target sentence
       if (transcription.trim() === card.term.trim()) {
         setSuccessfulAttempts((prev) => prev + 1);
-      } else {
-        setFailedAttempts((prev) => prev + 1);
       }
-    } finally {
-      setIsProcessingRecording(false);
+
+      // Check if repetitions are completed
+      if (successfulAttempts + 1 >= REPETITIONS) {
+        // Repetitions completed
+        setPhase("done");
+      } else {
+        // Move back to 'play' phase for next repetition
+        setPhase("play");
+      }
+    } catch (error) {
+      // Handle error if needed
+      // Move back to 'play' phase to retry
+      setPhase("play");
     }
   }
 
-  // Effect to handle successful completion
+  // Handle Fail button click
+  const handleFailClick = () => {
+    props.onComplete(Grade.AGAIN);
+  };
+
+  // Handle Difficulty selection
+  const handleDifficultySelect = (grade: Grade) => {
+    props.onComplete(grade);
+  };
+
+  // Handle space key press
+  useHotkeys([
+    [
+      "space",
+      () => {
+        if (phase === "play") {
+          handlePlayClick();
+        } else if (phase === "record") {
+          handleRecordClick();
+        }
+      },
+    ],
+  ]);
+
+  // Reset state when card changes
   useEffect(() => {
-    if (successfulAttempts >= 3) {
-      // Play the translation audio
-      playAudio(card.termAudio).then(() => {
-        props.onComplete(grade);
-      });
-    }
-  }, [successfulAttempts]);
+    setSuccessfulAttempts(0);
+    setIsRecording(false);
+    setPhase("play");
+  }, [card.term]);
 
   return (
-    <div>
-      <RecordingControls
-        isRecording={isRecording}
-        isProcessingRecording={isProcessingRecording}
-        successfulAttempts={successfulAttempts}
-        failedAttempts={failedAttempts}
-        handleClick={handleClick}
-      />
-      {successfulAttempts === 0 && <p>{card.term}</p>}
-      <DifficultyButtons current={grade} onSelectDifficulty={setGrade} />
-    </div>
+    <Stack>
+      {/* Display the sentence */}
+      <Text size="xl">{card.term}</Text>
+
+      {/* Play button during 'play' phase */}
+      {phase === "play" && <Button onClick={handlePlayClick}>Play</Button>}
+
+      {/* Record Response button during 'record' phase */}
+      {phase === "record" && (
+        <Button onClick={handleRecordClick}>
+          {isRecording ? "Stop Recording" : "Record Response"}
+        </Button>
+      )}
+
+      {/* Display recording status */}
+      {isRecording && <Text>Recording...</Text>}
+
+      {/* Show repetitions count */}
+      {phase !== "done" && (
+        <Text>
+          Repetitions: {successfulAttempts}/{REPETITIONS}
+        </Text>
+      )}
+
+      {/* Fail button during 'play' and 'record' phases */}
+      {phase !== "done" && (
+        <Button variant="outline" color="red" onClick={handleFailClick}>
+          Fail
+        </Button>
+      )}
+
+      {/* Difficulty buttons during 'done' phase */}
+      {phase === "done" && (
+        <DifficultyButtons
+          current={undefined}
+          onSelectDifficulty={handleDifficultySelect}
+        />
+      )}
+    </Stack>
   );
 };

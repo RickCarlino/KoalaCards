@@ -1,3 +1,5 @@
+import { Button, Group } from "@mantine/core";
+import { useHotkeys } from "@mantine/hooks";
 import { Grade } from "femto-fsrs";
 import React from "react";
 
@@ -12,17 +14,24 @@ export const DifficultyButtons: React.FC<DifficultyButtonsProps> = ({
   onSelectDifficulty,
 }) => {
   const grades: (keyof typeof Grade)[] = ["AGAIN", "HARD", "GOOD", "EASY"];
+  useHotkeys([
+    ["a", () => onSelectDifficulty(Grade.AGAIN)],
+    ["s", () => onSelectDifficulty(Grade.HARD)],
+    ["d", () => onSelectDifficulty(Grade.GOOD)],
+    ["f", () => onSelectDifficulty(Grade.EASY)],
+  ]);
+
   return (
-    <div>
+    <Group>
       {grades.map((grade) => (
-        <button
+        <Button
           key={grade}
           disabled={current === Grade[grade]}
           onClick={() => onSelectDifficulty(Grade[grade])}
         >
           {grade}
-        </button>
+        </Button>
       ))}
-    </div>
+    </Group>
   );
 };

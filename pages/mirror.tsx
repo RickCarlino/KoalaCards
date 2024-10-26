@@ -27,9 +27,9 @@ const RecordingControls = ({
 }) => {
   let message: string;
   if (isRecording) {
-    message = "Recording...";
+    message = "Repeat What You Hear Now";
   } else {
-    message = "Start recording";
+    message = "Click to Hear";
   }
 
   return (

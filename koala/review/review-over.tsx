@@ -1,4 +1,5 @@
 import { QuizState } from "./types";
+import { Card, Table, Text, Title } from "@mantine/core";
 
 type ReviewOverProps = {
   state: QuizState[];
@@ -6,9 +7,9 @@ type ReviewOverProps = {
 
 export const ReviewOver = ({ state }: ReviewOverProps) => {
   return (
-    <div>
-      <h2>Review Summary</h2>
-      <table>
+    <Card shadow="sm" padding="lg" radius="md" withBorder>
+      <Title order={2}>Review Summary</Title>
+      <Table highlightOnHover>
         <thead>
           <tr>
             <th>Card</th>
@@ -19,14 +20,14 @@ export const ReviewOver = ({ state }: ReviewOverProps) => {
         <tbody>
           {state.map((quizState, index) => (
             <tr key={index} style={{ backgroundColor: getColor(quizState) }}>
-              <td>{quizState.quiz.term}</td>
-              <td>{quizState.serverGradingResult || "Pending"}</td>
-              <td>{quizState.grade || "Not graded"}</td>
+              <td><Text>{quizState.quiz.term}</Text></td>
+              <td><Text>{quizState.serverGradingResult || "Pending"}</Text></td>
+              <td><Text>{quizState.grade || "Not graded"}</Text></td>
             </tr>
           ))}
         </tbody>
-      </table>
-    </div>
+      </Table>
+    </Card>
   );
 };
 
