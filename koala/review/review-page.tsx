@@ -8,6 +8,7 @@ import { ReviewOver } from "./review-over";
 import { SpeakingQuiz } from "./speaking-quiz";
 import { ListeningQuiz } from "./listening-quiz";
 import { trpc } from "../trpc-config";
+import { FlagButton } from "./flag-button";
 
 const UnknownQuiz: QuizComp = (props) => {
   const [currentGrade, setGrade] = useState<Grade>();
@@ -43,7 +44,6 @@ export const ReviewPage = (props: Props) => {
   const [state, dispatch] = useReducer(quizReducer, {
     quizzes: [],
     currentQuizIndex: 0,
-    sessionStatus: "inProgress",
   });
   const gradeQuiz = trpc.gradeQuiz.useMutation();
   useEffect(() => {
@@ -63,7 +63,7 @@ export const ReviewPage = (props: Props) => {
       },
       onComplete(status, feedback) {
         dispatch({
-          type: "RECEIVE_GRADING_RESULT",
+          type: "SERVER_FEEDBACK",
           quizId: quiz.quizId,
           result: status,
           serverResponse: feedback || "",
@@ -88,10 +88,18 @@ export const ReviewPage = (props: Props) => {
           padding="lg"
           radius="md"
           withBorder
-          style={{ maxWidth: 800, width: "100%" }} // Set fixed maxWidth
+          style={{ maxWidth: 600, width: "100%" }} // Set fixed maxWidth
         >
-          {illustration}
-          <LessonComponent {...quizProps} />
+          <Stack>
+            <LessonComponent {...quizProps} />
+            <FlagButton
+              cardID={quiz.cardId}
+              onClick={() => {
+                dispatch({ type: "FLAG_CURRENT_CARD" });
+              }}
+            />
+            {illustration}
+          </Stack>
         </Card>
       </Center>
     );

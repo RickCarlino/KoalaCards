@@ -61,6 +61,7 @@ export const SpeakingQuiz: QuizComp = (props) => {
   // Handle Fail button click
   const handleFailClick = () => {
     props.onGraded(Grade.AGAIN);
+    props.onComplete("fail", "You clicked 'Fail'");
   };
 
   // Handle Difficulty selection

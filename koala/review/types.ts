@@ -2,26 +2,23 @@ import { Grade } from "femto-fsrs";
 
 // Define the types
 export type Quiz = {
-  langCode: string;
-  term: string;
-  definition: string;
-  repetitions: number;
-  lapses: number;
-  lastReview: number;
-  quizId: number;
   cardId: number;
-  lessonType: "listening" | "speaking" | "dictation";
+  definition: string;
   definitionAudio: string;
-  termAudio: string;
   imageURL?: string | undefined;
+  langCode: string;
+  lessonType: "listening" | "speaking" | "dictation";
+  quizId: number;
+  term: string;
+  // lapses: number;
+  // lastReview: number;
+  // repetitions: number;
+  // termAudio: string;
 };
 
 export interface Props {
   quizzes: Quiz[];
   onSave(): Promise<void>;
-  // totalCards: number;
-  // quizzesDue: number;
-  // newCards: number;
 }
 
 export interface QuizProps {
@@ -35,10 +32,6 @@ export interface QuizProps {
 
 export type QuizComp = React.FC<QuizProps>;
 
-interface Card {
-  cardId: number;
-}
-
 // Define the status for each quiz
 type QuizStatus = "pass" | "fail" | "error";
 
@@ -49,34 +42,23 @@ export interface QuizState {
   grade?: Grade;
   serverGradingResult?: QuizStatus;
   serverResponse?: string; // Response from the server
-  flagged: boolean;
-  notes: string[];
 }
 
 // Define the overall state for the review session
 export interface ReviewState {
   quizzes: QuizState[];
   currentQuizIndex: number;
-  sessionStatus: "inProgress" | "finalized" | "exitedEarly";
 }
 
 // Define the possible actions
 export type Action =
   | { type: "LOAD_QUIZZES"; quizzes: Quiz[] }
-  | { type: "SUBMIT_RESPONSE"; response: string }
   | { type: "SET_GRADE"; grade: Grade; quizId: number }
-  | { type: "GIVE_UP" }
-  | { type: "FLAG_CARD" }
-  | { type: "ADD_NOTE"; note: string }
-  | { type: "EDIT_CARD"; cardId: number; updates: Partial<Card> }
-  | { type: "EXIT_EARLY" }
+  | { type: "FLAG_CURRENT_CARD" }
   | {
-      type: "RECEIVE_GRADING_RESULT";
+      type: "SERVER_FEEDBACK";
       quizId: number;
       result: QuizStatus;
       serverResponse: string;
     }
-  | { type: "FINALIZE_REVIEW" }
-  | { type: "NEXT_QUIZ" }
-  | { type: "PREVIOUS_QUIZ" }
-  | { type: "UPDATE_DIFFICULTY"; quizId: number; grade: Grade };
+  | { type: "NEXT_QUIZ" };

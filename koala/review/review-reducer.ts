@@ -2,31 +2,18 @@ import { Grade } from "femto-fsrs";
 import { Action, ReviewState } from "./types";
 
 export function quizReducer(state: ReviewState, action: Action): ReviewState {
+  const plusOne = state.currentQuizIndex + 1;
+  const nextIndex =
+    plusOne < state.quizzes.length ? plusOne : state.quizzes.length;
+
   switch (action.type) {
     case "LOAD_QUIZZES":
       return {
         ...state,
         quizzes: action.quizzes.map((quiz) => ({
           quiz,
-          status: "pending",
-          flagged: false,
-          notes: [],
         })),
         currentQuizIndex: 0,
-        sessionStatus: "inProgress",
-      };
-
-    case "SUBMIT_RESPONSE":
-      return {
-        ...state,
-        quizzes: state.quizzes.map((q, index) =>
-          index === state.currentQuizIndex
-            ? {
-                ...q,
-                response: action.response,
-              }
-            : q,
-        ),
       };
 
     case "SET_GRADE":
@@ -42,69 +29,7 @@ export function quizReducer(state: ReviewState, action: Action): ReviewState {
         ),
       };
 
-    case "GIVE_UP":
-      return {
-        ...state,
-        quizzes: state.quizzes.map((q, index) =>
-          index === state.currentQuizIndex
-            ? {
-                ...q,
-                difficulty: "AGAIN",
-                status: "completed",
-              }
-            : q,
-        ),
-      };
-
-    case "FLAG_CARD":
-      return {
-        ...state,
-        quizzes: state.quizzes.map((q, index) =>
-          index === state.currentQuizIndex
-            ? {
-                ...q,
-                flagged: true,
-              }
-            : q,
-        ),
-      };
-
-    case "ADD_NOTE":
-      return {
-        ...state,
-        quizzes: state.quizzes.map((q, index) =>
-          index === state.currentQuizIndex
-            ? {
-                ...q,
-                notes: [...q.notes, action.note],
-              }
-            : q,
-        ),
-      };
-
-    case "EDIT_CARD":
-      return {
-        ...state,
-        quizzes: state.quizzes.map((q) =>
-          q.quiz.cardId === action.cardId
-            ? {
-                ...q,
-                quiz: {
-                  ...q.quiz,
-                  ...action.updates,
-                },
-              }
-            : q,
-        ),
-      };
-
-    case "EXIT_EARLY":
-      return {
-        ...state,
-        sessionStatus: "exitedEarly",
-      };
-
-    case "RECEIVE_GRADING_RESULT":
+    case "SERVER_FEEDBACK":
       return {
         ...state,
         quizzes: state.quizzes.map((q) =>
@@ -120,38 +45,47 @@ export function quizReducer(state: ReviewState, action: Action): ReviewState {
         ),
       };
 
-    case "UPDATE_DIFFICULTY":
-      return {
-        ...state,
-        quizzes: state.quizzes.map((q) =>
-          q.quiz.quizId === action.quizId
-            ? {
-                ...q,
-                grade: action.grade,
-              }
-            : q,
-        ),
-      };
-
-    case "FINALIZE_REVIEW":
-      return {
-        ...state,
-        sessionStatus: "finalized",
-      };
-
     case "NEXT_QUIZ":
-      const nextIndex = state.currentQuizIndex + 1;
       return {
         ...state,
-        currentQuizIndex:
-          nextIndex < state.quizzes.length ? nextIndex : state.quizzes.length,
+        currentQuizIndex: nextIndex,
       };
 
-    case "PREVIOUS_QUIZ":
-      const prevIndex = state.currentQuizIndex - 1;
+    case "FLAG_CURRENT_CARD":
+      const currentQuiz = state.quizzes[state.currentQuizIndex];
+      if (!currentQuiz) {
+        return state;
+      }
+      const cardID = currentQuiz.quiz.cardId;
+      const filteredQuizzes = state.quizzes.filter(
+        (q) => q.quiz.cardId !== cardID,
+      );
+
+      if (filteredQuizzes.length === 0) {
+        // No quizzes left after filtering
+        return {
+          ...state,
+          quizzes: [],
+          currentQuizIndex: 0,
+        };
+      }
+
+      // Map filtered quizzes to their original indices
+      const originalIndices = filteredQuizzes.map((q) =>
+        state.quizzes.indexOf(q),
+      );
+
+      // Find the next quiz index in the original array that's after the current index
+      const nextQuizIndex = originalIndices.findIndex(
+        (idx) => idx > state.currentQuizIndex,
+      );
+
+      const newCurrentQuizIndex = nextQuizIndex !== -1 ? nextQuizIndex : 0; // Wrap around if necessary
+
       return {
         ...state,
-        currentQuizIndex: prevIndex >= 0 ? prevIndex : state.currentQuizIndex,
+        quizzes: filteredQuizzes,
+        currentQuizIndex: newCurrentQuizIndex,
       };
 
     default:

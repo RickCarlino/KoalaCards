@@ -84,6 +84,7 @@ export const ListeningQuiz: QuizComp = ({
       return (
         <Stack>
           <Text size="xl">{card.term}</Text>
+          {card.lessonType == "dictation" && <Text>{card.definition}</Text>}
           <Button onClick={handlePlayClick}>Play</Button>
           <Text>
             Repetitions: {successfulAttempts}/{REPETITIONS}
@@ -112,6 +113,7 @@ export const ListeningQuiz: QuizComp = ({
     case "done":
       return (
         <Stack>
+          <Text>Answer: {card.definition}</Text>
           <Text size="xl">Select difficulty:</Text>
           <DifficultyButtons
             current={undefined}

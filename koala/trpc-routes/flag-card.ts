@@ -6,11 +6,11 @@ import { getCardOrFail } from "@/koala/get-card-or-fail";
 export const flagCard = procedure
   .input(
     z.object({
-      id: z.number(),
+      cardID: z.number(),
     }),
   )
   .mutation(async ({ input, ctx }) => {
-    const card = await getCardOrFail(input.id, ctx.user?.id);
+    const card = await getCardOrFail(input.cardID, ctx.user?.id);
     await prismaClient.card.update({
       where: {
         id: card.id,
