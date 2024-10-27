@@ -88,15 +88,27 @@ export async function setGrade(
   grade: Grade,
   now = Date.now(),
 ) {
+  const data = {
+    ...quiz,
+    ...calculateSchedulingData(quiz, grade, now),
+    repetitions: (quiz.repetitions || 0) + 1,
+    lastReview: now,
+    firstReview: quiz.firstReview || now,
+    lapses: (quiz.lapses || 0) + (grade === Grade.AGAIN ? 1 : 0),
+  };
+
   const { id, nextReview } = await prismaClient.quiz.update({
     where: { id: quiz.id },
     data: {
-      ...quiz,
-      ...calculateSchedulingData(quiz, grade, now),
-      repetitions: (quiz.repetitions || 0) + 1,
-      lastReview: now,
-      firstReview: quiz.firstReview || now,
-      lapses: (quiz.lapses || 0) + (grade === Grade.AGAIN ? 1 : 0),
+      // Stats:
+      difficulty: data.difficulty,
+      lapses: data.lapses,
+      repetitions: data.repetitions,
+      stability: data.stability,
+      // Timestamps:
+      firstReview: data.firstReview,
+      lastReview: data.lastReview,
+      nextReview: data.nextReview,
     },
   });
   console.log(`Quiz ${id} next review: ${timeUntil(nextReview)}`);

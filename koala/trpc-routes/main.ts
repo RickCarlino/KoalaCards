@@ -15,6 +15,7 @@ import { getPlaybackAudio } from "./get-playback-audio";
 import { getRadioItem } from "./get-radio-item";
 import { getUserSettings } from "./get-user-settings";
 import { gradeQuiz } from "./grade-quiz";
+import { gradeSpeakingQuiz } from "./grade-speaking-quiz";
 import { levelReviews } from "./level-reviews";
 import { manuallyGrade } from "./manually-grade";
 import { parseCards } from "./parse-cards";
@@ -49,6 +50,7 @@ export const appRouter = router({
   translateText,
   viewTrainingData,
   getMirrorCards,
+  gradeSpeakingQuiz,
 });
 
 export type AppRouter = typeof appRouter;

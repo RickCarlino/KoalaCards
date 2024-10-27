@@ -4,7 +4,7 @@ import { map, shuffle } from "radash";
 import { getUserSettings } from "./auth-helpers";
 import { errorReport } from "./error-report";
 import { maybeGetCardImageUrl } from "./image";
-import { calculateSchedulingData } from "./routes/import-cards";
+import { calculateSchedulingData } from "./trpc-routes/import-cards";
 import { LessonType } from "./shared-types";
 import { generateLessonAudio } from "./speech";
 
@@ -193,11 +193,6 @@ export default async function getLessons(p: GetLessonInputParams) {
       quizType: q.repetitions ? q.quizType : "dictation",
     };
 
-    const audio = await generateLessonAudio({
-      card: quiz.Card,
-      lessonType: quiz.quizType as LessonType,
-      speed: 100,
-    });
     return {
       quizId: quiz.id,
       cardId: quiz.cardId,
@@ -206,7 +201,15 @@ export default async function getLessons(p: GetLessonInputParams) {
       repetitions: quiz.repetitions,
       lapses: quiz.lapses,
       lessonType: quiz.quizType as LessonType,
-      audio,
+      definitionAudio: await generateLessonAudio({
+        card: quiz.Card,
+        lessonType: "listening",
+        speed: 100,
+      }),
+      termAudio: await generateLessonAudio({
+        card: quiz.Card,
+        lessonType: "speaking",
+      }),
       langCode: quiz.Card.langCode,
       lastReview: quiz.lastReview || 0,
       imageURL: await maybeGetCardImageUrl(quiz.Card.imageBlobId),
