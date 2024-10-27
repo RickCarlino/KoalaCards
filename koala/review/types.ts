@@ -18,6 +18,7 @@ export type Quiz = {
 
 export interface Props {
   quizzes: Quiz[];
+  onSave(): Promise<void>;
   // totalCards: number;
   // quizzesDue: number;
   // newCards: number;

@@ -91,11 +91,12 @@ export const ReviewPage = (props: Props) => {
       </Center>
     );
   } else {
-    const props = {
+    const reviewOverProps = {
       state: state.quizzes,
       async onSave() {
         const grades = state.quizzes.map((q) => {
           if (!q.grade) {
+            alert("Not all quizzes have been graded");
             throw new Error("Not all quizzes have been graded");
           }
           return {
@@ -104,12 +105,12 @@ export const ReviewPage = (props: Props) => {
           };
         });
         await Promise.all(grades.map((grade) => gradeQuiz.mutateAsync(grade)));
+        await props.onSave(); // Fetch more potentially.
       },
       onUpdateDifficulty(quizId: number, grade: Grade) {
         dispatch({ type: "SET_GRADE", grade, quizId });
       },
-      moreQuizzesAvailable: false,
     };
-    return <ReviewOver {...props} />;
+    return <ReviewOver {...reviewOverProps} />;
   }
 };

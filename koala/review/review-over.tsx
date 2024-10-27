@@ -1,6 +1,6 @@
 import { QuizState } from "./types";
 import { Button, Card, Center, Stack, Text, Title, Alert } from "@mantine/core";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { DifficultyButtons } from "./grade-buttons";
 import { Grade } from "femto-fsrs";
 
@@ -16,12 +16,6 @@ export const ReviewOver = ({
   onUpdateDifficulty,
 }: ReviewOverProps) => {
   const [isSaving, setIsSaving] = useState(false);
-
-  useEffect(() => {
-    // Simulate downloading the next set of quizzes in the background
-    // This could be a stubbed function or a real API call
-    // For now, we'll assume it's handled elsewhere
-  }, []);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -49,6 +43,16 @@ export const ReviewOver = ({
   const dontShowCorrect = (quizState: QuizState) => {
     return quizState.serverGradingResult !== "pass";
   };
+
+  if (state.length === 0) {
+    return (
+      <Center style={{ width: "100%", height: "100vh" }}>
+        <Card shadow="sm" padding="lg" radius="md" withBorder>
+          <Title order={2}>No quizzes to review</Title>
+        </Card>
+      </Center>
+    );
+  }
 
   return (
     <Center style={{ width: "100%", height: "100vh", overflowY: "auto" }}>
