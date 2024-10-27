@@ -14,32 +14,7 @@ type GetLessonInputParams = {
   now: number;
   /** Max number of cards to return */
   take: number;
-  /** IDs that are already in the user's hand. */
-  notIn: number[];
 };
-
-async function getExcludedIDs(wantToExclude: number[]) {
-  if (!wantToExclude.length) return Promise.resolve([]);
-  const quizzes = prismaClient.quiz;
-
-  return (
-    await quizzes.findMany({
-      where: {
-        cardId: {
-          in: (
-            await quizzes.findMany({
-              where: {
-                id: { in: wantToExclude },
-              },
-              select: { cardId: true },
-            })
-          ).map(({ cardId }) => cardId),
-        },
-      },
-      select: { id: true },
-    })
-  ).map(({ id }) => id);
-}
 
 type CardLike = { repetitions?: number };
 
@@ -133,15 +108,13 @@ async function pruneOldAndHardQuizzes(userId: string) {
   await Promise.all([archiveOld(userId), resetHard(userId)]);
 }
 
-async function getReviewCards(userId: string, notIn: number[], now: number) {
-  const excluded = await getExcludedIDs(notIn);
+async function getReviewCards(userId: string, now: number) {
   return await prismaClient.quiz.findMany({
     where: {
       Card: {
         userId: userId,
         flagged: { not: true },
       },
-      ...(excluded.length ? { id: { notIn: excluded } } : {}),
       nextReview: {
         lt: now,
       },
@@ -183,7 +156,11 @@ export default async function getLessons(p: GetLessonInputParams) {
   }
 
   pruneOldAndHardQuizzes(p.userId);
-  const reviewCards = await getReviewCards(p.userId, p.notIn, p.now);
+  const playbackSpeed = await getUserSettings(p.userId).then(
+    (s) => s.playbackSpeed || 1.05,
+  );
+  const playbackPercentage = Math.round(playbackSpeed * 100);
+  const reviewCards = await getReviewCards(p.userId, p.now);
   const newCards = await getNewCards(p.userId);
   // 25% of cards are new cards.
   const combined = shuffle([...reviewCards, ...newCards]).slice(0, p.take);
@@ -204,11 +181,12 @@ export default async function getLessons(p: GetLessonInputParams) {
       definitionAudio: await generateLessonAudio({
         card: quiz.Card,
         lessonType: "speaking",
+        speed: 110,
       }),
       termAudio: await generateLessonAudio({
         card: quiz.Card,
         lessonType: "listening",
-        speed: 110,
+        speed: playbackPercentage,
       }),
       langCode: quiz.Card.langCode,
       lastReview: quiz.lastReview || 0,

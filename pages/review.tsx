@@ -9,7 +9,7 @@ export default function Review() {
 
   const fetchQuizzes = () => {
     mutation.mutate(
-      { notIn: [], take: 7 },
+      { take: 4 },
       { onSuccess: (data) => setQuizzes(data.quizzes) },
     );
   };

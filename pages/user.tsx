@@ -143,7 +143,7 @@ export default function UserSettingsPage(props: Props) {
     <Container size="s">
       <Title order={1}>User Settings</Title>
       <form onSubmit={handleSubmit}>
-        {/* <NumberInput
+        <NumberInput
           label="Audio playback speed percentage (50%-200%)"
           id="playbackSpeed"
           name="playbackSpeed"
@@ -151,9 +151,9 @@ export default function UserSettingsPage(props: Props) {
           onChange={(value) => handleChange(value, "playbackSpeed")}
           min={0.5}
           max={2}
-          step={0.05}
+          step={0.02}
           required
-        /> */}
+        />
         <NumberInput
           label="Maximum new quizzes (usually 2 per card) in a 24 hour period"
           id="cardsPerDayMax"

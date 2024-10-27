@@ -31,7 +31,6 @@ const QuizList = z.object({
 });
 
 const QuizInput = z.object({
-  notIn: z.array(z.number()),
   take: z.number(),
 });
 
@@ -91,7 +90,6 @@ export const getNextQuizzes = procedure
       ...(await getLessonMeta(userId)),
       quizzes: await getLessons({
         userId,
-        notIn: input.notIn,
         now: Date.now(),
         take: input.take,
       }),

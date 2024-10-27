@@ -20,7 +20,7 @@ export default function Faucet(_props: {}) {
         cardId: 0,
         lessonType: "speaking",
         definitionAudio: "",
-        // termAudio: "",
+        termAudio: "",
         imageURL: undefined,
       },
       response: "???",
