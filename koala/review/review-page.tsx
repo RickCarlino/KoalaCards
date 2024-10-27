@@ -16,7 +16,11 @@ const UnknownQuiz: QuizComp = (props) => {
     setGrade(grade);
     props.onGraded(grade);
     setGrade(undefined);
-    props.onComplete("pass", "");
+    props.onComplete({
+      status: "pass",
+      feedback: "Unknown quiz graded",
+      userResponse: "???",
+    });
   };
   return (
     <Card shadow="sm" padding="lg" radius="md" withBorder>
@@ -61,12 +65,13 @@ export const ReviewPage = (props: Props) => {
         dispatch({ type: "SET_GRADE", grade, quizId: quiz.quizId });
         dispatch({ type: "NEXT_QUIZ" });
       },
-      onComplete(status, feedback) {
+      onComplete({ status, feedback, userResponse }) {
         dispatch({
           type: "SERVER_FEEDBACK",
           quizId: quiz.quizId,
           result: status,
-          serverResponse: feedback || "",
+          serverResponse: feedback,
+          userResponse,
         });
       },
     };

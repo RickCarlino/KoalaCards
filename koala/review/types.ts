@@ -10,10 +10,10 @@ export type Quiz = {
   lessonType: "listening" | "speaking" | "dictation";
   quizId: number;
   term: string;
+  termAudio: string;
   // lapses: number;
   // lastReview: number;
   // repetitions: number;
-  // termAudio: string;
 };
 
 export interface Props {
@@ -27,7 +27,11 @@ export interface QuizProps {
   onGraded: (grade: Grade) => void;
   // Called when all async tasks / grading are done.
   // Quiz will be stuck in "awaitingGrading" until this is called.
-  onComplete: (status: QuizStatus, feedback: string) => void;
+  onComplete: (p: {
+    status: QuizStatus;
+    feedback: string;
+    userResponse: string;
+  }) => void;
 }
 
 export type QuizComp = React.FC<QuizProps>;
@@ -60,5 +64,6 @@ export type Action =
       quizId: number;
       result: QuizStatus;
       serverResponse: string;
+      userResponse: string;
     }
   | { type: "NEXT_QUIZ" };

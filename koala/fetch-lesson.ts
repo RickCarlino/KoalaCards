@@ -203,12 +203,12 @@ export default async function getLessons(p: GetLessonInputParams) {
       lessonType: quiz.quizType as LessonType,
       definitionAudio: await generateLessonAudio({
         card: quiz.Card,
-        lessonType: "listening",
-        speed: 100,
+        lessonType: "speaking",
       }),
       termAudio: await generateLessonAudio({
         card: quiz.Card,
-        lessonType: "speaking",
+        lessonType: "listening",
+        speed: 110,
       }),
       langCode: quiz.Card.langCode,
       lastReview: quiz.lastReview || 0,

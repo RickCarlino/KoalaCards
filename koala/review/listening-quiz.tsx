@@ -9,7 +9,7 @@ import { useEffect, useState, useCallback } from "react";
 import { DifficultyButtons } from "./grade-buttons";
 import { QuizComp } from "./types";
 
-const REPETITIONS = 1;
+const REPETITIONS = 2;
 
 export const ListeningQuiz: QuizComp = ({
   quiz: card,
@@ -29,7 +29,7 @@ export const ListeningQuiz: QuizComp = ({
   );
 
   const handlePlayClick = async () => {
-    await playAudio(card.definitionAudio);
+    await playAudio(card.termAudio);
     setPhase("record");
   };
 
@@ -58,12 +58,20 @@ export const ListeningQuiz: QuizComp = ({
 
   const handleFailClick = () => {
     onGraded(Grade.AGAIN);
-    onComplete("fail", "You hit the FAIL button");
+    onComplete({
+      status: "fail",
+      feedback: "You hit the FAIL button.",
+      userResponse: "Not provided.",
+    });
   };
 
   const handleDifficultySelect = (grade: Grade) => {
     onGraded(grade);
-    onComplete("pass", "");
+    onComplete({
+      status: "pass",
+      feedback: "",
+      userResponse: "Not yet supported for listening quizzes.",
+    });
   };
 
   useHotkeys([
@@ -79,12 +87,14 @@ export const ListeningQuiz: QuizComp = ({
     setPhase("play");
   }, [card.term]);
 
+  const isDictation = card.lessonType === "dictation";
+  const showTerm = successfulAttempts === 0 || isDictation;
   switch (phase) {
     case "play":
       return (
         <Stack>
-          <Text size="xl">{card.term}</Text>
-          {card.lessonType == "dictation" && <Text>{card.definition}</Text>}
+          {showTerm && <Text size="xl">{card.term}</Text>}
+          {isDictation && <Text>(NEW CARD) {card.definition}</Text>}
           <Button onClick={handlePlayClick}>Play</Button>
           <Text>
             Repetitions: {successfulAttempts}/{REPETITIONS}
@@ -113,6 +123,7 @@ export const ListeningQuiz: QuizComp = ({
     case "done":
       return (
         <Stack>
+          <Text>Prompt: {card.term}</Text>
           <Text>Answer: {card.definition}</Text>
           <Text size="xl">Select difficulty:</Text>
           <DifficultyButtons

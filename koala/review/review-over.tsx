@@ -19,12 +19,7 @@ export const ReviewOver = ({
 
   const handleSave = async () => {
     setIsSaving(true);
-    // Call the onFinalize prop to commit results to the server
-    try {
-      await onSave();
-    } finally {
-      setIsSaving(false);
-    }
+    await onSave().finally(() => setIsSaving(false));
   };
 
   const getColor = (quizState: QuizState): string => {
@@ -82,7 +77,7 @@ export const ReviewOver = ({
                 padding="md"
                 radius="md"
                 withBorder
-                style={{ backgroundColor: getColor(quizState) }}
+                style={{ borderColor: getColor(quizState) }}
               >
                 <Stack>
                   <Text>{quizState.quiz.term}</Text>
@@ -94,18 +89,11 @@ export const ReviewOver = ({
                   />
                   <Text>Type: {quizState.quiz.lessonType}</Text>
                   <Text>
-                    Your Response:{" "}
+                    Your Response: {/* SET RESPONSE */}
                     {quizState.response || "No response provided."}
                   </Text>
                   <Text>Feedback: {quizState.serverResponse || ""}</Text>
                   <Text>Definition: {quizState.quiz.definition}</Text>
-                  {quizState.quiz.imageURL && (
-                    <img
-                      src={quizState.quiz.imageURL}
-                      alt="Card Illustration"
-                      style={{ maxWidth: "100%" }}
-                    />
-                  )}
                 </Stack>
               </Card>
             ))}

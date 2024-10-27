@@ -7,6 +7,7 @@ import { Grade } from "femto-fsrs";
 import { useEffect, useState } from "react";
 import { DifficultyButtons } from "./grade-buttons";
 import { QuizComp } from "./types";
+import { playAudio } from "../play-audio";
 
 export const SpeakingQuiz: QuizComp = (props) => {
   const { quiz: card } = props;
@@ -46,10 +47,15 @@ export const SpeakingQuiz: QuizComp = (props) => {
               userInput: userTranscription,
               cardId: card.cardId,
             })
-            .then(({ isCorrect, feedback }) => {
+            .then(async ({ isCorrect, feedback }) => {
               const status = isCorrect ? "pass" : "fail";
               const f = status == "pass" ? "" : feedback;
-              props.onComplete(status, f);
+              await playAudio(card.termAudio);
+              props.onComplete({
+                status,
+                feedback: f,
+                userResponse: userTranscription,
+              });
             });
         });
     } finally {
@@ -59,9 +65,15 @@ export const SpeakingQuiz: QuizComp = (props) => {
   }
 
   // Handle Fail button click
-  const handleFailClick = () => {
+  const handleFailClick = async () => {
+    await playAudio(card.termAudio);
+    await playAudio(card.definitionAudio);
     props.onGraded(Grade.AGAIN);
-    props.onComplete("fail", "You clicked 'Fail'");
+    props.onComplete({
+      status: "fail",
+      feedback: "You clicked 'Fail'",
+      userResponse: "Not provided.",
+    });
   };
 
   // Handle Difficulty selection

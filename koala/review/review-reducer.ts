@@ -40,6 +40,7 @@ export function quizReducer(state: ReviewState, action: Action): ReviewState {
                 serverResponse: action.serverResponse,
                 status: "graded",
                 grade: action.result === "fail" ? Grade.AGAIN : q.grade,
+                response: action.userResponse,
               }
             : q,
         ),
