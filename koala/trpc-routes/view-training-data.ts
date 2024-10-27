@@ -38,7 +38,7 @@ export const viewTrainingData = procedure
       },
       take: 500,
     });
-    console.log(JSON.stringify(data));
+
     return data.map((trainingData) => {
       return {
         id: trainingData.id,

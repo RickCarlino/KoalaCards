@@ -7,7 +7,7 @@ import { notifications } from "@mantine/notifications";
 import { getUserSettingsFromEmail } from "@/koala/auth-helpers";
 import { prismaClient } from "@/koala/prisma-client";
 import { UnwrapPromise } from "@prisma/client/runtime/library";
-import { getLessonMeta } from "@/koala/routes/get-next-quizzes";
+import { getLessonMeta } from "@/koala/trpc-routes/get-next-quizzes";
 
 const ONE_DAY = 24 * 60 * 60 * 1000;
 const ONE_WEEK = 7 * ONE_DAY;
