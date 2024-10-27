@@ -10,12 +10,7 @@ export default function Review() {
   const fetchQuizzes = () => {
     mutation.mutate(
       { notIn: [], take: 7 },
-      {
-        onSuccess: (data) => {
-          console.log("On success CB")
-          setQuizzes(data.quizzes);
-        },
-      },
+      { onSuccess: (data) => setQuizzes(data.quizzes) },
     );
   };
 

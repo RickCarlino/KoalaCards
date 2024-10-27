@@ -68,10 +68,9 @@ export async function maybeAddImages(userId: string, take: number) {
   });
 
   if (!cards.length) {
-    // console.log(`=== No cards left to illustrate ===`);
     return;
   }
-  // console.log(`=== Adding images to ${cards.length} cards ===`);
+
   const x = await Promise.all(cards.map(maybeAddImageToCard));
   console.log(cards.map((x) => x.term).join("\n"));
   console.log(x.join("\n"));
