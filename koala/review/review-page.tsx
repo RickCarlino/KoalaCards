@@ -7,6 +7,7 @@ import { Props, Quiz, QuizComp, QuizProps } from "./types";
 import { ReviewOver } from "./review-over";
 import { SpeakingQuiz } from "./speaking-quiz";
 import { ListeningQuiz } from "./listening-quiz";
+import { trpc } from "../trpc-config";
 
 const UnknownQuiz: QuizComp = (props) => {
   const [currentGrade, setGrade] = useState<Grade>();
@@ -49,7 +50,7 @@ export const ReviewPage = (props: Props) => {
     currentQuizIndex: 0,
     sessionStatus: "inProgress",
   });
-
+  const gradeQuiz = trpc.gradeQuiz.useMutation();
   useEffect(() => {
     dispatch({ type: "LOAD_QUIZZES", quizzes: props.quizzes });
   }, [props.quizzes]);
@@ -92,14 +93,20 @@ export const ReviewPage = (props: Props) => {
   } else {
     const props = {
       state: state.quizzes,
-      onFinalize() {
-        alert("TODO: Finalize review session");
-      },
-      onContinue() {
-        alert("TODO: Continue to next set of quizzes");
+      async onSave() {
+        const grades = state.quizzes.map((q) => {
+          if (!q.grade) {
+            throw new Error("Not all quizzes have been graded");
+          }
+          return {
+            quizID: q.quiz.quizId,
+            perceivedDifficulty: q.grade,
+          };
+        });
+        await Promise.all(grades.map((grade) => gradeQuiz.mutateAsync(grade)));
       },
       onUpdateDifficulty(quizId: number, grade: Grade) {
-        alert(`TODO: Update quiz ${quizId} with grade ${grade}`);
+        dispatch({ type: "SET_GRADE", grade, quizId });
       },
       moreQuizzesAvailable: false,
     };

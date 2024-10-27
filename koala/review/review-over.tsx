@@ -6,18 +6,14 @@ import { Grade } from "femto-fsrs";
 
 type ReviewOverProps = {
   state: QuizState[];
-  onFinalize: () => void;
-  onContinue: () => void;
+  onSave: () => Promise<void>;
   onUpdateDifficulty: (quizId: number, grade: Grade) => void;
-  moreQuizzesAvailable: boolean;
 };
 
 export const ReviewOver = ({
   state,
-  onFinalize,
-  onContinue,
+  onSave,
   onUpdateDifficulty,
-  moreQuizzesAvailable,
 }: ReviewOverProps) => {
   const [isSaving, setIsSaving] = useState(false);
 
@@ -27,16 +23,14 @@ export const ReviewOver = ({
     // For now, we'll assume it's handled elsewhere
   }, []);
 
-  const handleFinalize = () => {
+  const handleSave = async () => {
     setIsSaving(true);
     // Call the onFinalize prop to commit results to the server
-    onFinalize();
-  };
-
-  const handleContinue = () => {
-    setIsSaving(true);
-    // Call the onContinue prop to proceed to the next set of quizzes
-    onContinue();
+    try {
+      await onSave();
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const getColor = (quizState: QuizState): string => {
@@ -51,15 +45,6 @@ export const ReviewOver = ({
         return "gray";
     }
   };
-  const saveButton = moreQuizzesAvailable ? (
-    <Button onClick={handleContinue} loading={isSaving}>
-      Continue Studying
-    </Button>
-  ) : (
-    <Button onClick={handleFinalize} loading={isSaving}>
-      End Session
-    </Button>
-  );
 
   const dontShowCorrect = (quizState: QuizState) => {
     return quizState.serverGradingResult !== "pass";
@@ -80,7 +65,11 @@ export const ReviewOver = ({
             Closing the browser tab early will cause changes to be lost. Please
             finalize your review.
           </Alert>
-          <Stack>{saveButton}</Stack>
+          <Stack>
+            <Button onClick={handleSave} loading={isSaving}>
+              Save Progress
+            </Button>
+          </Stack>
           <Stack>
             {state.filter(dontShowCorrect).map((quizState) => (
               <Card
@@ -92,8 +81,8 @@ export const ReviewOver = ({
                 style={{ backgroundColor: getColor(quizState) }}
               >
                 <Stack>
-                <Text>{quizState.quiz.term}</Text>
-                <DifficultyButtons
+                  <Text>{quizState.quiz.term}</Text>
+                  <DifficultyButtons
                     current={quizState.grade}
                     onSelectDifficulty={(grade) =>
                       onUpdateDifficulty(quizState.quiz.quizId, grade)
@@ -117,7 +106,6 @@ export const ReviewOver = ({
               </Card>
             ))}
           </Stack>
-          <Stack>{saveButton}</Stack>
         </Stack>
       </Card>
     </Center>

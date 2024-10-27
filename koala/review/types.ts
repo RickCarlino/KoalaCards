@@ -18,9 +18,9 @@ export type Quiz = {
 
 export interface Props {
   quizzes: Quiz[];
-  totalCards: number;
-  quizzesDue: number;
-  newCards: number;
+  // totalCards: number;
+  // quizzesDue: number;
+  // newCards: number;
 }
 
 export interface QuizProps {

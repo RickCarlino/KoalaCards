@@ -1,3 +1,4 @@
+import { Grade } from "femto-fsrs";
 import { Action, ReviewState } from "./types";
 
 export function quizReducer(state: ReviewState, action: Action): ReviewState {
@@ -29,10 +30,6 @@ export function quizReducer(state: ReviewState, action: Action): ReviewState {
       };
 
     case "SET_GRADE":
-      // 1. Find quiz by id
-      // 2. Crash if not found
-      // 3. Update grade
-      console.log(`Setting grade for quiz ${action.quizId} to ${action.grade}`);
       return {
         ...state,
         quizzes: state.quizzes.map((q) =>
@@ -117,8 +114,7 @@ export function quizReducer(state: ReviewState, action: Action): ReviewState {
                 serverGradingResult: action.result,
                 serverResponse: action.serverResponse,
                 status: "graded",
-                // If grading failed, default difficulty to 'AGAIN'
-                difficulty: action.result === "fail" ? "AGAIN" : q.grade,
+                grade: action.result === "fail" ? Grade.AGAIN : q.grade,
               }
             : q,
         ),

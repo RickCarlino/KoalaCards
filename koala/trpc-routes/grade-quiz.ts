@@ -10,7 +10,7 @@ export const gradeQuiz = procedure
   .input(
     z.object({
       perceivedDifficulty: z.number().min(1).max(4).int(),
-      id: z.number(),
+      quizID: z.number(),
     }),
   )
   .output(z.object({}))
@@ -26,7 +26,7 @@ export const gradeQuiz = procedure
     const grade = x.input.perceivedDifficulty as Grade;
     const quiz = await prismaClient.quiz.findUnique({
       where: {
-        id: x.input.id,
+        id: x.input.quizID,
         Card: {
           userId: user.id,
         },

@@ -33,11 +33,8 @@ export default function Faucet(_props: {}) {
   ];
   const props = {
     state,
-    onFinalize() {
+    async onSave() {
       alert("TODO: Finalize review session");
-    },
-    onContinue() {
-      alert("TODO: Continue to next set of quizzes");
     },
     onUpdateDifficulty(quizId: number, grade: Grade) {
       alert(`TODO: Update quiz ${quizId} with grade ${grade}`);
