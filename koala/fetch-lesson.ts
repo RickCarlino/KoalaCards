@@ -4,7 +4,7 @@ import { map, shuffle } from "radash";
 import { getUserSettings } from "./auth-helpers";
 import { errorReport } from "./error-report";
 import { maybeGetCardImageUrl } from "./image";
-import { calculateSchedulingData } from "./routes/import-cards";
+import { calculateSchedulingData } from "./trpc-routes/import-cards";
 import { LessonType } from "./shared-types";
 import { generateLessonAudio } from "./speech";
 

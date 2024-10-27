@@ -6,6 +6,7 @@ import { DifficultyButtons } from "./grade-buttons";
 import { Props, Quiz, QuizComp, QuizProps } from "./types";
 import { ListeningQuiz } from "./listening-quiz";
 import { ReviewOver } from "./review-over";
+import { SpeakingQuiz } from "./speaking-quiz";
 
 const UnknownQuiz: QuizComp = (props) => {
   const [currentGrade, setGrade] = useState<Grade>();
@@ -29,9 +30,9 @@ const UnknownQuiz: QuizComp = (props) => {
 
 // Lookup table for quiz components
 const quizComponents: Record<Quiz["lessonType"], QuizComp> = {
-  listening: ListeningQuiz,
-  speaking: UnknownQuiz,
-  dictation: ListeningQuiz,
+  dictation: SpeakingQuiz, // ListeningQuiz,
+  listening: SpeakingQuiz, // ListeningQuiz,
+  speaking: SpeakingQuiz,
 };
 
 export const ReviewPage = (props: Props) => {
