@@ -16,11 +16,6 @@ const UnknownQuiz: QuizComp = (props) => {
     props.onGraded(grade);
     setGrade(undefined);
     props.onComplete("pass", "");
-    // if (Math.random() < 0.5) {
-    //   setTimeout(() => {
-    //     props.onComplete("fail", "Fake false feedback");
-    //   }, 2000);
-    // }
   };
   return (
     <Card shadow="sm" padding="lg" radius="md" withBorder>
@@ -75,16 +70,26 @@ export const ReviewPage = (props: Props) => {
         });
       },
     };
-    const illustration = quiz.imageURL ? (
+
+    // Updated illustration rendering
+    const illustration = (
       <Card.Section>
-        <Image src={quiz.imageURL} height={160} />
+        {quiz.imageURL && (
+          <Image src={quiz.imageURL} fit="contain" width="100%" />
+        )}
       </Card.Section>
-    ) : null;
+    );
 
     return (
       // Center the content both vertically and horizontally
       <Center style={{ width: "100%" }}>
-        <Card shadow="sm" padding="lg" radius="md" withBorder>
+        <Card
+          shadow="sm"
+          padding="lg"
+          radius="md"
+          withBorder
+          style={{ maxWidth: 800, width: "100%" }} // Set fixed maxWidth
+        >
           {illustration}
           <LessonComponent {...quizProps} />
         </Card>
