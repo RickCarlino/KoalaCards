@@ -4,21 +4,29 @@ import { useEffect, useReducer, useState } from "react";
 import { Card, Title, Text, Stack, Image, Center } from "@mantine/core";
 import { DifficultyButtons } from "./grade-buttons";
 import { Props, Quiz, QuizComp, QuizProps } from "./types";
-import { ListeningQuiz } from "./listening-quiz";
 import { ReviewOver } from "./review-over";
 import { SpeakingQuiz } from "./speaking-quiz";
+import { ListeningQuiz } from "./listening-quiz";
 
 const UnknownQuiz: QuizComp = (props) => {
   const [currentGrade, setGrade] = useState<Grade>();
   const handleGrade = (grade: Grade) => {
     setGrade(grade);
-    props.onComplete(grade);
+    props.onGraded(grade);
+    setGrade(undefined);
+    props.onComplete("pass", "");
+    // if (Math.random() < 0.5) {
+    //   setTimeout(() => {
+    //     props.onComplete("fail", "Fake false feedback");
+    //   }, 2000);
+    // }
   };
   return (
     <Card shadow="sm" padding="lg" radius="md" withBorder>
       <Stack>
         <Title order={2}>Unknown Quiz ({props.quiz.lessonType})</Title>
         <Text>{props.quiz.definition}</Text>
+        <Text>{props.quiz.term}</Text>
         <DifficultyButtons
           current={currentGrade}
           onSelectDifficulty={handleGrade}
@@ -30,8 +38,8 @@ const UnknownQuiz: QuizComp = (props) => {
 
 // Lookup table for quiz components
 const quizComponents: Record<Quiz["lessonType"], QuizComp> = {
-  dictation: SpeakingQuiz, // ListeningQuiz,
-  listening: SpeakingQuiz, // ListeningQuiz,
+  dictation: ListeningQuiz,
+  listening: SpeakingQuiz,
   speaking: SpeakingQuiz,
 };
 
@@ -53,9 +61,17 @@ export const ReviewPage = (props: Props) => {
     const LessonComponent = quizComponents[quiz.lessonType] || UnknownQuiz;
     const quizProps: QuizProps = {
       quiz: currentQuizState.quiz,
-      onComplete(grade) {
-        dispatch({ type: "SET_GRADE", grade });
+      onGraded(grade) {
+        dispatch({ type: "SET_GRADE", grade, quizId: quiz.quizId });
         dispatch({ type: "NEXT_QUIZ" });
+      },
+      onComplete(status, feedback) {
+        dispatch({
+          type: "RECEIVE_GRADING_RESULT",
+          quizId: quiz.quizId,
+          result: status,
+          serverResponse: feedback || "",
+        });
       },
     };
     const illustration = quiz.imageURL ? (
@@ -74,6 +90,19 @@ export const ReviewPage = (props: Props) => {
       </Center>
     );
   } else {
-    return <ReviewOver state={state.quizzes} />;
+    const props = {
+      state: state.quizzes,
+      onFinalize() {
+        alert("TODO: Finalize review session");
+      },
+      onContinue() {
+        alert("TODO: Continue to next set of quizzes");
+      },
+      onUpdateDifficulty(quizId: number, grade: Grade) {
+        alert(`TODO: Update quiz ${quizId} with grade ${grade}`);
+      },
+      moreQuizzesAvailable: false,
+    };
+    return <ReviewOver {...props} />;
   }
 };

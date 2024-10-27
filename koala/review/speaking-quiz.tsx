@@ -10,43 +10,30 @@ import { QuizComp } from "./types";
 
 export const SpeakingQuiz: QuizComp = (props) => {
   const { quiz: card } = props;
-
-  // State variables
   const [isRecording, setIsRecording] = useState(false);
   const [phase, setPhase] = useState<"prompt" | "recording" | "done">("prompt");
-
-  // TRPC mutations (stubbed if missing)
   const transcribeAudio = trpc.transcribeAudio.useMutation();
   const gradeSpeakingQuiz = trpc.gradeSpeakingQuiz.useMutation();
-
-  // Voice recorder hook
   const voiceRecorder = useVoiceRecorder(handleRecordingResult);
 
-  // Handle Record button click
   const handleRecordClick = () => {
     if (isRecording) {
-      // Stop recording
       voiceRecorder.stop();
       setIsRecording(false);
       setPhase("done");
     } else {
-      // Start recording
       setIsRecording(true);
       setPhase("recording");
       voiceRecorder.start();
     }
   };
 
-  // Handle recording result
   async function handleRecordingResult(audioBlob: Blob) {
     setIsRecording(false);
-    // Process the recording
     try {
-      // Convert the recorded audio blob to WAV and then to base64
       const wavBlob = await convertBlobToWav(audioBlob);
       const base64Audio = await blobToBase64(wavBlob);
 
-      // Start transcription and grading in the background without awaiting
       transcribeAudio
         .mutateAsync({
           audio: base64Audio,
@@ -54,11 +41,16 @@ export const SpeakingQuiz: QuizComp = (props) => {
           lang: card.langCode as "ko", // e.g., "ko" for Korean
         })
         .then(({ result: userTranscription }) => {
-          // After transcription, start grading
-          gradeSpeakingQuiz.mutateAsync({
-            userInput: userTranscription,
-            cardId: card.cardId,
-          });
+          gradeSpeakingQuiz
+            .mutateAsync({
+              userInput: userTranscription,
+              cardId: card.cardId,
+            })
+            .then(({ isCorrect, feedback }) => {
+              const status = isCorrect ? "pass" : "fail";
+              const f = status == "pass" ? "" : feedback;
+              props.onComplete(status, f);
+            });
         });
     } finally {
       // Proceed to the 'done' phase to allow difficulty selection
@@ -68,12 +60,12 @@ export const SpeakingQuiz: QuizComp = (props) => {
 
   // Handle Fail button click
   const handleFailClick = () => {
-    props.onComplete(Grade.AGAIN);
+    props.onGraded(Grade.AGAIN);
   };
 
   // Handle Difficulty selection
   const handleDifficultySelect = (grade: Grade) => {
-    props.onComplete(grade);
+    props.onGraded(grade);
   };
 
   // Handle space key press
@@ -96,7 +88,9 @@ export const SpeakingQuiz: QuizComp = (props) => {
 
   return (
     <Stack>
-      <Text size="xl">Say in target language:</Text>
+      <Text size="xl">
+        {phase == "prompt" ? "Say in target language:" : "Select difficulty"}
+      </Text>
       <Text size="xl">{card.definition}</Text>
 
       {(phase === "prompt" || phase === "recording") && (

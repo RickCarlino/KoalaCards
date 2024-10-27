@@ -5,153 +5,121 @@ import { useVoiceRecorder } from "@/koala/use-recorder";
 import { Button, Stack, Text } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import { Grade } from "femto-fsrs";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { DifficultyButtons } from "./grade-buttons";
 import { QuizComp } from "./types";
 
-export const ListeningQuiz: QuizComp = (props) => {
-  const { quiz: card } = props;
+const REPETITIONS = 1;
 
+export const ListeningQuiz: QuizComp = ({
+  quiz: card,
+  onGraded,
+  onComplete,
+}) => {
   // State variables
   const [successfulAttempts, setSuccessfulAttempts] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
   const [phase, setPhase] = useState<"play" | "record" | "done">("play");
-
-  // Constants
-  const REPETITIONS = 3;
-
-  // TRPC mutation for transcribing audio
   const transcribeAudio = trpc.transcribeAudio.useMutation();
-
-  // Voice recorder hook
   const voiceRecorder = useVoiceRecorder(handleRecordingResult);
 
-  // Handle Play button click
+  const transitionToNextPhase = useCallback(
+    () => setPhase(phase === "play" ? "record" : "done"),
+    [phase],
+  );
+
   const handlePlayClick = async () => {
     await playAudio(card.definitionAudio);
-    // After audio has finished playing, move to 'record' phase
     setPhase("record");
   };
 
-  // Handle Record button click
   const handleRecordClick = () => {
-    if (isRecording) {
-      // Stop recording
-      voiceRecorder.stop();
-      setIsRecording(false);
-    } else {
-      // Start recording
-      setIsRecording(true);
-      voiceRecorder.start();
-    }
+    setIsRecording((prev) => !prev);
+    isRecording ? voiceRecorder.stop() : voiceRecorder.start();
   };
 
-  // Handle recording result
   async function handleRecordingResult(audioBlob: Blob) {
     setIsRecording(false);
-    // Process the recording
     try {
-      // Convert the recorded audio blob to WAV and then to base64
-      const wavBlob = await convertBlobToWav(audioBlob);
-      const base64Audio = await blobToBase64(wavBlob);
-
-      // Transcribe the audio
+      const base64Audio = await blobToBase64(await convertBlobToWav(audioBlob));
       const { result: transcription } = await transcribeAudio.mutateAsync({
         audio: base64Audio,
         lang: "ko",
         targetText: card.term,
       });
 
-      // Compare the transcription with the target sentence
-      if (transcription.trim() === card.term.trim()) {
+      if (transcription.trim() === card.term.trim())
         setSuccessfulAttempts((prev) => prev + 1);
-      }
-
-      // Check if repetitions are completed
-      if (successfulAttempts + 1 >= REPETITIONS) {
-        // Repetitions completed
-        setPhase("done");
-      } else {
-        // Move back to 'play' phase for next repetition
-        setPhase("play");
-      }
+      transitionToNextPhase();
     } catch (error) {
-      // Handle error if needed
-      // Move back to 'play' phase to retry
-      setPhase("play");
+      setPhase("play"); // Retry
     }
   }
 
-  // Handle Fail button click
   const handleFailClick = () => {
-    props.onComplete(Grade.AGAIN);
+    onGraded(Grade.AGAIN);
+    onComplete("fail", "You hit the FAIL button");
   };
 
-  // Handle Difficulty selection
   const handleDifficultySelect = (grade: Grade) => {
-    props.onComplete(grade);
+    onGraded(grade);
+    onComplete("pass", "");
   };
 
-  // Handle space key press
   useHotkeys([
     [
       "space",
-      () => {
-        if (phase === "play") {
-          handlePlayClick();
-        } else if (phase === "record") {
-          handleRecordClick();
-        }
-      },
+      () => (phase === "play" ? handlePlayClick() : handleRecordClick()),
     ],
   ]);
 
-  // Reset state when card changes
   useEffect(() => {
     setSuccessfulAttempts(0);
     setIsRecording(false);
     setPhase("play");
   }, [card.term]);
 
-  return (
-    <Stack>
-      {/* Display the sentence */}
-      <Text size="xl">{card.term}</Text>
-
-      {/* Play button during 'play' phase */}
-      {phase === "play" && <Button onClick={handlePlayClick}>Play</Button>}
-
-      {/* Record Response button during 'record' phase */}
-      {phase === "record" && (
-        <Button onClick={handleRecordClick}>
-          {isRecording ? "Stop Recording" : "Record Response"}
-        </Button>
-      )}
-
-      {/* Display recording status */}
-      {isRecording && <Text>Recording...</Text>}
-
-      {/* Show repetitions count */}
-      {phase !== "done" && (
-        <Text>
-          Repetitions: {successfulAttempts}/{REPETITIONS}
-        </Text>
-      )}
-
-      {/* Fail button during 'play' and 'record' phases */}
-      {phase !== "done" && (
-        <Button variant="outline" color="red" onClick={handleFailClick}>
-          Fail
-        </Button>
-      )}
-
-      {/* Difficulty buttons during 'done' phase */}
-      {phase === "done" && (
-        <DifficultyButtons
-          current={undefined}
-          onSelectDifficulty={handleDifficultySelect}
-        />
-      )}
-    </Stack>
-  );
+  switch (phase) {
+    case "play":
+      return (
+        <Stack>
+          <Text size="xl">{card.term}</Text>
+          <Button onClick={handlePlayClick}>Play</Button>
+          <Text>
+            Repetitions: {successfulAttempts}/{REPETITIONS}
+          </Text>
+          <Button variant="outline" color="red" onClick={handleFailClick}>
+            Fail
+          </Button>
+        </Stack>
+      );
+    case "record":
+      return (
+        <Stack>
+          <Text size="xl">{card.term}</Text>
+          <Button onClick={handleRecordClick}>
+            {isRecording ? "Stop Recording" : "Record Response"}
+          </Button>
+          {isRecording && <Text>Recording...</Text>}
+          <Text>
+            Repetitions: {successfulAttempts}/{REPETITIONS}
+          </Text>
+          <Button variant="outline" color="red" onClick={handleFailClick}>
+            Fail
+          </Button>
+        </Stack>
+      );
+    case "done":
+      return (
+        <Stack>
+          <Text size="xl">Select difficulty:</Text>
+          <DifficultyButtons
+            current={undefined}
+            onSelectDifficulty={handleDifficultySelect}
+          />
+        </Stack>
+      );
+    default:
+      return <div>{`Unknown phase: ${phase}`}</div>;
+  }
 };

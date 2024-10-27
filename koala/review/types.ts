@@ -25,7 +25,11 @@ export interface Props {
 
 export interface QuizProps {
   quiz: Quiz;
-  onComplete: (grade: Grade) => void;
+  // Called when user sets grade.
+  onGraded: (grade: Grade) => void;
+  // Called when all async tasks / grading are done.
+  // Quiz will be stuck in "awaitingGrading" until this is called.
+  onComplete: (status: QuizStatus, feedback: string) => void;
 }
 
 export type QuizComp = React.FC<QuizProps>;
@@ -35,21 +39,15 @@ interface Card {
 }
 
 // Define the status for each quiz
-type QuizStatus =
-  | "pending"
-  | "completed"
-  | "failed"
-  | "awaitingGrading"
-  | "graded";
+type QuizStatus = "pass" | "fail" | "error";
 
 // Define the state for each quiz in the session
 export interface QuizState {
   quiz: Quiz;
   response?: string; // User's response (text, audio, etc.)
   grade?: Grade;
-  status: QuizStatus;
-  serverGradingResult?: "correct" | "incorrect" | "error";
-  serverResponse?: string; // Response from the server (e.g., transcription)
+  serverGradingResult?: QuizStatus;
+  serverResponse?: string; // Response from the server
   flagged: boolean;
   notes: string[];
 }
@@ -65,7 +63,7 @@ export interface ReviewState {
 export type Action =
   | { type: "LOAD_QUIZZES"; quizzes: Quiz[] }
   | { type: "SUBMIT_RESPONSE"; response: string }
-  | { type: "SET_GRADE"; grade: Grade }
+  | { type: "SET_GRADE"; grade: Grade; quizId: number }
   | { type: "GIVE_UP" }
   | { type: "FLAG_CARD" }
   | { type: "ADD_NOTE"; note: string }
@@ -74,7 +72,7 @@ export type Action =
   | {
       type: "RECEIVE_GRADING_RESULT";
       quizId: number;
-      result: "correct" | "incorrect" | "error";
+      result: QuizStatus;
       serverResponse: string;
     }
   | { type: "FINALIZE_REVIEW" }

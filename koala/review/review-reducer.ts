@@ -29,46 +29,21 @@ export function quizReducer(state: ReviewState, action: Action): ReviewState {
       };
 
     case "SET_GRADE":
-      const updatedQuizzes = state.quizzes.map((q, index) => {
-        if (index === state.currentQuizIndex) {
-          const isCompleted = q.response !== undefined;
-          return {
-            ...q,
-            grade: action.grade,
-            status: isCompleted ? "completed" : q.status,
-          };
-        }
-        return q;
-      });
-
-      // Check if all quizzes are completed
-      const allCompleted = updatedQuizzes.every(
-        (q) => q.status === "completed" || q.status === "graded",
-      );
-
-      if (allCompleted) {
-        // Set status to 'awaitingGrading' for quizzes that require grading
-        const quizzesToGrade = updatedQuizzes.map((q) => ({
-          ...q,
-          status: "awaitingGrading" as const,
-        }));
-
-        return {
-          ...state,
-          quizzes: quizzesToGrade,
-        };
-      } else {
-        // Move to next quiz
-        const nextIndex = state.currentQuizIndex + 1;
-        return {
-          ...state,
-          quizzes: updatedQuizzes,
-          currentQuizIndex:
-            nextIndex < updatedQuizzes.length
-              ? nextIndex
-              : state.currentQuizIndex,
-        };
-      }
+      // 1. Find quiz by id
+      // 2. Crash if not found
+      // 3. Update grade
+      console.log(`Setting grade for quiz ${action.quizId} to ${action.grade}`);
+      return {
+        ...state,
+        quizzes: state.quizzes.map((q) =>
+          q.quiz.quizId === action.quizId
+            ? {
+                ...q,
+                grade: action.grade,
+              }
+            : q,
+        ),
+      };
 
     case "GIVE_UP":
       return {
@@ -143,7 +118,7 @@ export function quizReducer(state: ReviewState, action: Action): ReviewState {
                 serverResponse: action.serverResponse,
                 status: "graded",
                 // If grading failed, default difficulty to 'AGAIN'
-                difficulty: action.result === "incorrect" ? "AGAIN" : q.grade,
+                difficulty: action.result === "fail" ? "AGAIN" : q.grade,
               }
             : q,
         ),
@@ -172,7 +147,8 @@ export function quizReducer(state: ReviewState, action: Action): ReviewState {
       const nextIndex = state.currentQuizIndex + 1;
       return {
         ...state,
-        currentQuizIndex: nextIndex < state.quizzes.length ? nextIndex : state.quizzes.length,
+        currentQuizIndex:
+          nextIndex < state.quizzes.length ? nextIndex : state.quizzes.length,
       };
 
     case "PREVIOUS_QUIZ":
