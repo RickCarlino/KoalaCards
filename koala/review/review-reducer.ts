@@ -5,7 +5,7 @@ export function quizReducer(state: ReviewState, action: Action): ReviewState {
   const plusOne = state.currentQuizIndex + 1;
   const nextIndex =
     plusOne < state.quizzes.length ? plusOne : state.quizzes.length;
-
+  console.log(action.type);
   switch (action.type) {
     case "LOAD_QUIZZES":
       return {
@@ -41,6 +41,22 @@ export function quizReducer(state: ReviewState, action: Action): ReviewState {
                 status: "graded",
                 grade: action.result === "fail" ? Grade.AGAIN : q.grade,
                 response: action.userResponse,
+              }
+            : q,
+        ),
+      };
+
+    case "UPDATE_AUDIO_URL":
+      return {
+        ...state,
+        quizzes: state.quizzes.map((q) =>
+          q.quiz.quizId === action.quizId
+            ? {
+                ...q,
+                quiz: {
+                  ...q.quiz,
+                  termAudio: action.audioBase64,
+                },
               }
             : q,
         ),

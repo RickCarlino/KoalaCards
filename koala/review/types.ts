@@ -66,4 +66,5 @@ export type Action =
       serverResponse: string;
       userResponse: string;
     }
-  | { type: "NEXT_QUIZ" };
+  | { type: "NEXT_QUIZ" }
+  | { type: "UPDATE_AUDIO_URL"; quizId: number; audioBase64: string };

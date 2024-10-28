@@ -1,4 +1,18 @@
 import { quizReducer } from "@/koala/review/review-reducer";
+
+async function fetchAudioAsBase64(url: string): Promise<string> {
+  const response = await fetch(url);
+  const blob = await response.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      resolve(reader.result as string);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
 import { Grade } from "femto-fsrs";
 import { useEffect, useReducer, useState } from "react";
 import { Card, Title, Text, Stack, Image, Center } from "@mantine/core";
@@ -52,6 +66,18 @@ export const ReviewPage = (props: Props) => {
   const gradeQuiz = trpc.gradeQuiz.useMutation();
   useEffect(() => {
     dispatch({ type: "LOAD_QUIZZES", quizzes: props.quizzes });
+    
+    // Prefetch and convert the first quiz's audio URL to base64
+    if (props.quizzes.length > 0) {
+      const firstQuiz = props.quizzes[0];
+      fetchAudioAsBase64(firstQuiz.termAudio).then((audioBase64) => {
+        dispatch({
+          type: "UPDATE_AUDIO_URL",
+          quizId: firstQuiz.quizId,
+          audioBase64,
+        });
+      });
+    }
   }, [props.quizzes]);
 
   const currentQuizState = state.quizzes[state.currentQuizIndex];
@@ -64,6 +90,17 @@ export const ReviewPage = (props: Props) => {
       onGraded(grade) {
         dispatch({ type: "SET_GRADE", grade, quizId: quiz.quizId });
         dispatch({ type: "NEXT_QUIZ" });
+        // Prefetch and convert the next quiz's audio URL to base64
+        const nextQuiz = state.quizzes[state.currentQuizIndex + 1];
+        if (nextQuiz) {
+          fetchAudioAsBase64(nextQuiz.quiz.termAudio).then((audioBase64) => {
+            dispatch({
+              type: "UPDATE_AUDIO_URL",
+              quizId: nextQuiz.quiz.quizId,
+              audioBase64,
+            });
+          });
+        }
       },
       onComplete({ status, feedback, userResponse }) {
         dispatch({

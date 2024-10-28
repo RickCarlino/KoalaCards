@@ -97,7 +97,7 @@ export const ListeningQuiz: QuizComp = ({
           {showTerm && <Text size="xl">Term: {card.term}</Text>}
           {isDictation && <Text>Meaning: {card.definition}</Text>}
           <Button onClick={handlePlayClick}>
-            Listen and Proceed...
+            Listen to Audio and Proceed to Exercise
           </Button>
           <Text>
             Repetitions: {successfulAttempts}/{REPETITIONS}
