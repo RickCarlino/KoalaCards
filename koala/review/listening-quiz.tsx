@@ -91,7 +91,11 @@ export const ListeningQuiz: QuizComp = ({
     case "play":
       return (
         <Stack>
-          {isDictation && <Center><Text size="xl">NEW CARD</Text></Center>}
+          {isDictation && (
+            <Center>
+              <Text size="xl">NEW CARD</Text>
+            </Center>
+          )}
           {showTerm && <Text>Term: {card.term}</Text>}
           {isDictation && <Text>Meaning: {card.definition}</Text>}
           <Button onClick={handlePlayClick}>
@@ -105,13 +109,15 @@ export const ListeningQuiz: QuizComp = ({
     case "record":
       return (
         <Stack>
-          <Text size="xl">{card.term}</Text>
+          <Text size="xl">{isDictation && card.term}</Text>
           <Button onClick={handleRecordClick}>
             {isRecording ? "Stop Recording" : "Record and Repeat"}
           </Button>
-          {phase === "record" && <Button onClick={() => {
-            playAudio(card.termAudio);
-          }}>Play Audio Again</Button>}
+          {phase === "record" && (
+            <Button onClick={() => playAudio(card.termAudio)}>
+              Play Audio Again
+            </Button>
+          )}
           {!isDictation && (
             <Button variant="outline" color="red" onClick={handleFailClick}>
               I Don't Know
@@ -122,9 +128,11 @@ export const ListeningQuiz: QuizComp = ({
     case "done":
       return (
         <Stack>
+          <Center>
+            <Text size="xl">Select Difficulty</Text>
+          </Center>
           <Text>Term: {card.term}</Text>
           <Text>Definition: {card.definition}</Text>
-          <Text size="xl">Select difficulty:</Text>
           <DifficultyButtons
             current={undefined}
             onSelectDifficulty={handleDifficultySelect}

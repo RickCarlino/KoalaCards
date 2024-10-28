@@ -31,37 +31,31 @@ export const SpeakingQuiz: QuizComp = (props) => {
 
   async function handleRecordingResult(audioBlob: Blob) {
     setIsRecording(false);
-    try {
-      const wavBlob = await convertBlobToWav(audioBlob);
-      const base64Audio = await blobToBase64(wavBlob);
+    await playAudio(card.termAudio);
+    setPhase("done");
+    const wavBlob = await convertBlobToWav(audioBlob);
+    const base64Audio = await blobToBase64(wavBlob);
 
-      transcribeAudio
-        .mutateAsync({
-          audio: base64Audio,
-          targetText: card.term,
-          lang: card.langCode as "ko", // e.g., "ko" for Korean
-        })
-        .then(({ result: userTranscription }) => {
-          gradeSpeakingQuiz
-            .mutateAsync({
-              userInput: userTranscription,
-              cardId: card.cardId,
-            })
-            .then(async ({ isCorrect, feedback }) => {
-              const status = isCorrect ? "pass" : "fail";
-              const f = status == "pass" ? "" : feedback;
-              await playAudio(card.termAudio);
-              props.onComplete({
-                status,
-                feedback: f,
-                userResponse: userTranscription,
-              });
-            });
+    transcribeAudio.mutateAsync({
+      audio: base64Audio,
+      targetText: card.term,
+      lang: card.langCode as "ko", // e.g., "ko" for Korean
+    }).then(({ result: userTranscription }) => {
+      gradeSpeakingQuiz
+      .mutateAsync({
+        userInput: userTranscription,
+        cardId: card.cardId,
+      })
+      .then(async ({ isCorrect, feedback }) => {
+        const status = isCorrect ? "pass" : "fail";
+        const f = status == "pass" ? "" : feedback;
+        props.onComplete({
+          status,
+          feedback: f,
+          userResponse: userTranscription,
         });
-    } finally {
-      // Proceed to the 'done' phase to allow difficulty selection
-      setPhase("done");
-    }
+      });
+    });
   }
 
   // Handle Fail button click
@@ -118,9 +112,7 @@ export const SpeakingQuiz: QuizComp = (props) => {
         <Button variant="outline" color="red" onClick={handleFailClick}>
           I Don't Know
         </Button>
-      )}
-
-      {phase === "done" && (
+      )} (
         <DifficultyButtons
           current={undefined}
           onSelectDifficulty={handleDifficultySelect}

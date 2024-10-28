@@ -6,12 +6,16 @@ import { useEffect, useState } from "react";
 export default function Review() {
   const mutation = trpc.getNextQuizzes.useMutation();
   const [quizzes, setQuizzes] = useState([] as any);
+  const [isFetching, setIsFetching] = useState(false);
 
   const fetchQuizzes = () => {
-    mutation.mutate(
-      { take: 4 },
-      { onSuccess: (data) => setQuizzes(data.quizzes) },
-    );
+    setIsFetching(true);
+    mutation
+      .mutateAsync(
+        { take: 3 },
+        { onSuccess: (data) => setQuizzes(data.quizzes) },
+      )
+      .finally(() => setIsFetching(false));
   };
 
   useEffect(() => {
@@ -27,8 +31,12 @@ export default function Review() {
 
   if (mutation.isError) {
     el = <div>Error occurred: {mutation.error.message}</div>;
+  } else if (isFetching) {
+    el = <div>Fetching New Quizzes...</div>;
   } else if (quizzes.length > 0) {
     el = <ReviewPage quizzes={quizzes} onSave={onSave} />;
+  } else {
+    el = <div>No quizzes found</div>;
   }
 
   return MicrophonePermissions(el);

@@ -52,24 +52,39 @@ export const ReviewOver = ({
   const numWrong = state.filter(dontShowCorrect).length;
   const numTotal = state.length;
 
+  if (numWrong === 0 && numTotal > 0) {
+    return (
+      <Center style={{ width: "100%" }}>
+        <Card shadow="sm" padding="lg" radius="md" withBorder>
+          <Title order={2}>All quizzes passed!</Title>
+          <Stack>
+            <Button onClick={handleSave} loading={isSaving}>
+              Save Progress
+            </Button>
+          </Stack>
+        </Card>
+      </Center>
+    );
+  }
+
   return (
-    <Center style={{ width: "100%", height: "100vh", overflowY: "auto" }}>
+    <Center style={{ width: "100%" }}>
       <Card
         shadow="sm"
         padding="lg"
         radius="md"
         withBorder
-        style={{ width: "80%", maxHeight: "90vh", overflowY: "auto" }}
+        style={{ width: "80%" }}
       >
         <Stack>
-          <Title order={2}>{numWrong}/{numTotal} Failed</Title>
+          <Title order={2}>
+            {numWrong}/{numTotal} Failed
+          </Title>
           <Alert color="red">
             Closing the browser tab early will cause changes to be lost. Please
             finalize your review.
           </Alert>
-          <Text>
-            Please review the following quizzes and verify grades.
-          </Text>
+          <Text>Please review the following quizzes and verify grades.</Text>
           <Stack>
             <Button onClick={handleSave} loading={isSaving}>
               Save Progress
