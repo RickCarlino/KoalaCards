@@ -49,6 +49,9 @@ export const ReviewOver = ({
     );
   }
 
+  const numWrong = state.filter(dontShowCorrect).length;
+  const numTotal = state.length;
+
   return (
     <Center style={{ width: "100%", height: "100vh", overflowY: "auto" }}>
       <Card
@@ -59,11 +62,14 @@ export const ReviewOver = ({
         style={{ width: "80%", maxHeight: "90vh", overflowY: "auto" }}
       >
         <Stack>
-          <Title order={2}>Review Summary</Title>
+          <Title order={2}>{numWrong}/{numTotal} Failed</Title>
           <Alert color="red">
             Closing the browser tab early will cause changes to be lost. Please
             finalize your review.
           </Alert>
+          <Text>
+            Please review the following quizzes and verify grades.
+          </Text>
           <Stack>
             <Button onClick={handleSave} loading={isSaving}>
               Save Progress
@@ -80,7 +86,6 @@ export const ReviewOver = ({
                 style={{ borderColor: getColor(quizState) }}
               >
                 <Stack>
-                  <Text>{quizState.quiz.term}</Text>
                   <DifficultyButtons
                     current={quizState.grade}
                     onSelectDifficulty={(grade) =>
@@ -88,12 +93,13 @@ export const ReviewOver = ({
                     }
                   />
                   <Text>Type: {quizState.quiz.lessonType}</Text>
+                  <Text>{quizState.quiz.term}</Text>
+                  <Text>Definition: {quizState.quiz.definition}</Text>
                   <Text>
-                    Your Response: {/* SET RESPONSE */}
+                    Your Entered:{" "}
                     {quizState.response || "No response provided."}
                   </Text>
                   <Text>Feedback: {quizState.serverResponse || ""}</Text>
-                  <Text>Definition: {quizState.quiz.definition}</Text>
                 </Stack>
               </Card>
             ))}

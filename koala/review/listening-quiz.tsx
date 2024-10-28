@@ -93,14 +93,17 @@ export const ListeningQuiz: QuizComp = ({
     case "play":
       return (
         <Stack>
-          {showTerm && <Text size="xl">{card.term}</Text>}
-          {isDictation && <Text>(NEW CARD) {card.definition}</Text>}
-          <Button onClick={handlePlayClick}>Play</Button>
+          {isDictation && <Text>NEW CARD:</Text>}
+          {showTerm && <Text size="xl">Term: {card.term}</Text>}
+          {isDictation && <Text>Meaning: {card.definition}</Text>}
+          <Button onClick={handlePlayClick}>
+            Listen and Proceed...
+          </Button>
           <Text>
             Repetitions: {successfulAttempts}/{REPETITIONS}
           </Text>
           <Button variant="outline" color="red" onClick={handleFailClick}>
-            Fail
+            I Don't Know
           </Button>
         </Stack>
       );
@@ -109,15 +112,16 @@ export const ListeningQuiz: QuizComp = ({
         <Stack>
           <Text size="xl">{card.term}</Text>
           <Button onClick={handleRecordClick}>
-            {isRecording ? "Stop Recording" : "Record Response"}
+            {isRecording ? "Stop Recording" : "Record and Repeat"}
           </Button>
-          {isRecording && <Text>Recording...</Text>}
           <Text>
             Repetitions: {successfulAttempts}/{REPETITIONS}
           </Text>
-          <Button variant="outline" color="red" onClick={handleFailClick}>
-            Fail
-          </Button>
+          {!isDictation && (
+            <Button variant="outline" color="red" onClick={handleFailClick}>
+              I Don't Know
+            </Button>
+          )}
         </Stack>
       );
     case "done":

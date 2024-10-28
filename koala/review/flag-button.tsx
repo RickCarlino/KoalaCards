@@ -20,7 +20,7 @@ export const FlagButton = (props: FlagButtonProps) => {
       color="yellow"
       onClick={handleFlagClick}
     >
-      Pause Reviews
+      Ignore This Card
     </Button>
   );
 };

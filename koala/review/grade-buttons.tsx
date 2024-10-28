@@ -13,7 +13,13 @@ export const DifficultyButtons: React.FC<DifficultyButtonsProps> = ({
   current,
   onSelectDifficulty,
 }) => {
-  const grades: (keyof typeof Grade)[] = ["AGAIN", "HARD", "GOOD", "EASY"];
+  const labels: string[] = ["FAIL", "HARD", "GOOD", "EASY"] as const;
+  const LOOKUP: Record<(typeof labels)[number], Grade> = {
+    FAIL: Grade.AGAIN,
+    HARD: Grade.HARD,
+    GOOD: Grade.GOOD,
+    EASY: Grade.EASY,
+  };
   useHotkeys([
     ["a", () => onSelectDifficulty(Grade.AGAIN)],
     ["s", () => onSelectDifficulty(Grade.HARD)],
@@ -23,15 +29,17 @@ export const DifficultyButtons: React.FC<DifficultyButtonsProps> = ({
 
   return (
     <Group>
-      {grades.map((grade) => (
-        <Button
-          key={grade}
-          disabled={current === Grade[grade]}
-          onClick={() => onSelectDifficulty(Grade[grade])}
-        >
-          {grade}
-        </Button>
-      ))}
+      {labels.map((label: (typeof labels)[number]) => {
+        return (
+          <Button
+            key={label}
+            disabled={current === LOOKUP[label]}
+            onClick={() => onSelectDifficulty(LOOKUP[label])}
+          >
+            {label}
+          </Button>
+        );
+      })}
     </Group>
   );
 };

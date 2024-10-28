@@ -71,7 +71,7 @@ export const SpeakingQuiz: QuizComp = (props) => {
     props.onGraded(Grade.AGAIN);
     props.onComplete({
       status: "fail",
-      feedback: "You clicked 'Fail'",
+      feedback: "You clicked 'I Don't Know'.",
       userResponse: "Not provided.",
     });
   };
@@ -108,7 +108,7 @@ export const SpeakingQuiz: QuizComp = (props) => {
 
       {(phase === "prompt" || phase === "recording") && (
         <Button onClick={handleRecordClick}>
-          {isRecording ? "Stop Recording" : "Record Response"}
+          {isRecording ? "Stop Recording" : "Begin Recording, Repeat Phrase"}
         </Button>
       )}
 
@@ -116,7 +116,7 @@ export const SpeakingQuiz: QuizComp = (props) => {
 
       {(phase === "prompt" || phase === "recording") && (
         <Button variant="outline" color="red" onClick={handleFailClick}>
-          Fail
+          I Don't Know
         </Button>
       )}
 
