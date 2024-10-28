@@ -21,6 +21,22 @@ export const ListeningQuiz: QuizComp = ({
   const transcribeAudio = trpc.transcribeAudio.useMutation();
   const voiceRecorder = useVoiceRecorder(handleRecordingResult);
 
+  useHotkeys([
+    [
+      "space",
+      () => (phase === "play" ? handlePlayClick() : handleRecordClick()),
+    ],
+  ]);
+
+  useEffect(() => {
+    setSuccessfulAttempts(0);
+    setIsRecording(false);
+    setPhase("play");
+  }, [card.term]);
+
+  const isDictation = card.lessonType === "dictation";
+  const showTerm = successfulAttempts === 0 || isDictation;
+
   const transitionToNextPhase = useCallback(
     () => setPhase(phase === "play" ? "record" : "done"),
     [phase],
@@ -32,8 +48,13 @@ export const ListeningQuiz: QuizComp = ({
   };
 
   const handleRecordClick = () => {
-    setIsRecording((prev) => !prev);
-    isRecording ? voiceRecorder.stop() : voiceRecorder.start();
+    if (isRecording) {
+      voiceRecorder.stop();
+      setIsRecording(false);
+    } else {
+      voiceRecorder.start();
+      setIsRecording(true);
+    }
   };
 
   async function handleRecordingResult(audioBlob: Blob) {
@@ -46,8 +67,9 @@ export const ListeningQuiz: QuizComp = ({
         targetText: card.term,
       });
 
-      if (transcription.trim() === card.term.trim())
+      if (transcription.trim() === card.term.trim()) {
         setSuccessfulAttempts((prev) => prev + 1);
+      }
       transitionToNextPhase();
     } catch (error) {
       setPhase("play"); // Retry
@@ -72,74 +94,128 @@ export const ListeningQuiz: QuizComp = ({
     });
   };
 
-  useHotkeys([
-    [
-      "space",
-      () => (phase === "play" ? handlePlayClick() : handleRecordClick()),
-    ],
-  ]);
+  // Phase components mapping
+  const phaseComponents = {
+    play: (
+      <PlayPhase
+        isDictation={isDictation}
+        showTerm={showTerm}
+        term={card.term}
+        definition={card.definition}
+        onPlayClick={handlePlayClick}
+        onFailClick={handleFailClick}
+      />
+    ),
+    record: (
+      <RecordPhase
+        isDictation={isDictation}
+        isRecording={isRecording}
+        term={card.term}
+        onRecordClick={handleRecordClick}
+        onPlayAudioAgain={() => playAudio(card.termAudio)}
+        onFailClick={handleFailClick}
+      />
+    ),
+    done: (
+      <DonePhase
+        term={card.term}
+        definition={card.definition}
+        onDifficultySelect={handleDifficultySelect}
+      />
+    ),
+  };
 
-  useEffect(() => {
-    setSuccessfulAttempts(0);
-    setIsRecording(false);
-    setPhase("play");
-  }, [card.term]);
-
-  const isDictation = card.lessonType === "dictation";
-  const showTerm = successfulAttempts === 0 || isDictation;
-  switch (phase) {
-    case "play":
-      return (
-        <Stack>
-          {isDictation && (
-            <Center>
-              <Text size="xl">NEW CARD</Text>
-            </Center>
-          )}
-          {showTerm && <Text>Term: {card.term}</Text>}
-          {isDictation && <Text>Meaning: {card.definition}</Text>}
-          <Button onClick={handlePlayClick}>
-            Listen to Audio and Proceed to Exercise
-          </Button>
-          <Button variant="outline" color="red" onClick={handleFailClick}>
-            I Don't Know
-          </Button>
-        </Stack>
-      );
-    case "record":
-      return (
-        <Stack>
-          <Text size="xl">{isDictation && card.term}</Text>
-          <Button onClick={handleRecordClick}>
-            {isRecording ? "Stop Recording" : "Record and Repeat"}
-          </Button>
-          {phase === "record" && (
-            <Button onClick={() => playAudio(card.termAudio)}>
-              Play Audio Again
-            </Button>
-          )}
-          {!isDictation && (
-            <Button variant="outline" color="red" onClick={handleFailClick}>
-              I Don't Know
-            </Button>
-          )}
-        </Stack>
-      );
-    case "done":
-      return (
-        <Stack>
-          <Center>
-            <Text size="xl">Select Difficulty</Text>
-          </Center>
-          <Text>Term: {card.term}</Text>
-          <Text>Definition: {card.definition}</Text>
-          <DifficultyButtons
-            current={undefined}
-            onSelectDifficulty={handleDifficultySelect}
-          />
-        </Stack>
-      );
-    default:
-      return <div>{`Unknown phase: ${phase}`}</div>;
-  }
+  return phaseComponents[phase] || <div>{`Unknown phase: ${phase}`}</div>;
 };
+
+type PlayPhaseProps = {
+  isDictation: boolean;
+  showTerm: boolean;
+  term: string;
+  definition: string;
+  onPlayClick: () => void;
+  onFailClick: () => void;
+};
+
+// Play Phase Component
+const PlayPhase = ({
+  isDictation,
+  showTerm,
+  term,
+  definition,
+  onPlayClick,
+  onFailClick,
+}: PlayPhaseProps) => (
+  <Stack>
+    {isDictation && (
+      <Center>
+        <Text size="xl">NEW CARD</Text>
+      </Center>
+    )}
+    {showTerm && <Text>Term: {term}</Text>}
+    {isDictation && <Text>Meaning: {definition}</Text>}
+    <Button onClick={onPlayClick}>
+      Listen to Audio and Proceed to Exercise
+    </Button>
+    <Button variant="outline" color="red" onClick={onFailClick}>
+      I Don't Know
+    </Button>
+  </Stack>
+);
+
+type RecordPhaseProps = {
+  isDictation: boolean;
+  isRecording: boolean;
+  term: string;
+  onRecordClick: () => void;
+  onPlayAudioAgain: () => void;
+  onFailClick: () => void;
+};
+
+// Record Phase Component
+const RecordPhase = ({
+  isDictation,
+  isRecording,
+  term,
+  onRecordClick,
+  onPlayAudioAgain,
+  onFailClick,
+}: RecordPhaseProps) => (
+  <Stack>
+    {isDictation && <Text size="xl">{term}</Text>}
+    <Button onClick={onRecordClick}>
+      {isRecording ? "Stop Recording" : "Record and Repeat"}
+    </Button>
+    <Button onClick={onPlayAudioAgain}>Play Audio Again</Button>
+    {!isDictation && (
+      <Button variant="outline" color="red" onClick={onFailClick}>
+        I Don't Know
+      </Button>
+    )}
+  </Stack>
+);
+
+type DonePhaseProps = {
+  term: string;
+  definition: string;
+  onDifficultySelect: (grade: Grade) => void;
+};
+
+// Done Phase Component
+const DonePhase = ({
+  term,
+  definition,
+  onDifficultySelect,
+}: DonePhaseProps) => (
+  <Stack>
+    <Center>
+      <Text size="xl">Select Difficulty</Text>
+    </Center>
+    <Text>Term: {term}</Text>
+    <Text>Definition: {definition}</Text>
+    <DifficultyButtons
+      current={undefined}
+      onSelectDifficulty={onDifficultySelect}
+    />
+  </Stack>
+);
