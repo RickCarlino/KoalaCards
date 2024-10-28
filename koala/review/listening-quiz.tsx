@@ -2,14 +2,12 @@ import { playAudio } from "@/koala/play-audio";
 import { blobToBase64, convertBlobToWav } from "@/koala/record-button";
 import { trpc } from "@/koala/trpc-config";
 import { useVoiceRecorder } from "@/koala/use-recorder";
-import { Button, Stack, Text } from "@mantine/core";
+import { Button, Center, Stack, Text } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import { Grade } from "femto-fsrs";
 import { useEffect, useState, useCallback } from "react";
 import { DifficultyButtons } from "./grade-buttons";
 import { QuizComp } from "./types";
-
-const REPETITIONS = 2;
 
 export const ListeningQuiz: QuizComp = ({
   quiz: card,
@@ -93,15 +91,12 @@ export const ListeningQuiz: QuizComp = ({
     case "play":
       return (
         <Stack>
-          {isDictation && <Text>NEW CARD:</Text>}
-          {showTerm && <Text size="xl">Term: {card.term}</Text>}
+          {isDictation && <Center><Text size="xl">NEW CARD</Text></Center>}
+          {showTerm && <Text>Term: {card.term}</Text>}
           {isDictation && <Text>Meaning: {card.definition}</Text>}
           <Button onClick={handlePlayClick}>
             Listen to Audio and Proceed to Exercise
           </Button>
-          <Text>
-            Repetitions: {successfulAttempts}/{REPETITIONS}
-          </Text>
           <Button variant="outline" color="red" onClick={handleFailClick}>
             I Don't Know
           </Button>
@@ -114,9 +109,9 @@ export const ListeningQuiz: QuizComp = ({
           <Button onClick={handleRecordClick}>
             {isRecording ? "Stop Recording" : "Record and Repeat"}
           </Button>
-          <Text>
-            Repetitions: {successfulAttempts}/{REPETITIONS}
-          </Text>
+          {phase === "record" && <Button onClick={() => {
+            playAudio(card.termAudio);
+          }}>Play Audio Again</Button>}
           {!isDictation && (
             <Button variant="outline" color="red" onClick={handleFailClick}>
               I Don't Know
@@ -127,8 +122,8 @@ export const ListeningQuiz: QuizComp = ({
     case "done":
       return (
         <Stack>
-          <Text>Prompt: {card.term}</Text>
-          <Text>Answer: {card.definition}</Text>
+          <Text>Term: {card.term}</Text>
+          <Text>Definition: {card.definition}</Text>
           <Text size="xl">Select difficulty:</Text>
           <DifficultyButtons
             current={undefined}

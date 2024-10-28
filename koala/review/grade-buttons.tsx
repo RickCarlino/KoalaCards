@@ -13,7 +13,7 @@ export const DifficultyButtons: React.FC<DifficultyButtonsProps> = ({
   current,
   onSelectDifficulty,
 }) => {
-  const labels: string[] = ["FAIL", "HARD", "GOOD", "EASY"] as const;
+  const labels = ["FAIL", "HARD", "GOOD", "EASY"] as const;
   const LOOKUP: Record<(typeof labels)[number], Grade> = {
     FAIL: Grade.AGAIN,
     HARD: Grade.HARD,
