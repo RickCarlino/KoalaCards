@@ -5,7 +5,7 @@ import { useVoiceRecorder } from "@/koala/use-recorder";
 import { Button, Center, Stack, Text } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import { Grade } from "femto-fsrs";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState /*, useCallback*/ } from "react";
 import { DifficultyButtons } from "./grade-buttons";
 import { QuizComp } from "./types";
 
@@ -18,6 +18,7 @@ export const ListeningQuiz: QuizComp = ({
   const [successfulAttempts, setSuccessfulAttempts] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
   const [phase, setPhase] = useState<"play" | "record" | "done">("play");
+  const [transcriptionFailed, setTranscriptionFailed] = useState(false);
   const transcribeAudio = trpc.transcribeAudio.useMutation();
   const voiceRecorder = useVoiceRecorder(handleRecordingResult);
 
@@ -32,15 +33,16 @@ export const ListeningQuiz: QuizComp = ({
     setSuccessfulAttempts(0);
     setIsRecording(false);
     setPhase("play");
+    setTranscriptionFailed(false);
   }, [card.term]);
 
   const isDictation = card.lessonType === "dictation";
   const showTerm = successfulAttempts === 0 || isDictation;
 
-  const transitionToNextPhase = useCallback(
-    () => setPhase(phase === "play" ? "record" : "done"),
-    [phase],
-  );
+  // const transitionToNextPhase = useCallback(
+  //   () => setPhase(phase === "play" ? "record" : "done"),
+  //   [phase],
+  // );
 
   const handlePlayClick = async () => {
     await playAudio(card.termAudio);
@@ -52,6 +54,7 @@ export const ListeningQuiz: QuizComp = ({
       voiceRecorder.stop();
       setIsRecording(false);
     } else {
+      setTranscriptionFailed(false); // Reset error message
       voiceRecorder.start();
       setIsRecording(true);
     }
@@ -69,10 +72,15 @@ export const ListeningQuiz: QuizComp = ({
 
       if (transcription.trim() === card.term.trim()) {
         setSuccessfulAttempts((prev) => prev + 1);
+        setPhase("done");
+      } else {
+        // Transcription did not match
+        setTranscriptionFailed(true);
+        setPhase("record"); // Stay in record phase
       }
-      transitionToNextPhase();
     } catch (error) {
-      setPhase("play"); // Retry
+      setTranscriptionFailed(true);
+      setPhase("record"); // Retry
     }
   }
 
@@ -110,6 +118,7 @@ export const ListeningQuiz: QuizComp = ({
       <RecordPhase
         isDictation={isDictation}
         isRecording={isRecording}
+        transcriptionFailed={transcriptionFailed}
         term={card.term}
         onRecordClick={handleRecordClick}
         onPlayAudioAgain={() => playAudio(card.termAudio)}
@@ -166,6 +175,7 @@ const PlayPhase = ({
 type RecordPhaseProps = {
   isDictation: boolean;
   isRecording: boolean;
+  transcriptionFailed: boolean;
   term: string;
   onRecordClick: () => void;
   onPlayAudioAgain: () => void;
@@ -176,6 +186,7 @@ type RecordPhaseProps = {
 const RecordPhase = ({
   isDictation,
   isRecording,
+  transcriptionFailed,
   term,
   onRecordClick,
   onPlayAudioAgain,
@@ -183,6 +194,9 @@ const RecordPhase = ({
 }: RecordPhaseProps) => (
   <Stack>
     {isDictation && <Text size="xl">{term}</Text>}
+    {transcriptionFailed && (
+      <Text>The transcription did not match. Please try again.</Text>
+    )}
     <Button onClick={onRecordClick}>
       {isRecording ? "Stop Recording" : "Record and Repeat"}
     </Button>

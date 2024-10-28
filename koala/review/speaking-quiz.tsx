@@ -36,26 +36,28 @@ export const SpeakingQuiz: QuizComp = (props) => {
     const wavBlob = await convertBlobToWav(audioBlob);
     const base64Audio = await blobToBase64(wavBlob);
 
-    transcribeAudio.mutateAsync({
-      audio: base64Audio,
-      targetText: card.term,
-      lang: card.langCode as "ko", // e.g., "ko" for Korean
-    }).then(({ result: userTranscription }) => {
-      gradeSpeakingQuiz
+    transcribeAudio
       .mutateAsync({
-        userInput: userTranscription,
-        cardId: card.cardId,
+        audio: base64Audio,
+        targetText: card.term,
+        lang: card.langCode as "ko", // e.g., "ko" for Korean
       })
-      .then(async ({ isCorrect, feedback }) => {
-        const status = isCorrect ? "pass" : "fail";
-        const f = status == "pass" ? "" : feedback;
-        props.onComplete({
-          status,
-          feedback: f,
-          userResponse: userTranscription,
-        });
+      .then(({ result: userTranscription }) => {
+        gradeSpeakingQuiz
+          .mutateAsync({
+            userInput: userTranscription,
+            cardId: card.cardId,
+          })
+          .then(async ({ isCorrect, feedback }) => {
+            const status = isCorrect ? "pass" : "fail";
+            const f = status == "pass" ? "" : feedback;
+            props.onComplete({
+              status,
+              feedback: f,
+              userResponse: userTranscription,
+            });
+          });
       });
-    });
   }
 
   // Handle Fail button click
@@ -99,20 +101,18 @@ export const SpeakingQuiz: QuizComp = (props) => {
         {phase == "prompt" ? "Say in target language:" : "Select difficulty"}
       </Text>
       <Text size="xl">{card.definition}</Text>
-
       {(phase === "prompt" || phase === "recording") && (
         <Button onClick={handleRecordClick}>
           {isRecording ? "Stop Recording" : "Begin Recording, Repeat Phrase"}
         </Button>
       )}
-
       {isRecording && <Text>Recording...</Text>}
-
       {(phase === "prompt" || phase === "recording") && (
         <Button variant="outline" color="red" onClick={handleFailClick}>
           I Don't Know
         </Button>
-      )} (
+      )}
+      {phase === "done" && (
         <DifficultyButtons
           current={undefined}
           onSelectDifficulty={handleDifficultySelect}

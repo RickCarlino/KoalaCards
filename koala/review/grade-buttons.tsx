@@ -26,20 +26,15 @@ export const DifficultyButtons: React.FC<DifficultyButtonsProps> = ({
     ["d", () => onSelectDifficulty(Grade.GOOD)],
     ["f", () => onSelectDifficulty(Grade.EASY)],
   ]);
-
-  return (
-    <Group>
-      {labels.map((label: (typeof labels)[number]) => {
-        return (
-          <Button
-            key={label}
-            disabled={current === LOOKUP[label]}
-            onClick={() => onSelectDifficulty(LOOKUP[label])}
-          >
-            {label}
-          </Button>
-        );
-      })}
-    </Group>
-  );
+  const list = labels.map((label: (typeof labels)[number]) => {
+    return (
+      <Button
+        key={label}
+        disabled={current === LOOKUP[label]}
+        onClick={() => onSelectDifficulty(LOOKUP[label])}>
+        {label}
+      </Button>
+    );
+  });
+  return <Group>{list}</Group>;
 };
