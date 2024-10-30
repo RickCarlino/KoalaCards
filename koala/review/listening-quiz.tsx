@@ -216,18 +216,20 @@ const RecordPhase = ({
   onFailClick,
 }: RecordPhaseProps) => {
   useHotkeys([["space", () => !isProcessing && onRecordClick()]]);
-
-  const recordLabel = isRecording ? "Stop Recording" : "Begin Recording";
+  const recordingText = isRecording ? "Stop Recording" : "Begin Recording";
+  const buttonLabel = isProcessing ? "Processing..." : recordingText;
   const header = isDictation ? `NEW: ${term}` : "Record What You Hear";
 
   return (
     <Stack>
-      <Text size="xl">{header}</Text>
+      <Center>
+        <Text size="xl">{header}</Text>
+      </Center>
       {transcriptionFailed && (
         <Text>The transcription did not match. Please try again.</Text>
       )}
       <Button onClick={onRecordClick} disabled={isProcessing}>
-        {recordLabel}
+        {buttonLabel}
       </Button>
       <Button onClick={onPlayAudioAgain}>Play Audio Again</Button>
       <FailButton onClick={onFailClick} />
