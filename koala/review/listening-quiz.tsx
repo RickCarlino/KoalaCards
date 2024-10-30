@@ -8,6 +8,7 @@ import { Grade } from "femto-fsrs";
 import { useEffect, useState /*, useCallback*/ } from "react";
 import { DifficultyButtons } from "./grade-buttons";
 import { QuizComp } from "./types";
+import { FailButton } from "./fail-button";
 
 export const ListeningQuiz: QuizComp = ({
   quiz: card,
@@ -22,13 +23,6 @@ export const ListeningQuiz: QuizComp = ({
   const transcribeAudio = trpc.transcribeAudio.useMutation();
   const voiceRecorder = useVoiceRecorder(handleRecordingResult);
 
-  useHotkeys([
-    [
-      "space",
-      () => (phase === "play" ? handlePlayClick() : handleRecordClick()),
-    ],
-  ]);
-
   useEffect(() => {
     setSuccessfulAttempts(0);
     setIsRecording(false);
@@ -38,11 +32,6 @@ export const ListeningQuiz: QuizComp = ({
 
   const isDictation = card.lessonType === "dictation";
   const showTerm = successfulAttempts === 0 || isDictation;
-
-  // const transitionToNextPhase = useCallback(
-  //   () => setPhase(phase === "play" ? "record" : "done"),
-  //   [phase],
-  // );
 
   const handlePlayClick = async () => {
     await playAudio(card.termAudio);
@@ -166,9 +155,7 @@ const PlayPhase = ({
     <Button onClick={onPlayClick}>
       Listen to Audio and Proceed to Exercise
     </Button>
-    <Button variant="outline" color="red" onClick={onFailClick}>
-      I Don't Know
-    </Button>
+    <FailButton onClick={onFailClick} />
   </Stack>
 );
 
@@ -191,23 +178,24 @@ const RecordPhase = ({
   onRecordClick,
   onPlayAudioAgain,
   onFailClick,
-}: RecordPhaseProps) => (
-  <Stack>
-    {isDictation && <Text size="xl">{term}</Text>}
-    {transcriptionFailed && (
-      <Text>The transcription did not match. Please try again.</Text>
-    )}
-    <Button onClick={onRecordClick}>
-      {isRecording ? "Stop Recording" : "Record and Repeat"}
-    </Button>
-    <Button onClick={onPlayAudioAgain}>Play Audio Again</Button>
-    {!isDictation && (
-      <Button variant="outline" color="red" onClick={onFailClick}>
-        I Don't Know
-      </Button>
-    )}
-  </Stack>
-);
+}: RecordPhaseProps) => {
+  useHotkeys([["space", () => onRecordClick()]]);
+
+  const recordLabel = isRecording ? "Stop Recording" : "Begin Recording";
+  const header = isDictation ? `NEW: ${term}` : "Record What You Hear";
+
+  return (
+    <Stack>
+      <Text size="xl">{header}</Text>
+      {transcriptionFailed && (
+        <Text>The transcription did not match. Please try again.</Text>
+      )}
+      <Button onClick={onRecordClick}>{recordLabel}</Button>
+      <Button onClick={onPlayAudioAgain}>Play Audio Again</Button>
+      <FailButton onClick={onFailClick} />
+    </Stack>
+  );
+};
 
 type DonePhaseProps = {
   term: string;

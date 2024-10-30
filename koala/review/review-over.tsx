@@ -3,11 +3,26 @@ import { Button, Card, Center, Stack, Text, Title, Alert } from "@mantine/core";
 import { useState } from "react";
 import { DifficultyButtons } from "./grade-buttons";
 import { Grade } from "femto-fsrs";
+import { useHotkeys } from "@mantine/hooks";
 
 type ReviewOverProps = {
   state: QuizState[];
   onSave: () => Promise<void>;
   onUpdateDifficulty: (quizId: number, grade: Grade) => void;
+};
+
+const PerfectScore = ({ onSave }: { onSave: () => void }) => {
+  useHotkeys([["space", onSave]]);
+  return (
+    <Center style={{ width: "100%" }}>
+      <Card shadow="sm" padding="lg" radius="md" withBorder>
+        <Title order={2}>Perfect Score!</Title>
+        <Stack>
+          <Button onClick={onSave}>Save Progress</Button>
+        </Stack>
+      </Card>
+    </Center>
+  );
 };
 
 export const ReviewOver = ({
@@ -39,6 +54,10 @@ export const ReviewOver = ({
     return quizState.serverGradingResult !== "pass";
   };
 
+  const showFailed = (quizState: QuizState) => {
+    return quizState.serverGradingResult === "fail";
+  };
+
   if (state.length === 0) {
     return (
       <Center style={{ width: "100%", height: "100vh" }}>
@@ -49,22 +68,11 @@ export const ReviewOver = ({
     );
   }
 
-  const numWrong = state.filter(dontShowCorrect).length;
+  const numWrong = state.filter(showFailed).length;
   const numTotal = state.length;
 
   if (numWrong === 0 && numTotal > 0) {
-    return (
-      <Center style={{ width: "100%" }}>
-        <Card shadow="sm" padding="lg" radius="md" withBorder>
-          <Title order={2}>All quizzes passed!</Title>
-          <Stack>
-            <Button onClick={handleSave} loading={isSaving}>
-              Save Progress
-            </Button>
-          </Stack>
-        </Card>
-      </Center>
-    );
+    return <PerfectScore onSave={handleSave} />;
   }
 
   return (

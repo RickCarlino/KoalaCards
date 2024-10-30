@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { DifficultyButtons } from "./grade-buttons";
 import { QuizComp } from "./types";
 import { playAudio } from "../play-audio";
+import { FailButton } from "./fail-button";
 
 export const SpeakingQuiz: QuizComp = (props) => {
   const { quiz: card } = props;
@@ -46,7 +47,7 @@ export const SpeakingQuiz: QuizComp = (props) => {
         gradeSpeakingQuiz
           .mutateAsync({
             userInput: userTranscription,
-            cardId: card.cardId,
+            quizID: card.quizId,
           })
           .then(async ({ isCorrect, feedback }) => {
             const status = isCorrect ? "pass" : "fail";
@@ -108,9 +109,7 @@ export const SpeakingQuiz: QuizComp = (props) => {
       )}
       {isRecording && <Text>Recording...</Text>}
       {(phase === "prompt" || phase === "recording") && (
-        <Button variant="outline" color="red" onClick={handleFailClick}>
-          I Don't Know
-        </Button>
+        <FailButton onClick={handleFailClick} />
       )}
       {phase === "done" && (
         <DifficultyButtons

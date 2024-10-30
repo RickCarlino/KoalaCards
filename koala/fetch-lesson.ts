@@ -155,7 +155,7 @@ export default async function getLessons(p: GetLessonInputParams) {
     return errorReport("Too many cards requested.");
   }
 
-  pruneOldAndHardQuizzes(p.userId);
+  // pruneOldAndHardQuizzes(p.userId);
   const playbackSpeed = await getUserSettings(p.userId).then(
     (s) => s.playbackSpeed || 1.05,
   );

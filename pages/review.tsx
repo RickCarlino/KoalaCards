@@ -12,7 +12,7 @@ export default function Review() {
     setIsFetching(true);
     mutation
       .mutateAsync(
-        { take: 3 },
+        { take: 6 },
         { onSuccess: (data) => setQuizzes(data.quizzes) },
       )
       .finally(() => setIsFetching(false));

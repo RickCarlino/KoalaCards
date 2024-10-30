@@ -8,7 +8,7 @@ export const gradeSpeakingQuiz = procedure
   .input(
     z.object({
       userInput: z.string(),
-      cardId: z.number(),
+      quizID: z.number(),
     }),
   )
   .output(
@@ -20,18 +20,12 @@ export const gradeSpeakingQuiz = procedure
   .mutation(async ({ ctx, input }) => {
     const userID = (await getUserSettings(ctx.user?.id)).user.id;
 
-    const card = await prismaClient.card.findUnique({
-      where: { id: input.cardId, userId: userID },
-    });
-
-    if (!card) {
-      throw new Error("Card not found");
-    }
-
     const quiz = await prismaClient.quiz.findFirst({
       where: {
-        cardId: card.id,
-        quizType: "speaking",
+        id: input.quizID,
+      },
+      include: {
+        Card: true,
       },
     });
 
@@ -39,8 +33,12 @@ export const gradeSpeakingQuiz = procedure
       throw new Error("Quiz not found");
     }
 
+    if (quiz.Card.userId !== userID) {
+      throw new Error("Not your card");
+    }
+
     const result = await speaking({
-      card,
+      card: quiz.Card,
       quiz,
       userID,
       userInput: input.userInput,
