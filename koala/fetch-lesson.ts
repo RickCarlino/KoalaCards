@@ -1,10 +1,8 @@
 import { prismaClient } from "@/koala/prisma-client";
-import { Grade } from "femto-fsrs";
 import { map, shuffle } from "radash";
 import { getUserSettings } from "./auth-helpers";
 import { errorReport } from "./error-report";
 import { maybeGetCardImageUrl } from "./image";
-import { calculateSchedulingData } from "./trpc-routes/import-cards";
 import { LessonType } from "./shared-types";
 import { generateLessonAudio } from "./speech";
 
@@ -46,67 +44,6 @@ const maybeFilterNewCards: MaybeFilterNewCards = async (cards, userId) => {
     }
   });
 };
-
-async function archiveOld(userId: string) {
-  const TOO_EASY = {
-    AND: [{ stability: { gt: 365 } }, { repetitions: { gt: 3 } }],
-  };
-  const fullyLearned = await prismaClient.quiz.findMany({
-    where: {
-      Card: {
-        userId: userId,
-      },
-      ...TOO_EASY,
-    },
-    select: { cardId: true },
-  });
-  // Now flag:
-  await prismaClient.card.updateMany({
-    where: {
-      id: { in: fullyLearned.map((c) => c.cardId) },
-    },
-    data: { flagged: true },
-  });
-}
-
-async function resetHard(userId: string) {
-  // Before we get started, let's flag all cards where
-  // repetitions > 4 and difficulty > 8.9:
-
-  const tooHard = await prismaClient.quiz.findMany({
-    where: {
-      Card: {
-        userId: userId,
-      },
-      difficulty: { gt: 9 },
-      repetitions: { gt: 6 },
-    },
-  });
-
-  const reset = {
-    lapses: 0,
-    stability: 0,
-    difficulty: 0,
-    lastReview: 0,
-    nextReview: 0,
-    firstReview: 0,
-    repetitions: 0,
-  };
-
-  prismaClient.quiz.updateMany({
-    where: {
-      id: { in: tooHard.map((c) => c.id) },
-    },
-    data: {
-      ...reset,
-      ...calculateSchedulingData(reset, Grade.AGAIN),
-    },
-  });
-}
-
-async function pruneOldAndHardQuizzes(userId: string) {
-  await Promise.all([archiveOld(userId), resetHard(userId)]);
-}
 
 async function getReviewCards(userId: string, now: number) {
   return await prismaClient.quiz.findMany({

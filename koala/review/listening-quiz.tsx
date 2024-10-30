@@ -5,10 +5,20 @@ import { useVoiceRecorder } from "@/koala/use-recorder";
 import { Button, Center, Stack, Text } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import { Grade } from "femto-fsrs";
-import { useEffect, useState /*, useCallback*/ } from "react";
+import { useEffect, useState } from "react";
 import { DifficultyButtons } from "./grade-buttons";
 import { QuizComp } from "./types";
 import { FailButton } from "./fail-button";
+
+type Phase = "play" | "record" | "done";
+
+const DEFAULT_STATE = {
+  successfulAttempts: 0,
+  isRecording: false,
+  phase: "play" as Phase,
+  isProcessing: false,
+  transcriptionFailed: false,
+};
 
 export const ListeningQuiz: QuizComp = ({
   quiz: card,
@@ -16,41 +26,44 @@ export const ListeningQuiz: QuizComp = ({
   onComplete,
 }) => {
   // State variables
-  const [successfulAttempts, setSuccessfulAttempts] = useState(0);
-  const [isRecording, setIsRecording] = useState(false);
-  const [phase, setPhase] = useState<"play" | "record" | "done">("play");
-  const [transcriptionFailed, setTranscriptionFailed] = useState(false);
+  const [state, setState] = useState(DEFAULT_STATE);
   const transcribeAudio = trpc.transcribeAudio.useMutation();
   const voiceRecorder = useVoiceRecorder(handleRecordingResult);
 
   useEffect(() => {
-    setSuccessfulAttempts(0);
-    setIsRecording(false);
-    setPhase("play");
-    setTranscriptionFailed(false);
+    setState({
+      successfulAttempts: 0,
+      isRecording: false,
+      phase: "play",
+      isProcessing: false,
+      transcriptionFailed: false,
+    });
   }, [card.term]);
 
   const isDictation = card.lessonType === "dictation";
-  const showTerm = successfulAttempts === 0 || isDictation;
 
   const handlePlayClick = async () => {
     await playAudio(card.termAudio);
-    setPhase("record");
+    setState((prevState) => ({ ...prevState, phase: "record" }));
   };
 
   const handleRecordClick = () => {
-    if (isRecording) {
+    if (state.isRecording) {
       voiceRecorder.stop();
-      setIsRecording(false);
+      setState((prevState) => ({ ...prevState, isRecording: false }));
     } else {
-      setTranscriptionFailed(false); // Reset error message
+      setState((prevState) => ({ ...prevState, transcriptionFailed: false }));
       voiceRecorder.start();
-      setIsRecording(true);
+      setState((prevState) => ({ ...prevState, isRecording: true }));
     }
   };
 
   async function handleRecordingResult(audioBlob: Blob) {
-    setIsRecording(false);
+    setState((prevState) => ({
+      ...prevState,
+      isRecording: false,
+      isProcessing: true,
+    }));
     try {
       const base64Audio = await blobToBase64(await convertBlobToWav(audioBlob));
       const { result: transcription } = await transcribeAudio.mutateAsync({
@@ -59,17 +72,31 @@ export const ListeningQuiz: QuizComp = ({
         targetText: card.term,
       });
 
+      console.log([transcription, card.term].join(" VS "));
+
       if (transcription.trim() === card.term.trim()) {
-        setSuccessfulAttempts((prev) => prev + 1);
-        setPhase("done");
+        setState((prevState) => ({
+          ...prevState,
+          successfulAttempts: prevState.successfulAttempts + 1,
+          phase: "done",
+        }));
       } else {
         // Transcription did not match
-        setTranscriptionFailed(true);
-        setPhase("record"); // Stay in record phase
+        setState((prevState) => ({
+          ...prevState,
+          transcriptionFailed: true,
+          phase: "record",
+        }));
       }
     } catch (error) {
-      setTranscriptionFailed(true);
-      setPhase("record"); // Retry
+      console.error(error);
+      setState((prevState) => ({
+        ...prevState,
+        transcriptionFailed: true,
+        phase: "record",
+      }));
+    } finally {
+      setState((prevState) => ({ ...prevState, isProcessing: false }));
     }
   }
 
@@ -91,39 +118,42 @@ export const ListeningQuiz: QuizComp = ({
     });
   };
 
-  // Phase components mapping
-  const phaseComponents = {
-    play: (
-      <PlayPhase
-        isDictation={isDictation}
-        showTerm={showTerm}
-        term={card.term}
-        definition={card.definition}
-        onPlayClick={handlePlayClick}
-        onFailClick={handleFailClick}
-      />
-    ),
-    record: (
-      <RecordPhase
-        isDictation={isDictation}
-        isRecording={isRecording}
-        transcriptionFailed={transcriptionFailed}
-        term={card.term}
-        onRecordClick={handleRecordClick}
-        onPlayAudioAgain={() => playAudio(card.termAudio)}
-        onFailClick={handleFailClick}
-      />
-    ),
-    done: (
-      <DonePhase
-        term={card.term}
-        definition={card.definition}
-        onDifficultySelect={handleDifficultySelect}
-      />
-    ),
-  };
-
-  return phaseComponents[phase] || <div>{`Unknown phase: ${phase}`}</div>;
+  switch (state.phase) {
+    case "play":
+      return (
+        <PlayPhase
+          isDictation={isDictation}
+          showTerm={state.successfulAttempts === 0 || isDictation}
+          term={card.term}
+          definition={card.definition}
+          onPlayClick={handlePlayClick}
+          onFailClick={handleFailClick}
+        />
+      );
+    case "record":
+      return (
+        <RecordPhase
+          isDictation={isDictation}
+          isRecording={state.isRecording}
+          isProcessing={state.isProcessing}
+          transcriptionFailed={state.transcriptionFailed}
+          term={card.term}
+          onRecordClick={handleRecordClick}
+          onPlayAudioAgain={() => playAudio(card.termAudio)}
+          onFailClick={handleFailClick}
+        />
+      );
+    case "done":
+      return (
+        <DonePhase
+          term={card.term}
+          definition={card.definition}
+          onDifficultySelect={handleDifficultySelect}
+        />
+      );
+    default:
+      return <div>{`Unknown phase: ${state.phase}`}</div>;
+  }
 };
 
 type PlayPhaseProps = {
@@ -143,25 +173,30 @@ const PlayPhase = ({
   definition,
   onPlayClick,
   onFailClick,
-}: PlayPhaseProps) => (
-  <Stack>
-    {isDictation && (
-      <Center>
-        <Text size="xl">NEW CARD</Text>
-      </Center>
-    )}
-    {showTerm && <Text>Term: {term}</Text>}
-    {isDictation && <Text>Meaning: {definition}</Text>}
-    <Button onClick={onPlayClick}>
-      Listen to Audio and Proceed to Exercise
-    </Button>
-    <FailButton onClick={onFailClick} />
-  </Stack>
-);
+}: PlayPhaseProps) => {
+  useHotkeys([["space", () => onPlayClick()]]);
+
+  return (
+    <Stack>
+      {isDictation && (
+        <Center>
+          <Text size="xl">NEW CARD</Text>
+        </Center>
+      )}
+      {showTerm && <Text>Term: {term}</Text>}
+      {isDictation && <Text>Meaning: {definition}</Text>}
+      <Button onClick={onPlayClick}>
+        Listen to Audio and Proceed to Exercise
+      </Button>
+      <FailButton onClick={onFailClick} />
+    </Stack>
+  );
+};
 
 type RecordPhaseProps = {
   isDictation: boolean;
   isRecording: boolean;
+  isProcessing: boolean;
   transcriptionFailed: boolean;
   term: string;
   onRecordClick: () => void;
@@ -173,13 +208,14 @@ type RecordPhaseProps = {
 const RecordPhase = ({
   isDictation,
   isRecording,
+  isProcessing,
   transcriptionFailed,
   term,
   onRecordClick,
   onPlayAudioAgain,
   onFailClick,
 }: RecordPhaseProps) => {
-  useHotkeys([["space", () => onRecordClick()]]);
+  useHotkeys([["space", () => !isProcessing && onRecordClick()]]);
 
   const recordLabel = isRecording ? "Stop Recording" : "Begin Recording";
   const header = isDictation ? `NEW: ${term}` : "Record What You Hear";
@@ -190,7 +226,9 @@ const RecordPhase = ({
       {transcriptionFailed && (
         <Text>The transcription did not match. Please try again.</Text>
       )}
-      <Button onClick={onRecordClick}>{recordLabel}</Button>
+      <Button onClick={onRecordClick} disabled={isProcessing}>
+        {recordLabel}
+      </Button>
       <Button onClick={onPlayAudioAgain}>Play Audio Again</Button>
       <FailButton onClick={onFailClick} />
     </Stack>

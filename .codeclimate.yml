@@ -1,0 +1,9 @@
+---
+version: 2
+
+checks:
+  method-lines:
+    enabled: false
+  file-lines:
+    config:
+      threshold: 300
