@@ -1,5 +1,6 @@
 import { prismaClient } from "@/koala/prisma-client";
 import { map, shuffle } from "radash";
+import { Quiz, Card } from "@prisma/client";
 import { getUserSettings } from "./auth-helpers";
 import { errorReport } from "./error-report";
 import { maybeGetCardImageUrl } from "./image";
@@ -14,89 +15,73 @@ type GetLessonInputParams = {
   take: number;
 };
 
-async function getReviewCards(userId: string, now: number) {
+async function getCards(
+  userId: string,
+  now: number,
+  take: number,
+  isReview: boolean,
+) {
+  const base = {
+    Card: { userId, flagged: { not: true } },
+  };
+
+  const whereClause = isReview
+    ? { ...base, nextReview: { lt: now }, repetitions: { gt: 0 } }
+    : { ...base, repetitions: 0 };
+
   return await prismaClient.quiz.findMany({
-    where: {
-      Card: {
-        userId: userId,
-        flagged: { not: true },
-      },
-      nextReview: {
-        lt: now,
-      },
-      repetitions: {
-        gt: 0,
-      },
-    },
+    where: whereClause,
     distinct: ["cardId"],
     orderBy: [{ quizType: "asc" }, { lastReview: "asc" }],
-    take: 15,
-    include: {
-      Card: true, // Include related Card data in the result
-    },
-  });
-}
-
-async function getNewCards(userId: string, take: number) {
-  if (take == 0) {
-    return [];
-  }
-
-  return await prismaClient.quiz.findMany({
-    where: {
-      repetitions: { gt: 0 },
-      Card: {
-        userId: userId,
-        flagged: { not: true },
-      },
-    },
-    distinct: ["cardId"],
-    orderBy: [{ quizType: "asc" }],
     include: { Card: true },
     take,
   });
 }
 
+// A prisma quiz with Card included
+type LocalQuiz = Quiz & { Card: Card };
+
+async function prepareQuizData(quiz: LocalQuiz, playbackPercentage: number) {
+  return {
+    quizId: quiz.id,
+    cardId: quiz.cardId,
+    definition: quiz.Card.definition,
+    term: quiz.Card.term,
+    repetitions: quiz.repetitions,
+    lapses: quiz.lapses,
+    lessonType: quiz.quizType as LessonType,
+    definitionAudio: await generateLessonAudio({
+      card: quiz.Card,
+      lessonType: "speaking",
+      speed: 110,
+    }),
+    termAudio: await generateLessonAudio({
+      card: quiz.Card,
+      lessonType: "listening",
+      speed: playbackPercentage,
+    }),
+    langCode: quiz.Card.langCode,
+    lastReview: quiz.lastReview || 0,
+    imageURL: await maybeGetCardImageUrl(quiz.Card.imageBlobId),
+  };
+}
+
+const playbackSpeed = async (userID: string) => {
+  return await getUserSettings(userID).then((s) => s.playbackSpeed || 1.05);
+};
 export default async function getLessons(p: GetLessonInputParams) {
-  if (p.take > 15) {
-    return errorReport("Too many cards requested.");
-  }
+  if (p.take > 15) return errorReport("Too many cards requested.");
 
-  // pruneOldAndHardQuizzes(p.userId);
-  const playbackSpeed = await getUserSettings(p.userId).then(
-    (s) => s.playbackSpeed || 1.05,
-  );
-  const oldCards = await getReviewCards(p.userId, p.now);
-  const newCards = await getNewCards(p.userId, p.take - oldCards.length);
-  const combined = shuffle([...oldCards, ...newCards]).slice(0, p.take);
-  const playbackPercentage = Math.round(playbackSpeed * 100);
-  return await map(combined, async (q) => {
-    const quiz = {
-      ...q,
-      quizType: q.repetitions ? q.quizType : "dictation",
-    };
+  const { userId, now, take } = p;
 
-    return {
-      quizId: quiz.id,
-      cardId: quiz.cardId,
-      definition: quiz.Card.definition,
-      term: quiz.Card.term,
-      repetitions: quiz.repetitions,
-      lapses: quiz.lapses,
-      lessonType: quiz.quizType as LessonType,
-      definitionAudio: await generateLessonAudio({
-        card: quiz.Card,
-        lessonType: "speaking",
-        speed: 110,
-      }),
-      termAudio: await generateLessonAudio({
-        card: quiz.Card,
-        lessonType: "listening",
-        speed: playbackPercentage,
-      }),
-      langCode: quiz.Card.langCode,
-      lastReview: quiz.lastReview || 0,
-      imageURL: await maybeGetCardImageUrl(quiz.Card.imageBlobId),
-    };
+  const playbackPercentage = Math.round((await playbackSpeed(userId)) * 100);
+
+  const oldCards = await getCards(p.userId, p.now, 15, true);
+  const newCards = await getCards(userId, now, take - oldCards.length, false);
+  const combined = [...shuffle(oldCards), ...shuffle(newCards)];
+
+  return await map(combined, (q) => {
+    const quiz = { ...q, quizType: q.repetitions ? q.quizType : "dictation" };
+    return prepareQuizData(quiz, playbackPercentage);
   });
 }
