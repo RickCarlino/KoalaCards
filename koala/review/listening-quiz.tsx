@@ -20,6 +20,10 @@ const DEFAULT_STATE = {
   transcriptionFailed: false,
 };
 
+function strip(input: string): string {
+  return input.replace(/[^a-zA-Z]/g, "");
+}
+
 export const ListeningQuiz: QuizComp = ({
   quiz: card,
   onGraded,
@@ -74,7 +78,7 @@ export const ListeningQuiz: QuizComp = ({
 
       console.log([transcription, card.term].join(" VS "));
 
-      if (transcription.trim() === card.term.trim()) {
+      if (strip(transcription) === strip(card.term)) {
         setState((prevState) => ({
           ...prevState,
           successfulAttempts: prevState.successfulAttempts + 1,
