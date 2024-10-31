@@ -91,24 +91,17 @@ export function quizReducer(state: ReviewState, action: Action): ReviewState {
         };
       }
 
-      // Map filtered quizzes to their original indices
-      const originalIndices = filteredQuizzes.map((q) =>
-        state.quizzes.indexOf(q),
-      );
-
-      // Find the next quiz index in the original array that's after the current index
-      const nextQuizIndex = originalIndices.findIndex(
-        (idx) => idx > state.currentQuizIndex,
-      );
-
-      const newCurrentQuizIndex = nextQuizIndex !== -1 ? nextQuizIndex : 0; // Wrap around if necessary
+      // Adjust the currentQuizIndex if necessary
+      let newCurrentQuizIndex = state.currentQuizIndex;
+      if (newCurrentQuizIndex >= filteredQuizzes.length) {
+        newCurrentQuizIndex = filteredQuizzes.length - 1;
+      }
 
       return {
         ...state,
         quizzes: filteredQuizzes,
         currentQuizIndex: newCurrentQuizIndex,
       };
-
     default:
       return state;
   }
