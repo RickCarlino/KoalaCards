@@ -14,37 +14,6 @@ type GetLessonInputParams = {
   take: number;
 };
 
-type CardLike = { repetitions?: number };
-
-type MaybeFilterNewCards = <T extends CardLike>(
-  cards: T[],
-  userId: string,
-) => Promise<T[]>;
-
-const maybeFilterNewCards: MaybeFilterNewCards = async (cards, userId) => {
-  const limit = (await getUserSettings(userId)).cardsPerDayMax;
-  const ONE_DAY = 1000 * 60 * 60 * 24;
-  let newCards = await prismaClient.quiz.count({
-    where: {
-      Card: {
-        userId: userId,
-      },
-      firstReview: {
-        gte: Date.now() - ONE_DAY,
-      },
-    },
-  });
-  return cards.filter((c) => {
-    const isNew = (c.repetitions || 0) === 0;
-    if (isNew) {
-      newCards++;
-      return newCards <= limit;
-    } else {
-      return true;
-    }
-  });
-};
-
 async function getReviewCards(userId: string, now: number) {
   return await prismaClient.quiz.findMany({
     where: {
@@ -60,7 +29,7 @@ async function getReviewCards(userId: string, now: number) {
       },
     },
     distinct: ["cardId"],
-    orderBy: [{ quizType: "asc" }],
+    orderBy: [{ quizType: "asc" }, { lastReview: "asc" }],
     take: 15,
     include: {
       Card: true, // Include related Card data in the result
@@ -68,23 +37,24 @@ async function getReviewCards(userId: string, now: number) {
   });
 }
 
-async function getNewCards(userId: string) {
-  const cards = await prismaClient.quiz.findMany({
+async function getNewCards(userId: string, take: number) {
+  if (take == 0) {
+    return [];
+  }
+
+  return await prismaClient.quiz.findMany({
     where: {
+      repetitions: { gt: 0 },
       Card: {
         userId: userId,
         flagged: { not: true },
       },
-      repetitions: 0,
     },
     distinct: ["cardId"],
     orderBy: [{ quizType: "asc" }],
-    take: 5,
-    include: {
-      Card: true, // Include related Card data in the result
-    },
+    include: { Card: true },
+    take,
   });
-  return maybeFilterNewCards(cards, userId);
 }
 
 export default async function getLessons(p: GetLessonInputParams) {
@@ -96,11 +66,10 @@ export default async function getLessons(p: GetLessonInputParams) {
   const playbackSpeed = await getUserSettings(p.userId).then(
     (s) => s.playbackSpeed || 1.05,
   );
+  const oldCards = await getReviewCards(p.userId, p.now);
+  const newCards = await getNewCards(p.userId, p.take - oldCards.length);
+  const combined = shuffle([...oldCards, ...newCards]).slice(0, p.take);
   const playbackPercentage = Math.round(playbackSpeed * 100);
-  const reviewCards = await getReviewCards(p.userId, p.now);
-  const newCards = await getNewCards(p.userId);
-  // 25% of cards are new cards.
-  const combined = shuffle([...reviewCards, ...newCards]).slice(0, p.take);
   return await map(combined, async (q) => {
     const quiz = {
       ...q,

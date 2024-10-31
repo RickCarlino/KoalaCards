@@ -66,7 +66,7 @@ export const ReviewPage = (props: Props) => {
   const gradeQuiz = trpc.gradeQuiz.useMutation();
   useEffect(() => {
     dispatch({ type: "LOAD_QUIZZES", quizzes: props.quizzes });
-    
+
     // Prefetch and convert the first quiz's audio URL to base64
     if (props.quizzes.length > 0) {
       const firstQuiz = props.quizzes[0];
@@ -140,6 +140,7 @@ export const ReviewPage = (props: Props) => {
                 dispatch({ type: "FLAG_CURRENT_CARD" });
               }}
             />
+            <Text size={"xs"}>{props.quizzesDue} quizzes due today.</Text>
             {illustration}
           </Stack>
         </Card>
