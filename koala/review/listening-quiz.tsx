@@ -24,6 +24,8 @@ function strip(input: string): string {
   return input.replace(/[^a-zA-Z]/g, "");
 }
 
+const REPETITIONS = 2;
+
 export const ListeningQuiz: QuizComp = ({
   quiz: card,
   onGraded,
@@ -79,11 +81,14 @@ export const ListeningQuiz: QuizComp = ({
       console.log([transcription, card.term].join(" VS "));
 
       if (strip(transcription) === strip(card.term)) {
-        setState((prevState) => ({
-          ...prevState,
-          successfulAttempts: prevState.successfulAttempts + 1,
-          phase: "done",
-        }));
+        setState((prevState) => {
+          const newAttempts = prevState.successfulAttempts + 1;
+          return {
+            ...prevState,
+            successfulAttempts: newAttempts,
+            phase: newAttempts >= REPETITIONS ? "done" : "record",
+          };
+        });
       } else {
         // Transcription did not match
         setState((prevState) => ({
