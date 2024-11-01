@@ -21,6 +21,8 @@ async function getCards(
   take: number,
   isReview: boolean,
 ) {
+  if (take < 1) return [];
+
   const base = {
     Card: { userId, flagged: { not: true } },
   };
@@ -76,9 +78,9 @@ export default async function getLessons(p: GetLessonInputParams) {
 
   const playbackPercentage = Math.round((await playbackSpeed(userId)) * 100);
 
-  const oldCards = await getCards(p.userId, p.now, 15, true);
+  const oldCards = await getCards(p.userId, p.now, take, true);
   const newCards = await getCards(userId, now, take - oldCards.length, false);
-  const combined = [...shuffle(oldCards), ...shuffle(newCards)];
+  const combined = [...shuffle(oldCards), ...shuffle(newCards)].slice(0, take);
 
   return await map(combined, (q) => {
     const quiz = { ...q, quizType: q.repetitions ? q.quizType : "dictation" };
