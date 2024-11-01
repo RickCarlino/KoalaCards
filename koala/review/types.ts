@@ -21,6 +21,11 @@ export interface Props {
   quizzesDue: number;
   onSave(): Promise<void>;
 }
+export type OnCompleteProps = {
+  status: QuizStatus;
+  feedback: string;
+  userResponse: string;
+};
 
 export interface QuizProps {
   quiz: Quiz;
@@ -28,11 +33,7 @@ export interface QuizProps {
   onGraded: (grade: Grade) => void;
   // Called when all async tasks / grading are done.
   // Quiz will be stuck in "awaitingGrading" until this is called.
-  onComplete: (p: {
-    status: QuizStatus;
-    feedback: string;
-    userResponse: string;
-  }) => void;
+  onComplete: (p: OnCompleteProps) => void;
 }
 
 export type QuizComp = React.FC<QuizProps>;
