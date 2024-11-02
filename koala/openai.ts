@@ -122,6 +122,7 @@ const SINGLE_WORD = [
   `Create a DALL-e prompt to generate an image of the foreign language word above.`,
   `Make it as realistic and accurate to the words meaning as possible.`,
   `The illustration must convey the word's meaning to the student.`,
+  `humans must be anthropomorphized.`,
   `Do not add text. It will give away the answer!`,
 ].join("\n");
 

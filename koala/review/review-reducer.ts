@@ -2,10 +2,13 @@ import { Grade } from "femto-fsrs";
 import { Action, ReviewState } from "./types";
 
 export function quizReducer(state: ReviewState, action: Action): ReviewState {
-  const plusOne = state.currentQuizIndex + 1;
-  const nextIndex =
-    plusOne < state.quizzes.length ? plusOne : state.quizzes.length;
-  console.log(action.type);
+  if (action.type !== "LOAD_QUIZZES") {
+    console.log(JSON.stringify({
+      ...action,
+      audioBase64: undefined,
+    }, null, 2));
+  }
+
   switch (action.type) {
     case "LOAD_QUIZZES":
       return {
@@ -63,6 +66,10 @@ export function quizReducer(state: ReviewState, action: Action): ReviewState {
       };
 
     case "NEXT_QUIZ":
+      const plusOne = state.currentQuizIndex + 1;
+      const nextIndex =
+        plusOne < state.quizzes.length ? plusOne : state.quizzes.length;
+
       return {
         ...state,
         currentQuizIndex: nextIndex,
@@ -87,24 +94,17 @@ export function quizReducer(state: ReviewState, action: Action): ReviewState {
         };
       }
 
-      // Map filtered quizzes to their original indices
-      const originalIndices = filteredQuizzes.map((q) =>
-        state.quizzes.indexOf(q),
-      );
-
-      // Find the next quiz index in the original array that's after the current index
-      const nextQuizIndex = originalIndices.findIndex(
-        (idx) => idx > state.currentQuizIndex,
-      );
-
-      const newCurrentQuizIndex = nextQuizIndex !== -1 ? nextQuizIndex : 0; // Wrap around if necessary
+      // Adjust the currentQuizIndex if necessary
+      let newCurrentQuizIndex = state.currentQuizIndex;
+      if (newCurrentQuizIndex >= filteredQuizzes.length) {
+        newCurrentQuizIndex = filteredQuizzes.length - 1;
+      }
 
       return {
         ...state,
         quizzes: filteredQuizzes,
         currentQuizIndex: newCurrentQuizIndex,
       };
-
     default:
       return state;
   }

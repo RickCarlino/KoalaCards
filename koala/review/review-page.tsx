@@ -1,4 +1,14 @@
 import { quizReducer } from "@/koala/review/review-reducer";
+import { Grade } from "femto-fsrs";
+import { useEffect, useReducer, useState, useCallback } from "react";
+import { Card, Title, Text, Stack, Image, Center } from "@mantine/core";
+import { DifficultyButtons } from "./grade-buttons";
+import { OnCompleteProps, Props, Quiz, QuizComp, QuizProps } from "./types";
+import { ReviewOver } from "./review-over";
+import { SpeakingQuiz } from "./speaking-quiz";
+import { ListeningQuiz } from "./listening-quiz";
+import { trpc } from "../trpc-config";
+import { FlagButton } from "./flag-button";
 
 async function fetchAudioAsBase64(url: string): Promise<string> {
   const response = await fetch(url);
@@ -12,17 +22,6 @@ async function fetchAudioAsBase64(url: string): Promise<string> {
     reader.readAsDataURL(blob);
   });
 }
-
-import { Grade } from "femto-fsrs";
-import { useEffect, useReducer, useState } from "react";
-import { Card, Title, Text, Stack, Image, Center } from "@mantine/core";
-import { DifficultyButtons } from "./grade-buttons";
-import { Props, Quiz, QuizComp, QuizProps } from "./types";
-import { ReviewOver } from "./review-over";
-import { SpeakingQuiz } from "./speaking-quiz";
-import { ListeningQuiz } from "./listening-quiz";
-import { trpc } from "../trpc-config";
-import { FlagButton } from "./flag-button";
 
 const UnknownQuiz: QuizComp = (props) => {
   const [currentGrade, setGrade] = useState<Grade>();
@@ -54,7 +53,7 @@ const UnknownQuiz: QuizComp = (props) => {
 // Lookup table for quiz components
 const quizComponents: Record<Quiz["lessonType"], QuizComp> = {
   dictation: ListeningQuiz,
-  listening: SpeakingQuiz,
+  listening: ListeningQuiz,
   speaking: SpeakingQuiz,
 };
 
@@ -66,7 +65,7 @@ export const ReviewPage = (props: Props) => {
   const gradeQuiz = trpc.gradeQuiz.useMutation();
   useEffect(() => {
     dispatch({ type: "LOAD_QUIZZES", quizzes: props.quizzes });
-    
+
     // Prefetch and convert the first quiz's audio URL to base64
     if (props.quizzes.length > 0) {
       const firstQuiz = props.quizzes[0];
@@ -133,13 +132,14 @@ export const ReviewPage = (props: Props) => {
           style={{ maxWidth: 600, width: "100%" }} // Set fixed maxWidth
         >
           <Stack>
-            <LessonComponent {...quizProps} />
+            <LessonComponent {...quizProps} key={quiz.quizId} />
             <FlagButton
               cardID={quiz.cardId}
               onClick={() => {
                 dispatch({ type: "FLAG_CURRENT_CARD" });
               }}
             />
+            <Text size={"xs"}>{props.quizzesDue} quizzes due today.</Text>
             {illustration}
           </Stack>
         </Card>

@@ -5,16 +5,19 @@ import { useEffect, useState } from "react";
 
 export default function Review() {
   const mutation = trpc.getNextQuizzes.useMutation();
-  const [quizzes, setQuizzes] = useState([] as any);
+  const [data, setData] = useState({
+    quizzesDue: 0,
+    quizzes: [],
+  } as {
+    quizzesDue: number;
+    quizzes: any[];
+  });
   const [isFetching, setIsFetching] = useState(false);
 
   const fetchQuizzes = () => {
     setIsFetching(true);
     mutation
-      .mutateAsync(
-        { take: 6 },
-        { onSuccess: (data) => setQuizzes(data.quizzes) },
-      )
+      .mutateAsync({ take: 6 }, { onSuccess: (data) => setData(data) })
       .finally(() => setIsFetching(false));
   };
 
@@ -33,8 +36,14 @@ export default function Review() {
     el = <div>Error occurred: {mutation.error.message}</div>;
   } else if (isFetching) {
     el = <div>Fetching New Quizzes...</div>;
-  } else if (quizzes.length > 0) {
-    el = <ReviewPage quizzes={quizzes} onSave={onSave} />;
+  } else if (data.quizzes.length > 0) {
+    el = (
+      <ReviewPage
+        quizzesDue={data.quizzesDue}
+        quizzes={data.quizzes}
+        onSave={onSave}
+      />
+    );
   } else {
     el = <div>No quizzes found</div>;
   }

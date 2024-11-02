@@ -13,12 +13,15 @@ import { FailButton } from "./fail-button";
 type Phase = "play" | "record" | "done";
 
 const DEFAULT_STATE = {
-  successfulAttempts: 0,
   isRecording: false,
   phase: "play" as Phase,
   isProcessing: false,
   transcriptionFailed: false,
 };
+
+function strip(input: string): string {
+  return input.replace(/[^\p{L}]+/gu, "");
+}
 
 export const ListeningQuiz: QuizComp = ({
   quiz: card,
@@ -32,7 +35,6 @@ export const ListeningQuiz: QuizComp = ({
 
   useEffect(() => {
     setState({
-      successfulAttempts: 0,
       isRecording: false,
       phase: "play",
       isProcessing: false,
@@ -72,20 +74,24 @@ export const ListeningQuiz: QuizComp = ({
         targetText: card.term,
       });
 
-      console.log([transcription, card.term].join(" VS "));
-
-      if (transcription.trim() === card.term.trim()) {
-        setState((prevState) => ({
-          ...prevState,
-          successfulAttempts: prevState.successfulAttempts + 1,
-          phase: "done",
-        }));
+      const OK = strip(transcription) === strip(card.term);
+      console.log([strip(transcription), strip(card.term)].join(" VS "));
+      console.log(OK ? "OK" : "FAIL");
+      if (OK) {
+        await playAudio(card.termAudio);
+        await playAudio(card.definitionAudio);
+        setState((prevState) => {
+          return {
+            ...prevState,
+            phase: "done",
+          };
+        });
       } else {
         // Transcription did not match
+        await playAudio(card.termAudio);
         setState((prevState) => ({
           ...prevState,
           transcriptionFailed: true,
-          phase: "record",
         }));
       }
     } catch (error) {
@@ -93,7 +99,6 @@ export const ListeningQuiz: QuizComp = ({
       setState((prevState) => ({
         ...prevState,
         transcriptionFailed: true,
-        phase: "record",
       }));
     } finally {
       setState((prevState) => ({ ...prevState, isProcessing: false }));
@@ -123,7 +128,7 @@ export const ListeningQuiz: QuizComp = ({
       return (
         <PlayPhase
           isDictation={isDictation}
-          showTerm={state.successfulAttempts === 0 || isDictation}
+          showTerm={isDictation}
           term={card.term}
           definition={card.definition}
           onPlayClick={handlePlayClick}
@@ -178,13 +183,11 @@ const PlayPhase = ({
 
   return (
     <Stack>
-      {isDictation && (
-        <Center>
-          <Text size="xl">NEW CARD</Text>
-        </Center>
-      )}
-      {showTerm && <Text>Term: {term}</Text>}
-      {isDictation && <Text>Meaning: {definition}</Text>}
+      <Center>
+        <Text size="xl">Listen and Repeat</Text>
+      </Center>
+      {showTerm && <Text>{term}</Text>}
+      {isDictation && <Text>Definition: {definition}</Text>}
       <Button onClick={onPlayClick}>
         Listen to Audio and Proceed to Exercise
       </Button>
@@ -216,18 +219,22 @@ const RecordPhase = ({
   onFailClick,
 }: RecordPhaseProps) => {
   useHotkeys([["space", () => !isProcessing && onRecordClick()]]);
-
-  const recordLabel = isRecording ? "Stop Recording" : "Begin Recording";
-  const header = isDictation ? `NEW: ${term}` : "Record What You Hear";
+  const recordingText = isRecording ? "Stop Recording" : "Begin Recording";
+  const buttonLabel = isProcessing ? "Processing..." : recordingText;
+  const header = isDictation
+    ? `Repeat the Phrase: ${term}`
+    : "Repeat the Phrase Without Reading";
 
   return (
     <Stack>
-      <Text size="xl">{header}</Text>
+      <Center>
+        <Text size="xl">{header}</Text>
+      </Center>
       {transcriptionFailed && (
-        <Text>The transcription did not match. Please try again.</Text>
+        <Text>Pronunciation failure. Please try again.</Text>
       )}
       <Button onClick={onRecordClick} disabled={isProcessing}>
-        {recordLabel}
+        {buttonLabel}
       </Button>
       <Button onClick={onPlayAudioAgain}>Play Audio Again</Button>
       <FailButton onClick={onFailClick} />
@@ -249,7 +256,7 @@ const DonePhase = ({
 }: DonePhaseProps) => (
   <Stack>
     <Center>
-      <Text size="xl">Select Difficulty</Text>
+      <Text size="xl">How Well Did You Understand the Phrase?</Text>
     </Center>
     <Text>Term: {term}</Text>
     <Text>Definition: {definition}</Text>
