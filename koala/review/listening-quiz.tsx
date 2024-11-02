@@ -13,7 +13,6 @@ import { FailButton } from "./fail-button";
 type Phase = "play" | "record" | "done";
 
 const DEFAULT_STATE = {
-  successfulAttempts: 0,
   isRecording: false,
   phase: "play" as Phase,
   isProcessing: false,
@@ -23,8 +22,6 @@ const DEFAULT_STATE = {
 function strip(input: string): string {
   return input.replace(/[^a-zA-Z]/g, "");
 }
-
-const REPETITIONS = 2;
 
 export const ListeningQuiz: QuizComp = ({
   quiz: card,
@@ -38,7 +35,6 @@ export const ListeningQuiz: QuizComp = ({
 
   useEffect(() => {
     setState({
-      successfulAttempts: 0,
       isRecording: false,
       phase: "play",
       isProcessing: false,
@@ -82,11 +78,9 @@ export const ListeningQuiz: QuizComp = ({
 
       if (strip(transcription) === strip(card.term)) {
         setState((prevState) => {
-          const newAttempts = prevState.successfulAttempts + 1;
           return {
             ...prevState,
-            successfulAttempts: newAttempts,
-            phase: newAttempts >= REPETITIONS ? "done" : "record",
+            phase: "done",
           };
         });
       } else {
@@ -94,7 +88,6 @@ export const ListeningQuiz: QuizComp = ({
         setState((prevState) => ({
           ...prevState,
           transcriptionFailed: true,
-          phase: "record",
         }));
       }
     } catch (error) {
@@ -102,7 +95,6 @@ export const ListeningQuiz: QuizComp = ({
       setState((prevState) => ({
         ...prevState,
         transcriptionFailed: true,
-        phase: "record",
       }));
     } finally {
       setState((prevState) => ({ ...prevState, isProcessing: false }));
@@ -132,7 +124,7 @@ export const ListeningQuiz: QuizComp = ({
       return (
         <PlayPhase
           isDictation={isDictation}
-          showTerm={state.successfulAttempts === 0 || isDictation}
+          showTerm={isDictation}
           term={card.term}
           definition={card.definition}
           onPlayClick={handlePlayClick}
@@ -187,13 +179,11 @@ const PlayPhase = ({
 
   return (
     <Stack>
-      {isDictation && (
-        <Center>
-          <Text size="xl">NEW CARD</Text>
-        </Center>
-      )}
-      {showTerm && <Text>Term: {term}</Text>}
-      {isDictation && <Text>Meaning: {definition}</Text>}
+      <Center>
+        <Text size="xl">Listen and Repeat</Text>
+      </Center>
+      {showTerm && <Text>{term}</Text>}
+      {isDictation && <Text>Definition: {definition}</Text>}
       <Button onClick={onPlayClick}>
         Listen to Audio and Proceed to Exercise
       </Button>
@@ -227,7 +217,9 @@ const RecordPhase = ({
   useHotkeys([["space", () => !isProcessing && onRecordClick()]]);
   const recordingText = isRecording ? "Stop Recording" : "Begin Recording";
   const buttonLabel = isProcessing ? "Processing..." : recordingText;
-  const header = isDictation ? `NEW: ${term}` : "Record What You Hear";
+  const header = isDictation
+    ? `Repeat the Phrase: ${term}`
+    : "Repeat the Phrase Without Reading";
 
   return (
     <Stack>
@@ -260,7 +252,7 @@ const DonePhase = ({
 }: DonePhaseProps) => (
   <Stack>
     <Center>
-      <Text size="xl">Select Difficulty</Text>
+      <Text size="xl">How Well Did You Understand the Phrase?</Text>
     </Center>
     <Text>Term: {term}</Text>
     <Text>Definition: {definition}</Text>

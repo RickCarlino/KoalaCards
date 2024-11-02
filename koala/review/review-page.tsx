@@ -53,7 +53,7 @@ const UnknownQuiz: QuizComp = (props) => {
 // Lookup table for quiz components
 const quizComponents: Record<Quiz["lessonType"], QuizComp> = {
   dictation: ListeningQuiz,
-  listening: SpeakingQuiz,
+  listening: ListeningQuiz,
   speaking: SpeakingQuiz,
 };
 
