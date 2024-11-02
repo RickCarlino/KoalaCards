@@ -20,7 +20,7 @@ const DEFAULT_STATE = {
 };
 
 function strip(input: string): string {
-  return input.replace(/[^a-zA-Z]/g, "");
+  return input.replace(/[^\p{L}]+/gu, "");
 }
 
 export const ListeningQuiz: QuizComp = ({
@@ -74,9 +74,12 @@ export const ListeningQuiz: QuizComp = ({
         targetText: card.term,
       });
 
-      console.log([transcription, card.term].join(" VS "));
-
-      if (strip(transcription) === strip(card.term)) {
+      const OK = strip(transcription) === strip(card.term);
+      console.log([strip(transcription), strip(card.term)].join(" VS "));
+      console.log(OK ? "OK" : "FAIL");
+      if (OK) {
+        await playAudio(card.termAudio);
+        await playAudio(card.definitionAudio);
         setState((prevState) => {
           return {
             ...prevState,
@@ -85,6 +88,7 @@ export const ListeningQuiz: QuizComp = ({
         });
       } else {
         // Transcription did not match
+        await playAudio(card.termAudio);
         setState((prevState) => ({
           ...prevState,
           transcriptionFailed: true,
@@ -227,7 +231,7 @@ const RecordPhase = ({
         <Text size="xl">{header}</Text>
       </Center>
       {transcriptionFailed && (
-        <Text>The transcription did not match. Please try again.</Text>
+        <Text>Pronunciation failure. Please try again.</Text>
       )}
       <Button onClick={onRecordClick} disabled={isProcessing}>
         {buttonLabel}

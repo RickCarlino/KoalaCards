@@ -10,15 +10,17 @@ type ReviewOverProps = {
   onSave: () => Promise<void>;
   onUpdateDifficulty: (quizId: number, grade: Grade) => void;
 };
-
-const PerfectScore = ({ onSave }: { onSave: () => void }) => {
+type PerfectScoreProps = { onSave: () => void; isSaving: boolean };
+const PerfectScore = ({ onSave, isSaving }: PerfectScoreProps) => {
   useHotkeys([["space", onSave]]);
   return (
     <Center style={{ width: "100%" }}>
       <Card shadow="sm" padding="lg" radius="md" withBorder>
-        <Title order={2}>Perfect Score!</Title>
+        <Title order={2}>Lesson Complete</Title>
         <Stack>
-          <Button onClick={onSave}>Save Progress</Button>
+          <Button loading={isSaving} onClick={onSave}>
+            Save Progress
+          </Button>
         </Stack>
       </Card>
     </Center>
@@ -62,7 +64,7 @@ export const ReviewOver = ({
     return (
       <Center style={{ width: "100%", height: "100vh" }}>
         <Card shadow="sm" padding="lg" radius="md" withBorder>
-          <Title order={2}>No quizzes to review</Title>
+          <Title order={2}>{isSaving ? "" : "No quizzes to review"}</Title>
         </Card>
       </Center>
     );
@@ -72,7 +74,7 @@ export const ReviewOver = ({
   const numTotal = state.length;
 
   if (numWrong === 0 && numTotal > 0) {
-    return <PerfectScore onSave={handleSave} />;
+    return <PerfectScore onSave={handleSave} isSaving={isSaving} />;
   }
 
   return (

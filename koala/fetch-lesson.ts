@@ -55,7 +55,7 @@ async function prepareQuizData(quiz: LocalQuiz, playbackPercentage: number) {
     definitionAudio: await generateLessonAudio({
       card: quiz.Card,
       lessonType: "speaking",
-      speed: 110,
+      speed: 115,
     }),
     termAudio: await generateLessonAudio({
       card: quiz.Card,
