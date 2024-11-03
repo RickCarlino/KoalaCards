@@ -9,6 +9,7 @@ import { DifficultyButtons } from "./grade-buttons";
 import { QuizComp } from "./types";
 import { playAudio } from "../play-audio";
 import { FailButton } from "./fail-button";
+import { HOTKEYS } from "./hotkeys";
 
 export const SpeakingQuiz: QuizComp = (props) => {
   const { quiz: card } = props;
@@ -81,7 +82,7 @@ export const SpeakingQuiz: QuizComp = (props) => {
   // Handle space key press
   useHotkeys([
     [
-      "space",
+      HOTKEYS.RECORD,
       () => {
         if (phase === "prompt" || phase === "recording") {
           handleRecordClick();

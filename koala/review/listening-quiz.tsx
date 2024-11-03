@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import { DifficultyButtons } from "./grade-buttons";
 import { QuizComp } from "./types";
 import { FailButton } from "./fail-button";
+import { HOTKEYS } from "./hotkeys";
 
 type Phase = "play" | "record" | "done";
 
@@ -179,10 +180,7 @@ const PlayPhase = ({
   onPlayClick,
   onFailClick,
 }: PlayPhaseProps) => {
-  useHotkeys([
-    ["space", () => onPlayClick()],
-    ["j", () => onPlayClick()],
-  ]);
+  useHotkeys([[HOTKEYS.PLAY, () => onPlayClick()]]);
 
   return (
     <Stack>
@@ -222,8 +220,8 @@ const RecordPhase = ({
   onFailClick,
 }: RecordPhaseProps) => {
   useHotkeys([
-    ["space", () => !isProcessing && onRecordClick()],
-    ["j", () => !isProcessing && onPlayClick()],
+    [HOTKEYS.RECORD, () => !isProcessing && onRecordClick()],
+    [HOTKEYS.PLAY, () => !isProcessing && onPlayClick()],
   ]);
   const recordingText = isRecording ? "Stop Recording" : "Begin Recording";
   const buttonLabel = isProcessing ? "Processing..." : recordingText;

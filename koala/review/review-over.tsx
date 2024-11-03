@@ -1,10 +1,11 @@
-import { QuizState } from "./types";
-import { Button, Card, Center, Stack, Text, Title, Alert } from "@mantine/core";
+import { Alert, Button, Card, Center, Stack, Text, Title } from "@mantine/core";
+import { useHotkeys } from "@mantine/hooks";
+import { Grade } from "femto-fsrs";
+import Link from "next/link";
 import { useState } from "react";
 import { DifficultyButtons } from "./grade-buttons";
-import { Grade } from "femto-fsrs";
-import { useHotkeys } from "@mantine/hooks";
-import Link from "next/link";
+import { HOTKEYS } from "./hotkeys";
+import { QuizState } from "./types";
 
 type ReviewOverProps = {
   state: QuizState[];
@@ -13,7 +14,7 @@ type ReviewOverProps = {
 };
 type PerfectScoreProps = { onSave: () => void; isSaving: boolean };
 const PerfectScore = ({ onSave, isSaving }: PerfectScoreProps) => {
-  useHotkeys([["space", onSave]]);
+  useHotkeys([[HOTKEYS.SAVE, onSave]]);
   return (
     <Center style={{ width: "100%" }}>
       <Card shadow="sm" padding="lg" radius="md" withBorder>
