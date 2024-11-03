@@ -3,10 +3,16 @@ import { Action, ReviewState } from "./types";
 
 export function quizReducer(state: ReviewState, action: Action): ReviewState {
   if (action.type !== "LOAD_QUIZZES") {
-    console.log(JSON.stringify({
-      ...action,
-      audioBase64: undefined,
-    }, null, 2));
+    console.log(
+      JSON.stringify(
+        {
+          ...action,
+          audioBase64: undefined,
+        },
+        null,
+        2,
+      ),
+    );
   }
 
   switch (action.type) {

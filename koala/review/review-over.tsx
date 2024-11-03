@@ -4,6 +4,7 @@ import { useState } from "react";
 import { DifficultyButtons } from "./grade-buttons";
 import { Grade } from "femto-fsrs";
 import { useHotkeys } from "@mantine/hooks";
+import Link from "next/link";
 
 type ReviewOverProps = {
   state: QuizState[];
@@ -118,7 +119,14 @@ export const ReviewOver = ({
                     }
                   />
                   <Text>Type: {quizState.quiz.lessonType}</Text>
-                  <Text>{quizState.quiz.term}</Text>
+                  <Text>
+                    <Link
+                      target={"_blank"}
+                      href={`/cards/${quizState.quiz.cardId}`}
+                    >
+                      {quizState.quiz.term}
+                    </Link>
+                  </Text>
                   <Text>Definition: {quizState.quiz.definition}</Text>
                   <Text>
                     Your Entered:{" "}

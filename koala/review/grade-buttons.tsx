@@ -31,7 +31,8 @@ export const DifficultyButtons: React.FC<DifficultyButtonsProps> = ({
       <Button
         key={label}
         disabled={current === LOOKUP[label]}
-        onClick={() => onSelectDifficulty(LOOKUP[label])}>
+        onClick={() => onSelectDifficulty(LOOKUP[label])}
+      >
         {label}
       </Button>
     );

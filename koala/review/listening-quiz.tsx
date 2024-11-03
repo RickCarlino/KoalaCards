@@ -78,8 +78,8 @@ export const ListeningQuiz: QuizComp = ({
       console.log([strip(transcription), strip(card.term)].join(" VS "));
       console.log(OK ? "OK" : "FAIL");
       if (OK) {
-        await playAudio(card.termAudio);
         await playAudio(card.definitionAudio);
+        await playAudio(card.termAudio);
         setState((prevState) => {
           return {
             ...prevState,
@@ -144,7 +144,7 @@ export const ListeningQuiz: QuizComp = ({
           transcriptionFailed={state.transcriptionFailed}
           term={card.term}
           onRecordClick={handleRecordClick}
-          onPlayAudioAgain={() => playAudio(card.termAudio)}
+          onPlayClick={() => playAudio(card.termAudio)}
           onFailClick={handleFailClick}
         />
       );
@@ -179,7 +179,10 @@ const PlayPhase = ({
   onPlayClick,
   onFailClick,
 }: PlayPhaseProps) => {
-  useHotkeys([["space", () => onPlayClick()]]);
+  useHotkeys([
+    ["space", () => onPlayClick()],
+    ["j", () => onPlayClick()],
+  ]);
 
   return (
     <Stack>
@@ -203,7 +206,7 @@ type RecordPhaseProps = {
   transcriptionFailed: boolean;
   term: string;
   onRecordClick: () => void;
-  onPlayAudioAgain: () => void;
+  onPlayClick: () => void;
   onFailClick: () => void;
 };
 
@@ -215,10 +218,13 @@ const RecordPhase = ({
   transcriptionFailed,
   term,
   onRecordClick,
-  onPlayAudioAgain,
+  onPlayClick,
   onFailClick,
 }: RecordPhaseProps) => {
-  useHotkeys([["space", () => !isProcessing && onRecordClick()]]);
+  useHotkeys([
+    ["space", () => !isProcessing && onRecordClick()],
+    ["j", () => !isProcessing && onPlayClick()],
+  ]);
   const recordingText = isRecording ? "Stop Recording" : "Begin Recording";
   const buttonLabel = isProcessing ? "Processing..." : recordingText;
   const header = isDictation
@@ -236,7 +242,7 @@ const RecordPhase = ({
       <Button onClick={onRecordClick} disabled={isProcessing}>
         {buttonLabel}
       </Button>
-      <Button onClick={onPlayAudioAgain}>Play Audio Again</Button>
+      <Button onClick={onPlayClick}>Play Audio Again</Button>
       <FailButton onClick={onFailClick} />
     </Stack>
   );
