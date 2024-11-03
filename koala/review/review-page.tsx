@@ -1,5 +1,5 @@
 import { quizReducer } from "@/koala/review/review-reducer";
-import { Card, Center, Image, Stack, Text, Title } from "@mantine/core";
+import { Card, Center, Group, Image, Stack, Text, Title } from "@mantine/core";
 import { Grade } from "femto-fsrs";
 import { useEffect, useReducer, useState } from "react";
 import { trpc } from "../trpc-config";
@@ -9,6 +9,7 @@ import { ListeningQuiz } from "./listening-quiz";
 import { ReviewOver } from "./review-over";
 import { SpeakingQuiz } from "./speaking-quiz";
 import { Props, Quiz, QuizComp, QuizProps } from "./types";
+import { EditButton } from "./edit-button";
 
 async function fetchAudioAsBase64(url: string): Promise<string> {
   const response = await fetch(url);
@@ -133,12 +134,15 @@ export const ReviewPage = (props: Props) => {
         >
           <Stack>
             <LessonComponent {...quizProps} key={quiz.quizId} />
-            <FlagButton
-              cardID={quiz.cardId}
-              onClick={() => {
-                dispatch({ type: "FLAG_CURRENT_CARD" });
-              }}
-            />
+            <Group grow>
+              <FlagButton
+                cardID={quiz.cardId}
+                onClick={() => {
+                  dispatch({ type: "FLAG_CURRENT_CARD" });
+                }}
+              />
+              <EditButton cardID={quiz.cardId} />
+            </Group>
             <Text size={"xs"}>{props.quizzesDue} quizzes due today.</Text>
             {illustration}
           </Stack>

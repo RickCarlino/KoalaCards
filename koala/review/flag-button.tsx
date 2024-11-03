@@ -15,12 +15,11 @@ export const FlagButton = (props: FlagButtonProps) => {
 
   return (
     <Button
-      size="md"
       variant="outline"
       color="yellow"
       onClick={handleFlagClick}
     >
-      Ignore This Card
+      Ignore Card
     </Button>
   );
 };

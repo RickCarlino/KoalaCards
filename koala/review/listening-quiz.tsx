@@ -144,6 +144,7 @@ export const ListeningQuiz: QuizComp = ({
           isProcessing={state.isProcessing}
           transcriptionFailed={state.transcriptionFailed}
           term={card.term}
+          definition={card.definition}
           onRecordClick={handleRecordClick}
           onPlayClick={() => playAudio(card.termAudio)}
           onFailClick={handleFailClick}
@@ -203,6 +204,7 @@ type RecordPhaseProps = {
   isProcessing: boolean;
   transcriptionFailed: boolean;
   term: string;
+  definition: string;
   onRecordClick: () => void;
   onPlayClick: () => void;
   onFailClick: () => void;
@@ -215,10 +217,15 @@ const RecordPhase = ({
   isProcessing,
   transcriptionFailed,
   term,
+  definition,
   onRecordClick,
   onPlayClick,
   onFailClick,
 }: RecordPhaseProps) => {
+  const [failures, setFailures] = useState(0);
+  useEffect(() => {
+    transcriptionFailed && setFailures((prev) => prev + 1);
+  }, [transcriptionFailed]);
   useHotkeys([
     [HOTKEYS.RECORD, () => !isProcessing && onRecordClick()],
     [HOTKEYS.PLAY, () => !isProcessing && onPlayClick()],
@@ -228,7 +235,6 @@ const RecordPhase = ({
   const header = isDictation
     ? `Repeat the Phrase: ${term}`
     : "Repeat the Phrase Without Reading";
-
   return (
     <Stack>
       <Center>
@@ -237,6 +243,7 @@ const RecordPhase = ({
       {transcriptionFailed && (
         <Text>Pronunciation failure. Please try again.</Text>
       )}
+      {failures > 2 && <Text>Hint: {definition}</Text>}
       <Button onClick={onRecordClick} disabled={isProcessing}>
         {buttonLabel}
       </Button>
