@@ -12,21 +12,6 @@ type ReviewOverProps = {
   onSave: () => Promise<void>;
   onUpdateDifficulty: (quizId: number, grade: Grade) => void;
 };
-type PerfectScoreProps = { onSave: () => void; isSaving: boolean };
-const PerfectScore = ({ onSave, isSaving }: PerfectScoreProps) => {
-  return (
-    <Center style={{ width: "100%" }}>
-      <Card shadow="sm" padding="lg" radius="md" withBorder>
-        <Title order={2}>Lesson Complete</Title>
-        <Stack>
-          <Button loading={isSaving} onClick={onSave}>
-            Save Progress
-          </Button>
-        </Stack>
-      </Card>
-    </Center>
-  );
-};
 
 export const ReviewOver = ({
   state,
@@ -74,10 +59,6 @@ export const ReviewOver = ({
   const numWrong = state.filter(showFailed).length;
   const numTotal = state.length;
 
-  if (numWrong === 0 && numTotal > 0) {
-    return <PerfectScore onSave={handleSave} isSaving={isSaving} />;
-  }
-
   return (
     <Center style={{ width: "100%" }}>
       <Card
@@ -95,7 +76,7 @@ export const ReviewOver = ({
             Closing the browser tab early will cause changes to be lost. Please
             finalize your review.
           </Alert>
-          <Text>Please review the following quizzes and verify grades.</Text>
+          <Text>The server will return feedback (if any) below. Please take a look before moving to the next review session.</Text>
           <Stack>
             <Button onClick={handleSave} loading={isSaving}>
               Save Progress
@@ -130,7 +111,7 @@ export const ReviewOver = ({
                   <Text>Definition: {quizState.quiz.definition}</Text>
                   <Text>
                     Your Entered:{" "}
-                    {quizState.response || "No response provided."}
+                    {quizState.response || ""}
                   </Text>
                   <Text>Feedback: {quizState.serverResponse || ""}</Text>
                 </Stack>

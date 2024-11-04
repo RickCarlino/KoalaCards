@@ -43,9 +43,27 @@ const doGrade = async (
     englishTranslation,
   });
 
+  if (response === "yes") {
+    const x = await grammarCorrection({
+      term,
+      definition,
+      langCode,
+      userInput,
+    });
+
+    if (x) {
+      // Equivalent with grammar correction.
+      return {
+        response: "no",
+        whyNot:
+          `${x} (suggested correction)`,
+      };
+    }
+  }
+
   return {
     response: response,
-    whyNot: `"${userInput}" means "${englishTranslation}". ` + 46,
+    whyNot: `Input means "${englishTranslation}". ` + 46,
   };
 };
 
@@ -78,21 +96,6 @@ export const speaking: QuizEvaluator = async ({ userInput, card }) => {
     return {
       result: "fail",
       userMessage,
-    };
-  }
-
-  const x = await grammarCorrection({
-    term: card.term,
-    definition: card.definition,
-    langCode: card.langCode,
-    userInput,
-  });
-
-  if (x) {
-    // Equivalent with grammar correction.
-    return {
-      result: "fail",
-      userMessage: `Instead of '${userInput}' say '${x}' ` + 85,
     };
   }
 
