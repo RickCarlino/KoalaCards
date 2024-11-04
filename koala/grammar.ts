@@ -65,16 +65,13 @@ export const grammarCorrection = async (
   const { userInput } = props;
   const lang = getLangcode(props.langCode);
   const prompt = [
-    `You are a language assistant helping users improve their ${lang} sentences.`,
-    `The user wants to say: '${props.definition}' in ${lang}.`,
-    `They provided: '${userInput}'.`,
-    `Your task is to determine if the user's input is an acceptable way to express the intended meaning in ${lang}.`,
-    `If the response is acceptable by ${lang} native speakers, respond with:`,
+    `Target language: ${lang}`,
+    `Phrase: '${userInput}'.`,
+    `Translation: '${props.definition}'`,
+    `If the phrase is free of MAJOR grammar problems return:`,
     `{ "response": { "userWasCorrect": true } }`,
-    `If it is not, respond with:`,
+    `If the phrase has serious grammatical issues, return:`,
     `{ "response": { "userWasCorrect": false, "correctedSentence": "corrected sentence here" } }`,
-    `Do not include any additional commentary or explanations.`,
-    `Ensure your response is in valid JSON format.`,
   ].join("\n");
 
   const resp = await openai.beta.chat.completions.parse({

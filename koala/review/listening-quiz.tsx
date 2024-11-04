@@ -144,7 +144,6 @@ export const ListeningQuiz: QuizComp = ({
           isProcessing={state.isProcessing}
           transcriptionFailed={state.transcriptionFailed}
           term={card.term}
-          definition={card.definition}
           onRecordClick={handleRecordClick}
           onPlayClick={() => playAudio(card.termAudio)}
           onFailClick={handleFailClick}
@@ -204,7 +203,6 @@ type RecordPhaseProps = {
   isProcessing: boolean;
   transcriptionFailed: boolean;
   term: string;
-  definition: string;
   onRecordClick: () => void;
   onPlayClick: () => void;
   onFailClick: () => void;
@@ -217,7 +215,6 @@ const RecordPhase = ({
   isProcessing,
   transcriptionFailed,
   term,
-  definition,
   onRecordClick,
   onPlayClick,
   onFailClick,
@@ -243,7 +240,7 @@ const RecordPhase = ({
       {transcriptionFailed && (
         <Text>Pronunciation failure. Please try again.</Text>
       )}
-      {failures > 2 && <Text>Hint: {definition}</Text>}
+      {failures > 1 && <Text>Hint: {term}</Text>}
       <Button onClick={onRecordClick} disabled={isProcessing}>
         {buttonLabel}
       </Button>

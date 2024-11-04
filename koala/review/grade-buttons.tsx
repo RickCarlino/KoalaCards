@@ -38,5 +38,5 @@ export const DifficultyButtons: React.FC<DifficultyButtonsProps> = ({
       </Button>
     );
   });
-  return <Group>{list}</Group>;
+  return <Group grow>{list}</Group>;
 };

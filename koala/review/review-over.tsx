@@ -14,7 +14,6 @@ type ReviewOverProps = {
 };
 type PerfectScoreProps = { onSave: () => void; isSaving: boolean };
 const PerfectScore = ({ onSave, isSaving }: PerfectScoreProps) => {
-  useHotkeys([[HOTKEYS.SAVE, onSave]]);
   return (
     <Center style={{ width: "100%" }}>
       <Card shadow="sm" padding="lg" radius="md" withBorder>
@@ -35,7 +34,7 @@ export const ReviewOver = ({
   onUpdateDifficulty,
 }: ReviewOverProps) => {
   const [isSaving, setIsSaving] = useState(false);
-
+  useHotkeys([[HOTKEYS.SAVE, onSave]]);
   const handleSave = async () => {
     setIsSaving(true);
     await onSave().finally(() => setIsSaving(false));
