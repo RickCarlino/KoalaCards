@@ -1,14 +1,19 @@
 import { errorReport } from "@/koala/error-report";
-import { listening } from "./listening";
 import { speaking } from "./speaking-evaluator";
 import { QuizEvaluator } from "./types";
-import { dictation } from "./dictation";
 import { LessonType } from "../shared-types";
 
+const NO_OP: QuizEvaluator = (_: unknown) => {
+  return Promise.resolve({
+    result: "error",
+    userMessage: "Unknown quiz type",
+  });
+};
+
 const QUIZ_EVALUATORS: Record<LessonType, QuizEvaluator> = {
-  listening,
+  listening: NO_OP,
+  dictation: NO_OP,
   speaking,
-  dictation,
 };
 
 export const getQuizEvaluator = (kind: LessonType): QuizEvaluator => {
