@@ -1,13 +1,13 @@
-import { QuizEvaluator } from "./types";
 import { testEquivalence } from "@/koala/openai";
-import { strip } from "./evaluator-utils";
 import { captureTrainingData } from "./capture-training-data";
+import { compare } from "./evaluator-utils";
+import { QuizEvaluator } from "./types";
 
 export const listening: QuizEvaluator = async (ctx) => {
   const { userInput, card } = ctx;
   const { definition, term, langCode } = card;
 
-  if (strip(userInput) === strip(definition)) {
+  if (compare(userInput, definition)) {
     console.log(`=== Exact match! (23)`);
     return {
       result: "pass",

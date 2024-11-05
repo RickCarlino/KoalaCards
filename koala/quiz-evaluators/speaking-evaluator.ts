@@ -3,10 +3,10 @@ import {
   testEquivalence,
   translateToEnglish,
 } from "@/koala/openai";
-import { QuizEvaluator } from "./types";
-import { strip } from "./evaluator-utils";
-import { captureTrainingData } from "./capture-training-data";
 import { grammarCorrection } from "../grammar";
+import { captureTrainingData } from "./capture-training-data";
+import { compare } from "./evaluator-utils";
+import { QuizEvaluator } from "./types";
 
 const PERFECT = "Perfect match!";
 
@@ -16,12 +16,12 @@ const doGrade = async (
   definition: string,
   langCode: string,
 ): Promise<Explanation> => {
-  if (strip(userInput) === strip(term)) {
+  if (compare(userInput, term)) {
     return { response: "yes", whyNot: PERFECT };
   }
 
   const englishTranslation = await translateToEnglish(userInput, langCode);
-  const exactTranslation = strip(englishTranslation) === strip(definition);
+  const exactTranslation = compare(englishTranslation, definition);
 
   if (exactTranslation) {
     return { response: "yes", whyNot: "Exact translation. " + 25 };
@@ -55,8 +55,7 @@ const doGrade = async (
       // Equivalent with grammar correction.
       return {
         response: "no",
-        whyNot:
-          `${x} (suggested correction)`,
+        whyNot: `${x} (suggested correction)`,
       };
     }
   }
@@ -68,7 +67,7 @@ const doGrade = async (
 };
 
 export const speaking: QuizEvaluator = async ({ userInput, card }) => {
-  if (strip(userInput) === strip(card.term)) {
+  if (compare(userInput, card.term)) {
     console.log(`=== Exact match! (53)`);
     return {
       result: "pass",
