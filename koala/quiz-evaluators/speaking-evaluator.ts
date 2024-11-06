@@ -24,7 +24,7 @@ const doGrade = async (
   const exactTranslation = compare(englishTranslation, definition);
 
   if (exactTranslation) {
-    return { response: "yes", whyNot: "Exact translation. " + 25 };
+    return { response: "yes", whyNot: "Exact translation." };
   }
 
   const response = await testEquivalence(
@@ -62,7 +62,7 @@ const doGrade = async (
 
   return {
     response: response,
-    whyNot: `Input means "${englishTranslation}". ` + 46,
+    whyNot: `Your answer would mean "${englishTranslation}". `,
   };
 };
 

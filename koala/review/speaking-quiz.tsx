@@ -10,6 +10,7 @@ import { QuizComp } from "./types";
 import { playAudio } from "../play-audio";
 import { FailButton } from "./fail-button";
 import { HOTKEYS } from "./hotkeys";
+import { useUserSettings } from "../settings-provider";
 
 export const SpeakingQuiz: QuizComp = (props) => {
   const { quiz: card } = props;
@@ -18,6 +19,7 @@ export const SpeakingQuiz: QuizComp = (props) => {
   const transcribeAudio = trpc.transcribeAudio.useMutation();
   const gradeSpeakingQuiz = trpc.gradeSpeakingQuiz.useMutation();
   const voiceRecorder = useVoiceRecorder(handleRecordingResult);
+  const { playbackPercentage } = useUserSettings();
 
   const handleRecordClick = () => {
     if (isRecording) {
@@ -37,7 +39,7 @@ export const SpeakingQuiz: QuizComp = (props) => {
     setPhase("done");
     const wavBlob = await convertBlobToWav(audioBlob);
     const base64Audio = await blobToBase64(wavBlob);
-
+    Math.random() < playbackPercentage && await playAudio(base64Audio);
     transcribeAudio
       .mutateAsync({
         audio: base64Audio,

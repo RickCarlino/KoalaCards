@@ -10,6 +10,7 @@ import { DifficultyButtons } from "./grade-buttons";
 import { QuizComp } from "./types";
 import { FailButton } from "./fail-button";
 import { HOTKEYS } from "./hotkeys";
+import { useUserSettings } from "../settings-provider";
 
 type Phase = "play" | "record" | "done";
 
@@ -33,7 +34,7 @@ export const ListeningQuiz: QuizComp = ({
   const [state, setState] = useState(DEFAULT_STATE);
   const transcribeAudio = trpc.transcribeAudio.useMutation();
   const voiceRecorder = useVoiceRecorder(handleRecordingResult);
-
+  const { playbackPercentage } = useUserSettings();
   useEffect(() => {
     setState({
       isRecording: false,
@@ -81,6 +82,7 @@ export const ListeningQuiz: QuizComp = ({
       if (OK) {
         await playAudio(card.definitionAudio);
         await playAudio(card.termAudio);
+        Math.random() < playbackPercentage && (await playAudio(base64Audio));
         setState((prevState) => {
           return {
             ...prevState,
