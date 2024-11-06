@@ -11,6 +11,7 @@ import { QuizComp } from "./types";
 import { FailButton } from "./fail-button";
 import { HOTKEYS } from "./hotkeys";
 import { useUserSettings } from "../settings-provider";
+import { playFX } from "../play-fx";
 
 type Phase = "play" | "record" | "done";
 
@@ -42,6 +43,7 @@ export const ListeningQuiz: QuizComp = ({
       isProcessing: false,
       transcriptionFailed: false,
     });
+    playFX("/listening-beep.wav");
   }, [card.term]);
 
   const isDictation = card.lessonType === "dictation";

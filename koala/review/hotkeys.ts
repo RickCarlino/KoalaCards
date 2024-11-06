@@ -3,7 +3,7 @@ export const HOTKEYS = {
   GRADE_GOOD: "d",
   GRADE_EASY: "f",
   GRADE_HARD: "s",
-  SAVE: "enter",
+  SAVE: "h",
   FAIL: "g",
   RECORD: "space",
   PLAY: "j",
