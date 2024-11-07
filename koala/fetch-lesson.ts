@@ -60,7 +60,8 @@ async function prepareQuizData(quiz: LocalQuiz, playbackPercentage: number) {
     termAudio: await generateLessonAudio({
       card: quiz.Card,
       lessonType: "listening",
-      speed: playbackPercentage,
+      // Always play new cards at 95% speed
+      speed: quiz.repetitions > 2 ? playbackPercentage : 95,
     }),
     langCode: quiz.Card.langCode,
     lastReview: quiz.lastReview || 0,
