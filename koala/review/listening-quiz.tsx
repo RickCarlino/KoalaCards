@@ -9,6 +9,9 @@ import { useEffect, useState } from "react";
 import { DifficultyButtons } from "./grade-buttons";
 import { QuizComp } from "./types";
 import { FailButton } from "./fail-button";
+import { HOTKEYS } from "./hotkeys";
+import { useUserSettings } from "../settings-provider";
+import { playFX } from "../play-fx";
 
 type Phase = "play" | "record" | "done";
 
@@ -32,7 +35,7 @@ export const ListeningQuiz: QuizComp = ({
   const [state, setState] = useState(DEFAULT_STATE);
   const transcribeAudio = trpc.transcribeAudio.useMutation();
   const voiceRecorder = useVoiceRecorder(handleRecordingResult);
-
+  const { playbackPercentage } = useUserSettings();
   useEffect(() => {
     setState({
       isRecording: false,
@@ -40,6 +43,7 @@ export const ListeningQuiz: QuizComp = ({
       isProcessing: false,
       transcriptionFailed: false,
     });
+    playFX("/listening-beep.wav");
   }, [card.term]);
 
   const isDictation = card.lessonType === "dictation";
@@ -78,8 +82,9 @@ export const ListeningQuiz: QuizComp = ({
       console.log([strip(transcription), strip(card.term)].join(" VS "));
       console.log(OK ? "OK" : "FAIL");
       if (OK) {
-        await playAudio(card.termAudio);
         await playAudio(card.definitionAudio);
+        await playAudio(card.termAudio);
+        Math.random() < playbackPercentage && (await playAudio(base64Audio));
         setState((prevState) => {
           return {
             ...prevState,
@@ -144,7 +149,7 @@ export const ListeningQuiz: QuizComp = ({
           transcriptionFailed={state.transcriptionFailed}
           term={card.term}
           onRecordClick={handleRecordClick}
-          onPlayAudioAgain={() => playAudio(card.termAudio)}
+          onPlayClick={() => playAudio(card.termAudio)}
           onFailClick={handleFailClick}
         />
       );
@@ -179,7 +184,7 @@ const PlayPhase = ({
   onPlayClick,
   onFailClick,
 }: PlayPhaseProps) => {
-  useHotkeys([["space", () => onPlayClick()]]);
+  useHotkeys([[HOTKEYS.PLAY, () => onPlayClick()]]);
 
   return (
     <Stack>
@@ -203,7 +208,7 @@ type RecordPhaseProps = {
   transcriptionFailed: boolean;
   term: string;
   onRecordClick: () => void;
-  onPlayAudioAgain: () => void;
+  onPlayClick: () => void;
   onFailClick: () => void;
 };
 
@@ -215,16 +220,22 @@ const RecordPhase = ({
   transcriptionFailed,
   term,
   onRecordClick,
-  onPlayAudioAgain,
+  onPlayClick,
   onFailClick,
 }: RecordPhaseProps) => {
-  useHotkeys([["space", () => !isProcessing && onRecordClick()]]);
+  const [failures, setFailures] = useState(0);
+  useEffect(() => {
+    transcriptionFailed && setFailures((prev) => prev + 1);
+  }, [transcriptionFailed]);
+  useHotkeys([
+    [HOTKEYS.RECORD, () => !isProcessing && onRecordClick()],
+    [HOTKEYS.PLAY, () => !isProcessing && onPlayClick()],
+  ]);
   const recordingText = isRecording ? "Stop Recording" : "Begin Recording";
   const buttonLabel = isProcessing ? "Processing..." : recordingText;
   const header = isDictation
     ? `Repeat the Phrase: ${term}`
     : "Repeat the Phrase Without Reading";
-
   return (
     <Stack>
       <Center>
@@ -233,10 +244,11 @@ const RecordPhase = ({
       {transcriptionFailed && (
         <Text>Pronunciation failure. Please try again.</Text>
       )}
+      {failures > 1 && <Text>Hint: {term}</Text>}
       <Button onClick={onRecordClick} disabled={isProcessing}>
         {buttonLabel}
       </Button>
-      <Button onClick={onPlayAudioAgain}>Play Audio Again</Button>
+      <Button onClick={onPlayClick}>Play Audio Again</Button>
       <FailButton onClick={onFailClick} />
     </Stack>
   );

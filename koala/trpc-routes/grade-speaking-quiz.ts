@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { getUserSettings } from "../auth-helpers";
 import { procedure } from "../trpc-procedure";
-import { speaking } from "../quiz-evaluators/speaking";
+import { speaking } from "../quiz-evaluators/speaking-evaluator";
 import { prismaClient } from "../prisma-client";
 
 export const gradeSpeakingQuiz = procedure

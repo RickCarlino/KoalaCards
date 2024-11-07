@@ -37,7 +37,7 @@ const INITIAL_STATE: State = {
   language: "ko",
   rawInput: "",
   processedCards: [],
-  cardType: "both",
+  cardType: "listening",
 };
 
 const errorHandler = (error: any) => {
@@ -236,7 +236,7 @@ function LanguageInputPage() {
           >
             <Radio
               value="listening"
-              label="Listening only - Good for long sentences."
+              label="Listening only - Pick this if you are unsure."
             />
             <Radio
               value="speaking"

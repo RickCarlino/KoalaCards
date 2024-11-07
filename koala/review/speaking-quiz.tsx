@@ -5,10 +5,13 @@ import { Button, Stack, Text } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import { Grade } from "femto-fsrs";
 import { useEffect, useState } from "react";
-import { DifficultyButtons } from "./grade-buttons";
-import { QuizComp } from "./types";
 import { playAudio } from "../play-audio";
+import { playFX } from "../play-fx";
+import { useUserSettings } from "../settings-provider";
 import { FailButton } from "./fail-button";
+import { DifficultyButtons } from "./grade-buttons";
+import { HOTKEYS } from "./hotkeys";
+import { QuizComp } from "./types";
 
 export const SpeakingQuiz: QuizComp = (props) => {
   const { quiz: card } = props;
@@ -17,7 +20,10 @@ export const SpeakingQuiz: QuizComp = (props) => {
   const transcribeAudio = trpc.transcribeAudio.useMutation();
   const gradeSpeakingQuiz = trpc.gradeSpeakingQuiz.useMutation();
   const voiceRecorder = useVoiceRecorder(handleRecordingResult);
-
+  const { playbackPercentage } = useUserSettings();
+  useEffect(() => {
+    playFX("speaking-beep.wav");
+  }, [card.quizId]);
   const handleRecordClick = () => {
     if (isRecording) {
       voiceRecorder.stop();
@@ -36,7 +42,7 @@ export const SpeakingQuiz: QuizComp = (props) => {
     setPhase("done");
     const wavBlob = await convertBlobToWav(audioBlob);
     const base64Audio = await blobToBase64(wavBlob);
-
+    Math.random() < playbackPercentage && (await playAudio(base64Audio));
     transcribeAudio
       .mutateAsync({
         audio: base64Audio,
@@ -81,7 +87,7 @@ export const SpeakingQuiz: QuizComp = (props) => {
   // Handle space key press
   useHotkeys([
     [
-      "space",
+      HOTKEYS.RECORD,
       () => {
         if (phase === "prompt" || phase === "recording") {
           handleRecordClick();
