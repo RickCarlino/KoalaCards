@@ -40,6 +40,23 @@ async function getCards(
   });
 }
 
+function cardCountNewToday(userID: string): Promise<number> {
+  const _24HoursAgo = Date.now() - 24 * 60 * 60 * 1000;
+
+  return prismaClient.card.count({
+    where: {
+      userId: userID,
+      Quiz: {
+        every: {
+          firstReview: {
+            gte: _24HoursAgo,
+          },
+        },
+      },
+    },
+  });
+}
+
 // A prisma quiz with Card included
 type LocalQuiz = Quiz & { Card: Card };
 
@@ -80,7 +97,8 @@ export default async function getLessons(p: GetLessonInputParams) {
   const playbackPercentage = Math.round((await playbackSpeed(userId)) * 100);
 
   const oldCards = await getCards(p.userId, p.now, take, true);
-  const newCards = await getCards(userId, now, take - oldCards.length, false);
+  const remaining = take - oldCards.length - (await cardCountNewToday(userId));
+  const newCards = await getCards(userId, now, remaining, false);
   const combined = [...shuffle(oldCards), ...shuffle(newCards)].slice(0, take);
 
   return await map(combined, (q) => {
