@@ -58,11 +58,15 @@ const doGrade = async (
         whyNot: `${x} (suggested correction)`,
       };
     }
+    return {
+      response: "yes",
+      whyNot: "No grammar correction needed."
+    };
   }
 
   return {
     response: response,
-    whyNot: `Your answer would mean "${englishTranslation}". `,
+    whyNot: `Your answer would mean "${englishTranslation}".`,
   };
 };
 
