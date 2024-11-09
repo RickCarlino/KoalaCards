@@ -34,7 +34,9 @@ async function getCards(
   return await prismaClient.quiz.findMany({
     where: whereClause,
     distinct: ["cardId"],
-    orderBy: [{ quizType: "asc" }, { nextReview: "asc" }],
+    orderBy: isReview
+      ? [{ quizType: "asc" }, { nextReview: "asc" }]
+      : [{ Card: { createdAt: "desc" } }],
     include: { Card: true },
     take,
   });
