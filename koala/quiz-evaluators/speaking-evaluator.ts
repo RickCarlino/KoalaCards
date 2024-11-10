@@ -1,7 +1,4 @@
-import {
-  testEquivalence,
-  translateToEnglish,
-} from "@/koala/openai";
+import { testEquivalence, translateToEnglish } from "@/koala/openai";
 import { grammarCorrection } from "../grammar";
 import { captureTrainingData } from "./capture-training-data";
 import { compare } from "./evaluator-utils";
@@ -42,7 +39,7 @@ const doGrade = async (
   if (response !== "yes") {
     return {
       result: "fail",
-      userMessage: `Your answer would mean "${englishTranslation}".`,
+      userMessage: `Your sentence's translation: ${englishTranslation}`,
     };
   }
 
@@ -53,10 +50,14 @@ const doGrade = async (
     userInput,
   });
 
-  if (corrections) {
+  const legit = corrections && compare(corrections, userInput);
+  if (legit) {
     return {
       result: "fail",
-      userMessage: corrections,
+      // format: "diff",
+      // input: userInput,
+      // output: corrections,
+      userMessage: `Grammar suggestion: ${corrections}`,
     };
   }
 

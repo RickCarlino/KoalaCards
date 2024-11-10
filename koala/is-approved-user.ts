@@ -21,7 +21,9 @@ let approvedUserIDs: Set<string> = new Set();
         ? Math.floor((Date.now() - lastSeen.getTime()) / (1000 * 60 * 60 * 24))
         : 0;
       if (lastSeenDays < 93) {
-        console.log(`=== ${su ? "Super" : "Normal"} user: ${email} (${lastSeenDays} days ago)`);
+        console.log(
+          `=== ${su ? "Super" : "Normal"} user: ${email} (${lastSeenDays} days ago)`,
+        );
       } else {
         // prismaClient.user.delete({ where: { id } }).then(() => {
         //   console.log(`=== Deleted user: ${email}`);
