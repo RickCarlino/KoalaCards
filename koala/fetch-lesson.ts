@@ -36,7 +36,7 @@ async function getCards(
     distinct: ["cardId"],
     orderBy: isReview
       ? [{ quizType: "asc" }, { nextReview: "asc" }]
-      : [{ Card: { createdAt: "desc" } }],
+      : [{ Card: { createdAt: "desc" } }], // TODO: Change to desc later.
     include: { Card: true },
     take,
   });
@@ -91,6 +91,11 @@ async function prepareQuizData(quiz: LocalQuiz, playbackPercentage: number) {
 const playbackSpeed = async (userID: string) => {
   return await getUserSettings(userID).then((s) => s.playbackSpeed || 1.05);
 };
+
+const newCardsPerDay = async (userID: string) => {
+  return await getUserSettings(userID).then((s) => s.cardsPerDayMax || 10);
+}
+
 export default async function getLessons(p: GetLessonInputParams) {
   if (p.take > 15) return errorReport("Too many cards requested.");
 
@@ -99,8 +104,14 @@ export default async function getLessons(p: GetLessonInputParams) {
   const playbackPercentage = Math.round((await playbackSpeed(userId)) * 100);
 
   const oldCards = await getCards(p.userId, p.now, take, true);
-  const remaining = take - oldCards.length - (await cardCountNewToday(userId));
-  const newCards = await getCards(userId, now, remaining, false);
+  const remaining = take - oldCards.length;
+
+  const maxNew = await newCardsPerDay(userId);
+  const newToday = await cardCountNewToday(userId);
+  const allowedNew = Math.max(maxNew - newToday, 0);
+  const finalNewCount = Math.min(remaining, allowedNew);
+
+  const newCards = await getCards(userId, now, finalNewCount, false);
   const combined = [...shuffle(oldCards), ...shuffle(newCards)].slice(0, take);
 
   return await map(combined, (q) => {
