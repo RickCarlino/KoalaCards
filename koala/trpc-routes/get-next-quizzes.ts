@@ -1,8 +1,8 @@
+import { getLessons } from "@/koala/fetch-lesson";
 import { z } from "zod";
-import { procedure } from "../trpc-procedure";
-import getLessons from "@/koala/fetch-lesson";
 import { getUserSettings } from "../auth-helpers";
 import { prismaClient } from "../prisma-client";
+import { procedure } from "../trpc-procedure";
 
 export const Quiz = z.object({
   quizId: z.number(),

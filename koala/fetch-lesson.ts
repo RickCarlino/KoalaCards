@@ -1,5 +1,5 @@
 import { prismaClient } from "@/koala/prisma-client";
-import { map, shuffle } from "radash";
+import { map, zip } from "radash";
 import { Quiz, Card } from "@prisma/client";
 import { getUserSettings } from "./auth-helpers";
 import { errorReport } from "./error-report";
@@ -94,28 +94,30 @@ const playbackSpeed = async (userID: string) => {
 
 const newCardsPerDay = async (userID: string) => {
   return await getUserSettings(userID).then((s) => s.cardsPerDayMax || 10);
-}
+};
 
-export default async function getLessons(p: GetLessonInputParams) {
-  if (p.take > 15) return errorReport("Too many cards requested.");
-
-  const { userId, now, take } = p;
-
-  const playbackPercentage = Math.round((await playbackSpeed(userId)) * 100);
-
-  const oldCards = await getCards(p.userId, p.now, take, true);
-  const remaining = take - oldCards.length;
-
+const getNewCards = async (userId: string, now: number, take: number) => {
   const maxNew = await newCardsPerDay(userId);
   const newToday = await cardCountNewToday(userId);
   const allowedNew = Math.max(maxNew - newToday, 0);
-  const finalNewCount = Math.min(remaining, allowedNew);
+  const maxNewCards = Math.min(take, allowedNew);
 
-  const newCards = await getCards(userId, now, finalNewCount, false);
-  const combined = [...shuffle(oldCards), ...shuffle(newCards)].slice(0, take);
+  return await getCards(userId, now, maxNewCards, false);
+};
+
+export async function getLessons(p: GetLessonInputParams) {
+  const { userId, now, take } = p;
+
+  if (take > 15) return errorReport("Too many cards requested.");
+
+  const newCards = await getNewCards(userId, now, take);
+  const oldCards = await getCards(userId, now, take, true);
+
+  const combined = zip(oldCards, newCards).flat().slice(0, take);
+  const audioSpeed = Math.round((await playbackSpeed(userId)) * 100);
 
   return await map(combined, (q) => {
     const quiz = { ...q, quizType: q.repetitions ? q.quizType : "dictation" };
-    return prepareQuizData(quiz, playbackPercentage);
+    return prepareQuizData(quiz, audioSpeed);
   });
 }
