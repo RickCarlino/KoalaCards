@@ -4,7 +4,6 @@ import { deleteCard } from "./delete-card";
 import { deleteFlaggedCards } from "./delete-flagged-card";
 import { editCard } from "./edit-card";
 import { editUserSettings } from "./edit-user-settings";
-import { exportCards } from "./export-cards";
 import { faucet } from "./faucet";
 import { flagCard } from "./flag-card";
 import { getAllCards } from "./get-all-cards";
@@ -24,7 +23,6 @@ export const appRouter = router({
   deleteFlaggedCards,
   editCard,
   editUserSettings,
-  exportCards,
   faucet,
   flagCard,
   getAllCards,

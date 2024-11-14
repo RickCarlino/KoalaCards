@@ -76,7 +76,10 @@ export const ReviewOver = ({
             Closing the browser tab early will cause changes to be lost. Please
             finalize your review.
           </Alert>
-          <Text>The server will return feedback (if any) below. Please take a look before moving to the next review session.</Text>
+          <Text>
+            The server will return feedback (if any) below. Please take a look
+            before moving to the next review session.
+          </Text>
           <Stack>
             <Button onClick={handleSave} loading={isSaving}>
               Save Progress
@@ -109,10 +112,7 @@ export const ReviewOver = ({
                     </Link>
                   </Text>
                   <Text>Definition: {quizState.quiz.definition}</Text>
-                  <Text>
-                    Your Entered:{" "}
-                    {quizState.response || ""}
-                  </Text>
+                  <Text>Your Entered: {quizState.response || ""}</Text>
                   <Text>Feedback: {quizState.serverResponse || ""}</Text>
                 </Stack>
               </Card>

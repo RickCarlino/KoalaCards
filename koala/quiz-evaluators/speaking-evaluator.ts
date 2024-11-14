@@ -1,30 +1,23 @@
-import {
-  Explanation,
-  testEquivalence,
-  translateToEnglish,
-} from "@/koala/openai";
+import { testEquivalence, translateToEnglish } from "@/koala/openai";
 import { grammarCorrection } from "../grammar";
 import { captureTrainingData } from "./capture-training-data";
 import { compare } from "./evaluator-utils";
 import { QuizEvaluator } from "./types";
-
-const PERFECT = "Perfect match!";
 
 const doGrade = async (
   userInput: string,
   term: string,
   definition: string,
   langCode: string,
-): Promise<Explanation> => {
+): Promise<{ result: "pass" | "fail"; userMessage: string }> => {
   if (compare(userInput, term)) {
-    return { response: "yes", whyNot: PERFECT };
+    return { result: "pass", userMessage: "Exact match." };
   }
 
   const englishTranslation = await translateToEnglish(userInput, langCode);
-  const exactTranslation = compare(englishTranslation, definition);
 
-  if (exactTranslation) {
-    return { response: "yes", whyNot: "Exact translation." };
+  if (compare(englishTranslation, definition)) {
+    return { result: "pass", userMessage: "Exact translation." };
   }
 
   const response = await testEquivalence(
@@ -43,68 +36,37 @@ const doGrade = async (
     englishTranslation,
   });
 
-  if (response === "yes") {
-    const x = await grammarCorrection({
-      term,
-      definition,
-      langCode,
-      userInput,
-    });
-
-    if (x) {
-      // Equivalent with grammar correction.
-      return {
-        response: "no",
-        whyNot: `${x} (suggested correction)`,
-      };
-    }
+  if (response !== "yes") {
     return {
-      response: "yes",
-      whyNot: "No grammar correction needed."
+      result: "fail",
+      userMessage: `Your sentence's translation: ${englishTranslation}`,
+    };
+  }
+
+  const corrections = await grammarCorrection({
+    term,
+    definition,
+    langCode,
+    userInput,
+  });
+
+  const legit = corrections && compare(corrections, userInput);
+  if (legit) {
+    return {
+      result: "fail",
+      // format: "diff",
+      // input: userInput,
+      // output: corrections,
+      userMessage: `Grammar suggestion: ${corrections}`,
     };
   }
 
   return {
-    response: response,
-    whyNot: `Your answer would mean "${englishTranslation}".`,
+    result: "pass",
+    userMessage: "Good job!",
   };
 };
 
 export const speaking: QuizEvaluator = async ({ userInput, card }) => {
-  if (compare(userInput, card.term)) {
-    console.log(`=== Exact match! (53)`);
-    return {
-      result: "pass",
-      userMessage: "Exact match. Nice work! " + 55,
-    };
-  }
-
-  const result = await doGrade(
-    userInput,
-    card.term,
-    card.definition,
-    card.langCode,
-  );
-
-  if (result.whyNot === PERFECT) {
-    return {
-      result: "pass",
-      userMessage: "Perfect match! " + 63,
-    };
-  }
-
-  if (result.response === "no") {
-    const userMessage = (result.whyNot || "No response") + 67;
-
-    return {
-      result: "fail",
-      userMessage,
-    };
-  }
-
-  // Equivalent with no grammar correction.
-  return {
-    result: "pass",
-    userMessage: "Good job! " + 91,
-  };
+  return await doGrade(userInput, card.term, card.definition, card.langCode);
 };
