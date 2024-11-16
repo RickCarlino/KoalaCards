@@ -1,22 +1,23 @@
+import { Text } from "@mantine/core";
 import { diffWords } from "diff";
 
 interface SentencecorrectionProps {
-  input: string;
-  correction: string;
+  expected: string;
+  actual: string;
 }
 
 export const VisualDiff: React.FC<SentencecorrectionProps> = ({
-  input,
-  correction,
+  expected,
+  actual,
 }) => {
-  const diff = diffWords(input, correction);
+  const diff = diffWords(actual, expected);
 
   return (
-    <span style={{ background: "white", color: "black" }}>
+    <Text>
       {diff.map((part, index) => {
-        const removedColor = part.removed ? "salmon" : "transparent";
         const style = {
-          backgroundColor: part.added ? "lightgreen" : removedColor,
+          // Make incorrect text lighter weight, and correct text bold
+          fontWeight: part.added ? "bold" : "normal",
           textDecoration: part.removed ? "line-through" : "none",
         };
 
@@ -26,6 +27,6 @@ export const VisualDiff: React.FC<SentencecorrectionProps> = ({
           </span>
         );
       })}
-    </span>
+    </Text>
   );
 };
