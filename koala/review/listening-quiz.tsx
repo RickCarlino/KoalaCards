@@ -241,9 +241,9 @@ const RecordPhase = ({
       <Center>
         <Text size="xl">{header}</Text>
       </Center>
-      {transcriptionFailed && (
+      {transcriptionFailed ? (
         <Text>Pronunciation failure. Please try again.</Text>
-      )}
+      ) : ""}
       {failures && <Text>Hint: {term}</Text>}
       <Button onClick={onRecordClick} disabled={isProcessing}>
         {buttonLabel}

@@ -63,12 +63,13 @@ function cardCountNewToday(userID: string): Promise<number> {
 type LocalQuiz = Quiz & { Card: Card };
 
 async function prepareQuizData(quiz: LocalQuiz, playbackPercentage: number) {
+  const repetitions = quiz.repetitions || 0;
   return {
     quizId: quiz.id,
     cardId: quiz.cardId,
     definition: quiz.Card.definition,
     term: quiz.Card.term,
-    repetitions: quiz.repetitions,
+    repetitions,
     lapses: quiz.lapses,
     lessonType: quiz.quizType as LessonType,
     definitionAudio: await generateLessonAudio({
@@ -80,7 +81,7 @@ async function prepareQuizData(quiz: LocalQuiz, playbackPercentage: number) {
       card: quiz.Card,
       lessonType: "listening",
       // Always play new cards at 95% speed
-      speed: quiz.repetitions > 2 ? playbackPercentage : 95,
+      speed: repetitions > 2 ? playbackPercentage : 95,
     }),
     langCode: quiz.Card.langCode,
     lastReview: quiz.lastReview || 0,
@@ -113,7 +114,10 @@ export async function getLessons(p: GetLessonInputParams) {
   const newCards = await getNewCards(userId, now, take);
   const oldCards = await getCards(userId, now, take, true);
 
-  const combined = zip(oldCards, newCards).flat().slice(0, take);
+  const combined = zip(oldCards, newCards)
+    .flat()
+    .filter(Boolean)
+    .slice(0, take);
   const audioSpeed = Math.round((await playbackSpeed(userId)) * 100);
 
   return await map(combined, (q) => {
