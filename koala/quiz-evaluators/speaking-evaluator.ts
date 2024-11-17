@@ -3,6 +3,7 @@ import { grammarCorrection } from "../grammar";
 import { captureTrainingData } from "./capture-training-data";
 import { compare } from "./evaluator-utils";
 import { QuizEvaluator } from "./types";
+import { grammarCorrectionNG } from "../grammar-ng";
 
 const doGrade = async (
   userInput: string,
@@ -10,7 +11,7 @@ const doGrade = async (
   definition: string,
   langCode: string,
 ): Promise<{ result: "pass" | "fail"; userMessage: string }> => {
-  if (compare(userInput, term)) {
+  if (compare(userInput, term, 1)) {
     return { result: "pass", userMessage: "Exact match." };
   }
 
@@ -65,5 +66,33 @@ const doGrade = async (
 };
 
 export const speaking: QuizEvaluator = async ({ userInput, card }) => {
+  const { term, definition, langCode } = card;
+  if (compare(userInput, term, 1)) {
+    return { result: "pass", userMessage: "Exact match." };
+  }
+
+  const resp = await grammarCorrectionNG({
+    definition,
+    langCode,
+    term,
+    userInput,
+  });
+
+  const userMessage = resp.correctedSentence || "";
+
+  switch (resp.grade) {
+    case "correct":
+      return { result: "pass", userMessage };
+    case "incorrect":
+      return { result: "fail", userMessage };
+    case "grammar":
+      return { result: "fail", userMessage: `✏️${userMessage}` };
+    default:
+      return {
+        result: "fail",
+        userMessage: "An error occurred. Please report this.",
+      };
+  }
+  // Leave the old one around for now...
   return await doGrade(userInput, card.term, card.definition, card.langCode);
 };
