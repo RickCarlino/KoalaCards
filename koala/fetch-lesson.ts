@@ -15,12 +15,15 @@ type GetLessonInputParams = {
   take: number;
 };
 
-async function getCards(
-  userId: string,
-  now: number,
-  take: number,
-  isReview: boolean,
-) {
+type GetCardsProps = {
+  userId: string;
+  now: number;
+  take: number;
+  isReview: boolean;
+};
+
+async function getCards(props: GetCardsProps) {
+  const { userId, now, take, isReview } = props;
   if (take < 1) return [];
 
   const base = {
@@ -33,9 +36,9 @@ async function getCards(
 
   return await prismaClient.quiz.findMany({
     where: whereClause,
-    distinct: ["cardId"],
+    // distinct: ["cardId"],
     orderBy: isReview
-      ? [{ quizType: "asc" }, { nextReview: "asc" }]
+      ? [{cardId: "asc"}, { quizType: "asc" }]
       : [{ Card: { createdAt: "desc" } }], // TODO: Change to desc later.
     include: { Card: true },
     take,
@@ -97,22 +100,23 @@ const newCardsPerDay = async (userID: string) => {
   return await getUserSettings(userID).then((s) => s.cardsPerDayMax || 10);
 };
 
-const getNewCards = async (userId: string, now: number, take: number) => {
+const getNewCards = async (props: GetCardsProps) => {
+  const { userId, now, take } = props;
   const maxNew = await newCardsPerDay(userId);
   const newToday = await cardCountNewToday(userId);
   const allowedNew = Math.max(maxNew - newToday, 0);
   const maxNewCards = Math.min(take, allowedNew);
 
-  return await getCards(userId, now, maxNewCards, false);
+  return await getCards({ userId, now, take: maxNewCards, isReview: false });
 };
 
 export async function getLessons(p: GetLessonInputParams) {
   const { userId, now, take } = p;
 
   if (take > 15) return errorReport("Too many cards requested.");
-
-  const newCards = await getNewCards(userId, now, take);
-  const oldCards = await getCards(userId, now, take, true);
+  const p2 = { userId, now, take };
+  const newCards = await getNewCards({ ...p2, isReview: false });
+  const oldCards = await getCards({ ...p2, isReview: true });
 
   const combined = zip(oldCards, newCards)
     .flat()

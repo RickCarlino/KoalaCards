@@ -24,8 +24,12 @@ const LastRow = ({
   // Will re-do schema if I like the results.
   // This is an experiment.
   // - RC 16 NOV 2024
-  if (expected[0] === PENCIL_EMOJI) {
-    return <VisualDiff expected={expected.slice(1)} actual={actual} />;
+  if (expected.includes(PENCIL_EMOJI)) {
+    return <VisualDiff
+      expected={expected.slice(1)}
+      actual={actual}
+      heading="Feedback: "
+      />;
   } else {
     return <Text>Feedback: {expected}</Text>;
   }
