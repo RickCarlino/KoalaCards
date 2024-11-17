@@ -12,7 +12,12 @@ export const VisualDiff: React.FC<SentencecorrectionProps> = ({
   actual,
   heading,
 }) => {
-  const diff = diffWords(actual, expected);
+  const stripFinalPunctuation = (str: string) => {
+    return str.replace(/[.,!?]$/, "");
+  };
+  const a = stripFinalPunctuation(actual);
+  const e = stripFinalPunctuation(expected);
+  const diff = diffWords(a, e);
 
   return (
     <Text>
