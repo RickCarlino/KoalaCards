@@ -6,12 +6,14 @@ import { Button, Center, Stack, Text } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import { Grade } from "femto-fsrs";
 import { useEffect, useState } from "react";
-import { DifficultyButtons } from "./grade-buttons";
-import { QuizComp } from "./types";
-import { FailButton } from "./fail-button";
-import { HOTKEYS } from "./hotkeys";
-import { useUserSettings } from "../settings-provider";
 import { playFX } from "../play-fx";
+import { compare } from "../quiz-evaluators/evaluator-utils";
+import { useUserSettings } from "../settings-provider";
+import { FailButton } from "./fail-button";
+import { DifficultyButtons } from "./grade-buttons";
+import { HOTKEYS } from "./hotkeys";
+import { QuizComp } from "./types";
+import { VisualDiff } from "./visual-diff";
 
 type Phase = "play" | "record" | "done";
 
@@ -19,12 +21,8 @@ const DEFAULT_STATE = {
   isRecording: false,
   phase: "play" as Phase,
   isProcessing: false,
-  transcriptionFailed: false,
+  userInput: undefined as string | undefined,
 };
-
-function strip(input: string): string {
-  return input.replace(/[^\p{L}]+/gu, "");
-}
 
 export const ListeningQuiz: QuizComp = ({
   quiz: card,
@@ -41,7 +39,7 @@ export const ListeningQuiz: QuizComp = ({
       isRecording: false,
       phase: "play",
       isProcessing: false,
-      transcriptionFailed: false,
+      userInput: "",
     });
     playFX("/listening-beep.wav");
   }, [card.term]);
@@ -58,7 +56,7 @@ export const ListeningQuiz: QuizComp = ({
       voiceRecorder.stop();
       setState((prevState) => ({ ...prevState, isRecording: false }));
     } else {
-      setState((prevState) => ({ ...prevState, transcriptionFailed: false }));
+      setState((prevState) => ({ ...prevState, userInput: undefined }));
       voiceRecorder.start();
       setState((prevState) => ({ ...prevState, isRecording: true }));
     }
@@ -78,9 +76,7 @@ export const ListeningQuiz: QuizComp = ({
         targetText: card.term,
       });
 
-      const OK = strip(transcription) === strip(card.term);
-      console.log([strip(transcription), strip(card.term)].join(" VS "));
-      console.log(OK ? "OK" : "FAIL");
+      const OK = compare(card.term, transcription);
       if (OK) {
         await playAudio(card.definitionAudio);
         await playAudio(card.termAudio);
@@ -89,6 +85,7 @@ export const ListeningQuiz: QuizComp = ({
           return {
             ...prevState,
             phase: "done",
+            userInput: transcription,
           };
         });
       } else {
@@ -96,14 +93,14 @@ export const ListeningQuiz: QuizComp = ({
         await playAudio(card.termAudio);
         setState((prevState) => ({
           ...prevState,
-          transcriptionFailed: true,
+          userInput: transcription,
         }));
       }
     } catch (error) {
       console.error(error);
       setState((prevState) => ({
         ...prevState,
-        transcriptionFailed: true,
+        userInput: "Error occurred during transcription.",
       }));
     } finally {
       setState((prevState) => ({ ...prevState, isProcessing: false }));
@@ -146,7 +143,7 @@ export const ListeningQuiz: QuizComp = ({
           isDictation={isDictation}
           isRecording={state.isRecording}
           isProcessing={state.isProcessing}
-          transcriptionFailed={state.transcriptionFailed}
+          userInput={state.userInput}
           term={card.term}
           onRecordClick={handleRecordClick}
           onPlayClick={() => playAudio(card.termAudio)}
@@ -156,6 +153,7 @@ export const ListeningQuiz: QuizComp = ({
     case "done":
       return (
         <DonePhase
+          userInput={state.userInput}
           term={card.term}
           definition={card.definition}
           onDifficultySelect={handleDifficultySelect}
@@ -205,7 +203,7 @@ type RecordPhaseProps = {
   isDictation: boolean;
   isRecording: boolean;
   isProcessing: boolean;
-  transcriptionFailed: boolean;
+  userInput: string | undefined;
   term: string;
   onRecordClick: () => void;
   onPlayClick: () => void;
@@ -217,16 +215,12 @@ const RecordPhase = ({
   isDictation,
   isRecording,
   isProcessing,
-  transcriptionFailed,
+  userInput,
   term,
   onRecordClick,
   onPlayClick,
   onFailClick,
 }: RecordPhaseProps) => {
-  const [failures, setFailures] = useState(0);
-  useEffect(() => {
-    transcriptionFailed && setFailures((prev) => prev + 1);
-  }, [transcriptionFailed]);
   useHotkeys([
     [HOTKEYS.RECORD, () => !isProcessing && onRecordClick()],
     [HOTKEYS.PLAY, () => !isProcessing && onPlayClick()],
@@ -241,10 +235,7 @@ const RecordPhase = ({
       <Center>
         <Text size="xl">{header}</Text>
       </Center>
-      {transcriptionFailed && (
-        <Text>Pronunciation failure. Please try again.</Text>
-      )}
-      {failures && <Text>Hint: {term}</Text>}
+      {userInput ? <VisualDiff expected={term} actual={userInput} /> : ""}
       <Button onClick={onRecordClick} disabled={isProcessing}>
         {buttonLabel}
       </Button>
@@ -256,12 +247,14 @@ const RecordPhase = ({
 
 type DonePhaseProps = {
   term: string;
+  userInput: string | undefined;
   definition: string;
   onDifficultySelect: (grade: Grade) => void;
 };
 
 // Done Phase Component
 const DonePhase = ({
+  userInput,
   term,
   definition,
   onDifficultySelect,
@@ -270,7 +263,7 @@ const DonePhase = ({
     <Center>
       <Text size="xl">How Well Did You Understand the Phrase?</Text>
     </Center>
-    <Text>Term: {term}</Text>
+    <VisualDiff expected={term} actual={userInput || term} />
     <Text>Definition: {definition}</Text>
     <DifficultyButtons
       current={undefined}

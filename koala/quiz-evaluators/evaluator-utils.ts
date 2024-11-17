@@ -1,8 +1,16 @@
-export function compare(l: string, r: string, cutoff = 1): boolean {
+const MIN_LEN = 4; // First 4 characters === No leniency
+const POINT_INCR = 10; // 1 point of leniency Every 10 characters after that.
+
+function calculateCutoff(length: number): number {
+  return Math.ceil(Math.max(length - MIN_LEN, 0) / POINT_INCR);
+}
+
+export function compare(l: string, r: string, cutoffOverride = 0): boolean {
   const sl = strip(l);
   const sr = strip(r);
+  const cutoff = cutoffOverride || calculateCutoff(Math.max(sl.length, sr.length));
 
-  if (Math.min(sr.length, sl.length) < 4) {
+  if (cutoff === 0) {
     return sl === sr;
   }
 
