@@ -5,10 +5,10 @@ function calculateCutoff(length: number): number {
   return Math.ceil(Math.max(length - MIN_LEN, 0) / POINT_INCR);
 }
 
-export function compare(l: string, r: string): boolean {
+export function compare(l: string, r: string, cutoffOverride = 0): boolean {
   const sl = strip(l);
   const sr = strip(r);
-  const cutoff = calculateCutoff(Math.max(sl.length, sr.length));
+  const cutoff = cutoffOverride || calculateCutoff(Math.max(sl.length, sr.length));
 
   if (cutoff === 0) {
     return sl === sr;

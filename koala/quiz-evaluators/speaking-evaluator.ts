@@ -16,7 +16,7 @@ const doGrade = async (
 
   const englishTranslation = await translateToEnglish(userInput, langCode);
 
-  if (compare(englishTranslation, definition)) {
+  if (compare(englishTranslation, definition, 1)) {
     return { result: "pass", userMessage: "Exact translation." };
   }
 
