@@ -15,10 +15,7 @@ export default function Faucet(_props: {}) {
         style={{ width: "80%" }}
       >
         <Stack>
-          <VisualDiff
-            input="지수가 부인 동시에 엄마예요."
-            correction="지수는 부인인 동시에 엄마예요."
-          />
+          <VisualDiff actual="Hello, world!" expected="Hello, whirled!" />
         </Stack>
       </Card>
     </Center>

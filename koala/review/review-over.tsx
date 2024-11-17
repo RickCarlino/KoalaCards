@@ -1,9 +1,8 @@
 import { Alert, Button, Card, Center, Stack, Text, Title } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import { Grade } from "femto-fsrs";
-import Link from "next/link";
 import { useState } from "react";
-import { DifficultyButtons } from "./grade-buttons";
+import { FeedbackRow } from "./feedback-row";
 import { HOTKEYS } from "./hotkeys";
 import { QuizState } from "./types";
 
@@ -87,35 +86,12 @@ export const ReviewOver = ({
           </Stack>
           <Stack>
             {state.filter(dontShowCorrect).map((quizState) => (
-              <Card
+              <FeedbackRow
                 key={quizState.quiz.quizId}
-                shadow="sm"
-                padding="md"
-                radius="md"
-                withBorder
-                style={{ borderColor: getColor(quizState) }}
-              >
-                <Stack>
-                  <DifficultyButtons
-                    current={quizState.grade}
-                    onSelectDifficulty={(grade) =>
-                      onUpdateDifficulty(quizState.quiz.quizId, grade)
-                    }
-                  />
-                  <Text>Type: {quizState.quiz.lessonType}</Text>
-                  <Text>
-                    <Link
-                      target={"_blank"}
-                      href={`/cards/${quizState.quiz.cardId}`}
-                    >
-                      {quizState.quiz.term}
-                    </Link>
-                  </Text>
-                  <Text>Definition: {quizState.quiz.definition}</Text>
-                  <Text>Your Entered: {quizState.response || ""}</Text>
-                  <Text>Feedback: {quizState.serverResponse || ""}</Text>
-                </Stack>
-              </Card>
+                quizState={quizState}
+                onUpdateDifficulty={onUpdateDifficulty}
+                getColor={getColor}
+              />
             ))}
           </Stack>
         </Stack>

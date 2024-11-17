@@ -54,10 +54,7 @@ const doGrade = async (
   if (legit) {
     return {
       result: "fail",
-      // format: "diff",
-      // input: userInput,
-      // output: corrections,
-      userMessage: `Grammar suggestion: ${corrections}`,
+      userMessage: `✏️${corrections}`,
     };
   }
 
