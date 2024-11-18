@@ -25,11 +25,13 @@ const LastRow = ({
   // This is an experiment.
   // - RC 16 NOV 2024
   if (expected.includes(PENCIL_EMOJI)) {
-    return <VisualDiff
-      expected={expected.slice(1)}
-      actual={actual}
-      heading="Feedback: "
-      />;
+    return (
+      <VisualDiff
+        expected={expected.slice(1)}
+        actual={actual}
+        heading="Feedback: "
+      />
+    );
   } else {
     return <Text>Feedback: {expected}</Text>;
   }

@@ -1,7 +1,6 @@
 import OpenAI from "openai";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources";
 import { errorReport } from "./error-report";
-import { YesNo } from "./shared-types";
 
 const apiKey = process.env.OPENAI_API_KEY;
 
@@ -17,97 +16,6 @@ export async function gptCall(opts: ChatCompletionCreateParamsNonStreaming) {
   return await openai.chat.completions.create(opts);
 }
 
-const SIMPLE_YES_OR_NO = {
-  name: "yes_or_no",
-  parameters: {
-    type: "object",
-    properties: {
-      response: {
-        type: "string",
-        enum: ["yes", "no"],
-      },
-    },
-    dependencies: {
-      response: {
-        oneOf: [
-          {
-            properties: {
-              response: { const: "no" },
-            },
-          },
-          {
-            properties: {
-              response: { const: "yes" },
-            },
-          },
-        ],
-      },
-    },
-  },
-  description: "Answer a yes or no question.",
-};
-
-export type Explanation = { response: YesNo; whyNot?: string };
-
-export const testEquivalence = async (
-  left: string,
-  right: string,
-): Promise<YesNo> => {
-  const model = process.env.GPT_MODEL || "gpt-4o";
-  const content = [left, right].map((s, i) => `${i + 1}: ${s}`).join("\n");
-  const resp = await gptCall({
-    messages: [
-      {
-        role: "user",
-        content,
-      },
-      {
-        role: "system",
-        content: "Are these two sentences equivalent?",
-      },
-    ],
-    model,
-    tools: [
-      {
-        type: "function",
-        function: SIMPLE_YES_OR_NO,
-      },
-    ],
-    max_tokens: 100,
-    temperature: 0.7,
-    tool_choice: { type: "function", function: { name: "yes_or_no" } },
-  });
-  const jsonString =
-    resp?.choices?.[0]?.message?.tool_calls?.[0].function.arguments || "{}";
-  const raw: any = JSON.parse(jsonString);
-  return raw.response as YesNo;
-};
-
-export const translateToEnglish = async (content: string, langCode: string) => {
-  const prompt = `You will be provided with a foreign language sentence (lang code: ${langCode}), and your task is to translate it into English.`;
-  const hm = await gptCall({
-    model: "gpt-4o",
-    messages: [
-      {
-        role: "system",
-        content: prompt,
-      },
-      {
-        role: "user",
-        content,
-      },
-    ],
-    temperature: 0.7,
-    max_tokens: 128,
-    top_p: 1,
-  });
-  const val = hm.choices[0].message.content;
-  if (!val) {
-    return errorReport("No translation response from GPT-4.");
-  }
-  return val;
-};
-
 const SENTENCE = [
   `You are a language learning flash card app.`,
   `You are creating a comic to help users remember the flashcard above.`,
@@ -122,7 +30,7 @@ const SINGLE_WORD = [
   `Create a DALL-e prompt to generate an image of the foreign language word above.`,
   `Make it as realistic and accurate to the words meaning as possible.`,
   `The illustration must convey the word's meaning to the student.`,
-  `humans must be anthropomorphized.`,
+  `humans must be shown as anthropomorphized animals.`,
   `Do not add text. It will give away the answer!`,
 ].join("\n");
 

@@ -38,7 +38,7 @@ async function getCards(props: GetCardsProps) {
     where: whereClause,
     // distinct: ["cardId"],
     orderBy: isReview
-      ? [{cardId: "asc"}, { quizType: "asc" }]
+      ? [{ cardId: "asc" }, { quizType: "asc" }]
       : [{ Card: { createdAt: "desc" } }], // TODO: Change to desc later.
     include: { Card: true },
     take,
