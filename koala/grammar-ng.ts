@@ -20,12 +20,12 @@ export async function gptCall(opts: ChatCompletionCreateParamsNonStreaming) {
 
 const zodGradeResponse = z.object({
   grade: z.enum(["correct", "grammar", "incorrect"]),
-  correctedSentence: z.string().optional(),
+  edit: z.string().optional(),
 });
 
 export type Explanation = {
   grade: "correct" | "grammar" | "incorrect";
-  correctedSentence?: string;
+  edit?: string;
 };
 
 type GrammarCorrectionProps = {
@@ -59,15 +59,16 @@ export const grammarCorrectionNG = async (
   const lang = getLangName(props.langCode);
   const prompt = [
     `You are a language learning assistant.`,
+    `You are grading a student's speaking drill.`,
     `You asked the user to say "${definition}" in ${lang}.`,
     `They responded with: "${userInput}".`,
     `Evaluate the user's response according to the following criteria:`,
     `1. Correct: The sentence is correct (or close enough) both in its grammar usage and target meaning.`,
-    `2. Grammar: The student said a correct sentence, but it has minor grammar issues. In this case, provide a mild correction in the 'correctedSentence' field.`,
+    `2. Grammar: The student said a correct sentence, but it has minor grammar issues. In this case, provide a mild correction in the 'edit' field.`,
     `3. Incorrect: The meaning of the sentence is not the same, or there are major grammar problems. Write a SHORT explanation of the problem.`,
     `Your response should be a JSON object with the following structure:`,
     `For correct: { "grade": "correct" }`,
-    `For Grammar: { "grade": "grammar", "correctedSentence": "..." }`,
+    `For Grammar: { "grade": "grammar", "edit": "..." }`,
     `For incorrect: { "grade": "incorrect" }`,
     `Do not include any explanations or additional text.`,
   ].join("\n");
@@ -94,7 +95,7 @@ export const grammarCorrectionNG = async (
   } else {
     return {
       grade: "incorrect",
-      correctedSentence: "This should never happen. Submit a bug report.",
+      edit: "This should never happen. Submit a bug report.",
     };
   }
 };
