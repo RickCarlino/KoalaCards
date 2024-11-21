@@ -6,6 +6,7 @@ import { errorReport } from "./error-report";
 import { maybeGetCardImageUrl } from "./image";
 import { LessonType } from "./shared-types";
 import { generateLessonAudio } from "./speech";
+import { autoPromoteCards } from "./autopromote";
 
 type GetLessonInputParams = {
   userId: string;
@@ -39,7 +40,7 @@ async function getCards(props: GetCardsProps) {
     // distinct: ["cardId"],
     orderBy: isReview
       ? [{ cardId: "asc" }, { quizType: "asc" }]
-      : [{ Card: { createdAt: "desc" } }], // TODO: Change to desc later.
+      : [{ Card: { createdAt: "desc" } }, { quizType: "asc" }],
     include: { Card: true },
     take,
   });
@@ -112,20 +113,24 @@ const getNewCards = async (props: GetCardsProps) => {
 
 export async function getLessons(p: GetLessonInputParams) {
   const { userId, now, take } = p;
-
+  await autoPromoteCards(userId);
   if (take > 15) return errorReport("Too many cards requested.");
   const p2 = { userId, now, take };
   const newCards = await getNewCards({ ...p2, isReview: false });
   const oldCards = await getCards({ ...p2, isReview: true });
-
-  const combined = zip(oldCards, newCards)
+  const combined = zip(
+    oldCards,
+    newCards.slice(0, Math.floor(newCards.length / 2)),
+  )
     .flat()
     .filter(Boolean)
     .slice(0, take);
   const audioSpeed = Math.round((await playbackSpeed(userId)) * 100);
 
   return await map(combined, (q) => {
-    const quiz = { ...q, quizType: q.repetitions ? q.quizType : "dictation" };
+    const isDictation = q.quizType === "listening" && q.repetitions < 1;
+    const quizType = isDictation ? "dictation" : q.quizType;
+    const quiz = { ...q, quizType };
     return prepareQuizData(quiz, audioSpeed);
   });
 }
