@@ -37,7 +37,6 @@ async function getCards(props: GetCardsProps) {
 
   return await prismaClient.quiz.findMany({
     where: whereClause,
-    // distinct: ["cardId"],
     orderBy: isReview
       ? [{ cardId: "asc" }, { quizType: "asc" }]
       : [{ Card: { createdAt: "desc" } }, { quizType: "asc" }],

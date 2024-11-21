@@ -2,7 +2,6 @@ import { z } from "zod";
 import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc-procedure";
 import { setGrade } from "./import-cards";
-import { isApprovedUser } from "../is-approved-user";
 import { maybeAddImages } from "../image";
 import { Grade } from "femto-fsrs";
 
@@ -43,8 +42,7 @@ export const gradeQuiz = procedure
       };
     }
 
-    // Temporary experiment: Add 3 DALL-E images per review.
-    if (isApprovedUser(user.id)) {
+    if ([Grade.AGAIN, Grade.HARD].includes(grade)) {
       maybeAddImages(user.id, 1);
     }
     await setGrade(quiz, grade);

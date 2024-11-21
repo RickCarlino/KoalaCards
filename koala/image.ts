@@ -25,7 +25,7 @@ export async function maybeGetCardImageUrl(
   return await expiringUrl(bucket.file(blobID));
 }
 
-const CHEAPNESS = 2;
+const CHEAPNESS = 8; // Roughly 12% of cards will get an image.
 
 async function maybeAddImageToCard(card: Card) {
   if (Math.random() < 1 / CHEAPNESS) {

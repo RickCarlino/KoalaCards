@@ -3,6 +3,7 @@ import { ChatCompletionCreateParamsNonStreaming } from "openai/resources";
 import { errorReport } from "./error-report";
 import { z } from "zod";
 import { zodResponseFormat } from "openai/helpers/zod";
+import { prismaClient } from "./prisma-client";
 
 const apiKey = process.env.OPENAI_API_KEY;
 
@@ -51,9 +52,59 @@ const getLangName = (lang: string) => {
   return names[key] || lang;
 };
 
+async function getCache(
+  props: GrammarCorrectionProps,
+): Promise<Explanation | undefined> {
+  const td = await prismaClient.trainingData.findFirst({
+    where: {
+      term: props.term,
+      definition: props.definition,
+      langCode: props.langCode,
+      userInput: props.userInput,
+    },
+  });
+
+  if (td) {
+    const edit = td.explanation || "";
+    // Pencil emoji means it's a grammar correction.
+    if (edit.includes("✏️")) {
+      return {
+        grade: "grammar",
+        edit: `✏️${edit} (Repeat Mistake)`,
+      };
+    }
+    return {
+      grade: td.yesNo === "yes" ? "correct" : "incorrect",
+      edit,
+    };
+  }
+}
+
+async function setCache(
+  props: GrammarCorrectionProps,
+  explanation: Explanation,
+) {
+  await prismaClient.trainingData.create({
+    data: {
+      term: props.term,
+      definition: props.definition,
+      langCode: props.langCode,
+      userInput: props.userInput,
+      yesNo: explanation.grade === "correct" ? "yes" : "no",
+      explanation: "grammar-ng",
+      quizType: "speaking",
+      englishTranslation: "NA",
+    },
+  });
+}
+
 export const grammarCorrectionNG = async (
   props: GrammarCorrectionProps,
 ): Promise<Explanation> => {
+  const cached = await getCache(props);
+  if (cached) {
+    return cached;
+  }
   const model = "gpt-4o-2024-08-06";
   const { userInput, definition } = props;
   const lang = getLangName(props.langCode);
@@ -73,8 +124,6 @@ export const grammarCorrectionNG = async (
     `Do not include any explanations or additional text.`,
   ].join("\n");
 
-  console.log({ prompt });
-
   const resp = await openai.beta.chat.completions.parse({
     messages: [
       {
@@ -91,6 +140,7 @@ export const grammarCorrectionNG = async (
   const grade_response = resp.choices[0].message.parsed;
 
   if (grade_response) {
+    setCache(props, grade_response);
     return grade_response;
   } else {
     return {
