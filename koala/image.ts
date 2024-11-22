@@ -27,7 +27,11 @@ export async function maybeGetCardImageUrl(
 
 const CHEAPNESS = 8; // Roughly 12% of cards will get an image.
 
-async function maybeAddImageToCard(card: Card) {
+export async function maybeAddImageToCard(card: Card) {
+  if (card.imageBlobId) {
+    return
+  }
+
   if (Math.random() < 1 / CHEAPNESS) {
     return;
   }
@@ -55,23 +59,4 @@ async function maybeAddImageToCard(card: Card) {
   });
 
   return await maybeGetCardImageUrl(filePath);
-}
-
-export async function maybeAddImages(userId: string, take: number) {
-  const cards = await prismaClient.card.findMany({
-    where: {
-      userId,
-      imageBlobId: null,
-      flagged: { not: true },
-    },
-    take,
-  });
-
-  if (!cards.length) {
-    return;
-  }
-
-  const x = await Promise.all(cards.map(maybeAddImageToCard));
-  console.log(cards.map((x) => x.term).join("\n"));
-  console.log(x.join("\n"));
 }

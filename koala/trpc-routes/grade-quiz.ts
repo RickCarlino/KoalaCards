@@ -1,9 +1,9 @@
+import { Grade } from "femto-fsrs";
 import { z } from "zod";
+import { maybeAddImageToCard } from "../image";
 import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc-procedure";
 import { setGrade } from "./import-cards";
-import { maybeAddImages } from "../image";
-import { Grade } from "femto-fsrs";
 
 export const gradeQuiz = procedure
   .input(
@@ -43,7 +43,7 @@ export const gradeQuiz = procedure
     }
 
     if ([Grade.AGAIN, Grade.HARD].includes(grade)) {
-      maybeAddImages(user.id, 1);
+      maybeAddImageToCard(quiz.Card);
     }
     await setGrade(quiz, grade);
     return {};

@@ -21,12 +21,12 @@ export async function gptCall(opts: ChatCompletionCreateParamsNonStreaming) {
 
 const zodGradeResponse = z.object({
   grade: z.enum(["correct", "grammar", "incorrect"]),
-  edit: z.string().optional(),
+  correctedSentence: z.string().optional(),
 });
 
 export type Explanation = {
   grade: "correct" | "grammar" | "incorrect";
-  edit?: string;
+  correctedSentence?: string;
 };
 
 type GrammarCorrectionProps = {
@@ -65,17 +65,17 @@ async function getCache(
   });
 
   if (td) {
-    const edit = td.explanation || "";
+    const correctedSentence = td.explanation || "";
     // Pencil emoji means it's a grammar correction.
-    if (edit.includes("✏️")) {
+    if (correctedSentence.includes("✏️")) {
       return {
         grade: "grammar",
-        edit: `✏️${edit} (Repeat Mistake)`,
+        correctedSentence: `✏️${correctedSentence} (Repeat Mistake)`,
       };
     }
     return {
       grade: td.yesNo === "yes" ? "correct" : "incorrect",
-      edit,
+      correctedSentence,
     };
   }
 }
@@ -110,17 +110,16 @@ export const grammarCorrectionNG = async (
   const lang = getLangName(props.langCode);
   const prompt = [
     `You are a language learning assistant.`,
-    `You are grading a student's speaking drill.`,
     `You asked the user to say "${definition}" in ${lang}.`,
     `They responded with: "${userInput}".`,
     `Evaluate the user's response according to the following criteria:`,
     `1. Correct: The sentence is correct (or close enough) both in its grammar usage and target meaning.`,
-    `2. Grammar: The student said a correct sentence, but it has minor grammar issues. In this case, provide a mild correction in the 'edit' field.`,
+    `2. Grammar: The student said a correct sentence, but it has minor grammar issues. In this case, provide a mild correction in the 'correctedSentence' field.`,
     `3. Incorrect: The meaning of the sentence is not the same, or there are major grammar problems. Write a SHORT explanation of the problem.`,
     `Your response should be a JSON object with the following structure:`,
-    `For correct: { "grade": "correct" }`,
-    `For Grammar: { "grade": "grammar", "edit": "..." }`,
-    `For incorrect: { "grade": "incorrect" }`,
+    `For Correct: { "grade": "correct" }`,
+    `For Grammar: { "grade": "grammar", "correctedSentence": "..." }`,
+    `For Incorrect: { "grade": "incorrect" }`,
     `Do not include any explanations or additional text.`,
   ].join("\n");
 
@@ -145,7 +144,7 @@ export const grammarCorrectionNG = async (
   } else {
     return {
       grade: "incorrect",
-      edit: "This should never happen. Submit a bug report.",
+      correctedSentence: "This should never happen. Submit a bug report.",
     };
   }
 };

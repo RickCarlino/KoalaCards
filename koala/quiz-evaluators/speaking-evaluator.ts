@@ -17,7 +17,7 @@ export const speaking: QuizEvaluator = async ({ userInput, card }) => {
     userInput,
   });
 
-  const userMessage = `✏️${resp.edit || ""}`;
+  const userMessage = `✏️${resp.correctedSentence || ""}`;
 
   switch (resp.grade) {
     case "correct":
