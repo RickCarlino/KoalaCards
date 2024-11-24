@@ -29,7 +29,7 @@ const CHEAPNESS = 8; // Roughly 12% of cards will get an image.
 
 export async function maybeAddImageToCard(card: Card) {
   if (card.imageBlobId) {
-    return
+    return;
   }
 
   if (Math.random() < 1 / CHEAPNESS) {

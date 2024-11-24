@@ -65,17 +65,9 @@ async function getCache(
   });
 
   if (td) {
-    const correctedSentence = td.explanation || "";
-    // Pencil emoji means it's a grammar correction.
-    if (correctedSentence.includes("✏️")) {
-      return {
-        grade: "grammar",
-        correctedSentence: `✏️${correctedSentence} (Repeat Mistake)`,
-      };
-    }
     return {
       grade: td.yesNo === "yes" ? "correct" : "incorrect",
-      correctedSentence,
+      correctedSentence: `Repeat Mistake. ${td.explanation}`,
     };
   }
 }
@@ -91,7 +83,7 @@ async function setCache(
       langCode: props.langCode,
       userInput: props.userInput,
       yesNo: explanation.grade === "correct" ? "yes" : "no",
-      explanation: "grammar-ng",
+      explanation: explanation.correctedSentence || "",
       quizType: "speaking",
       englishTranslation: "NA",
     },

@@ -23,12 +23,11 @@ function formatTrainingData(props: {}) {
           <th>ID</th>
           <th>Lang</th>
           <th>Time</th>
-          <th>Type</th>
           <th>Definition</th>
           <th>Term</th>
           <th>Response</th>
           <th>Translation</th>
-          {/* <th>explanation</th> */}
+          <th>explanation</th>
         </tr>
       </thead>
       <tbody>
@@ -43,11 +42,11 @@ function formatTrainingData(props: {}) {
             <td>{trainingData.id}</td>
             <td>{trainingData.langCode}</td>
             <td>{trainingData.createdAt.toLocaleDateString()}</td>
-            <td>{trainingData.quizType[0].toUpperCase()}</td>
             <td>{trainingData.definition}</td>
             <td>{trainingData.term}</td>
             <td>{trainingData.userInput}</td>
             <td>{trainingData.englishTranslation}</td>
+            <td>{trainingData.explanation}</td>
           </tr>
         ))}
       </tbody>

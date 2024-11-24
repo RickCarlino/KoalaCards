@@ -54,6 +54,7 @@ export const FeedbackRow = ({
     >
       <Stack>
         <DifficultyButtons
+          disableHotkeys={true}
           current={quizState.grade}
           onSelectDifficulty={(grade) =>
             onUpdateDifficulty(quizState.quiz.quizId, grade)
