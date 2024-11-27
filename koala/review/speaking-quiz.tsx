@@ -68,15 +68,19 @@ export const SpeakingQuiz: QuizComp = (props) => {
   }
 
   // Handle Fail button click
-  const handleFailClick = async () => {
+  const onFailClick = async () => {
     await playAudio(card.termAudio);
     await playAudio(card.definitionAudio);
+
     props.onGraded(Grade.AGAIN);
-    props.onComplete({
-      status: "fail",
-      feedback: "You clicked 'I Don't Know'.",
-      userResponse: "Not provided.",
-    });
+    setTimeout(() => {
+      console.log(`=== REMEMBER: TO FIX THIS HACK ===`);
+      props.onComplete({
+        status: "fail",
+        feedback: "You clicked 'I Don't Know'.",
+        userResponse: "Not provided.",
+      });
+    }, 1000);
   };
 
   // Handle Difficulty selection
@@ -115,7 +119,7 @@ export const SpeakingQuiz: QuizComp = (props) => {
       )}
       {isRecording && <Text>Recording...</Text>}
       {(phase === "prompt" || phase === "recording") && (
-        <FailButton onClick={handleFailClick} />
+        <FailButton onClick={onFailClick} />
       )}
       {phase === "done" && (
         <DifficultyButtons

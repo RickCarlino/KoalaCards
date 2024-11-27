@@ -1,4 +1,4 @@
-import { quizReducer } from "@/koala/review/review-reducer";
+import { reviewReducer } from "@/koala/review/review-reducer";
 import { Card, Center, Group, Image, Stack, Text, Title } from "@mantine/core";
 import { Grade } from "femto-fsrs";
 import { useEffect, useReducer, useState } from "react";
@@ -59,7 +59,7 @@ const quizComponents: Record<Quiz["lessonType"], QuizComp> = {
 };
 
 export const ReviewPage = (props: Props) => {
-  const [state, dispatch] = useReducer(quizReducer, {
+  const [state, dispatch] = useReducer(reviewReducer, {
     quizzes: [],
     currentQuizIndex: 0,
   });

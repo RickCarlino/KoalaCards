@@ -31,7 +31,9 @@ export const viewTrainingData = procedure
     // Return the last 100 training data entries
     const data = await prismaClient.trainingData.findMany({
       where: {
-        explanation: process.env.GPT_MODEL || "gpt-4o",
+        createdAt: {
+          gte: new Date(new Date().getTime() - 1000 * 60 * 60 * 24 * 30),
+        },
       },
       orderBy: {
         createdAt: "desc",

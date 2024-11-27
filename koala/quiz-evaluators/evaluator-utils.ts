@@ -8,7 +8,8 @@ function calculateCutoff(length: number): number {
 export function compare(l: string, r: string, cutoffOverride = 0): boolean {
   const sl = strip(l);
   const sr = strip(r);
-  const cutoff = cutoffOverride || calculateCutoff(Math.max(sl.length, sr.length));
+  const cutoff =
+    cutoffOverride || calculateCutoff(Math.max(sl.length, sr.length));
 
   if (cutoff === 0) {
     return sl === sr;

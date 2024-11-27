@@ -1,116 +1,95 @@
 import { Grade } from "femto-fsrs";
-import { Action, ReviewState } from "./types";
+import {
+  Action,
+  ReviewState,
+  LoadQuizzesAction,
+  SetGradeAction,
+  ServerFeedbackAction,
+  UpdateAudioUrlAction,
+} from "./types";
 
-export function quizReducer(state: ReviewState, action: Action): ReviewState {
-  if (action.type !== "LOAD_QUIZZES") {
-    console.log(
-      JSON.stringify(
-        {
-          ...action,
-          audioBase64: undefined,
-        },
-        null,
-        2,
-      ),
-    );
-  }
+function updateQuiz(state: ReviewState, quizId: number, updateFn: (quiz: any) => any): ReviewState {
+  return {
+    ...state,
+    quizzes: state.quizzes.map((q) =>
+      q.quiz.quizId === quizId ? updateFn(q) : q
+    ),
+  };
+}
 
+function handleLoadQuizzes(state: ReviewState, action: LoadQuizzesAction): ReviewState {
+  return {
+    ...state,
+    quizzes: action.quizzes.map((quiz) => ({ quiz })),
+    currentQuizIndex: 0,
+  };
+}
+
+function handleSetGrade(state: ReviewState, action: SetGradeAction): ReviewState {
+  return updateQuiz(state, action.quizId, (q) => ({
+    ...q,
+    grade: action.grade,
+  }));
+}
+
+function handleServerFeedback(state: ReviewState, action: ServerFeedbackAction): ReviewState {
+  return updateQuiz(state, action.quizId, (q) => ({
+    ...q,
+    serverGradingResult: action.result,
+    serverResponse: action.serverResponse,
+    status: "graded",
+    grade: action.result === "fail" ? Grade.AGAIN : q.grade,
+    response: action.userResponse,
+  }));
+}
+
+function handleUpdateAudioUrl(state: ReviewState, action: UpdateAudioUrlAction): ReviewState {
+  return updateQuiz(state, action.quizId, (q) => ({
+    ...q,
+    quiz: {
+      ...q.quiz,
+      termAudio: action.audioBase64,
+    },
+  }));
+}
+
+function handleNextQuiz(state: ReviewState): ReviewState {
+  const nextIndex = Math.min(state.currentQuizIndex + 1, state.quizzes.length - 1);
+  return {
+    ...state,
+    currentQuizIndex: nextIndex,
+  };
+}
+
+function handleFlagCurrentCard(state: ReviewState): ReviewState {
+  const currentQuiz = state.quizzes[state.currentQuizIndex];
+  if (!currentQuiz) return state;
+
+  const filteredQuizzes = state.quizzes.filter(
+    (q) => q.quiz.cardId !== currentQuiz.quiz.cardId
+  );
+
+  return {
+    ...state,
+    quizzes: filteredQuizzes,
+    currentQuizIndex: Math.min(state.currentQuizIndex, filteredQuizzes.length - 1),
+  };
+}
+
+export function reviewReducer(state: ReviewState, action: Action): ReviewState {
   switch (action.type) {
     case "LOAD_QUIZZES":
-      return {
-        ...state,
-        quizzes: action.quizzes.map((quiz) => ({
-          quiz,
-        })),
-        currentQuizIndex: 0,
-      };
-
+      return handleLoadQuizzes(state, action);
     case "SET_GRADE":
-      return {
-        ...state,
-        quizzes: state.quizzes.map((q) =>
-          q.quiz.quizId === action.quizId
-            ? {
-                ...q,
-                grade: action.grade,
-              }
-            : q,
-        ),
-      };
-
+      return handleSetGrade(state, action);
     case "SERVER_FEEDBACK":
-      return {
-        ...state,
-        quizzes: state.quizzes.map((q) =>
-          q.quiz.quizId === action.quizId
-            ? {
-                ...q,
-                serverGradingResult: action.result,
-                serverResponse: action.serverResponse,
-                status: "graded",
-                grade: action.result === "fail" ? Grade.AGAIN : q.grade,
-                response: action.userResponse,
-              }
-            : q,
-        ),
-      };
-
+      return handleServerFeedback(state, action);
     case "UPDATE_AUDIO_URL":
-      return {
-        ...state,
-        quizzes: state.quizzes.map((q) =>
-          q.quiz.quizId === action.quizId
-            ? {
-                ...q,
-                quiz: {
-                  ...q.quiz,
-                  termAudio: action.audioBase64,
-                },
-              }
-            : q,
-        ),
-      };
-
+      return handleUpdateAudioUrl(state, action);
     case "NEXT_QUIZ":
-      const plusOne = state.currentQuizIndex + 1;
-      const nextIndex =
-        plusOne < state.quizzes.length ? plusOne : state.quizzes.length;
-
-      return {
-        ...state,
-        currentQuizIndex: nextIndex,
-      };
-
+      return handleNextQuiz(state);
     case "FLAG_CURRENT_CARD":
-      const currentQuiz = state.quizzes[state.currentQuizIndex];
-      if (!currentQuiz) {
-        return state;
-      }
-      const cardID = currentQuiz.quiz.cardId;
-      const filteredQuizzes = state.quizzes.filter(
-        (q) => q.quiz.cardId !== cardID,
-      );
-
-      if (filteredQuizzes.length === 0) {
-        // No quizzes left after filtering
-        return {
-          ...state,
-          quizzes: [],
-          currentQuizIndex: 0,
-        };
-      }
-
-      // Adjust the currentQuizIndex if necessary
-      let newCurrentQuizIndex = state.currentQuizIndex;
-      if (newCurrentQuizIndex >= filteredQuizzes.length) {
-        newCurrentQuizIndex = filteredQuizzes.length - 1;
-      }
-
-      return {
-        ...state,
-        quizzes: filteredQuizzes,
-        currentQuizIndex: newCurrentQuizIndex,
-      };
+      return handleFlagCurrentCard(state);
     default:
       return state;
   }

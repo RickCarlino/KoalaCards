@@ -8,11 +8,13 @@ import { HOTKEYS } from "./hotkeys";
 interface DifficultyButtonsProps {
   current: Grade | undefined;
   onSelectDifficulty: (difficulty: Grade) => void;
+  disableHotkeys?: boolean;
 }
 
 export const DifficultyButtons: React.FC<DifficultyButtonsProps> = ({
   current,
   onSelectDifficulty,
+  disableHotkeys,
 }) => {
   const labels = ["FAIL", "HARD", "GOOD", "EASY"] as const;
   const LOOKUP: Record<(typeof labels)[number], Grade> = {
@@ -21,12 +23,14 @@ export const DifficultyButtons: React.FC<DifficultyButtonsProps> = ({
     GOOD: Grade.GOOD,
     EASY: Grade.EASY,
   };
-  useHotkeys([
-    [HOTKEYS.GRADE_AGAIN, () => onSelectDifficulty(Grade.AGAIN)],
-    [HOTKEYS.GRADE_HARD, () => onSelectDifficulty(Grade.HARD)],
-    [HOTKEYS.GRADE_GOOD, () => onSelectDifficulty(Grade.GOOD)],
-    [HOTKEYS.GRADE_EASY, () => onSelectDifficulty(Grade.EASY)],
-  ]);
+  if (!disableHotkeys) {
+    useHotkeys([
+      [HOTKEYS.GRADE_AGAIN, () => onSelectDifficulty(Grade.AGAIN)],
+      [HOTKEYS.GRADE_HARD, () => onSelectDifficulty(Grade.HARD)],
+      [HOTKEYS.GRADE_GOOD, () => onSelectDifficulty(Grade.GOOD)],
+      [HOTKEYS.GRADE_EASY, () => onSelectDifficulty(Grade.EASY)],
+    ]);
+  }
   const list = labels.map((label: (typeof labels)[number]) => {
     return (
       <Button

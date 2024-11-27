@@ -1,7 +1,8 @@
 import { prismaClient } from "@/koala/prisma-client";
-import { map, zip } from "radash";
-import { Quiz, Card } from "@prisma/client";
+import { Card, Quiz } from "@prisma/client";
+import { map, unique } from "radash";
 import { getUserSettings } from "./auth-helpers";
+import { autoPromoteCards } from "./autopromote";
 import { errorReport } from "./error-report";
 import { maybeGetCardImageUrl } from "./image";
 import { LessonType } from "./shared-types";
@@ -15,12 +16,26 @@ type GetLessonInputParams = {
   take: number;
 };
 
-async function getCards(
-  userId: string,
-  now: number,
-  take: number,
-  isReview: boolean,
-) {
+type GetCardsProps = {
+  userId: string;
+  now: number;
+  take: number;
+  isReview: boolean;
+};
+
+// Split an array like a deck of cards.
+function split<T>(l: T[], r: T[]): T[] {
+  const output: T[] = [];
+  const len = Math.max(l.length, r.length);
+  for (let i = 0; i < len; i++) {
+    if (l[i]) output.push(l[i]);
+    if (r[i]) output.push(r[i]);
+  }
+  return output;
+}
+
+async function getCards(props: GetCardsProps) {
+  const { userId, now, take, isReview } = props;
   if (take < 1) return [];
 
   const base = {
@@ -30,16 +45,23 @@ async function getCards(
   const whereClause = isReview
     ? { ...base, nextReview: { lt: now }, repetitions: { gt: 0 } }
     : { ...base, repetitions: 0 };
-
-  return await prismaClient.quiz.findMany({
+  const p = {
     where: whereClause,
-    distinct: ["cardId"],
-    orderBy: isReview
-      ? [{ quizType: "asc" }, { nextReview: "asc" }]
-      : [{ Card: { createdAt: "desc" } }], // TODO: Change to desc later.
     include: { Card: true },
     take,
+  };
+  const orderBy = (i: "asc" | "desc") =>
+    isReview ? [{ nextReview: i }] : [{ Card: { createdAt: i } }];
+  // Grab old ones first, then new ones.
+  const list1 = await prismaClient.quiz.findMany({
+    ...p,
+    orderBy: orderBy("asc"),
   });
+  const list2 = await prismaClient.quiz.findMany({
+    ...p,
+    orderBy: orderBy("desc"),
+  });
+  return unique(split(list1, list2), (x) => x.id).slice(0, take);
 }
 
 function cardCountNewToday(userID: string): Promise<number> {
@@ -97,31 +119,35 @@ const newCardsPerDay = async (userID: string) => {
   return await getUserSettings(userID).then((s) => s.cardsPerDayMax || 10);
 };
 
-const getNewCards = async (userId: string, now: number, take: number) => {
+const getNewCards = async (props: Omit<GetCardsProps, "isReview">) => {
+  const { userId, now, take } = props;
   const maxNew = await newCardsPerDay(userId);
   const newToday = await cardCountNewToday(userId);
   const allowedNew = Math.max(maxNew - newToday, 0);
   const maxNewCards = Math.min(take, allowedNew);
 
-  return await getCards(userId, now, maxNewCards, false);
+  return await getCards({ userId, now, take: maxNewCards, isReview: false });
 };
 
 export async function getLessons(p: GetLessonInputParams) {
   const { userId, now, take } = p;
-
+  await autoPromoteCards(userId);
   if (take > 15) return errorReport("Too many cards requested.");
-
-  const newCards = await getNewCards(userId, now, take);
-  const oldCards = await getCards(userId, now, take, true);
-
-  const combined = zip(oldCards, newCards)
-    .flat()
-    .filter(Boolean)
-    .slice(0, take);
+  const p2 = { userId, now, take };
+  const oldCards = await getCards({ ...p2, isReview: true });
+  const newCards = await getNewCards({
+    ...p2,
+    // Insert fewer cards when there are many old cards
+    // always provide at least 3 new cards.
+    take: Math.max(take - oldCards.length, 3),
+  });
+  const combined = split(oldCards, newCards).slice(0, take);
   const audioSpeed = Math.round((await playbackSpeed(userId)) * 100);
 
   return await map(combined, (q) => {
-    const quiz = { ...q, quizType: q.repetitions ? q.quizType : "dictation" };
+    const isDictation = q.quizType === "listening" && q.repetitions < 1;
+    const quizType = isDictation ? "dictation" : q.quizType;
+    const quiz = { ...q, quizType };
     return prepareQuizData(quiz, audioSpeed);
   });
 }
