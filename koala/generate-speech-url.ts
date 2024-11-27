@@ -93,36 +93,7 @@ const randomVoice = (langCode: string, gender: string) => {
 
 const VERSION = "v1"; // Bust cache with this. Be careful with changing this.
 
-export async function generateSpeechURL(
-  params: AudioLessonParams,
-): Promise<string> {
-  const lang = params.langCode.slice(0, 2).toLocaleLowerCase();
-  const voice = randomVoice(lang, params.gender);
-
-  const hashInput = `${params.text}|${params.langCode}|${params.gender}`;
-  const md5Hash = createHash("md5").update(hashInput).digest();
-  const base64UrlHash =
-    VERSION +
-    md5Hash
-      .toString("base64")
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/, "");
-
-  const fileName = `lesson-audio/${base64UrlHash}.mp3`;
-
-  const file = bucket.file(fileName);
-
-  const [exists] = await file.exists();
-
-  if (exists) {
-    const [signedUrl] = await file.getSignedUrl({
-      action: "read",
-      expires: Date.now() + 1000 * 60 * 60,
-    });
-    return signedUrl;
-  }
-
+const callTTS = async (voice: string, params: AudioLessonParams) => {
   const p = params.text.includes("<speak>")
     ? { ssml: params.text }
     : { text: params.text };
@@ -144,6 +115,43 @@ export async function generateSpeechURL(
     };
 
   const [response] = await CLIENT.synthesizeSpeech(request);
+
+  return response;
+};
+
+const hashURL = (text: string, langCode: string, gender: string) => {
+  const hashInput = `${text}|${langCode}|${gender}`;
+  const md5Hash = createHash("md5").update(hashInput).digest();
+  const base64UrlHash =
+    VERSION +
+    md5Hash
+      .toString("base64")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
+
+  return base64UrlHash;
+};
+
+export async function generateSpeechURL(
+  params: AudioLessonParams,
+): Promise<string> {
+  const base64UrlHash = hashURL(params.text, params.langCode, params.gender);
+  const fileName = `lesson-audio/${base64UrlHash}.mp3`;
+  const file = bucket.file(fileName);
+  const [exists] = await file.exists();
+
+  if (exists) {
+    const [signedUrl] = await file.getSignedUrl({
+      action: "read",
+      expires: Date.now() + 1000 * 60 * 60,
+    });
+    return signedUrl;
+  }
+
+  const lang = params.langCode.slice(0, 2).toLocaleLowerCase();
+  const voice = randomVoice(lang, params.gender);
+  const response = await callTTS(voice, params);
 
   await file.save(response.audioContent as Buffer, {
     metadata: { contentType: "audio/mpeg" },
