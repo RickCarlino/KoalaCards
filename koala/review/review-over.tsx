@@ -41,10 +41,6 @@ export const ReviewOver = ({
     return quizState.serverGradingResult !== "pass";
   };
 
-  const showFailed = (quizState: QuizState) => {
-    return quizState.serverGradingResult === "fail";
-  };
-
   if (state.length === 0) {
     return (
       <Center style={{ width: "100%", height: "100vh" }}>
@@ -54,9 +50,6 @@ export const ReviewOver = ({
       </Center>
     );
   }
-
-  const numWrong = state.filter(showFailed).length;
-  const numTotal = state.length;
 
   return (
     <Center style={{ width: "100%" }}>
@@ -69,7 +62,7 @@ export const ReviewOver = ({
       >
         <Stack>
           <Title order={2}>
-            {numWrong}/{numTotal} Failed
+            Finalize Review
           </Title>
           <Alert color="red">
             Closing the browser tab early will cause changes to be lost. Please
