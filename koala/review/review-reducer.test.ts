@@ -99,4 +99,15 @@ describe("reviewReducer", () => {
     expect(newState.quizzes.length).toBe(1);
     expect(newState.quizzes[0].quiz.quizId).toBe(2);
   });
+  it("should return the current state for an unknown action type", () => {
+    const state: ReviewState = {
+      quizzes: [
+        { quiz: { quizId: 1, term: "term1", definition: "definition1", cardId: 1, definitionAudio: "", langCode: "en", lessonType: "listening", termAudio: "" } },
+      ],
+      currentQuizIndex: 0,
+    };
+    const action: any = { type: "UNKNOWN_ACTION" };
+    const newState = reviewReducer(state, action);
+    expect(newState).toBe(state);
+  });
 });

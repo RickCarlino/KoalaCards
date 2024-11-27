@@ -57,16 +57,23 @@ export interface ReviewState {
 }
 
 // Define the possible actions
+export type LoadQuizzesAction = { type: "LOAD_QUIZZES"; quizzes: Quiz[] };
+export type SetGradeAction = { type: "SET_GRADE"; grade: Grade; quizId: number };
+export type FlagCurrentCardAction = { type: "FLAG_CURRENT_CARD" };
+export type ServerFeedbackAction = {
+  type: "SERVER_FEEDBACK";
+  quizId: number;
+  result: QuizStatus;
+  serverResponse: string;
+  userResponse: string;
+};
+export type NextQuizAction = { type: "NEXT_QUIZ" };
+export type UpdateAudioUrlAction = { type: "UPDATE_AUDIO_URL"; quizId: number; audioBase64: string };
+
 export type Action =
-  | { type: "LOAD_QUIZZES"; quizzes: Quiz[] }
-  | { type: "SET_GRADE"; grade: Grade; quizId: number }
-  | { type: "FLAG_CURRENT_CARD" }
-  | {
-      type: "SERVER_FEEDBACK";
-      quizId: number;
-      result: QuizStatus;
-      serverResponse: string;
-      userResponse: string;
-    }
-  | { type: "NEXT_QUIZ" }
-  | { type: "UPDATE_AUDIO_URL"; quizId: number; audioBase64: string };
+  | LoadQuizzesAction
+  | SetGradeAction
+  | FlagCurrentCardAction
+  | ServerFeedbackAction
+  | NextQuizAction
+  | UpdateAudioUrlAction;

@@ -1,5 +1,12 @@
 import { Grade } from "femto-fsrs";
-import { Action, ReviewState } from "./types";
+import {
+  Action,
+  ReviewState,
+  LoadQuizzesAction,
+  SetGradeAction,
+  ServerFeedbackAction,
+  UpdateAudioUrlAction,
+} from "./types";
 
 function updateQuiz(state: ReviewState, quizId: number, updateFn: (quiz: any) => any): ReviewState {
   return {
@@ -10,7 +17,7 @@ function updateQuiz(state: ReviewState, quizId: number, updateFn: (quiz: any) =>
   };
 }
 
-function handleLoadQuizzes(state: ReviewState, action: Extract<Action, { type: "LOAD_QUIZZES" }>): ReviewState {
+function handleLoadQuizzes(state: ReviewState, action: LoadQuizzesAction): ReviewState {
   return {
     ...state,
     quizzes: action.quizzes.map((quiz) => ({ quiz })),
@@ -18,14 +25,14 @@ function handleLoadQuizzes(state: ReviewState, action: Extract<Action, { type: "
   };
 }
 
-function handleSetGrade(state: ReviewState, action: Extract<Action, { type: "SET_GRADE" }>): ReviewState {
+function handleSetGrade(state: ReviewState, action: SetGradeAction): ReviewState {
   return updateQuiz(state, action.quizId, (q) => ({
     ...q,
     grade: action.grade,
   }));
 }
 
-function handleServerFeedback(state: ReviewState, action: Extract<Action, { type: "SERVER_FEEDBACK" }>): ReviewState {
+function handleServerFeedback(state: ReviewState, action: ServerFeedbackAction): ReviewState {
   return updateQuiz(state, action.quizId, (q) => ({
     ...q,
     serverGradingResult: action.result,
@@ -36,7 +43,7 @@ function handleServerFeedback(state: ReviewState, action: Extract<Action, { type
   }));
 }
 
-function handleUpdateAudioUrl(state: ReviewState, action: Extract<Action, { type: "UPDATE_AUDIO_URL" }>): ReviewState {
+function handleUpdateAudioUrl(state: ReviewState, action: UpdateAudioUrlAction): ReviewState {
   return updateQuiz(state, action.quizId, (q) => ({
     ...q,
     quiz: {
@@ -72,13 +79,13 @@ function handleFlagCurrentCard(state: ReviewState): ReviewState {
 export function reviewReducer(state: ReviewState, action: Action): ReviewState {
   switch (action.type) {
     case "LOAD_QUIZZES":
-      return handleLoadQuizzes(state, action as Extract<Action, { type: "LOAD_QUIZZES" }>);
+      return handleLoadQuizzes(state, action);
     case "SET_GRADE":
-      return handleSetGrade(state, action as Extract<Action, { type: "SET_GRADE" }>);
+      return handleSetGrade(state, action);
     case "SERVER_FEEDBACK":
-      return handleServerFeedback(state, action as Extract<Action, { type: "SERVER_FEEDBACK" }>);
+      return handleServerFeedback(state, action);
     case "UPDATE_AUDIO_URL":
-      return handleUpdateAudioUrl(state, action as Extract<Action, { type: "UPDATE_AUDIO_URL" }>);
+      return handleUpdateAudioUrl(state, action);
     case "NEXT_QUIZ":
       return handleNextQuiz(state);
     case "FLAG_CURRENT_CARD":
