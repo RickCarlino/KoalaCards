@@ -1,33 +1,47 @@
+import { LessonType } from "../shared-types";
 import { reviewReducer } from "./review-reducer";
 import { ReviewState, Action } from "./types";
 import { Grade } from "femto-fsrs";
 
 describe("reviewReducer", () => {
-  const initialState: ReviewState = {
-    quizzes: [],
-    currentQuizIndex: 0,
-  };
+  const createQuiz = (
+    quizId: number,
+    term: string,
+    definition: string,
+    lessonType: LessonType = "listening",
+  ) => ({
+    quizId,
+    term,
+    definition,
+    cardId: quizId,
+    definitionAudio: "",
+    langCode: "en",
+    lessonType,
+    termAudio: "",
+  });
+
+  const createState = (quizzes: any[], currentQuizIndex = 0): ReviewState => ({
+    quizzes: quizzes.map((quiz) => ({ quiz })),
+    currentQuizIndex,
+  });
 
   it("should handle LOAD_QUIZZES", () => {
     const action: Action = {
       type: "LOAD_QUIZZES",
       quizzes: [
-        { quizId: 1, term: "term1", definition: "definition1", cardId: 1, definitionAudio: "", langCode: "en", lessonType: "listening", termAudio: "" },
-        { quizId: 2, term: "term2", definition: "definition2", cardId: 2, definitionAudio: "", langCode: "en", lessonType: "listening", termAudio: "" },
+        createQuiz(1, "term1", "definition1", "listening"),
+        createQuiz(2, "term2", "definition2", "listening"),
       ],
     };
-    const newState = reviewReducer(initialState, action);
+    const newState = reviewReducer(createState([]), action);
     expect(newState.quizzes.length).toBe(2);
     expect(newState.currentQuizIndex).toBe(0);
   });
 
   it("should handle SET_GRADE", () => {
-    const state: ReviewState = {
-      quizzes: [
-        { quiz: { quizId: 1, term: "term1", definition: "definition1", cardId: 1, definitionAudio: "", langCode: "en", lessonType: "listening", termAudio: "" }, grade: Grade.GOOD },
-      ],
-      currentQuizIndex: 0,
-    };
+    const state = createState([
+      { ...createQuiz(1, "term1", "definition1"), grade: Grade.GOOD },
+    ]);
     const action: Action = {
       type: "SET_GRADE",
       quizId: 1,
@@ -38,12 +52,9 @@ describe("reviewReducer", () => {
   });
 
   it("should handle SERVER_FEEDBACK", () => {
-    const state: ReviewState = {
-      quizzes: [
-        { quiz: { quizId: 1, term: "term1", definition: "definition1", cardId: 1, definitionAudio: "", langCode: "en", lessonType: "listening", termAudio: "" }, grade: Grade.GOOD },
-      ],
-      currentQuizIndex: 0,
-    };
+    const state = createState([
+      { ...createQuiz(1, "term1", "definition1"), grade: Grade.GOOD },
+    ]);
     const action: Action = {
       type: "SERVER_FEEDBACK",
       quizId: 1,
@@ -58,12 +69,7 @@ describe("reviewReducer", () => {
   });
 
   it("should handle UPDATE_AUDIO_URL", () => {
-    const state: ReviewState = {
-      quizzes: [
-        { quiz: { quizId: 1, term: "term1", definition: "definition1", cardId: 1, definitionAudio: "", langCode: "en", lessonType: "listening", termAudio: "" } },
-      ],
-      currentQuizIndex: 0,
-    };
+    const state = createState([createQuiz(1, "term1", "definition1")]);
     const action: Action = {
       type: "UPDATE_AUDIO_URL",
       quizId: 1,
@@ -74,38 +80,28 @@ describe("reviewReducer", () => {
   });
 
   it("should handle NEXT_QUIZ", () => {
-    const state: ReviewState = {
-      quizzes: [
-        { quiz: { quizId: 1, term: "term1", definition: "definition1", cardId: 1, definitionAudio: "", langCode: "en", lessonType: "listening", termAudio: "" } },
-        { quiz: { quizId: 2, term: "term2", definition: "definition2", cardId: 2, definitionAudio: "", langCode: "en", lessonType: "listening", termAudio: "" } },
-      ],
-      currentQuizIndex: 0,
-    };
+    const state = createState([
+      createQuiz(1, "term1", "definition1"),
+      createQuiz(2, "term2", "definition2"),
+    ]);
     const action: Action = { type: "NEXT_QUIZ" };
     const newState = reviewReducer(state, action);
     expect(newState.currentQuizIndex).toBe(1);
   });
 
   it("should handle FLAG_CURRENT_CARD", () => {
-    const state: ReviewState = {
-      quizzes: [
-        { quiz: { quizId: 1, term: "term1", definition: "definition1", cardId: 1, definitionAudio: "", langCode: "en", lessonType: "listening", termAudio: "" } },
-        { quiz: { quizId: 2, term: "term2", definition: "definition2", cardId: 2, definitionAudio: "", langCode: "en", lessonType: "listening", termAudio: "" } },
-      ],
-      currentQuizIndex: 0,
-    };
+    const state = createState([
+      createQuiz(1, "term1", "definition1"),
+      createQuiz(2, "term2", "definition2"),
+    ]);
     const action: Action = { type: "FLAG_CURRENT_CARD" };
     const newState = reviewReducer(state, action);
     expect(newState.quizzes.length).toBe(1);
     expect(newState.quizzes[0].quiz.quizId).toBe(2);
   });
+
   it("should return the current state for an unknown action type", () => {
-    const state: ReviewState = {
-      quizzes: [
-        { quiz: { quizId: 1, term: "term1", definition: "definition1", cardId: 1, definitionAudio: "", langCode: "en", lessonType: "listening", termAudio: "" } },
-      ],
-      currentQuizIndex: 0,
-    };
+    const state = createState([createQuiz(1, "term1", "definition1")]);
     const action: any = { type: "UNKNOWN_ACTION" };
     const newState = reviewReducer(state, action);
     expect(newState).toBe(state);
