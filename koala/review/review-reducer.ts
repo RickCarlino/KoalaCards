@@ -8,16 +8,23 @@ import {
   UpdateAudioUrlAction,
 } from "./types";
 
-function updateQuiz(state: ReviewState, quizId: number, updateFn: (quiz: any) => any): ReviewState {
+function updateQuiz(
+  state: ReviewState,
+  quizId: number,
+  updateFn: (quiz: any) => any,
+): ReviewState {
   return {
     ...state,
     quizzes: state.quizzes.map((q) =>
-      q.quiz.quizId === quizId ? updateFn(q) : q
+      q.quiz.quizId === quizId ? updateFn(q) : q,
     ),
   };
 }
 
-function handleLoadQuizzes(state: ReviewState, action: LoadQuizzesAction): ReviewState {
+function handleLoadQuizzes(
+  state: ReviewState,
+  action: LoadQuizzesAction,
+): ReviewState {
   return {
     ...state,
     quizzes: action.quizzes.map((quiz) => ({ quiz })),
@@ -25,14 +32,20 @@ function handleLoadQuizzes(state: ReviewState, action: LoadQuizzesAction): Revie
   };
 }
 
-function handleSetGrade(state: ReviewState, action: SetGradeAction): ReviewState {
+function handleSetGrade(
+  state: ReviewState,
+  action: SetGradeAction,
+): ReviewState {
   return updateQuiz(state, action.quizId, (q) => ({
     ...q,
     grade: action.grade,
   }));
 }
 
-function handleServerFeedback(state: ReviewState, action: ServerFeedbackAction): ReviewState {
+function handleServerFeedback(
+  state: ReviewState,
+  action: ServerFeedbackAction,
+): ReviewState {
   return updateQuiz(state, action.quizId, (q) => ({
     ...q,
     serverGradingResult: action.result,
@@ -43,7 +56,10 @@ function handleServerFeedback(state: ReviewState, action: ServerFeedbackAction):
   }));
 }
 
-function handleUpdateAudioUrl(state: ReviewState, action: UpdateAudioUrlAction): ReviewState {
+function handleUpdateAudioUrl(
+  state: ReviewState,
+  action: UpdateAudioUrlAction,
+): ReviewState {
   return updateQuiz(state, action.quizId, (q) => ({
     ...q,
     quiz: {
@@ -54,10 +70,9 @@ function handleUpdateAudioUrl(state: ReviewState, action: UpdateAudioUrlAction):
 }
 
 function handleNextQuiz(state: ReviewState): ReviewState {
-  const nextIndex = Math.min(state.currentQuizIndex + 1, state.quizzes.length - 1);
   return {
     ...state,
-    currentQuizIndex: nextIndex,
+    currentQuizIndex: state.currentQuizIndex + 1,
   };
 }
 
@@ -66,17 +81,18 @@ function handleFlagCurrentCard(state: ReviewState): ReviewState {
   if (!currentQuiz) return state;
 
   const filteredQuizzes = state.quizzes.filter(
-    (q) => q.quiz.cardId !== currentQuiz.quiz.cardId
+    (q) => q.quiz.cardId !== currentQuiz.quiz.cardId,
   );
 
   return {
     ...state,
     quizzes: filteredQuizzes,
-    currentQuizIndex: Math.min(state.currentQuizIndex, filteredQuizzes.length - 1),
+    currentQuizIndex: state.currentQuizIndex + 1,
   };
 }
 
 export function reviewReducer(state: ReviewState, action: Action): ReviewState {
+  console.log(`=== ${action.type}`);
   switch (action.type) {
     case "LOAD_QUIZZES":
       return handleLoadQuizzes(state, action);
