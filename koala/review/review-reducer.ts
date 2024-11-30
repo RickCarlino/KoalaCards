@@ -87,7 +87,6 @@ function handleFlagCurrentCard(state: ReviewState): ReviewState {
   return {
     ...state,
     quizzes: filteredQuizzes,
-    currentQuizIndex: state.currentQuizIndex + 1,
   };
 }
 
