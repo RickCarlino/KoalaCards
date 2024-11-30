@@ -1,3 +1,7 @@
+## WHERE DO I SIGN UP?
+
+I host a demo instance of the app [here](https://app.koala.cards/user) but please keep in mind I may **turn off the server during peak usage** to reduce costs. I have set up a [Patreon](https://www.patreon.com/rickcarlino) to help offset hosting costs. Please consider donating if you find the app useful.
+
 # KoalaCards 🐨
 
 <p align="center">
@@ -29,10 +33,6 @@ Hey there! Welcome to KoalaCards, a fun and friendly [spaced repetition system](
     <img src="./screenshot.png" alt="KoalaCards UI screenshot"/>
   </a>
 </p>
-
-## Demo Server / Accounts
-
-I host a demo instance of the app [here](https://app.koala.cards/user) but please keep in mind I may **turn off the server during peak usage** to reduce costs. I have set up a [Patreon](https://www.patreon.com/rickcarlino) to help offset hosting costs. Please consider donating if you find the app useful.
 
 ## ~~ALPHA~~ Beta Software
 
