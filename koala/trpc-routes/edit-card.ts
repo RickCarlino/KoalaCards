@@ -24,12 +24,11 @@ export const editCard = procedure
       where: {
         id: input.id,
         userId,
-        flagged: false,
       },
     });
 
     if (!card) {
-      return errorReport("Card not found");
+      return errorReport(`Card not found: card: ${input.id}, user: ${userId}`);
     }
 
     await prismaClient.card.update({

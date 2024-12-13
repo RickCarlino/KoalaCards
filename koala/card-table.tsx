@@ -33,7 +33,6 @@ function CardRow({ card, onDelete }: CardRowProps) {
         onDelete();
       },
       (e) => {
-        debugger;
         console.error(e);
         setColor("blue");
       },
