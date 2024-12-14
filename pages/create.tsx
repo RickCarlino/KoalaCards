@@ -11,6 +11,7 @@ import {
   Textarea,
 } from "@mantine/core";
 import { useReducer, useState } from "react";
+
 type ProcessedCard = {
   term: string;
   definition: string;
@@ -66,8 +67,7 @@ const SAMPLES = {
     "Come stai? (How are you?)",
     "Sono uno studente. (I am a student.)",
     "Sto imparando l'italiano. (I am learning Italian.)",
-    "Grazie mille! (Thank",
-    "you very much!)",
+    "Grazie mille! (Thank you very much!)",
     "Quanto costa questo? (How much does this cost?)",
   ].join("\n"),
   fr: [
@@ -78,6 +78,7 @@ const SAMPLES = {
     "Combien coûte ceci ? (How much does this cost?)",
   ].join("\n"),
 };
+
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case "ADD_CARD":
@@ -113,15 +114,21 @@ function LanguageInputPage() {
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(false);
+
   const parseCards = trpc.parseCards.useMutation();
   const bulkCreateCards = trpc.bulkCreateCards.useMutation();
 
-  // Handler for language selection
   const handleLanguageChange = (language: LangCode) => {
     dispatch({ type: "SET_LANGUAGE", language });
   };
 
-  // Handler for raw input submission
+  const pasteExample = () => {
+    dispatch({
+      type: "SET_RAW_INPUT",
+      rawInput: SAMPLES[state.language] || SAMPLES["ko"],
+    });
+  };
+
   const handleRawInputSubmit = async () => {
     setLoading(true);
     parseCards
@@ -131,7 +138,7 @@ function LanguageInputPage() {
       })
       .then(({ cards }) => {
         dispatch({ type: "SET_PROCESSED_CARDS", processedCards: cards });
-        setActiveStep((current) => current + 1);
+        setActiveStep(1); // Move to editing step
       })
       .catch(errorHandler)
       .finally(() => {
@@ -139,12 +146,10 @@ function LanguageInputPage() {
       });
   };
 
-  // Handler for adding, editing, and removing cards
   const handleCardChange = (action: Action) => {
     dispatch(action);
   };
 
-  // Save the processed cards
   const handleSave = async () => {
     setLoading(true);
     bulkCreateCards
@@ -165,17 +170,11 @@ function LanguageInputPage() {
       });
   };
 
-  const pasteExample = () => {
-    dispatch({
-      type: "SET_RAW_INPUT",
-      rawInput: SAMPLES[state.language] || SAMPLES["ko"],
-    });
-  };
   return (
     <Container size="sm">
       <h1>Create New Cards</h1>
       <Stepper active={activeStep} onStepClick={setActiveStep}>
-        <Stepper.Step label="Select language">
+        <Stepper.Step label="Input Cards">
           <Select
             label="Language"
             placeholder="Choose"
@@ -191,18 +190,10 @@ function LanguageInputPage() {
               { value: "fr", label: "French" },
             ]}
           />
-          <Button
-            disabled={!state.language}
-            onClick={() => {
-              setActiveStep((current) => current + 1);
-            }}
-          >
-            Next
-          </Button>
-        </Stepper.Step>
-        <Stepper.Step label="Input text">
+
           <Textarea
             label="Paste your text here"
+            placeholder="NOTE: Cards can be input in most computer readable text formats such as CSV, TSV, JSON. Try the example input if you are unsure."
             autosize
             minRows={5}
             value={state.rawInput}
@@ -213,20 +204,10 @@ function LanguageInputPage() {
               })
             }
           />
-          <Button onClick={handleRawInputSubmit} loading={loading}>
-            Process
-          </Button>
-          <p>
-            NOTE: Cards can be input in most computer readable text formats such
-            as CSV, TSV, JSON. Ensure that each entry has a target language
-            phrase and an English translation. Koala Cards will figure out the
-            rest.
-          </p>
           <Button size="xs" onClick={pasteExample}>
             Paste Example Input
           </Button>
-        </Stepper.Step>
-        <Stepper.Step label="Set card type">
+
           <Radio.Group
             label="Select the type of cards"
             value={state.cardType}
@@ -236,22 +217,20 @@ function LanguageInputPage() {
           >
             <Radio
               value="listening"
-              label="Listening only - Pick this if you are unsure."
+              label="Start with listening drills and eventually graduate to speaking drills. Pick this if you are unsure."
             />
             <Radio
               value="speaking"
-              label="Speaking only - Good for single sets of words (nouns, colors, numbers)"
+              label="Speaking only drills - Good for single sets of words (nouns, colors, numbers)"
             />
             <Radio
               value="both"
-              label="Both - Good for medium length phrases and sentences"
+              label="Do listening and speaking at the same time - Good for simple sentences"
             />
           </Radio.Group>
-          <Button
-            disabled={!state.cardType}
-            onClick={() => setActiveStep((current) => current + 1)}
-          >
-            Next
+
+          <Button onClick={handleRawInputSubmit} loading={loading}>
+            Process
           </Button>
         </Stepper.Step>
         <Stepper.Step label="Edit cards">
