@@ -1,7 +1,7 @@
 import { GetServerSideProps } from "next";
 import { CardTable } from "@/koala/card-table";
 import { trpc } from "@/koala/trpc-config";
-import { Button, Container, Select, Group } from "@mantine/core";
+import { Button, Container, Select, Group, Text } from "@mantine/core";
 import { prismaClient } from "@/koala/prisma-client";
 import { getSession } from "next-auth/react";
 import { useRouter } from "next/router";
@@ -19,6 +19,8 @@ type EditProps = {
   cards: CardRecord[];
   sortBy: string;
   sortOrder: string;
+  page: number;
+  totalPages: number;
 };
 
 const SORT_OPTIONS = [
@@ -28,6 +30,8 @@ const SORT_OPTIONS = [
   { label: "Language", value: "langCode" },
   { label: "Term", value: "term" },
 ];
+
+const ITEMS_PER_PAGE = 150;
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const session = await getSession(ctx);
@@ -49,18 +53,37 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const rawSortOrder = Array.isArray(ctx.query.sortOrder)
     ? ctx.query.sortOrder[0]
     : ctx.query.sortOrder;
+  const rawPage = Array.isArray(ctx.query.page)
+    ? parseInt(ctx.query.page[0], 10)
+    : parseInt(ctx.query.page as string, 10);
 
   const sortBy = rawSortBy ?? "createdAt";
   const sortOrder = rawSortOrder ?? "desc";
+  const page = !isNaN(rawPage) && rawPage > 0 ? rawPage : 1;
 
   // Validate the sortBy field (optional)
   const validFields = SORT_OPTIONS.map((x) => x.value);
   const finalSortBy = validFields.includes(sortBy) ? sortBy : "createdAt";
   const finalSortOrder = sortOrder === "desc" ? "desc" : "asc";
 
+  // Get total count of cards
+  const totalCount = await prismaClient.card.count({
+    where: { userId },
+  });
+
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+
+  // Ensure page is within bounds
+  const finalPage = Math.min(
+    Math.max(page, 1),
+    totalPages === 0 ? 1 : totalPages,
+  );
+
   const cards = await prismaClient.card.findMany({
     where: { userId },
     orderBy: [{ [finalSortBy]: finalSortOrder }],
+    skip: (finalPage - 1) * ITEMS_PER_PAGE,
+    take: ITEMS_PER_PAGE,
   });
 
   const serializedCards = cards.map((c) => ({
@@ -73,11 +96,19 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
       cards: serializedCards,
       sortBy: finalSortBy,
       sortOrder: finalSortOrder,
+      page: finalPage,
+      totalPages,
     },
   };
 };
 
-const Edit: React.FC<EditProps> = ({ cards, sortBy, sortOrder }) => {
+const Edit: React.FC<EditProps> = ({
+  cards,
+  sortBy,
+  sortOrder,
+  page,
+  totalPages,
+}) => {
   const deleteFlagged = trpc.deleteFlaggedCards.useMutation();
   const router = useRouter();
 
@@ -97,10 +128,43 @@ const Edit: React.FC<EditProps> = ({ cards, sortBy, sortOrder }) => {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    // Build the URL with query parameters
-    const query = { sortBy: currentSortBy, sortOrder: currentSortOrder };
+    // Reset page to 1 when changing sort
+    const query = {
+      sortBy: currentSortBy,
+      sortOrder: currentSortOrder,
+      page: "1",
+    };
     router.push({ pathname: "/cards", query });
   };
+
+  const goToPage = (newPage: number) => {
+    const query = {
+      sortBy: currentSortBy,
+      sortOrder: currentSortOrder,
+      page: String(newPage),
+    };
+    router.push({ pathname: "/cards", query });
+  };
+
+  const flipper = totalPages > 0 && (
+    <Group mt="md">
+      <Button
+        disabled={page <= 1}
+        onClick={() => goToPage(page - 1)}
+      >
+        Previous
+      </Button>
+      <Text>
+        Page {page} of {totalPages}
+      </Text>
+      <Button
+        disabled={page >= totalPages}
+        onClick={() => goToPage(page + 1)}
+      >
+        Next
+      </Button>
+    </Group>
+  );
 
   return (
     <Container size="s">
@@ -124,13 +188,15 @@ const Edit: React.FC<EditProps> = ({ cards, sortBy, sortOrder }) => {
             ]}
           />
           <Button type="submit">Search</Button>
-          <Button color="red" onClick={doDeleteFlagged} mt="md">
+          {flipper}
+          <Button color="red" onClick={doDeleteFlagged}>
             Delete Flagged Cards
           </Button>
         </Group>
       </form>
-      <hr />
+      <hr/>
       <CardTable onDelete={() => location.reload()} cards={cards} />
+      {flipper}
     </Container>
   );
 };
