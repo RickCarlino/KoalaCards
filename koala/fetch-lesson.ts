@@ -23,6 +23,8 @@ type GetCardsProps = {
   isReview: boolean;
 };
 
+const NEW_CARDS_PER_SESSION_MIN = 2;
+
 // Split an array like a deck of cards.
 function split<T>(l: T[], r: T[]): T[] {
   const output: T[] = [];
@@ -139,7 +141,7 @@ export async function getLessons(p: GetLessonInputParams) {
     ...p2,
     // Insert fewer cards when there are many old cards
     // always provide at least 3 new cards.
-    take: Math.max(take - oldCards.length, 3),
+    take: Math.max(take - oldCards.length, NEW_CARDS_PER_SESSION_MIN),
   });
   const combined = split(oldCards, newCards).slice(0, take);
   const audioSpeed = Math.round((await playbackSpeed(userId)) * 100);

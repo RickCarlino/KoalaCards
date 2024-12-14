@@ -1,126 +1,190 @@
+import { getCardOrFail } from "@/koala/get-card-or-fail";
+import { maybeGetCardImageUrl } from "@/koala/image";
+import { prismaClient } from "@/koala/prisma-client";
 import { timeUntil } from "@/koala/time-until";
 import { trpc } from "@/koala/trpc-config";
-import { Button, Checkbox, Container, Paper, TextInput } from "@mantine/core";
+import {
+  Button,
+  Checkbox,
+  Container,
+  Flex,
+  Paper,
+  Stack,
+  Table,
+  TextInput,
+  Title,
+} from "@mantine/core";
 import { useForm } from "@mantine/form";
+import { GetServerSideProps } from "next";
+import { getSession } from "next-auth/react";
 import { useRouter } from "next/router";
 
-type LocalQuiz = {
-  repetitions: number;
-  lapses: number;
-  lessonType: string;
-  lastReview: number;
+type CardData = {
+  cardData: {
+    id: number;
+    definition: string;
+    term: string;
+    flagged: boolean;
+    imageURL: string | null;
+    quizzes: {
+      quizId: number;
+      repetitions: number;
+      lapses: number;
+      lessonType: string;
+      lastReview: number;
+    }[];
+  };
 };
 
-function CardQuiz(props: LocalQuiz) {
-  const when = props.lastReview ? timeUntil(props.lastReview) : "never";
-  return (
-    <div>
-      <h2>{props.lessonType.toUpperCase()}</h2>
-      <p>Repetitions: {props.repetitions}</p>
-      <p>Lapses: {props.lapses}</p>
-      <p>Last Review: {when}</p>
-    </div>
-  );
-}
-
-function Card({ id }: { id: number }) {
+function Card({ cardData }: CardData) {
   const router = useRouter();
   const form = useForm({
     initialValues: {
-      definition: "loading...",
-      term: "Loading...",
-      flagged: false,
+      definition: cardData.definition,
+      term: cardData.term,
+      flagged: cardData.flagged,
     },
   });
-  const m = trpc.editCard.useMutation();
-  const d = trpc.deleteCard.useMutation();
-  const card = trpc.getOneCard.useQuery(
-    { id },
-    {
-      onSuccess: (data) => {
-        form.setValues({
-          definition: data.definition,
-          term: data.term,
-          flagged: data.flagged,
-        });
-      },
-    },
-  );
-  if (card.error)
-    return <pre>{JSON.stringify(card.error.message, null, 2)}</pre>;
-  if (!card.data) return <div>Loading data...</div>;
-  // Define updateForm function
+  const updateMutation = trpc.editCard.useMutation();
+  const deleteMutation = trpc.deleteCard.useMutation();
+  const id = cardData.id;
+
   const updateForm = (values: {
     definition: string;
     term: string;
     flagged: boolean;
   }) => {
-    // Logic to update the card will go here
-    m.mutateAsync({
-      id,
-      definition: values.definition,
-      term: values.term,
-      flagged: values.flagged,
-    }).then(() => {
-      router.back();
-    });
+    updateMutation.mutateAsync({ id, ...values }).then(() => router.back());
   };
+
   const deleteCard = () => {
-    d.mutate({ id });
+    deleteMutation.mutate({ id });
     router.back();
   };
+
   return (
-    <div>
-      <Paper shadow="xs">
+    <Container size="sm" py="xl">
+      <Paper withBorder p="xl" radius="md" shadow="xs">
+        <Title order={2} mb="md">
+          Edit Card #{cardData.id}
+        </Title>
         <form onSubmit={form.onSubmit(updateForm)}>
-          <Container size="md">
-            <h1>Card {card.data.id}</h1>
-            <TextInput
-              label="Definition"
-              placeholder="Enter Definition"
-              error={form.errors.en && "Please enter an Definition"}
-              {...form.getInputProps("definition")}
-            />
+          <Stack gap="md">
             <TextInput
               label="Term"
-              placeholder="Enter Term"
-              error={form.errors.ko && "Please enter a Term"}
+              placeholder="Enter the term"
               {...form.getInputProps("term")}
             />
+            <TextInput
+              label="Definition"
+              placeholder="Enter the definition"
+              {...form.getInputProps("definition")}
+            />
             <Checkbox
-              label="Flagged"
-              checked={form.values.flagged}
-              {...form.getInputProps("flagged")}
+              label="Flag this card"
+              {...form.getInputProps("flagged", { type: "checkbox" })}
             />
-          </Container>
-          <Button type="submit">Update</Button>
-          <Button color="red" type="submit" onClick={deleteCard}>
-            Delete
-          </Button>
-          {card.data.imageURL && (
-            <img
-              width={"100%"}
-              src={card.data.imageURL}
-              alt={"Card illustration"}
-            />
-          )}
+            <Flex justify="space-between" mt="md" gap="md">
+              <Button type="submit">Save Changes</Button>
+              <Button variant="outline" color="red" onClick={deleteCard}>
+                Delete Card
+              </Button>
+            </Flex>
+            {cardData.quizzes.length > 0 && (
+              <Stack gap="md" mt="xl">
+                <Title order={3}>Quiz History</Title>
+                <Table
+                  withTableBorder
+                  withRowBorders
+                  withColumnBorders
+                  highlightOnHover
+                  verticalSpacing="sm"
+                >
+                  <thead>
+                    <tr>
+                      <th>Lesson Type</th>
+                      <th>Repetitions</th>
+                      <th>Lapses</th>
+                      <th>Last Review</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cardData.quizzes.map((quiz) => (
+                      <tr key={quiz.quizId}>
+                        <td>{quiz.lessonType.toUpperCase()}</td>
+                        <td>{quiz.repetitions}</td>
+                        <td>{quiz.lapses}</td>
+                        <td>
+                          {quiz.lastReview
+                            ? timeUntil(quiz.lastReview)
+                            : "never"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              </Stack>
+            )}
+            {cardData.imageURL && (
+              <Paper withBorder p="sm" radius="md">
+                <img
+                  width="100%"
+                  src={cardData.imageURL}
+                  alt="Card illustration"
+                />
+              </Paper>
+            )}
+          </Stack>
         </form>
-        <h1>Quiz Data</h1>
-        {card.data.quizzes.map((quiz) => {
-          return <CardQuiz key={quiz.quizId} {...quiz} />;
-        })}
       </Paper>
-    </div>
+    </Container>
   );
 }
 
-function CardWrapper() {
-  const router = useRouter();
-  const id = router.query.card_id as string;
-  if (typeof id === "string") {
-    return <Card id={parseInt(id)} />;
-  }
-  return <div>Loading page...</div>;
+export default function CardPage({ cardData }: CardData) {
+  return <Card cardData={cardData} />;
 }
 
-export default CardWrapper;
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const { card_id } = context.query;
+  const session = await getSession(context);
+
+  if (!session || !session.user) {
+    return { redirect: { destination: "/api/auth/signin", permanent: false } };
+  }
+
+  const dbUser = await prismaClient.user.findUnique({
+    where: {
+      email: session.user.email ?? undefined,
+    },
+  });
+  const cardId = parseInt(card_id as string, 10);
+
+  try {
+    const card = await getCardOrFail(cardId, dbUser?.id);
+    const imageURL = await maybeGetCardImageUrl(card.imageBlobId);
+
+    const quizzes = card.Quiz.map((quiz) => ({
+      quizId: quiz.id,
+      repetitions: quiz.repetitions,
+      lapses: quiz.lapses,
+      lessonType: quiz.quizType,
+      lastReview: quiz.lastReview,
+    }));
+
+    return {
+      props: {
+        cardData: {
+          id: card.id,
+          definition: card.definition,
+          term: card.term,
+          flagged: card.flagged,
+          imageURL: imageURL || null,
+          quizzes,
+        },
+      },
+    };
+  } catch (error) {
+    return { notFound: true };
+  }
+};

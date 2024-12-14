@@ -1,16 +1,3 @@
-# Koala.Cards v4 Review UI
-
-Koala.Cards is a spaced repetition language learning application that quizzes users on a variety of language learning tasks (listening, speaking, response writing, comprehension). It is a web application written in React.JS, Typescript, Next.js, and tRPC.
-
-The application is centered around the following concepts:
-
-- **"cards"**: Key/value pairs of terms and definitions. These can be individual words, full sentences, reading passages, or other types of information pairs.
-- **"decks"**: A collection of cards.
-- **"quizzes"**: A specific review drill for a particular card, such as translating English to a target language.
-- **"reviews"**: During a review session, the app quizzes users on a particular skill, such as their ability to translate a phrase into the target language or write a short comprehension answer. It uses a spaced repetition algorithm to schedule the next review time.
-
-Reviews for cards are scheduled using the FSRS spaced repetition algorithm.
-
 ## The Review Session
 
 After logging in and creating a deck of cards, the user clicks on the tile representing a specific deck. This begins a "review session," which includes reviewing 7 cards at a time.
