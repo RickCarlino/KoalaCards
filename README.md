@@ -27,7 +27,7 @@ KoalaCards is a [spaced repetition system](https://en.wikipedia.org/wiki/Spaced_
 ## Demo Video
 
 <p align="center">
-  <a href="https://www.youtube.com/watch?v=JgmwxEz2ibE">
+  <a href="https://www.youtube.com/watch?v=xu7NxSei11Q">
     Watch a short YouTube demo of the app as of August 2024
     <br/>
     <img src="./screenshot.png" alt="KoalaCards UI screenshot"/>
