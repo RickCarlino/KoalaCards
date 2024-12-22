@@ -28,3 +28,6 @@ notes/
 data/
 db/
 .aider*
+db-data/*
+!db-data/.gitignore
+!db-data/.gitkeep
