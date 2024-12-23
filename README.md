@@ -9,7 +9,7 @@ I host a demo instance of the app [here](https://app.koala.cards/user) but pleas
 </p>
 <a href="https://codeclimate.com/github/RickCarlino/KoalaCards/maintainability"><img src="https://api.codeclimate.com/v1/badges/b7666624c14bf8dcfb9b/maintainability" /></a>
 
-Hey there! Welcome to KoalaCards, a fun and friendly [spaced repetition system](https://en.wikipedia.org/wiki/Spaced_repetition) that focuses on listening and speaking skills. KoalaCards captures your voice input using speech-to-text and large language models for human-like test assessments. This has two advantages over traditional spaced repetition systems:
+KoalaCards is a [spaced repetition system](https://en.wikipedia.org/wiki/Spaced_repetition) that focuses on listening and speaking skills. KoalaCards captures your voice input using speech-to-text and large language models for human-like test assessments. This has two advantages over traditional spaced repetition systems:
 
 1. Results are recorded objectively via machine-assisted grading rather than self-grading.
 2. "Close enough" answers that match the meaning of the target sentence and which demonstrate understanding will be accepted. This captures the flexibility of self-grading with the objectivity of external grading.
@@ -27,7 +27,7 @@ Hey there! Welcome to KoalaCards, a fun and friendly [spaced repetition system](
 ## Demo Video
 
 <p align="center">
-  <a href="https://www.youtube.com/watch?v=JgmwxEz2ibE">
+  <a href="https://www.youtube.com/watch?v=xu7NxSei11Q">
     Watch a short YouTube demo of the app as of August 2024
     <br/>
     <img src="./screenshot.png" alt="KoalaCards UI screenshot"/>
@@ -63,21 +63,7 @@ Check out the [whitepaper](https://github.com/RickCarlino/gpt-language-learning-
 
 ## Developer Setup 🛠️
 
-**These instructions may be out of date. Please raise an issue if things don't work!**
-
-**Prerequisites:** NodeJS is required. I've tested it on v20 of node.
-
-The project is in a semi-public alpha phase. If you don't understand the instructions below, you might want to wait for the project to mature before proceeding.
-
-1. Install NodeJS if you have not done so already.
-1. Clone this repo and `cd` in.
-1. Create an [OpenAI API key](https://platform.openai.com/account/api-keys).
-1. Create a [Google Cloud Service Account JSON credentials file](https://developers.google.com/workspace/guides/create-credentials)
-1. Make sure the Google Cloud service account can access Cloud Speech API and Cloud Text-to-Speech APIs.
-1. Copy `example.env` to `.env`.
-1. Fill out the ENV vars to match your OpenAI / GCS credentials.
-1. Run `npm reset`.
-1. Run `npm start`.
+See [SETUP.md](SETUP.md)
 
 ## Contribution Guidelines 🤝
 

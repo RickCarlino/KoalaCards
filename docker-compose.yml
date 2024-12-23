@@ -1,0 +1,47 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: npm run dev
+    entrypoint: ./entrypoint.sh
+    volumes:
+      - .:/app
+      - /app/node_modules
+    ports:
+      - '3000:3000'
+      - '5555:5555' # Prisma Studio, optional
+    env_file:
+      - .env
+    environment:
+      POSTGRES_URI: postgres://prisma:your_password@db:5432/prisma
+    depends_on:
+      - db
+    networks:
+      - koala-network
+
+  db:
+    image: postgres:latest
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: prisma
+      POSTGRES_PASSWORD: your_password
+      POSTGRES_DB: prisma
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - '5432:5432' # To access the DB externally via pgAdmin and other tools
+    networks:
+      - koala-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U prisma"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  db-data:
+
+networks:
+  koala-network:
+    driver: bridge
