@@ -95,6 +95,6 @@ export const bulkCreateCards = procedure
         });
       }
     }
-    backfillDecks(userId);
+    await backfillDecks(userId);
     return results;
   });

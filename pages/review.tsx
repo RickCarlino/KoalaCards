@@ -28,7 +28,7 @@ export const getServerSideProps: GetServerSideProps<ReviewPageProps> = async (
 
   const { backfillDecks } = await import("@/koala/decks/backfill-decks");
 
-  backfillDecks(dbUser.id);
+  await backfillDecks(dbUser.id);
   const decks = await prismaClient.deck.findMany({
     where: {
       userId: dbUser.id,
