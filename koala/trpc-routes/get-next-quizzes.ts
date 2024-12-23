@@ -32,6 +32,7 @@ const QuizList = z.object({
 
 const QuizInput = z.object({
   take: z.number(),
+  deckId: z.number(),
 });
 
 export async function getLessonMeta(userId: string) {
@@ -90,6 +91,7 @@ export const getNextQuizzes = procedure
       ...(await getLessonMeta(userId)),
       quizzes: await getLessons({
         userId,
+        deckId: input.deckId,
         now: Date.now(),
         take: input.take,
       }),

@@ -49,6 +49,7 @@ model User {
   sessions      Session[]
   userSettings  UserSettings?
   Card          Card[]
+  Deck          Deck[]
 }
 
 model UserSettings {
@@ -74,6 +75,17 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+model Deck {
+  id       Int    @id @default(autoincrement())
+  langCode String
+  name     String
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Card     Card[]
+
+  @@unique([name, userId])
+}
+
 model Card {
   id                    Int                  @id @default(autoincrement())
   user                  User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -89,6 +101,8 @@ model Card {
   imageBlobId           String?
   SpeakingCorrection    SpeakingCorrection[]
   mirrorRepetitionCount Int?                 @default(0)
+  deckId                Int? // Nullable for gradual migration
+  Deck                  Deck?                @relation(fields: [deckId], references: [id])
 
   @@unique([userId, term])
 }
