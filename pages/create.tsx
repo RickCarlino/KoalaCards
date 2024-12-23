@@ -1,16 +1,24 @@
-import { Gender, LangCode } from "@/koala/shared-types";
-import { trpc } from "@/koala/trpc-config";
+import { useReducer, useState } from "react";
 import {
   Button,
   Container,
-  Group,
+  Paper,
   Radio,
   Select,
   Stepper,
   TextInput,
   Textarea,
+  Title,
+  Card,
+  Divider,
+  Flex,
+  Overlay,
+  Loader,
 } from "@mantine/core";
-import { useReducer, useState } from "react";
+import { notifications } from "@mantine/notifications";
+import { trpc } from "@/koala/trpc-config";
+import { Gender, LangCode } from "@/koala/shared-types";
+
 type ProcessedCard = {
   term: string;
   definition: string;
@@ -40,14 +48,7 @@ const INITIAL_STATE: State = {
   cardType: "listening",
 };
 
-const errorHandler = (error: any) => {
-  console.error(error);
-  alert(
-    "Error. Please try again or report this on Github if the error continues.",
-  );
-};
-
-const SAMPLES = {
+const SAMPLES: Record<LangCode, string> = {
   ko: [
     "안녕하세요? (Hello, how are you?)",
     "저는 학생입니다. (I am a student.)",
@@ -66,8 +67,7 @@ const SAMPLES = {
     "Come stai? (How are you?)",
     "Sono uno studente. (I am a student.)",
     "Sto imparando l'italiano. (I am learning Italian.)",
-    "Grazie mille! (Thank",
-    "you very much!)",
+    "Grazie mille! (Thank you very much!)",
     "Quanto costa questo? (How much does this cost?)",
   ].join("\n"),
   fr: [
@@ -78,6 +78,7 @@ const SAMPLES = {
     "Combien coûte ceci ? (How much does this cost?)",
   ].join("\n"),
 };
+
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case "ADD_CARD":
@@ -86,14 +87,14 @@ function reducer(state: State, action: Action): State {
         processedCards: [...state.processedCards, action.card],
       };
     case "EDIT_CARD":
-      const newCards = [...state.processedCards];
-      newCards[action.index] = action.card;
-      return { ...state, processedCards: newCards };
+      const updatedCards = [...state.processedCards];
+      updatedCards[action.index] = action.card;
+      return { ...state, processedCards: updatedCards };
     case "REMOVE_CARD":
       return {
         ...state,
         processedCards: state.processedCards.filter(
-          (_card, index) => index !== action.index,
+          (_, i) => i !== action.index,
         ),
       };
     case "SET_LANGUAGE":
@@ -109,189 +110,284 @@ function reducer(state: State, action: Action): State {
   }
 }
 
-function LanguageInputPage() {
-  const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
-  const [activeStep, setActiveStep] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const parseCards = trpc.parseCards.useMutation();
-  const bulkCreateCards = trpc.bulkCreateCards.useMutation();
+function handleError(error: unknown) {
+  console.error(error);
+  notifications.show({
+    title: "Error",
+    message:
+      "Something went wrong. Try inputting fewer cards. Please report this issue if it persists.",
+    color: "red",
+  });
+}
 
-  // Handler for language selection
-  const handleLanguageChange = (language: LangCode) => {
-    dispatch({ type: "SET_LANGUAGE", language });
-  };
+interface InputStepProps {
+  state: State;
+  dispatch: React.Dispatch<Action>;
+  onSubmit: () => void;
+  loading: boolean;
+}
 
-  // Handler for raw input submission
-  const handleRawInputSubmit = async () => {
-    setLoading(true);
-    parseCards
-      .mutateAsync({
-        langCode: state.language,
-        text: state.rawInput,
-      })
-      .then(({ cards }) => {
-        dispatch({ type: "SET_PROCESSED_CARDS", processedCards: cards });
-        setActiveStep((current) => current + 1);
-      })
-      .catch(errorHandler)
-      .finally(() => {
-        setLoading(false);
-      });
-  };
-
-  // Handler for adding, editing, and removing cards
-  const handleCardChange = (action: Action) => {
-    dispatch(action);
-  };
-
-  // Save the processed cards
-  const handleSave = async () => {
-    setLoading(true);
-    bulkCreateCards
-      .mutateAsync({
-        langCode: state.language,
-        input: state.processedCards,
-        cardType: state.cardType,
-      })
-      .then(() => {
-        // Reset and start over:
-        dispatch({ type: "SET_PROCESSED_CARDS", processedCards: [] });
-        dispatch({ type: "SET_RAW_INPUT", rawInput: "" });
-        setActiveStep(0);
-      })
-      .catch(errorHandler)
-      .finally(() => {
-        setLoading(false);
-      });
-  };
-
+function InputStep({ state, dispatch, onSubmit, loading }: InputStepProps) {
   const pasteExample = () => {
     dispatch({
       type: "SET_RAW_INPUT",
       rawInput: SAMPLES[state.language] || SAMPLES["ko"],
     });
   };
+
+  const handleLanguageChange = (language: LangCode) => {
+    dispatch({ type: "SET_LANGUAGE", language });
+  };
+
   return (
-    <Container size="sm">
-      <h1>Create New Cards</h1>
-      <Stepper active={activeStep} onStepClick={setActiveStep}>
-        <Stepper.Step label="Select language">
-          <Select
-            label="Language"
-            placeholder="Choose"
-            value={state.language}
-            onChange={(selection) => {
-              const value = selection || state.language;
-              value && handleLanguageChange(value as LangCode);
-            }}
-            data={[
-              { value: "ko", label: "Korean" },
-              { value: "es", label: "Spanish" },
-              { value: "it", label: "Italian" },
-              { value: "fr", label: "French" },
-            ]}
+    <Paper withBorder p="md" radius="md">
+      <Flex direction="column" gap="md">
+        <Title order={3}>Step 1: Input Your Content</Title>
+        <div style={{ fontSize: 14, color: "gray" }}>
+          Select the language of your new cards, then paste your raw text input.
+          This can be plain sentences, CSV, TSV, or JSON. If you need help, try
+          the example input.
+        </div>
+
+        <Select
+          label="Language"
+          placeholder="Choose language"
+          value={state.language}
+          onChange={(value) => {
+            if (value) handleLanguageChange(value as LangCode);
+          }}
+          data={[
+            { value: "ko", label: "Korean" },
+            { value: "es", label: "Spanish" },
+            { value: "it", label: "Italian" },
+            { value: "fr", label: "French" },
+          ]}
+        />
+
+        <Textarea
+          label="Raw Input"
+          placeholder="Paste sentences or data here..."
+          minRows={10}
+          maxRows={10}
+          autosize
+          value={state.rawInput}
+          onChange={(e) =>
+            dispatch({
+              type: "SET_RAW_INPUT",
+              rawInput: e.currentTarget.value,
+            })
+          }
+        />
+
+        <Button variant="subtle" size="xs" onClick={pasteExample}>
+          Paste Example Input
+        </Button>
+
+        <Radio.Group
+          label="Card Type"
+          description="Choose how you want to practice these new cards."
+          value={state.cardType}
+          onChange={(value) =>
+            dispatch({ type: "SET_CARD_TYPE", cardType: value })
+          }
+        >
+          <Radio
+            value="listening"
+            label="Listening first, then speaking (Recommended for most sentences)."
           />
-          <Button
-            disabled={!state.language}
-            onClick={() => {
-              setActiveStep((current) => current + 1);
-            }}
-          >
-            Next
-          </Button>
-        </Stepper.Step>
-        <Stepper.Step label="Input text">
-          <Textarea
-            label="Paste your text here"
-            autosize
-            minRows={5}
-            value={state.rawInput}
-            onChange={(event) =>
-              dispatch({
-                type: "SET_RAW_INPUT",
-                rawInput: event.currentTarget.value,
-              })
-            }
+          <Radio
+            value="speaking"
+            label="Speaking only (Good for vocab words)."
           />
-          <Button onClick={handleRawInputSubmit} loading={loading}>
-            Process
+          <Radio
+            value="both"
+            label="Do listening and speaking at the same time. (For well-understood material)."
+          />
+        </Radio.Group>
+
+        <Divider my="sm" />
+        <Flex justify="flex-end">
+          <Button onClick={onSubmit} disabled={!state.rawInput || loading}>
+            Process Input
           </Button>
-          <p>
-            NOTE: Cards can be input in most computer readable text formats such
-            as CSV, TSV, JSON. Ensure that each entry has a target language
-            phrase and an English translation. Koala Cards will figure out the
-            rest.
-          </p>
-          <Button size="xs" onClick={pasteExample}>
-            Paste Example Input
-          </Button>
-        </Stepper.Step>
-        <Stepper.Step label="Set card type">
-          <Radio.Group
-            label="Select the type of cards"
-            value={state.cardType}
-            onChange={(value) =>
-              dispatch({ type: "SET_CARD_TYPE", cardType: value })
-            }
-          >
-            <Radio
-              value="listening"
-              label="Listening only - Pick this if you are unsure."
-            />
-            <Radio
-              value="speaking"
-              label="Speaking only - Good for single sets of words (nouns, colors, numbers)"
-            />
-            <Radio
-              value="both"
-              label="Both - Good for medium length phrases and sentences"
-            />
-          </Radio.Group>
-          <Button
-            disabled={!state.cardType}
-            onClick={() => setActiveStep((current) => current + 1)}
-          >
-            Next
-          </Button>
-        </Stepper.Step>
-        <Stepper.Step label="Edit cards">
-          <Button onClick={handleSave} loading={loading}>
-            Save
-          </Button>
-          {state.processedCards.map((card, index) => (
-            <Group key={index}>
+        </Flex>
+      </Flex>
+    </Paper>
+  );
+}
+
+interface ReviewStepProps {
+  state: State;
+  dispatch: React.Dispatch<Action>;
+  onBack: () => void;
+  onSave: () => void;
+  loading: boolean;
+}
+
+function ReviewStep({
+  state,
+  dispatch,
+  onBack,
+  onSave,
+  loading,
+}: ReviewStepProps) {
+  const handleCardChange = (action: Action) => {
+    dispatch(action);
+  };
+
+  return (
+    <Paper withBorder p="md" radius="md">
+      <Flex direction="column" gap="md">
+        <Title order={3}>Step 2: Review & Edit Cards</Title>
+        <div style={{ fontSize: 14, color: "gray" }}>
+          Verify each card is correct. You can edit the term or definition if
+          needed, or remove cards that you don't want. When satisfied, click
+          "Save Cards".
+        </div>
+
+        {state.processedCards.length === 0 && (
+          <div style={{ fontSize: 14, color: "gray" }}>
+            No cards to edit yet. Please go back and process input.
+          </div>
+        )}
+
+        {state.processedCards.map((card, index) => (
+          <Card withBorder key={index} p="sm">
+            <Flex direction="column" gap="xs">
               <TextInput
+                label="Term"
                 value={card.term}
-                onChange={(event) =>
+                onChange={(e) =>
                   handleCardChange({
                     type: "EDIT_CARD",
-                    card: { ...card, term: event.currentTarget.value },
+                    card: { ...card, term: e.currentTarget.value },
                     index,
                   })
                 }
               />
               <TextInput
+                label="Definition"
                 value={card.definition}
-                onChange={(event) =>
+                onChange={(e) =>
                   handleCardChange({
                     type: "EDIT_CARD",
-                    card: { ...card, definition: event.currentTarget.value },
+                    card: { ...card, definition: e.currentTarget.value },
                     index,
                   })
                 }
               />
-              <Button
-                color="red"
-                onClick={() => handleCardChange({ type: "REMOVE_CARD", index })}
-              >
-                Remove
-              </Button>
-            </Group>
-          ))}
+              <Flex justify="flex-end">
+                <Button
+                  variant="outline"
+                  color="red"
+                  onClick={() =>
+                    handleCardChange({ type: "REMOVE_CARD", index })
+                  }
+                >
+                  Remove
+                </Button>
+              </Flex>
+            </Flex>
+          </Card>
+        ))}
+
+        <Divider my="sm" />
+        <Flex justify="space-between">
+          <Button variant="default" onClick={onBack} disabled={loading}>
+            Back
+          </Button>
+          <Button
+            onClick={onSave}
+            disabled={loading || state.processedCards.length === 0}
+          >
+            Save Cards
+          </Button>
+        </Flex>
+      </Flex>
+    </Paper>
+  );
+}
+
+export default function LanguageInputPage() {
+  const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
+  const [activeStep, setActiveStep] = useState(0);
+  const [loading, setLoading] = useState(false);
+
+  const parseCards = trpc.parseCards.useMutation();
+  const bulkCreateCards = trpc.bulkCreateCards.useMutation();
+
+  const handleRawInputSubmit = async () => {
+    setLoading(true);
+    try {
+      const { cards } = await parseCards.mutateAsync({
+        langCode: state.language,
+        text: state.rawInput,
+      });
+      dispatch({ type: "SET_PROCESSED_CARDS", processedCards: cards });
+      setActiveStep(1); // Move to editing step
+    } catch (error) {
+      handleError(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      await bulkCreateCards.mutateAsync({
+        langCode: state.language,
+        input: state.processedCards,
+        cardType: state.cardType,
+      });
+
+      // Reset and start over
+      dispatch({ type: "SET_PROCESSED_CARDS", processedCards: [] });
+      dispatch({ type: "SET_RAW_INPUT", rawInput: "" });
+      setActiveStep(0);
+
+      notifications.show({
+        title: "Success",
+        message: "Your cards have been created successfully!",
+        color: "green",
+      });
+    } catch (error) {
+      handleError(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Container size="sm" mt="xl" style={{ position: "relative" }}>
+      {loading && (
+        <Overlay blur={2} opacity={0.6} color="#fff" zIndex={9999}>
+          <Loader size="lg" variant="dots" />
+        </Overlay>
+      )}
+
+      <Title order={1} mb="lg">
+        Create New Cards
+      </Title>
+      <Stepper active={activeStep} onStepClick={setActiveStep} mb="xl">
+        <Stepper.Step label="Input">
+          <InputStep
+            state={state}
+            dispatch={dispatch}
+            onSubmit={handleRawInputSubmit}
+            loading={loading}
+          />
+        </Stepper.Step>
+        <Stepper.Step label="Review & Edit">
+          <ReviewStep
+            state={state}
+            dispatch={dispatch}
+            onBack={() => setActiveStep(0)}
+            onSave={handleSave}
+            loading={loading}
+          />
         </Stepper.Step>
       </Stepper>
     </Container>
   );
 }
-
-export default LanguageInputPage;

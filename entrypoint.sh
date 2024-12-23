@@ -6,6 +6,7 @@ until nc -z db 5432; do
   sleep 1
 done
 
+npm install
 # Run migrations
 npx prisma migrate deploy
 

@@ -1,3 +1,4 @@
+let lastAudio: string;
 export const playAudio = (urlOrDataURI: string) => {
   return new Promise((resolve, reject) => {
     if (!urlOrDataURI) {
@@ -10,6 +11,10 @@ export const playAudio = (urlOrDataURI: string) => {
     };
 
     const audio = new Audio(urlOrDataURI);
+    if (lastAudio === urlOrDataURI) {
+      audio.playbackRate = 0.6;
+    }
+    lastAudio = urlOrDataURI;
     audio.onended = ok;
     audio.onerror = (e) => {
       reject(e);
