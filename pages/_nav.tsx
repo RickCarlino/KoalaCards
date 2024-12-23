@@ -27,7 +27,7 @@ const NavBar = () => {
   };
 
   const links = [
-    { path: "/review", name: "Review" },
+    { path: "/review/0", name: "Review" },
     { path: "/create", name: "Add" },
     { path: "/cards", name: "Cards" },
     { path: "/user", name: "Settings" },
