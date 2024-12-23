@@ -7,10 +7,10 @@ services:
     entrypoint: ./entrypoint.sh
     volumes:
       - .:/app
-      - /app/node_modules
+      - ./node_modules:/app/node_modules
     ports:
-      - '3000:3000'
-      - '5555:5555' # Prisma Studio, optional
+      - "3000:3000"
+      - "5555:5555" # Prisma Studio, optional
     env_file:
       - .env
     environment:
@@ -30,7 +30,7 @@ services:
     volumes:
       - db-data:/var/lib/postgresql/data
     ports:
-      - '5432:5432' # To access the DB externally via pgAdmin and other tools
+      - "5432:5432" # To access the DB externally via pgAdmin and other tools
     networks:
       - koala-network
     healthcheck:

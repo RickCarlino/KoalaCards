@@ -1,6 +1,6 @@
 ## The Review Session
 
-After logging in and creating a deck of cards, the user clicks on the tile representing a specific deck. This begins a "review session," which includes reviewing 7 cards at a time.
+After logging in, creating a deck of cards and visiting the review page, the user clicks on the tile representing a specific deck. This begins a "review session," which reviews 12 cards at a time.
 
 The general flow for each individual review is as follows:
 
