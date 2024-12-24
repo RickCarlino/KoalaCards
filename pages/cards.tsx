@@ -188,7 +188,7 @@ export default function Edit({
         </Group>
       </form>
       <hr />
-      <CardTable onDelete={() => location.reload()} cards={cards} />
+      <CardTable onDelete={() => {}} cards={cards} />
       {Pagination}
     </Container>
   );

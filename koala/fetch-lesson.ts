@@ -151,7 +151,8 @@ export async function getLessons(p: GetLessonInputParams) {
     // always provide at least 3 new cards.
     take: Math.max(take - oldCards.length, NEW_CARDS_PER_SESSION_MIN),
   });
-  const combined = split(oldCards, newCards).slice(0, take);
+  const shuffled = split(oldCards, newCards);
+  const combined = unique(shuffled, (x) => x.cardId).slice(0, take);
   const audioSpeed = Math.round((await playbackSpeed(userId)) * 100);
 
   return await map(combined, (q) => {
