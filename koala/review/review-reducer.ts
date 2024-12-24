@@ -36,6 +36,23 @@ function handleSetGrade(
   state: ReviewState,
   action: SetGradeAction,
 ): ReviewState {
+  const quiz = state.quizzes.find((q) => q.quiz.quizId === action.quizId);
+  if (!quiz) {
+    console.warn("Quiz not found: ", action.quizId);
+    return state;
+  }
+
+  const reviewIsOver = state.currentQuizIndex >= state.quizzes.length;
+  const llmThinksYoureWrong = quiz.serverGradingResult === "fail";
+
+  if (llmThinksYoureWrong && !reviewIsOver) {
+    // Prevent user's guess from overriding LLM's feedback
+    return updateQuiz(state, action.quizId, (q) => ({
+      ...q,
+      grade: Grade.AGAIN,
+    }));
+  }
+
   return updateQuiz(state, action.quizId, (q) => ({
     ...q,
     grade: action.grade,
