@@ -15,7 +15,7 @@ export const bulkCreateCards = procedure
     z.object({
       cardType: z.string(),
       langCode: LANG_CODES,
-      // deckId: z.number(),
+      deckName: z.string(),
       input: z
         .array(
           z.object({
@@ -41,6 +41,22 @@ export const bulkCreateCards = procedure
     if (!userId) {
       throw new Error("User not found");
     }
+    let deck = await prismaClient.deck.findFirst({
+      where: {
+        userId,
+        langCode: input.langCode,
+        name: input.deckName,
+      },
+    });
+    if (!deck) {
+      deck = await prismaClient.deck.create({
+        data: {
+          userId,
+          langCode: input.langCode,
+          name: input.deckName,
+        },
+      });
+    }
     for (const i of input.input) {
       const { term: foreignLanguage, definition: english, gender } = i;
       const alreadyExists = await prismaClient.card.findFirst({
@@ -55,6 +71,7 @@ export const bulkCreateCards = procedure
           langCode: input.langCode,
           term: foreignLanguage,
           definition: english,
+          deckId: deck.id,
           gender,
         };
         console.log("Creating card:", data);

@@ -14,10 +14,15 @@ import {
   Flex,
   Overlay,
   Loader,
+  RadioGroup,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { trpc } from "@/koala/trpc-config";
 import { Gender, LangCode } from "@/koala/shared-types";
+import { GetServerSideProps } from "next";
+import { getSession } from "next-auth/react";
+import { prismaClient } from "@/koala/prisma-client";
+import { backfillDecks } from "@/koala/decks/backfill-decks";
 
 type ProcessedCard = {
   term: string;
@@ -29,20 +34,33 @@ type Action =
   | { type: "ADD_CARD"; card: ProcessedCard }
   | { type: "EDIT_CARD"; card: ProcessedCard; index: number }
   | { type: "REMOVE_CARD"; index: number }
-  | { type: "SET_LANGUAGE"; language: LangCode }
   | { type: "SET_PROCESSED_CARDS"; processedCards: ProcessedCard[] }
   | { type: "SET_RAW_INPUT"; rawInput: string }
-  | { type: "SET_CARD_TYPE"; cardType: string };
+  | { type: "SET_CARD_TYPE"; cardType: string }
+  // New actions for deck selection
+  | { type: "SET_DECK_SELECTION"; deckSelection: "existing" | "new" }
+  | { type: "SET_DECK_ID"; deckId: number | undefined }
+  | { type: "SET_DECK_NAME"; deckName: string }
+  | { type: "SET_DECK_LANG"; deckLang: LangCode };
 
 interface State {
-  language: LangCode;
+  // Deck selection
+  deckSelection: "existing" | "new";
+  deckId?: number; // if using an existing deck
+  deckName: string; // if creating a new deck
+  deckLang: LangCode; // always store the final deck language
+
+  // Card creation
   rawInput: string;
   processedCards: ProcessedCard[];
-  cardType: string;
+  cardType: string; // listening, speaking, both
 }
 
 const INITIAL_STATE: State = {
-  language: "ko",
+  deckSelection: "existing",
+  deckId: undefined,
+  deckName: "",
+  deckLang: "ko", // default to Korean if user selects "new deck" but hasn't changed
   rawInput: "",
   processedCards: [],
   cardType: "listening",
@@ -86,10 +104,11 @@ function reducer(state: State, action: Action): State {
         ...state,
         processedCards: [...state.processedCards, action.card],
       };
-    case "EDIT_CARD":
+    case "EDIT_CARD": {
       const updatedCards = [...state.processedCards];
       updatedCards[action.index] = action.card;
       return { ...state, processedCards: updatedCards };
+    }
     case "REMOVE_CARD":
       return {
         ...state,
@@ -97,14 +116,21 @@ function reducer(state: State, action: Action): State {
           (_, i) => i !== action.index,
         ),
       };
-    case "SET_LANGUAGE":
-      return { ...state, language: action.language };
     case "SET_PROCESSED_CARDS":
       return { ...state, processedCards: action.processedCards };
     case "SET_RAW_INPUT":
       return { ...state, rawInput: action.rawInput };
     case "SET_CARD_TYPE":
       return { ...state, cardType: action.cardType };
+    // New deck-related actions
+    case "SET_DECK_SELECTION":
+      return { ...state, deckSelection: action.deckSelection };
+    case "SET_DECK_ID":
+      return { ...state, deckId: action.deckId };
+    case "SET_DECK_NAME":
+      return { ...state, deckName: action.deckName };
+    case "SET_DECK_LANG":
+      return { ...state, deckLang: action.deckLang };
     default:
       return state;
   }
@@ -114,12 +140,139 @@ function handleError(error: unknown) {
   console.error(error);
   notifications.show({
     title: "Error",
-    message:
-      "Something went wrong. Try inputting fewer cards. Please report this issue if it persists.",
+    message: "Something went wrong. Please report this issue if it persists.",
     color: "red",
   });
 }
 
+/* 
+  STEP 1: Choose or Create Deck
+*/
+interface DeckStepProps {
+  decks: {
+    id: number;
+    name: string;
+    langCode: string;
+  }[];
+  state: State;
+  dispatch: React.Dispatch<Action>;
+  onNext: () => void;
+}
+
+function DeckStep({ decks, state, dispatch, onNext }: DeckStepProps) {
+  // Handler for picking an existing deck
+  const handleExistingDeckChange = (deckId: number | undefined) => {
+    dispatch({ type: "SET_DECK_ID", deckId });
+    const selectedDeck = decks.find((d) => d.id === deckId);
+    if (selectedDeck) {
+      dispatch({
+        type: "SET_DECK_LANG",
+        deckLang: selectedDeck.langCode as LangCode,
+      });
+      dispatch({ type: "SET_DECK_NAME", deckName: selectedDeck.name });
+    }
+  };
+
+  // Handler for switching between "existing" vs "new" deck
+  const handleDeckModeChange = (value: "existing" | "new") => {
+    dispatch({ type: "SET_DECK_SELECTION", deckSelection: value });
+
+    if (value === "existing") {
+      // Reset new-deck fields
+      dispatch({ type: "SET_DECK_NAME", deckName: "" });
+      dispatch({ type: "SET_DECK_LANG", deckLang: "ko" });
+    } else {
+      // Reset existing-deck fields
+      dispatch({ type: "SET_DECK_ID", deckId: undefined });
+      dispatch({ type: "SET_DECK_NAME", deckName: "" });
+      dispatch({ type: "SET_DECK_LANG", deckLang: "ko" });
+    }
+  };
+
+  // Check if "Next" is disabled
+  const isNextDisabled = (() => {
+    if (state.deckSelection === "existing") {
+      return !state.deckId; // must have chosen an existing deck
+    } else {
+      // must have a deck name if creating a new deck
+      return !state.deckName.trim();
+    }
+  })();
+
+  return (
+    <Paper withBorder p="md" radius="md">
+      <Flex direction="column" gap="md">
+        <Title order={3}>Step 1: Select or Create Deck</Title>
+        <div style={{ fontSize: 14, color: "gray" }}>
+          You can add new cards to an existing deck or create a new one below.
+        </div>
+
+        <RadioGroup
+          label="Deck Mode"
+          value={state.deckSelection}
+          onChange={(value: "existing" | "new") => handleDeckModeChange(value)}
+        >
+          <Radio value="existing" label="Use an existing deck" />
+          <Radio value="new" label="Create a new deck" />
+        </RadioGroup>
+
+        {state.deckSelection === "existing" && (
+          <Select
+            label="Existing Deck"
+            placeholder="Select your deck"
+            value={state.deckId ? String(state.deckId) : null}
+            onChange={(val) => handleExistingDeckChange(Number(val))}
+            data={decks.map((d) => ({
+              label: `${d.name} (${d.langCode.toUpperCase()})`,
+              value: String(d.id),
+            }))}
+          />
+        )}
+
+        {state.deckSelection === "new" && (
+          <>
+            <TextInput
+              label="New Deck Name"
+              placeholder="e.g. 'Spanish Travel Phrases'"
+              value={state.deckName}
+              onChange={(e) =>
+                dispatch({
+                  type: "SET_DECK_NAME",
+                  deckName: e.currentTarget.value,
+                })
+              }
+            />
+            <Select
+              label="Language"
+              placeholder="Choose language"
+              value={state.deckLang}
+              onChange={(val) =>
+                dispatch({ type: "SET_DECK_LANG", deckLang: val as LangCode })
+              }
+              data={[
+                { value: "ko", label: "Korean" },
+                { value: "es", label: "Spanish" },
+                { value: "it", label: "Italian" },
+                { value: "fr", label: "French" },
+              ]}
+            />
+          </>
+        )}
+
+        <Divider my="sm" />
+        <Flex justify="flex-end">
+          <Button onClick={onNext} disabled={isNextDisabled}>
+            Next
+          </Button>
+        </Flex>
+      </Flex>
+    </Paper>
+  );
+}
+
+/* 
+  STEP 2: Input Step
+*/
 interface InputStepProps {
   state: State;
   dispatch: React.Dispatch<Action>;
@@ -128,41 +281,22 @@ interface InputStepProps {
 }
 
 function InputStep({ state, dispatch, onSubmit, loading }: InputStepProps) {
+  // We now get our sample from the deckLang in state
   const pasteExample = () => {
     dispatch({
       type: "SET_RAW_INPUT",
-      rawInput: SAMPLES[state.language] || SAMPLES["ko"],
+      rawInput: SAMPLES[state.deckLang] || "",
     });
-  };
-
-  const handleLanguageChange = (language: LangCode) => {
-    dispatch({ type: "SET_LANGUAGE", language });
   };
 
   return (
     <Paper withBorder p="md" radius="md">
       <Flex direction="column" gap="md">
-        <Title order={3}>Step 1: Input Your Content</Title>
+        <Title order={3}>Step 2: Input Your Content</Title>
         <div style={{ fontSize: 14, color: "gray" }}>
-          Select the language of your new cards, then paste your raw text input.
-          This can be plain sentences, CSV, TSV, or JSON. If you need help, try
-          the example input.
+          Paste your raw text input. This can be plain sentences, CSV, TSV, or
+          JSON. If you need help, try the example input.
         </div>
-
-        <Select
-          label="Language"
-          placeholder="Choose language"
-          value={state.language}
-          onChange={(value) => {
-            if (value) handleLanguageChange(value as LangCode);
-          }}
-          data={[
-            { value: "ko", label: "Korean" },
-            { value: "es", label: "Spanish" },
-            { value: "it", label: "Italian" },
-            { value: "fr", label: "French" },
-          ]}
-        />
 
         <Textarea
           label="Raw Input"
@@ -216,6 +350,9 @@ function InputStep({ state, dispatch, onSubmit, loading }: InputStepProps) {
   );
 }
 
+/* 
+  STEP 3: Review & Edit
+*/
 interface ReviewStepProps {
   state: State;
   dispatch: React.Dispatch<Action>;
@@ -238,7 +375,7 @@ function ReviewStep({
   return (
     <Paper withBorder p="md" radius="md">
       <Flex direction="column" gap="md">
-        <Title order={3}>Step 2: Review & Edit Cards</Title>
+        <Title order={3}>Step 3: Review & Edit Cards</Title>
         <div style={{ fontSize: 14, color: "gray" }}>
           Verify each card is correct. You can edit the term or definition if
           needed, or remove cards that you don't want. When satisfied, click
@@ -308,7 +445,54 @@ function ReviewStep({
   );
 }
 
-export default function LanguageInputPage() {
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const session = await getSession(context);
+
+  if (!session || !session.user) {
+    return { redirect: { destination: "/api/auth/signin", permanent: false } };
+  }
+
+  const dbUser = await prismaClient.user.findUnique({
+    where: {
+      email: session.user.email ?? undefined,
+    },
+  });
+
+  if (!dbUser) {
+    return { redirect: { destination: "/api/auth/signin", permanent: false } };
+  }
+
+  // Ensure user has a default set of decks
+  await backfillDecks(dbUser.id);
+
+  // Fetch user decks
+  const decks = await prismaClient.deck.findMany({
+    where: {
+      userId: dbUser?.id,
+    },
+  });
+
+  return {
+    props: {
+      decks: decks.map((deck) => ({
+        id: deck.id,
+        name: deck.name,
+        langCode: deck.langCode,
+      })),
+    },
+  };
+};
+
+type LanguageInputPageProps = {
+  decks: {
+    id: number;
+    name: string;
+    langCode: string;
+  }[];
+};
+
+const LanguageInputPage = (props: LanguageInputPageProps) => {
+  const { decks } = props;
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -316,15 +500,21 @@ export default function LanguageInputPage() {
   const parseCards = trpc.parseCards.useMutation();
   const bulkCreateCards = trpc.bulkCreateCards.useMutation();
 
+  /* Move from Step 1 (deck) -> Step 2 (input) */
+  const handleDeckNext = () => {
+    setActiveStep(1);
+  };
+
+  /* Process the raw input (Step 2 -> Step 3) */
   const handleRawInputSubmit = async () => {
     setLoading(true);
     try {
       const { cards } = await parseCards.mutateAsync({
-        langCode: state.language,
+        langCode: state.deckLang,
         text: state.rawInput,
       });
       dispatch({ type: "SET_PROCESSED_CARDS", processedCards: cards });
-      setActiveStep(1); // Move to editing step
+      setActiveStep(2); // Move to editing step
     } catch (error) {
       handleError(error);
     } finally {
@@ -332,13 +522,24 @@ export default function LanguageInputPage() {
     }
   };
 
+  /* Save the final cards to the chosen or newly created deck (Step 3 finalize) */
   const handleSave = async () => {
     setLoading(true);
     try {
+      // If existing deck, use that deck's name; otherwise, use the new deck name
+      let finalDeckName = state.deckName;
+      if (state.deckSelection === "existing") {
+        const existingDeck = decks.find((d) => d.id === state.deckId);
+        if (existingDeck) {
+          finalDeckName = existingDeck.name;
+        }
+      }
+
       await bulkCreateCards.mutateAsync({
-        langCode: state.language,
+        langCode: state.deckLang,
         input: state.processedCards,
         cardType: state.cardType,
+        deckName: finalDeckName, // find-or-create by deck name
       });
 
       // Reset and start over
@@ -370,6 +571,15 @@ export default function LanguageInputPage() {
         Create New Cards
       </Title>
       <Stepper active={activeStep} onStepClick={setActiveStep} mb="xl">
+        <Stepper.Step label="Deck Selection">
+          <DeckStep
+            decks={decks}
+            state={state}
+            dispatch={dispatch}
+            onNext={handleDeckNext}
+          />
+        </Stepper.Step>
+
         <Stepper.Step label="Input">
           <InputStep
             state={state}
@@ -378,11 +588,12 @@ export default function LanguageInputPage() {
             loading={loading}
           />
         </Stepper.Step>
+
         <Stepper.Step label="Review & Edit">
           <ReviewStep
             state={state}
             dispatch={dispatch}
-            onBack={() => setActiveStep(0)}
+            onBack={() => setActiveStep(1)}
             onSave={handleSave}
             loading={loading}
           />
@@ -390,4 +601,6 @@ export default function LanguageInputPage() {
       </Stepper>
     </Container>
   );
-}
+};
+
+export default LanguageInputPage;
