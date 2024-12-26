@@ -1,4 +1,3 @@
-import { VisualDiff } from "@/koala/review/visual-diff";
 import { Card, Center, Stack } from "@mantine/core";
 
 /** The faucet component has a button that when clicked
@@ -14,9 +13,7 @@ export default function Faucet(_props: {}) {
         withBorder
         style={{ width: "80%" }}
       >
-        <Stack>
-          <VisualDiff actual="Hello, world!" expected="Hello, whirled!" />
-        </Stack>
+        <Stack>TODO</Stack>
       </Card>
     </Center>
   );
