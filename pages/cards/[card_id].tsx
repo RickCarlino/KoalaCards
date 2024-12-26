@@ -1,6 +1,7 @@
 import { getCardOrFail } from "@/koala/get-card-or-fail";
 import { maybeGetCardImageUrl } from "@/koala/image";
 import { prismaClient } from "@/koala/prisma-client";
+import RemixButton from "@/koala/remix-button";
 import { timeUntil } from "@/koala/time-until";
 import { trpc } from "@/koala/trpc-config";
 import {
@@ -85,6 +86,7 @@ function Card({ cardData }: CardData) {
               {...form.getInputProps("flagged", { type: "checkbox" })}
             />
             <Flex justify="space-between" mt="md" gap="md">
+              <RemixButton card={cardData} />
               <Button type="submit">Save Changes</Button>
               <Button variant="outline" color="red" onClick={deleteCard}>
                 Delete Card
