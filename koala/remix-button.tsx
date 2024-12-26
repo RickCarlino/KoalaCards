@@ -21,7 +21,7 @@ export default function RemixButton(props: RemixButtonProps) {
     if (!card?.id) return;
 
     const result = await createRemix.mutateAsync({ cardID: card.id });
-    setRemixes(result.map((r) => ({ ...r, kept: false })));
+    setRemixes(result.map((r) => ({ ...r, kept: true })));
   };
 
   // Mark an item as "kept"
@@ -49,7 +49,18 @@ export default function RemixButton(props: RemixButtonProps) {
       remixes: remixes.filter((r) => r.kept),
     });
     console.log(result);
+    // Close the modal:
+    setOpened(false);
   };
+  let saveButton = <Button onClick={handleSaveRemixes}>Save Remixes</Button>;
+  let loadButton = (
+    <Button onClick={handleRemix} loading={createRemix.isLoading}>
+      Load Remixes (Experimental Feature)
+    </Button>
+  );
+  if (remixes.length > 0) {
+    loadButton = saveButton;
+  }
 
   const hmm = (
     <Modal
@@ -60,10 +71,7 @@ export default function RemixButton(props: RemixButtonProps) {
       overlayProps={{ opacity: 0.5, blur: 1 }}
     >
       <Stack>
-        <Button onClick={handleRemix} loading={createRemix.isLoading}>
-          Load Remixes (Experimental Feature)
-        </Button>
-
+        {loadButton}
         {remixes.length > 0 && (
           <Stack>
             {remixes.map((remix, index) => (
@@ -91,9 +99,7 @@ export default function RemixButton(props: RemixButtonProps) {
           </Stack>
         )}
 
-        {remixes.length > 0 && (
-          <Button onClick={handleSaveRemixes}>Save Remixes</Button>
-        )}
+        {remixes.length > 0 && saveButton}
       </Stack>
     </Modal>
   );
