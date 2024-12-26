@@ -14,13 +14,13 @@ const zodRemix = z.object({
   ),
 });
 
-async function askGPT(term: string, definition: string) {
+async function askGPT(term: string, _definition: string) {
   const model = "gpt-4o-2024-08-06";
   const resp = await openai.beta.chat.completions.parse({
     messages: [
       {
         role: "user",
-        content: `Term: "${term}", Definition: "${definition}"`,
+        content: `${term}`,
       },
       {
         role: "assistant",
@@ -31,6 +31,7 @@ async function askGPT(term: string, definition: string) {
           "A remix sentence that uses similar vocab or grammar patterns (but not both!) and is slightly different in meaning.",
           "Since this is a language learning app, it is critical that the sentences be grammatically correct.",
           "The sentences also need to be short and realistic.",
+          "The focus of a remix is to re-use exact words and grammar structure, not the subject matter of the input sentence.",
         ].join("\n"),
       },
     ],

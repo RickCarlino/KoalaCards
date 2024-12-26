@@ -2,7 +2,7 @@ import { trpc } from "@/koala/trpc-config";
 import { Card, Stack, Button, Modal, Group, Text } from "@mantine/core";
 import { useState } from "react";
 
-type FaucetProps = {
+type RemixButtonProps = {
   card: {
     id: number;
     term: string;
@@ -10,17 +10,13 @@ type FaucetProps = {
   };
 };
 
-export default function RemixButton(props: FaucetProps) {
-  const { card } = props;
-  // Stores the open/close state of the modal
-  const [opened, setOpened] = useState(false);
-
+export default function RemixButton(props: RemixButtonProps) {
   type Remix = Omit<typeof card & { kept?: boolean }, "id">;
-  // Stores any remixes returned by the tRPC faucet mutation
+  const { card } = props;
+  const [opened, setOpened] = useState(false);
   const [remixes, setRemixes] = useState<Remix[]>([]);
-
-  const createRemix = trpc.faucet.useMutation({});
-  // Handler for calling the faucet to generate new remixes
+  const createRemix = trpc.remix.useMutation({});
+  const saveRemixCards = trpc.createRemixCards.useMutation();
   const handleRemix = async () => {
     if (!card?.id) return;
 
@@ -47,12 +43,12 @@ export default function RemixButton(props: FaucetProps) {
   };
 
   // Stub for saving the kept items
-  const handleSaveRemixes = () => {
-    // For now, do nothing. Fill out your DB or API call here.
-    console.log(
-      "Remixes to save:",
-      remixes.filter((r) => r.kept),
-    );
+  const handleSaveRemixes = async () => {
+    const result = await saveRemixCards.mutateAsync({
+      cardId: card.id,
+      remixes: remixes.filter((r) => r.kept),
+    });
+    console.log(result);
   };
 
   const hmm = (
@@ -64,12 +60,10 @@ export default function RemixButton(props: FaucetProps) {
       overlayProps={{ opacity: 0.5, blur: 1 }}
     >
       <Stack>
-        {/* Button to fetch (generate) new remixes */}
         <Button onClick={handleRemix} loading={createRemix.isLoading}>
-          Remix this Card
+          Load Remixes (Experimental Feature)
         </Button>
 
-        {/* Show the returned remixes */}
         {remixes.length > 0 && (
           <Stack>
             {remixes.map((remix, index) => (
@@ -97,7 +91,6 @@ export default function RemixButton(props: FaucetProps) {
           </Stack>
         )}
 
-        {/* Button to save the selected items */}
         {remixes.length > 0 && (
           <Button onClick={handleSaveRemixes}>Save Remixes</Button>
         )}

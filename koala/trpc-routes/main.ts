@@ -1,5 +1,6 @@
 import { router } from "../trpc-procedure";
 import { bulkCreateCards } from "./bulk-create-cards";
+import { createRemixCards } from "./create-remix-cards";
 import { deleteCard } from "./delete-card";
 import { deleteFlaggedCards } from "./delete-flagged-card";
 import { editCard } from "./edit-card";
@@ -33,6 +34,7 @@ export const appRouter = router({
   viewTrainingData,
   gradeSpeakingQuiz,
   remix,
+  createRemixCards,
 });
 
 export type AppRouter = typeof appRouter;
