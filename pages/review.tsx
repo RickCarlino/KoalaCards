@@ -1,8 +1,12 @@
+import {
+  decksWithReviewInfo,
+  DeckWithReviewInfo,
+} from "@/koala/decks/decks-with-review-info";
 import Link from "next/link";
 import { GetServerSideProps } from "next/types";
 
 type ReviewPageProps = {
-  decks: { name: string; id: number }[];
+  decks: DeckWithReviewInfo[];
 };
 
 export const getServerSideProps: GetServerSideProps<ReviewPageProps> = async (
@@ -29,15 +33,7 @@ export const getServerSideProps: GetServerSideProps<ReviewPageProps> = async (
   const { backfillDecks } = await import("@/koala/decks/backfill-decks");
 
   await backfillDecks(dbUser.id);
-  const decks = await prismaClient.deck.findMany({
-    where: {
-      userId: dbUser.id,
-    },
-    select: {
-      name: true,
-      id: true,
-    },
-  });
+  const decks = await decksWithReviewInfo(dbUser.id);
 
   if (decks.length === 1) {
     return {
@@ -67,14 +63,16 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
     );
   }
 
+  const sortedByDue = decks.sort((b, a) => a.quizzesDue - b.quizzesDue);
+
   return (
     <div>
       <h1>Decks</h1>
       <ul>
-        {decks.map((deck) => (
+        {sortedByDue.map((deck) => (
           <li key={deck.id}>
             <Link href={`/review/${deck.id}`}>
-              {deck.name}
+              {deck.deckName} ({deck.quizzesDue} due)
             </Link>
           </li>
         ))}
