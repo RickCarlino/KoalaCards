@@ -10,6 +10,7 @@ import { generateLessonAudio } from "./speech";
 
 type GetLessonInputParams = {
   userId: string;
+  deckId: number;
   /** Current time */
   now: number;
   /** Max number of cards to return */
@@ -18,6 +19,7 @@ type GetLessonInputParams = {
 
 type GetCardsProps = {
   userId: string;
+  deckId: number;
   now: number;
   take: number;
   isReview: boolean;
@@ -37,11 +39,11 @@ function split<T>(l: T[], r: T[]): T[] {
 }
 
 async function getCards(props: GetCardsProps) {
-  const { userId, now, take, isReview } = props;
+  const { userId, now, take, isReview, deckId } = props;
   if (take < 1) return [];
 
   const base = {
-    Card: { userId, flagged: { not: true } },
+    Card: { userId, deckId, flagged: { not: true } },
   };
 
   const whereClause = isReview
@@ -122,20 +124,26 @@ const newCardsPerDay = async (userID: string) => {
 };
 
 const getNewCards = async (props: Omit<GetCardsProps, "isReview">) => {
-  const { userId, now, take } = props;
+  const { userId, now, take, deckId } = props;
   const maxNew = await newCardsPerDay(userId);
   const newToday = await cardCountNewToday(userId);
   const allowedNew = Math.max(maxNew - newToday, 0);
   const maxNewCards = Math.min(take, allowedNew);
 
-  return await getCards({ userId, now, take: maxNewCards, isReview: false });
+  return await getCards({
+    userId,
+    deckId,
+    now,
+    take: maxNewCards,
+    isReview: false,
+  });
 };
 
 export async function getLessons(p: GetLessonInputParams) {
-  const { userId, now, take } = p;
+  const { userId, now, take, deckId } = p;
   await autoPromoteCards(userId);
   if (take > 15) return errorReport("Too many cards requested.");
-  const p2 = { userId, now, take };
+  const p2 = { userId, now, take, deckId };
   const oldCards = await getCards({ ...p2, isReview: true });
   const newCards = await getNewCards({
     ...p2,
@@ -143,7 +151,8 @@ export async function getLessons(p: GetLessonInputParams) {
     // always provide at least 3 new cards.
     take: Math.max(take - oldCards.length, NEW_CARDS_PER_SESSION_MIN),
   });
-  const combined = split(oldCards, newCards).slice(0, take);
+  const shuffled = split(oldCards, newCards);
+  const combined = unique(shuffled, (x) => x.cardId).slice(0, take);
   const audioSpeed = Math.round((await playbackSpeed(userId)) * 100);
 
   return await map(combined, (q) => {

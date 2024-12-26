@@ -72,7 +72,7 @@ export const ListeningQuiz: QuizComp = ({
       const base64Audio = await blobToBase64(await convertBlobToWav(audioBlob));
       const { result: transcription } = await transcribeAudio.mutateAsync({
         audio: base64Audio,
-        lang: "ko",
+        lang: card.langCode as "ko",
         targetText: card.term,
       });
 

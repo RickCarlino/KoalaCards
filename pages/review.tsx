@@ -1,52 +1,82 @@
-import MicrophonePermissions from "@/koala/microphone-permissions";
-import { ReviewPage } from "@/koala/review/review-page";
-import { trpc } from "@/koala/trpc-config";
-import { useEffect, useState } from "react";
+import {
+  decksWithReviewInfo,
+  DeckWithReviewInfo,
+} from "@/koala/decks/decks-with-review-info";
+import Link from "next/link";
+import { GetServerSideProps } from "next/types";
 
-export default function Review() {
-  const mutation = trpc.getNextQuizzes.useMutation();
-  const [data, setData] = useState({
-    quizzesDue: 0,
-    quizzes: [],
-  } as {
-    quizzesDue: number;
-    quizzes: any[];
-  });
-  const [isFetching, setIsFetching] = useState(false);
+type ReviewPageProps = {
+  decks: DeckWithReviewInfo[];
+};
 
-  const fetchQuizzes = () => {
-    setIsFetching(true);
-    mutation
-      .mutateAsync({ take: 12 }, { onSuccess: (data) => setData(data) })
-      .finally(() => setIsFetching(false));
-  };
+export const getServerSideProps: GetServerSideProps<ReviewPageProps> = async (
+  context,
+) => {
+  const { prismaClient } = await import("@/koala/prisma-client");
+  const { getSession } = await import("next-auth/react");
+  const session = await getSession(context);
 
-  useEffect(() => {
-    fetchQuizzes();
-  }, []);
-
-  const onSave = async () => {
-    // Called by child component when it wants more quizzes.
-    fetchQuizzes();
-  };
-
-  let el = <div>Loading...</div>;
-
-  if (mutation.isError) {
-    el = <div>Error occurred: {mutation.error.message}</div>;
-  } else if (isFetching) {
-    el = <div>Fetching New Quizzes...</div>;
-  } else if (data.quizzes.length > 0) {
-    el = (
-      <ReviewPage
-        quizzesDue={data.quizzesDue}
-        quizzes={data.quizzes}
-        onSave={onSave}
-      />
-    );
-  } else {
-    el = <div>No quizzes found</div>;
+  if (!session || !session.user) {
+    return { redirect: { destination: "/api/auth/signin", permanent: false } };
   }
 
-  return MicrophonePermissions(el);
+  const dbUser = await prismaClient.user.findUnique({
+    where: {
+      email: session.user.email ?? undefined,
+    },
+  });
+
+  if (!dbUser) {
+    return { redirect: { destination: "/api/auth/signin", permanent: false } };
+  }
+
+  const { backfillDecks } = await import("@/koala/decks/backfill-decks");
+
+  await backfillDecks(dbUser.id);
+  const decks = await decksWithReviewInfo(dbUser.id);
+
+  if (decks.length === 1) {
+    return {
+      redirect: {
+        destination: `/review/${decks[0].id}`,
+        permanent: false,
+      },
+    };
+  }
+
+  return {
+    props: {
+      decks,
+    },
+  };
+};
+
+export default function ReviewPage({ decks }: ReviewPageProps) {
+  if (decks.length === 0) {
+    return (
+      <div>
+        <h1>Welcome, Please Add Cards First</h1>
+        <p>
+          You can add cards <Link href={"/create"}>here</Link>.
+        </p>
+      </div>
+    );
+  }
+
+  const sortedByDue = decks.sort((b, a) => a.quizzesDue - b.quizzesDue);
+
+  return (
+    <div>
+      <h1>Decks</h1>
+      <ul>
+        {sortedByDue.map((deck) => (
+          <li key={deck.id}>
+            <Link href={`/review/${deck.id}`}>
+              {deck.deckName} ({deck.quizzesDue} due)
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }

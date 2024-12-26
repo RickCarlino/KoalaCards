@@ -4,6 +4,7 @@ import { errorReport } from "./error-report";
 import { z } from "zod";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { prismaClient } from "./prisma-client";
+import { getLangName } from "./get-lang-name";
 
 const apiKey = process.env.OPENAI_API_KEY;
 
@@ -38,18 +39,6 @@ type GrammarCorrectionProps = {
   langCode: string;
   /** What the user said. */
   userInput: string;
-};
-
-const getLangName = (lang: string) => {
-  const names: Record<string, string> = {
-    EN: "English",
-    IT: "Italian",
-    FR: "French",
-    ES: "Spanish",
-    KO: "Korean",
-  };
-  const key = lang.slice(0, 2).toUpperCase();
-  return names[key] || lang;
 };
 
 async function getCache(
