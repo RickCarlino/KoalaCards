@@ -84,6 +84,7 @@ model Deck {
   Card     Card[]
 
   @@unique([name, userId])
+  @@index([userId])
 }
 
 model Card {
@@ -105,6 +106,8 @@ model Card {
   Deck                  Deck?                @relation(fields: [deckId], references: [id])
 
   @@unique([userId, term])
+  @@index([deckId])
+  @@index([userId])
 }
 
 model Quiz {
@@ -119,23 +122,10 @@ model Quiz {
   nextReview  Float    @default(0)
   lapses      Float    @default(0)
   repetitions Float    @default(0)
-  RevLog      RevLog[]
 
   @@unique([cardId, quizType])
-}
-
-model RevLog {
-  id          Int      @id @default(autoincrement())
-  quiz        Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  quizId      Int
-  lapses      Float
-  repetitions Float
-  difficulty  Float
-  stability   Float
-  firstReview Float
-  lastReview  Float
-  gradedAt    Float
-  createdAt   DateTime @default(now())
+  @@index([cardId])
+  @@index([nextReview])
 }
 
 model TrainingData {
