@@ -6,9 +6,9 @@ import {
   Button,
   Modal,
   Group,
-  Text,
   Radio,
   RadioGroup,
+  TextInput,
 } from "@mantine/core";
 import { useState } from "react";
 import { unique } from "radash";
@@ -75,8 +75,25 @@ export default function RemixButton(props: RemixButtonProps) {
     setOpened(false);
   };
 
-  let saveButton = <Button onClick={handleSaveRemixes}>Save Remixes</Button>;
-  let loadButton = (
+  const handleEditRemix = (
+    index: number,
+    field: keyof Omit<Remix, "kept">,
+    value: string,
+  ) => {
+    setRemixes((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: value };
+      return next;
+    });
+  };
+
+  const saveButton = (
+    <Button onClick={handleSaveRemixes} disabled={saveRemixCards.isLoading}>
+      {saveRemixCards.isLoading ? "Saving..." : "Save Remixes"}
+    </Button>
+  );
+
+  const loadButton = (
     <Button onClick={handleRemix} loading={createRemix.isLoading}>
       Load Remixes
     </Button>
@@ -86,7 +103,7 @@ export default function RemixButton(props: RemixButtonProps) {
     <Modal
       opened={opened}
       onClose={() => setOpened(false)}
-      title="🧪Remix Card (!EXPERIMENTAL!)"
+      title="🧪 Remix Card (!EXPERIMENTAL!)"
       size="lg"
       overlayProps={{ opacity: 0.5, blur: 1 }}
     >
@@ -109,28 +126,45 @@ export default function RemixButton(props: RemixButtonProps) {
         </RadioGroup>
 
         {loadButton}
+
         {remixes.length > 0 && (
           <Stack>
             {remixes.map((remix, index) => (
               <Card key={index} shadow="xs" padding="sm">
-                <Text>{remix.term}</Text>
-                <Text size="sm">{remix.definition}</Text>
-                <Group mt="sm">
-                  <Button
-                    size="xs"
-                    variant={remix.kept ? "filled" : "outline"}
-                    onClick={() => handleKeep(index)}
-                  >
-                    Keep
-                  </Button>
-                  <Button
-                    size="xs"
-                    variant={!remix.kept ? "filled" : "outline"}
-                    onClick={() => handleDiscard(index)}
-                  >
-                    Discard
-                  </Button>
-                </Group>
+                <Stack>
+                  <TextInput
+                    label="Term"
+                    value={remix.term}
+                    onChange={(e) =>
+                      handleEditRemix(index, "term", e.target.value)
+                    }
+                    placeholder="Edit term"
+                  />
+                  <TextInput
+                    label="Definition"
+                    value={remix.definition}
+                    onChange={(e) =>
+                      handleEditRemix(index, "definition", e.target.value)
+                    }
+                    placeholder="Edit definition"
+                  />
+                  <Group mt="sm">
+                    <Button
+                      size="xs"
+                      variant={remix.kept ? "filled" : "outline"}
+                      onClick={() => handleKeep(index)}
+                    >
+                      Keep
+                    </Button>
+                    <Button
+                      size="xs"
+                      variant={!remix.kept ? "filled" : "outline"}
+                      onClick={() => handleDiscard(index)}
+                    >
+                      Discard
+                    </Button>
+                  </Group>
+                </Stack>
               </Card>
             ))}
           </Stack>
@@ -144,7 +178,7 @@ export default function RemixButton(props: RemixButtonProps) {
   return (
     <>
       <Button variant="outline" onClick={() => setOpened(true)}>
-      🧪Create Remix
+        🧪 Create Remix
       </Button>
       {remixModal}
     </>
