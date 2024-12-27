@@ -4,6 +4,7 @@ import Link from "next/link";
 import { DifficultyButtons } from "./grade-buttons";
 import { QuizState } from "./types";
 import { VisualDiff } from "./visual-diff";
+import RemixButton from "../remix-button";
 
 type FeedbackRowProps = {
   quizState: QuizState;
@@ -43,6 +44,11 @@ export const FeedbackRow = ({
 }: FeedbackRowProps) => {
   const expected = quizState.serverResponse || "";
   const actual = quizState.response || expected;
+  const card = {
+    id: quizState.quiz.cardId,
+    term: quizState.quiz.term,
+    definition: quizState.quiz.definition,
+  };
   return (
     <Card
       key={quizState.quiz.quizId}
@@ -60,6 +66,7 @@ export const FeedbackRow = ({
             onUpdateDifficulty(quizState.quiz.quizId, grade)
           }
         />
+        <RemixButton card={card} />
         <Text>Type: {quizState.quiz.lessonType}</Text>
         <Text>
           <Link target={"_blank"} href={`/cards/${quizState.quiz.cardId}`}>

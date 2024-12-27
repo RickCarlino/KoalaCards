@@ -1,5 +1,6 @@
 import { router } from "../trpc-procedure";
 import { bulkCreateCards } from "./bulk-create-cards";
+import { createRemixCards } from "./create-remix-cards";
 import { deleteCard } from "./delete-card";
 import { deleteFlaggedCards } from "./delete-flagged-card";
 import { editCard } from "./edit-card";
@@ -12,6 +13,7 @@ import { gradeQuiz } from "./grade-quiz";
 import { gradeSpeakingQuiz } from "./grade-speaking-quiz";
 import { levelReviews } from "./level-reviews";
 import { parseCards } from "./parse-cards";
+import { remix } from "./remix";
 import { transcribeAudio } from "./transcribe-audio";
 import { viewTrainingData } from "./view-training-data";
 
@@ -31,6 +33,8 @@ export const appRouter = router({
   transcribeAudio,
   viewTrainingData,
   gradeSpeakingQuiz,
+  remix,
+  createRemixCards,
 });
 
 export type AppRouter = typeof appRouter;
