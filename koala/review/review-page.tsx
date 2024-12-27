@@ -10,6 +10,7 @@ import { ReviewOver } from "./review-over";
 import { SpeakingQuiz } from "./speaking-quiz";
 import { Props, Quiz, QuizComp, QuizProps } from "./types";
 import { EditButton } from "./edit-button";
+import RemixButton from "../remix-button";
 
 async function fetchAudioAsBase64(url: string): Promise<string> {
   const response = await fetch(url);
@@ -142,6 +143,13 @@ export const ReviewPage = (props: Props) => {
                 }}
               />
               <EditButton cardID={quiz.cardId} />
+              <RemixButton
+                card={{
+                  id: quiz.cardId,
+                  term: quiz.term,
+                  definition: quiz.definition,
+                }}
+              />
             </Group>
             <Text size={"xs"}>{props.quizzesDue} quizzes due today.</Text>
             {illustration}

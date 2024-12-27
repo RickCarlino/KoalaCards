@@ -11,6 +11,7 @@ import {
   RadioGroup,
 } from "@mantine/core";
 import { useState } from "react";
+import { unique } from "radash";
 
 type RemixButtonProps = {
   card: {
@@ -39,7 +40,14 @@ export default function RemixButton(props: RemixButtonProps) {
       cardID: card.id,
       type: selectedType,
     });
-    setRemixes(result.map((r) => ({ ...r, kept: true })));
+    const oldOnes = remixes.filter((r) => r.kept);
+    const newOnes = result.map((r) => ({ ...r, kept: false }));
+    const combined = [...oldOnes, ...newOnes];
+    const filtered = combined.filter(
+      (r) => r.term !== card.term || r.definition !== card.definition,
+    );
+    const uniq = unique(filtered, (r) => r.term);
+    setRemixes(uniq);
   };
 
   const handleKeep = (index: number) => {
@@ -78,7 +86,7 @@ export default function RemixButton(props: RemixButtonProps) {
     <Modal
       opened={opened}
       onClose={() => setOpened(false)}
-      title="Remix Card"
+      title="🧪Remix Card (!EXPERIMENTAL!)"
       size="lg"
       overlayProps={{ opacity: 0.5, blur: 1 }}
     >
@@ -136,7 +144,7 @@ export default function RemixButton(props: RemixButtonProps) {
   return (
     <>
       <Button variant="outline" onClick={() => setOpened(true)}>
-        Remix (Experimental)
+      🧪Create Remix
       </Button>
       {remixModal}
     </>
