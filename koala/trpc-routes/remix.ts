@@ -4,7 +4,8 @@ import { getUserSettings } from "../auth-helpers";
 import { openai } from "../openai";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { prismaClient } from "../prisma-client";
-import { draw, range } from "radash";
+import { draw } from "radash";
+import { RemixTypePrompts, RemixTypes } from "../remix-types";
 
 const zodRemix = z.object({
   result: z.array(
@@ -15,7 +16,7 @@ const zodRemix = z.object({
   ),
 });
 
-async function askGPT(term: string, _definition: string) {
+async function askGPT(type: RemixTypes, term: string, _definition: string) {
   const model = "gpt-4o-2024-08-06";
   const temperature = draw([0.5, 0.6, 0.7, 0.8]) || 1;
   const frequency_penalty = draw([0.4, 0.5, 0.6, 0.7]) || 1;
@@ -49,6 +50,7 @@ async function askGPT(term: string, _definition: string) {
   // [0.8 , 0.6 ,  1.1 ],
   // [0.7,  0.6,   1],
   // [0.7,  0.7,   0.8]
+  console.log({ type, RemixTypePrompts, val: RemixTypePrompts[type] });
   const resp = await openai.beta.chat.completions.parse({
     messages: [
       {
@@ -56,12 +58,15 @@ async function askGPT(term: string, _definition: string) {
         content: `${term}`,
       },
       {
+        role: "user",
+        content: RemixTypePrompts[type],
+      },
+      {
         role: "assistant",
         content: [
           "The user is a native English speaker learning a foreign language.",
-          "Provide 10 short, grammatically correct 'remix' sentences for language learning.",
-          "A remix reuses key vocabulary and grammar patterns from the input sentence but alters its meaning slightly.",
-          "Focus on realistic, concise sentences and prioritize maintaining vocabulary and grammar structures.",
+          "Provide several short, grammatically correct 'remix' sentences for language learning.",
+          // "Use the student's guidance to create above to guide the content of the new sentences.",
           "The 'definition' attribute is an English translation of the target sentence.",
         ].join("\n"),
       },
@@ -84,6 +89,7 @@ export const remix = procedure
   .input(
     z.object({
       cardID: z.number(),
+      type: z.number(),
     }),
   )
   .output(
@@ -111,5 +117,5 @@ export const remix = procedure
     if (!card) {
       throw new Error("Card not found");
     }
-    return await askGPT(card.term, card.definition);
+    return await askGPT(input.type as RemixTypes, card.term, card.definition);
   });

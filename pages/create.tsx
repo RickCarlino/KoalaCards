@@ -210,7 +210,9 @@ function DeckStep({ decks, state, dispatch, onNext }: DeckStepProps) {
         <RadioGroup
           label="Deck Mode"
           value={state.deckSelection}
-          onChange={(value: "existing" | "new") => handleDeckModeChange(value)}
+          onChange={(value) =>
+            handleDeckModeChange(value as "existing" | "new")
+          }
         >
           <Radio value="existing" label="Use an existing deck" />
           <Radio value="new" label="Create a new deck" />
