@@ -16,7 +16,7 @@ export const RemixTypePrompts: Record<RemixTypes, string> = {
   [RemixTypes.TOO_LONG]:
     "The sentence is too long. Break it into smaller sentences with similar grammar and vocab.",
   [RemixTypes.VOCAB]:
-    "Generate sentences that use the same vocabulary, but have different grammatical patterns or themes.",
+    "Create new sentences that contain words from the original sentence.",
 };
 
 export const RemixTypeDescriptions: Record<RemixTypes, string> = {

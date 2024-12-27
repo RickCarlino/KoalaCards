@@ -16,41 +16,32 @@ const zodRemix = z.object({
   ),
 });
 
-async function askGPT(type: RemixTypes, term: string, _definition: string) {
+const LANGUAGE_SPECIFIC_ADDITIONS: Record<string, string | undefined> = {
+  KO: "Avoid using 'dictionary form' and 'plain form' verbs. Don't use the pronouns 그녀, 그, 당신.",
+};
+
+async function askGPT(
+  type: RemixTypes,
+  langCode: string,
+  term: string,
+  _definition: string,
+) {
   const model = "gpt-4o-2024-08-06";
-  const temperature = draw([0.5, 0.6, 0.7, 0.8]) || 1;
-  const frequency_penalty = draw([0.4, 0.5, 0.6, 0.7]) || 1;
-  const presence_penalty = draw([0.4, 0.5, 0.6, 0.7, 0.8]) || 1;
-  console.log(
-    JSON.stringify([temperature, frequency_penalty, presence_penalty]),
-  );
-
-  // RED:
-  // [0.75 , 1.25, 0.25],
-  // [1    , 1   , 0.5 ],
-  // [1    , 1.5 , 0.25],
-  // [0.5  , 1.5 , 1.5 ],
-
-  // YELLOW:
-  // [0.5 , 0.25, 0.25],
-  // [0.75, 0.5 , 0.5 ],
-  // [0.5,  0.3,  1],
-  // [0.5,  0.5 , 1]
-  // [0.6,0.5,1]
-  // [0.7 , 0.6 , 1.1 ],
-  // [0.8,  0.5,   0.9],
-
-  // GREEN:
-  // [0.75, 0.25,  0.25],
-  // [0.5 , 0.4 ,  0.9 ],
-  // [0.8,  0.4,   0.9 ],
-  // [0.5 , 0.5 ,  0.25],
-  // [0.5 , 0.5 ,  0.75],
-  // [0.75, 0.5 ,  1   ],
-  // [0.8 , 0.6 ,  1.1 ],
-  // [0.7,  0.6,   1],
-  // [0.7,  0.7,   0.8]
-  console.log({ type, RemixTypePrompts, val: RemixTypePrompts[type] });
+  const temperature = draw([0.65, 0.7/*, 0.75*/]) || 1;
+  const frequency_penalty = draw([0.4, 0.45, 0.55]) || 1;
+  const presence_penalty = draw([0.7, 0.75, 0.8]) || 1;
+  const langSpecific = LANGUAGE_SPECIFIC_ADDITIONS[langCode] || "";
+  // BAD:
+  // None yet.
+  // GOOD:
+  // [ 0.65, 0.4, 0.75 ]
+  // [ 0.65, 0.45, 0.7 ]
+  // [ 0.7, 0.45, 0.75 ]
+  // [ 0.75, 0.55, 0.7 ]
+  console.log({
+    params: [temperature, frequency_penalty, presence_penalty],
+    val: RemixTypePrompts[type],
+  });
   const resp = await openai.beta.chat.completions.parse({
     messages: [
       {
@@ -64,11 +55,13 @@ async function askGPT(type: RemixTypes, term: string, _definition: string) {
       {
         role: "assistant",
         content: [
-          "The user is a native English speaker learning a foreign language.",
-          "Provide several short, grammatically correct 'remix' sentences for language learning.",
-          // "Use the student's guidance to create above to guide the content of the new sentences.",
+          "You are a language teacher.",
+          "Your student is a native English speaker.",
+          "You help the student learn the language by creating a 'remix' of the input sentences.",
           "The 'definition' attribute is an English translation of the target sentence.",
-          "Sound natural like a native speaker, not some English sentence that was copy/pasted into Google translate, OK?",
+          "Sound natural like a native speaker, producing grammatically correct and realistic sentences.",
+          "Definition = English. Term = Target language.",
+          langSpecific,
         ].join("\n"),
       },
     ],
@@ -115,8 +108,15 @@ export const remix = procedure
         createdAt: "desc",
       },
     });
+
     if (!card) {
       throw new Error("Card not found");
     }
-    return await askGPT(input.type as RemixTypes, card.term, card.definition);
+
+    return await askGPT(
+      input.type as RemixTypes,
+      card.langCode,
+      card.term,
+      card.definition,
+    );
   });

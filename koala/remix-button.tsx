@@ -42,7 +42,7 @@ export default function RemixButton(props: RemixButtonProps) {
     });
     const oldOnes = remixes.filter((r) => r.kept);
     const newOnes = result.map((r) => ({ ...r, kept: false }));
-    const combined = [...oldOnes, ...newOnes];
+    const combined = [...newOnes, ...oldOnes];
     const filtered = combined.filter(
       (r) => r.term !== card.term || r.definition !== card.definition,
     );
@@ -67,11 +67,16 @@ export default function RemixButton(props: RemixButtonProps) {
   };
 
   const handleSaveRemixes = async () => {
-    const result = await saveRemixCards.mutateAsync({
+    const final = remixes.filter((r) => r.kept);
+    if (final.length === 0) {
+      alert("You must 'keep' at least one remix before you can save.");
+      return;
+    }
+    await saveRemixCards.mutateAsync({
       cardId: card.id,
-      remixes: remixes.filter((r) => r.kept),
+      remixes: final,
     });
-    console.log(result);
+    setRemixes([]);
     setOpened(false);
   };
 
@@ -177,7 +182,13 @@ export default function RemixButton(props: RemixButtonProps) {
 
   return (
     <>
-      <Button variant="outline" onClick={() => setOpened(true)}>
+      <Button
+        variant="outline"
+        onClick={() => {
+          setOpened(true);
+          setRemixes([]);
+        }}
+      >
         🧪 Create Remix
       </Button>
       {remixModal}
