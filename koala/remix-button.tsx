@@ -26,7 +26,7 @@ export default function RemixButton(props: RemixButtonProps) {
   const [opened, setOpened] = useState(false);
   const [remixes, setRemixes] = useState<Remix[]>([]);
   const [selectedType, setSelectedType] = useState<RemixTypes>(
-    RemixTypes.CONJUGATION,
+    RemixTypes.GRAMMAR,
   );
 
   const createRemix = trpc.remix.useMutation({});
@@ -70,7 +70,7 @@ export default function RemixButton(props: RemixButtonProps) {
   let saveButton = <Button onClick={handleSaveRemixes}>Save Remixes</Button>;
   let loadButton = (
     <Button onClick={handleRemix} loading={createRemix.isLoading}>
-      Load Remixes (Experimental Feature)
+      Load Remixes
     </Button>
   );
 
@@ -84,8 +84,8 @@ export default function RemixButton(props: RemixButtonProps) {
     >
       <Stack>
         <RadioGroup
-          label="Select Remix Type"
-          description="Choose the type of remix you want to apply to the card."
+          label="Select a Remix Type"
+          description="Remixing creates new cards from old ones."
           value={selectedType.toString()}
           onChange={(value) => setSelectedType(Number(value) as RemixTypes)}
         >
@@ -136,7 +136,7 @@ export default function RemixButton(props: RemixButtonProps) {
   return (
     <>
       <Button variant="outline" onClick={() => setOpened(true)}>
-        Remix
+        Remix (Experimental)
       </Button>
       {remixModal}
     </>

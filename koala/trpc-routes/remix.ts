@@ -68,6 +68,7 @@ async function askGPT(type: RemixTypes, term: string, _definition: string) {
           "Provide several short, grammatically correct 'remix' sentences for language learning.",
           // "Use the student's guidance to create above to guide the content of the new sentences.",
           "The 'definition' attribute is an English translation of the target sentence.",
+          "Sound natural like a native speaker, not some English sentence that was copy/pasted into Google translate, OK?",
         ].join("\n"),
       },
     ],
