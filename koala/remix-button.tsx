@@ -29,6 +29,7 @@ export default function RemixButton(props: RemixButtonProps) {
   const [selectedType, setSelectedType] = useState<RemixTypes>(
     RemixTypes.GRAMMAR,
   );
+  const [didSave, setDidSave] = useState(false);
 
   const createRemix = trpc.remix.useMutation({});
   const saveRemixCards = trpc.createRemixCards.useMutation();
@@ -76,6 +77,7 @@ export default function RemixButton(props: RemixButtonProps) {
       cardId: card.id,
       remixes: final,
     });
+    setDidSave(true);
     setRemixes([]);
     setOpened(false);
   };
@@ -107,7 +109,15 @@ export default function RemixButton(props: RemixButtonProps) {
   const remixModal = (
     <Modal
       opened={opened}
-      onClose={() => setOpened(false)}
+      onClose={() => {
+        if (
+          !didSave &&
+          !confirm("Are you sure you want to close without saving?")
+        ) {
+          return;
+        }
+        setOpened(false);
+      }}
       title="🧪 Remix Card (!EXPERIMENTAL!)"
       size="lg"
       overlayProps={{ opacity: 0.5, blur: 1 }}

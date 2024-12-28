@@ -38,6 +38,9 @@ export const ReviewOver = ({
   };
 
   const dontShowCorrect = (quizState: QuizState) => {
+    if (quizState.grade === Grade.AGAIN) {
+      return true;
+    }
     return quizState.serverGradingResult !== "pass";
   };
 
@@ -61,9 +64,7 @@ export const ReviewOver = ({
         style={{ width: "80%" }}
       >
         <Stack>
-          <Title order={2}>
-            Finalize Review
-          </Title>
+          <Title order={2}>Finalize Review</Title>
           <Alert color="red">
             Closing the browser tab early will cause changes to be lost. Please
             finalize your review.

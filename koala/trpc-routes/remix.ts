@@ -27,17 +27,12 @@ async function askGPT(
   definition: string,
 ) {
   const model = "gpt-4o-2024-08-06";
-  const temperature = draw([0.65, 0.7 /*, 0.75*/]) || 1;
+  const temperature = 0.65;
   const frequency_penalty = draw([0.4, 0.45, 0.55]) || 1;
   const presence_penalty = draw([0.7, 0.75, 0.8]) || 1;
   const langSpecific = LANGUAGE_SPECIFIC_ADDITIONS[langCode] || "";
   // BAD:
-  // None yet.
   // GOOD:
-  // [ 0.65, 0.4, 0.75 ]
-  // [ 0.65, 0.45, 0.7 ]
-  // [ 0.7, 0.45, 0.75 ]
-  // [ 0.75, 0.55, 0.7 ]
   console.log({
     params: [temperature, frequency_penalty, presence_penalty],
     val: RemixTypePrompts[type],
