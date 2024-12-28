@@ -24,10 +24,10 @@ async function askGPT(
   type: RemixTypes,
   langCode: string,
   term: string,
-  _definition: string,
+  definition: string,
 ) {
   const model = "gpt-4o-2024-08-06";
-  const temperature = draw([0.65, 0.7/*, 0.75*/]) || 1;
+  const temperature = draw([0.65, 0.7 /*, 0.75*/]) || 1;
   const frequency_penalty = draw([0.4, 0.45, 0.55]) || 1;
   const presence_penalty = draw([0.7, 0.75, 0.8]) || 1;
   const langSpecific = LANGUAGE_SPECIFIC_ADDITIONS[langCode] || "";
@@ -46,7 +46,7 @@ async function askGPT(
     messages: [
       {
         role: "user",
-        content: `${term}`,
+        content: `${langCode}: ${term} (EN: ${definition})`,
       },
       {
         role: "user",
