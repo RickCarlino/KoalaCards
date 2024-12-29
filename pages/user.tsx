@@ -181,8 +181,8 @@ export default function UserSettingsPage(props: Props) {
               />
 
               <NumberInput
-                label="User recorded audio playback volume"
-                description="Percentage of user recorded audio played back after a speaking test (0 - 1)"
+                label="User audio playback sampling rate"
+                description="Use this to hear your voice and review your pronounciation. It's the percentage of user recorded audio played back after a speaking test (0 - 1)"
                 id="playbackPercentage"
                 name="playbackPercentage"
                 value={settings.playbackPercentage}

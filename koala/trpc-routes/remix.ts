@@ -4,19 +4,18 @@ import { getUserSettings } from "../auth-helpers";
 import { openai } from "../openai";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { prismaClient } from "../prisma-client";
-import { draw } from "radash";
 import { RemixTypePrompts, RemixTypes } from "../remix-types";
 
 const zodRemix = z.object({
   result: z.array(
     z.object({
-      term: z.string(),
-      definition: z.string(),
+      exampleSentence: z.string(),
+      englishTranslation: z.string(),
     }),
   ),
 });
 
-const LANGUAGE_SPECIFIC_ADDITIONS: Record<string, string | undefined> = {
+const LANG_SPECIFIC_PROMPT: Record<string, string | undefined> = {
   KO: "You will be severly punished for using 'dictionary form' verbs or the pronouns 그녀, 그, 당신.",
 };
 
@@ -26,51 +25,43 @@ async function askGPT(
   term: string,
   _definition: string,
 ) {
-  const model = "gpt-4o-2024-08-06";
-  const temperature = 0.65;
-  const frequency_penalty = draw([0.4, 0.45, 0.55]) || 1;
-  const presence_penalty = draw([0.7, 0.75, 0.8]) || 1;
-  const langSpecific = LANGUAGE_SPECIFIC_ADDITIONS[langCode] || "";
-  // BAD:
-  // GOOD:
-  console.log({
-    params: [temperature, frequency_penalty, presence_penalty],
-    val: RemixTypePrompts[type],
-  });
+  const model = "gpt-4o";
+  const langSpecific = LANG_SPECIFIC_PROMPT[langCode.toUpperCase()] || "";
+  const content = [
+    "You are a language teacher.",
+    "You help the student learn the language by creating 'remix' sentences using the input above.",
+    "Your student is a native English speaker.",
+    "Create a few short, grammatically correct sentences that help the student understand the term.",
+    langSpecific,
+    `INPUT: ${term}`,
+    `YOUR TASK: ${RemixTypePrompts[type]}`,
+  ].join("\n");
   const resp = await openai.beta.chat.completions.parse({
     messages: [
       {
-        role: "user",
-        content: `${term}`,
-      },
-      {
-        role: "user",
-        content: RemixTypePrompts[type],
-      },
-      {
         role: "assistant",
-        content: [
-          "You are a language teacher.",
-          "Your student is a native English speaker.",
-          "You help the student learn the language by creating a 'remix' of the input sentences.",
-          "The 'definition' attribute is an English translation of the target sentence.",
-          "Sound natural like a native speaker, producing grammatically correct and realistic sentences.",
-          "Definition = English. Term = Target language.",
-          langSpecific,
-        ].join("\n"),
+        content,
       },
     ],
     model,
-    max_tokens: 500,
-    temperature,
-    frequency_penalty, // Encourages variety
-    presence_penalty, // Reduces overuse of key words
+    max_tokens: 400,
+    temperature: 0.7,
     response_format: zodResponseFormat(zodRemix, "remix_resp"),
   });
   const grade_response = resp.choices[0];
-  const result = grade_response.message.parsed?.result || [];
+  const unsorted = grade_response.message.parsed?.result || [];
+  const result = unsorted
+    .sort((a, b) => a.exampleSentence.length - b.exampleSentence.length)
+    .slice(0, 7)
+    .map((r) => {
+      return {
+        term: r.exampleSentence,
+        definition: r.englishTranslation,
+      };
+    });
 
-  return result.sort((a, b) => a.term.length - b.term.length).slice(0, 7);
+  console.log(content);
+  return result;
 }
 /** The `faucet` route is a mutation that returns a "Hello, world" string
  * and takes an empty object as its only argument. */
