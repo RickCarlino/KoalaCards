@@ -22,7 +22,7 @@ export const SpeakingQuiz: QuizComp = (props) => {
   const voiceRecorder = useVoiceRecorder(handleRecordingResult);
   const { playbackPercentage } = useUserSettings();
   useEffect(() => {
-    playFX("speaking-beep.wav");
+    playFX("/speaking-beep.wav");
   }, [card.term]);
   const handleRecordClick = () => {
     if (isRecording) {

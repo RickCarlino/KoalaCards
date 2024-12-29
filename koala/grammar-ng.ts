@@ -1,26 +1,8 @@
-import OpenAI from "openai";
-import { ChatCompletionCreateParamsNonStreaming } from "openai/resources";
-import { errorReport } from "./error-report";
 import { z } from "zod";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { prismaClient } from "./prisma-client";
 import { getLangName } from "./get-lang-name";
-
-// Ensure the OpenAI API key is available
-const apiKey = process.env.OPENAI_API_KEY;
-
-if (!apiKey) {
-  errorReport("Missing ENV Var: OPENAI_API_KEY");
-  throw new Error("Missing OPENAI_API_KEY");
-}
-
-// Initialize OpenAI client
-const openai = new OpenAI({ apiKey });
-
-// Generic GPT call function
-export async function gptCall(opts: ChatCompletionCreateParamsNonStreaming) {
-  return openai.chat.completions.create(opts);
-}
+import { openai } from "./openai";
 
 // Define the expected structure of the grade response
 const zodGradeResponse = z.object({
@@ -85,28 +67,20 @@ export const grammarCorrectionNG = async (
   const lang = getLangName(props.langCode);
   const prompt = buildPrompt(props, lang);
 
-  try {
-    const response = await openai.beta.chat.completions.parse({
-      messages: [{ role: "user", content: prompt }],
-      model,
-      max_tokens: 125,
-      temperature: 0.1,
-      response_format: zodResponseFormat(zodGradeResponse, "grade_response"),
-    });
+  const response = await openai.beta.chat.completions.parse({
+    messages: [{ role: "user", content: prompt }],
+    model,
+    max_tokens: 125,
+    temperature: 0.1,
+    response_format: zodResponseFormat(zodGradeResponse, "grade_response"),
+  });
 
-    const gradeResponse = response.choices[0]?.message?.parsed;
+  const gradeResponse = response.choices[0]?.message?.parsed;
 
-    if (!gradeResponse) {
-      throw new Error("Invalid response format from OpenAI.");
-    }
-
-    await storeTrainingData(props, gradeResponse);
-    return gradeResponse;
-  } catch (error) {
-    errorReport(`GrammarCorrectionNG Error: ${(error as Error).message}`);
-    return {
-      grade: "incorrect",
-      correctedSentence: "This should never happen. Submit a bug report.",
-    };
+  if (!gradeResponse) {
+    throw new Error("Invalid response format from OpenAI.");
   }
+
+  await storeTrainingData(props, gradeResponse);
+  return gradeResponse;
 };
