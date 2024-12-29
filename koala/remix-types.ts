@@ -14,9 +14,9 @@ export const RemixTypePrompts: Record<RemixTypes, string> = {
   [RemixTypes.THEME]:
     "Freely modify grammar and vocab, but keep the same theme.",
   [RemixTypes.TOO_LONG]:
-    "The sentence is too long. Break it into smaller sentences with similar grammar and vocab.",
+    "The sentence is too long. Break it into smaller sub-sentences.",
   [RemixTypes.VOCAB]:
-    "Generate sentences that use the same vocabulary, but have different grammatical patterns or themes.",
+    "Create new sentences that contain words from the original sentence.",
 };
 
 export const RemixTypeDescriptions: Record<RemixTypes, string> = {
@@ -26,3 +26,36 @@ export const RemixTypeDescriptions: Record<RemixTypes, string> = {
   [RemixTypes.CONJUGATION]: "Different Conjugation",
   [RemixTypes.TOO_LONG]: "Shorter Length",
 };
+
+// type HyperParams = {
+//   temperature: number;
+//   frequency_penalty: number,
+//   presence_penalty: number;
+// };
+// export const hyperParams: Record<RemixTypes, HyperParams> = {
+//   [RemixTypes.VOCAB]: {
+//     temperature: 0.7,
+//     frequency_penalty: 0,
+//     presence_penalty: 0,
+//   },
+//   [RemixTypes.GRAMMAR]: {
+//     temperature: 0.7,
+//     frequency_penalty: 2,
+//     presence_penalty: 0,
+//   },
+//   [RemixTypes.THEME]: {
+//     temperature: 0.7,
+//     frequency_penalty: 0,
+//     presence_penalty: 0,
+//   },
+//   [RemixTypes.CONJUGATION]: {
+//     temperature: 0.7,
+//     frequency_penalty: 0,
+//     presence_penalty: 0,
+//   },
+//   [RemixTypes.TOO_LONG]: {
+//     temperature: 0.7,
+//     frequency_penalty: 0,
+//     presence_penalty: 0,
+//   },
+// };

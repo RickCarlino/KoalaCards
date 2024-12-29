@@ -23,7 +23,7 @@ export const SpeakingQuiz: QuizComp = (props) => {
   const { playbackPercentage } = useUserSettings();
   useEffect(() => {
     playFX("speaking-beep.wav");
-  }, [card.quizId]);
+  }, [card.term]);
   const handleRecordClick = () => {
     if (isRecording) {
       voiceRecorder.stop();
@@ -71,6 +71,9 @@ export const SpeakingQuiz: QuizComp = (props) => {
   const onFailClick = async () => {
     await playAudio(card.termAudio);
     await playAudio(card.definitionAudio);
+    await playAudio(card.termAudio);
+    await playAudio(card.definitionAudio);
+    await playAudio(card.termAudio);
 
     props.onGraded(Grade.AGAIN);
     setTimeout(() => {

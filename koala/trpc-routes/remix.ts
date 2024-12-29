@@ -4,85 +4,64 @@ import { getUserSettings } from "../auth-helpers";
 import { openai } from "../openai";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { prismaClient } from "../prisma-client";
-import { draw } from "radash";
 import { RemixTypePrompts, RemixTypes } from "../remix-types";
 
 const zodRemix = z.object({
   result: z.array(
     z.object({
-      term: z.string(),
-      definition: z.string(),
+      exampleSentence: z.string(),
+      englishTranslation: z.string(),
     }),
   ),
 });
 
-async function askGPT(type: RemixTypes, term: string, _definition: string) {
-  const model = "gpt-4o-2024-08-06";
-  const temperature = draw([0.5, 0.6, 0.7, 0.8]) || 1;
-  const frequency_penalty = draw([0.4, 0.5, 0.6, 0.7]) || 1;
-  const presence_penalty = draw([0.4, 0.5, 0.6, 0.7, 0.8]) || 1;
-  console.log(
-    JSON.stringify([temperature, frequency_penalty, presence_penalty]),
-  );
+const LANG_SPECIFIC_PROMPT: Record<string, string | undefined> = {
+  KO: "You will be severly punished for using 'dictionary form' verbs or the pronouns 그녀, 그, 당신.",
+};
 
-  // RED:
-  // [0.75 , 1.25, 0.25],
-  // [1    , 1   , 0.5 ],
-  // [1    , 1.5 , 0.25],
-  // [0.5  , 1.5 , 1.5 ],
-
-  // YELLOW:
-  // [0.5 , 0.25, 0.25],
-  // [0.75, 0.5 , 0.5 ],
-  // [0.5,  0.3,  1],
-  // [0.5,  0.5 , 1]
-  // [0.6,0.5,1]
-  // [0.7 , 0.6 , 1.1 ],
-  // [0.8,  0.5,   0.9],
-
-  // GREEN:
-  // [0.75, 0.25,  0.25],
-  // [0.5 , 0.4 ,  0.9 ],
-  // [0.8,  0.4,   0.9 ],
-  // [0.5 , 0.5 ,  0.25],
-  // [0.5 , 0.5 ,  0.75],
-  // [0.75, 0.5 ,  1   ],
-  // [0.8 , 0.6 ,  1.1 ],
-  // [0.7,  0.6,   1],
-  // [0.7,  0.7,   0.8]
-  console.log({ type, RemixTypePrompts, val: RemixTypePrompts[type] });
+async function askGPT(
+  type: RemixTypes,
+  langCode: string,
+  term: string,
+  _definition: string,
+) {
+  const model = "gpt-4o";
+  const langSpecific = LANG_SPECIFIC_PROMPT[langCode.toUpperCase()] || "";
+  const content = [
+    "You are a language teacher.",
+    "You help the student learn the language by creating 'remix' sentences using the input above.",
+    "Your student is a native English speaker.",
+    "Create a few short, grammatically correct sentences that help the student understand the term.",
+    langSpecific,
+    `INPUT: ${term}`,
+    `YOUR TASK: ${RemixTypePrompts[type]}`,
+  ].join("\n");
   const resp = await openai.beta.chat.completions.parse({
     messages: [
       {
-        role: "user",
-        content: `${term}`,
-      },
-      {
-        role: "user",
-        content: RemixTypePrompts[type],
-      },
-      {
         role: "assistant",
-        content: [
-          "The user is a native English speaker learning a foreign language.",
-          "Provide several short, grammatically correct 'remix' sentences for language learning.",
-          // "Use the student's guidance to create above to guide the content of the new sentences.",
-          "The 'definition' attribute is an English translation of the target sentence.",
-          "Sound natural like a native speaker, not some English sentence that was copy/pasted into Google translate, OK?",
-        ].join("\n"),
+        content,
       },
     ],
     model,
-    max_tokens: 500,
-    temperature,
-    frequency_penalty, // Encourages variety
-    presence_penalty, // Reduces overuse of key words
+    max_tokens: 400,
+    temperature: 0.7,
     response_format: zodResponseFormat(zodRemix, "remix_resp"),
   });
   const grade_response = resp.choices[0];
-  const result = grade_response.message.parsed?.result || [];
+  const unsorted = grade_response.message.parsed?.result || [];
+  const result = unsorted
+    .sort((a, b) => a.exampleSentence.length - b.exampleSentence.length)
+    .slice(0, 7)
+    .map((r) => {
+      return {
+        term: r.exampleSentence,
+        definition: r.englishTranslation,
+      };
+    });
 
-  return result.sort((a, b) => a.term.length - b.term.length).slice(0, 7);
+  console.log(content);
+  return result;
 }
 /** The `faucet` route is a mutation that returns a "Hello, world" string
  * and takes an empty object as its only argument. */
@@ -115,8 +94,15 @@ export const remix = procedure
         createdAt: "desc",
       },
     });
+
     if (!card) {
       throw new Error("Card not found");
     }
-    return await askGPT(input.type as RemixTypes, card.term, card.definition);
+
+    return await askGPT(
+      input.type as RemixTypes,
+      card.langCode,
+      card.term,
+      card.definition,
+    );
   });
