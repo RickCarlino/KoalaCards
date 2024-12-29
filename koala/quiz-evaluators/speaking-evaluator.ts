@@ -1,5 +1,3 @@
-// import { testEquivalence, translateToEnglish } from "@/koala/openai";
-// import { captureTrainingData } from "./capture-training-data";
 import { compare } from "./evaluator-utils";
 import { QuizEvaluator } from "./types";
 import { grammarCorrectionNG } from "../grammar-ng";

@@ -1,33 +1,37 @@
+import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
-import { procedure } from "../trpc-procedure";
 import { getUserSettings } from "../auth-helpers";
 import { openai } from "../openai";
-import { zodResponseFormat } from "openai/helpers/zod";
 import { prismaClient } from "../prisma-client";
 import { RemixTypePrompts, RemixTypes } from "../remix-types";
-
-const zodRemix = z.object({
-  result: z.array(
-    z.object({
-      exampleSentence: z.string(),
-      englishTranslation: z.string(),
-    }),
-  ),
-});
+import { procedure } from "../trpc-procedure";
 
 const LANG_SPECIFIC_PROMPT: Record<string, string | undefined> = {
-  KO: "You will be severly punished for using 'dictionary form' verbs or the pronouns 그녀, 그, 당신.",
+  KO: "You will be severely punished for using 'dictionary form' verbs or the pronouns 그녀, 그, 당신.",
 };
+const MAX_TOKENS = 400;
+const REMIX_MODEL = "gpt-4o";
+const REMIX_TEMP = 0.7;
+const MAX_REMIXES = 7;
+const REMIX_SCHEMA = zodResponseFormat(
+  z.object({
+    result: z.array(
+      z.object({
+        exampleSentence: z.string(),
+        englishTranslation: z.string(),
+      }),
+    ),
+  }),
+  "remix_resp",
+);
 
-async function askGPT(
+function buildRemixPrompt(
   type: RemixTypes,
   langCode: string,
   term: string,
-  _definition: string,
-) {
-  const model = "gpt-4o";
-  const langSpecific = LANG_SPECIFIC_PROMPT[langCode.toUpperCase()] || "";
-  const content = [
+): string {
+  const langSpecific = LANG_SPECIFIC_PROMPT[langCode.toUpperCase()] ?? "";
+  return [
     "You are a language teacher.",
     "You help the student learn the language by creating 'remix' sentences using the input above.",
     "Your student is a native English speaker.",
@@ -36,35 +40,36 @@ async function askGPT(
     `INPUT: ${term}`,
     `YOUR TASK: ${RemixTypePrompts[type]}`,
   ].join("\n");
-  const resp = await openai.beta.chat.completions.parse({
-    messages: [
-      {
-        role: "assistant",
-        content,
-      },
-    ],
-    model,
-    max_tokens: 400,
-    temperature: 0.7,
-    response_format: zodResponseFormat(zodRemix, "remix_resp"),
-  });
-  const grade_response = resp.choices[0];
-  const unsorted = grade_response.message.parsed?.result || [];
-  const result = unsorted
-    .sort((a, b) => a.exampleSentence.length - b.exampleSentence.length)
-    .slice(0, 7)
-    .map((r) => {
-      return {
-        term: r.exampleSentence,
-        definition: r.englishTranslation,
-      };
-    });
-
-  console.log(content);
-  return result;
 }
-/** The `faucet` route is a mutation that returns a "Hello, world" string
- * and takes an empty object as its only argument. */
+
+async function askGPT(
+  type: RemixTypes,
+  langCode: string,
+  term: string,
+  _definition: string,
+) {
+  const content = buildRemixPrompt(type, langCode, term);
+  const response = await openai.beta.chat.completions.parse({
+    messages: [{ role: "assistant", content }],
+    model: REMIX_MODEL,
+    max_tokens: MAX_TOKENS,
+    temperature: REMIX_TEMP,
+    response_format: REMIX_SCHEMA,
+  });
+
+  const parsed = response.choices[0]?.message.parsed;
+  const unsorted = parsed?.result ?? [];
+  const sorted = unsorted.sort(
+    (a, b) => a.exampleSentence.length - b.exampleSentence.length,
+  );
+  const limited = sorted.slice(0, MAX_REMIXES);
+
+  return limited.map((item) => ({
+    term: item.exampleSentence,
+    definition: item.englishTranslation,
+  }));
+}
+
 export const remix = procedure
   .input(
     z.object({
@@ -81,13 +86,10 @@ export const remix = procedure
     ),
   )
   .mutation(async ({ input, ctx }) => {
-    // I will fill this part out, don't worry about it for now.
-    // Show it to you so you understand the schema.
-    const x = await getUserSettings(ctx.user?.id);
-    console.log(x.userId);
+    const userSettings = await getUserSettings(ctx.user?.id);
     const card = await prismaClient.card.findFirst({
       where: {
-        userId: x.userId,
+        userId: userSettings.userId,
         id: input.cardID,
       },
       orderBy: {
@@ -99,7 +101,7 @@ export const remix = procedure
       throw new Error("Card not found");
     }
 
-    return await askGPT(
+    return askGPT(
       input.type as RemixTypes,
       card.langCode,
       card.term,
