@@ -17,14 +17,14 @@ const zodRemix = z.object({
 });
 
 const LANGUAGE_SPECIFIC_ADDITIONS: Record<string, string | undefined> = {
-  KO: "Avoid using 'dictionary form' and 'plain form' verbs. Don't use the pronouns 그녀, 그, 당신.",
+  KO: "You will be severly punished for using 'dictionary form' verbs or the pronouns 그녀, 그, 당신.",
 };
 
 async function askGPT(
   type: RemixTypes,
   langCode: string,
   term: string,
-  definition: string,
+  _definition: string,
 ) {
   const model = "gpt-4o-2024-08-06";
   const temperature = 0.65;
@@ -41,7 +41,7 @@ async function askGPT(
     messages: [
       {
         role: "user",
-        content: `${langCode}: ${term} (EN: ${definition})`,
+        content: `${term}`,
       },
       {
         role: "user",
