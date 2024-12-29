@@ -5,15 +5,29 @@ import { openai } from "../openai";
 import { prismaClient } from "../prisma-client";
 import { RemixTypePrompts, RemixTypes } from "../remix-types";
 import { procedure } from "../trpc-procedure";
+import { isApprovedUser } from "../is-approved-user";
+
+interface RemixParams {
+  type: RemixTypes;
+  langCode: string;
+  term: string;
+  definition: string;
+  model: keyof typeof MODELS;
+}
+
+interface Remix {
+  term: string;
+  definition: string;
+}
 
 const LANG_SPECIFIC_PROMPT: Record<string, string> = {
   KO: "You will be severely punished for using 'dictionary form' verbs or the pronouns 그녀, 그, 당신.",
 };
 
-const MODELS = {
-  good: "o1-mini", // $12.00 / 1M output tokens
-  fast: "gpt-4o",
-  cheap: "gpt-4o-mini",
+const MODELS: Record<"good" | "fast" | "cheap", string> = {
+  good: "o1-mini", // $12.00 + $3.00 = $15.00
+  fast: "gpt-4o", // $2.50 + $10 = $12.50
+  cheap: "gpt-4o-mini" // $0.150 + $0.600 = $0.750
 };
 
 const JSON_PARSE_PROMPT = [
@@ -99,15 +113,13 @@ const processRemixes = (parsedData: {
     }));
 };
 
-const generateRemixes = async (
-  type: RemixTypes,
-  langCode: string,
-  term: string,
-  _definition: string,
-): Promise<{ term: string; definition: string }[]> => {
+// Refactored generateRemixes function
+const generateRemixes = async (input: RemixParams): Promise<Remix[]> => {
+  const { type, langCode, term, model } = input;
+  console.log(`=== Using the ${model} model.`);
   const prompt = buildRemixPrompt(type, langCode, term);
 
-  const rawText = await fetchOpenAIResponse(MODELS.good, [
+  const rawText = await fetchOpenAIResponse(MODELS[model], [
     { role: "user", content: prompt },
   ]);
 
@@ -147,10 +159,11 @@ export const remix = procedure
       throw new Error("Card not found");
     }
 
-    return generateRemixes(
-      input.type as RemixTypes,
-      card.langCode,
-      card.term,
-      card.definition,
-    );
+    return generateRemixes({
+      type: input.type as RemixTypes,
+      langCode: card.langCode,
+      term: card.term,
+      definition: card.definition,
+      model: isApprovedUser(userSettings.userId) ? "good" : "fast",
+    });
   });
