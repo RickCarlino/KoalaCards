@@ -1,32 +1,20 @@
 import { compare } from "./evaluator-utils";
 import { QuizEvaluator } from "./types";
-import { grammarCorrectionNG } from "../grammar-ng";
+import { equivalence } from "../equivalence";
+import { grammarCorrection } from "../grammar";
 
-export const speaking: QuizEvaluator = async ({ userInput, card }) => {
-  const { term, definition, langCode } = card;
+// ORDER MATTERS!:
+const CHECKS = [equivalence, grammarCorrection] as const;
+const PASS = { result: "pass", userMessage: "" } as const;
+
+export const speaking: QuizEvaluator = async (input) => {
+  const { userInput, card } = input;
+  const { term } = card;
   if (compare(userInput, term, 1)) {
     return { result: "pass", userMessage: "Exact match." };
   }
-
-  const resp = await grammarCorrectionNG({
-    definition,
-    langCode,
-    term,
-    userInput,
-  });
-
-  const userMessage = `✏️${resp.correctedSentence || ""}`;
-
-  switch (resp.grade) {
-    case "correct":
-      return { result: "pass", userMessage };
-    case "incorrect":
-    case "grammar":
-      return { result: "fail", userMessage };
-    default:
-      return {
-        result: "fail",
-        userMessage: "An error occurred. Please report this.",
-      };
-  }
+  const promises = CHECKS.map((g) => g(input));
+  // Run grammar and equivalence checks in parallel.
+  const results = await Promise.all(promises);
+  return results.find((r) => r.result === "fail") || PASS;
 };

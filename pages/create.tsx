@@ -56,17 +56,19 @@ interface State {
   cardType: string; // listening, speaking, both
 }
 
+const DEFAULT_LANG: LangCode = "ko";
+
 const INITIAL_STATE: State = {
   deckSelection: "existing",
   deckId: undefined,
   deckName: "",
-  deckLang: "ko", // default to Korean if user selects "new deck" but hasn't changed
+  deckLang: DEFAULT_LANG, // default to Korean if user selects "new deck" but hasn't changed
   rawInput: "",
   processedCards: [],
   cardType: "listening",
 };
 
-const SAMPLES: Record<LangCode, string> = {
+const SAMPLES: Partial<Record<LangCode, string>> = {
   ko: [
     "안녕하세요? (Hello, how are you?)",
     "저는 학생입니다. (I am a student.)",
@@ -180,12 +182,12 @@ function DeckStep({ decks, state, dispatch, onNext }: DeckStepProps) {
     if (value === "existing") {
       // Reset new-deck fields
       dispatch({ type: "SET_DECK_NAME", deckName: "" });
-      dispatch({ type: "SET_DECK_LANG", deckLang: "ko" });
+      dispatch({ type: "SET_DECK_LANG", deckLang: DEFAULT_LANG });
     } else {
       // Reset existing-deck fields
       dispatch({ type: "SET_DECK_ID", deckId: undefined });
       dispatch({ type: "SET_DECK_NAME", deckName: "" });
-      dispatch({ type: "SET_DECK_LANG", deckLang: "ko" });
+      dispatch({ type: "SET_DECK_LANG", deckLang: DEFAULT_LANG });
     }
   };
 
@@ -252,7 +254,7 @@ function DeckStep({ decks, state, dispatch, onNext }: DeckStepProps) {
                 dispatch({ type: "SET_DECK_LANG", deckLang: val as LangCode })
               }
               data={[
-                { value: "ko", label: "Korean" },
+                { value: DEFAULT_LANG, label: "Korean" },
                 { value: "es", label: "Spanish" },
                 { value: "it", label: "Italian" },
                 { value: "fr", label: "French" },

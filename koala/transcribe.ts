@@ -4,6 +4,7 @@ import { uid } from "radash";
 import { promisify } from "util";
 import { SafeCounter } from "./counter";
 import { openai } from "./openai";
+import { LangCode } from "./shared-types";
 
 type TranscriptionResult = { kind: "OK"; text: string } | { kind: "error" };
 
@@ -17,7 +18,7 @@ export async function transcribeB64(
   dataURI: string,
   userID: string | number,
   prompt: string,
-  language: "en" | "ko" | "es" | "fr" | "it",
+  language: LangCode,
 ): Promise<TranscriptionResult> {
   const writeFileAsync = promisify(writeFile);
   const base64Data = dataURI.split(";base64,").pop() || "";

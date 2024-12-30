@@ -5,7 +5,7 @@ import { openai } from "../openai";
 import { prismaClient } from "../prisma-client";
 import { RemixTypePrompts, RemixTypes } from "../remix-types";
 import { procedure } from "../trpc-procedure";
-import { isApprovedUser } from "../is-approved-user";
+// import { isApprovedUser } from "../is-approved-user";
 
 interface RemixParams {
   type: RemixTypes;
@@ -27,7 +27,7 @@ const LANG_SPECIFIC_PROMPT: Record<string, string> = {
 const MODELS: Record<"good" | "fast" | "cheap", string> = {
   good: "o1-mini", // $12.00 + $3.00 = $15.00
   fast: "gpt-4o", // $2.50 + $10 = $12.50
-  cheap: "gpt-4o-mini" // $0.150 + $0.600 = $0.750
+  cheap: "gpt-4o-mini", // $0.150 + $0.600 = $0.750
 };
 
 const JSON_PARSE_PROMPT = [
@@ -60,7 +60,7 @@ const buildRemixPrompt = (
     "You are a language teacher.",
     "You help the student learn a language by creating 'remix' sentences using the input above.",
     "Your student is a native English speaker.",
-    "Create 5 short, grammatically correct sentences that help the student understand the term.",
+    "Create a few short, grammatically correct sentences that help the student understand the term.",
     langSpecific,
     `INPUT: ${term}`,
     `YOUR TASK: ${RemixTypePrompts[type]}`,
@@ -164,6 +164,6 @@ export const remix = procedure
       langCode: card.langCode,
       term: card.term,
       definition: card.definition,
-      model: isApprovedUser(userSettings.userId) ? "good" : "fast",
+      model: Math.random() > 0.5 ? "good" : "fast",
     });
   });

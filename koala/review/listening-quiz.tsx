@@ -14,6 +14,7 @@ import { DifficultyButtons } from "./grade-buttons";
 import { HOTKEYS } from "./hotkeys";
 import { QuizComp } from "./types";
 import { VisualDiff } from "./visual-diff";
+import { LangCode } from "../shared-types";
 
 type Phase = "play" | "record" | "done";
 
@@ -72,7 +73,7 @@ export const ListeningQuiz: QuizComp = ({
       const base64Audio = await blobToBase64(await convertBlobToWav(audioBlob));
       const { result: transcription } = await transcribeAudio.mutateAsync({
         audio: base64Audio,
-        lang: card.langCode as "ko",
+        lang: card.langCode as LangCode,
         targetText: card.term,
       });
 

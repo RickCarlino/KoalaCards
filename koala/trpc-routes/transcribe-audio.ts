@@ -1,9 +1,9 @@
 import { z } from "zod";
-import { transcribeB64 } from "../transcribe";
-import { procedure } from "../trpc-procedure";
-import { LANG_CODES } from "./bulk-create-cards";
 import { getUserSettings } from "../auth-helpers";
 import { errorReport } from "../error-report";
+import { transcribeB64 } from "../transcribe";
+import { procedure } from "../trpc-procedure";
+import { LANG_CODES } from "../shared-types";
 
 export const transcribeAudio = procedure
   .input(
