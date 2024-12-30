@@ -16,7 +16,7 @@ export const RemixTypePrompts: Record<RemixTypes, string> = {
   [RemixTypes.TOO_LONG]:
     "The sentence is too long. Break it into smaller sub-sentences.",
   [RemixTypes.VOCAB]:
-    "Create new sentences that contain words from the original sentence.",
+    "Create one sentence in the target language for each vocabulary word in the input sentence, starting with the most advanced words first. Don't add notes or parenthesis.",
 };
 
 export const RemixTypeDescriptions: Record<RemixTypes, string> = {
