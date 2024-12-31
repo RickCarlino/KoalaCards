@@ -3,16 +3,10 @@ import { zodResponseFormat } from "openai/helpers/zod";
 import { openai } from "./openai";
 import { QuizEvaluator } from "./quiz-evaluators/types";
 import { translate } from "./translate";
+import { compare } from "./quiz-evaluators/evaluator-utils";
 
-// Define the expected structure of the grade response
-const zodGradeResponse = z.object({
-  evaluation: z.enum(["yes", "no"]),
-});
-
-// Type definition for Explanation based on Zod schema
 export type Explanation = z.infer<typeof zodGradeResponse>;
 
-// Props required for grammar correction
 type GrammarCorrectionProps = {
   term: string;
   definition: string;
@@ -20,7 +14,15 @@ type GrammarCorrectionProps = {
   userInput: string;
 };
 
-// Build the prompt for OpenAI
+const zodGradeResponse = z.object({
+  evaluation: z.enum(["yes", "no"]),
+});
+
+const PASS = {
+  result: "pass",
+  userMessage: "OK",
+} as const;
+
 const buildPrompt = (props: GrammarCorrectionProps): string =>
   [
     `### SENTENCE A: "${props.userInput}".`,
@@ -51,15 +53,23 @@ export const equivalence: QuizEvaluator = async (input) => {
   }
 
   if (gradeResponse.evaluation === "yes") {
-    return {
-      result: "pass",
-      userMessage: "OK",
-    };
+    return PASS;
   } else {
-    const englishTranslation = await translate(langCode, userInput);
-    return {
-      result: "fail",
-      userMessage: `Inccorrect response. Your sentence translates to '${englishTranslation}'.`,
-    };
+    return await handleFailure(langCode, userInput, definition);
   }
 };
+
+async function handleFailure(
+  langCode: string,
+  userInput: string,
+  definition: string,
+): Promise<{ result: "fail" | "pass"; userMessage: string }> {
+  const englishTranslation = await translate(langCode, userInput);
+  if (compare(englishTranslation, definition)) {
+    return PASS;
+  }
+  return {
+    result: "fail",
+    userMessage: `Inccorrect response. Your sentence translates to '${englishTranslation}'.`,
+  };
+}
