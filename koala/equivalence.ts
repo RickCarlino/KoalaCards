@@ -36,7 +36,6 @@ export const equivalence: QuizEvaluator = async (input) => {
   const { userInput } = input;
   const prompt = buildPrompt({ term, definition, langCode, userInput });
 
-  // compare student's answer with expected answer
   const response = await openai.beta.chat.completions.parse({
     messages: [{ role: "user", content: prompt }],
     model,
