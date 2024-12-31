@@ -18,11 +18,13 @@ import {
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { trpc } from "@/koala/trpc-config";
-import { Gender, LangCode } from "@/koala/shared-types";
+import { Gender, LangCode, supportedLanguages } from "@/koala/shared-types";
 import { GetServerSideProps } from "next";
 import { getSession } from "next-auth/react";
 import { prismaClient } from "@/koala/prisma-client";
 import { backfillDecks } from "@/koala/decks/backfill-decks";
+import { getLangName } from "@/koala/get-lang-name";
+import { draw } from "radash";
 
 type ProcessedCard = {
   term: string;
@@ -253,12 +255,12 @@ function DeckStep({ decks, state, dispatch, onNext }: DeckStepProps) {
               onChange={(val) =>
                 dispatch({ type: "SET_DECK_LANG", deckLang: val as LangCode })
               }
-              data={[
-                { value: DEFAULT_LANG, label: "Korean" },
-                { value: "es", label: "Spanish" },
-                { value: "it", label: "Italian" },
-                { value: "fr", label: "French" },
-              ]}
+              data={Object.keys(supportedLanguages)
+                .sort()
+                .map((langCode) => ({
+                  label: supportedLanguages[langCode as LangCode],
+                  value: langCode,
+                }))}
             />
           </>
         )}
@@ -284,12 +286,43 @@ interface InputStepProps {
   loading: boolean;
 }
 
+const LANG_LEARNING_THEMES = [
+  "food",
+  "travel",
+  "work",
+  "school",
+  "family",
+  "shopping",
+  "health",
+  "weather",
+  "sports",
+  "hobbies",
+  "music",
+  "movies",
+  "books",
+  "technology",
+  "nature",
+  "animals",
+  "culture",
+  "history",
+  "politics",
+  "religion",
+  "science",
+  "math",
+];
+
 function InputStep({ state, dispatch, onSubmit, loading }: InputStepProps) {
   // We now get our sample from the deckLang in state
   const pasteExample = () => {
     dispatch({
       type: "SET_RAW_INPUT",
-      rawInput: SAMPLES[state.deckLang] || "",
+      rawInput:
+        SAMPLES[state.deckLang] ||
+        `Please make 10 ${getLangName(
+          state.deckLang,
+        )} cards that help me learn vocabulary related to ${draw(
+          LANG_LEARNING_THEMES,
+        )}.`,
     });
   };
 

@@ -1,5 +1,6 @@
 import { Text } from "@mantine/core";
 import { diffWords } from "diff";
+import { stripFinalPunctuation } from "../quiz-evaluators/evaluator-utils";
 
 interface SentencecorrectionProps {
   expected: string;
@@ -12,12 +13,12 @@ export const VisualDiff: React.FC<SentencecorrectionProps> = ({
   actual,
   heading,
 }) => {
-  const stripFinalPunctuation = (str: string) => {
-    return str.replace(/[.,!?]$/, "");
-  };
   const a = stripFinalPunctuation(actual);
   const e = stripFinalPunctuation(expected);
-  const diff = diffWords(a, e);
+  const diff = diffWords(a, e, {
+    ignoreCase: true,
+    ignoreWhitespace: true,
+  });
 
   return (
     <Text>

@@ -17,9 +17,68 @@ type AudioLessonParams = {
 type LangLookTable = Record<LangCode, Record<Gender, string[]>>;
 
 const Voices: LangLookTable = {
+  ar: {
+    F: ["ar-XA-Wavenet-A", "ar-XA-Wavenet-D"], // both female
+    M: ["ar-XA-Wavenet-B", "ar-XA-Wavenet-C"], // both male
+    N: [
+      "ar-XA-Wavenet-A",
+      "ar-XA-Wavenet-B",
+      "ar-XA-Wavenet-C",
+      "ar-XA-Wavenet-D",
+    ],
+  },
+  cn: {
+    F: ["cmn-CN-Wavenet-A", "cmn-CN-Wavenet-D"],
+    M: ["cmn-CN-Wavenet-B", "cmn-CN-Wavenet-C"],
+    N: [
+      "cmn-CN-Wavenet-A",
+      "cmn-CN-Wavenet-B",
+      "cmn-CN-Wavenet-C",
+      "cmn-CN-Wavenet-D",
+    ],
+  },
+  he: {
+    F: ["he-IL-Wavenet-A", "he-IL-Wavenet-C"],
+    M: ["he-IL-Wavenet-B", "he-IL-Wavenet-D"],
+    N: [
+      "he-IL-Wavenet-A",
+      "he-IL-Wavenet-B",
+      "he-IL-Wavenet-C",
+      "he-IL-Wavenet-D",
+    ],
+  },
+  sv: {
+    F: ["sv-SE-Wavenet-A", "sv-SE-Wavenet-B", "sv-SE-Wavenet-D"],
+    M: ["sv-SE-Wavenet-C", "sv-SE-Wavenet-E"],
+    N: [
+      "sv-SE-Wavenet-A",
+      "sv-SE-Wavenet-B",
+      "sv-SE-Wavenet-C",
+      "sv-SE-Wavenet-D",
+      "sv-SE-Wavenet-E",
+    ],
+  },
+  tr: {
+    F: ["tr-TR-Wavenet-A", "tr-TR-Wavenet-C", "tr-TR-Wavenet-D"],
+    M: ["tr-TR-Wavenet-B", "tr-TR-Wavenet-E"],
+    N: [
+      "tr-TR-Wavenet-A",
+      "tr-TR-Wavenet-B",
+      "tr-TR-Wavenet-C",
+      "tr-TR-Wavenet-D",
+      "tr-TR-Wavenet-E",
+    ],
+  },
+  th: {
+    F: ["th-TH-Standard-A"],
+    M: [
+      "th-TH-Standard-A", // THIS IS NOT ACTUALLY A MALE VOICE. NO MALE OPTION AVAILABLE.
+    ],
+    N: ["th-TH-Standard-A"],
+  },
   en: {
-    F: ["en-US-Wavenet-A", "en-US-Wavenet-B"],
-    M: ["en-US-Wavenet-C", "en-US-Wavenet-D"],
+    F: ["en-US-Wavenet-C"],
+    M: ["en-US-Wavenet-A", "en-US-Wavenet-B", "en-US-Wavenet-D"],
     N: [
       "en-US-Wavenet-A",
       "en-US-Wavenet-B",
@@ -28,18 +87,8 @@ const Voices: LangLookTable = {
     ],
   },
   ko: {
-    F: [
-      "ko-KR-Wavenet-A",
-      "ko-KR-Wavenet-B",
-      "ko-KR-Wavenet-C",
-      "ko-KR-Wavenet-D",
-    ],
-    M: [
-      "ko-KR-Wavenet-A",
-      "ko-KR-Wavenet-B",
-      "ko-KR-Wavenet-C",
-      "ko-KR-Wavenet-D",
-    ],
+    F: ["ko-KR-Wavenet-A", "ko-KR-Wavenet-B"],
+    M: ["ko-KR-Wavenet-C", "ko-KR-Wavenet-D"],
     N: [
       "ko-KR-Wavenet-A",
       "ko-KR-Wavenet-B",
@@ -83,20 +132,21 @@ const Voices: LangLookTable = {
     ],
   },
   cs: {
-    F: ["cs-CZ-Wavenet-A", "cs-CZ-Wavenet-C"],
-    M: ["cs-CZ-Wavenet-B"],
-    N: ["cs-CZ-Wavenet-A", "cs-CZ-Wavenet-B", "cs-CZ-Wavenet-C"],
+    F: ["cs-CZ-Wavenet-A"],
+    M: ["cs-CZ-Wavenet-A"], // Male option unavailable.
+    N: ["cs-CZ-Wavenet-A"],
   },
   da: {
     F: ["da-DK-Wavenet-A"],
-    M: ["da-DK-Wavenet-B"],
-    N: ["da-DK-Wavenet-A", "da-DK-Wavenet-B"],
+    M: ["da-DK-Wavenet-C"],
+    N: ["da-DK-Wavenet-D", "da-DK-Wavenet-E"],
   },
   nl: {
     F: ["nl-NL-Wavenet-A"],
     M: ["nl-NL-Wavenet-B"],
     N: ["nl-NL-Wavenet-A", "nl-NL-Wavenet-B"],
   },
+  // Finnish
   fi: {
     F: ["fi-FI-Wavenet-A"],
     M: ["fi-FI-Wavenet-B"],
@@ -133,9 +183,9 @@ const Voices: LangLookTable = {
     ],
   },
   hu: {
-    F: ["hu-HU-Wavenet-A", "hu-HU-Wavenet-C"],
-    M: ["hu-HU-Wavenet-B"],
-    N: ["hu-HU-Wavenet-A", "hu-HU-Wavenet-B", "hu-HU-Wavenet-C"],
+    F: ["hu-HU-Wavenet-A"],
+    M: ["hu-HU-Wavenet-A"], // NO MALE VERSION AVAILABLE
+    N: ["hu-HU-Wavenet-A"],
   },
   id: {
     F: ["id-ID-Wavenet-A", "id-ID-Wavenet-C"],
@@ -189,8 +239,8 @@ const Voices: LangLookTable = {
   },
   ro: {
     F: ["ro-RO-Wavenet-A"],
-    M: ["ro-RO-Wavenet-B"],
-    N: ["ro-RO-Wavenet-A", "ro-RO-Wavenet-B"],
+    M: ["ro-RO-Wavenet-A"], // NO MALE VERSION AVAILABLE
+    N: ["ro-RO-Wavenet-A"],
   },
   ru: {
     F: ["ru-RU-Wavenet-A", "ru-RU-Wavenet-C"],
@@ -203,14 +253,16 @@ const Voices: LangLookTable = {
     ],
   },
   sk: {
+    // Slovak: only "sk-SK-Wavenet-A" is documented (female).
+    // So B likely doesn’t exist:
     F: ["sk-SK-Wavenet-A"],
-    M: ["sk-SK-Wavenet-B"],
-    N: ["sk-SK-Wavenet-A", "sk-SK-Wavenet-B"],
+    M: ["sk-SK-Wavenet-A"], // NO MALE VERSION AVAILABLE
+    N: ["sk-SK-Wavenet-A"],
   },
   uk: {
     F: ["uk-UA-Wavenet-A"],
-    M: ["uk-UA-Wavenet-B"],
-    N: ["uk-UA-Wavenet-A", "uk-UA-Wavenet-B"],
+    M: ["uk-UA-Wavenet-A"], // NO MALE VERSION AVAILABLE
+    N: ["uk-UA-Wavenet-A"],
   },
   vi: {
     F: ["vi-VN-Wavenet-A"],

@@ -3,7 +3,7 @@ import { zodResponseFormat } from "openai/helpers/zod";
 import { prismaClient } from "./prisma-client";
 import { getLangName } from "./get-lang-name";
 import { openai } from "./openai";
-import { compare } from "./quiz-evaluators/evaluator-utils";
+import { compare, stripFinalPunctuation } from "./quiz-evaluators/evaluator-utils";
 import { QuizEvaluator } from "./quiz-evaluators/types";
 
 export type Explanation = z.infer<typeof zodGradeResponse>;
@@ -71,7 +71,11 @@ async function checkGrammar(
   if (!gradeResponse) {
     throw new Error("Invalid response format from OpenAI.");
   }
-  if (compare(userInput, gradeResponse.correctedSentence || "", 0)) {
+
+  const l = stripFinalPunctuation(userInput).toLocaleLowerCase();
+  const r = stripFinalPunctuation(gradeResponse.correctedSentence || "").toLocaleLowerCase();
+
+  if (compare(l, r, 0)) {
     gradeResponse.grade = "correct";
   }
   await storeTrainingData(props, gradeResponse);
