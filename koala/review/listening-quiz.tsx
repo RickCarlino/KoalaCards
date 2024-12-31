@@ -228,6 +228,7 @@ const RecordPhase = ({
   ]);
   const recordingText = isRecording ? "Stop Recording" : "Begin Recording";
   const buttonLabel = isProcessing ? "Processing..." : recordingText;
+  const color = isRecording ? "red" : "blue";
   const header = isDictation
     ? `Repeat the Phrase: ${term}`
     : "Repeat the Phrase Without Reading";
@@ -237,7 +238,7 @@ const RecordPhase = ({
         <Text size="xl">{header}</Text>
       </Center>
       {userInput ? <VisualDiff expected={term} actual={userInput} /> : ""}
-      <Button onClick={onRecordClick} disabled={isProcessing}>
+      <Button color={color} onClick={onRecordClick} disabled={isProcessing}>
         {buttonLabel}
       </Button>
       <Button onClick={onPlayClick}>Play Audio Again</Button>

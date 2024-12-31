@@ -2,6 +2,7 @@ import { z } from "zod";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { openai } from "./openai";
 import { QuizEvaluator } from "./quiz-evaluators/types";
+import { translate } from "./translate";
 
 // Define the expected structure of the grade response
 const zodGradeResponse = z.object({
@@ -31,13 +32,11 @@ const buildPrompt = (props: GrammarCorrectionProps): string =>
 // Main function for grammar correction
 export const equivalence: QuizEvaluator = async (input) => {
   const model = "gpt-4o-mini";
-  const prompt = buildPrompt({
-    term: input.card.term,
-    definition: input.card.definition,
-    langCode: input.card.langCode,
-    userInput: input.userInput,
-  });
+  const { term, definition, langCode } = input.card;
+  const { userInput } = input;
+  const prompt = buildPrompt({ term, definition, langCode, userInput });
 
+  // compare student's answer with expected answer
   const response = await openai.beta.chat.completions.parse({
     messages: [{ role: "user", content: prompt }],
     model,
@@ -58,9 +57,10 @@ export const equivalence: QuizEvaluator = async (input) => {
       userMessage: "OK",
     };
   } else {
+    const englishTranslation = await translate(langCode, userInput);
     return {
       result: "fail",
-      userMessage: "Not equivalent.",
+      userMessage: `Inccorrect response. Your sentence translates to '${englishTranslation}'.`,
     };
   }
 };

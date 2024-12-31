@@ -70,37 +70,6 @@ const INITIAL_STATE: State = {
   cardType: "listening",
 };
 
-const SAMPLES: Partial<Record<LangCode, string>> = {
-  ko: [
-    "안녕하세요? (Hello, how are you?)",
-    "저는 학생입니다. (I am a student.)",
-    "한국어를 배우고 있어요. (I am learning Korean.)",
-    "감사합니다! (Thank you!)",
-    "이것은 얼마입니까? (How much is this?)",
-  ].join("\n"),
-  es: [
-    "¿Cómo estás? (How are you?)",
-    "Soy profesor. (I am a teacher.)",
-    "Estoy aprendiendo español. (I am learning Spanish.)",
-    "¡Muchas gracias! (Thank you very much!)",
-    "¿Cuánto cuesta esto? (How much does this cost?)",
-  ].join("\n"),
-  it: [
-    "Come stai? (How are you?)",
-    "Sono uno studente. (I am a student.)",
-    "Sto imparando l'italiano. (I am learning Italian.)",
-    "Grazie mille! (Thank you very much!)",
-    "Quanto costa questo? (How much does this cost?)",
-  ].join("\n"),
-  fr: [
-    "Comment ça va ? (How are you?)",
-    "Je suis enseignant. (I am a teacher.)",
-    "J'apprends le français. (I am learning French.)",
-    "Merci beaucoup ! (Thank you very much!)",
-    "Combien coûte ceci ? (How much does this cost?)",
-  ].join("\n"),
-};
-
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case "ADD_CARD":
@@ -314,15 +283,11 @@ const LANG_LEARNING_THEMES = [
 function InputStep({ state, dispatch, onSubmit, loading }: InputStepProps) {
   // We now get our sample from the deckLang in state
   const pasteExample = () => {
+    const lang = getLangName(state.deckLang);
+    const theme = draw(LANG_LEARNING_THEMES);
     dispatch({
       type: "SET_RAW_INPUT",
-      rawInput:
-        SAMPLES[state.deckLang] ||
-        `Please make 10 ${getLangName(
-          state.deckLang,
-        )} cards that help me learn vocabulary related to ${draw(
-          LANG_LEARNING_THEMES,
-        )}.`,
+      rawInput: `Please make 10 ${lang} example sentences related to ${theme}.`,
     });
   };
 
