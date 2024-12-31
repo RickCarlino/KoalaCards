@@ -27,6 +27,7 @@ export const decksWithReviewInfo: QueryFn = async (userId: string) => {
         gt: 0,
       },
       Card: {
+        flagged: false,
         Deck: {
           userId: userId,
         },
