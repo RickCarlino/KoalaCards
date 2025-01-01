@@ -1,10 +1,10 @@
 import { compare } from "./evaluator-utils";
 import { QuizEvaluator } from "./types";
 import { equivalence } from "../equivalence";
-import { grammarCorrection } from "../grammar";
+import { grammarCorrectionNG } from "../grammar-ng";
 
 // ORDER MATTERS!:
-const CHECKS = [equivalence, grammarCorrection] as const;
+const CHECKS = [equivalence, grammarCorrectionNG] as const;
 const PASS = { result: "pass", userMessage: "" } as const;
 
 export const speaking: QuizEvaluator = async (input) => {
@@ -14,7 +14,12 @@ export const speaking: QuizEvaluator = async (input) => {
     return { result: "pass", userMessage: "Exact match." };
   }
   const promises = CHECKS.map((g) => g(input));
-  // Run grammar and equivalence checks in parallel.
-  const results = await Promise.all(promises);
-  return results.find((r) => r.result === "fail") || PASS;
+  // Run grammar and equivalence checks in sequence:
+  for (const promise of promises) {
+    const result = await promise;
+    if (result.result === "fail") {
+      return result;
+    }
+  }
+  return PASS;
 };

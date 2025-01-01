@@ -12,12 +12,19 @@ import {
 import { TrainingData } from "@prisma/client";
 import { GetServerSideProps } from "next/types";
 import { getServersideUser } from "@/koala/get-serverside-user";
+import { VisualDiff } from "@/koala/review/visual-diff";
 
 interface TrainProps {
   data: TrainingData[];
   totalPages: number;
   page: number;
 }
+
+const NULL_TABLE = (
+  <Text fw="bold" ta="center">
+    No data found.
+  </Text>
+);
 
 export default function Train({ data, totalPages, page }: TrainProps) {
   const router = useRouter();
@@ -33,47 +40,7 @@ export default function Train({ data, totalPages, page }: TrainProps) {
       <Title order={2}>Training Data</Title>
       <Space h="md" />
       <Paper shadow="md" radius="md" withBorder p="md">
-        {data.length === 0 ? (
-          <Text fw="bold" ta="center">
-            No data found.
-          </Text>
-        ) : (
-          <Table striped highlightOnHover withColumnBorders>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>ID</Table.Th>
-                <Table.Th>Lang</Table.Th>
-                <Table.Th>Time</Table.Th>
-                <Table.Th>Definition</Table.Th>
-                <Table.Th>Expected</Table.Th>
-                <Table.Th>Actual</Table.Th>
-                <Table.Th>Correction</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {data.map((trainingData) => (
-                <Table.Tr
-                  key={trainingData.id}
-                  style={{
-                    color: trainingData.yesNo === "no" ? "orange" : "",
-                  }}
-                >
-                  <Table.Td>{trainingData.id}</Table.Td>
-                  <Table.Td>{trainingData.langCode}</Table.Td>
-                  <Table.Td>
-                    {new Date(trainingData.createdAt).toLocaleDateString(
-                      "en-US",
-                    )}
-                  </Table.Td>
-                  <Table.Td>{trainingData.definition}</Table.Td>
-                  <Table.Td>{trainingData.term}</Table.Td>
-                  <Table.Td>{trainingData.userInput}</Table.Td>
-                  <Table.Td>{trainingData.explanation}</Table.Td>
-                </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
-        )}
+        {data.length === 0 ? NULL_TABLE : table(data)}
       </Paper>
       <Space h="md" />
       <Pagination value={page} onChange={onPageChange} total={totalPages} />
@@ -138,3 +105,52 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
     },
   };
 };
+function table(data: TrainingData[]): React.ReactNode {
+  return (
+    <Table striped highlightOnHover withColumnBorders>
+      <Table.Thead>
+        <Table.Tr>
+          <Table.Th>ID</Table.Th>
+          <Table.Th>Lang</Table.Th>
+          <Table.Th>Time</Table.Th>
+          <Table.Th>Definition</Table.Th>
+          <Table.Th>Expected</Table.Th>
+          <Table.Th>Corrected</Table.Th>
+        </Table.Tr>
+      </Table.Thead>
+      <Table.Tbody>
+        {data.map((trainingData) => {
+          const {
+            id,
+            langCode,
+            createdAt,
+            definition,
+            term,
+            userInput,
+            explanation,
+            yesNo,
+          } = trainingData;
+          return (
+            <Table.Tr
+              key={id}
+              style={{
+                color: yesNo === "no" ? "orange" : "",
+              }}
+            >
+              <Table.Td>{id}</Table.Td>
+              <Table.Td>{langCode}</Table.Td>
+              <Table.Td>
+                {new Date(createdAt).toLocaleDateString("en-US")}{" "}
+              </Table.Td>
+              <Table.Td>{definition}</Table.Td>
+              <Table.Td>{term}</Table.Td>
+              <Table.Td>
+                <VisualDiff expected={userInput} actual={explanation} />
+              </Table.Td>
+            </Table.Tr>
+          );
+        })}
+      </Table.Tbody>
+    </Table>
+  );
+}
