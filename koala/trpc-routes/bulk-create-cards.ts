@@ -2,13 +2,7 @@ import { z } from "zod";
 import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc-procedure";
 import { backfillDecks } from "../decks/backfill-decks";
-
-export const LANG_CODES = z.union([
-  z.literal("es"),
-  z.literal("fr"),
-  z.literal("it"),
-  z.literal("ko"),
-]);
+import { LANG_CODES } from "../shared-types";
 
 export const bulkCreateCards = procedure
   .input(

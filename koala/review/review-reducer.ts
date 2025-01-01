@@ -120,7 +120,7 @@ export function reviewReducer(state: ReviewState, action: Action): ReviewState {
       return handleUpdateAudioUrl(state, action);
     case "NEXT_QUIZ":
       return handleNextQuiz(state);
-    case "FLAG_CURRENT_CARD":
+    case "PAUSE_CURRENT_CARD":
       return handleFlagCurrentCard(state);
     default:
       return state;

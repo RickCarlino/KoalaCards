@@ -2,6 +2,7 @@ import {
   decksWithReviewInfo,
   DeckWithReviewInfo,
 } from "@/koala/decks/decks-with-review-info";
+import { getServersideUser } from "@/koala/get-serverside-user";
 import Link from "next/link";
 import { GetServerSideProps } from "next/types";
 
@@ -12,7 +13,6 @@ type ReviewPageProps = {
 export const getServerSideProps: GetServerSideProps<ReviewPageProps> = async (
   context,
 ) => {
-  const { prismaClient } = await import("@/koala/prisma-client");
   const { getSession } = await import("next-auth/react");
   const session = await getSession(context);
 
@@ -20,11 +20,7 @@ export const getServerSideProps: GetServerSideProps<ReviewPageProps> = async (
     return { redirect: { destination: "/api/auth/signin", permanent: false } };
   }
 
-  const dbUser = await prismaClient.user.findUnique({
-    where: {
-      email: session.user.email ?? undefined,
-    },
-  });
+  const dbUser = await getServersideUser(context);
 
   if (!dbUser) {
     return { redirect: { destination: "/api/auth/signin", permanent: false } };

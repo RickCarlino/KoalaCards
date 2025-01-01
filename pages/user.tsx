@@ -9,6 +9,7 @@ import {
   Group,
   NumberInput,
   Paper,
+  Radio,
   Stack,
   Text,
   Title,
@@ -16,7 +17,7 @@ import {
 import { notifications } from "@mantine/notifications";
 import { UnwrapPromise } from "@prisma/client/runtime/library";
 import { GetServerSidePropsContext } from "next";
-import { getSession } from "next-auth/react";
+import { getSession, signOut } from "next-auth/react";
 import React, { useState } from "react";
 
 const ONE_DAY = 24 * 60 * 60 * 1000;
@@ -112,7 +113,7 @@ export default function UserSettingsPage(props: Props) {
   const lr = trpc.levelReviews.useMutation();
 
   const handleChange = (value: number | string, name: string) => {
-    setSettings({ ...settings, [name]: parseFloat("" + value) });
+    setSettings({ ...settings, [name]: parseFloat(String(value)) });
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -180,18 +181,19 @@ export default function UserSettingsPage(props: Props) {
                 required
               />
 
-              <NumberInput
-                label="User audio playback sampling rate"
-                description="Use this to hear your voice and review your pronounciation. It's the percentage of user recorded audio played back after a speaking test (0 - 1)"
+              <Radio.Group
+                label="Playback your voice after recording?"
+                description="Listening to your own voice is a good way to improve pronunciation"
                 id="playbackPercentage"
                 name="playbackPercentage"
-                value={settings.playbackPercentage}
+                value={String(settings.playbackPercentage)}
                 onChange={(value) => handleChange(value, "playbackPercentage")}
-                min={0}
-                max={1}
-                step={0.05}
                 required
-              />
+              >
+                <Radio value="1" label="Always" />
+                <Radio value="0.125" label="Sometimes" />
+                <Radio value="0" label="Never" />
+              </Radio.Group>
 
               <Group justify="flex-end" mt="md">
                 <Button type="submit">Save Settings</Button>
@@ -219,6 +221,17 @@ export default function UserSettingsPage(props: Props) {
         </Stack>
 
         <Stack gap="md">
+          <Card withBorder shadow="xs" p="md" radius="md">
+            <Button
+              onClick={(event) => {
+                event.preventDefault();
+                signOut();
+                location.assign("/");
+              }}
+            >
+              Log Out
+            </Button>
+          </Card>
           <Title order={2}>Level Reviews</Title>
           <Text size="sm">
             If you have too many cards due, you can level your review schedule.

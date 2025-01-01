@@ -59,7 +59,7 @@ export interface ReviewState {
 // Define the possible actions
 export type LoadQuizzesAction = { type: "LOAD_QUIZZES"; quizzes: Quiz[] };
 export type SetGradeAction = { type: "SET_GRADE"; grade: Grade; quizId: number };
-export type FlagCurrentCardAction = { type: "FLAG_CURRENT_CARD" };
+export type PauseCurrentCardAction = { type: "PAUSE_CURRENT_CARD" };
 export type ServerFeedbackAction = {
   type: "SERVER_FEEDBACK";
   quizId: number;
@@ -73,7 +73,7 @@ export type UpdateAudioUrlAction = { type: "UPDATE_AUDIO_URL"; quizId: number; a
 export type Action =
   | LoadQuizzesAction
   | SetGradeAction
-  | FlagCurrentCardAction
+  | PauseCurrentCardAction
   | ServerFeedbackAction
   | NextQuizAction
   | UpdateAudioUrlAction;

@@ -18,11 +18,15 @@ import {
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { trpc } from "@/koala/trpc-config";
-import { Gender, LangCode } from "@/koala/shared-types";
+import { Gender, LangCode, supportedLanguages } from "@/koala/shared-types";
 import { GetServerSideProps } from "next";
 import { getSession } from "next-auth/react";
 import { prismaClient } from "@/koala/prisma-client";
 import { backfillDecks } from "@/koala/decks/backfill-decks";
+import { getLangName } from "@/koala/get-lang-name";
+import { draw } from "radash";
+import { getServersideUser } from "@/koala/get-serverside-user";
+import { useRouter } from "next/router";
 
 type ProcessedCard = {
   term: string;
@@ -56,45 +60,16 @@ interface State {
   cardType: string; // listening, speaking, both
 }
 
+const DEFAULT_LANG: LangCode = "ko";
+
 const INITIAL_STATE: State = {
   deckSelection: "existing",
   deckId: undefined,
   deckName: "",
-  deckLang: "ko", // default to Korean if user selects "new deck" but hasn't changed
+  deckLang: DEFAULT_LANG, // default to Korean if user selects "new deck" but hasn't changed
   rawInput: "",
   processedCards: [],
   cardType: "listening",
-};
-
-const SAMPLES: Record<LangCode, string> = {
-  ko: [
-    "안녕하세요? (Hello, how are you?)",
-    "저는 학생입니다. (I am a student.)",
-    "한국어를 배우고 있어요. (I am learning Korean.)",
-    "감사합니다! (Thank you!)",
-    "이것은 얼마입니까? (How much is this?)",
-  ].join("\n"),
-  es: [
-    "¿Cómo estás? (How are you?)",
-    "Soy profesor. (I am a teacher.)",
-    "Estoy aprendiendo español. (I am learning Spanish.)",
-    "¡Muchas gracias! (Thank you very much!)",
-    "¿Cuánto cuesta esto? (How much does this cost?)",
-  ].join("\n"),
-  it: [
-    "Come stai? (How are you?)",
-    "Sono uno studente. (I am a student.)",
-    "Sto imparando l'italiano. (I am learning Italian.)",
-    "Grazie mille! (Thank you very much!)",
-    "Quanto costa questo? (How much does this cost?)",
-  ].join("\n"),
-  fr: [
-    "Comment ça va ? (How are you?)",
-    "Je suis enseignant. (I am a teacher.)",
-    "J'apprends le français. (I am learning French.)",
-    "Merci beaucoup ! (Thank you very much!)",
-    "Combien coûte ceci ? (How much does this cost?)",
-  ].join("\n"),
 };
 
 function reducer(state: State, action: Action): State {
@@ -180,12 +155,12 @@ function DeckStep({ decks, state, dispatch, onNext }: DeckStepProps) {
     if (value === "existing") {
       // Reset new-deck fields
       dispatch({ type: "SET_DECK_NAME", deckName: "" });
-      dispatch({ type: "SET_DECK_LANG", deckLang: "ko" });
+      dispatch({ type: "SET_DECK_LANG", deckLang: DEFAULT_LANG });
     } else {
       // Reset existing-deck fields
       dispatch({ type: "SET_DECK_ID", deckId: undefined });
       dispatch({ type: "SET_DECK_NAME", deckName: "" });
-      dispatch({ type: "SET_DECK_LANG", deckLang: "ko" });
+      dispatch({ type: "SET_DECK_LANG", deckLang: DEFAULT_LANG });
     }
   };
 
@@ -225,7 +200,7 @@ function DeckStep({ decks, state, dispatch, onNext }: DeckStepProps) {
             value={state.deckId ? String(state.deckId) : null}
             onChange={(val) => handleExistingDeckChange(Number(val))}
             data={decks.map((d) => ({
-              label: `${d.name} (${d.langCode.toUpperCase()})`,
+              label: `${d.name} (${getLangName(d.langCode)})`,
               value: String(d.id),
             }))}
           />
@@ -251,12 +226,12 @@ function DeckStep({ decks, state, dispatch, onNext }: DeckStepProps) {
               onChange={(val) =>
                 dispatch({ type: "SET_DECK_LANG", deckLang: val as LangCode })
               }
-              data={[
-                { value: "ko", label: "Korean" },
-                { value: "es", label: "Spanish" },
-                { value: "it", label: "Italian" },
-                { value: "fr", label: "French" },
-              ]}
+              data={Object.keys(supportedLanguages)
+                .sort()
+                .map((langCode) => ({
+                  label: supportedLanguages[langCode as LangCode],
+                  value: langCode,
+                }))}
             />
           </>
         )}
@@ -282,27 +257,62 @@ interface InputStepProps {
   loading: boolean;
 }
 
+const LANG_LEARNING_THEMES = [
+  "food",
+  "travel",
+  "work",
+  "school",
+  "family",
+  "shopping",
+  "health",
+  "weather",
+  "sports",
+  "hobbies",
+  "music",
+  "movies",
+  "books",
+  "technology",
+  "nature",
+  "animals",
+  "culture",
+  "history",
+  "science",
+  "math",
+  "computers",
+  "humor",
+];
+
 function InputStep({ state, dispatch, onSubmit, loading }: InputStepProps) {
+  const exampleText = () => {
+    const lang = getLangName(state.deckLang);
+    const theme = draw(LANG_LEARNING_THEMES);
+    return `Please make 10 ${lang} example sentences related to ${theme}.`;
+  };
+
   // We now get our sample from the deckLang in state
   const pasteExample = () => {
     dispatch({
       type: "SET_RAW_INPUT",
-      rawInput: SAMPLES[state.deckLang] || "",
+      rawInput: exampleText(),
     });
   };
 
   return (
     <Paper withBorder p="md" radius="md">
       <Flex direction="column" gap="md">
-        <Title order={3}>Step 2: Input Your Content</Title>
+        <Title order={3}>Step 2: Input Your Learning Material</Title>
         <div style={{ fontSize: 14, color: "gray" }}>
-          Paste your raw text input. This can be plain sentences, CSV, TSV, or
-          JSON. If you need help, try the example input.
+          Paste your notes or target language phrases here. If you don't know
+          what to learn, try an example by clicking the button.
         </div>
+
+        <Button size="sm" onClick={pasteExample}>
+          Don't know what to write? Try an example.
+        </Button>
 
         <Textarea
           label="Raw Input"
-          placeholder="Paste sentences or data here..."
+          placeholder={exampleText()}
           minRows={10}
           maxRows={10}
           autosize
@@ -314,10 +324,6 @@ function InputStep({ state, dispatch, onSubmit, loading }: InputStepProps) {
             })
           }
         />
-
-        <Button variant="subtle" size="xs" onClick={pasteExample}>
-          Paste Example Input
-        </Button>
 
         <Radio.Group
           label="Card Type"
@@ -454,11 +460,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     return { redirect: { destination: "/api/auth/signin", permanent: false } };
   }
 
-  const dbUser = await prismaClient.user.findUnique({
-    where: {
-      email: session.user.email ?? undefined,
-    },
-  });
+  const dbUser = await getServersideUser(context);
 
   if (!dbUser) {
     return { redirect: { destination: "/api/auth/signin", permanent: false } };
@@ -495,9 +497,15 @@ type LanguageInputPageProps = {
 
 const LanguageInputPage = (props: LanguageInputPageProps) => {
   const { decks } = props;
-  const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
+  const [state, dispatch] = useReducer(reducer, {
+    ...INITIAL_STATE,
+    // Improve first time user experience:
+    deckLang: (decks?.[0]?.langCode as LangCode) || INITIAL_STATE.deckLang,
+    deckSelection: decks.length > 0 ? "existing" : "new",
+  });
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const parseCards = trpc.parseCards.useMutation();
   const bulkCreateCards = trpc.bulkCreateCards.useMutation();
@@ -554,6 +562,7 @@ const LanguageInputPage = (props: LanguageInputPageProps) => {
         message: "Your cards have been created successfully!",
         color: "green",
       });
+      router.push("/review");
     } catch (error) {
       handleError(error);
     } finally {

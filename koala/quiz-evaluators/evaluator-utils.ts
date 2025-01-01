@@ -55,6 +55,10 @@ export function levenshtein(a: string, b: string): number {
   return matrix[bn][an];
 }
 
+export const stripFinalPunctuation = (str: string) => {
+  return str.replace(/[.,!?]$/, "");
+};
+
 export function strip(input: string): string {
   // This regex matches any punctuation, space, or number
   // \p{P} matches any kind of punctuation character

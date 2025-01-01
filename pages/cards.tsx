@@ -3,9 +3,9 @@ import { CardTable } from "@/koala/card-table";
 import { trpc } from "@/koala/trpc-config";
 import { Button, Container, Select, Group, Text } from "@mantine/core";
 import { prismaClient } from "@/koala/prisma-client";
-import { getSession } from "next-auth/react";
 import { useRouter } from "next/router";
 import { useState, useEffect, FormEvent } from "react";
+import { getServersideUser } from "@/koala/get-serverside-user";
 
 type CardRecord = {
   id: number;
@@ -26,7 +26,7 @@ type EditProps = {
 const SORT_OPTIONS = [
   { label: "Date Created", value: "createdAt" },
   { label: "Definition", value: "definition" },
-  { label: "Flag Status", value: "flagged" },
+  { label: "Paused", value: "flagged" },
   { label: "Language", value: "langCode" },
   { label: "Term", value: "term" },
 ];
@@ -39,10 +39,7 @@ const ORDER_OPTIONS = [
 const ITEMS_PER_PAGE = 32;
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
-  const session = await getSession(ctx);
-  const dbUser = await prismaClient.user.findUnique({
-    where: { email: session?.user?.email ?? "" + Math.random() },
-  });
+  const dbUser = await getServersideUser(ctx);
   const userId = dbUser?.id;
 
   if (!userId) {
@@ -111,7 +108,7 @@ export default function Edit({
   page,
   totalPages,
 }: EditProps) {
-  const deleteFlagged = trpc.deleteFlaggedCards.useMutation();
+  const deleteFlagged = trpc.deletePausedCards.useMutation();
   const router = useRouter();
 
   const [currentSortBy, setCurrentSortBy] = useState(sortBy);
@@ -122,8 +119,8 @@ export default function Edit({
     setCurrentSortOrder(sortOrder);
   }, [sortBy, sortOrder]);
 
-  const handleDeleteFlagged = async () => {
-    if (confirm("Are you sure you want to delete all flagged cards?")) {
+  const handleDeletePaused = async () => {
+    if (confirm("Are you sure you want to delete all paused cards?")) {
       await deleteFlagged.mutateAsync({});
       location.reload();
     }
@@ -182,8 +179,8 @@ export default function Edit({
           />
           <Button type="submit">Search</Button>
           {Pagination}
-          <Button color="red" onClick={handleDeleteFlagged}>
-            Delete Flagged Cards
+          <Button color="red" onClick={handleDeletePaused}>
+            Delete Paused Cards
           </Button>
         </Group>
       </form>

@@ -14,6 +14,7 @@ import { DifficultyButtons } from "./grade-buttons";
 import { HOTKEYS } from "./hotkeys";
 import { QuizComp } from "./types";
 import { VisualDiff } from "./visual-diff";
+import { LangCode } from "../shared-types";
 
 type Phase = "play" | "record" | "done";
 
@@ -72,7 +73,7 @@ export const ListeningQuiz: QuizComp = ({
       const base64Audio = await blobToBase64(await convertBlobToWav(audioBlob));
       const { result: transcription } = await transcribeAudio.mutateAsync({
         audio: base64Audio,
-        lang: card.langCode as "ko",
+        lang: card.langCode as LangCode,
         targetText: card.term,
       });
 
@@ -107,7 +108,13 @@ export const ListeningQuiz: QuizComp = ({
     }
   }
 
-  const handleFailClick = () => {
+  const handleFailClick = async () => {
+    await playAudio(card.termAudio);
+    await playAudio(card.definitionAudio);
+    await playAudio(card.termAudio);
+    await playAudio(card.definitionAudio);
+    await playAudio(card.termAudio);
+
     onGraded(Grade.AGAIN);
     onComplete({
       status: "fail",
@@ -227,6 +234,7 @@ const RecordPhase = ({
   ]);
   const recordingText = isRecording ? "Stop Recording" : "Begin Recording";
   const buttonLabel = isProcessing ? "Processing..." : recordingText;
+  const color = isRecording ? "red" : "blue";
   const header = isDictation
     ? `Repeat the Phrase: ${term}`
     : "Repeat the Phrase Without Reading";
@@ -236,7 +244,7 @@ const RecordPhase = ({
         <Text size="xl">{header}</Text>
       </Center>
       {userInput ? <VisualDiff expected={term} actual={userInput} /> : ""}
-      <Button onClick={onRecordClick} disabled={isProcessing}>
+      <Button color={color} onClick={onRecordClick} disabled={isProcessing}>
         {buttonLabel}
       </Button>
       <Button onClick={onPlayClick}>Play Audio Again</Button>

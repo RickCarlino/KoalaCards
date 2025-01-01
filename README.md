@@ -2,6 +2,13 @@
 
 I host a demo instance of the app [here](https://app.koala.cards/user) but please keep in mind I may **turn off the server during peak usage** to reduce costs. I have set up a [Patreon](https://www.patreon.com/rickcarlino) to help offset hosting costs. Please consider donating if you find the app useful.
 
+## Officially Supported Languages
+Korean, French, Italian, Spanish,
+
+## Supported, But Untested/Limited Support
+
+Arabic, Catalan, Chinese, Czech, Danish, Dutch, English, Finnish, Galician, German, Greek, Gujarati, Hebrew, Hindi, Hungarian, Indonesian, Japanese, Kannada, Latvian, Lithuanian, Malay, Marathi, Norwegian, Polish, Portuguese, Punjabi, Romanian, Russian, Serbian, Slovak, Swedish, Thai, Turkish, Ukrainian, Vietnamese,
+
 # KoalaCards 🐨
 
 <p align="center">

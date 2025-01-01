@@ -1,8 +1,8 @@
 import { createCardsFromText } from "@/koala/create-cards-from-text";
 import { z } from "zod";
 import { procedure } from "../trpc-procedure";
-import { LANG_CODES } from "./bulk-create-cards";
 import { errorReport } from "../error-report";
+import { LANG_CODES } from "../shared-types";
 
 export const parseCards = procedure
   .input(

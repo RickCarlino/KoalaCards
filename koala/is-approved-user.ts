@@ -9,9 +9,15 @@ const superUsers = (process.env.AUTHORIZED_EMAILS || "")
 
 let approvedUserIDs: Set<string> = new Set();
 
-(() =>
-  prismaClient.user.findMany({}).then((users) => {
-    users.map((user) => {
+export const isApprovedUser = (id: string) => {
+  const env = (process.env.NODE_ENV || "dev").toUpperCase();
+
+  return approvedUserIDs.has(id) || !env.includes("prod");
+};
+
+(async () =>
+  prismaClient.user.findMany({}).then(async (users) => {
+    users.map(async (user) => {
       const { email, /*id,*/ lastSeen } = user;
       const su = email && superUsers.includes(email);
       if (su) {
@@ -21,9 +27,18 @@ let approvedUserIDs: Set<string> = new Set();
         ? Math.floor((Date.now() - lastSeen.getTime()) / (1000 * 60 * 60 * 24))
         : 0;
       if (lastSeenDays < 93) {
-        console.log(
-          `=== ${su ? "Super" : "Normal"} user: ${email} (${lastSeenDays} days ago)`,
-        );
+        const cardCount = await prismaClient.card.count({
+          where: {
+            userId: user.id,
+          },
+        });
+        if (cardCount > 1) {
+          console.log(
+            `=== ${
+              su ? "Super" : "Normal"
+            } user: ${email} (${lastSeenDays} days ago)`,
+          );
+        }
       } else {
         // prismaClient.user.delete({ where: { id } }).then(() => {
         //   console.log(`=== Deleted user: ${email}`);
@@ -31,7 +46,3 @@ let approvedUserIDs: Set<string> = new Set();
       }
     });
   }))();
-
-export const isApprovedUser = (id: string) => {
-  return approvedUserIDs.has(id);
-};

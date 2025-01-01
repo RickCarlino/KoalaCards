@@ -12,6 +12,7 @@ import { FailButton } from "./fail-button";
 import { DifficultyButtons } from "./grade-buttons";
 import { HOTKEYS } from "./hotkeys";
 import { QuizComp } from "./types";
+import { LangCode } from "../shared-types";
 
 export const SpeakingQuiz: QuizComp = (props) => {
   const { quiz: card } = props;
@@ -22,7 +23,7 @@ export const SpeakingQuiz: QuizComp = (props) => {
   const voiceRecorder = useVoiceRecorder(handleRecordingResult);
   const { playbackPercentage } = useUserSettings();
   useEffect(() => {
-    playFX("speaking-beep.wav");
+    playFX("/speaking-beep.wav");
   }, [card.term]);
   const handleRecordClick = () => {
     if (isRecording) {
@@ -47,7 +48,7 @@ export const SpeakingQuiz: QuizComp = (props) => {
       .mutateAsync({
         audio: base64Audio,
         targetText: card.term,
-        lang: card.langCode as "ko", // e.g., "ko" for Korean
+        lang: card.langCode as LangCode,
       })
       .then(({ result: userTranscription }) => {
         gradeSpeakingQuiz
