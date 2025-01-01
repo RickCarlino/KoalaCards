@@ -497,7 +497,12 @@ type LanguageInputPageProps = {
 
 const LanguageInputPage = (props: LanguageInputPageProps) => {
   const { decks } = props;
-  const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
+  const [state, dispatch] = useReducer(reducer, {
+    ...INITIAL_STATE,
+    // Improve first time user experience:
+    deckLang: (decks?.[0]?.langCode as LangCode) || INITIAL_STATE.deckLang,
+    deckSelection: decks.length > 0 ? "existing" : "new",
+  });
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const router = useRouter();

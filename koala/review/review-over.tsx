@@ -64,7 +64,7 @@ export const ReviewOver = ({
         style={{ width: "80%" }}
       >
         <Stack>
-          <Title order={2}>Finalize Review</Title>
+          <Title order={2}>Save Progress</Title>
           <Alert color="red">
             Closing the browser tab early will cause changes to be lost. Please
             finalize your review.

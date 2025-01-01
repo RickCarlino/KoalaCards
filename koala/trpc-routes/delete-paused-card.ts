@@ -3,7 +3,7 @@ import { procedure } from "../trpc-procedure";
 import { getUserSettings } from "../auth-helpers";
 import { prismaClient } from "../prisma-client";
 
-export const deleteFlaggedCards = procedure
+export const deletePausedCards = procedure
   .input(z.object({}))
   .mutation(async ({ ctx }) => {
     const userId = (await getUserSettings(ctx.user?.id)).user.id;

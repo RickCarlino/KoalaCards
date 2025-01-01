@@ -89,12 +89,12 @@ describe("reviewReducer", () => {
     expect(newState.currentQuizIndex).toBe(1);
   });
 
-  it("should handle FLAG_CURRENT_CARD", () => {
+  it("should handle PAUSE_CURRENT_CARD", () => {
     const state = createState([
       createQuiz(1, "term1", "definition1"),
       createQuiz(2, "term2", "definition2"),
     ]);
-    const action: Action = { type: "FLAG_CURRENT_CARD" };
+    const action: Action = { type: "PAUSE_CURRENT_CARD" };
     const newState = reviewReducer(state, action);
     expect(newState.quizzes.length).toBe(1);
     expect(newState.quizzes[0].quiz.quizId).toBe(2);

@@ -2,11 +2,11 @@ import { router } from "../trpc-procedure";
 import { bulkCreateCards } from "./bulk-create-cards";
 import { createRemixCards } from "./create-remix-cards";
 import { deleteCard } from "./delete-card";
-import { deleteFlaggedCards } from "./delete-flagged-card";
+import { deletePausedCards } from "./delete-paused-card";
 import { editCard } from "./edit-card";
 import { editUserSettings } from "./edit-user-settings";
 import { faucet } from "./faucet";
-import { flagCard } from "./flag-card";
+import { pauseCard } from "./pause-card";
 import { getNextQuizzes } from "./get-next-quizzes";
 import { getUserSettings } from "./get-user-settings";
 import { gradeQuiz } from "./grade-quiz";
@@ -19,11 +19,11 @@ import { transcribeAudio } from "./transcribe-audio";
 export const appRouter = router({
   bulkCreateCards,
   deleteCard,
-  deleteFlaggedCards,
+  deletePausedCards,
   editCard,
   editUserSettings,
   faucet,
-  flagCard,
+  pauseCard,
   getNextQuizzes,
   getUserSettings,
   gradeQuiz,

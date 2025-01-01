@@ -82,7 +82,7 @@ function Card({ cardData }: CardData) {
               {...form.getInputProps("definition")}
             />
             <Checkbox
-              label="Flag this card"
+              label="Pause reviews of this card"
               {...form.getInputProps("flagged", { type: "checkbox" })}
             />
             <Flex justify="space-between" mt="md" gap="md">

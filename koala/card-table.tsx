@@ -47,14 +47,13 @@ function CardRow({ card, onDelete }: CardRowProps) {
         <td></td>
         <td></td>
         <td></td>
-        <td></td>
       </tr>
     );
   }
+
   return (
     <tr>
-      <td>{card.id}</td>
-      <td>{card.flagged ? "🚩" : ""}</td>
+      <td>{card.flagged ? "⏸️" : ""}</td>
       <td>{card.definition}</td>
       <td>{card.term}</td>
       <td>
@@ -76,8 +75,7 @@ export const CardTable: React.FC<CardTableProps> = ({ cards, onDelete }) => {
     <Table>
       <thead>
         <tr>
-          <th>ID</th>
-          <th>Flagged</th>
+          <th></th>
           <th>Definition</th>
           <th>Term</th>
           <th>Delete</th>

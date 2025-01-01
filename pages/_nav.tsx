@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { signOut } from "next-auth/react";
 
 const NavBar = () => {
   const navBarStyle = {
@@ -19,13 +18,6 @@ const NavBar = () => {
     fontWeight: "bold",
   };
 
-  const logoutButtonStyle = {
-    ...linkStyle,
-    margin: undefined,
-    marginLeft: "auto",
-    cursor: "pointer",
-  };
-
   const links = [
     { path: "/review", name: "Review" },
     { path: "/create", name: "Add" },
@@ -43,16 +35,6 @@ const NavBar = () => {
           {link.name}
         </Link>
       ))}
-      <div
-        style={logoutButtonStyle}
-        onClick={(event) => {
-          event.preventDefault();
-          signOut();
-          location.assign("/");
-        }}
-      >
-        Log Out
-      </div>
     </div>
   );
 };

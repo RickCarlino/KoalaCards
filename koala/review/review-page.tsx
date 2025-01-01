@@ -3,7 +3,7 @@ import { Card, Center, Group, Image, Stack, Text, Title } from "@mantine/core";
 import { Grade } from "femto-fsrs";
 import { useEffect, useReducer, useState } from "react";
 import { trpc } from "../trpc-config";
-import { FlagButton } from "./flag-button";
+import { PauseReviewButton } from "./pause-button";
 import { DifficultyButtons } from "./grade-buttons";
 import { ListeningQuiz } from "./listening-quiz";
 import { ReviewOver } from "./review-over";
@@ -136,10 +136,10 @@ export const ReviewPage = (props: Props) => {
           <Stack>
             <LessonComponent {...quizProps} key={quiz.quizId} />
             <Group grow>
-              <FlagButton
+              <PauseReviewButton
                 cardID={quiz.cardId}
                 onClick={() => {
-                  dispatch({ type: "FLAG_CURRENT_CARD" });
+                  dispatch({ type: "PAUSE_CURRENT_CARD" });
                 }}
               />
               <EditButton cardID={quiz.cardId} />
