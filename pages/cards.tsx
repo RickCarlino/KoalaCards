@@ -3,9 +3,9 @@ import { CardTable } from "@/koala/card-table";
 import { trpc } from "@/koala/trpc-config";
 import { Button, Container, Select, Group, Text } from "@mantine/core";
 import { prismaClient } from "@/koala/prisma-client";
-import { getSession } from "next-auth/react";
 import { useRouter } from "next/router";
 import { useState, useEffect, FormEvent } from "react";
+import { getServersideUser } from "@/koala/get-serverside-user";
 
 type CardRecord = {
   id: number;
@@ -39,10 +39,7 @@ const ORDER_OPTIONS = [
 const ITEMS_PER_PAGE = 32;
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
-  const session = await getSession(ctx);
-  const dbUser = await prismaClient.user.findUnique({
-    where: { email: session?.user?.email ?? "" + Math.random() },
-  });
+  const dbUser = await getServersideUser(ctx);
   const userId = dbUser?.id;
 
   if (!userId) {

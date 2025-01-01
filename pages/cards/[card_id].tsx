@@ -1,6 +1,6 @@
 import { getCardOrFail } from "@/koala/get-card-or-fail";
+import { getServersideUser } from "@/koala/get-serverside-user";
 import { maybeGetCardImageUrl } from "@/koala/image";
-import { prismaClient } from "@/koala/prisma-client";
 import RemixButton from "@/koala/remix-button";
 import { timeUntil } from "@/koala/time-until";
 import { trpc } from "@/koala/trpc-config";
@@ -155,11 +155,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     return { redirect: { destination: "/api/auth/signin", permanent: false } };
   }
 
-  const dbUser = await prismaClient.user.findUnique({
-    where: {
-      email: session.user.email ?? undefined,
-    },
-  });
+  const dbUser = await getServersideUser(context);
   const cardId = parseInt(card_id as string, 10);
 
   try {

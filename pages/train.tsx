@@ -11,6 +11,7 @@ import {
 } from "@mantine/core";
 import { TrainingData } from "@prisma/client";
 import { GetServerSideProps } from "next/types";
+import { getServersideUser } from "@/koala/get-serverside-user";
 
 interface TrainProps {
   data: TrainingData[];
@@ -83,12 +84,7 @@ export default function Train({ data, totalPages, page }: TrainProps) {
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const { prismaClient } = await import("@/koala/prisma-client");
   const { isApprovedUser } = await import("@/koala/is-approved-user");
-  const { getSession } = await import("next-auth/react");
-
-  const session = await getSession(ctx);
-  const dbUser = await prismaClient.user.findUnique({
-    where: { email: session?.user?.email ?? "" },
-  });
+  const dbUser = await getServersideUser(ctx);
   const userId = dbUser?.id;
 
   // Only approved users can access

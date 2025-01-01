@@ -25,6 +25,8 @@ import { prismaClient } from "@/koala/prisma-client";
 import { backfillDecks } from "@/koala/decks/backfill-decks";
 import { getLangName } from "@/koala/get-lang-name";
 import { draw } from "radash";
+import { getServersideUser } from "@/koala/get-serverside-user";
+import { useRouter } from "next/router";
 
 type ProcessedCard = {
   term: string;
@@ -198,7 +200,7 @@ function DeckStep({ decks, state, dispatch, onNext }: DeckStepProps) {
             value={state.deckId ? String(state.deckId) : null}
             onChange={(val) => handleExistingDeckChange(Number(val))}
             data={decks.map((d) => ({
-              label: `${d.name} (${d.langCode.toUpperCase()})`,
+              label: `${d.name} (${getLangName(d.langCode)})`,
               value: String(d.id),
             }))}
           />
@@ -274,35 +276,43 @@ const LANG_LEARNING_THEMES = [
   "animals",
   "culture",
   "history",
-  "politics",
-  "religion",
   "science",
   "math",
+  "computers",
+  "humor",
 ];
 
 function InputStep({ state, dispatch, onSubmit, loading }: InputStepProps) {
-  // We now get our sample from the deckLang in state
-  const pasteExample = () => {
+  const exampleText = () => {
     const lang = getLangName(state.deckLang);
     const theme = draw(LANG_LEARNING_THEMES);
+    return `Please make 10 ${lang} example sentences related to ${theme}.`;
+  };
+
+  // We now get our sample from the deckLang in state
+  const pasteExample = () => {
     dispatch({
       type: "SET_RAW_INPUT",
-      rawInput: `Please make 10 ${lang} example sentences related to ${theme}.`,
+      rawInput: exampleText(),
     });
   };
 
   return (
     <Paper withBorder p="md" radius="md">
       <Flex direction="column" gap="md">
-        <Title order={3}>Step 2: Input Your Content</Title>
+        <Title order={3}>Step 2: Input Your Learning Material</Title>
         <div style={{ fontSize: 14, color: "gray" }}>
-          Paste your raw text input. This can be plain sentences, CSV, TSV, or
-          JSON. If you need help, try the example input.
+          Paste your notes or target language phrases here. If you don't know
+          what to learn, try an example by clicking the button.
         </div>
+
+        <Button size="sm" onClick={pasteExample}>
+          Don't know what to write? Try an example.
+        </Button>
 
         <Textarea
           label="Raw Input"
-          placeholder="Paste sentences or data here..."
+          placeholder={exampleText()}
           minRows={10}
           maxRows={10}
           autosize
@@ -314,10 +324,6 @@ function InputStep({ state, dispatch, onSubmit, loading }: InputStepProps) {
             })
           }
         />
-
-        <Button variant="subtle" size="xs" onClick={pasteExample}>
-          Paste Example Input
-        </Button>
 
         <Radio.Group
           label="Card Type"
@@ -454,11 +460,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     return { redirect: { destination: "/api/auth/signin", permanent: false } };
   }
 
-  const dbUser = await prismaClient.user.findUnique({
-    where: {
-      email: session.user.email ?? undefined,
-    },
-  });
+  const dbUser = await getServersideUser(context);
 
   if (!dbUser) {
     return { redirect: { destination: "/api/auth/signin", permanent: false } };
@@ -498,6 +500,7 @@ const LanguageInputPage = (props: LanguageInputPageProps) => {
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const parseCards = trpc.parseCards.useMutation();
   const bulkCreateCards = trpc.bulkCreateCards.useMutation();
@@ -554,6 +557,7 @@ const LanguageInputPage = (props: LanguageInputPageProps) => {
         message: "Your cards have been created successfully!",
         color: "green",
       });
+      router.push("/review");
     } catch (error) {
       handleError(error);
     } finally {
