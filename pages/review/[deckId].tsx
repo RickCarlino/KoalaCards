@@ -30,7 +30,7 @@ export default function Review() {
   const fetchQuizzes = () => {
     setIsFetching(true);
     mutation
-      .mutateAsync({ take: 12, deckId }, { onSuccess: (data) => setData(data) })
+      .mutateAsync({ take: 15, deckId }, { onSuccess: (data) => setData(data) })
       .finally(() => setIsFetching(false));
   };
 
