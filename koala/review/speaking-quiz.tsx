@@ -13,6 +13,7 @@ import { DifficultyButtons } from "./grade-buttons";
 import { HOTKEYS } from "./hotkeys";
 import { QuizComp } from "./types";
 import { LangCode } from "../shared-types";
+import { getLangName } from "../get-lang-name";
 
 export const SpeakingQuiz: QuizComp = (props) => {
   const { quiz: card } = props;
@@ -113,7 +114,9 @@ export const SpeakingQuiz: QuizComp = (props) => {
   return (
     <Stack>
       <Text size="xl">
-        {phase == "prompt" ? "Say in target language:" : "Select Next Review Date"}
+        {phase == "prompt"
+          ? `Say in target ${getLangName(card.langCode)}`
+          : "Select Next Review Date"}
       </Text>
       <Text size="xl">{card.definition}</Text>
       {(phase === "prompt" || phase === "recording") && (
