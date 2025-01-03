@@ -112,6 +112,8 @@ async function prepareQuizData(quiz: LocalQuiz, playbackPercentage: number) {
     langCode: quiz.Card.langCode,
     lastReview: quiz.lastReview || 0,
     imageURL: await maybeGetCardImageUrl(quiz.Card.imageBlobId),
+    stability: quiz.stability,
+    difficulty: quiz.difficulty,
   };
 }
 
