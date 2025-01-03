@@ -12,7 +12,7 @@ import { useUserSettings } from "../settings-provider";
 import { FailButton } from "./fail-button";
 import { DifficultyButtons } from "./grade-buttons";
 import { HOTKEYS } from "./hotkeys";
-import { QuizComp } from "./types";
+import { Quiz, QuizComp } from "./types";
 import { VisualDiff } from "./visual-diff";
 import { LangCode } from "../shared-types";
 
@@ -128,7 +128,7 @@ export const ListeningQuiz: QuizComp = ({
     onComplete({
       status: "pass",
       feedback: "",
-      userResponse: "Not yet supported for listening quizzes.",
+      userResponse: "",
     });
   };
 
@@ -160,9 +160,8 @@ export const ListeningQuiz: QuizComp = ({
     case "done":
       return (
         <DonePhase
+          quiz={card}
           userInput={state.userInput}
-          term={card.term}
-          definition={card.definition}
           onDifficultySelect={handleDifficultySelect}
         />
       );
@@ -254,28 +253,26 @@ const RecordPhase = ({
 };
 
 type DonePhaseProps = {
-  term: string;
+  quiz: Quiz;
   userInput: string | undefined;
-  definition: string;
   onDifficultySelect: (grade: Grade) => void;
 };
 
 // Done Phase Component
-const DonePhase = ({
-  userInput,
-  term,
-  definition,
-  onDifficultySelect,
-}: DonePhaseProps) => (
-  <Stack>
-    <Center>
-      <Text size="xl">How Well Did You Understand the Phrase?</Text>
-    </Center>
-    <VisualDiff expected={term} actual={userInput || term} />
-    <Text>Definition: {definition}</Text>
-    <DifficultyButtons
-      current={undefined}
-      onSelectDifficulty={onDifficultySelect}
-    />
-  </Stack>
-);
+const DonePhase = ({ userInput, onDifficultySelect, quiz }: DonePhaseProps) => {
+  const { term, definition } = quiz;
+  return (
+    <Stack>
+      <Center>
+        <Text size="xl">Select Next Review Date</Text>
+      </Center>
+      <VisualDiff expected={term} actual={userInput || term} />
+      <Text>Definition: {definition}</Text>
+      <DifficultyButtons
+        quiz={quiz}
+        current={undefined}
+        onSelectDifficulty={onDifficultySelect}
+      />
+    </Stack>
+  );
+};

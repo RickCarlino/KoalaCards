@@ -33,7 +33,7 @@ const buildPrompt = (props: GrammarCorrectionProps): string =>
 
 // Main function for grammar correction
 export const equivalence: QuizEvaluator = async (input) => {
-  const model = "gpt-4o-mini";
+  const model = "gpt-4o";
   const { term, definition, langCode } = input.card;
   const { userInput } = input;
   const prompt = buildPrompt({ term, definition, langCode, userInput });

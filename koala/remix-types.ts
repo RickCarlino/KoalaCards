@@ -20,42 +20,9 @@ export const RemixTypePrompts: Record<RemixTypes, string> = {
 };
 
 export const RemixTypeDescriptions: Record<RemixTypes, string> = {
-  [RemixTypes.VOCAB]: "Similar Vocabulary",
-  [RemixTypes.GRAMMAR]: "Similar Grammar",
+  [RemixTypes.VOCAB]: "Similar Vocabulary Words",
+  [RemixTypes.GRAMMAR]: "Similar Sentence Structure",
   [RemixTypes.THEME]: "Similar Themes",
   [RemixTypes.CONJUGATION]: "Different Conjugation",
-  [RemixTypes.TOO_LONG]: "Shorter Length",
+  [RemixTypes.TOO_LONG]: "Break into Smaller Sentences",
 };
-
-// type HyperParams = {
-//   temperature: number;
-//   frequency_penalty: number,
-//   presence_penalty: number;
-// };
-// export const hyperParams: Record<RemixTypes, HyperParams> = {
-//   [RemixTypes.VOCAB]: {
-//     temperature: 0.7,
-//     frequency_penalty: 0,
-//     presence_penalty: 0,
-//   },
-//   [RemixTypes.GRAMMAR]: {
-//     temperature: 0.7,
-//     frequency_penalty: 2,
-//     presence_penalty: 0,
-//   },
-//   [RemixTypes.THEME]: {
-//     temperature: 0.7,
-//     frequency_penalty: 0,
-//     presence_penalty: 0,
-//   },
-//   [RemixTypes.CONJUGATION]: {
-//     temperature: 0.7,
-//     frequency_penalty: 0,
-//     presence_penalty: 0,
-//   },
-//   [RemixTypes.TOO_LONG]: {
-//     temperature: 0.7,
-//     frequency_penalty: 0,
-//     presence_penalty: 0,
-//   },
-// };

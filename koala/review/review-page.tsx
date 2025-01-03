@@ -44,6 +44,7 @@ const UnknownQuiz: QuizComp = (props) => {
         <Text>{props.quiz.definition}</Text>
         <Text>{props.quiz.term}</Text>
         <DifficultyButtons
+          quiz={props.quiz}
           current={currentGrade}
           onSelectDifficulty={handleGrade}
         />

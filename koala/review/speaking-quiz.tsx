@@ -113,11 +113,14 @@ export const SpeakingQuiz: QuizComp = (props) => {
   return (
     <Stack>
       <Text size="xl">
-        {phase == "prompt" ? "Say in target language:" : "Select difficulty"}
+        {phase == "prompt" ? "Say in target language:" : "Select Next Review Date"}
       </Text>
       <Text size="xl">{card.definition}</Text>
       {(phase === "prompt" || phase === "recording") && (
-        <Button onClick={handleRecordClick}>
+        <Button
+          onClick={handleRecordClick}
+          color={isRecording ? "red" : "blue"}
+        >
           {isRecording ? "Stop Recording" : "Begin Recording, Repeat Phrase"}
         </Button>
       )}
@@ -127,6 +130,7 @@ export const SpeakingQuiz: QuizComp = (props) => {
       )}
       {phase === "done" && (
         <DifficultyButtons
+          quiz={props.quiz}
           current={undefined}
           onSelectDifficulty={handleDifficultySelect}
         />
