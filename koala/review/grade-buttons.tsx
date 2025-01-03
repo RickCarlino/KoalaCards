@@ -31,7 +31,7 @@ export const DifficultyButtons: React.FC<DifficultyButtonsProps> = ({
   const list = getGradeButtonText(quiz).map(([grade, label]) => {
     return (
       <Button
-        key={label}
+        key={grade}
         disabled={current === grade}
         onClick={() => onSelectDifficulty(grade)}
       >
