@@ -3,26 +3,23 @@ import { useHotkeys } from "@mantine/hooks";
 import { Grade } from "femto-fsrs";
 import React from "react";
 import { HOTKEYS } from "./hotkeys";
+import { Quiz } from "./types";
+import { getGradeButtonText } from "../trpc-routes/calculate-scheduling-data";
 
 // Define the props for the component
 interface DifficultyButtonsProps {
+  quiz: Quiz;
   current: Grade | undefined;
   onSelectDifficulty: (difficulty: Grade) => void;
   disableHotkeys?: boolean;
 }
 
 export const DifficultyButtons: React.FC<DifficultyButtonsProps> = ({
+  quiz,
   current,
   onSelectDifficulty,
   disableHotkeys,
 }) => {
-  const labels = ["FAIL", "HARD", "GOOD", "EASY"] as const;
-  const LOOKUP: Record<(typeof labels)[number], Grade> = {
-    FAIL: Grade.AGAIN,
-    HARD: Grade.HARD,
-    GOOD: Grade.GOOD,
-    EASY: Grade.EASY,
-  };
   if (!disableHotkeys) {
     useHotkeys([
       [HOTKEYS.GRADE_AGAIN, () => onSelectDifficulty(Grade.AGAIN)],
@@ -31,12 +28,12 @@ export const DifficultyButtons: React.FC<DifficultyButtonsProps> = ({
       [HOTKEYS.GRADE_EASY, () => onSelectDifficulty(Grade.EASY)],
     ]);
   }
-  const list = labels.map((label: (typeof labels)[number]) => {
+  const list = getGradeButtonText(quiz).map(([grade, label]) => {
     return (
       <Button
-        key={label}
-        disabled={current === LOOKUP[label]}
-        onClick={() => onSelectDifficulty(LOOKUP[label])}
+        key={grade}
+        disabled={current === grade}
+        onClick={() => onSelectDifficulty(grade)}
       >
         {label}
       </Button>

@@ -11,9 +11,11 @@ export type Quiz = {
   quizId: number;
   term: string;
   termAudio: string;
-  // lapses: number;
-  // lastReview: number;
-  // repetitions: number;
+  lapses: number;
+  repetitions: number;
+  difficulty: number;
+  stability: number;
+  lastReview: number;
 };
 
 export interface Props {
@@ -58,7 +60,11 @@ export interface ReviewState {
 
 // Define the possible actions
 export type LoadQuizzesAction = { type: "LOAD_QUIZZES"; quizzes: Quiz[] };
-export type SetGradeAction = { type: "SET_GRADE"; grade: Grade; quizId: number };
+export type SetGradeAction = {
+  type: "SET_GRADE";
+  grade: Grade;
+  quizId: number;
+};
 export type PauseCurrentCardAction = { type: "PAUSE_CURRENT_CARD" };
 export type ServerFeedbackAction = {
   type: "SERVER_FEEDBACK";
@@ -68,7 +74,11 @@ export type ServerFeedbackAction = {
   userResponse: string;
 };
 export type NextQuizAction = { type: "NEXT_QUIZ" };
-export type UpdateAudioUrlAction = { type: "UPDATE_AUDIO_URL"; quizId: number; audioBase64: string };
+export type UpdateAudioUrlAction = {
+  type: "UPDATE_AUDIO_URL";
+  quizId: number;
+  audioBase64: string;
+};
 
 export type Action =
   | LoadQuizzesAction

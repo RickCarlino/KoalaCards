@@ -18,6 +18,11 @@ describe("reviewReducer", () => {
     langCode: "en",
     lessonType,
     termAudio: "",
+    lapses: 0,
+    repetitions: 0,
+    difficulty: 0,
+    stability: 0,
+    lastReview: 0,
   });
 
   const createState = (quizzes: any[], currentQuizIndex = 0): ReviewState => ({

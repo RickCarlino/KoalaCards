@@ -21,6 +21,8 @@ export const Quiz = z.object({
   langCode: z.string(),
   lastReview: z.number(),
   imageURL: z.string().optional(),
+  stability: z.number(),
+  difficulty: z.number(),
 });
 
 const QuizList = z.object({
