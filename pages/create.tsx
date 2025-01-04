@@ -15,6 +15,7 @@ import {
   Overlay,
   Loader,
   RadioGroup,
+  Text,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { trpc } from "@/koala/trpc-config";
@@ -285,7 +286,7 @@ function InputStep({ state, dispatch, onSubmit, loading }: InputStepProps) {
   const exampleText = () => {
     const lang = getLangName(state.deckLang);
     const theme = draw(LANG_LEARNING_THEMES);
-    return `Please make 10 ${lang} example sentences related to ${theme}.`;
+    return `Please make 25 ${lang} example sentences related to ${theme}.`;
   };
 
   // We now get our sample from the deckLang in state
@@ -300,13 +301,18 @@ function InputStep({ state, dispatch, onSubmit, loading }: InputStepProps) {
     <Paper withBorder p="md" radius="md">
       <Flex direction="column" gap="md">
         <Title order={3}>Step 2: Input Your Learning Material</Title>
-        <div style={{ fontSize: 14, color: "gray" }}>
+        <Text size="sm">
           Paste your notes or target language phrases here. If you don't know
           what to learn, try an example by clicking the button.
-        </div>
-
+        </Text>
+        <Text size="sm">
+          Koala is built for self-study learners who have a textbook
+          or language course to follow. If you don't have material of your own,
+          that's OK. Koala can generate content for you to study. Click the
+          button below until you find a topic that is interesting to you.
+        </Text>
         <Button size="sm" onClick={pasteExample}>
-          Don't know what to write? Try an example.
+          Generate Learning Content 🎲
         </Button>
 
         <Textarea

@@ -1,5 +1,14 @@
 import { reviewReducer } from "@/koala/review/review-reducer";
-import { Card, Center, Group, Image, Stack, Text, Title } from "@mantine/core";
+import {
+  Card,
+  Center,
+  Group,
+  Image,
+  Progress,
+  Stack,
+  Text,
+  Title,
+} from "@mantine/core";
 import { Grade } from "femto-fsrs";
 import { useEffect, useReducer, useState } from "react";
 import { trpc } from "../trpc-config";
@@ -124,6 +133,11 @@ export const ReviewPage = (props: Props) => {
       </Card.Section>
     );
 
+    const done = state.quizzes.filter(
+      (q) => !!(q.grade || q.serverGradingResult),
+    ).length;
+    const total = state.quizzes.length;
+    const percentage = Math.round((done / total) * 100);
     return (
       // Center the content both vertically and horizontally
       <Center style={{ width: "100%" }}>
@@ -152,7 +166,16 @@ export const ReviewPage = (props: Props) => {
                 }}
               />
             </Group>
-            <Text size={"xs"}>{props.quizzesDue} quizzes due today.</Text>
+            <Text size={"xs"}>
+            {props.quizzesDue} due today. {done} of {total} complete in current lesson.
+            </Text>
+            <Progress
+              radius="lg"
+              size="xl"
+              value={percentage}
+              striped
+              animated
+            />
             {illustration}
           </Stack>
         </Card>
