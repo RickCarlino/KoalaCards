@@ -144,7 +144,7 @@ const getNewCards = async (props: Omit<GetCardsProps, "isReview">) => {
 export async function getLessons(p: GetLessonInputParams) {
   const { userId, now, take, deckId } = p;
   await autoPromoteCards(userId);
-  if (take > 15) return errorReport("Too many cards requested.");
+  if (take > 45) return errorReport("Too many cards requested.");
   const p2 = { userId, now, take, deckId };
   const oldCards = await getCards({ ...p2, isReview: true });
   const newCards = await getNewCards({

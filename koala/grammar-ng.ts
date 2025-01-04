@@ -183,7 +183,9 @@ async function runChecksO1(
       { role: "user", content: respText },
       {
         role: "system",
-        content: ["You are a JSON parser.", JSON_PROMPT].join("\n"),
+        content: [
+          "You are a JSON parser. Convert the input to JSON format.",
+        ].join("\n"),
       },
     ],
     model: "gpt-4o-mini",
@@ -211,7 +213,8 @@ export const grammarCorrectionNG: QuizEvaluator = async ({
   userInput,
   card,
 }) => {
-  const fn = Math.random() < 1 ? runChecksO1 : runChecks;
+  // Not impressed with GPT-O1-Mini.
+  const fn = Math.random() > 1 ? runChecksO1 : runChecks;
   const resp = await fn({
     term: card.term,
     definition: card.definition,

@@ -28,7 +28,7 @@ const buildPrompt = (props: GrammarCorrectionProps): string =>
     `### SENTENCE A: "${props.userInput}".`,
     `### SENTENCE B: "${props.term}".`,
     "(YES/NO) Does Sentence A more-or-less mean the same thing as Sentence B?",
-    "Meanings do not need to be 100% exact, just mostly the same?",
+    "Meanings do not need to be 100% exact, just mostly the same.",
   ].join("\n");
 
 // Main function for grammar correction
@@ -44,6 +44,7 @@ export const equivalence: QuizEvaluator = async (input) => {
     max_tokens: 125,
     temperature: 0.1,
     response_format: zodResponseFormat(zodGradeResponse, "grade_response"),
+    store: true,
   });
 
   const gradeResponse = response.choices[0]?.message?.parsed;
