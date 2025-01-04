@@ -167,15 +167,10 @@ export const ReviewPage = (props: Props) => {
               />
             </Group>
             <Text size={"xs"}>
-            {props.quizzesDue} due today. {done} of {total} complete in current lesson.
+              {props.quizzesDue} due today. {done} of {total} complete in
+              current lesson.
             </Text>
-            <Progress
-              radius="lg"
-              size="xl"
-              value={percentage}
-              striped
-              animated
-            />
+            <Progress radius="lg" size="xl" value={percentage} />
             {illustration}
           </Stack>
         </Card>

@@ -5,7 +5,6 @@ import { openai } from "../openai";
 import { prismaClient } from "../prisma-client";
 import { RemixTypePrompts, RemixTypes } from "../remix-types";
 import { procedure } from "../trpc-procedure";
-// import { isApprovedUser } from "../is-approved-user";
 
 interface RemixParams {
   type: RemixTypes;
