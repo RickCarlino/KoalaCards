@@ -31,7 +31,7 @@ export default function Review() {
     setIsFetching(true);
     // Get the "take" param from the URL using NextJS router.
     const take = parseInt(
-      new URLSearchParams(window.location.search).get("take") || "15",
+      new URLSearchParams(window.location.search).get("take") || "24",
     );
     mutation
       .mutateAsync({ take, deckId }, { onSuccess: (data) => setData(data) })
@@ -62,7 +62,7 @@ export default function Review() {
       />
     );
   } else {
-    el = <div>No quizzes found</div>;
+    el = <div>No quizzes found. Add more words to this deck or come back later when cards are due for review.</div>;
   }
 
   return MicrophonePermissions(el);
