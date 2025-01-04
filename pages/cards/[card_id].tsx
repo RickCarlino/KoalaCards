@@ -17,7 +17,6 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { GetServerSideProps } from "next";
-import { getSession } from "next-auth/react";
 import { useRouter } from "next/router";
 
 type CardData = {
@@ -149,12 +148,6 @@ export default function CardPage({ cardData }: CardData) {
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const { card_id } = context.query;
-  const session = await getSession(context);
-
-  if (!session || !session.user) {
-    return { redirect: { destination: "/api/auth/signin", permanent: false } };
-  }
-
   const dbUser = await getServersideUser(context);
   const cardId = parseInt(card_id as string, 10);
 

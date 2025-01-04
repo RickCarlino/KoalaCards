@@ -20,7 +20,6 @@ import { notifications } from "@mantine/notifications";
 import { trpc } from "@/koala/trpc-config";
 import { Gender, LangCode, supportedLanguages } from "@/koala/shared-types";
 import { GetServerSideProps } from "next";
-import { getSession } from "next-auth/react";
 import { prismaClient } from "@/koala/prisma-client";
 import { backfillDecks } from "@/koala/decks/backfill-decks";
 import { getLangName } from "@/koala/get-lang-name";
@@ -454,12 +453,6 @@ function ReviewStep({
 }
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
-  const session = await getSession(context);
-
-  if (!session || !session.user) {
-    return { redirect: { destination: "/api/auth/signin", permanent: false } };
-  }
-
   const dbUser = await getServersideUser(context);
 
   if (!dbUser) {
