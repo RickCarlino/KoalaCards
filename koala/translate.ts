@@ -12,7 +12,7 @@ export const translate: TranslateFN = async (langCode, input) => {
 
   const translationResponse = await openai.chat.completions.create({
     messages: [{ role: "user", content: translationPrompt }],
-    model: "gpt-4o-mini",
+    model: "gpt-4o",
     max_tokens: 125,
     temperature: 0.3,
   });
