@@ -164,6 +164,6 @@ export const remix = procedure
       langCode: card.langCode,
       term: card.term,
       definition: card.definition,
-      model: Math.random() > 0.5 ? "good" : "fast",
+      model: "good",
     });
   });
