@@ -29,8 +29,12 @@ export default function Review() {
 
   const fetchQuizzes = () => {
     setIsFetching(true);
+    // Get the "take" param from the URL using NextJS router.
+    const take = parseInt(
+      new URLSearchParams(window.location.search).get("take") || "15",
+    );
     mutation
-      .mutateAsync({ take: 15, deckId }, { onSuccess: (data) => setData(data) })
+      .mutateAsync({ take, deckId }, { onSuccess: (data) => setData(data) })
       .finally(() => setIsFetching(false));
   };
 
