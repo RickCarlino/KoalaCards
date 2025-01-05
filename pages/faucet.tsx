@@ -1,5 +1,9 @@
 import { Card, Center, Stack } from "@mantine/core";
 
+export async function getServerSideProps() {
+  return { props: {} };
+}
+
 /** The faucet component has a button that when clicked
  * calls the "faucet" trpc mutation:
  */

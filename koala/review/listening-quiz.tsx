@@ -228,7 +228,10 @@ const RecordPhase = ({
   onFailClick,
 }: RecordPhaseProps) => {
   useHotkeys([
-    [HOTKEYS.RECORD, () => !isProcessing && onRecordClick()],
+    [HOTKEYS.RECORD, (e) => {
+      e.preventDefault(); // Prevent buttons from getting pushed due to spacebar press.
+      !isProcessing && onRecordClick();
+    }],
     [HOTKEYS.PLAY, () => !isProcessing && onPlayClick()],
   ]);
   const recordingText = isRecording ? "Stop Recording" : "Begin Recording";

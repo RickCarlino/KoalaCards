@@ -46,16 +46,7 @@ export const UserSettingsProvider = ({
       .finally(() => setLoading(false));
   }, []);
 
-  const clickLogin = () => {
-    alert(
-      [
-        "Thanks for trying out Koala 🎉",
-        "It is still in beta, and I would really appreciate your feedback.",
-        "Please consider contacting me with issues or suggestions.",
-      ].join("\n"),
-    );
-    signIn();
-  };
+  const clickLogin = () => signIn();
   const login = (
     <Container size="s">
       <Grid grow justify="center" align="center">

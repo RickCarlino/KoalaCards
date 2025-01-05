@@ -24,9 +24,7 @@ export async function autoPromoteCards(userID: string) {
         quizType: "speaking",
       },
     });
-    console.log(`=== Promoting ${quiz.Card.term}`);
     if (!alreadyExists) {
-      console.log(`Creating speaking quiz`);
       await prismaClient.quiz.create({
         data: {
           cardId: quiz.cardId,
@@ -35,9 +33,6 @@ export async function autoPromoteCards(userID: string) {
         },
       });
     }
-    // Delete listening quiz:
-    console.log(`Deleting listening quiz`);
     await prismaClient.quiz.deleteMany({ where: { id: quiz.id } });
-    console.log(`Done`);
   });
 }

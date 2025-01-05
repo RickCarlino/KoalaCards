@@ -54,42 +54,64 @@ export const ReviewOver = ({
     );
   }
 
-  return (
-    <Center style={{ width: "100%" }}>
-      <Card
-        shadow="sm"
-        padding="lg"
-        radius="md"
-        withBorder
-        style={{ width: "80%" }}
-      >
-        <Stack>
-          <Title order={2}>Save Progress</Title>
-          <Alert color="red">
-            Closing the browser tab early will cause changes to be lost. Please
-            finalize your review.
-          </Alert>
-          <Text>
-            The server will return feedback (if any) below. Please take a look
-            before moving to the next review session.
-          </Text>
+  const filtered = state.filter(dontShowCorrect);
+
+  if (filtered.length === 0) {
+    return (
+      <Center style={{ width: "100%" }}>
+        <Card
+          shadow="sm"
+          padding="lg"
+          radius="md"
+          withBorder
+          style={{ width: "80%" }}
+        >
           <Stack>
             <Button onClick={handleSave} loading={isSaving}>
-              Save Progress
+              Save Lesson Progress
             </Button>
           </Stack>
+        </Card>
+      </Center>
+    );
+  } else {
+    return (
+      <Center style={{ width: "100%" }}>
+        <Card
+          shadow="sm"
+          padding="lg"
+          radius="md"
+          withBorder
+          style={{ width: "80%" }}
+        >
           <Stack>
-            {state.filter(dontShowCorrect).map((quizState) => (
-              <FeedbackRow
-                key={quizState.quiz.quizId}
-                quizState={quizState}
-                onUpdateDifficulty={onUpdateDifficulty}
-                getColor={getColor}
-              />
-            ))}
+            <Title order={2}>Save Progress</Title>
+            <Alert color="red">
+              Closing the browser tab early will cause changes to be lost.
+              Please finalize your review.
+            </Alert>
+            <Text>
+              The server will return feedback (if any) below. Please take a look
+              before moving to the next review session.
+            </Text>
+            <Stack>
+              <Button onClick={handleSave} loading={isSaving}>
+                Save Lesson Progress
+              </Button>
+            </Stack>
+            <Stack>
+              {filtered.map((quizState) => (
+                <FeedbackRow
+                  key={quizState.quiz.quizId}
+                  quizState={quizState}
+                  onUpdateDifficulty={onUpdateDifficulty}
+                  getColor={getColor}
+                />
+              ))}
+            </Stack>
           </Stack>
-        </Stack>
-      </Card>
-    </Center>
-  );
+        </Card>
+      </Center>
+    );
+  }
 };

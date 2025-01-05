@@ -5,7 +5,6 @@ import { openai } from "../openai";
 import { prismaClient } from "../prisma-client";
 import { RemixTypePrompts, RemixTypes } from "../remix-types";
 import { procedure } from "../trpc-procedure";
-// import { isApprovedUser } from "../is-approved-user";
 
 interface RemixParams {
   type: RemixTypes;
@@ -116,7 +115,6 @@ const processRemixes = (parsedData: {
 // Refactored generateRemixes function
 const generateRemixes = async (input: RemixParams): Promise<Remix[]> => {
   const { type, langCode, term, model } = input;
-  console.log(`=== Using the ${model} model.`);
   const prompt = buildRemixPrompt(type, langCode, term);
 
   const rawText = await fetchOpenAIResponse(MODELS[model], [
@@ -164,6 +162,6 @@ export const remix = procedure
       langCode: card.langCode,
       term: card.term,
       definition: card.definition,
-      model: Math.random() > 0.5 ? "good" : "fast",
+      model: "good",
     });
   });

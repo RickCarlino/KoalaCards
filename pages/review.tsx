@@ -13,13 +13,6 @@ type ReviewPageProps = {
 export const getServerSideProps: GetServerSideProps<ReviewPageProps> = async (
   context,
 ) => {
-  const { getSession } = await import("next-auth/react");
-  const session = await getSession(context);
-
-  if (!session || !session.user) {
-    return { redirect: { destination: "/api/auth/signin", permanent: false } };
-  }
-
   const dbUser = await getServersideUser(context);
 
   if (!dbUser) {
@@ -65,13 +58,18 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
     <div>
       <h1>Decks</h1>
       <ul>
-        {sortedByDue.map((deck) => (
-          <li key={deck.id}>
-            <Link href={`/review/${deck.id}`}>
-              {deck.deckName} ({deck.quizzesDue} due)
-            </Link>
-          </li>
-        ))}
+        {sortedByDue.map((deck) => {
+          const cardsDue = deck.quizzesDue ? `${deck.quizzesDue} due` : "";
+          const cardsNew = deck.newQuizzes ? `${deck.newQuizzes} new` : "";
+          const cards = [cardsDue, cardsNew].filter(Boolean).join(", ");
+          return (
+            <li key={deck.id}>
+              <Link href={`/review/${deck.id}`}>
+                {deck.deckName} {cards ? `(${cards})` : ""}
+              </Link>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

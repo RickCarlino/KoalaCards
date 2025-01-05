@@ -47,7 +47,16 @@ const storeTrainingData: StoreTrainingData = async (props, exp) => {
     },
   });
 };
-
+const JSON_PROMPT = [
+  "Output exactly one JSON object, matching this schema:",
+  "```json",
+  "{",
+  '  "grade": "ok" | "edit" | "fail",',
+  '  "correctedSentence": "..." (optional if grade is "ok" or "fail")',
+  "}",
+  "```",
+  "",
+].join("\n");
 // Build the new multi-lingual minimal-edit prompt:
 function systemPrompt() {
   return [
@@ -101,14 +110,7 @@ function systemPrompt() {
     "   - Do not get overly concerned about matching every detail of the English prompt in the user's output.",
     "   - Focus on correcting usage of the target language. Close enough in meaning is good enough.",
     "",
-    "Output exactly one JSON object, in this schema:",
-    "```json",
-    "{",
-    '  "grade": "ok" | "edit" | "fail",',
-    '  "correctedSentence": "..." (optional if grade is "ok" or "fail")',
-    "}",
-    "```",
-    "",
+    JSON_PROMPT,
   ].join("\n");
 }
 
@@ -117,8 +119,8 @@ function createMessages(
   definition: string,
   userInput: string,
 ) {
-  const result = [
-    { role: "system" as const, content: systemPrompt() },
+  return [
+    { role: "user" as const, content: systemPrompt() },
     {
       role: "user" as const,
       content: [
@@ -129,14 +131,10 @@ function createMessages(
       ].join("\n"),
     },
   ];
-
-  console.log(result);
-  return result;
 }
 
 async function runChecks(props: GrammarCorrectionProps): Promise<Explanation> {
   const { userInput, langCode } = props;
-  console.log(props);
   const messages = createMessages(langCode, props.definition, userInput);
   const response = await openai.beta.chat.completions.parse({
     messages,
@@ -161,11 +159,60 @@ async function runChecks(props: GrammarCorrectionProps): Promise<Explanation> {
   return gradeResponse;
 }
 
+async function runChecksO1(
+  props: GrammarCorrectionProps,
+): Promise<Explanation> {
+  const { userInput, langCode } = props;
+  const messages = createMessages(langCode, props.definition, userInput);
+  const rawResponse = await openai.beta.chat.completions.parse({
+    messages,
+    model: "o1-mini",
+  });
+
+  const respText = rawResponse.choices[0]?.message?.content;
+
+  if (!respText) {
+    throw new Error("Invalid response format from OpenAI.");
+  }
+
+  const jsonResponse = await openai.beta.chat.completions.parse({
+    messages: [
+      { role: "user", content: respText },
+      {
+        role: "system",
+        content: [
+          "You are a JSON parser. Convert the input to JSON format.",
+        ].join("\n"),
+      },
+    ],
+    model: "gpt-4o-mini",
+    max_tokens: 125,
+    temperature: 0.1,
+    response_format: zodResponseFormat(zodGradeResponse, "grade_response"),
+  });
+
+  // This is the LLM's structured response (or an error if parsing failed)
+  const gradeResponse = jsonResponse.choices[0]?.message?.parsed;
+  if (!gradeResponse) {
+    throw new Error("Invalid response format from OpenAI.");
+  }
+
+  if (compare(userInput, gradeResponse.correctedSentence || "", 0)) {
+    gradeResponse.grade = "ok";
+  }
+
+  // Store the final data (with "ok" = correct, others = incorrect)
+  await storeTrainingData(props, gradeResponse);
+  return gradeResponse;
+}
+
 export const grammarCorrectionNG: QuizEvaluator = async ({
   userInput,
   card,
 }) => {
-  const resp = await runChecks({
+  // Not impressed with GPT-O1-Mini.
+  const fn = Math.random() > 1 ? runChecksO1 : runChecks;
+  const resp = await fn({
     term: card.term,
     definition: card.definition,
     langCode: card.langCode,

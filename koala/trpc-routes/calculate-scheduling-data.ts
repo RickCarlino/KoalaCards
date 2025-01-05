@@ -77,27 +77,40 @@ export function calculateSchedulingData(
 // Uses the nearest time unit, all the way up to months.
 export function getGradeButtonText(quiz: PartialQuiz): [Grade, string][] {
   const now = Date.now();
+  const SCALE: Record<Grade, string> = {
+    [Grade.AGAIN]: "😵",
+    [Grade.HARD]: "😐",
+    [Grade.GOOD]: "😊",
+    [Grade.EASY]: "😎",
+  };
   return [Grade.AGAIN, Grade.HARD, Grade.GOOD, Grade.EASY].map((grade) => {
+    const emoji = SCALE[grade];
     const { nextReview } = calculateSchedulingData(quiz, grade, now);
     const diff = nextReview - now;
     const minutes = Math.floor(diff / (60 * 1000));
+    if (minutes < 5) {
+      return [grade, emoji + " Very Soon"];
+    }
     // Use minutes, hours, days, months:
     if (minutes < 60) {
       const val = Math.floor(minutes);
-      return [grade, `${val} minute${val === 1 ? "" : "s"}`];
+      return [grade, `${emoji}${val} minute${val === 1 ? "" : "s"}`];
     }
 
     if (minutes < 24 * 60) {
       const val = Math.floor(minutes / 60);
-      return [grade, `${Math.floor(minutes / 60)} hour${val === 1 ? "" : "s"}`];
+      return [
+        grade,
+        `${emoji}${Math.floor(minutes / 60)} hour${val === 1 ? "" : "s"}`,
+      ];
     }
 
     if (minutes < 30 * 24 * 60) {
       const val = Math.floor(minutes / (24 * 60));
-      return [grade, `${val} day${val === 1 ? "" : "s"}`];
+      return [grade, `${emoji}${val} day${val === 1 ? "" : "s"}`];
     }
 
     const val = Math.floor(minutes / (30 * 24 * 60));
-    return [grade, `${val} month${val === 1 ? "" : "s"}`];
+    return [grade, `${emoji}${val} month${val === 1 ? "" : "s"}`];
   });
 }

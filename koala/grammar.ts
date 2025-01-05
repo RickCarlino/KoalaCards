@@ -62,7 +62,7 @@ async function checkGrammar(
     messages: [
       { role: "user", content: buildPrompt(props, getLangName(langCode)) },
     ],
-    model: "gpt-4o-mini",
+    model: "gpt-4o",
     max_tokens: 125,
     temperature: 0.1,
     response_format: zodResponseFormat(zodGradeResponse, "grade_response"),

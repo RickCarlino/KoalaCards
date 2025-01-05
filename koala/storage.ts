@@ -52,16 +52,13 @@ export async function storeURLGoogleCloud(
 
     return new Promise((resolve, reject) => {
       blobStream.on("finish", async () => {
-        console.log("File uploaded successfully");
         resolve(await expiringUrl(blob));
       });
       blobStream.on("error", (error) => {
-        console.error("Upload failed:", error);
         reject(error);
       });
     });
   } catch (error) {
-    console.error("Failed to upload file:", error);
     throw error;
   }
 }
