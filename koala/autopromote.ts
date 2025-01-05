@@ -33,6 +33,6 @@ export async function autoPromoteCards(userID: string) {
         },
       });
     }
-    await prismaClient.quiz.deleteMany({ where: { id: quiz.id } });
+    // await prismaClient.quiz.deleteMany({ where: { id: quiz.id } });
   });
 }
