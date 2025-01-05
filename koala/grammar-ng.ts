@@ -119,7 +119,7 @@ function createMessages(
   definition: string,
   userInput: string,
 ) {
-  const result = [
+  return [
     { role: "user" as const, content: systemPrompt() },
     {
       role: "user" as const,
@@ -131,9 +131,6 @@ function createMessages(
       ].join("\n"),
     },
   ];
-
-  console.log(result);
-  return result;
 }
 
 async function runChecks(props: GrammarCorrectionProps): Promise<Explanation> {

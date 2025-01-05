@@ -45,8 +45,6 @@ export async function transcribeB64(
           text,
         });
       } catch (error) {
-        console.log("server side transcription error:");
-        console.error(error);
         return resolve({ kind: "error" });
       } finally {
         // Delete the file now that we are done:

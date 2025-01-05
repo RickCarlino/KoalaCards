@@ -115,7 +115,6 @@ const processRemixes = (parsedData: {
 // Refactored generateRemixes function
 const generateRemixes = async (input: RemixParams): Promise<Remix[]> => {
   const { type, langCode, term, model } = input;
-  console.log(`=== Using the ${model} model.`);
   const prompt = buildRemixPrompt(type, langCode, term);
 
   const rawText = await fetchOpenAIResponse(MODELS[model], [

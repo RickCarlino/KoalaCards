@@ -13,11 +13,11 @@ export const isApprovedUser = (id: string) => {
   return approvedUserIDs.has(id) || !env.includes("prod");
 };
 
-function deleteInactiveUser(id: string, email: string | null) {
+async function deleteInactiveUser(id: string, email: string | null) {
   if (isApprovedUser(id)) {
     return;
   }
-  prismaClient.user.delete({ where: { id } }).then(() => {
+  await prismaClient.user.delete({ where: { id } }).then(() => {
     console.log(`=== Delete ${email}`);
   });
 }
@@ -64,11 +64,11 @@ const userCleanup = async (user: User) => {
     } else {
       // Users must create a card within 5 days of signing up.
       if (cardCount === 0 && lastSeenDays > 5) {
-        deleteInactiveUser(id, email);
+        await deleteInactiveUser(id, email);
       }
     }
   } else {
-    deleteInactiveUser(user.id, email);
+    await deleteInactiveUser(user.id, email);
   }
 };
 

@@ -71,12 +71,10 @@ export const createRemixCards = procedure
           deckId: deck.id,
           gender: "N",
         };
-        console.log("Creating card:", data);
         const card = await prismaClient.card.create({
           data,
         });
         const quizType = "listening";
-        console.log(`=== CREATE REMIX: ${card.term} ===`);
         await prismaClient.quiz.create({
           data: {
             cardId: card.id,
