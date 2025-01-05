@@ -146,7 +146,7 @@ export const ReviewPage = (props: Props) => {
           padding="lg"
           radius="md"
           withBorder
-          style={{ maxWidth: 600, width: "100%" }} // Set fixed maxWidth
+          style={{ maxWidth: 600, width: "100%", marginTop: "10px" }} // Set fixed maxWidth
         >
           <Stack>
             <LessonComponent {...quizProps} key={quiz.quizId} />

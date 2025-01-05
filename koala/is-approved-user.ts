@@ -8,9 +8,7 @@ const superUsers = (process.env.AUTHORIZED_EMAILS || "")
 let approvedUserIDs: Set<string> = new Set();
 
 export const isApprovedUser = (id: string) => {
-  const env = (process.env.NODE_ENV || "dev").toUpperCase();
-
-  return approvedUserIDs.has(id) || !env.includes("prod");
+  return approvedUserIDs.has(id);
 };
 
 async function deleteInactiveUser(id: string, email: string | null) {
@@ -61,6 +59,7 @@ const userCleanup = async (user: User) => {
     const cardCount = await countCards(id);
     if (cardCount > 1) {
       console.log(`== ${su ? "@" : ""}${email} ${lastSeenDays} days`);
+      return;
     } else {
       // Users must create a card within 5 days of signing up.
       if (cardCount === 0 && lastSeenDays > 5) {
