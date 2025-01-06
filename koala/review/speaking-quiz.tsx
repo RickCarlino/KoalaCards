@@ -178,15 +178,22 @@ export const SpeakingQuiz: QuizComp = (props) => {
   const gradingInfo = () => {
     switch (props.quiz.serverGradingResult) {
       case "pass":
-        return <Text>Congrats! You got this one correct.</Text>;
+        return <Text size="xs">Congrats! You got this one correct.</Text>;
       case "fail":
         const expected = props.quiz.serverResponse || "";
         const actual = props.quiz.response || expected;
-        return <ServerExplanation expected={expected} actual={actual} />;
+        const heading = "";
+        return (
+          <>
+            <Text size="xs">You didn't get this one correct.</Text>
+            <ServerExplanation {...{ expected, actual, heading }} />
+          </>
+        );
       default:
         return (
-          <Text>
-            We are still grading this one. You can keep waiting or review your feedback at the end of the lesson.
+          <Text size="xs">
+            Grading in progress. You can keep waiting or review your feedback at
+            the end of the lesson.
           </Text>
         );
     }
