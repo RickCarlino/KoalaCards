@@ -14,7 +14,6 @@ import { HOTKEYS } from "./hotkeys";
 import { QuizComp } from "./types";
 import { LangCode } from "../shared-types";
 import { getLangName } from "../get-lang-name";
-import { notifications } from "@mantine/notifications";
 
 /** A helper to sequentially play any number of audio files. */
 async function playSequence(...audioURLs: (string | undefined)[]) {
@@ -57,6 +56,7 @@ export const SpeakingQuiz: QuizComp = (props) => {
   function handleRecordClick() {
     if (isRecording) {
       voiceRecorder.stop();
+      console.time(card.term);
       setIsRecording(false);
       setPhase("done");
       return;
@@ -91,10 +91,6 @@ export const SpeakingQuiz: QuizComp = (props) => {
     }
 
     let userTranscription = "";
-    notifications.show({
-      title: "Your response will be graded soon!",
-      message: "Please wait a moment.",
-    });
     // Send to server for grading.
     transcribeAudio
       .mutateAsync({
@@ -115,6 +111,7 @@ export const SpeakingQuiz: QuizComp = (props) => {
           feedback: isCorrect ? "" : feedback,
           userResponse: userTranscription,
         });
+        console.timeEnd(card.term);
       });
   }
 
@@ -187,7 +184,7 @@ export const SpeakingQuiz: QuizComp = (props) => {
 
   function getHeaderText() {
     if (phase === "prompt") {
-      return `Say in target ${getLangName(card.langCode)}`;
+      return `Say in ${getLangName(card.langCode)}`;
     }
     return "Select Next Review Date";
   }
