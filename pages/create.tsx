@@ -302,7 +302,7 @@ function InputStep({ state, dispatch, onSubmit, loading }: InputStepProps) {
       <Flex direction="column" gap="md">
         <Title order={3}>Step 2: Input Your Learning Material</Title>
         <Text size="sm">
-          Paste your notes or target language phrases here. If you don't know
+          Paste a list of language phrases or vocabulary here. If you don't know
           what to learn, try an example by clicking the button.
         </Text>
         <Text size="sm">
