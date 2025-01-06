@@ -3,8 +3,8 @@ import { Grade } from "femto-fsrs";
 import Link from "next/link";
 import { DifficultyButtons } from "./grade-buttons";
 import { QuizState } from "./types";
-import { VisualDiff } from "./visual-diff";
 import RemixButton from "../remix-button";
+import { ServerExplanation } from "./ServerExplanation";
 
 type FeedbackRowProps = {
   quizState: QuizState;
@@ -12,31 +12,6 @@ type FeedbackRowProps = {
   getColor: (quizState: QuizState) => string;
 };
 
-const PENCIL_EMOJI = "✏️";
-
-const LastRow = ({
-  expected,
-  actual,
-}: {
-  expected: string;
-  actual: string;
-}) => {
-  // HACK: Stringly typed server response for now
-  // Will re-do schema if I like the results.
-  // This is an experiment.
-  // - RC 16 NOV 2024
-  if (expected.includes(PENCIL_EMOJI)) {
-    return (
-      <VisualDiff
-        expected={expected.slice(1)}
-        actual={actual}
-        heading="Feedback: "
-      />
-    );
-  } else {
-    return <Text>Feedback: {expected}</Text>;
-  }
-};
 export const FeedbackRow = ({
   quizState,
   onUpdateDifficulty,
@@ -76,7 +51,7 @@ export const FeedbackRow = ({
         </Text>
         <Text>Definition: {quizState.quiz.definition}</Text>
         <Text>Your Entered: {quizState.response || ""}</Text>
-        <LastRow expected={expected} actual={actual} />
+        <ServerExplanation expected={expected} actual={actual} />
       </Stack>
     </Card>
   );

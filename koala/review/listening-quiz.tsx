@@ -25,11 +25,8 @@ const DEFAULT_STATE = {
   userInput: undefined as string | undefined,
 };
 
-export const ListeningQuiz: QuizComp = ({
-  quiz: card,
-  onGraded,
-  onComplete,
-}) => {
+export const ListeningQuiz: QuizComp = ({ quiz, onGraded, onComplete }) => {
+  const card = quiz.quiz;
   // State variables
   const [state, setState] = useState(DEFAULT_STATE);
   const transcribeAudio = trpc.transcribeAudio.useMutation();

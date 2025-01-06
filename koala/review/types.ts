@@ -30,7 +30,7 @@ export type OnCompleteProps = {
 };
 
 export interface QuizProps {
-  quiz: Quiz;
+  quiz: QuizState;
   // Called when user sets grade.
   onGraded: (grade: Grade) => void;
   // Called when all async tasks / grading are done.

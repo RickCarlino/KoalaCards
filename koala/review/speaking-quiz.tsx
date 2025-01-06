@@ -14,6 +14,7 @@ import { HOTKEYS } from "./hotkeys";
 import { QuizComp } from "./types";
 import { LangCode } from "../shared-types";
 import { getLangName } from "../get-lang-name";
+import { ServerExplanation } from "./ServerExplanation";
 
 /** A helper to sequentially play any number of audio files. */
 async function playSequence(...audioURLs: (string | undefined)[]) {
@@ -24,8 +25,8 @@ async function playSequence(...audioURLs: (string | undefined)[]) {
 }
 
 export const SpeakingQuiz: QuizComp = (props) => {
-  const { quiz: card, onComplete, onGraded } = props;
-
+  const { onComplete, onGraded } = props;
+  const card = props.quiz.quiz;
   const [isRecording, setIsRecording] = useState(false);
   const [phase, setPhase] = useState<"prompt" | "recording" | "done">("prompt");
 
@@ -174,13 +175,34 @@ export const SpeakingQuiz: QuizComp = (props) => {
     </>
   );
 
-  const renderDoneControls = () => (
-    <DifficultyButtons
-      quiz={card}
-      current={undefined}
-      onSelectDifficulty={handleDifficultySelect}
-    />
-  );
+  const gradingInfo = () => {
+    switch (props.quiz.serverGradingResult) {
+      case "pass":
+        return <Text>Congrats! You got this one correct.</Text>;
+      case "fail":
+        const expected = props.quiz.serverResponse || "";
+        const actual = props.quiz.response || expected;
+        return <ServerExplanation expected={expected} actual={actual} />;
+      default:
+        return (
+          <Text>
+            We are still grading this one. You can keep waiting or review your feedback at the end of the lesson.
+          </Text>
+        );
+    }
+  };
+  const renderDoneControls = () => {
+    return (
+      <>
+        {gradingInfo()}
+        <DifficultyButtons
+          quiz={card}
+          current={undefined}
+          onSelectDifficulty={handleDifficultySelect}
+        />
+      </>
+    );
+  };
 
   function getHeaderText() {
     if (phase === "prompt") {
