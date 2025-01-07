@@ -85,7 +85,7 @@ export const ReviewOver = ({
               </Button>
             </Stack>
             <Stack>
-              {sort(filtered, (x) => x.grade || 0, true).map((quizState) => (
+              {filtered.map((quizState) => (
                 <FeedbackRow
                   key={quizState.quiz.quizId}
                   quizState={quizState}
