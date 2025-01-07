@@ -88,7 +88,9 @@ export const getNextQuizzes = procedure
   .input(QuizInput)
   .output(QuizList)
   .mutation(async ({ ctx, input }) => {
-    const userId = (await getUserSettings(ctx.user?.id)).user.id;
+    const { user } = await getUserSettings(ctx.user?.id);
+    const userId = user.id;
+    console.log("### Begin session: " + user.email);
     return {
       ...(await getLessonMeta(userId)),
       quizzes: await getLessons({

@@ -147,7 +147,7 @@ export default function UserSettingsPage(props: Props) {
     ["newCardsLastWeek", "New cards studied this week"],
     ["uniqueCardsLast24Hours", "Cards studied last 24 hours"],
     ["uniqueCardsLastWeek", "Cards studied this week"],
-    ["globalUsers", "Users on this server"],
+    ["globalUsers", "Active Koala users"],
   ];
 
   return (

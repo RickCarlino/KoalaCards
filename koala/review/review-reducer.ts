@@ -68,7 +68,7 @@ function handleServerFeedback(
     serverGradingResult: action.result,
     serverResponse: action.serverResponse,
     status: "graded",
-    grade: action.result === "fail" ? Grade.AGAIN : q.grade,
+    // grade: action.result === "fail" ? Grade.AGAIN : q.grade,
     response: action.userResponse,
   }));
 }

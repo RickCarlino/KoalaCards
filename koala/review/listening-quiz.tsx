@@ -25,11 +25,8 @@ const DEFAULT_STATE = {
   userInput: undefined as string | undefined,
 };
 
-export const ListeningQuiz: QuizComp = ({
-  quiz: card,
-  onGraded,
-  onComplete,
-}) => {
+export const ListeningQuiz: QuizComp = ({ quiz, onGraded, onComplete }) => {
+  const card = quiz.quiz;
   // State variables
   const [state, setState] = useState(DEFAULT_STATE);
   const transcribeAudio = trpc.transcribeAudio.useMutation();
@@ -118,8 +115,8 @@ export const ListeningQuiz: QuizComp = ({
     onGraded(Grade.AGAIN);
     onComplete({
       status: "fail",
-      feedback: "You hit the FAIL button.",
-      userResponse: "Not provided.",
+      feedback: "You gave up.",
+      userResponse: "",
     });
   };
 
@@ -228,10 +225,13 @@ const RecordPhase = ({
   onFailClick,
 }: RecordPhaseProps) => {
   useHotkeys([
-    [HOTKEYS.RECORD, (e) => {
-      e.preventDefault(); // Prevent buttons from getting pushed due to spacebar press.
-      !isProcessing && onRecordClick();
-    }],
+    [
+      HOTKEYS.RECORD,
+      (e) => {
+        e.preventDefault(); // Prevent buttons from getting pushed due to spacebar press.
+        !isProcessing && onRecordClick();
+      },
+    ],
     [HOTKEYS.PLAY, () => !isProcessing && onPlayClick()],
   ]);
   const recordingText = isRecording ? "Stop Recording" : "Begin Recording";

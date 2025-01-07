@@ -5,6 +5,7 @@ import { useState } from "react";
 import { FeedbackRow } from "./feedback-row";
 import { HOTKEYS } from "./hotkeys";
 import { QuizState } from "./types";
+import { sort } from "radash";
 
 type ReviewOverProps = {
   state: QuizState[];
@@ -24,24 +25,8 @@ export const ReviewOver = ({
     await onSave().finally(() => setIsSaving(false));
   };
 
-  const getColor = (quizState: QuizState): string => {
-    switch (quizState.serverGradingResult) {
-      case "pass":
-        return "white";
-      case "fail":
-        return "red";
-      case "error":
-        return "yellow";
-      default:
-        return "gray";
-    }
-  };
-
   const dontShowCorrect = (quizState: QuizState) => {
-    if (quizState.grade === Grade.AGAIN) {
-      return true;
-    }
-    return quizState.serverGradingResult !== "pass";
+    return quizState.serverGradingResult === "fail";
   };
 
   if (state.length === 0) {
@@ -58,7 +43,7 @@ export const ReviewOver = ({
 
   if (filtered.length === 0) {
     return (
-      <Center style={{ width: "100%" }}>
+      <Center style={{ width: "100%", marginTop: "10px" }}>
         <Card
           shadow="sm"
           padding="lg"
@@ -76,7 +61,7 @@ export const ReviewOver = ({
     );
   } else {
     return (
-      <Center style={{ width: "100%" }}>
+      <Center style={{ width: "100%", marginTop: "10px" }}>
         <Card
           shadow="sm"
           padding="lg"
@@ -91,8 +76,8 @@ export const ReviewOver = ({
               Please finalize your review.
             </Alert>
             <Text>
-              The server will return feedback (if any) below. Please take a look
-              before moving to the next review session.
+              The server found some mistakes with some of your responses.
+              Please take a look at the feedback below. You may want to shorten the review interval.
             </Text>
             <Stack>
               <Button onClick={handleSave} loading={isSaving}>
@@ -100,12 +85,11 @@ export const ReviewOver = ({
               </Button>
             </Stack>
             <Stack>
-              {filtered.map((quizState) => (
+              {sort(filtered, (x) => x.grade || 0, true).map((quizState) => (
                 <FeedbackRow
                   key={quizState.quiz.quizId}
                   quizState={quizState}
                   onUpdateDifficulty={onUpdateDifficulty}
-                  getColor={getColor}
                 />
               ))}
             </Stack>

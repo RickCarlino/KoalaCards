@@ -49,11 +49,11 @@ const UnknownQuiz: QuizComp = (props) => {
   return (
     <Card shadow="sm" padding="lg" radius="md" withBorder>
       <Stack>
-        <Title order={2}>Unknown Quiz ({props.quiz.lessonType})</Title>
-        <Text>{props.quiz.definition}</Text>
-        <Text>{props.quiz.term}</Text>
+        <Title order={2}>Unknown Quiz ({props.quiz.quiz.lessonType})</Title>
+        <Text>{props.quiz.quiz.definition}</Text>
+        <Text>{props.quiz.quiz.term}</Text>
         <DifficultyButtons
-          quiz={props.quiz}
+          quiz={props.quiz.quiz}
           current={currentGrade}
           onSelectDifficulty={handleGrade}
         />
@@ -97,7 +97,7 @@ export const ReviewPage = (props: Props) => {
     const quiz = currentQuizState.quiz;
     const LessonComponent = quizComponents[quiz.lessonType] || UnknownQuiz;
     const quizProps: QuizProps = {
-      quiz: currentQuizState.quiz,
+      quiz: currentQuizState,
       onGraded(grade) {
         dispatch({ type: "SET_GRADE", grade, quizId: quiz.quizId });
         dispatch({ type: "NEXT_QUIZ" });

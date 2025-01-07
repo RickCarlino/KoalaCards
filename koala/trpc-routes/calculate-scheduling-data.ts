@@ -3,7 +3,7 @@ import { errorReport } from "../error-report";
 import { Quiz } from "@prisma/client";
 
 const FSRS = createDeck({
-  requestedRetentionRate: 0.89,
+  requestedRetentionRate: 0.87,
 });
 
 const DAYS = 24 * 60 * 60 * 1000;
@@ -34,10 +34,10 @@ function scheduleNewCard(grade: Grade, now = Date.now()): SchedulingData {
   const x = FSRS.newCard(grade);
   const MINUTE = 60000;
   const grades: Record<Grade, number> = {
-    [Grade.AGAIN]: 1 * MINUTE,
-    [Grade.HARD]: 4 * 60 * MINUTE,
-    [Grade.GOOD]: 50 * 60 * MINUTE,
-    [Grade.EASY]: 4 * DAYS,
+    [Grade.AGAIN]: 6 * MINUTE,
+    [Grade.HARD]: 2.5 * DAYS,
+    [Grade.GOOD]: 4 * DAYS,
+    [Grade.EASY]: 8 * DAYS,
   };
   const nextReview = now + fuzzNumber(grades[grade]);
 

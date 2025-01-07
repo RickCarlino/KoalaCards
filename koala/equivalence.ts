@@ -71,6 +71,6 @@ async function handleFailure(
   }
   return {
     result: "fail",
-    userMessage: `Inccorrect response. Your sentence translates to '${englishTranslation}'.`,
+    userMessage: `Incorrect response. Your sentence translates to '${englishTranslation}'.`,
   };
 }

@@ -58,7 +58,9 @@ const userCleanup = async (user: User) => {
     const su = userApproval(id, email);
     const cardCount = await countCards(id);
     if (cardCount > 1) {
-      console.log(`== ${su ? "@" : ""}${email} ${lastSeenDays} days`);
+      const flair = su ? "@" : "";
+      const log = `== ${flair}${email} ${lastSeenDays}d ago ${cardCount} cards`;
+      console.log(log);
       return;
     } else {
       // Users must create a card within 5 days of signing up.
