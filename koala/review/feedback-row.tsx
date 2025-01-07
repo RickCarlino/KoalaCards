@@ -9,13 +9,11 @@ import { ServerExplanation } from "./ServerExplanation";
 type FeedbackRowProps = {
   quizState: QuizState;
   onUpdateDifficulty: (quizId: number, grade: Grade) => void;
-  getColor: (quizState: QuizState) => string;
 };
 
 export const FeedbackRow = ({
   quizState,
   onUpdateDifficulty,
-  getColor,
 }: FeedbackRowProps) => {
   const expected = quizState.serverResponse || "";
   const actual = quizState.response || expected;
@@ -31,7 +29,6 @@ export const FeedbackRow = ({
       padding="md"
       radius="md"
       withBorder
-      style={{ borderColor: getColor(quizState) }}
     >
       <Stack>
         <DifficultyButtons

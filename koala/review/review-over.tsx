@@ -24,24 +24,8 @@ export const ReviewOver = ({
     await onSave().finally(() => setIsSaving(false));
   };
 
-  const getColor = (quizState: QuizState): string => {
-    switch (quizState.serverGradingResult) {
-      case "pass":
-        return "white";
-      case "fail":
-        return "red";
-      case "error":
-        return "yellow";
-      default:
-        return "gray";
-    }
-  };
-
   const dontShowCorrect = (quizState: QuizState) => {
-    if (quizState.grade === Grade.AGAIN) {
-      return true;
-    }
-    return quizState.serverGradingResult !== "pass";
+    return quizState.serverGradingResult === "fail";
   };
 
   if (state.length === 0) {
@@ -105,7 +89,6 @@ export const ReviewOver = ({
                   key={quizState.quiz.quizId}
                   quizState={quizState}
                   onUpdateDifficulty={onUpdateDifficulty}
-                  getColor={getColor}
                 />
               ))}
             </Stack>
