@@ -58,7 +58,7 @@ export const ReviewOver = ({
 
   if (filtered.length === 0) {
     return (
-      <Center style={{ width: "100%" }}>
+      <Center style={{ width: "100%", marginTop: "10px" }}>
         <Card
           shadow="sm"
           padding="lg"
@@ -76,7 +76,7 @@ export const ReviewOver = ({
     );
   } else {
     return (
-      <Center style={{ width: "100%" }}>
+      <Center style={{ width: "100%", marginTop: "10px" }}>
         <Card
           shadow="sm"
           padding="lg"

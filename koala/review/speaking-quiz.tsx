@@ -185,7 +185,6 @@ export const SpeakingQuiz: QuizComp = (props) => {
         const heading = "";
         return (
           <>
-            <Text size="xs">You didn't get this one correct.</Text>
             <ServerExplanation {...{ expected, actual, heading }} />
           </>
         );

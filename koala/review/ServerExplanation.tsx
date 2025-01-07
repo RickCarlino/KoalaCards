@@ -21,7 +21,7 @@ export const ServerExplanation = ({
       <VisualDiff
         expected={expected.slice(1)}
         actual={actual}
-        heading={heading || "Feedback: "}
+        heading={typeof heading === "string" ? heading : "Feedback: "}
       />
     );
   } else {
