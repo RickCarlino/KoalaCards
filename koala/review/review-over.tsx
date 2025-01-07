@@ -5,7 +5,6 @@ import { useState } from "react";
 import { FeedbackRow } from "./feedback-row";
 import { HOTKEYS } from "./hotkeys";
 import { QuizState } from "./types";
-import { sort } from "radash";
 
 type ReviewOverProps = {
   state: QuizState[];

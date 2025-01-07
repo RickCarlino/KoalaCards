@@ -25,17 +25,36 @@ type GetCardsProps = {
   isReview: boolean;
 };
 
-const NEW_CARDS_PER_SESSION_MIN = 7;
+function blend<T>(max: number, ...arrays: T[][]): T[] {
+  const result: T[] = [];
+  let index = 0;
 
-// Split an array like a deck of cards.
-function split<T>(l: T[], r: T[]): T[] {
-  const output: T[] = [];
-  const len = Math.max(l.length, r.length);
-  for (let i = 0; i < len; i++) {
-    if (l[i]) output.push(l[i]);
-    if (r[i]) output.push(r[i]);
+  // Continue looping until the result has reached the max size
+  while (result.length < max) {
+    let added = false;
+
+    // Iterate over each array and add the next element if available
+    for (let arr of arrays) {
+      if (index < arr.length) {
+        result.push(arr[index]);
+        added = true;
+
+        // If we've reached the max, return the result early
+        if (result.length === max) {
+          return result;
+        }
+      }
+    }
+
+    // If no elements were added in this iteration, all arrays are exhausted
+    if (!added) {
+      break;
+    }
+
+    index++;
   }
-  return output;
+
+  return result;
 }
 
 async function getCards(props: GetCardsProps) {
@@ -65,7 +84,8 @@ async function getCards(props: GetCardsProps) {
     ...p,
     orderBy: orderBy("desc"),
   });
-  return unique(split(list1, list2), (x) => x.id).slice(0, take);
+  const blended = blend(take * 2, list1, list2);
+  return unique(blended, (x) => x.id).slice(0, take);
 }
 
 function cardCountNewToday(userID: string): Promise<number> {
@@ -151,9 +171,9 @@ export async function getLessons(p: GetLessonInputParams) {
     ...p2,
     // Insert fewer cards when there are many old cards
     // always provide at least 3 new cards.
-    take: Math.max(take - oldCards.length, NEW_CARDS_PER_SESSION_MIN),
+    take,
   });
-  const shuffled = split(oldCards, newCards);
+  const shuffled = blend(take * 2, oldCards, newCards);
   const combined = unique(shuffled, (x) => x.cardId).slice(0, take);
   const audioSpeed = Math.round((await playbackSpeed(userId)) * 100);
 
