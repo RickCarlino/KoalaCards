@@ -5,6 +5,7 @@ import { useState } from "react";
 import { FeedbackRow } from "./feedback-row";
 import { HOTKEYS } from "./hotkeys";
 import { QuizState } from "./types";
+import { sort } from "radash";
 
 type ReviewOverProps = {
   state: QuizState[];
@@ -75,8 +76,8 @@ export const ReviewOver = ({
               Please finalize your review.
             </Alert>
             <Text>
-              The server will return feedback (if any) below. Please take a look
-              before moving to the next review session.
+              The server found some mistakes with some of your responses.
+              Please take a look at the feedback below. You may want to shorten the review interval.
             </Text>
             <Stack>
               <Button onClick={handleSave} loading={isSaving}>
@@ -84,7 +85,7 @@ export const ReviewOver = ({
               </Button>
             </Stack>
             <Stack>
-              {filtered.map((quizState) => (
+              {sort(filtered, (x) => x.grade || 0, true).map((quizState) => (
                 <FeedbackRow
                   key={quizState.quiz.quizId}
                   quizState={quizState}
