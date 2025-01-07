@@ -25,7 +25,7 @@ type GetCardsProps = {
   isReview: boolean;
 };
 
-const NEW_CARDS_PER_SESSION_MIN = 3;
+const NEW_CARDS_PER_SESSION_MIN = 4;
 
 // Split an array like a deck of cards.
 function split<T>(l: T[], r: T[]): T[] {
