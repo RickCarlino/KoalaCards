@@ -89,12 +89,8 @@ async function checkGrammar(
     return gradeResponse;
   };
 
-  let output = await check();
-  if (output.grade === "incorrect") {
-    output = await check();
-  }
-
-  return output;
+  const results = await Promise.all([check(), check()]);
+  return results.find((response) => response.grade === "correct") || results[0];
 }
 
 export const grammarCorrection: QuizEvaluator = async ({ userInput, card }) => {

@@ -30,14 +30,13 @@ export const FeedbackRow = ({
     >
       <Stack>
         <RemixButton card={card} />
-        <Text>Type: {quizState.quiz.lessonType}</Text>
         <Text>
           <Link target={"_blank"} href={`/cards/${quizState.quiz.cardId}`}>
             {quizState.quiz.term}
           </Link>
         </Text>
         <Text>Definition: {quizState.quiz.definition}</Text>
-        <Text>Your Entered: {quizState.response || ""}</Text>
+        <Text>You Said: {quizState.response || ""}</Text>
         <ServerExplanation expected={expected} actual={actual} />
       </Stack>
     </Card>

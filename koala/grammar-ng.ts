@@ -3,7 +3,7 @@ import { zodResponseFormat } from "openai/helpers/zod";
 import { prismaClient } from "./prisma-client";
 import { openai } from "./openai";
 import { compare } from "./quiz-evaluators/evaluator-utils";
-import { QuizEvaluator } from "./quiz-evaluators/types";
+import { QuizEvaluator, QuizEvaluatorOutput } from "./quiz-evaluators/types";
 import { getLangName } from "./get-lang-name";
 
 // We now allow three possible outcomes: "ok", "edit", or "fail",
@@ -210,7 +210,6 @@ export const grammarCorrectionNG: QuizEvaluator = async ({
   userInput,
   card,
 }) => {
-
   const check = async (): ReturnType<QuizEvaluator> => {
     // Not impressed with GPT-O1-Mini.
     const fn = Math.random() > 1 ? runChecksO1 : runChecks;
@@ -234,10 +233,6 @@ export const grammarCorrectionNG: QuizEvaluator = async ({
     }
   };
 
-  let result = await check();
-  // Check twice if failed:
-  if (result.result === "fail") {
-    result = await check();
-  }
-  return result;
+  const results = await Promise.all([check(), check()]);
+  return results.find((response) => response.result === "pass") || results[0];
 };
