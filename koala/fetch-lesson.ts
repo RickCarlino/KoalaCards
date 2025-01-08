@@ -11,9 +11,7 @@ import { generateLessonAudio } from "./speech";
 type GetLessonInputParams = {
   userId: string;
   deckId: number;
-  /** Current time */
   now: number;
-  /** Max number of cards to return */
   take: number;
 };
 
@@ -25,90 +23,64 @@ type GetCardsProps = {
   isReview: boolean;
 };
 
-function blend<T>(max: number, ...arrays: T[][]): T[] {
+function interleave<T>(max: number, ...lists: T[][]): T[] {
   const result: T[] = [];
   let index = 0;
-
-  // Continue looping until the result has reached the max size
   while (result.length < max) {
-    let added = false;
-
-    // Iterate over each array and add the next element if available
-    for (let arr of arrays) {
-      if (index < arr.length) {
-        result.push(arr[index]);
-        added = true;
-
-        // If we've reached the max, return the result early
-        if (result.length === max) {
-          return result;
-        }
+    let inserted = false;
+    for (const list of lists) {
+      if (index < list.length) {
+        result.push(list[index]);
+        inserted = true;
+        if (result.length === max) return result;
       }
     }
-
-    // If no elements were added in this iteration, all arrays are exhausted
-    if (!added) {
-      break;
-    }
-
+    if (!inserted) break;
     index++;
   }
-
   return result;
 }
 
-async function getCards(props: GetCardsProps) {
+async function fetchQuizCards(props: GetCardsProps) {
   const { userId, now, take, isReview, deckId } = props;
   if (take < 1) return [];
-
-  const base = {
-    Card: { userId, deckId, flagged: { not: true } },
-  };
-
-  const whereClause = isReview
+  const base = { Card: { userId, deckId, flagged: { not: true } } };
+  const filters = isReview
     ? { ...base, nextReview: { lt: now }, repetitions: { gt: 0 } }
     : { ...base, repetitions: 0 };
-  const p = {
-    where: whereClause,
-    include: { Card: true },
-    take,
-  };
-  const orderBy = (i: "asc" | "desc") =>
-    isReview ? [{ nextReview: i }] : [{ Card: { createdAt: i } }];
-  // Grab old ones first, then new ones.
-  const list1 = await prismaClient.quiz.findMany({
-    ...p,
-    orderBy: orderBy("asc"),
+  const query = { where: filters, include: { Card: true }, take };
+  const sort = (dir: "asc" | "desc") =>
+    isReview ? [{ nextReview: dir }] : [{ Card: { createdAt: dir } }];
+  const ascList = await prismaClient.quiz.findMany({
+    ...query,
+    orderBy: sort("asc"),
   });
-  const list2 = await prismaClient.quiz.findMany({
-    ...p,
-    orderBy: orderBy("desc"),
+  const descList = await prismaClient.quiz.findMany({
+    ...query,
+    orderBy: sort("desc"),
   });
-  const blended = blend(take * 2, list1, list2);
-  return unique(blended, (x) => x.id).slice(0, take);
+  const combined = interleave(take * 2, ascList, descList);
+  return unique(combined, (x) => x.id).slice(0, take);
 }
 
-function cardCountNewToday(userID: string): Promise<number> {
-  const _24HoursAgo = Date.now() - 24 * 60 * 60 * 1000;
-
+function newCardsLearnedToday(userId: string): Promise<number> {
+  const timeLimit = Date.now() - 24 * 60 * 60 * 1000;
   return prismaClient.card.count({
     where: {
-      userId: userID,
+      userId,
       Quiz: {
-        every: {
-          firstReview: {
-            gte: _24HoursAgo,
-          },
+        // "Some" or "Every" ? Hmm...
+        some: {
+          firstReview: { gte: timeLimit },
         },
       },
     },
   });
 }
 
-// A prisma quiz with Card included
 type LocalQuiz = Quiz & { Card: Card };
 
-async function prepareQuizData(quiz: LocalQuiz, playbackPercentage: number) {
+async function buildQuizPayload(quiz: LocalQuiz, playbackPercentage: number) {
   const repetitions = quiz.repetitions || 0;
   return {
     quizId: quiz.id,
@@ -126,7 +98,6 @@ async function prepareQuizData(quiz: LocalQuiz, playbackPercentage: number) {
     termAudio: await generateLessonAudio({
       card: quiz.Card,
       lessonType: "listening",
-      // Always play new cards at 95% speed
       speed: repetitions > 2 ? playbackPercentage : 95,
     }),
     langCode: quiz.Card.langCode,
@@ -137,50 +108,44 @@ async function prepareQuizData(quiz: LocalQuiz, playbackPercentage: number) {
   };
 }
 
-const playbackSpeed = async (userID: string) => {
-  return await getUserSettings(userID).then((s) => s.playbackSpeed || 1.05);
-};
+async function getAudioSpeed(userId: string) {
+  const settings = await getUserSettings(userId);
+  return settings.playbackSpeed || 1.00;
+}
 
-const newCardsPerDay = async (userID: string) => {
-  return await getUserSettings(userID).then((s) => s.cardsPerDayMax || 10);
-};
+async function getCardsAllowedPerDay(userId: string) {
+  const settings = await getUserSettings(userId);
+  return settings.cardsPerDayMax || 24;
+}
 
-const getNewCards = async (props: Omit<GetCardsProps, "isReview">) => {
+async function fetchNewCards(props: Omit<GetCardsProps, "isReview">) {
   const { userId, now, take, deckId } = props;
-  const maxNew = await newCardsPerDay(userId);
-  const newToday = await cardCountNewToday(userId);
-  const allowedNew = Math.max(maxNew - newToday, 0);
-  const maxNewCards = Math.min(take, allowedNew);
-
-  return await getCards({
-    userId,
-    deckId,
-    now,
-    take: maxNewCards,
-    isReview: false,
-  });
-};
+  const maxNew = await getCardsAllowedPerDay(userId);
+  const newToday = await newCardsLearnedToday(userId);
+  const allowed = Math.max(maxNew - newToday, 0);
+  const limit = Math.min(take, allowed);
+  return fetchQuizCards({ userId, deckId, now, take: limit, isReview: false });
+}
 
 export async function getLessons(p: GetLessonInputParams) {
   const { userId, now, take, deckId } = p;
   await autoPromoteCards(userId);
   if (take > 45) return errorReport("Too many cards requested.");
-  const p2 = { userId, now, take, deckId };
-  const oldCards = await getCards({ ...p2, isReview: true });
-  const newCards = await getNewCards({
-    ...p2,
-    // Insert fewer cards when there are many old cards
-    // always provide at least 3 new cards.
+  const reviewCards = await fetchQuizCards({
+    userId,
+    deckId,
+    now,
     take,
+    isReview: true,
   });
-  const shuffled = blend(take * 2, oldCards, newCards);
-  const combined = unique(shuffled, (x) => x.cardId).slice(0, take);
-  const audioSpeed = Math.round((await playbackSpeed(userId)) * 100);
-
-  return await map(combined, (q) => {
-    const isDictation = q.quizType === "listening" && q.repetitions < 1;
-    const quizType = isDictation ? "dictation" : q.quizType;
-    const quiz = { ...q, quizType };
-    return prepareQuizData(quiz, audioSpeed);
+  const freshCards = await fetchNewCards({ userId, deckId, now, take });
+  const blended = interleave(take * 2, reviewCards, freshCards);
+  const uniqueCards = unique(blended, (x) => x.cardId).slice(0, take);
+  const speed = Math.round((await getAudioSpeed(userId)) * 100);
+  return map(uniqueCards, (quiz) => {
+    const needsDictation =
+      quiz.quizType === "listening" && quiz.repetitions < 1;
+    const quizType = needsDictation ? "dictation" : quiz.quizType;
+    return buildQuizPayload({ ...quiz, quizType }, speed);
   });
 }

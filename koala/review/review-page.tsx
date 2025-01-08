@@ -185,9 +185,14 @@ export const ReviewPage = (props: Props) => {
             alert("Not all quizzes have been graded");
             throw new Error("Not all quizzes have been graded");
           }
+          const perceivedDifficulty =
+            q.serverGradingResult === "fail" ? Grade.AGAIN : q.grade;
+          console.log(
+            `Saving grade ${perceivedDifficulty} for quiz ${q.quiz.definition}`,
+          );
           return {
             quizID: q.quiz.quizId,
-            perceivedDifficulty: q.grade,
+            perceivedDifficulty,
           };
         });
         await Promise.all(grades.map((grade) => gradeQuiz.mutateAsync(grade)));
