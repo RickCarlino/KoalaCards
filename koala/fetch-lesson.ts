@@ -164,23 +164,22 @@ export async function getLessons(p: GetLessonInputParams) {
     false,
     take,
   );
-  const importedEarly = await fetchNewCards(userId, deckId, true, takeNew);
-  const importedLate = await fetchNewCards(userId, deckId, false, takeNew);
-  const combined = interleave(
-    take * 6,
-    importedEarly,
-    importedLate,
+  const importedEarly = await fetchNewCards(userId, deckId, true, take);
+  const importedLate = await fetchNewCards(userId, deckId, false, take);
+  const newCards = interleave(takeNew, importedEarly, importedLate);
+  const oldCards = interleave(
+    take,
     listeningDueOld,
     listeningDueNew,
     speakingDueOld,
     speakingDueNew,
   );
-  const uniqueByCardId = unique(combined, (q) => q.cardId);
-  const uniqueByQuizId = unique(uniqueByCardId, (q) => q.id);
-  return uniqueByQuizId.slice(0, take).map((quiz) => {
-    const needsDictation =
-      quiz.quizType === "listening" && (quiz.repetitions || 0) < 1;
-    const quizType = needsDictation ? "dictation" : quiz.quizType;
+  const allCards = unique([...newCards, ...oldCards], (q) => q.id);
+  const uniqueByCardId = unique(allCards, (q) => q.cardId);
+  return uniqueByCardId.slice(0, take).map((quiz) => {
+    const isListening = quiz.quizType === "listening";
+    const isNew = (quiz.repetitions || 0) < 1;
+    const quizType = isListening && isNew ? "dictation" : quiz.quizType;
     return buildQuizPayload({ ...quiz, quizType }, speedPercent);
   });
 }
