@@ -3,7 +3,7 @@ import { zodResponseFormat } from "openai/helpers/zod";
 import { prismaClient } from "./prisma-client";
 import { openai } from "./openai";
 import { compare } from "./quiz-evaluators/evaluator-utils";
-import { QuizEvaluator, QuizEvaluatorOutput } from "./quiz-evaluators/types";
+import { QuizEvaluator } from "./quiz-evaluators/types";
 import { getLangName } from "./get-lang-name";
 
 // We now allow three possible outcomes: "ok", "edit", or "fail",

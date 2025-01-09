@@ -91,13 +91,16 @@ export const getNextQuizzes = procedure
     const { user } = await getUserSettings(ctx.user?.id);
     const userId = user.id;
     console.log("### Begin session: " + user.email);
-    return {
-      ...(await getLessonMeta(userId)),
-      quizzes: await getLessons({
+    const quizzes = await Promise.all(
+      await getLessons({
         userId,
         deckId: input.deckId,
         now: Date.now(),
         take: input.take,
       }),
+    );
+    return {
+      ...(await getLessonMeta(userId)),
+      quizzes,
     };
   });
