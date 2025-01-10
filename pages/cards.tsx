@@ -25,6 +25,7 @@ type EditProps = {
 
 const SORT_OPTIONS = [
   { label: "Date Created", value: "createdAt" },
+  { label: "Date Failed", value: "lastFailure" },
   { label: "Definition", value: "definition" },
   { label: "Paused", value: "flagged" },
   { label: "Language", value: "langCode" },
