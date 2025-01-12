@@ -5,6 +5,7 @@ import { openai } from "../openai";
 import { prismaClient } from "../prisma-client";
 import { RemixTypePrompts, RemixTypes } from "../remix-types";
 import { procedure } from "../trpc-procedure";
+import { isApprovedUser } from "../is-approved-user";
 
 interface RemixParams {
   type: RemixTypes;
@@ -20,10 +21,11 @@ interface Remix {
 }
 
 const LANG_SPECIFIC_PROMPT: Record<string, string> = {
-  KO: "You will be severely punished for using 'dictionary form' verbs or the pronouns 그녀, 그, 당신.",
+  KO: "You will be severely punished for using 'dictionary form' or 'plain form' verbs or the pronouns 그녀, 그, 당신.",
 };
 
-const MODELS: Record<"good" | "fast" | "cheap", string> = {
+const MODELS: Record<"good" | "fast" | "cheap" | "premium", string> = {
+  premium: "o1-preview", // $10.00 + $10.00 = $20.00
   good: "o1-mini", // $12.00 + $3.00 = $15.00
   fast: "gpt-4o", // $2.50 + $10 = $12.50
   cheap: "gpt-4o-mini", // $0.150 + $0.600 = $0.750
@@ -162,6 +164,6 @@ export const remix = procedure
       langCode: card.langCode,
       term: card.term,
       definition: card.definition,
-      model: "good",
+      model: isApprovedUser(card.userId) ? "premium" : "good",
     });
   });

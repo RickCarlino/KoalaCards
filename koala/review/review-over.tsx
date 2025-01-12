@@ -27,7 +27,7 @@ export function ReviewOver({
   onUpdateDifficulty,
 }: ReviewOverProps) {
   const DARK_MODE = !!window?.matchMedia?.("(prefers-color-scheme: dark)")
-  ?.matches;
+    ?.matches;
   const theme = useMantineTheme();
   const [isSaving, setIsSaving] = useState(false);
   useHotkeys([[HOTKEYS.SAVE, onSave]]);
@@ -56,7 +56,7 @@ export function ReviewOver({
   }
 
   const filtered = state.filter(dontShowCorrect);
-
+  const score = Math.round((filtered.length / state.length) * 100);
   if (filtered.length === 0) {
     return (
       <Center style={{ width: "100%", marginTop: "2rem" }}>
@@ -122,7 +122,7 @@ export function ReviewOver({
             </Alert>
             <Text size="sm">
               The server found some issues with your responses. Check the
-              feedback below.
+              feedback below. {score}%
             </Text>
             <div
               style={{
