@@ -15,6 +15,7 @@ export const editCard = procedure
       interval: z.optional(z.number()),
       ease: z.optional(z.number()),
       lapses: z.optional(z.number()),
+      lastFailure: z.optional(z.number()),
     }),
   )
   .mutation(async ({ input, ctx }) => {
