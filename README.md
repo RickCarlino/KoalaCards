@@ -94,16 +94,14 @@ The project could use help in the following areas:
 ## CORS Setup on Google Cloud
 
 ```json
-// Run `gsutil cors set cors.json gs://my-bucket`
+// VIEW: gcloud storage buckets describe gs://....
+// EDIT: gcloud storage buckets update gs://.... --cors-file=foo.json
 [
   {
-    "origin": [
-      "https://app.koala.cards"
-    ],
+    "origin": ["https://app.koala.cards"],
     "method": ["GET", "HEAD", "PUT", "POST"],
     "responseHeader": ["Content-Type"],
     "maxAgeSeconds": 3600
   }
 ]
 ```
-
