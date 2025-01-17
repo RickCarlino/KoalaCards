@@ -104,6 +104,7 @@ model Card {
   mirrorRepetitionCount Int?                 @default(0)
   deckId                Int? // Nullable for gradual migration
   Deck                  Deck?                @relation(fields: [deckId], references: [id])
+  lastFailure Float    @default(0)
 
   @@unique([userId, term])
   @@index([deckId])
@@ -122,7 +123,6 @@ model Quiz {
   nextReview  Float    @default(0)
   lapses      Float    @default(0)
   repetitions Float    @default(0)
-
   @@unique([cardId, quizType])
   @@index([cardId])
   @@index([nextReview])

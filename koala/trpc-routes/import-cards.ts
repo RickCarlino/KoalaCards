@@ -13,7 +13,7 @@ type QuizGradingFields =
   | "repetitions"
   | "stability";
 
-  type GradedQuiz = Pick<Quiz, QuizGradingFields>;
+type GradedQuiz = Pick<Quiz, QuizGradingFields>;
 
 export async function setGrade(
   quiz: GradedQuiz,
@@ -32,6 +32,9 @@ export async function setGrade(
   const { id, nextReview } = await prismaClient.quiz.update({
     where: { id: quiz.id },
     data: {
+      ...(grade === Grade.AGAIN
+        ? { Card: { update: { lastFailure: now } } }
+        : {}),
       // Stats:
       difficulty: data.difficulty,
       lapses: data.lapses,

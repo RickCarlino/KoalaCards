@@ -210,24 +210,29 @@ export const grammarCorrectionNG: QuizEvaluator = async ({
   userInput,
   card,
 }) => {
-  // Not impressed with GPT-O1-Mini.
-  const fn = Math.random() > 1 ? runChecksO1 : runChecks;
-  const resp = await fn({
-    term: card.term,
-    definition: card.definition,
-    langCode: card.langCode,
-    userInput,
-  });
+  const check = async (): ReturnType<QuizEvaluator> => {
+    // Not impressed with GPT-O1-Mini.
+    const fn = Math.random() > 1 ? runChecksO1 : runChecks;
+    const resp = await fn({
+      term: card.term,
+      definition: card.definition,
+      langCode: card.langCode,
+      userInput,
+    });
 
-  switch (resp.grade) {
-    case "ok":
-      return { result: "pass", userMessage: "" };
-    case "edit":
-      return { result: "fail", userMessage: `✏️${resp.correctedSentence}` };
-    case "fail":
-      return {
-        result: "fail",
-        userMessage: "(Failed) " + resp.correctedSentence || "",
-      };
-  }
+    switch (resp.grade) {
+      case "ok":
+        return { result: "pass", userMessage: "" };
+      case "edit":
+        return { result: "fail", userMessage: `✏️${resp.correctedSentence}` };
+      case "fail":
+        return {
+          result: "fail",
+          userMessage: "(Failed) " + resp.correctedSentence || "",
+        };
+    }
+  };
+
+  const results = await Promise.all([check(), check()]);
+  return results.find((response) => response.result === "pass") || results[0];
 };

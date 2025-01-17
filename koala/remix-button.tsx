@@ -100,8 +100,11 @@ export default function RemixButton(props: RemixButtonProps) {
     </Button>
   );
 
+  // Target phrase must contain at least 4 charaters a one space.
+  const isDisabled = props.card.term.length < 4 || !props.card.term.includes(" ");
+
   const loadButton = (
-    <Button onClick={handleRemix} loading={createRemix.isLoading}>
+    <Button onClick={handleRemix} loading={createRemix.isLoading} disabled={isDisabled}>
       Load Remixes
     </Button>
   );

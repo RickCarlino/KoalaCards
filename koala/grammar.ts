@@ -3,7 +3,10 @@ import { zodResponseFormat } from "openai/helpers/zod";
 import { prismaClient } from "./prisma-client";
 import { getLangName } from "./get-lang-name";
 import { openai } from "./openai";
-import { compare, stripFinalPunctuation } from "./quiz-evaluators/evaluator-utils";
+import {
+  compare,
+  stripFinalPunctuation,
+} from "./quiz-evaluators/evaluator-utils";
 import { QuizEvaluator } from "./quiz-evaluators/types";
 
 export type Explanation = z.infer<typeof zodGradeResponse>;
@@ -58,28 +61,36 @@ async function checkGrammar(
   props: GrammarCorrectionProps,
 ): Promise<Explanation> {
   const { userInput, langCode } = props;
-  const response = await openai.beta.chat.completions.parse({
-    messages: [
-      { role: "user", content: buildPrompt(props, getLangName(langCode)) },
-    ],
-    model: "gpt-4o",
-    max_tokens: 125,
-    temperature: 0.1,
-    response_format: zodResponseFormat(zodGradeResponse, "grade_response"),
-  });
-  const gradeResponse = response.choices[0]?.message?.parsed;
-  if (!gradeResponse) {
-    throw new Error("Invalid response format from OpenAI.");
-  }
 
-  const l = stripFinalPunctuation(userInput).toLocaleLowerCase();
-  const r = stripFinalPunctuation(gradeResponse.correctedSentence || "").toLocaleLowerCase();
+  const check = async () => {
+    const response = await openai.beta.chat.completions.parse({
+      messages: [
+        { role: "user", content: buildPrompt(props, getLangName(langCode)) },
+      ],
+      model: "gpt-4o",
+      max_tokens: 125,
+      temperature: 0.1,
+      response_format: zodResponseFormat(zodGradeResponse, "grade_response"),
+    });
+    const gradeResponse = response.choices[0]?.message?.parsed;
 
-  if (compare(l, r, 0)) {
-    gradeResponse.grade = "correct";
-  }
-  await storeTrainingData(props, gradeResponse);
-  return gradeResponse;
+    if (!gradeResponse) {
+      throw new Error("Invalid response format from OpenAI.");
+    }
+    const l = stripFinalPunctuation(userInput).toLocaleLowerCase();
+    const r = stripFinalPunctuation(
+      gradeResponse.correctedSentence || "",
+    ).toLocaleLowerCase();
+
+    if (compare(l, r, 0)) {
+      gradeResponse.grade = "correct";
+    }
+    await storeTrainingData(props, gradeResponse);
+    return gradeResponse;
+  };
+
+  const results = await Promise.all([check(), check()]);
+  return results.find((response) => response.grade === "correct") || results[0];
 }
 
 export const grammarCorrection: QuizEvaluator = async ({ userInput, card }) => {

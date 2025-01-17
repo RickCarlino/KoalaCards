@@ -38,22 +38,21 @@ export const equivalence: QuizEvaluator = async (input) => {
   const { userInput } = input;
   const prompt = buildPrompt({ term, definition, langCode, userInput });
 
-  const response = await openai.beta.chat.completions.parse({
-    messages: [{ role: "user", content: prompt }],
-    model,
-    max_tokens: 125,
-    temperature: 0.1,
-    response_format: zodResponseFormat(zodGradeResponse, "grade_response"),
-    store: true,
-  });
+  const check = async () => {
+    const response = await openai.beta.chat.completions.parse({
+      messages: [{ role: "user", content: prompt }],
+      model,
+      max_tokens: 125,
+      temperature: 0.1,
+      response_format: zodResponseFormat(zodGradeResponse, "grade_response"),
+      store: true,
+    });
+    return response.choices[0]?.message?.parsed;
+  };
 
-  const gradeResponse = response.choices[0]?.message?.parsed;
-
-  if (!gradeResponse) {
-    throw new Error("Invalid response format from OpenAI.");
-  }
-
-  if (gradeResponse.evaluation === "yes") {
+  const gradeResponses = await Promise.all([check(), check()]);
+  const passing = gradeResponses.find((response) => response?.evaluation === "yes");
+  if (passing) {
     return PASS;
   } else {
     return await handleFailure(langCode, userInput, definition);
