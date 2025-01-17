@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { GetServerSideProps } from "next";
 import {
   Button,
@@ -60,9 +60,8 @@ function useCardRepair() {
 }
 
 // If you want a helper that plays both “term” and “definition” in sequence:
-async function playTermAndDefinition(card: GetRepairOutputParams[number]) {
+async function playTerm(card: GetRepairOutputParams[number]) {
   await playAudio(card.termAudio);
-  await playAudio(card.definitionAudio);
 }
 
 // Just for the VisualDiff
@@ -70,12 +69,6 @@ function Diff({ expected, actual }: { expected: string; actual: string }) {
   return <VisualDiff expected={expected} actual={actual} />;
 }
 
-/**
- * Single-card "repair flow":
- * - Plays the term audio on mount.
- * - If the user says it correctly, play term + definition audio.
- * - Requires 3 consecutive correct attempts to move on.
- */
 function CardRepairFlow({
   card,
   onComplete,
@@ -83,7 +76,7 @@ function CardRepairFlow({
   card: GetRepairOutputParams[number];
   onComplete: () => void;
 }) {
-  const [consecutiveCorrect, setConsecutiveCorrect] = useState(0);
+  const [correctAttempts, setCorrectAttempts] = useState(0); // Changed to track total correct attempts
   const [lastAttemptWrong, setLastAttemptWrong] = useState<null | {
     expected: string;
     actual: string;
@@ -91,19 +84,6 @@ function CardRepairFlow({
 
   const repairCard = useCardRepair();
   const transcribeAudio = trpc.transcribeAudio.useMutation();
-
-  /**
-   * 1) PLAY TERM AUDIO ON MOUNT
-   */
-  useEffect(() => {
-    // Only run when a new card is loaded
-    (async () => {
-      if (card.termAudio) {
-        await playAudio(card.termAudio);
-      }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [card.cardId]);
 
   // Our voice recorder callback:
   const voiceRecorder = useVoiceRecorder(async (audio: Blob) => {
@@ -122,23 +102,21 @@ function CardRepairFlow({
       /**
        * 2) PLAY TERM + DEFINITION WHEN CORRECT
        */
-      await playTermAndDefinition(card);
+      await playTerm(card);
 
-      // Then handle the “3 consecutive correct” logic
-      setConsecutiveCorrect((prev) => {
+      // Increment the correct attempts counter
+      setCorrectAttempts((prev) => {
         const newCount = prev + 1;
         if (newCount === 3) {
-          // “repair” the card on server
-          repairCard(card.cardId).then(() => {
-            // Move to next card
-            onComplete();
-          });
+          repairCard(card.cardId);
+          playAudio(card.definitionAudio);
+          onComplete();
+          return 0;
         }
         return newCount;
       });
     } else {
-      // Wrong attempt:
-      setConsecutiveCorrect(0);
+      // Wrong attempt: Display the error message but don't reset the counter
       setLastAttemptWrong({ expected: card.term, actual: result });
     }
   });
@@ -168,10 +146,10 @@ function CardRepairFlow({
 
         <Stack gap="xs">
           <Text size="sm">
-            You need <strong>3 consecutive correct</strong> attempts.
+            You need <strong>3 correct</strong> attempts.
           </Text>
           <Text size="sm">
-            Current streak: <strong>{consecutiveCorrect}</strong>/3
+            Current count: <strong>{correctAttempts}</strong>/3
           </Text>
 
           {lastAttemptWrong && (

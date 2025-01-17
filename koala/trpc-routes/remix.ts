@@ -159,11 +159,14 @@ export const remix = procedure
       throw new Error("Card not found");
     }
 
+    // Thanks for the free tokens, OpenAI.
+    // Check if date is prior to Feb 28 2025:
+    const freeTokens = new Date() < new Date(2025, 1, 28);
     return generateRemixes({
       type: input.type as RemixTypes,
       langCode: card.langCode,
       term: card.term,
       definition: card.definition,
-      model: isApprovedUser(card.userId) ? "premium" : "good",
+      model: freeTokens || isApprovedUser(card.userId) ? "premium" : "good",
     });
   });
