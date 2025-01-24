@@ -25,7 +25,7 @@ const LANG_SPECIFIC_PROMPT: Record<string, string> = {
 };
 
 const MODELS: Record<"good" | "fast" | "cheap" | "premium", string> = {
-  premium: "o1-preview", // $10.00 + $10.00 = $20.00
+  premium: "o1", // $10.00 + $10.00 = $20.00
   good: "o1-mini", // $12.00 + $3.00 = $15.00
   fast: "gpt-4o", // $2.50 + $10 = $12.50
   cheap: "gpt-4o-mini", // $0.150 + $0.600 = $0.750
@@ -57,15 +57,16 @@ const buildRemixPrompt = (
   term: string,
 ): string => {
   const langSpecific = LANG_SPECIFIC_PROMPT[langCode.toUpperCase()] || "";
-  return [
+  const out = [
     "You are a language teacher.",
-    "You help the student learn a language by creating 'remix' sentences using the input above.",
+    "You help the student learn a language by creating 'remix' sentences using the input below.",
     "Your student is a native English speaker.",
     "Create a few short, grammatically correct sentences that help the student understand the term.",
     langSpecific,
     `INPUT: ${term}`,
     `YOUR TASK: ${RemixTypePrompts[type]}`,
   ].join("\n");
+  return out;
 };
 
 const fetchOpenAIResponse = async (

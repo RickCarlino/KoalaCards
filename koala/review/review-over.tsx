@@ -122,7 +122,7 @@ export function ReviewOver({
             </Alert>
             <Text size="sm">
               The server found some issues with your responses. Check the
-              feedback below. {score}%
+              feedback below. {100 - score}%
             </Text>
             <div
               style={{

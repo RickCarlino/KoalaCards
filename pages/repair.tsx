@@ -213,7 +213,11 @@ export default function RepairPage({ cards }: RepairPageProps) {
     return (
       <Center style={{ minHeight: "100vh" }}>
         <Stack align="center" justify="center" p="xl">
-          <Title order={3}>All cards have been repaired!</Title>
+          <Title order={3}>Session Complete</Title>
+          <Text size="md" color="dimmed">
+            You repaired {cards.length} cards.
+            <Button onClick={() => window.location.reload()}>Load More?</Button>
+          </Text>
         </Stack>
       </Center>
     );
