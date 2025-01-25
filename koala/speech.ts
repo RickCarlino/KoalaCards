@@ -5,15 +5,17 @@ import { generateSpeechURL } from "./generate-speech-url";
 import { removeParens } from "./quiz-evaluators/evaluator-utils";
 
 type AudioLessonParams = {
-  card: Card;
+  card: Pick<Card, "term" | "definition" | "gender" | "langCode">;
   lessonType: LessonType | "dictation";
   speed?: number;
 };
 
+const DICTATION = `<speak><prosody rate="{{speed}}%">{{term}}</prosody><break time="0.4s"/><voice language="en-US" gender="female">{{definition}}</voice><break time="0.4s"/></speak>`;
 const SSML: Record<LessonType, string> = {
   speaking: `<speak><voice language="en-US" gender="female">{{definition}}</voice></speak>`,
   listening: `<speak><prosody rate="{{speed}}%">{{term}}</prosody></speak>`,
-  dictation: `<speak><prosody rate="{{speed}}%">{{term}}</prosody><break time="0.4s"/><voice language="en-US" gender="female">{{definition}}</voice><break time="0.4s"/></speak>`,
+  dictation: DICTATION,
+  review: DICTATION,
 };
 
 export async function generateLessonAudio(params: AudioLessonParams) {

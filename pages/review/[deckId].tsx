@@ -62,7 +62,12 @@ export default function Review() {
       />
     );
   } else {
-    el = <div>No quizzes found. Add more words to this deck or come back later when cards are due for review.</div>;
+    el = (
+      <div>
+        No quizzes found. Add more words to this deck or come back later when
+        cards are due for review.
+      </div>
+    );
   }
 
   return MicrophonePermissions(el);

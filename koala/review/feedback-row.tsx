@@ -10,10 +10,9 @@ type FeedbackRowProps = {
   onUpdateDifficulty: (quizId: number, grade: Grade) => void;
 };
 
-
 export function FeedbackRow({ quizState }: FeedbackRowProps) {
   const DARK_MODE = !!window?.matchMedia?.("(prefers-color-scheme: dark)")
-  ?.matches;
+    ?.matches;
   const theme = useMantineTheme();
   const expected = quizState.serverResponse || "";
   const actual = quizState.response || expected;

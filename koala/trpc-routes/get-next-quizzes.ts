@@ -15,6 +15,7 @@ export const Quiz = z.object({
     z.literal("listening"),
     z.literal("speaking"),
     z.literal("dictation"),
+    z.literal("review"),
   ]),
   definitionAudio: z.string(),
   termAudio: z.string(),

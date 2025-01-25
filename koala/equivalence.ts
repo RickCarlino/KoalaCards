@@ -51,7 +51,9 @@ export const equivalence: QuizEvaluator = async (input) => {
   };
 
   const gradeResponses = await Promise.all([check(), check()]);
-  const passing = gradeResponses.find((response) => response?.evaluation === "yes");
+  const passing = gradeResponses.find(
+    (response) => response?.evaluation === "yes",
+  );
   if (passing) {
     return PASS;
   } else {

@@ -41,7 +41,7 @@ export type LangCode =
   | "tr" // Turkish
   | "uk" // Ukrainian
   | "vi"; // Vietnamese // Thai
-export type LessonType = "listening" | "speaking" | "dictation";
+export type LessonType = "listening" | "speaking" | "dictation" | "review";
 export type QuizResult = "error" | "fail" | "pass";
 export type YesNo = "yes" | "no";
 

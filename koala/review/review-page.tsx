@@ -20,6 +20,7 @@ import { SpeakingQuiz } from "./speaking-quiz";
 import { Props, Quiz, QuizComp, QuizProps } from "./types";
 import { EditButton } from "./edit-button";
 import RemixButton from "../remix-button";
+import { ReviewQuiz } from "./review-quiz";
 
 async function fetchAudioAsBase64(url: string): Promise<string> {
   const response = await fetch(url);
@@ -67,6 +68,7 @@ const quizComponents: Record<Quiz["lessonType"], QuizComp> = {
   dictation: ListeningQuiz,
   listening: ListeningQuiz,
   speaking: SpeakingQuiz,
+  review: ReviewQuiz,
 };
 
 export const ReviewPage = (props: Props) => {

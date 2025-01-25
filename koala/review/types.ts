@@ -7,7 +7,7 @@ export type Quiz = {
   definitionAudio: string;
   imageURL?: string | undefined;
   langCode: string;
-  lessonType: "listening" | "speaking" | "dictation";
+  lessonType: "listening" | "speaking" | "dictation" | "review";
   quizId: number;
   term: string;
   termAudio: string;

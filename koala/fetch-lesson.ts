@@ -1,12 +1,12 @@
 import { prismaClient } from "@/koala/prisma-client";
-import { Quiz, Card } from "@prisma/client";
-import { unique } from "radash";
+import { shuffle, unique } from "radash";
 import { getUserSettings } from "./auth-helpers";
 import { autoPromoteCards } from "./autopromote";
 import { errorReport } from "./error-report";
 import { maybeGetCardImageUrl } from "./image";
 import { LessonType } from "./shared-types";
 import { generateLessonAudio } from "./speech";
+import { Card, Quiz } from "@prisma/client";
 
 type GetLessonInputParams = {
   userId: string;
@@ -14,8 +14,18 @@ type GetLessonInputParams = {
   now: number;
   take: number;
 };
-
-type LocalQuiz = Quiz & { Card: Card };
+type CardKeys = "imageBlobId" | "definition" | "langCode" | "gender" | "term";
+type LocalCard = Pick<Card, CardKeys>;
+type QuizKeys =
+  | "id"
+  | "repetitions"
+  | "lastReview"
+  | "difficulty"
+  | "stability"
+  | "quizType"
+  | "cardId"
+  | "lapses";
+type LocalQuiz = Pick<Quiz, QuizKeys> & { Card: LocalCard };
 
 function interleave<T>(max: number, ...lists: T[][]): T[] {
   const result: T[] = [];
@@ -123,6 +133,33 @@ async function fetchNewCards(
   });
 }
 
+async function getCardsWithFailures(
+  userId: string,
+  take: number,
+): Promise<LocalQuiz[]> {
+  const cards = await prismaClient.card.findMany({
+    take,
+    where: {
+      userId: userId,
+      lastFailure: { not: 0 },
+    },
+    orderBy: { lastFailure: "asc" },
+  });
+  return cards.map((Card): LocalQuiz => {
+    return {
+      id: -1 * Math.round(Math.random() * 1000000),
+      repetitions: 999,
+      lastReview: 999,
+      difficulty: 999,
+      stability: 999,
+      quizType: "review",
+      cardId: Card.id,
+      lapses: 999,
+      Card,
+    };
+  });
+}
+
 export async function getLessons(p: GetLessonInputParams) {
   const { userId, deckId, now, take } = p;
   await autoPromoteCards(userId);
@@ -174,12 +211,18 @@ export async function getLessons(p: GetLessonInputParams) {
     speakingDueOld,
     speakingDueNew,
   );
-  const allCards = unique([...newCards, ...oldCards], (q) => q.id);
+  const failedCards = await getCardsWithFailures(userId, take);
+  const allCards = unique(
+    [...failedCards, ...newCards, ...oldCards],
+    (q) => q.id,
+  );
   const uniqueByCardId = unique(allCards, (q) => q.cardId);
-  return uniqueByCardId.slice(0, take).map((quiz) => {
-    const isListening = quiz.quizType === "listening";
-    const isNew = (quiz.repetitions || 0) < 1;
-    const quizType = isListening && isNew ? "dictation" : quiz.quizType;
-    return buildQuizPayload({ ...quiz, quizType }, speedPercent);
-  });
+  return shuffle(uniqueByCardId)
+    .slice(0, take)
+    .map((quiz) => {
+      const isListening = quiz.quizType === "listening";
+      const isNew = (quiz.repetitions || 0) < 1;
+      const quizType = isListening && isNew ? "dictation" : quiz.quizType;
+      return buildQuizPayload({ ...quiz, quizType }, speedPercent);
+    });
 }
