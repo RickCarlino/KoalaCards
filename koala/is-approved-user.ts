@@ -54,7 +54,7 @@ type User = {
 const userCleanup = async (user: User) => {
   const { email, id, lastSeen } = user;
   const lastSeenDays = calculateDays(lastSeen);
-  if (lastSeenDays < 40) {
+  if (lastSeenDays < 28) {
     const su = userApproval(id, email);
     const cardCount = await countCards(id);
     if (cardCount > 1) {

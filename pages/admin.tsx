@@ -41,6 +41,9 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
   }>;
 
   const users: UserWithCount[] = await prismaClient.user.findMany({
+    orderBy: {
+      lastSeen: "desc",
+    },
     include: {
       _count: {
         select: { Card: true },
@@ -72,13 +75,12 @@ export default function AdminPage({ userData }: Props) {
   return (
     <Container size="md" mt="xl">
       <Title order={1} mb="sm">
-        Admin Report
+        User Report
       </Title>
       <Table striped highlightOnHover>
         <thead>
           <tr>
             <th>Email</th>
-            <th>Last Seen</th>
             <th>Days Since</th>
             <th># Cards</th>
             <th>Admin?</th>
@@ -88,7 +90,6 @@ export default function AdminPage({ userData }: Props) {
           {userData.map((u) => (
             <tr key={u.id}>
               <td>{u.email}</td>
-              <td>{u.lastSeen || "Never"}</td>
               <td>{u.daysSinceLastSeen}</td>
               <td>{u.cardCount}</td>
               <td>{u.isAdmin ? "Yes" : "No"}</td>
