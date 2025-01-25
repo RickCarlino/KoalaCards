@@ -185,6 +185,5 @@ export const grammarCorrectionNG: QuizEvaluator = async ({
     }
   };
 
-  const results = await Promise.all([check(), check()]);
-  return results.find((response) => response.result === "pass") || results[0];
+  return check();
 };
