@@ -24,7 +24,7 @@ type SchedulingData = {
 };
 
 function fuzzNumber(num: number) {
-  let pct = num * 0.2;
+  let pct = num * 0.3;
   let fuzzFactor = (Math.random() * 2 - 1) * pct;
 
   return num + fuzzFactor;

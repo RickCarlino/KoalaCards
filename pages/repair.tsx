@@ -20,10 +20,13 @@ import { LangCode } from "@/koala/shared-types";
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { GetRepairOutputParams } from "@/koala/fetch-failure-types";
 
+
 // Fetch data on the server:
 type RepairPageProps = {
   cards: GetRepairOutputParams;
 };
+
+const ATTEMPTS = 2;
 
 export const getServerSideProps: GetServerSideProps<RepairPageProps> = async (
   context,
@@ -107,7 +110,7 @@ function CardRepairFlow({
       // Increment the correct attempts counter
       setCorrectAttempts((prev) => {
         const newCount = prev + 1;
-        if (newCount === 3) {
+        if (newCount === ATTEMPTS) {
           repairCard(card.cardId);
           playAudio(card.definitionAudio);
           onComplete();
@@ -146,10 +149,10 @@ function CardRepairFlow({
 
         <Stack gap="xs">
           <Text size="sm">
-            You need <strong>3 correct</strong> attempts.
+            You need <strong>{ATTEMPTS} correct</strong> attempts.
           </Text>
           <Text size="sm">
-            Current count: <strong>{correctAttempts}</strong>/3
+            Current count: <strong>{correctAttempts}</strong>/{ATTEMPTS}
           </Text>
 
           {lastAttemptWrong && (
@@ -190,7 +193,7 @@ function CardRepairFlow({
 
 /**
  * Main Repair Page:
- * - Renders one card at a time until “3 consecutive correct” resets the card’s failure
+ * - Renders one card at a time until “n consecutive correct” resets the card’s failure
  * - Then moves on to the next card
  */
 export default function RepairPage({ cards }: RepairPageProps) {
@@ -213,7 +216,11 @@ export default function RepairPage({ cards }: RepairPageProps) {
     return (
       <Center style={{ minHeight: "100vh" }}>
         <Stack align="center" justify="center" p="xl">
-          <Title order={3}>All cards have been repaired!</Title>
+          <Title order={3}>Session Complete</Title>
+          <Text size="md" color="dimmed">
+            You repaired {cards.length} cards.
+            <Button onClick={() => window.location.reload()}>Load More?</Button>
+          </Text>
         </Stack>
       </Center>
     );
@@ -229,7 +236,7 @@ export default function RepairPage({ cards }: RepairPageProps) {
       <Stack gap="lg" p="xl" align="center" justify="center">
         <Title order={1}>Repair Mode</Title>
         <Text size="md" color="dimmed">
-          Repeat each word/phrase <strong>3 times correctly</strong> to repair.
+          Repeat each word/phrase <strong>{3} times correctly</strong> to repair.
         </Text>
         <CardRepairFlow card={currentCard} onComplete={handleComplete} />
       </Stack>
