@@ -6,8 +6,10 @@ import { LangCode } from "@/koala/shared-types";
 import { trpc } from "@/koala/trpc-config";
 import { useVoiceRecorder } from "@/koala/use-recorder";
 import { Button, Center, rem, Stack, Text } from "@mantine/core";
+import { useHotkeys } from "@mantine/hooks";
 import { Grade } from "femto-fsrs";
 import { useState } from "react";
+import { HOTKEYS } from "./hotkeys"; // <-- Make sure you import your existing hotkeys
 import { QuizComp } from "./types";
 
 const ATTEMPTS = 2;
@@ -15,7 +17,7 @@ const ATTEMPTS = 2;
 function Diff({ expected, actual }: { expected: string; actual: string }) {
   return <VisualDiff expected={expected} actual={actual} />;
 }
-// Mutation to reset a card's last failure:
+
 function useCardRepair() {
   const update = trpc.editCard.useMutation();
   return async function (id: number) {
@@ -28,22 +30,25 @@ function useCardRepair() {
 
 export const ReviewQuiz: QuizComp = ({ quiz, onComplete, onGraded }) => {
   const card = quiz.quiz;
-  const [correctAttempts, setCorrectAttempts] = useState(0); // Changed to track total correct attempts
+  const repairCard = useCardRepair();
+  const transcribeAudio = trpc.transcribeAudio.useMutation();
+  const [correctAttempts, setCorrectAttempts] = useState(0);
+  const [isThinking, setIsThinking] = useState(false);
   const [lastAttemptWrong, setLastAttemptWrong] = useState<null | {
     expected: string;
     actual: string;
   }>(null);
-  const repairCard = useCardRepair();
-  const transcribeAudio = trpc.transcribeAudio.useMutation();
 
   const voiceRecorder = useVoiceRecorder(async (audio: Blob) => {
     setLastAttemptWrong(null); // clear any old “wrong attempt” message
-
-    const { result } = await transcribeAudio.mutateAsync({
-      audio: await blobToBase64(audio),
-      lang: card.langCode as LangCode,
-      targetText: card.term,
-    });
+    setIsThinking(true);
+    const { result } = await transcribeAudio
+      .mutateAsync({
+        audio: await blobToBase64(audio),
+        lang: card.langCode as LangCode,
+        targetText: card.term,
+      })
+      .finally(() => setIsThinking(false));
 
     const isCorrect = compare(result, card.term);
     if (isCorrect) {
@@ -64,10 +69,26 @@ export const ReviewQuiz: QuizComp = ({ quiz, onComplete, onGraded }) => {
     }
   });
 
+  useHotkeys([
+    [
+      HOTKEYS.RECORD,
+      (e) => {
+        e.preventDefault();
+        voiceRecorder.isRecording
+          ? voiceRecorder.stop()
+          : voiceRecorder.start();
+      },
+    ],
+    // Shift+P plays the term audio
+    [HOTKEYS.PLAY, () => playAudio(card.termAudio)],
+  ]);
+
   return (
     <Stack gap="md">
       <Center>
-        <Text size="l">Let's Try Again</Text>
+        <Text size="l">
+          {isThinking ? "Grading Response..." : "Let's Try Again"}
+        </Text>
       </Center>
       <Text fw={1000}>{card.term}</Text>
       <Text size="sm">{card.definition}</Text>
@@ -79,32 +100,28 @@ export const ReviewQuiz: QuizComp = ({ quiz, onComplete, onGraded }) => {
         <Text size="sm">
           Current count: <strong>{correctAttempts}</strong>/{ATTEMPTS}
         </Text>
-
         {lastAttemptWrong && (
-          <>
-            <Diff
-              expected={lastAttemptWrong.expected}
-              actual={lastAttemptWrong.actual}
-            />
-          </>
+          <Diff
+            expected={lastAttemptWrong.expected}
+            actual={lastAttemptWrong.actual}
+          />
         )}
       </Stack>
 
       <Stack gap="xs" style={{ marginTop: rem(16) }}>
-        <Button onClick={() => playAudio(card.termAudio)}>Play Term</Button>
-
-        {!voiceRecorder.isRecording && (
-          <Button color="blue" onClick={voiceRecorder.start}>
-            Start Recording
-          </Button>
-        )}
-        {voiceRecorder.isRecording && (
-          <Button onClick={voiceRecorder.stop}>Stop Recording</Button>
-        )}
-
-        {voiceRecorder.error && (
-          <Text>Error: {voiceRecorder.error.message}</Text>
-        )}
+        <Button onClick={() => playAudio(card.termAudio)}>
+          Play Audio Again
+        </Button>
+        <Button
+          color={voiceRecorder.isRecording ? "red" : "blue"}
+          onClick={() =>
+            voiceRecorder.isRecording
+              ? voiceRecorder.stop()
+              : voiceRecorder.start()
+          }
+        >
+          {voiceRecorder.isRecording ? "Stop Recording" : "Begin Recording"}
+        </Button>
       </Stack>
     </Stack>
   );
