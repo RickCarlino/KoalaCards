@@ -56,7 +56,15 @@ export async function getLessonMeta(userId: string) {
     },
   });
 
-  const totalCards = await prismaClient.quiz.count({
+  const reviewsDue = await prismaClient.card.count({
+    where: {
+      userId: userId,
+      lastFailure: { not: 0 },
+      flagged: { not: true },
+    },
+  });
+
+  let totalCards = await prismaClient.quiz.count({
     where: {
       Card: {
         userId: userId,
@@ -64,6 +72,8 @@ export async function getLessonMeta(userId: string) {
       },
     },
   });
+
+  totalCards += reviewsDue;
 
   // Cards that have no quiz yet:
   // Count of Quizzes where repetitions and lapses are 0

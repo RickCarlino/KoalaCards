@@ -34,6 +34,14 @@ export const decksWithReviewInfo: QueryFn = async (userId: string) => {
     },
   });
 
+  const dueReviews = await prismaClient.card.count({
+    where: {
+      userId: userId,
+      lastFailure: { not: 0 },
+      flagged: { not: true },
+    },
+  });
+
   // Step 2: Identify "new" quizzes (quizzes with 0 repetitions and not flagged)
   const newQuizzes = await prismaClient.quiz.groupBy({
     by: ["cardId"],
@@ -107,7 +115,7 @@ export const decksWithReviewInfo: QueryFn = async (userId: string) => {
   const result: DeckWithReviewInfo[] = decks.map((deck) => ({
     id: deck.id,
     deckName: deck.name,
-    quizzesDue: deckQuizMap[deck.id]?.quizzesDue || 0,
+    quizzesDue: (deckQuizMap[deck.id]?.quizzesDue || 0) + dueReviews,
     newQuizzes: deckQuizMap[deck.id]?.newQuizzes || 0,
   }));
 

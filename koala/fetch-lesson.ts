@@ -142,6 +142,7 @@ async function getCardsWithFailures(
     where: {
       userId: userId,
       lastFailure: { not: 0 },
+      flagged: { not: true },
     },
     orderBy: { lastFailure: "asc" },
   });
