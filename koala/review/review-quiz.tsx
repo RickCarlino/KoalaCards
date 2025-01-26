@@ -8,9 +8,10 @@ import { useVoiceRecorder } from "@/koala/use-recorder";
 import { Button, Center, rem, Stack, Text } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import { Grade } from "femto-fsrs";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { HOTKEYS } from "./hotkeys"; // <-- Make sure you import your existing hotkeys
 import { QuizComp } from "./types";
+import { playFX } from "../play-fx";
 
 const ATTEMPTS = 2;
 
@@ -38,7 +39,9 @@ export const ReviewQuiz: QuizComp = ({ quiz, onComplete, onGraded }) => {
     expected: string;
     actual: string;
   }>(null);
-
+  useEffect(() => {
+    playFX("/listening-beep.wav");
+  }, [card.term]);
   const voiceRecorder = useVoiceRecorder(async (audio: Blob) => {
     setLastAttemptWrong(null); // clear any old “wrong attempt” message
     setIsThinking(true);
