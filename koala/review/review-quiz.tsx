@@ -56,17 +56,20 @@ export const ReviewQuiz: QuizComp = ({ quiz, onComplete, onGraded }) => {
     const isCorrect = compare(result, card.term);
     if (isCorrect) {
       await playAudio(card.termAudio);
-      const newCount = correctAttempts + 1;
-      setCorrectAttempts(newCount);
-      if (newCount === ATTEMPTS) {
-        await repairCard(quiz.quiz.cardId);
-        onGraded(Grade.EASY);
-        onComplete({
-          status: "pass",
-          feedback: "Card re-reviewed",
-          userResponse: result,
-        });
-      }
+      setCorrectAttempts((oldCount) => {
+        const newCount = oldCount + 1;
+        if (newCount === ATTEMPTS) {
+          repairCard(quiz.quiz.cardId).then(() => {
+            onGraded(Grade.EASY);
+            onComplete({
+              status: "pass",
+              feedback: "Card re-reviewed",
+              userResponse: result,
+            });
+          });
+        }
+        return newCount;
+      });
     } else {
       setLastAttemptWrong({ expected: card.term, actual: result });
     }
