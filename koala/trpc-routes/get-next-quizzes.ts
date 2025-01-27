@@ -41,7 +41,7 @@ const QuizInput = z.object({
 export async function getLessonMeta(userId: string) {
   const currentDate = new Date().getTime(); // Current time in milliseconds
 
-  const quizzesDue = await prismaClient.quiz.count({
+  let quizzesDue = await prismaClient.quiz.count({
     where: {
       Card: {
         userId: userId,
@@ -64,7 +64,7 @@ export async function getLessonMeta(userId: string) {
     },
   });
 
-  let totalCards = await prismaClient.quiz.count({
+  const totalCards = await prismaClient.quiz.count({
     where: {
       Card: {
         userId: userId,
@@ -73,7 +73,7 @@ export async function getLessonMeta(userId: string) {
     },
   });
 
-  totalCards += reviewsDue;
+  quizzesDue += reviewsDue;
 
   // Cards that have no quiz yet:
   // Count of Quizzes where repetitions and lapses are 0
