@@ -6,8 +6,6 @@ import { compare } from "./quiz-evaluators/evaluator-utils";
 import { QuizEvaluator } from "./quiz-evaluators/types";
 import { getLangName } from "./get-lang-name";
 
-// We now allow three possible outcomes: "ok", "edit", or "fail",
-// but we still map them internally to "correct" or "incorrect" to avoid breaking existing code.
 const zodGradeResponse = z.object({
   grade: z.enum(["ok", "edit", "fail"]),
   correctedSentence: z.string().optional(),
@@ -47,6 +45,7 @@ const storeTrainingData: StoreTrainingData = async (props, exp) => {
     },
   });
 };
+
 const JSON_PROMPT = [
   "Output exactly one JSON object, matching this schema:",
   "```json",
@@ -57,7 +56,7 @@ const JSON_PROMPT = [
   "```",
   "",
 ].join("\n");
-// Build the new multi-lingual minimal-edit prompt:
+
 function systemPrompt() {
   return [
     "=== EXAMPLES ===",
@@ -80,7 +79,7 @@ function systemPrompt() {
     "Example 4:",
     "- English prompt: “I’m hungry now, so I can eat anything.”",
     "- User’s Attempt: “이제 배고파서 아무거나 먹을 수 있어요.”",
-    "- Corrected Output: “이제 배고파서 아무거나 먹을 수 있어요.”  (OK)",
+    "- Corrected Output: “이제 배고파서 아무거나 먹을 수 있어요.” (OK)",
     "",
     "=== INSTRUCTIONS ===",
     "You are a grammar and usage corrector for a multi-lingual language-learning app. Follow these rules carefully:",
@@ -114,13 +113,48 @@ function systemPrompt() {
   ].join("\n");
 }
 
+function systemPrompt2() {
+  return [
+    "You are a **language usage and grammar corrector** for a flashcard app. When given:",
+    "1. An **English prompt** (the meaning the user should convey).",
+    "2. The **user’s attempted response** in the target language.",
+    "",
+    "Your goals:",
+    "1. **Evaluate correctness and naturalness** of the user’s response with the fewest possible edits.",
+    "2. **Allow synonyms** or alternate phrasing if they preserve the same meaning naturally.",
+    "3. **Preserve** the user’s politeness level and any dialect usage if it’s coherent.",
+    "4. **Ignore minor style differences** and only fix real usage or grammar mistakes.",
+    "5. Return a single JSON object in this format:",
+    "```json",
+    "{",
+    '  "grade": "ok" | "edit" | "fail",',
+    '  "correctedSentence": "..." (if grade="edit")',
+    "}",
+    "```",
+    "",
+    "Guidelines:",
+    "- **ok** if correct or natural enough; no changes needed.",
+    '- **edit** only if you must fix a real grammar or usage mistake. Provide minimal corrected text in "correctedSentence".',
+    '- **fail** if the response is way off-topic or nonsensical; provide no "correctedSentence".',
+    "",
+    JSON_PROMPT,
+  ].join("\n");
+}
+
 function createMessages(
   langCode: string,
   definition: string,
   userInput: string,
 ) {
+  const randomPick = Math.random();
+  const selectedSystemPrompt =
+    randomPick < 0.5 ? systemPrompt2() : systemPrompt();
+
   return [
-    { role: "user" as const, content: systemPrompt() },
+    {
+      role: "user" as const,
+      content: selectedSystemPrompt,
+    },
     {
       role: "user" as const,
       content: [
@@ -136,6 +170,7 @@ function createMessages(
 async function runChecks(props: GrammarCorrectionProps): Promise<Explanation> {
   const { userInput, langCode } = props;
   const messages = createMessages(langCode, props.definition, userInput);
+
   const response = await openai.beta.chat.completions.parse({
     messages,
     model: "gpt-4o",
@@ -154,7 +189,7 @@ async function runChecks(props: GrammarCorrectionProps): Promise<Explanation> {
     gradeResponse.grade = "ok";
   }
 
-  // Store the final data (with "ok" = correct, others = incorrect)
+  // Store the final data
   await storeTrainingData(props, gradeResponse);
   return gradeResponse;
 }
@@ -164,7 +199,6 @@ export const grammarCorrectionNG: QuizEvaluator = async ({
   card,
 }) => {
   const check = async (): ReturnType<QuizEvaluator> => {
-    // Not impressed with GPT-O1-Mini.
     const resp = await runChecks({
       term: card.term,
       definition: card.definition,
@@ -180,7 +214,7 @@ export const grammarCorrectionNG: QuizEvaluator = async ({
       case "fail":
         return {
           result: "fail",
-          userMessage: "(Failed) " + resp.correctedSentence || "",
+          userMessage: "(Failed) " + (resp.correctedSentence || ""),
         };
     }
   };
