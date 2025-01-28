@@ -99,7 +99,7 @@ function systemPrompt() {
     "",
     "4. “TOTALLY WRONG” CASE",
     '   - If the input is nonsensical or has no meaningful relation to the target phrase, output grade="fail" with no correctedSentence.',
-    "   - This is only reserved for extreme cases. Dont nitpick or search for minor errors.",
+    "   - This is only for extreme cases. Don’t nitpick minor differences.",
     "",
     "5. NO EXPLANATIONS",
     '   - Provide ONLY the final evaluation in JSON: { "grade": "ok|edit|fail", "correctedSentence": "..." }.',
@@ -159,10 +159,10 @@ function systemPrompt2() {
     "   - Keep the user’s politeness level or dialect consistent unless it’s clearly incorrect or inconsistent.",
     "",
     "3. ON-TOPIC vs. NONSENSE:",
-    '   - If the user’s sentence is totally unrelated or nonsensical, respond with grade="fail" (no correctedSentence).',
+    '   - If the user’s sentence is totally unrelated or nonsensical, respond with grade="fail".',
     "",
     "4. DO NOT OVER-CORRECT:",
-    "   - Minor omissions or stylistic differences from the English prompt are allowed if the sentence remains correct and natural.",
+    "   - Minor omissions or stylistic differences from the English prompt are allowed if the sentence is correct and natural.",
     "",
     "5. OUTPUT FORMAT:",
     "   - Provide exactly one JSON object with the structure:",
@@ -183,75 +183,7 @@ const stats = {
   prompt2: { total: 0, ok: 0 },
 };
 
-function createMessages(
-  langCode: string,
-  definition: string,
-  userInput: string,
-) {
-  const isPrompt2 = Math.random() < 0.5;
-
-  if (isPrompt2) {
-    stats.prompt2.total++;
-  } else {
-    stats.prompt1.total++;
-  }
-
-  const selectedSystemPrompt = isPrompt2 ? systemPrompt2() : systemPrompt();
-
-  return {
-    isPrompt2,
-    messages: [
-      {
-        role: "user" as const,
-        content: selectedSystemPrompt,
-      },
-      {
-        role: "user" as const,
-        content: [
-          `=== TASK ===`,
-          `Correct the following user input (${getLangName(langCode)}):`,
-          `English Prompt: "${definition}"`,
-          `User's Attempt: "${userInput}"`,
-        ].join("\n"),
-      },
-    ],
-  };
-}
-
-async function runChecks(props: GrammarCorrectionProps): Promise<Explanation> {
-  const { userInput, langCode } = props;
-
-  const { isPrompt2, messages } = createMessages(
-    langCode,
-    props.definition,
-    userInput,
-  );
-
-  const response = await openai.beta.chat.completions.parse({
-    messages,
-    model: "gpt-4o",
-    max_tokens: 125,
-    temperature: 0.1,
-    response_format: zodResponseFormat(zodGradeResponse, "grade_response"),
-  });
-
-  const gradeResponse = response.choices[0]?.message?.parsed;
-  if (!gradeResponse) {
-    throw new Error("Invalid response format from OpenAI.");
-  }
-
-  if (compare(userInput, gradeResponse.correctedSentence || "", 0)) {
-    gradeResponse.grade = "ok";
-  }
-
-  if (gradeResponse.grade === "ok") {
-    if (isPrompt2) {
-      stats.prompt2.ok++;
-    } else {
-      stats.prompt1.ok++;
-    }
-  }
-
+function logStats() {
   const p1pct =
     stats.prompt1.total === 0
       ? 0
@@ -266,36 +198,108 @@ async function runChecks(props: GrammarCorrectionProps): Promise<Explanation> {
       2,
     )}%  |  system prompt 2: ${p2pct.toFixed(2)}%`,
   );
+}
 
-  // Store the final data
-  await storeTrainingData(props, gradeResponse);
+async function runSinglePrompt(
+  promptNumber: 1 | 2,
+  props: GrammarCorrectionProps,
+): Promise<Explanation> {
+  if (promptNumber === 1) {
+    stats.prompt1.total++;
+  } else {
+    stats.prompt2.total++;
+  }
+
+  const selectedSystemPrompt =
+    promptNumber === 1 ? systemPrompt() : systemPrompt2();
+
+  const messages = [
+    {
+      role: "user" as const,
+      content: selectedSystemPrompt,
+    },
+    {
+      role: "user" as const,
+      content: [
+        `=== TASK ===`,
+        `Correct the following user input (${getLangName(props.langCode)}):`,
+        `English Prompt: "${props.definition}"`,
+        `User's Attempt: "${props.userInput}"`,
+      ].join("\n"),
+    },
+  ];
+
+  const response = await openai.beta.chat.completions.parse({
+    messages,
+    model: "gpt-4o",
+    max_tokens: 125,
+    temperature: 0.1,
+    response_format: zodResponseFormat(zodGradeResponse, "grade_response"),
+  });
+
+  const gradeResponse = response.choices[0]?.message?.parsed;
+  if (!gradeResponse) {
+    throw new Error("Invalid response format from OpenAI.");
+  }
+
+  if (
+    gradeResponse.correctedSentence &&
+    compare(props.userInput, gradeResponse.correctedSentence, 0)
+  ) {
+    gradeResponse.grade = "ok";
+    delete gradeResponse.correctedSentence; // no need to keep the same text
+  }
+
+  // If it's "ok", increment that prompt's ok count
+  if (gradeResponse.grade === "ok") {
+    if (promptNumber === 1) {
+      stats.prompt1.ok++;
+    } else {
+      stats.prompt2.ok++;
+    }
+  }
+
   return gradeResponse;
+}
+
+async function runChecks(props: GrammarCorrectionProps): Promise<Explanation> {
+  const p1 = runSinglePrompt(1, props);
+  const p2 = runSinglePrompt(2, props);
+  const results = await Promise.all([p1, p2]);
+  const ok = results.filter((x) => x.grade === "ok");
+  const edit = results
+    .filter((x) => x.grade === "edit")
+    .sort((a, b) => {
+      // Sort shortests response first:
+      const aLen = a.correctedSentence?.length || 0;
+      const bLen = b.correctedSentence?.length || 0;
+      return aLen - bLen;
+    });
+  const fail = results.filter((x) => x.grade === "fail");
+
+  logStats();
+
+  results.map((r) => storeTrainingData(props, r));
+  return ok[0] || edit[0] || fail[0];
 }
 
 export const grammarCorrectionNG: QuizEvaluator = async ({
   userInput,
   card,
 }) => {
-  const check = async (): ReturnType<QuizEvaluator> => {
-    const resp = await runChecks({
-      term: card.term,
-      definition: card.definition,
-      langCode: card.langCode,
-      userInput,
-    });
+  const { term, definition, langCode } = card;
 
-    switch (resp.grade) {
-      case "ok":
-        return { result: "pass", userMessage: "" };
-      case "edit":
-        return { result: "fail", userMessage: `✏️${resp.correctedSentence}` };
-      case "fail":
-        return {
-          result: "fail",
-          userMessage: "(Failed) " + (resp.correctedSentence || ""),
-        };
-    }
-  };
+  const chosen = await runChecks({ term, definition, langCode, userInput });
 
-  return check();
+  switch (chosen.grade) {
+    case "ok":
+      return { result: "pass", userMessage: "" };
+    case "edit":
+      return { result: "fail", userMessage: `✏️${chosen.correctedSentence}` };
+    case "fail":
+      return {
+        result: "fail",
+        userMessage: "(Failed) " + (chosen.correctedSentence || ""),
+      };
+  }
 };
