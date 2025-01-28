@@ -120,11 +120,12 @@ function systemPrompt2() {
     "2. The **user’s attempted response** in the target language.",
     "",
     "Your goals:",
-    "1. **Evaluate correctness and naturalness** of the user’s response with the fewest possible edits.",
-    "2. **Allow synonyms** or alternate phrasing if they preserve the same meaning naturally.",
-    "3. **Preserve** the user’s politeness level and any dialect usage if it’s coherent.",
-    "4. **Ignore minor style differences** and only fix real usage or grammar mistakes.",
-    "5. Return a single JSON object in this format:",
+    "1. **Evaluate correctness and naturalness** with the fewest edits possible.",
+    "2. **Allow synonyms** or alternate phrasing that preserves the same meaning.",
+    "3. **Preserve** the user’s politeness level or dialect if coherent.",
+    "4. **Ignore minor style differences**. Only fix real usage or grammar mistakes.",
+    "",
+    "Return exactly one JSON object in this format:",
     "```json",
     "{",
     '  "grade": "ok" | "edit" | "fail",',
@@ -132,44 +133,62 @@ function systemPrompt2() {
     "}",
     "```",
     "",
-    "Guidelines:",
-    "- **ok** if correct or natural enough; no changes needed.",
-    '- **edit** only if you must fix a real grammar or usage mistake. Provide minimal corrected text in "correctedSentence".',
-    '- **fail** if the response is way off-topic or nonsensical; provide no "correctedSentence".',
+    "- **ok** if no changes are needed and it’s natural enough.",
+    '- **edit** if you must fix a mistake. Provide a minimal corrected sentence in "correctedSentence".',
+    "- **fail** if the user’s response is off-topic or nonsensical; do NOT provide a corrected sentence.",
     "",
     JSON_PROMPT,
   ].join("\n");
 }
+
+const stats = {
+  prompt1: { total: 0, ok: 0 },
+  prompt2: { total: 0, ok: 0 },
+};
 
 function createMessages(
   langCode: string,
   definition: string,
   userInput: string,
 ) {
-  const randomPick = Math.random();
-  const selectedSystemPrompt =
-    randomPick < 0.5 ? systemPrompt2() : systemPrompt();
+  const isPrompt2 = Math.random() < 0.5;
 
-  return [
-    {
-      role: "user" as const,
-      content: selectedSystemPrompt,
-    },
-    {
-      role: "user" as const,
-      content: [
-        `=== TASK ===`,
-        `Correct the following user input (${getLangName(langCode)}):`,
-        `English Prompt: "${definition}"`,
-        `User's Attempt: "${userInput}"`,
-      ].join("\n"),
-    },
-  ];
+  if (isPrompt2) {
+    stats.prompt2.total++;
+  } else {
+    stats.prompt1.total++;
+  }
+
+  const selectedSystemPrompt = isPrompt2 ? systemPrompt2() : systemPrompt();
+
+  return {
+    isPrompt2,
+    messages: [
+      {
+        role: "user" as const,
+        content: selectedSystemPrompt,
+      },
+      {
+        role: "user" as const,
+        content: [
+          `=== TASK ===`,
+          `Correct the following user input (${getLangName(langCode)}):`,
+          `English Prompt: "${definition}"`,
+          `User's Attempt: "${userInput}"`,
+        ].join("\n"),
+      },
+    ],
+  };
 }
 
 async function runChecks(props: GrammarCorrectionProps): Promise<Explanation> {
   const { userInput, langCode } = props;
-  const messages = createMessages(langCode, props.definition, userInput);
+
+  const { isPrompt2, messages } = createMessages(
+    langCode,
+    props.definition,
+    userInput,
+  );
 
   const response = await openai.beta.chat.completions.parse({
     messages,
@@ -179,7 +198,6 @@ async function runChecks(props: GrammarCorrectionProps): Promise<Explanation> {
     response_format: zodResponseFormat(zodGradeResponse, "grade_response"),
   });
 
-  // This is the LLM's structured response (or an error if parsing failed)
   const gradeResponse = response.choices[0]?.message?.parsed;
   if (!gradeResponse) {
     throw new Error("Invalid response format from OpenAI.");
@@ -188,6 +206,29 @@ async function runChecks(props: GrammarCorrectionProps): Promise<Explanation> {
   if (compare(userInput, gradeResponse.correctedSentence || "", 0)) {
     gradeResponse.grade = "ok";
   }
+
+  if (gradeResponse.grade === "ok") {
+    if (isPrompt2) {
+      stats.prompt2.ok++;
+    } else {
+      stats.prompt1.ok++;
+    }
+  }
+
+  const p1pct =
+    stats.prompt1.total === 0
+      ? 0
+      : (100 * stats.prompt1.ok) / stats.prompt1.total;
+  const p2pct =
+    stats.prompt2.total === 0
+      ? 0
+      : (100 * stats.prompt2.ok) / stats.prompt2.total;
+
+  console.log(
+    `=== system prompt 1: ${p1pct.toFixed(
+      2,
+    )}%  |  system prompt 2: ${p2pct.toFixed(2)}%`,
+  );
 
   // Store the final data
   await storeTrainingData(props, gradeResponse);
