@@ -28,7 +28,7 @@ export const transcribeAudio = procedure
     );
 
     if (result.kind !== "OK") {
-      return errorReport('result.kind !== "OK"');
+      return { result: "Server ERROR" }; // TODO: better error handling
     }
 
     return { result: result.text };
