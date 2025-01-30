@@ -2,7 +2,7 @@ import { z } from "zod";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { prismaClient } from "./prisma-client";
 import { openai } from "./openai";
-import { compare } from "./quiz-evaluators/evaluator-utils";
+import { compare, levenshtein } from "./quiz-evaluators/evaluator-utils";
 import { QuizEvaluator } from "./quiz-evaluators/types";
 import { getLangName } from "./get-lang-name";
 
@@ -59,57 +59,33 @@ const JSON_PROMPT = [
 
 function systemPrompt() {
   return [
-    "=== EXAMPLES ===",
-    "",
-    "Example 1:",
-    "- English prompt: “It's me who is truly sorry.”",
-    "- User’s Attempt: “제가 말로 미안해요.”",
-    "- Corrected Output: “저야말로 미안해요.” (EDIT)",
-    "",
-    "Example 2:",
-    "- English prompt: “The economy will likely improve next year.”",
-    "- User’s Attempt: “내년에 경제가 개선할 거예요.”",
-    "- Corrected Output: “내년에 경제가 개선될 거예요.” (EDIT)",
-    "",
-    "Example 3:",
-    "- English prompt: “If the user says something unrelated.”",
-    "- User’s Attempt: “랄라 무슨 노래 먹고 있어요?”",
-    "- Corrected Output: “NOT RELATED” (FAIL)",
-    "",
-    "Example 4:",
-    "- English prompt: “I’m hungry now, so I can eat anything.”",
-    "- User’s Attempt: “이제 배고파서 아무거나 먹을 수 있어요.”",
-    "- Corrected Output: “이제 배고파서 아무거나 먹을 수 있어요.” (OK)",
-    "",
-    "=== INSTRUCTIONS ===",
-    "You are a grammar and usage corrector for a multi-lingual language-learning app. Follow these rules carefully:",
-    "1. MINIMAL EDITS",
-    "   - Only fix true grammar errors or unnatural wording.",
-    "   - Do NOT add extra words or forms if the sentence is already correct and idiomatic.",
-    "   - Do NOT force the user’s attempt to match a provided reference if the user’s version is correct.",
-    "",
-    "2. POLITENESS & REGISTER",
-    "   - If the user uses informal style, maintain it.",
-    "   - If the user uses formal style, maintain it.",
-    "   - If they mix styles incorrectly, correct to a consistent style.",
-    "",
-    "3. DIALECT OR REGIONAL USAGE",
-    "   - If the user employs a regional/dialect form correctly, leave it as is.",
-    "   - If a dialect form is used incorrectly, correct it to a clear variant or standard usage.",
-    "",
-    "4. “TOTALLY WRONG” CASE",
-    '   - If the input is nonsensical or has no meaningful relation to the target phrase, output grade="fail" with no correctedSentence.',
-    "   - This is only for extreme cases. Don’t nitpick minor differences.",
-    "",
-    "5. NO EXPLANATIONS",
-    '   - Provide ONLY the final evaluation in JSON: { "grade": "ok|edit|fail", "correctedSentence": "..." }.',
-    '   - If grade is "ok" or "fail", you may omit correctedSentence entirely.',
-    "",
-    "6. EQUIVALENT MEANING",
-    "   - Do not get overly concerned about matching every detail of the English prompt in the user's output.",
-    "   - Focus on correcting usage of the target language. Close enough in meaning is good enough.",
-    "",
-    JSON_PROMPT,
+    "=== GRAMMAR ERROR DETECTION ===",
+    "=== FOCUS: LEARNER MISTAKES ONLY ===",
+    "Your task: Identify and correct ONLY common language learner grammatical errors.",
+    "DO NOT suggest improvements to:",
+    "- Vocabulary choice/phrasing",
+    "- Style/nuance",
+    "- Regional variations",
+    "- Naturalness of expression",
+    "ONLY correct these specific error types:",
+    "Korean: Particle errors (은/는 vs 이/가), incorrect verb endings",
+    "Japanese: Particle errors (は vs が), verb conjugation mistakes",
+    "Spanish: Gender agreement errors, ser/estar confusion",
+    "Evaluation rules:",
+    "1. If sentence is grammatically correct → RESPOND WITH 'OK'",
+    "2. If contains learner mistake from listed categories → EDIT (minimal changes)",
+    "3. If error not in listed categories → 'OK' even if non-ideal",
+    "4. Preserve user's original words when possible",
+    "Critical constraints:",
+    "- NEVER add suggestions/comments",
+    "- NEVER correct valid regional variations",
+    "- NEVER edit stylistically different but grammatically correct sentences",
+    "Examples:",
+    "- User: 'Él está ingeniero' → 'Él es ingeniero' (ser/estar EDIT)",
+    "- User: 'Watashi wa gakusei desu' → OK (correct particles)",
+    "- User: 'She eat rice' → 'She eats rice' (verb conjugation EDIT)",
+    "- User: 'I consumed breakfast' → OK (different phrasing but correct)",
+    "Output ONLY 'OK' or edited sentence with minimal corrections.",
   ].join("\n");
 }
 
@@ -227,8 +203,8 @@ async function runChecks(props: GrammarCorrectionProps): Promise<Explanation> {
     .filter((x) => x.grade === "edit")
     .sort((a, b) => {
       // Sort shortests response first:
-      const aLen = a.correctedSentence?.length || 0;
-      const bLen = b.correctedSentence?.length || 0;
+      const aLen = levenshtein(props.userInput, a.correctedSentence || '');
+      const bLen = levenshtein(props.userInput, b.correctedSentence || '');
       return aLen - bLen;
     });
   const fail = results.filter((x) => x.grade === "fail");
