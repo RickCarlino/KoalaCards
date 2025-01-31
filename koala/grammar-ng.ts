@@ -91,25 +91,48 @@ function systemPrompt() {
 
 function systemPrompt2() {
   return [
-    "=== CONTEXT AWARE CORRECTIONS ===",
-    "=== FOCUS: MINIMAL CHANGES ===",
-    "Consider typical learner errors for the target language:",
-    "- Korean: Particle errors (은/는 vs 이/가), incorrect use of verb endings",
-    "- Japanese: Particle (は vs が), verb conjugations",
-    "- Spanish: Gender agreement, ser/estar",
-    "Only correct language learner errors. Ignore stylistic differences.",
-    "If the error matches common learner mistakes for the language → EDIT",
-    "Otherwise → OK",
-    "Only correct clear grammatical errors. Preserve user's original wording when possible.",
-    "Accept regional variations and synonyms unless they change meaning significantly.",
-    "Example:",
-    "- Prompt: 'I ate breakfast'",
-    "- User: 'I eated breakfast' → 'I ate breakfast' (EDIT)",
-    "- User: 'I had my morning meal' → OK (different phrasing)",
+    "=== GRAMMAR ERROR DETECTION ===",
+    "=== FOCUS: COMMON LEARNER MISTAKES ONLY ===",
+    "Your task: Identify and correct ONLY clear grammatical errors that language learners typically make.",
+    "DO NOT correct:",
+    "- Vocabulary choice, word phrasing, or word substitutions",
+    "- Stylistic or naturalness improvements",
+    "- Regional variations of grammar or usage",
+    "- Minor awkwardness that does not break grammar rules",
+    "Examples of common learner mistakes:",
+    "- Incorrect word order",
+    "- Article misuse or omission",
+    "- Gender agreement errors",
+    "- Incorrect verb conjugations",
+    "- Confusion between similar grammatical structures (e.g., ser/estar, por/para)",
+    "- Incorrect use of particles or case markers",
+    "- Subject-verb agreement mistakes",
+    "- Incorrect pluralization or noun-adjective agreement",
+    "Evaluation rules:",
+    "1. If a sentence is grammatically correct → RESPOND WITH 'OK'",
+    "2. If it contains a common learner grammar mistake → EDIT (minimal changes)",
+    "3. If it contains an uncommon mistake that does not break core grammar → 'OK'",
+    "4. Preserve the user’s original words and phrasing whenever possible",
+    "5. Do NOT overcorrect to sound more natural—correct only clear errors",
+    "Critical constraints:",
+    "- NEVER provide explanations or comments",
+    "- NEVER correct valid but informal or regional variations",
+    "- NEVER add missing words unless grammatically required",
+    "Examples:",
+    "- User: 'She eat rice' → 'She eats rice' (subject-verb agreement EDIT)",
+    "- User: 'A apple is red' → 'An apple is red' (article EDIT)",
+    "- User: 'I am go to store' → 'I am going to the store' (verb conjugation EDIT)",
+    "- User: 'Yesterday I go school' → 'Yesterday I went to school' (verb tense EDIT)",
+    "- User: 'She is engineer' → 'She is an engineer' (article EDIT)",
+    "- User: 'He like dogs' → 'He likes dogs' (subject-verb agreement EDIT)",
+    "- User: 'I very like it' → 'I really like it' (word order EDIT)",
+    "- User: 'I no understand' → 'I do not understand' (grammar EDIT)",
+    "- User: 'I consumed breakfast' → OK (unnatural but grammatically correct)",
+    "- User: 'She ain't coming' → OK (valid informal grammar)",
+    "Output ONLY 'OK' or the corrected sentence with minimal changes.",
     JSON_PROMPT,
   ].join("\n");
 }
-
 const stats = {
   prompt1: { total: 0, ok: 0 },
   prompt2: { total: 0, ok: 0 },
@@ -125,11 +148,10 @@ function logStats() {
       ? 0
       : (100 * stats.prompt2.ok) / stats.prompt2.total;
 
-  console.log(
-    `=== system prompt 1: ${p1pct.toFixed(
-      2,
-    )}%  |  system prompt 2: ${p2pct.toFixed(2)}%`,
-  );
+  const { total } = stats.prompt1;
+  const p1 = p1pct.toFixed(2);
+  const p2 = p2pct.toFixed(2);
+  console.log(`=== T: ${total} p1: ${p1}% p2: ${p2}%`);
 }
 
 async function runSinglePrompt(
@@ -203,8 +225,8 @@ async function runChecks(props: GrammarCorrectionProps): Promise<Explanation> {
     .filter((x) => x.grade === "edit")
     .sort((a, b) => {
       // Sort shortests response first:
-      const aLen = levenshtein(props.userInput, a.correctedSentence || '');
-      const bLen = levenshtein(props.userInput, b.correctedSentence || '');
+      const aLen = levenshtein(props.userInput, a.correctedSentence || "");
+      const bLen = levenshtein(props.userInput, b.correctedSentence || "");
       return aLen - bLen;
     });
   const fail = results.filter((x) => x.grade === "fail");
