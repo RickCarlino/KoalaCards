@@ -126,7 +126,7 @@ export default function RemixButton(props: RemixButtonProps) {
         }
         setOpened(false);
       }}
-      title="🧪 Remix Card (!EXPERIMENTAL!)"
+      title="🧪 Remix Card (SLOW, EXPERIMENTAL)"
       size="lg"
       overlayProps={{ opacity: 0.5, blur: 1 }}
     >
@@ -202,9 +202,10 @@ export default function RemixButton(props: RemixButtonProps) {
     <>
       <Button
         variant="outline"
-        onClick={() => {
+        onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
           setOpened(true);
           setRemixes([]);
+          e.currentTarget.blur(); // Removes focus from the button
         }}
       >
         🧪 Create Remix
