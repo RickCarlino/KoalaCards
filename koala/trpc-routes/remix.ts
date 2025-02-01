@@ -5,14 +5,12 @@ import { openai } from "../openai";
 import { prismaClient } from "../prisma-client";
 import { RemixTypePrompts, RemixTypes } from "../remix-types";
 import { procedure } from "../trpc-procedure";
-import { isApprovedUser } from "../is-approved-user";
 
 interface RemixParams {
   type: RemixTypes;
   langCode: string;
   term: string;
   definition: string;
-  model: keyof typeof MODELS;
 }
 
 interface Remix {
@@ -22,13 +20,6 @@ interface Remix {
 
 const LANG_SPECIFIC_PROMPT: Record<string, string> = {
   KO: "You will be severely punished for using 'dictionary form' or 'plain form' verbs or the pronouns 그녀, 그, 당신.",
-};
-
-const MODELS: Record<"good" | "fast" | "cheap" | "premium", string> = {
-  premium: "o1", // $10.00 + $10.00 = $20.00
-  good: "o1-mini", // $12.00 + $3.00 = $15.00
-  fast: "gpt-4o", // $2.50 + $10 = $12.50
-  cheap: "gpt-4o-mini", // $0.150 + $0.600 = $0.750
 };
 
 const JSON_PARSE_PROMPT = [
@@ -92,7 +83,7 @@ const parseJSONWithOpenAI = async (
   result: { exampleSentence: string; englishTranslation: string }[];
 }> => {
   const response = await openai.beta.chat.completions.parse({
-    model: MODELS.cheap,
+    model: "o3-mini",
     messages: [
       { role: "system", content: JSON_PARSE_PROMPT },
       { role: "user", content: rawText },
@@ -117,10 +108,10 @@ const processRemixes = (parsedData: {
 
 // Refactored generateRemixes function
 const generateRemixes = async (input: RemixParams): Promise<Remix[]> => {
-  const { type, langCode, term, model } = input;
+  const { type, langCode, term } = input;
   const prompt = buildRemixPrompt(type, langCode, term);
 
-  const rawText = await fetchOpenAIResponse(MODELS[model], [
+  const rawText = await fetchOpenAIResponse("o3-mini", [
     { role: "user", content: prompt },
   ]);
 
@@ -160,14 +151,10 @@ export const remix = procedure
       throw new Error("Card not found");
     }
 
-    // Thanks for the free tokens, OpenAI.
-    // Check if date is prior to Feb 28 2025:
-    const freeTokens = new Date() < new Date(2025, 1, 28);
     return generateRemixes({
       type: input.type as RemixTypes,
       langCode: card.langCode,
       term: card.term,
       definition: card.definition,
-      model: freeTokens || isApprovedUser(card.userId) ? "premium" : "good",
     });
   });

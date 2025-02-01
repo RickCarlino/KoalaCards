@@ -6,7 +6,6 @@ import { compare, levenshtein } from "./quiz-evaluators/evaluator-utils";
 import { QuizEvaluator } from "./quiz-evaluators/types";
 import { getLangName } from "./get-lang-name";
 
-// Simplified schema: only "ok" or "edit"
 const zodGradeResponse = z.object({
   grade: z.enum(["ok", "edit"]),
   correctedSentence: z.string().optional(),
@@ -46,16 +45,32 @@ const storeTrainingData: StoreTrainingData = async (props, exp) => {
   });
 };
 
-const JSON_PROMPT = [
-  "Output exactly one JSON object, matching this schema:",
-  "```json",
-  "{",
-  '  "grade": "ok" | "edit",',
-  '  "correctedSentence": "..." (only if grade is "edit")',
-  "}",
-  "```",
-  "",
-].join("\n");
+// const JSON_PROMPT = [
+//   "Output exactly one JSON object, matching this schema:",
+//   "```json",
+//   "{",
+//   '  "grade": "ok" | "edit",',
+//   '  "correctedSentence": "..." (only if grade is "edit")',
+//   "}",
+//   "```",
+//   "",
+// ].join("\n");
+
+const CANDIDATE2 = `
+You are a language evaluation engine. Your sole task is to judge a student’s translation solely on its grammatical accuracy in the target language. The student’s response is provided along with an original English sentence (the “Student Prompt”) to offer context, but you must ignore stylistic choices or vocabulary variations unless they cause a clear, unambiguous grammatical error.
+
+Instructions:
+• If the student’s translation is grammatically correct, output a JSON object with "grade" set to "ok" and no additional fields.
+• If there is a grammatical error, output a JSON object with "grade" set to "edit" and include a "correctedSentence" field containing a minimally revised version of the student’s translation. Your correction must address only grammatical issues—not offer rephrasing, stylistic improvements, or tone changes.
+• Only focus on grammar. Even if the translation differs in style or word choice from an expected answer, mark it as "ok" as long as the grammar is correct.
+• Output exactly one JSON object matching this schema and nothing else:
+ {
+  "grade": "ok" | "edit",
+  "correctedSentence": "..."     // Only present when grade is "edit"
+ }
+
+Do not include any commentary, markdown formatting, or extra text in your output.
+`;
 
 function systemPrompt() {
   return [
@@ -90,47 +105,7 @@ function systemPrompt() {
 }
 
 function systemPrompt2() {
-  return [
-    "=== GRAMMAR ERROR DETECTION ===",
-    "=== FOCUS: COMMON LEARNER MISTAKES ONLY ===",
-    "Your task: Identify and correct ONLY clear grammatical errors that language learners typically make.",
-    "DO NOT correct:",
-    "- Vocabulary choice, word phrasing, or word substitutions",
-    "- Stylistic or naturalness improvements",
-    "- Regional variations of grammar or usage",
-    "- Minor awkwardness that does not break grammar rules",
-    "Examples of common learner mistakes:",
-    "- Incorrect word order",
-    "- Article misuse or omission",
-    "- Gender agreement errors",
-    "- Incorrect verb conjugations",
-    "- Confusion between similar grammatical structures (e.g., ser/estar, por/para)",
-    "- Incorrect use of particles or case markers",
-    "- Subject-verb agreement mistakes",
-    "- Incorrect pluralization or noun-adjective agreement",
-    "Evaluation rules:",
-    "1. If a sentence is grammatically correct → RESPOND WITH 'OK'",
-    "2. If it contains a common learner grammar mistake → EDIT (minimal changes)",
-    "3. If it contains an uncommon mistake that does not break core grammar → 'OK'",
-    "4. Preserve the user’s original words and phrasing whenever possible",
-    "5. Do NOT overcorrect to sound more natural—correct only clear errors",
-    "Critical constraints:",
-    "- NEVER provide explanations or comments",
-    "- NEVER correct valid but informal or regional variations",
-    "- NEVER add missing words unless grammatically required",
-    "Examples:",
-    "- User: 'She eat rice' → 'She eats rice' (subject-verb agreement EDIT)",
-    "- User: 'A apple is red' → 'An apple is red' (article EDIT)",
-    "- User: 'I am go to store' → 'I am going to the store' (verb conjugation EDIT)",
-    "- User: 'Yesterday I go school' → 'Yesterday I went to school' (verb tense EDIT)",
-    "- User: 'She is engineer' → 'She is an engineer' (article EDIT)",
-    "- User: 'He like dogs' → 'He likes dogs' (subject-verb agreement EDIT)",
-    "- User: 'I very like it' → 'I really like it' (word order EDIT)",
-    "- User: 'I no understand' → 'I do not understand' (grammar EDIT)",
-    "- User: 'I consumed breakfast' → OK (unnatural but grammatically correct)",
-    "- User: 'She ain't coming' → OK (valid informal grammar)",
-    JSON_PROMPT,
-  ].join("\n");
+  return CANDIDATE2;
 }
 const stats = {
   prompt1: { total: 0, ok: 0 },
@@ -174,11 +149,9 @@ async function runSinglePrompt(
     {
       role: "user" as const,
       content: [
-        `=== TASK ===`,
-        `Correct the following user input (${getLangName(props.langCode)}):`,
-        `English Prompt: "${props.definition}"`,
-        promptNumber === 1 ? "" : `Example response: "${props.term}"`,
-        `User's Response: "${props.userInput}"`,
+        `Language: ${getLangName(props.langCode)}`,
+        `Student Prompt: "${props.definition}"`,
+        `Student Response: "${props.userInput}"`,
       ].join("\n"),
     },
   ];
