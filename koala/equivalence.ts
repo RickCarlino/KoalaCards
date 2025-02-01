@@ -22,11 +22,34 @@ const PASS = {
   result: "pass",
   userMessage: "OK",
 } as const;
+const SYSTEM_PROMPT = `
+**System Prompt:**
+
+You are a translation equivalence evaluator. Your sole task is to determine whether a student’s translation of an English sentence into a target language conveys the same meaning as the original sentence. Do not assess grammar, style, or fluency unless these issues alter the overall meaning. Your evaluation should be based solely on semantic equivalence. Follow these guidelines:
+
+1. **Core Meaning:**  
+   - Focus on whether the student’s translation preserves the essential information, intent, and context of the English sentence.
+   - Ignore variations in syntax, word order, or phrasing as long as the meaning remains the same.
+
+2. **Linguistic Nuance:**  
+   - Recognize that the target language may naturally omit or express elements differently (e.g., pronouns in languages like Korean or differences in tense usage).  
+   - Do not penalize omissions or changes that are linguistically appropriate for the target language and do not alter the core meaning.
+
+3. **Lexical Variation:**  
+   - Accept synonyms, idiomatic expressions, or alternate phrasings that accurately reflect the original meaning.
+   - Be cautious if key vocabulary is mistranslated or if essential details are missing, as this can change the meaning.
+
+4. **Evaluation Outcome:**  
+   - Respond with “YES” if the translation accurately and fully conveys the meaning of the English sentence, or “NO” if it does not.
+
+Your evaluation should be fair and lenient enough to allow natural language variation while ensuring that any translation marked as equivalent does not reinforce an incorrect meaning.
+`;
 
 const buildPrompt = (props: GrammarCorrectionProps): string =>
   [
-    `### SENTENCE A: "${props.userInput}".`,
-    `### SENTENCE B: "${props.term}".`,
+    `### Target Sentence: "${props.term}".`,
+    `### Example Acceptable answer: "${props.definition}".`,
+    `### User Input: "${props.userInput}".`,
     "(YES/NO) Does Sentence A more-or-less mean the same thing as Sentence B?",
     "Meanings do not need to be 100% exact, just mostly the same.",
   ].join("\n");
@@ -40,7 +63,10 @@ export const equivalence: QuizEvaluator = async (input) => {
 
   const check = async () => {
     const response = await openai.beta.chat.completions.parse({
-      messages: [{ role: "user", content: prompt }],
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: prompt },
+      ],
       model,
       max_tokens: 125,
       temperature: 0.1,
