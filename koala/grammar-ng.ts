@@ -6,8 +6,9 @@ import { compare, levenshtein } from "./quiz-evaluators/evaluator-utils";
 import { QuizEvaluator } from "./quiz-evaluators/types";
 import { getLangName } from "./get-lang-name";
 
+// Simplified schema: only "ok" or "edit"
 const zodGradeResponse = z.object({
-  grade: z.enum(["ok", "edit", "fail"]),
+  grade: z.enum(["ok", "edit"]),
   correctedSentence: z.string().optional(),
 });
 
@@ -29,7 +30,6 @@ const storeTrainingData: StoreTrainingData = async (props, exp) => {
   const { term, definition, langCode, userInput } = props;
   const { grade, correctedSentence } = exp;
 
-  // Map "ok" to "correct", otherwise "incorrect"
   const yesNo = grade === "ok" ? "yes" : "no";
 
   await prismaClient.trainingData.create({
@@ -50,8 +50,8 @@ const JSON_PROMPT = [
   "Output exactly one JSON object, matching this schema:",
   "```json",
   "{",
-  '  "grade": "ok" | "edit" | "fail",',
-  '  "correctedSentence": "..." (optional if grade is "ok" or "fail")',
+  '  "grade": "ok" | "edit",',
+  '  "correctedSentence": "..." (only if grade is "edit")',
   "}",
   "```",
   "",
@@ -129,7 +129,6 @@ function systemPrompt2() {
     "- User: 'I no understand' → 'I do not understand' (grammar EDIT)",
     "- User: 'I consumed breakfast' → OK (unnatural but grammatically correct)",
     "- User: 'She ain't coming' → OK (valid informal grammar)",
-    "Output ONLY 'OK' or the corrected sentence with minimal changes.",
     JSON_PROMPT,
   ].join("\n");
 }
@@ -178,7 +177,8 @@ async function runSinglePrompt(
         `=== TASK ===`,
         `Correct the following user input (${getLangName(props.langCode)}):`,
         `English Prompt: "${props.definition}"`,
-        `User's Attempt: "${props.userInput}"`,
+        promptNumber === 1 ? "" : `Example response: "${props.term}"`,
+        `User's Response: "${props.userInput}"`,
       ].join("\n"),
     },
   ];
@@ -201,10 +201,9 @@ async function runSinglePrompt(
     compare(props.userInput, gradeResponse.correctedSentence, 0)
   ) {
     gradeResponse.grade = "ok";
-    delete gradeResponse.correctedSentence; // no need to keep the same text
+    delete gradeResponse.correctedSentence;
   }
 
-  // If it's "ok", increment that prompt's ok count
   if (gradeResponse.grade === "ok") {
     if (promptNumber === 1) {
       stats.prompt1.ok++;
@@ -224,17 +223,20 @@ async function runChecks(props: GrammarCorrectionProps): Promise<Explanation> {
   const edit = results
     .filter((x) => x.grade === "edit")
     .sort((a, b) => {
-      // Sort shortests response first:
-      const aLen = levenshtein(props.userInput, a.correctedSentence || "");
-      const bLen = levenshtein(props.userInput, b.correctedSentence || "");
-      return aLen - bLen;
+      const distA = levenshtein(props.userInput, a.correctedSentence || "");
+      const distB = levenshtein(props.userInput, b.correctedSentence || "");
+      return distA - distB;
     });
-  const fail = results.filter((x) => x.grade === "fail");
 
   logStats();
 
   results.map((r) => storeTrainingData(props, r));
-  return ok[0] || edit[0] || fail[0];
+
+  const ERROR = {
+    grade: "edit",
+    correctedSentence: "?? Grading error ??",
+  };
+  return ok[0] || edit[0] || ERROR;
 }
 
 export const grammarCorrectionNG: QuizEvaluator = async ({
@@ -242,18 +244,15 @@ export const grammarCorrectionNG: QuizEvaluator = async ({
   card,
 }) => {
   const { term, definition, langCode } = card;
-
   const chosen = await runChecks({ term, definition, langCode, userInput });
 
-  switch (chosen.grade) {
-    case "ok":
-      return { result: "pass", userMessage: "" };
-    case "edit":
-      return { result: "fail", userMessage: `✏️${chosen.correctedSentence}` };
-    case "fail":
-      return {
-        result: "fail",
-        userMessage: "(Failed) " + (chosen.correctedSentence || ""),
-      };
+  if (chosen.grade === "ok") {
+    return { result: "pass", userMessage: "" };
+  } else {
+    // "edit"
+    return {
+      result: "fail",
+      userMessage: `✏️${chosen.correctedSentence || ""}`,
+    };
   }
 };
