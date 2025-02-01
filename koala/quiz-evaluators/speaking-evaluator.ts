@@ -1,10 +1,10 @@
 import { compare } from "./evaluator-utils";
 import { QuizEvaluator } from "./types";
-// import { equivalence } from "../equivalence";
+import { equivalence } from "../equivalence";
 import { grammarCorrectionNG } from "../grammar-ng";
 
 // ORDER MATTERS!:
-const CHECKS = [/*equivalence,*/ grammarCorrectionNG] as const;
+const CHECKS = [equivalence, grammarCorrectionNG] as const;
 const PASS = { result: "pass", userMessage: "" } as const;
 
 export const speaking: QuizEvaluator = async (input) => {
