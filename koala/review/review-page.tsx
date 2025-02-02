@@ -170,7 +170,10 @@ export const ReviewPage = (props: Props) => {
             </Group>
             <Text size={"xs"}>
               {props.quizzesDue} due today. {done} of {total} complete in
-              current lesson.
+              current lesson.{" "}
+              {quiz.lapses > 9
+                ? "Consider pausing reviews of this very difficult card."
+                : ""}
             </Text>
             <Progress radius="lg" size="xl" value={percentage || 1} />
             {illustration}
