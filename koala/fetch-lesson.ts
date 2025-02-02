@@ -218,12 +218,23 @@ export async function getLessons(p: GetLessonInputParams) {
     (q) => q.id,
   );
   const uniqueByCardId = unique(allCards, (q) => q.cardId);
+  const cardIds = uniqueByCardId.map((q) => q.cardId);
+  const repsByCard = await prismaClient.quiz.groupBy({
+    by: ["cardId"],
+    where: {
+      cardId: { in: cardIds },
+    },
+    _sum: { repetitions: true },
+  });
+
+  const repsMap: Record<number, number> = Object.fromEntries(
+    repsByCard.map((item) => [item.cardId, item._sum.repetitions || 0]),
+  );
+
   return shuffle(uniqueByCardId)
     .slice(0, take)
     .map((quiz) => {
-      const isListening = quiz.quizType === "listening";
-      const isNew = (quiz.repetitions || 0) < 1;
-      const quizType = isListening && isNew ? "dictation" : quiz.quizType;
+      const quizType = !repsMap[quiz.cardId] ? "dictation" : quiz.quizType;
       return buildQuizPayload({ ...quiz, quizType }, speedPercent);
     });
 }
