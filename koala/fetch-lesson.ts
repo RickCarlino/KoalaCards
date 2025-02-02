@@ -161,12 +161,29 @@ async function getCardsWithFailures(
   });
 }
 
+async function newCardsLearnedLastWeek(userId: string) {
+  const t = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  return prismaClient.card.count({
+    where: {
+      userId,
+      Quiz: { some: { firstReview: { gte: t } } },
+    },
+  });
+}
+
 export async function getLessons(p: GetLessonInputParams) {
   const { userId, deckId, now, take } = p;
   await autoPromoteCards(userId);
   if (take > 45) return errorReport("Too many cards requested.");
   const speedPercent = Math.round((await getAudioSpeed(userId)) * 100);
-  const dailyCap = await getCardsAllowedPerDay(userId);
+  const cardsPerDayMax = await getCardsAllowedPerDay(userId);
+  const weeklyNewCardsLearned = await newCardsLearnedLastWeek(userId);
+  const weeklyGoal = cardsPerDayMax * 7;
+  // If the student is behind on their weekly goal, Go above the daily limit by 25%.
+  const dailyCap =
+    weeklyNewCardsLearned < weeklyGoal
+      ? cardsPerDayMax * Math.round(cardsPerDayMax * 1.25)
+      : cardsPerDayMax;
   const learnedToday = await newCardsLearnedToday(userId);
   const canLearn = Math.max(dailyCap - learnedToday, 0);
   const takeNew = Math.min(take, canLearn);

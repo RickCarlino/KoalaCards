@@ -171,8 +171,8 @@ export default function UserSettingsPage(props: Props) {
               />
 
               <NumberInput
-                label="Max new quizzes per day"
-                description="Maximum number of new quizzes (usually 2 per card) in a 24-hour period"
+                label="Card per day weekly target"
+                description="Your weekly target is 7 times this value. Daily new cards will shrink or grow to meet this weekly target."
                 id="cardsPerDayMax"
                 name="cardsPerDayMax"
                 value={settings.cardsPerDayMax}
