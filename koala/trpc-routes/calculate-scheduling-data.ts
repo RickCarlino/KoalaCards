@@ -3,7 +3,7 @@ import { errorReport } from "../error-report";
 import { Quiz } from "@prisma/client";
 
 const FSRS = createDeck({
-  requestedRetentionRate: 0.87,
+  requestedRetentionRate: 0.86,
 });
 
 const DAYS = 24 * 60 * 60 * 1000;

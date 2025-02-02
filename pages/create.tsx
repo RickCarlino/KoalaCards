@@ -306,10 +306,10 @@ function InputStep({ state, dispatch, onSubmit, loading }: InputStepProps) {
           what to learn, try an example by clicking the button.
         </Text>
         <Text size="sm">
-          Koala is built for self-study learners who have a textbook
-          or language course to follow. If you don't have material of your own,
-          that's OK. Koala can generate content for you to study. Click the
-          button below until you find a topic that is interesting to you.
+          Koala is built for self-study learners who have a textbook or language
+          course to follow. If you don't have material of your own, that's OK.
+          Koala can generate content for you to study. Click the button below
+          until you find a topic that is interesting to you.
         </Text>
         <Button size="sm" onClick={pasteExample}>
           Generate Learning Content 🎲

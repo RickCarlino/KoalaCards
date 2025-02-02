@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getUserSettings } from "../auth-helpers";
-import { errorReport } from "../error-report";
 import { transcribeB64 } from "../transcribe";
 import { procedure } from "../trpc-procedure";
 import { LANG_CODES } from "../shared-types";
@@ -28,7 +27,7 @@ export const transcribeAudio = procedure
     );
 
     if (result.kind !== "OK") {
-      return errorReport('result.kind !== "OK"');
+      return { result: "Server ERROR" }; // TODO: better error handling
     }
 
     return { result: result.text };

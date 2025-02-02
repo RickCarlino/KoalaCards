@@ -20,7 +20,6 @@ import { LangCode } from "@/koala/shared-types";
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { GetRepairOutputParams } from "@/koala/fetch-failure-types";
 
-
 // Fetch data on the server:
 type RepairPageProps = {
   cards: GetRepairOutputParams;
@@ -236,7 +235,8 @@ export default function RepairPage({ cards }: RepairPageProps) {
       <Stack gap="lg" p="xl" align="center" justify="center">
         <Title order={1}>Repair Mode</Title>
         <Text size="md" color="dimmed">
-          Repeat each word/phrase <strong>{3} times correctly</strong> to repair.
+          Repeat each word/phrase <strong>{3} times correctly</strong> to
+          repair.
         </Text>
         <CardRepairFlow card={currentCard} onComplete={handleComplete} />
       </Stack>

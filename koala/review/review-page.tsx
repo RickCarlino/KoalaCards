@@ -20,6 +20,7 @@ import { SpeakingQuiz } from "./speaking-quiz";
 import { Props, Quiz, QuizComp, QuizProps } from "./types";
 import { EditButton } from "./edit-button";
 import RemixButton from "../remix-button";
+import { ReviewQuiz } from "./review-quiz";
 
 async function fetchAudioAsBase64(url: string): Promise<string> {
   const response = await fetch(url);
@@ -67,6 +68,7 @@ const quizComponents: Record<Quiz["lessonType"], QuizComp> = {
   dictation: ListeningQuiz,
   listening: ListeningQuiz,
   speaking: SpeakingQuiz,
+  review: ReviewQuiz,
 };
 
 export const ReviewPage = (props: Props) => {
@@ -181,10 +183,6 @@ export const ReviewPage = (props: Props) => {
       state: state.quizzes,
       async onSave() {
         const grades = state.quizzes.map((q) => {
-          if (!q.grade) {
-            alert("Not all quizzes have been graded");
-            throw new Error("Not all quizzes have been graded");
-          }
           const perceivedDifficulty =
             q.serverGradingResult === "fail" ? Grade.AGAIN : q.grade;
           console.log(
@@ -195,7 +193,21 @@ export const ReviewPage = (props: Props) => {
             perceivedDifficulty,
           };
         });
-        await Promise.all(grades.map((grade) => gradeQuiz.mutateAsync(grade)));
+        await Promise.all(
+          grades.map((grade) => {
+            if (grade && grade.perceivedDifficulty) {
+              gradeQuiz.mutateAsync({
+                quizID: grade.quizID,
+                perceivedDifficulty: grade.perceivedDifficulty,
+              });
+            } else {
+              // REPRO STEPS, don't care to fix right now:
+              // Pause a review quiz before the server finishes grading
+              // the final repetition.
+              console.warn("No grade to save for quiz", grade.quizID);
+            }
+          }),
+        );
         await props.onSave(); // Fetch more potentially.
       },
       onUpdateDifficulty(quizId: number, grade: Grade) {

@@ -11,13 +11,16 @@ export async function backfillDecks(userID: string) {
   });
 
   // Step 2: Group the cards by `langCode`
-  const cardsByLangCode = cards.reduce((acc, card) => {
-    if (!acc[card.langCode]) {
-      acc[card.langCode] = [];
-    }
-    acc[card.langCode].push(card);
-    return acc;
-  }, {} as Record<string, typeof cards>);
+  const cardsByLangCode = cards.reduce(
+    (acc, card) => {
+      if (!acc[card.langCode]) {
+        acc[card.langCode] = [];
+      }
+      acc[card.langCode].push(card);
+      return acc;
+    },
+    {} as Record<string, typeof cards>,
+  );
 
   // Step 3: Iterate through each language group and backfill
   for (const [langCode, cards] of Object.entries(cardsByLangCode)) {

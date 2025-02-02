@@ -54,7 +54,7 @@ export function ReviewOver({
       </Center>
     );
   }
-
+  console.log(state.filter((x) => x.quiz.lessonType === "speaking"));
   const filtered = state.filter(dontShowCorrect);
   const score = Math.round((filtered.length / state.length) * 100);
   if (filtered.length === 0) {

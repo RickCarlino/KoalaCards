@@ -9,8 +9,9 @@ export const EditButton = (props: EditButtonProps) => {
     <Button
       variant="outline"
       color="yellow"
-      onClick={() => {
+      onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
         window.open(`/cards/${props.cardID}`, "_blank");
+        e.currentTarget.blur(); // Removes focus from the button
       }}
     >
       Edit Card
