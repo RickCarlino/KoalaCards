@@ -1,15 +1,10 @@
-import { z } from "zod";
 import { zodResponseFormat } from "openai/helpers/zod";
-import { prismaClient } from "./prisma-client";
-import { openai } from "./openai";
-import { compare, levenshtein } from "./quiz-evaluators/evaluator-utils";
-import { QuizEvaluator } from "./quiz-evaluators/types";
+import { z } from "zod";
 import { getLangName } from "./get-lang-name";
-
-const zodGradeResponse = z.object({
-  grade: z.enum(["ok", "edit"]),
-  correctedSentence: z.string().optional(),
-});
+import { openai } from "./openai";
+import { prismaClient } from "./prisma-client";
+import { compare } from "./quiz-evaluators/evaluator-utils";
+import { QuizEvaluator } from "./quiz-evaluators/types";
 
 export type Explanation = z.infer<typeof zodGradeResponse>;
 
@@ -24,6 +19,11 @@ type StoreTrainingData = (
   props: GrammarCorrectionProps,
   exp: Explanation,
 ) => Promise<void>;
+
+const zodGradeResponse = z.object({
+  grade: z.enum(["ok", "edit"]),
+  correctedSentence: z.string().optional(),
+});
 
 const storeTrainingData: StoreTrainingData = async (props, exp) => {
   const { term, definition, langCode, userInput } = props;
@@ -44,33 +44,6 @@ const storeTrainingData: StoreTrainingData = async (props, exp) => {
     },
   });
 };
-
-// const JSON_PROMPT = [
-//   "Output exactly one JSON object, matching this schema:",
-//   "```json",
-//   "{",
-//   '  "grade": "ok" | "edit",',
-//   '  "correctedSentence": "..." (only if grade is "edit")',
-//   "}",
-//   "```",
-//   "",
-// ].join("\n");
-
-const CANDIDATE2 = `
-You are a language evaluation engine. Your sole task is to judge a student’s translation solely on its grammatical accuracy in the target language. The student’s response is provided along with an original English sentence (the “Student Prompt”) to offer context, but you must ignore stylistic choices or vocabulary variations unless they cause a clear, unambiguous grammatical error.
-
-Instructions:
-• If the student’s translation is grammatically correct, output a JSON object with "grade" set to "ok" and no additional fields.
-• If there is a grammatical error, output a JSON object with "grade" set to "edit" and include a "correctedSentence" field containing a minimally revised version of the student’s translation. Your correction must address only grammatical issues—not offer rephrasing, stylistic improvements, or tone changes.
-• Only focus on grammar. Even if the translation differs in style or word choice from an expected answer, mark it as "ok" as long as the grammar is correct.
-• Output exactly one JSON object matching this schema and nothing else:
- {
-  "grade": "ok" | "edit",
-  "correctedSentence": "..."     // Only present when grade is "edit"
- }
-
-Do not include any commentary, markdown formatting, or extra text in your output.
-`;
 
 function systemPrompt() {
   return [
@@ -104,47 +77,11 @@ function systemPrompt() {
   ].join("\n");
 }
 
-function systemPrompt2() {
-  return CANDIDATE2;
-}
-const stats = {
-  prompt1: { total: 0, ok: 0 },
-  prompt2: { total: 0, ok: 0 },
-};
-
-function logStats() {
-  const p1pct =
-    stats.prompt1.total === 0
-      ? 0
-      : (100 * stats.prompt1.ok) / stats.prompt1.total;
-  const p2pct =
-    stats.prompt2.total === 0
-      ? 0
-      : (100 * stats.prompt2.ok) / stats.prompt2.total;
-
-  const { total } = stats.prompt1;
-  const p1 = p1pct.toFixed(2);
-  const p2 = p2pct.toFixed(2);
-  console.log(`=== T: ${total} p1: ${p1}% p2: ${p2}%`);
-}
-
-async function runSinglePrompt(
-  promptNumber: 1 | 2,
-  props: GrammarCorrectionProps,
-): Promise<Explanation> {
-  if (promptNumber === 1) {
-    stats.prompt1.total++;
-  } else {
-    stats.prompt2.total++;
-  }
-
-  const selectedSystemPrompt =
-    promptNumber === 1 ? systemPrompt() : systemPrompt2();
-
+async function run(props: GrammarCorrectionProps): Promise<Explanation> {
   const messages = [
     {
       role: "user" as const,
-      content: selectedSystemPrompt,
+      content: systemPrompt(),
     },
     {
       role: "user" as const,
@@ -177,47 +114,22 @@ async function runSinglePrompt(
     delete gradeResponse.correctedSentence;
   }
 
-  if (gradeResponse.grade === "ok") {
-    if (promptNumber === 1) {
-      stats.prompt1.ok++;
-    } else {
-      stats.prompt2.ok++;
-    }
-  }
-
   return gradeResponse;
 }
 
-async function runChecks(props: GrammarCorrectionProps): Promise<Explanation> {
-  const p1 = runSinglePrompt(1, props);
-  const p2 = runSinglePrompt(2, props);
-  const results = await Promise.all([p1, p2]);
-  const ok = results.filter((x) => x.grade === "ok");
-  const edit = results
-    .filter((x) => x.grade === "edit")
-    .sort((a, b) => {
-      const distA = levenshtein(props.userInput, a.correctedSentence || "");
-      const distB = levenshtein(props.userInput, b.correctedSentence || "");
-      return distA - distB;
-    });
-
-  logStats();
-
-  results.map((r) => storeTrainingData(props, r));
-
-  const ERROR = {
-    grade: "edit",
-    correctedSentence: "?? Grading error ??",
-  };
-  return ok[0] || edit[0] || ERROR;
+async function runAndStore(
+  props: GrammarCorrectionProps,
+): Promise<Explanation> {
+  const result = await run(props);
+  storeTrainingData(props, result);
+  return result;
 }
 
 export const grammarCorrectionNG: QuizEvaluator = async ({
   userInput,
   card,
 }) => {
-  const { term, definition, langCode } = card;
-  const chosen = await runChecks({ term, definition, langCode, userInput });
+  const chosen = await runAndStore({ ...card, userInput });
 
   if (chosen.grade === "ok") {
     return { result: "pass", userMessage: "" };
