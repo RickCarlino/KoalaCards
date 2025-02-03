@@ -83,8 +83,10 @@ async function getCardsAllowedPerDay(userId: string) {
   return s.cardsPerDayMax || 24;
 }
 
-async function newCardsLearnedToday(userId: string) {
-  const t = Date.now() - 24 * 60 * 60 * 1000;
+async function newCardsLearnedThisWeek(userId: string) {
+  const ONE_DAY = 24 * 60 * 60 * 1000;
+  const ONE_WEEK = 7 * ONE_DAY;
+  const t = Date.now() - ONE_WEEK;
   return prismaClient.card.count({
     where: {
       userId,
@@ -161,14 +163,11 @@ async function getCardsWithFailures(
   });
 }
 
-async function newCardsLearnedLastWeek(userId: string) {
-  const t = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  return prismaClient.card.count({
-    where: {
-      userId,
-      Quiz: { some: { firstReview: { gte: t } } },
-    },
-  });
+async function newCardsAllowed(userId: string, take: number) {
+  const weeklyCap = (await getCardsAllowedPerDay(userId)) * 7;
+  const thisWeek = await newCardsLearnedThisWeek(userId);
+  const deficiency = Math.max(weeklyCap - thisWeek, 0);
+  return Math.min(take, deficiency);
 }
 
 export async function getLessons(p: GetLessonInputParams) {
@@ -176,17 +175,7 @@ export async function getLessons(p: GetLessonInputParams) {
   await autoPromoteCards(userId);
   if (take > 45) return errorReport("Too many cards requested.");
   const speedPercent = Math.round((await getAudioSpeed(userId)) * 100);
-  const cardsPerDayMax = await getCardsAllowedPerDay(userId);
-  const weeklyNewCardsLearned = await newCardsLearnedLastWeek(userId);
-  const weeklyGoal = cardsPerDayMax * 7;
-  // If the student is behind on their weekly goal, Go above the daily limit by 25%.
-  const dailyCap =
-    weeklyNewCardsLearned < weeklyGoal
-      ? cardsPerDayMax * Math.round(cardsPerDayMax * 1.25)
-      : cardsPerDayMax;
-  const learnedToday = await newCardsLearnedToday(userId);
-  const canLearn = Math.max(dailyCap - learnedToday, 0);
-  const takeNew = Math.min(take, canLearn);
+  const newCardCount = await newCardsAllowed(userId, take);
   const listeningDueOld = await fetchDueCards(
     userId,
     deckId,
@@ -221,7 +210,7 @@ export async function getLessons(p: GetLessonInputParams) {
   );
   const importedEarly = await fetchNewCards(userId, deckId, true, take);
   const importedLate = await fetchNewCards(userId, deckId, false, take);
-  const newCards = interleave(takeNew, importedEarly, importedLate);
+  const newCards = interleave(newCardCount, importedEarly, importedLate);
   const oldCards = interleave(
     take,
     listeningDueOld,
