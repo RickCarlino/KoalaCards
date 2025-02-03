@@ -151,13 +151,13 @@ async function getCardsWithFailures(
   return cards.map((Card): LocalQuiz => {
     return {
       id: -1 * Math.round(Math.random() * 1000000),
-      repetitions: 999,
+      repetitions: 1,
+      lapses: 1,
       lastReview: 999,
       difficulty: 999,
       stability: 999,
       quizType: "review",
       cardId: Card.id,
-      lapses: 999,
       Card,
     };
   });

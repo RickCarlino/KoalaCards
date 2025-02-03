@@ -103,7 +103,7 @@ export const ReviewQuiz: QuizComp = ({ quiz, onComplete, onGraded }) => {
           {card.lapses > 9
             ? "This card has been unusually difficult for you. Perhaps you should pause reviews?"
             : "You previously had trouble with this card."}
-          Repeat <strong>{ATTEMPTS} times</strong> to continue.
+          {" "} Repeat <strong>{ATTEMPTS} times</strong> to continue.
         </Text>
         <Text size="sm">
           Current count: <strong>{correctAttempts}</strong>/{ATTEMPTS}
