@@ -1,5 +1,5 @@
 import { playAudio } from "@/koala/play-audio";
-import { compare } from "@/koala/quiz-evaluators/evaluator-utils";
+import { compare, removeParens } from "@/koala/quiz-evaluators/evaluator-utils";
 import { blobToBase64 } from "@/koala/record-button";
 import { VisualDiff } from "@/koala/review/visual-diff";
 import { LangCode } from "@/koala/shared-types";
@@ -53,7 +53,7 @@ export const ReviewQuiz: QuizComp = ({ quiz, onComplete, onGraded }) => {
       })
       .finally(() => setIsThinking(false));
 
-    const isCorrect = compare(result, card.term);
+    const isCorrect = compare(result, removeParens(card.term));
     if (isCorrect) {
       await playAudio(card.termAudio);
       setCorrectAttempts((oldCount) => {
