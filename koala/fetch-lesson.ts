@@ -137,11 +137,13 @@ async function fetchNewCards(
 
 async function getCardsWithFailures(
   userId: string,
+  deckId: number,
   take: number,
 ): Promise<LocalQuiz[]> {
   const cards = await prismaClient.card.findMany({
     take,
     where: {
+      deckId,
       userId: userId,
       lastFailure: { not: 0 },
       flagged: { not: true },
@@ -218,7 +220,7 @@ export async function getLessons(p: GetLessonInputParams) {
     speakingDueOld,
     speakingDueNew,
   );
-  const failedCards = await getCardsWithFailures(userId, take);
+  const failedCards = await getCardsWithFailures(userId, deckId, take);
   const allCards = unique(
     [...failedCards, ...newCards, ...oldCards],
     (q) => q.id,
