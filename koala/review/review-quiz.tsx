@@ -1,5 +1,5 @@
 import { playAudio } from "@/koala/play-audio";
-import { compare } from "@/koala/quiz-evaluators/evaluator-utils";
+import { compare, removeParens } from "@/koala/quiz-evaluators/evaluator-utils";
 import { blobToBase64 } from "@/koala/record-button";
 import { VisualDiff } from "@/koala/review/visual-diff";
 import { LangCode } from "@/koala/shared-types";
@@ -53,7 +53,7 @@ export const ReviewQuiz: QuizComp = ({ quiz, onComplete, onGraded }) => {
       })
       .finally(() => setIsThinking(false));
 
-    const isCorrect = compare(result, card.term);
+    const isCorrect = compare(result, removeParens(card.term));
     if (isCorrect) {
       await playAudio(card.termAudio);
       setCorrectAttempts((oldCount) => {
@@ -100,8 +100,10 @@ export const ReviewQuiz: QuizComp = ({ quiz, onComplete, onGraded }) => {
       <Text size="sm">{card.definition}</Text>
       <Stack gap="xs">
         <Text size="sm">
-          You previously had trouble with this card. Let's repeat this{" "}
-          <strong>{ATTEMPTS} times</strong> to continue.
+          {card.lapses > 9
+            ? "This card has been unusually difficult for you. Perhaps you should pause reviews?"
+            : "You previously had trouble with this card."}
+          {" "} Repeat <strong>{ATTEMPTS} times</strong> to continue.
         </Text>
         <Text size="sm">
           Current count: <strong>{correctAttempts}</strong>/{ATTEMPTS}

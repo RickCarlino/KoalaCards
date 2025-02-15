@@ -83,8 +83,10 @@ async function getCardsAllowedPerDay(userId: string) {
   return s.cardsPerDayMax || 24;
 }
 
-async function newCardsLearnedToday(userId: string) {
-  const t = Date.now() - 24 * 60 * 60 * 1000;
+async function newCardsLearnedThisWeek(userId: string) {
+  const ONE_DAY = 24 * 60 * 60 * 1000;
+  const ONE_WEEK = 7 * ONE_DAY;
+  const t = Date.now() - ONE_WEEK;
   return prismaClient.card.count({
     where: {
       userId,
@@ -135,11 +137,13 @@ async function fetchNewCards(
 
 async function getCardsWithFailures(
   userId: string,
+  deckId: number,
   take: number,
 ): Promise<LocalQuiz[]> {
   const cards = await prismaClient.card.findMany({
     take,
     where: {
+      deckId,
       userId: userId,
       lastFailure: { not: 0 },
       flagged: { not: true },
@@ -149,16 +153,23 @@ async function getCardsWithFailures(
   return cards.map((Card): LocalQuiz => {
     return {
       id: -1 * Math.round(Math.random() * 1000000),
-      repetitions: 999,
+      repetitions: 1,
+      lapses: 1,
       lastReview: 999,
       difficulty: 999,
       stability: 999,
       quizType: "review",
       cardId: Card.id,
-      lapses: 999,
       Card,
     };
   });
+}
+
+async function newCardsAllowed(userId: string, take: number) {
+  const weeklyCap = (await getCardsAllowedPerDay(userId)) * 7;
+  const thisWeek = await newCardsLearnedThisWeek(userId);
+  const deficiency = Math.max(weeklyCap - thisWeek, 0);
+  return Math.min(take, deficiency);
 }
 
 export async function getLessons(p: GetLessonInputParams) {
@@ -166,10 +177,7 @@ export async function getLessons(p: GetLessonInputParams) {
   await autoPromoteCards(userId);
   if (take > 45) return errorReport("Too many cards requested.");
   const speedPercent = Math.round((await getAudioSpeed(userId)) * 100);
-  const dailyCap = await getCardsAllowedPerDay(userId);
-  const learnedToday = await newCardsLearnedToday(userId);
-  const canLearn = Math.max(dailyCap - learnedToday, 0);
-  const takeNew = Math.min(take, canLearn);
+  const newCardCount = await newCardsAllowed(userId, take);
   const listeningDueOld = await fetchDueCards(
     userId,
     deckId,
@@ -204,7 +212,7 @@ export async function getLessons(p: GetLessonInputParams) {
   );
   const importedEarly = await fetchNewCards(userId, deckId, true, take);
   const importedLate = await fetchNewCards(userId, deckId, false, take);
-  const newCards = interleave(takeNew, importedEarly, importedLate);
+  const newCards = interleave(newCardCount, importedEarly, importedLate);
   const oldCards = interleave(
     take,
     listeningDueOld,
@@ -212,18 +220,29 @@ export async function getLessons(p: GetLessonInputParams) {
     speakingDueOld,
     speakingDueNew,
   );
-  const failedCards = await getCardsWithFailures(userId, take);
+  const failedCards = await getCardsWithFailures(userId, deckId, take);
   const allCards = unique(
     [...failedCards, ...newCards, ...oldCards],
     (q) => q.id,
   );
   const uniqueByCardId = unique(allCards, (q) => q.cardId);
+  const cardIds = uniqueByCardId.map((q) => q.cardId);
+  const repsByCard = await prismaClient.quiz.groupBy({
+    by: ["cardId"],
+    where: {
+      cardId: { in: cardIds },
+    },
+    _sum: { repetitions: true },
+  });
+
+  const repsMap: Record<number, number> = Object.fromEntries(
+    repsByCard.map((item) => [item.cardId, item._sum.repetitions || 0]),
+  );
+
   return shuffle(uniqueByCardId)
     .slice(0, take)
     .map((quiz) => {
-      const isListening = quiz.quizType === "listening";
-      const isNew = (quiz.repetitions || 0) < 1;
-      const quizType = isListening && isNew ? "dictation" : quiz.quizType;
+      const quizType = !repsMap[quiz.cardId] ? "dictation" : quiz.quizType;
       return buildQuizPayload({ ...quiz, quizType }, speedPercent);
     });
 }

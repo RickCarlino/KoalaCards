@@ -99,3 +99,18 @@ async function handleFailure(
     userMessage: `Incorrect response. Your sentence translates to '${englishTranslation}'.`,
   };
 }
+
+// const PROMPT2 = `
+// You are a ${language} quiz grading machine.
+// You provide assesments of ${language} language quizzes.
+
+// STUDENT QUIZ QUESTION: Say "Ask the teacher." in ${language}.
+// STUDENT'S INPUT: "선생님께서 여쭈어요".
+
+// Label the student's sentence as "Correct" or "Incorrect".
+
+// First, think of the many ways you could say "Ask the teacher." in ${language}.
+// Then, in one sentence or less, tell the student (not me) why they are or are not correct.
+// You will be penalized for lengthy responses or mirroring statements.
+// You only point out incorrectness, do not suggest alternatives.
+// `
