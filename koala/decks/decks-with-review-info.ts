@@ -1,7 +1,5 @@
 import { prismaClient } from "../prisma-client";
 
-type FnInput = string; // userId
-
 export type DeckWithReviewInfo = {
   id: number;
   deckName: string;
@@ -9,107 +7,86 @@ export type DeckWithReviewInfo = {
   newQuizzes: number;
 };
 
-type QueryFn = (input: FnInput) => Promise<DeckWithReviewInfo[]>;
-
-export const decksWithReviewInfo: QueryFn = async (userId: string) => {
-  // Step 1: Group quizzes by deckId where quizzes are due
-  const dueQuizzes = await prismaClient.quiz.groupBy({
+const fetchDueQuizzes = (userId: string) => {
+  const criteria = {
+    nextReview: { lt: Date.now() },
+    repetitions: { gt: 0 },
+    Card: {
+      flagged: false,
+      Deck: { userId },
+    },
+  };
+  return prismaClient.quiz.groupBy({
     by: ["cardId"],
-    where: {
-      nextReview: {
-        lt: Date.now(),
-      },
-      repetitions: {
-        gt: 0,
-      },
-      Card: {
-        flagged: false,
-        Deck: {
-          userId: userId,
-        },
-      },
-    },
-    _count: {
-      _all: true,
-    },
+    where: criteria,
+    _count: { _all: true },
   });
+};
 
-  // Step 2: Identify "new" quizzes (quizzes with 0 repetitions and not flagged)
-  const newQuizzes = await prismaClient.quiz.groupBy({
+const fetchNewQuizzes = (userId: string) => {
+  const criteria = {
+    repetitions: 0,
+    Card: {
+      flagged: false,
+      Deck: { userId },
+    },
+  };
+  return prismaClient.quiz.groupBy({
     by: ["cardId"],
-    where: {
-      repetitions: 0,
-      Card: {
-        flagged: false,
-        Deck: {
-          userId: userId,
-        },
-      },
-    },
-    _count: {
-      _all: true,
-    },
+    where: criteria,
+    _count: { _all: true },
+  });
+};
+
+const fetchCardToDeckMap = async (cardIds: number[]) => {
+  const mappings = await prismaClient.card.findMany({
+    where: { id: { in: cardIds } },
+    select: { id: true, deckId: true },
+  });
+  return Object.fromEntries(mappings.map((m) => [m.id, m.deckId]));
+};
+
+const fetchUserDecks = (userId: string) =>
+  prismaClient.deck.findMany({
+    where: { userId },
+    select: { id: true, name: true },
   });
 
-  // Step 3: Map cardId to deckId for due quizzes
-  const cardIds = dueQuizzes.map((q) => q.cardId);
-  const newCardIds = newQuizzes.map((q) => q.cardId);
+export const decksWithReviewInfo = async (
+  userId: string,
+): Promise<DeckWithReviewInfo[]> => {
+  const [dueQuizzes, newQuizzes] = await Promise.all([
+    fetchDueQuizzes(userId),
+    fetchNewQuizzes(userId),
+  ]);
 
-  // Step 4: Retrieve deckId for each cardId
-  const cards = await prismaClient.card.findMany({
-    where: {
-      id: { in: [...cardIds, ...newCardIds] },
-    },
-    select: {
-      id: true,
-      deckId: true,
-    },
-  });
+  const allCardIds = [...dueQuizzes, ...newQuizzes].map((q) => q.cardId);
+  const cardToDeck = await fetchCardToDeckMap(allCardIds);
 
-  // Step 5: Aggregate quizzes due and new quizzes per deck
-  const deckQuizMap: Record<
-    number,
-    { quizzesDue: number; newQuizzes: number }
-  > = {};
+  const quizCounts: Record<number, { due: number; new: number }> = {};
 
-  dueQuizzes.forEach((q) => {
-    const card = cards.find((c) => c.id === q.cardId);
-    if (card) {
-      if (!deckQuizMap[card.deckId!]) {
-        deckQuizMap[card.deckId!] = { quizzesDue: 0, newQuizzes: 0 };
+  const accumulateCounts = (
+    quizzes: { cardId: number; _count: { _all: number } }[],
+    key: "due" | "new",
+  ) => {
+    for (const quiz of quizzes) {
+      const deckId = cardToDeck[quiz.cardId];
+      if (!deckId) continue;
+      if (!quizCounts[deckId]) {
+        quizCounts[deckId] = { due: 0, new: 0 };
       }
-      deckQuizMap[card.deckId!].quizzesDue += q._count!._all;
+      quizCounts[deckId][key] += quiz._count?._all || 0;
     }
-  });
+  };
 
-  newQuizzes.forEach((q) => {
-    const card = cards.find((c) => c.id === q.cardId);
-    if (card) {
-      if (!deckQuizMap[card.deckId!]) {
-        deckQuizMap[card.deckId!] = { quizzesDue: 0, newQuizzes: 0 };
-      }
-      deckQuizMap[card.deckId!].newQuizzes += q._count!._all;
-    }
-  });
+  accumulateCounts(dueQuizzes, "due");
+  accumulateCounts(newQuizzes, "new");
 
-  // Step 6: Retrieve deck details
-  const decks = await prismaClient.deck.findMany({
-    where: {
-      userId: userId,
-    },
-    select: {
-      id: true,
-      name: true,
-    },
-  });
-
-  // Step 7: Combine deck details with quizzesDue and newQuizzes
-  const result: DeckWithReviewInfo[] = decks.map((deck) => ({
+  const decks = await fetchUserDecks(userId);
+  return decks.map((deck) => ({
     id: deck.id,
     deckName: deck.name,
-    quizzesDue: deckQuizMap[deck.id]?.quizzesDue || 0,
-    newQuizzes: deckQuizMap[deck.id]?.newQuizzes || 0,
+    quizzesDue: quizCounts[deck.id]?.due || 0,
+    newQuizzes: quizCounts[deck.id]?.new || 0,
   }));
-
-  return result;
 };

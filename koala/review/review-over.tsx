@@ -10,7 +10,7 @@ import {
 } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import { Grade } from "femto-fsrs";
-import { useState } from "react";
+import { useState, CSSProperties } from "react";
 import { FeedbackRow } from "./feedback-row";
 import { HOTKEYS } from "./hotkeys";
 import { QuizState } from "./types";
@@ -26,23 +26,39 @@ export function ReviewOver({
   onSave,
   onUpdateDifficulty,
 }: ReviewOverProps) {
-  const DARK_MODE = !!window?.matchMedia?.("(prefers-color-scheme: dark)")
+  const isDarkMode = !!window?.matchMedia?.("(prefers-color-scheme: dark)")
     ?.matches;
   const theme = useMantineTheme();
   const [isSaving, setIsSaving] = useState(false);
   useHotkeys([[HOTKEYS.SAVE, onSave]]);
+
+  const CENTER_FULL_STYLE: CSSProperties = { width: "100%", height: "100vh" };
+  const CENTER_MARGIN_STYLE: CSSProperties = {
+    width: "100%",
+    marginTop: "2rem",
+  };
+  const CARD_STYLE: CSSProperties = {
+    width: "90%",
+    maxWidth: 900,
+    border: `1px solid ${isDarkMode ? theme.colors.dark[5] : theme.colors.gray[2]}`,
+  };
+  const BUTTON_CONTAINER_STYLE: CSSProperties = {
+    display: "flex",
+    gap: theme.spacing.sm,
+    flexWrap: "wrap",
+    justifyContent: "flex-start",
+  };
 
   const handleSave = async () => {
     setIsSaving(true);
     await onSave().finally(() => setIsSaving(false));
   };
 
-  const dontShowCorrect = (quizState: QuizState) =>
-    quizState.serverGradingResult === "fail";
+  const hasError = (quiz: QuizState) => quiz.serverGradingResult === "fail";
 
   if (state.length === 0) {
     return (
-      <Center style={{ width: "100%", height: "100vh" }}>
+      <Center style={CENTER_FULL_STYLE}>
         <Card shadow="sm" padding="lg" radius="md" withBorder>
           <Title order={2}>{isSaving ? "" : "All Done!"}</Title>
           {!isSaving && (
@@ -54,24 +70,20 @@ export function ReviewOver({
       </Center>
     );
   }
-  console.log(state.filter((x) => x.quiz.lessonType === "speaking"));
-  const filtered = state.filter(dontShowCorrect);
-  const score = Math.round((filtered.length / state.length) * 100);
-  if (filtered.length === 0) {
+
+  const errorQuizzes = state.filter(hasError);
+  const errorRate = Math.round((errorQuizzes.length / state.length) * 100);
+  const correctPercent = 100 - errorRate;
+
+  if (errorQuizzes.length === 0) {
     return (
-      <Center style={{ width: "100%", marginTop: "2rem" }}>
+      <Center style={CENTER_MARGIN_STYLE}>
         <Card
           shadow="sm"
           padding="lg"
           radius="md"
           withBorder
-          style={{
-            width: "90%",
-            maxWidth: 900,
-            border: `1px solid ${
-              DARK_MODE ? theme.colors.dark[5] : theme.colors.gray[2]
-            }`,
-          }}
+          style={CARD_STYLE}
         >
           <Stack gap="md">
             <Title order={3}>Review Completed</Title>
@@ -79,75 +91,49 @@ export function ReviewOver({
               Great job! Everything looks correct. You can now save your
               progress to finish.
             </Text>
-            <div
-              style={{
-                display: "flex",
-                gap: theme.spacing.sm,
-                flexWrap: "wrap",
-                justifyContent: "flex-start",
-              }}
-            >
+            <div style={BUTTON_CONTAINER_STYLE}>
               <Button onClick={handleSave} loading={isSaving} variant="filled">
                 Save Lesson Progress
               </Button>
             </div>
-          </Stack>
-        </Card>
-      </Center>
-    );
-  } else {
-    return (
-      <Center style={{ width: "100%", marginTop: "2rem" }}>
-        <Card
-          shadow="sm"
-          padding="lg"
-          radius="md"
-          withBorder
-          style={{
-            width: "90%",
-            maxWidth: 900,
-            border: `1px solid ${
-              DARK_MODE ? theme.colors.dark[5] : theme.colors.gray[2]
-            }`,
-          }}
-        >
-          <Stack gap="md">
-            <Title order={2}>Almost There!</Title>
-            <Alert color="red" variant="light">
-              <Text fw={500}>Important:</Text>
-              <Text size="sm">
-                Closing this tab early will cause changes to be lost. Please
-                finalize your review and save your progress.
-              </Text>
-            </Alert>
-            <Text size="sm">
-              The server found some issues with your responses. Check the
-              feedback below. {100 - score}%
-            </Text>
-            <div
-              style={{
-                display: "flex",
-                gap: theme.spacing.sm,
-                flexWrap: "wrap",
-                justifyContent: "flex-start",
-              }}
-            >
-              <Button onClick={handleSave} loading={isSaving} variant="filled">
-                Save Lesson Progress
-              </Button>
-            </div>
-            <Stack gap="sm">
-              {filtered.map((quizState) => (
-                <FeedbackRow
-                  key={quizState.quiz.quizId}
-                  quizState={quizState}
-                  onUpdateDifficulty={onUpdateDifficulty}
-                />
-              ))}
-            </Stack>
           </Stack>
         </Card>
       </Center>
     );
   }
+
+  return (
+    <Center style={CENTER_MARGIN_STYLE}>
+      <Card shadow="sm" padding="lg" radius="md" withBorder style={CARD_STYLE}>
+        <Stack gap="md">
+          <Title order={2}>Almost There!</Title>
+          <Alert color="red" variant="light">
+            <Text fw={500}>Important:</Text>
+            <Text size="sm">
+              Closing this tab early will cause changes to be lost. Please
+              finalize your review and save your progress.
+            </Text>
+          </Alert>
+          <Text size="sm">
+            The server found some issues with your responses. Check the feedback
+            below. {correctPercent}%
+          </Text>
+          <div style={BUTTON_CONTAINER_STYLE}>
+            <Button onClick={handleSave} loading={isSaving} variant="filled">
+              Save Lesson Progress
+            </Button>
+          </div>
+          <Stack gap="sm">
+            {errorQuizzes.map((quiz) => (
+              <FeedbackRow
+                key={quiz.quiz.quizId}
+                quizState={quiz}
+                onUpdateDifficulty={onUpdateDifficulty}
+              />
+            ))}
+          </Stack>
+        </Stack>
+      </Card>
+    </Center>
+  );
 }

@@ -8,11 +8,11 @@ import { prismaClient } from "@/koala/prisma-client";
 import { backfillDecks } from "@/koala/decks/backfill-decks";
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { useRouter } from "next/router";
-import { DeckStep } from "./components/DeckStep";
-import { InputStep } from "./components/InputStep";
-import { ReviewStep } from "./components/ReviewStep";
-import { LanguageInputPageProps } from "./types/create-types";
-import { reducer, INITIAL_STATE } from "./types/create-reducer";
+import { DeckStep } from "@/koala/components/DeckStep";
+import { InputStep } from "@/koala/components/InputStep";
+import { ReviewStep } from "@/koala/components/ReviewStep";
+import { LanguageInputPageProps } from "@/koala/types/create-types";
+import { reducer, INITIAL_STATE } from "@/koala/types/create-reducer";
 
 function handleError(error: unknown) {
   console.error(error);

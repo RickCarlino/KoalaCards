@@ -39,7 +39,7 @@ export type Action =
   | { type: "SET_DECK_LANG"; deckLang: LangCode };
 
 // Component-specific action types
-export type DeckAction = 
+export type DeckAction =
   | { type: "SET_DECK_SELECTION"; deckSelection: "existing" | "new" }
   | { type: "SET_DECK_ID"; deckId: number | undefined }
   | { type: "SET_DECK_NAME"; deckName: string }
