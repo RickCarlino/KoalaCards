@@ -52,7 +52,9 @@ const fetchUserDecks = (userId: string) =>
     select: { id: true, name: true },
   });
 
-export const decksWithReviewInfo = async (userId: string): Promise<DeckWithReviewInfo[]> => {
+export const decksWithReviewInfo = async (
+  userId: string,
+): Promise<DeckWithReviewInfo[]> => {
   const [dueQuizzes, newQuizzes] = await Promise.all([
     fetchDueQuizzes(userId),
     fetchNewQuizzes(userId),
@@ -65,7 +67,7 @@ export const decksWithReviewInfo = async (userId: string): Promise<DeckWithRevie
 
   const accumulateCounts = (
     quizzes: { cardId: number; _count: { _all: number } }[],
-    key: "due" | "new"
+    key: "due" | "new",
   ) => {
     for (const quiz of quizzes) {
       const deckId = cardToDeck[quiz.cardId];

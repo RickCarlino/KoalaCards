@@ -1,4 +1,14 @@
-import { Button, Paper, Radio, Select, Title, Divider, Flex, RadioGroup, TextInput } from "@mantine/core";
+import {
+  Button,
+  Paper,
+  Radio,
+  Select,
+  Title,
+  Divider,
+  Flex,
+  RadioGroup,
+  TextInput,
+} from "@mantine/core";
 import { LangCode, supportedLanguages } from "@/koala/shared-types";
 import { getLangName } from "@/koala/get-lang-name";
 import { DeckStepProps } from "../types/create-types";

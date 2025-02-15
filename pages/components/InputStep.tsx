@@ -1,4 +1,13 @@
-import { Button, Paper, Radio, Title, Divider, Flex, Text, Textarea } from "@mantine/core";
+import {
+  Button,
+  Paper,
+  Radio,
+  Title,
+  Divider,
+  Flex,
+  Text,
+  Textarea,
+} from "@mantine/core";
 import { draw } from "radash";
 import { getLangName } from "@/koala/get-lang-name";
 import { InputStepProps } from "../types/create-types";
@@ -28,7 +37,12 @@ const LANG_LEARNING_THEMES = [
   "humor",
 ];
 
-export function InputStep({ state, dispatch, onSubmit, loading }: InputStepProps) {
+export function InputStep({
+  state,
+  dispatch,
+  onSubmit,
+  loading,
+}: InputStepProps) {
   const exampleText = () => {
     const lang = getLangName(state.deckLang);
     const theme = draw(LANG_LEARNING_THEMES);

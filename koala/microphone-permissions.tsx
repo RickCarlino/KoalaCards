@@ -24,8 +24,12 @@ export default function MicrophonePermissions<T extends Element>(el: T) {
   if (state === "waiting") {
     return (
       <div className="flex flex-col items-center justify-center">
-        <div className="text-2xl font-bold mb-4">Requesting microphone permission...</div>
-        <div className="text-gray-600">Please allow microphone access to continue</div>
+        <div className="text-2xl font-bold mb-4">
+          Requesting microphone permission...
+        </div>
+        <div className="text-gray-600">
+          Please allow microphone access to continue
+        </div>
       </div>
     );
   }
@@ -33,7 +37,9 @@ export default function MicrophonePermissions<T extends Element>(el: T) {
   if (state === "error") {
     return (
       <div className="flex flex-col items-center justify-center">
-        <div className="text-2xl font-bold mb-4 text-red-600">Microphone Access Error</div>
+        <div className="text-2xl font-bold mb-4 text-red-600">
+          Microphone Access Error
+        </div>
         <div className="text-gray-600 text-center max-w-md">{errorMessage}</div>
       </div>
     );

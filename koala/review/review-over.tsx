@@ -26,13 +26,17 @@ export function ReviewOver({
   onSave,
   onUpdateDifficulty,
 }: ReviewOverProps) {
-  const isDarkMode = !!window?.matchMedia?.("(prefers-color-scheme: dark)")?.matches;
+  const isDarkMode = !!window?.matchMedia?.("(prefers-color-scheme: dark)")
+    ?.matches;
   const theme = useMantineTheme();
   const [isSaving, setIsSaving] = useState(false);
   useHotkeys([[HOTKEYS.SAVE, onSave]]);
 
   const CENTER_FULL_STYLE: CSSProperties = { width: "100%", height: "100vh" };
-  const CENTER_MARGIN_STYLE: CSSProperties = { width: "100%", marginTop: "2rem" };
+  const CENTER_MARGIN_STYLE: CSSProperties = {
+    width: "100%",
+    marginTop: "2rem",
+  };
   const CARD_STYLE: CSSProperties = {
     width: "90%",
     maxWidth: 900,
@@ -57,7 +61,11 @@ export function ReviewOver({
       <Center style={CENTER_FULL_STYLE}>
         <Card shadow="sm" padding="lg" radius="md" withBorder>
           <Title order={2}>{isSaving ? "" : "All Done!"}</Title>
-          {!isSaving && <Text color="dimmed" mt="sm">There are no quizzes to review.</Text>}
+          {!isSaving && (
+            <Text color="dimmed" mt="sm">
+              There are no quizzes to review.
+            </Text>
+          )}
         </Card>
       </Center>
     );
@@ -70,10 +78,19 @@ export function ReviewOver({
   if (errorQuizzes.length === 0) {
     return (
       <Center style={CENTER_MARGIN_STYLE}>
-        <Card shadow="sm" padding="lg" radius="md" withBorder style={CARD_STYLE}>
+        <Card
+          shadow="sm"
+          padding="lg"
+          radius="md"
+          withBorder
+          style={CARD_STYLE}
+        >
           <Stack gap="md">
             <Title order={3}>Review Completed</Title>
-            <Text size="sm">Great job! Everything looks correct. You can now save your progress to finish.</Text>
+            <Text size="sm">
+              Great job! Everything looks correct. You can now save your
+              progress to finish.
+            </Text>
             <div style={BUTTON_CONTAINER_STYLE}>
               <Button onClick={handleSave} loading={isSaving} variant="filled">
                 Save Lesson Progress
@@ -93,11 +110,13 @@ export function ReviewOver({
           <Alert color="red" variant="light">
             <Text fw={500}>Important:</Text>
             <Text size="sm">
-              Closing this tab early will cause changes to be lost. Please finalize your review and save your progress.
+              Closing this tab early will cause changes to be lost. Please
+              finalize your review and save your progress.
             </Text>
           </Alert>
           <Text size="sm">
-            The server found some issues with your responses. Check the feedback below. {correctPercent}%
+            The server found some issues with your responses. Check the feedback
+            below. {correctPercent}%
           </Text>
           <div style={BUTTON_CONTAINER_STYLE}>
             <Button onClick={handleSave} loading={isSaving} variant="filled">

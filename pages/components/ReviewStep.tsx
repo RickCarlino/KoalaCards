@@ -1,4 +1,12 @@
-import { Button, Paper, Title, Divider, Flex, Card, TextInput } from "@mantine/core";
+import {
+  Button,
+  Paper,
+  Title,
+  Divider,
+  Flex,
+  Card,
+  TextInput,
+} from "@mantine/core";
 import { ReviewStepProps } from "../types/create-types";
 
 export function ReviewStep({
@@ -53,9 +61,7 @@ export function ReviewStep({
                 <Button
                   variant="outline"
                   color="red"
-                  onClick={() =>
-                    dispatch({ type: "REMOVE_CARD", index })
-                  }
+                  onClick={() => dispatch({ type: "REMOVE_CARD", index })}
                 >
                   Remove
                 </Button>
