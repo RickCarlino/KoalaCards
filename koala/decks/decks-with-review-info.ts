@@ -7,6 +7,14 @@ export type DeckWithReviewInfo = {
   newQuizzes: number;
 };
 
+type DeckMap = Record<
+  number,
+  {
+    due: number;
+    new: number;
+  }
+>;
+
 const fetchDueQuizzes = (userId: string) => {
   const criteria = {
     nextReview: { lt: Date.now() },
@@ -52,6 +60,23 @@ const fetchUserDecks = (userId: string) =>
     select: { id: true, name: true },
   });
 
+const accumulateRemedial = async (userId: string, dueQuizzes: DeckMap) => {
+  const remedialCards = await prismaClient.card.findMany({
+    where: {
+      lastFailure: { not: 0 },
+      userId,
+      flagged: false,
+    },
+    select: { deckId: true },
+  });
+  remedialCards.forEach(({ deckId }) => {
+    if (deckId) {
+      dueQuizzes[deckId] ??= { due: 0, new: 0 };
+      dueQuizzes[deckId].due++;
+    }
+  });
+};
+
 export const decksWithReviewInfo = async (
   userId: string,
 ): Promise<DeckWithReviewInfo[]> => {
@@ -81,6 +106,7 @@ export const decksWithReviewInfo = async (
 
   accumulateCounts(dueQuizzes, "due");
   accumulateCounts(newQuizzes, "new");
+  accumulateRemedial(userId, quizCounts);
 
   const decks = await fetchUserDecks(userId);
   return decks.map((deck) => ({
