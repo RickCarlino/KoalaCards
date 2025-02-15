@@ -7,111 +7,84 @@ export type DeckWithReviewInfo = {
   newQuizzes: number;
 };
 
-type QuizGroup = {
-  cardId: number;
-  _count: { _all: number } | null;
-};
-
-type DeckQuizCounts = {
-  quizzesDue: number;
-  newQuizzes: number;
-};
-
-type CardDeckMap = {
-  id: number;
-  deckId: number | null;
-};
-
-const getQuizGroups = async (userId: string, isDueQuiz: boolean) => {
+const fetchDueQuizzes = (userId: string) => {
+  const criteria = {
+    nextReview: { lt: Date.now() },
+    repetitions: { gt: 0 },
+    Card: {
+      flagged: false,
+      Deck: { userId },
+    },
+  };
   return prismaClient.quiz.groupBy({
     by: ["cardId"],
-    where: {
-      ...(isDueQuiz
-        ? {
-            nextReview: {
-              lt: Date.now(),
-            },
-            repetitions: {
-              gt: 0,
-            },
-          }
-        : {
-            repetitions: 0,
-          }),
-      Card: {
-        flagged: false,
-        Deck: {
-          userId: userId,
-        },
-      },
-    },
-    _count: {
-      _all: true,
-    },
+    where: criteria,
+    _count: { _all: true },
   });
 };
 
-const updateDeckQuizMap = (
-  quizGroups: QuizGroup[],
-  cards: CardDeckMap[],
-  deckQuizMap: Record<number, DeckQuizCounts>,
-  isDueQuiz: boolean
-) => {
-  quizGroups.forEach((quiz) => {
-    const card = cards.find((c) => c.id === quiz.cardId);
-    if (card?.deckId) {
-      if (!deckQuizMap[card.deckId]) {
-        deckQuizMap[card.deckId] = { quizzesDue: 0, newQuizzes: 0 };
-      }
-      const count = quiz._count?._all || 0;
-      if (isDueQuiz) {
-        deckQuizMap[card.deckId].quizzesDue += count;
-      } else {
-        deckQuizMap[card.deckId].newQuizzes += count;
-      }
-    }
+const fetchNewQuizzes = (userId: string) => {
+  const criteria = {
+    repetitions: 0,
+    Card: {
+      flagged: false,
+      Deck: { userId },
+    },
+  };
+  return prismaClient.quiz.groupBy({
+    by: ["cardId"],
+    where: criteria,
+    _count: { _all: true },
   });
 };
 
-export const decksWithReviewInfo = async (userId: string) => {
-  // Get both due and new quizzes
+const fetchCardToDeckMap = async (cardIds: number[]) => {
+  const mappings = await prismaClient.card.findMany({
+    where: { id: { in: cardIds } },
+    select: { id: true, deckId: true },
+  });
+  return Object.fromEntries(mappings.map((m) => [m.id, m.deckId]));
+};
+
+const fetchUserDecks = (userId: string) =>
+  prismaClient.deck.findMany({
+    where: { userId },
+    select: { id: true, name: true },
+  });
+
+export const decksWithReviewInfo = async (userId: string): Promise<DeckWithReviewInfo[]> => {
   const [dueQuizzes, newQuizzes] = await Promise.all([
-    getQuizGroups(userId, true),
-    getQuizGroups(userId, false),
+    fetchDueQuizzes(userId),
+    fetchNewQuizzes(userId),
   ]);
 
-  // Get all relevant card IDs and their deck mappings
-  const cardIds = [...dueQuizzes, ...newQuizzes].map((q) => q.cardId);
-  const cards = await prismaClient.card.findMany({
-    where: {
-      id: { in: cardIds },
-    },
-    select: {
-      id: true,
-      deckId: true,
-    },
-  });
+  const allCardIds = [...dueQuizzes, ...newQuizzes].map((q) => q.cardId);
+  const cardToDeck = await fetchCardToDeckMap(allCardIds);
 
-  // Build the deck quiz map
-  const deckQuizMap: Record<number, DeckQuizCounts> = {};
-  updateDeckQuizMap(dueQuizzes, cards, deckQuizMap, true);
-  updateDeckQuizMap(newQuizzes, cards, deckQuizMap, false);
+  const quizCounts: Record<number, { due: number; new: number }> = {};
 
-  // Get deck details and combine with quiz counts
-  const decks = await prismaClient.deck.findMany({
-    where: {
-      userId: userId,
-    },
-    select: {
-      id: true,
-      name: true,
-    },
-  });
+  const accumulateCounts = (
+    quizzes: { cardId: number; _count: { _all: number } }[],
+    key: "due" | "new"
+  ) => {
+    for (const quiz of quizzes) {
+      const deckId = cardToDeck[quiz.cardId];
+      if (!deckId) continue;
+      if (!quizCounts[deckId]) {
+        quizCounts[deckId] = { due: 0, new: 0 };
+      }
+      quizCounts[deckId][key] += quiz._count?._all || 0;
+    }
+  };
 
+  accumulateCounts(dueQuizzes, "due");
+  accumulateCounts(newQuizzes, "new");
+
+  const decks = await fetchUserDecks(userId);
   return decks.map((deck) => ({
     id: deck.id,
     deckName: deck.name,
-    quizzesDue: deckQuizMap[deck.id]?.quizzesDue || 0,
-    newQuizzes: deckQuizMap[deck.id]?.newQuizzes || 0,
+    quizzesDue: quizCounts[deck.id]?.due || 0,
+    newQuizzes: quizCounts[deck.id]?.new || 0,
   }));
 };
