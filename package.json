@@ -8,21 +8,17 @@
     "dev": "next dev",
     "lint": "next lint",
     "reset": "rm -rf node_modules && rm -rf package-lock.json && npm install && npx prisma migrate dev && npx tsx seeds/ingest.ts",
-    "start": "npx prisma migrate deploy && next start",
-    "test": "npx jest --verbose=true --coverage"
+    "start": "npx prisma migrate deploy && next start"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@types/jest": "^29.5.12",
     "@types/node": "^20.14.2",
     "@types/nodemailer": "^6.4.15",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
-    "jest": "^29.7.0",
     "prisma": "^5.15.0",
-    "ts-jest": "^29.1.4",
     "typescript": "^5.4.5"
   },
   "dependencies": {
@@ -56,13 +52,5 @@
     "react-dom": "^18.3.1",
     "superjson": "^2.2.1",
     "zod": "^3.23.8"
-  },
-  "jest": {
-    "transform": {
-      "^.+\\.(ts|tsx)$": "ts-jest"
-    },
-    "moduleNameMapper": {
-      "^@/(.*)$": "<rootDir>/$1"
-    }
   }
 }
