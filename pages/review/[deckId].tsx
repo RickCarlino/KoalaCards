@@ -30,7 +30,7 @@ export default function Review() {
   const fetchQuizzes = () => {
     setIsFetching(true);
     // Get the "take" param from the URL using NextJS router.
-    const take = Math.max(parseInt(
+    const take = Math.min(parseInt(
       new URLSearchParams(window.location.search).get("take") || "7",
     ), 44);
     mutation
