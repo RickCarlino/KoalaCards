@@ -58,12 +58,12 @@ async function buildQuizPayload(quiz: LocalQuiz, playbackPercentage: number) {
     definitionAudio: await generateLessonAudio({
       card: quiz.Card,
       lessonType: "speaking",
-      speed: 115,
+      speed: 125,
     }),
     termAudio: await generateLessonAudio({
       card: quiz.Card,
       lessonType: "listening",
-      speed: r > 1 ? playbackPercentage : 95,
+      speed: r > 1 ? playbackPercentage : 1,
     }),
     langCode: quiz.Card.langCode,
     lastReview: quiz.lastReview || 0,
