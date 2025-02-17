@@ -72,8 +72,6 @@ export async function labelWords(
   return results;
 }
 
-/** The `faucet` route is a mutation that returns a "Hello, world" string
- * and takes an empty object as its only argument. */
 export const faucet = procedure
   .input(
     z.object({
@@ -92,7 +90,10 @@ export const faucet = procedure
     // I will fill this part out, don't worry about it for now.
     // Show it to you so you understand the schema.
     await getUserSettings(ctx.user?.id);
-    const { words } = await labelWords(input.words);
+    const step1 = await labelWords(input.words);
+    // Don't use 'skip' or 'objects' for now.
+    const { words } = step1;
+
     console.log(JSON.stringify(words, null, 2));
     return [];
   });
