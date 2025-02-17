@@ -72,6 +72,49 @@ export async function labelWords(
   return results;
 }
 
+const ColocationSchema = z.object({
+  colocations: z.array(
+    z.object({
+      target: z.string(),
+      noun: z.string(),
+      adjective: z.string(),
+      verb: z.string(),
+    }),
+  ),
+});
+
+export async function pairColocations(words: string) {
+  const PROMPT = `
+  You are a specialized AI colocations finder.
+  For each item in the list, add the most statistically likely noun,
+  adjective and verb to be co-located in a sentence that contains the target word.
+  all words must be converted to "dictionary form".
+  
+  Return the result as JSON in the following format:
+  {
+    "colocations": [
+      { "target": "word", "noun": "noun", "adjective": "adjective", "verb": "verb" },
+      ...
+    ]
+  }
+  `;
+  const response = await openai.beta.chat.completions.parse({
+    messages: [
+      { role: "system", content: PROMPT },
+      { role: "user", content: words },
+    ],
+    model: "gpt-4o",
+    temperature: 0.1,
+    response_format: zodResponseFormat(ColocationSchema, "colocations"),
+  });
+
+  const parsedResponse = response.choices[0]?.message?.parsed;
+  if (!parsedResponse) {
+    throw new Error("Invalid response format from OpenAI.");
+  }
+  return parsedResponse.colocations;
+}
+
 export const faucet = procedure
   .input(
     z.object({
@@ -93,7 +136,22 @@ export const faucet = procedure
     const step1 = await labelWords(input.words);
     // Don't use 'skip' or 'objects' for now.
     const { words } = step1;
-
+    console.log(`=== WORDS ===`);
     console.log(JSON.stringify(words, null, 2));
+    const colo = await pairColocations(words.join(", "));
+    console.log(`=== COLOCATIONS ===`);
+    console.log(JSON.stringify(colo, null, 2));
+    // Combine target word with each colocation kind:
+    const combined: string[] = colo
+      .reduce((acc, item) => {
+        acc.push(`${item.noun} + ${item.target}`);
+        acc.push(`${item.adjective} + ${item.target}`);
+        acc.push(`${item.verb} + ${item.target}`);
+        return acc;
+      }, [] as string[])
+      .sort()
+      .map((item, index) => `${index + 1}. ${item.toLowerCase()}`);
+    console.log(`=== COMBINED ===`);
+    console.log(JSON.stringify(combined, null, 2));
     return [];
   });
