@@ -19,7 +19,7 @@ const SpeechTageSchema = z.object({
   ),
 });
 
-export async function labelWords(
+async function labelWords(
   // Comma seperated word list.
   words: string,
 ) {
@@ -83,7 +83,7 @@ const ColocationSchema = z.object({
   ),
 });
 
-export async function pairColocations(words: string) {
+async function pairColocations(words: string) {
   const PROMPT = `
   You are a specialized AI colocations finder.
   For each item in the list, add the most statistically likely noun,
@@ -114,6 +114,77 @@ export async function pairColocations(words: string) {
   }
   return parsedResponse.colocations;
 }
+const PhraseSchema = z.object({
+  phrases: z.array(z.string()),
+});
+
+async function generatePhrases(words: string) {
+  const PROMPT = `
+  You are a specialized AI phrase generator inside of a language learning app.
+  You make short, grammatically correct, realistic phrases by combining colocations.
+  For each item in the list:
+
+  1. Look at the three colocations. Pick the one that is most likely to be used in a sentence that contains the target word.
+  2. Combine the target word with the chosen colocation to produce a short, grammatically correct, realistic verb phrase, noun phrase, or adjective phrase.
+  3. If (and only if!) the phrase is a verb phrase, conjugate using the provided conjugation style.
+  4. Double check your work to make sure the phrase is grammatically correct and realistic.
+
+  Keep in mind:
+   * This is being used for language education, so the correctness and realism of the phrases is very important.
+   * The words are provided in "dictionary form" but you are allowed and encouraged to make changes by adding particles, conjugations and verb endings.
+  `;
+  const response = await openai.beta.chat.completions.parse({
+    messages: [
+      { role: "system", content: PROMPT },
+      { role: "user", content: words },
+    ],
+    model: "o3-mini",
+    reasoning_effort: "high",
+    response_format: zodResponseFormat(PhraseSchema, "phrases"),
+  });
+
+  const parsedResponse = response.choices[0]?.message?.parsed;
+  if (!parsedResponse) {
+    throw new Error("Invalid response format from OpenAI.");
+  }
+  return parsedResponse.phrases;
+}
+
+const TRANSLATION = z.array(
+  z.object({
+    term: z.string(),
+    definition: z.string(),
+  }),
+);
+
+const TranslationSchema = z.object({
+  translations: TRANSLATION,
+});
+
+async function translatePhrases(words: string) {
+  const PROMPT = `
+  You are a language translator inside of a language learning app.
+  You translate phrases from a target language to English.
+  Your translations are used in flashcards.
+  Your translations find a perfect balance between exposing the nuance of the language to a student
+  while also sounding natural and easy to understand.
+  `;
+  const response = await openai.beta.chat.completions.parse({
+    messages: [
+      { role: "system", content: PROMPT },
+      { role: "user", content: words },
+    ],
+    model: "o3-mini",
+    reasoning_effort: "medium",
+    response_format: zodResponseFormat(TranslationSchema, "translations"),
+  });
+
+  const parsedResponse = response.choices[0]?.message?.parsed;
+  if (!parsedResponse) {
+    throw new Error("Invalid response format from OpenAI.");
+  }
+  return parsedResponse.translations;
+}
 
 export const faucet = procedure
   .input(
@@ -121,14 +192,7 @@ export const faucet = procedure
       words: z.string(),
     }),
   )
-  .output(
-    z.array(
-      z.object({
-        term: z.string(),
-        definition: z.string(),
-      }),
-    ),
-  )
+  .output(TRANSLATION)
   .mutation(async ({ ctx, input }) => {
     // I will fill this part out, don't worry about it for now.
     // Show it to you so you understand the schema.
@@ -138,20 +202,30 @@ export const faucet = procedure
     const { words } = step1;
     console.log(`=== WORDS ===`);
     console.log(JSON.stringify(words, null, 2));
-    const colo = await pairColocations(words.join(", "));
+    const step2 = await pairColocations(words.join(", "));
     console.log(`=== COLOCATIONS ===`);
-    console.log(JSON.stringify(colo, null, 2));
+    console.log(JSON.stringify(step2, null, 2));
     // Combine target word with each colocation kind:
-    const combined: string[] = colo
-      .reduce((acc, item) => {
-        acc.push(`${item.noun} + ${item.target}`);
-        acc.push(`${item.adjective} + ${item.target}`);
-        acc.push(`${item.verb} + ${item.target}`);
-        return acc;
-      }, [] as string[])
+    const combined: string[] = step2
+      .map((item, index) => {
+        const conjugation = [
+          "합니다 polite formal",
+          "해요 polite informal",
+          "한다 plain form",
+        ][index % 3];
+        return `Target: ${item.target} Colocations: ${item.noun},${item.adjective},${item.verb} Tense: ${conjugation}`;
+      })
       .sort()
       .map((item, index) => `${index + 1}. ${item.toLowerCase()}`);
     console.log(`=== COMBINED ===`);
     console.log(JSON.stringify(combined, null, 2));
-    return [];
+    const step3 = await generatePhrases(combined.join(", "));
+    console.log(`=== PHRASES ===`);
+    console.log(JSON.stringify(step3, null, 2));
+
+    const step4 = await translatePhrases(step3.join(", "));
+    console.log(`=== TRANSLATIONS ===`);
+    console.log(JSON.stringify(step4, null, 2));
+
+    return step4;
   });

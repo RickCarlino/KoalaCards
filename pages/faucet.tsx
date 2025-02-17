@@ -5,7 +5,7 @@ export async function getServerSideProps() {
   return { props: {} };
 }
 
-const WORDS = `정모, 수도, 동지, 쪼개다, 촬영장, 스크린, 트랙, 상상력, 미연, 프로듀서`;
+const WORDS = `휴대, 자물쇠, 일명, 마주하다, 알아차리다, 시동, 돋보이다, 남매, 도전자, 시위, 뛰어다니다, 음원, 날아다니다, 목격하다, 동선, 두께, 순경, 구조대, 신원, 개인기, 불태우다`;
 
 export default function Faucet(_props: {}) {
   const x = trpc.faucet.useMutation();
