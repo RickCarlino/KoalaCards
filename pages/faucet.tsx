@@ -4,12 +4,9 @@ export async function getServerSideProps() {
   return { props: {} };
 }
 
-/** The faucet component has a button that when clicked
- * calls the "faucet" trpc mutation:
- */
-export default function Faucet(_props: {}) {
+export default function Faucet() {
   return (
-    <Center style={{ width: "100%" }}>
+    <Center style={{ width: "100%", padding: "2rem" }}>
       <Card
         shadow="sm"
         padding="lg"
@@ -17,7 +14,8 @@ export default function Faucet(_props: {}) {
         withBorder
         style={{ width: "80%" }}
       >
-        <Stack>TODO</Stack>
+        <Stack>
+        </Stack>
       </Card>
     </Center>
   );

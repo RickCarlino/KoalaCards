@@ -15,6 +15,7 @@ import { levelReviews } from "./level-reviews";
 import { parseCards } from "./parse-cards";
 import { remix } from "./remix";
 import { transcribeAudio } from "./transcribe-audio";
+import { turbine } from "./turbine";
 
 export const appRouter = router({
   bulkCreateCards,
@@ -33,6 +34,7 @@ export const appRouter = router({
   gradeSpeakingQuiz,
   remix,
   createRemixCards,
+  turbine,
 });
 
 export type AppRouter = typeof appRouter;

@@ -7,6 +7,14 @@ export type DeckWithReviewInfo = {
   newQuizzes: number;
 };
 
+type DeckMap = Record<
+  number,
+  {
+    due: number;
+    new: number;
+  }
+>;
+
 const fetchDueQuizzes = (userId: string) => {
   const criteria = {
     nextReview: { lt: Date.now() },
