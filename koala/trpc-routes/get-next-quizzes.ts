@@ -38,7 +38,7 @@ const QuizInput = z.object({
   deckId: z.number(),
 });
 
-export async function getLessonMeta(userId: string) {
+export async function getLessonMeta(userId: string, deckId?: number) {
   const currentDate = new Date().getTime(); // Current time in milliseconds
 
   let quizzesDue = await prismaClient.quiz.count({
@@ -46,6 +46,7 @@ export async function getLessonMeta(userId: string) {
       Card: {
         userId: userId,
         flagged: { not: true },
+        ...(deckId ? { deckId: deckId } : {}),
       },
       nextReview: {
         lt: currentDate,
@@ -111,7 +112,7 @@ export const getNextQuizzes = procedure
       }),
     );
     return {
-      ...(await getLessonMeta(userId)),
+      ...(await getLessonMeta(userId, input.deckId)),
       quizzes,
     };
   });
