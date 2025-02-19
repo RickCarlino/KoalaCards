@@ -84,6 +84,7 @@ const parseJSONWithOpenAI = async (
 }> => {
   const response = await openai.beta.chat.completions.parse({
     model: "o3-mini",
+    reasoning_effort: "low",
     messages: [
       { role: "system", content: JSON_PARSE_PROMPT },
       { role: "user", content: rawText },

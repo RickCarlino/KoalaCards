@@ -1,164 +1,62 @@
-책임이 부담스러웠어, The responsibility was overwhelming.
-거리를 돌아다녔어요, I wandered around the neighborhood.
-웬만한 수준이었어., It was of a pretty decent level.
-상황을 불구한다., Regardless of the circumstances.
-행동이 수상하다., The behavior appears suspicious.
-가위바위보 했습니다, We played rock–paper–scissors.
-결과가 기대되었습니다, The result was anticipated.
-기회가 아깝다, It's a waste of an opportunity.
-결과가 이어져요., One result leads to another.
-집안의 도련님, The young master of the family
-환경을 보호했어, I protected the environment.
-결과를 예상했어요., I anticipated the outcome.
-정보가 헷갈려요, The information is confusing
-문제는 상관없어요., The issue doesn’t matter.
-상황이 애매해., The situation is ambiguous.
-기분이 억울했습니다., I felt unjustly treated.
-행동이 너무해요, Your actions are too much.
-의미심장한 말, A thought-provoking remark.
-실패한 시도입니다., It was a failed attempt.
-사실이 알려져요., The truth comes to light.
-서비스를 제공했어요., I provided the service.
-상황을 지켜봤어., I observed the situation.
-미래가 두려웠어, I was afraid of the future
-상황이 계속됩니다, The situation continues.
-과거를 돌아봅니다, I look back on the past.
-사건이 벌어졌습니다, An incident took place.
-불쌍한 사람입니다., That person is pitiful.
-머릿속이 복잡했습니다, My mind was in turmoil
-중요하게 여겨요, I consider it important.
-위기에서 벗어났어요, I escaped the crisis.
-게이머가 플레이합니다, The gamer is playing
-문제가 커졌어요, The problem got bigger.
-물건을 건드렸어요, I touched the object.
-기온이 높아졌어요, The temperature rose.
-해답을 찾아냅니다., I find the solution.
-비밀이 들킵니다, The secret is revealed
-방을 치웠습니다, I cleaned up the room.
-자리에 가만 있어요, Stay where you are.
-끝내주는 경험, An awesome experience.
-짐을 내려놓습니다, I put down the load.
-흥미진진한 이야기, A fascinating story.
-마음이 서운했습니다., I felt a bit hurt.
-팀을 응원한다., I cheer for the team.
-강렬한 인상, A powerful impression.
-바다가 잔잔했습니다., The sea was calm.
-특이해 보였습니다., It looked unusual.
-유리가 깨졌습니다, The glass is broken
-미래를 꿈꿨어, Dreamed of the future
-흙에 묻혔어요, It was buried in soil
-사람이 넘어져, A person falls down.
-책을 돌려줬어, I returned the book.
-사람을 마주쳐요, I run into someone.
-멀쩡한 상태, In perfect condition.
-미래를 상상해., Imagine the future.
-사람을 의심합니다., I suspect people.
-변화를 일으켜., Bring about change.
-제품을 출시해., I launch a product.
-잘난 사람이었어요, He was a big shot.
-거대한 건물, A gigantic building.
-끔찍한 사고, A terrible accident.
-어마어마한 규모, An enormous scale.
-꿈이 이루어집니다, Dreams come true.
-솔직하게 말했어., I spoke honestly.
-감옥에 갇힌다, Be locked in prison
-긍정적인 태도, A positive attitude
-적당히 했어, I did it moderately.
-대회 참가자, Contest participant.
-마음을 진정한다., I calm my heart.
-불이 꺼졌어요, The light went out
-수를 더했습니다, Added the numbers
-사진이 찍힙니다, A photo is taken.
-적을 공격해요, Attack the enemy.
-영화를 촬영해요., I film a movie.
-팀을 이끌었습니다, I led the team.
-칼로 찌른다, Stab with a knife.
-음식을 차려요, I prepare a meal.
-노래를 불렀습니다, I sang a song.
-기분이 속상했어요., I felt upset.
-기억을 까먹어, Forgot my memory
-친구를 놀립니다, Teases a friend
-문이 닫혀, The door is closed
-마음이 흔들려, My heart wavered
-많이 애씁니다, I try very hard.
-사람을 괴롭혀, Harass someone.
-물건을 놔둬요, Leaves the item
-카드를 뒤집는다, Flips the card
-정확한 디테일, Precise details
-손이 떨려, My hands tremble
-길을 비켰어, Cleared the way
-평범한 삶, An ordinary life
-영향을 끼친다, Has an impact
-우아한 사모님, Elegant madam
-아이돌 연습생, Idol trainee.
-경쾌한 음악, Lively music.
-차라리, Rather; instead
-다행히, fortunately
-사실상, in effect
-그나마, at least
---- STOPPED HERE ---
-태우다
-퍼지다
-펼치다
-하여튼
-해내다
-훔치다
-힘겹다
-가짜
-감성
-감히
-경제
-계약
-고생
-관객
-그리
-기도
-기운
-깔다
-꼬마
-끌다
-끼다
-날개
-낮다
-내내
-녹다
-녹음
-눈빛
-뉴욕
-단점
-대결
-대리
-----
-대사
-대충
-덕화
-데뷔
-도둑
-도착
-등장
-따위
-딱히
-떨다
-떼다
-똘똘
-뚫다
-뜯다
-마마
-매번
-매출
-명수
-모험
-무려
-무리
-묶다
-미소
-반장
+반장|A student elected to represent the class (class president)
+관객|Individuals who attend and watch performances (audience)
+숙소|A place offering lodging or housing (accommodation)
+따위|things like that (often with a dismissive tone)
+꼬마|A small child or youngster (little one)
+대리운전을 해요|I act as a designated driver
+과제를 해냈어|I accomplished the assignment
+수사 진행했습니다|Conducted an investigation.
+딱히|not particularly; not especially
+대결을 벌입니다|They engage in a showdown
+사정 설명합니다|Explaining the situation.
+실험 진행했습니다|Conducted an experiment.
+단점이 드러난다|Weaknesses are revealed
+성능 향상돼요|Performance is enhanced.
+책임 있는 실장|A responsible director.
+관심을 끌습니다|It attracts attention
+가난한 백성|Poor people (populace).
+계약을 체결해|Enter into a contract
+눈을 뗐습니다|I took my eyes off it
+매출이 증가해요|Sales are increasing
+감성을 자극합니다|It evokes emotions
+똘똘한 아이였어요|He was a sharp kid
+명수가 많아|There are many people
+분노 폭발했습니다|Exploded in anger.
+능력 있는 부장|A capable manager.
+시점 맞춘다|Align the viewpoint.
+뛰어난 신동|Outstanding prodigy.
+소름 돋아|Gives me goosebumps.
+승리 거두었어요|Achieved victory.
+채소 썰었어요|Sliced vegetables.
+기운을 느꼈어|I felt the energy
+모험을 했습니다|Had an adventure
+대충|roughly; approximately
+비명 지랐어요|Let out a scream.
+얼음이 녹았습니다|The ice melted
+일이 힘겹습니다|The job is hard
+대사를 말한다|Speaks his lines
+어른 뵈요|I'll see you, sir.
+시선 끌었어|Caught attention.
+눈빛을 보냈어|I gave a glance
+권리 뺏다|Took away rights.
+쫄깃한 식감|A chewy texture.
+카펫을 깔다|Lay the carpet
+물건을 훔친다|Steal an item
+끈을 묶었어요|Tied the rope
+소원 빌었어|I made a wish.
+안경을 껴요|Wears glasses
+불을 태워|Burn the flame
+화살 쐈어|Shot an arrow.
+구멍을 뚫었어|Made a hole
+별거합니다|Living apart.
+가짜 제품|Fake product
+녹음을 했어요|I recorded
+그리|in that manner
+기도를 드렸어요|I prayed
+###
 발표
 백성
-밴드
 별거
-보스
----
 뵈다
 뵙다
 부장
@@ -186,6 +84,7 @@
 썰다
 쏘다
 아멘
+---
 아씨
 아아
 아하

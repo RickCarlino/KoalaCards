@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getUserSettings } from "../auth-helpers";
 import { procedure } from "../trpc-procedure";
 import { openai } from "../openai";
+import { shuffle } from "radash";
 
 type ColocationGroup = z.infer<typeof ColocationGroup>;
 
@@ -93,15 +94,14 @@ const PHRASE_TRANSLATION_PROMPT = `
 You are a language translator inside of a language learning app.
 You translate phrases and words from the target language to English.
 Your translations are used in flashcards.
-Your translations find a perfect balance between exposing the nuance of the language to a student
-while also sounding natural and easy to understand.
+Exposing the nuance and meaning of words is more important than a direct translation.
 `;
 
 const OBJ_TRANSLATION_PROMPT = `
 You are a language AI inside of a language learning app.
 You english definitions of words from a target language to English.
-First, provide a one sentence definition.
-Then, put the a parenthesized english translation of the word for simplicity.
+First, provide a single sentence definition. Don't add a bunch of commas. Keep it brief.
+Next, put the a parenthesized english translation of the word for simplicity.
 Examples:
 사람 => a human being (a person)
 서울 => The capital city of South Korea (Seoul)
@@ -169,15 +169,24 @@ async function pairColocations(words: string[]): Promise<ColocationGroup[]> {
 async function generatePhrases(colocations: ColocationGroup[]) {
   const words = colocations
     .map((item, index) => {
-      const conjugations = [
-        "plain present (ex: 한다)",
+      const conjugations = shuffle([
+        "polite informal present (ex: 해요)",
+        "polite informal present (ex: 해요)",
+        "polite informal present (ex: 해요)",
+        "polite informal present (ex: 해요)",
+        "polite informal present (ex: 해요)",
+        "polite informal present (ex: 해요)",
         "polite formal present (ex: 합니다)",
-        "polite informal preset (ex: 해요)",
-        "casual present (ex: 해)",
-        "polite formal past (ex: 했습니다)",
         "polite informal past (ex: 했어요)",
+        "polite formal past (ex: 했습니다)",
+        "plain present (ex: 한다)",
+        "casual present (ex: 해)",
+        "casual present (ex: 해)",
+        "casual present (ex: 해)",
         "casual past (ex: 했어)",
-      ];
+        "casual past (ex: 했어)",
+        "casual past (ex: 했어)",
+      ]);
       const conjugation = conjugations[index % conjugations.length];
       return `Target: ${item.target} Colocations: ${item.noun},${item.adjective},${item.verb} Tense: ${conjugation}`;
     })
