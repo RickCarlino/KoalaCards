@@ -100,7 +100,7 @@ Exposing the nuance and meaning of words is more important than a direct transla
 const OBJ_TRANSLATION_PROMPT = `
 You are a language AI inside of a language learning app.
 You english definitions of words from a target language to English.
-First, provide a single sentence definition. Don't add a bunch of commas. Keep it brief.
+First, provide a one sentence definition. Be brief. Be concise. Provide only one definition.
 Next, put the a parenthesized english translation of the word for simplicity.
 Examples:
 사람 => a human being (a person)
