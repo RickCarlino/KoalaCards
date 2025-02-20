@@ -109,6 +109,7 @@ export function DeckStep({ decks, state, dispatch, onNext }: DeckStepProps) {
               }
               data={Object.keys(supportedLanguages)
                 .sort()
+                .filter((langCode) => langCode !== "en")
                 .map((langCode) => ({
                   label: supportedLanguages[langCode as LangCode],
                   value: langCode,

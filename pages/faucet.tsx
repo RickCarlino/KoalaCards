@@ -14,8 +14,7 @@ export default function Faucet() {
         withBorder
         style={{ width: "80%" }}
       >
-        <Stack>
-        </Stack>
+        <Stack></Stack>
       </Card>
     </Center>
   );
