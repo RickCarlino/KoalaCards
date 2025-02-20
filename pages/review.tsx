@@ -7,6 +7,7 @@ import { trpc } from "@/koala/trpc-config";
 import Link from "next/link";
 import { GetServerSideProps } from "next/types";
 import { Button, Group } from "@mantine/core";
+import { useState } from "react";
 
 type ReviewPageProps = {
   decks: DeckWithReviewInfo[];
@@ -44,6 +45,7 @@ export const getServerSideProps: GetServerSideProps<ReviewPageProps> = async (
 
 export default function ReviewPage({ decks }: ReviewPageProps) {
   const deleteDeck = trpc.deleteDeck.useMutation();
+  const [showDeleteButton, setShowDeleteButton] = useState(false);
   if (decks.length === 0) {
     return (
       <div>
@@ -60,6 +62,13 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
   return (
     <div>
       <h1>Decks</h1>
+      <Button
+        onClick={() => setShowDeleteButton((prev) => !prev)}
+        mb="md"
+        variant="outline"
+      >
+        {showDeleteButton ? "Cancel Deletion" : "Delete a Deck"}
+      </Button>
       <ul>
         {sortedByDue.map((deck) => {
           const cardsDue = deck.quizzesDue ? `${deck.quizzesDue} due` : "";
@@ -68,23 +77,24 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
           return (
             <li key={deck.id}>
               <Group>
+                {showDeleteButton && (
+                  <Button
+                    color="red"
+                    size="xs"
+                    variant="light"
+                    onClick={async () => {
+                      if (!confirm("Are you sure?")) return;
+                      await deleteDeck
+                        .mutateAsync({ deckId: deck.id })
+                        .then(() => window.location.reload());
+                    }}
+                  >
+                    Delete
+                  </Button>
+                )}
                 <Link href={`/review/${deck.id}`}>
                   {deck.deckName} {cards ? `(${cards})` : ""}
                 </Link>
-                <Button
-                  color="red"
-                  size="xs"
-                  variant="light"
-                  onClick={async () => {
-                    if (!confirm("Are you sure?")) return;
-                    if (!confirm("Are you really sure?")) return;
-                    await deleteDeck
-                      .mutateAsync({ deckId: deck.id })
-                      .then(() => window.location.reload());
-                  }}
-                >
-                  Delete
-                </Button>
               </Group>
             </li>
           );
