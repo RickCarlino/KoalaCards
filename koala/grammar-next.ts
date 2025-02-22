@@ -3,6 +3,7 @@ import { z } from "zod";
 import { openai } from "./openai";
 import { prismaClient } from "./prisma-client";
 import { QuizEvaluator } from "./quiz-evaluators/types";
+import { getLangName } from "./get-lang-name";
 
 export type Explanation = z.infer<typeof zodGradeResponse>;
 
@@ -46,12 +47,20 @@ async function run(props: GrammarCorrectionProps): Promise<Explanation> {
     messages: [
       {
         role: "user",
-        content: `Translate ${props.term} to English.`,
+        content: [
+          `I am learning ${getLangName(props.langCode)}.`,
+          `Translate ${props.term} to English.`,
+        ].join(" "),
       },
       { role: "assistant", content: props.definition },
       {
         role: "user",
-        content: `Could I say "${props.userInput}" instead? Explain in one sentence. It doesn't need to be an exact match, but is it close enough?`,
+        content: [
+          `Let's call the first sentence "the target sentence" and call the second sentence "the provided sentence".`,
+          `In one sentence, explain if I could use "${props.userInput}" in a situation similar to the original sentence.`,
+          `Is it close enough?`,
+          `Don't restate my sentence or the target sentence.`,
+        ].join(" "),
       },
     ],
     model: "gpt-4o",
