@@ -14,7 +14,7 @@ export const speaking: QuizEvaluator = async (input) => {
   if (compare(userInput, term, 1)) {
     return { result: "pass", userMessage: "Exact match." };
   }
-  if (Math.random() < 0.5) {
+  if (Math.random() > 1) {
     const promises = await Promise.all(CHECKS.map((g) => g(input)));
     // Run grammar and equivalence checks in sequence:
     for (const result of promises) {
