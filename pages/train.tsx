@@ -12,7 +12,6 @@ import {
 import { TrainingData } from "@prisma/client";
 import { GetServerSideProps } from "next/types";
 import { getServersideUser } from "@/koala/get-serverside-user";
-import { VisualDiff } from "@/koala/review/visual-diff";
 
 interface TrainProps {
   data: TrainingData[];
@@ -71,6 +70,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   // Count total records (adjust filter for your 30-days condition, etc.)
   const totalCount = await prismaClient.trainingData.count({
     where: {
+      yesNo: "no",
       createdAt: {
         gte: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30),
       },
@@ -85,6 +85,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   // Query paginated results (last 30 days, max 500 if you wish, or remove that limit)
   const data = await prismaClient.trainingData.findMany({
     where: {
+      yesNo: "no",
       createdAt: {
         gte: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30),
       },
@@ -105,31 +106,23 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
     },
   };
 };
+
 function table(data: TrainingData[]): React.ReactNode {
   return (
     <Table striped highlightOnHover withColumnBorders>
       <Table.Thead>
         <Table.Tr>
           <Table.Th>ID</Table.Th>
-          <Table.Th>Lang</Table.Th>
-          <Table.Th>Time</Table.Th>
           <Table.Th>Definition</Table.Th>
-          <Table.Th>Expected</Table.Th>
+          <Table.Th>Acceptable</Table.Th>
+          <Table.Th>Provided</Table.Th>
           <Table.Th>Corrected</Table.Th>
         </Table.Tr>
       </Table.Thead>
       <Table.Tbody>
         {data.map((trainingData) => {
-          const {
-            id,
-            langCode,
-            createdAt,
-            definition,
-            term,
-            userInput,
-            explanation,
-            yesNo,
-          } = trainingData;
+          const { id, definition, term, userInput, explanation, yesNo } =
+            trainingData;
           return (
             <Table.Tr
               key={id}
@@ -138,15 +131,10 @@ function table(data: TrainingData[]): React.ReactNode {
               }}
             >
               <Table.Td>{id}</Table.Td>
-              <Table.Td>{langCode}</Table.Td>
-              <Table.Td>
-                {new Date(createdAt).toLocaleDateString("en-US")}{" "}
-              </Table.Td>
               <Table.Td>{definition}</Table.Td>
               <Table.Td>{term}</Table.Td>
-              <Table.Td>
-                <VisualDiff expected={userInput} actual={explanation} />
-              </Table.Td>
+              <Table.Td>{userInput}</Table.Td>
+              <Table.Td>{explanation}</Table.Td>
             </Table.Tr>
           );
         })}
