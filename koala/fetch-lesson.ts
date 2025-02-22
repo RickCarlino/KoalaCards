@@ -212,6 +212,13 @@ export async function getLessons(p: GetLessonInputParams) {
   );
   const importedEarly = await fetchNewCards(userId, deckId, true, take);
   const importedLate = await fetchNewCards(userId, deckId, false, take);
+  console.log({
+    "====": "====",
+    importedEarly: importedEarly.length,
+    importedLate: importedLate.length,
+    newCardCount,
+    take,
+  });
   const newCards = interleave(newCardCount, importedEarly, importedLate);
   const oldCards = interleave(
     take,
