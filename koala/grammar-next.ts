@@ -44,32 +44,32 @@ const storeTrainingData: StoreTrainingData = async (props, exp) => {
 };
 
 const LANG_OVERRIDES: Partial<Record<LangCode, string>> = {
-  ko: "Oh and for the sake of this discussion, let's say that formality levels don't need to be taken into consideration.",
+  ko: "For the sake of this discussion, let's say that formality levels don't need to be taken into consideration.",
 };
 
 async function run(props: GrammarCorrectionProps): Promise<Explanation> {
   const override = LANG_OVERRIDES[props.langCode as LangCode] || "";
+  const messages = [
+    {
+      role: "user" as const,
+      content: [
+        `I am learning ${getLangName(props.langCode)}.`,
+        `Translate ${props.term} to English.`,
+      ].join(" "),
+    },
+    { role: "assistant" as const, content: props.definition },
+    {
+      role: "user" as const,
+      content: [
+        `Let's say I am in a situation that warrants the sentence above.`,
+        `Could I say "${props.userInput}" instead?`,
+        `Would that be OK?`,
+        override,
+      ].join(" "),
+    },
+  ];
   const response = await openai.beta.chat.completions.parse({
-    messages: [
-      {
-        role: "user",
-        content: [
-          `I am learning ${getLangName(props.langCode)}.`,
-          `Translate ${props.term} to English.`,
-        ].join(" "),
-      },
-      { role: "assistant", content: props.definition },
-      {
-        role: "user",
-        content: [
-          `Let's call the first sentence "the target sentence" and call the second sentence "the provided sentence".`,
-          `Let's say I am in that situation and I say "${props.userInput}" instead.`,
-          `Is that OK?`,
-          `Don't restate the target sentence or the provided sentence.`,
-          override,
-        ].join(" "),
-      },
-    ],
+    messages,
     model: "gpt-4o",
     max_tokens: 125,
     temperature: 0.1,
@@ -77,8 +77,37 @@ async function run(props: GrammarCorrectionProps): Promise<Explanation> {
   });
 
   const gradeResponse = response.choices[0]?.message?.parsed;
+
   if (!gradeResponse) {
     throw new Error("Invalid response format from OpenAI.");
+  }
+
+  if (gradeResponse.yesNo === "no") {
+    const resp2 = await openai.beta.chat.completions.parse({
+      messages: [
+        ...messages,
+        {
+          role: "assistant" as const,
+          content: gradeResponse.why,
+        },
+        {
+          role: "user" as const,
+          content: [
+            `Please re-write your response:`,
+            `1. Shorten your response to one sentence in length.`,
+            `2. Remove any 'mirroring' of my input. Call the first sentence "the original sentence" and the second sentence "the provided sentence".`,
+          ].join("\n"),
+        },
+      ],
+      model: "gpt-4o",
+      max_tokens: 125,
+      temperature: 0.1,
+    });
+    const whyResponse = resp2.choices[0]?.message?.content;
+    return {
+      ...gradeResponse,
+      why: whyResponse || gradeResponse.why,
+    }
   }
 
   return gradeResponse;
