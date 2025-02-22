@@ -23,6 +23,7 @@ const NavBar = () => {
     { path: "/create", name: "Add" },
     { path: "/cards", name: "Cards" },
     { path: "/user", name: "Settings" },
+    { path: "https://github.com/RickCarlino/KoalaCards", name: "Help" },
   ];
 
   return (

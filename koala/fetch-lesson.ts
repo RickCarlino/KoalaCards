@@ -170,12 +170,7 @@ async function newCardsAllowed(userId: string, take: number) {
   const thisWeek = await newCardsLearnedThisWeek(userId);
   const deficiency = Math.max(weeklyCap - thisWeek, 0);
   const result = Math.min(take, deficiency);
-  console.log({
-    weeklyCap,
-    thisWeek,
-    deficiency,
-    result,
-  })
+
   return result;
 }
 
