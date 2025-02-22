@@ -92,10 +92,12 @@ async function run(props: GrammarCorrectionProps): Promise<Explanation> {
         {
           role: "user" as const,
           content: [
-            `Please re-write your response:`,
-            `1. Shorten your response to one sentence in length.`,
-            `2. Remove any 'mirroring' of my input. Call the first sentence "the original sentence" and the second sentence "the provided sentence".`,
+            `Let's edit your response step by step:`,
+            `1. Remove any 'mirroring' or repetition of my input. Just say "the original sentence" or "the provided sentence" if you need to.`,
+            `2. We know the "orginal" sentence is correct - focus your discussion exclusively on the "provided" sentence.`,
             `3. Remove all pronounciation help - foreign words should only be written in the foreign writing system.`,
+            `4. Shorten your response to one sentence in length.`,
+            `5. Double check compliance with these rules before submitting your response.`,
           ].join("\n"),
         },
       ],
@@ -106,7 +108,7 @@ async function run(props: GrammarCorrectionProps): Promise<Explanation> {
     return {
       ...gradeResponse,
       why: whyResponse || gradeResponse.why,
-    }
+    };
   }
 
   return gradeResponse;
