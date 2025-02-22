@@ -139,7 +139,7 @@ export default function UserSettingsPage(props: Props) {
 
   const stats = props.stats;
   const labels: [keyof typeof stats, string][] = [
-    ["totalCards", "Total cards studied"],
+    ["totalCards", "Total cards"],
     ["newCards", "New cards in deck"],
     ["quizzesDue", "Cards due now"],
     ["cardsDueNext24Hours", "Cards due next 24 hours"],

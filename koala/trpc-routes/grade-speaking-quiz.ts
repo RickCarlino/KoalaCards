@@ -39,7 +39,6 @@ export const gradeSpeakingQuiz = procedure
 
     const result = await speaking({
       card: quiz.Card,
-      quiz,
       userID,
       userInput: input.userInput,
     });

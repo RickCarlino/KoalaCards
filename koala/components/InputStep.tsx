@@ -1,7 +1,6 @@
 import {
   Button,
   Paper,
-  Radio,
   Title,
   Divider,
   Flex,
@@ -88,29 +87,6 @@ export function InputStep({
             })
           }
         />
-
-        <Radio.Group
-          label="Card Type"
-          description="Choose how you want to practice these new cards."
-          value={state.cardType}
-          onChange={(value) =>
-            dispatch({ type: "SET_CARD_TYPE", cardType: value })
-          }
-        >
-          <Radio
-            value="listening"
-            label="Listening first, then speaking (Recommended for most sentences)."
-          />
-          <Radio
-            value="speaking"
-            label="Speaking only (Good for vocab words)."
-          />
-          <Radio
-            value="both"
-            label="Do listening and speaking at the same time. (For well-understood material)."
-          />
-        </Radio.Group>
-
         <Divider my="sm" />
         <Flex justify="flex-end">
           <Button onClick={onSubmit} disabled={!state.rawInput || loading}>
