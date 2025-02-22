@@ -71,7 +71,6 @@ async function run(props: GrammarCorrectionProps): Promise<Explanation> {
   const response = await openai.beta.chat.completions.parse({
     messages,
     model: "gpt-4o",
-    max_tokens: 125,
     temperature: 0.1,
     response_format: zodResponseFormat(zodGradeResponse, "grade_response"),
   });
@@ -96,11 +95,11 @@ async function run(props: GrammarCorrectionProps): Promise<Explanation> {
             `Please re-write your response:`,
             `1. Shorten your response to one sentence in length.`,
             `2. Remove any 'mirroring' of my input. Call the first sentence "the original sentence" and the second sentence "the provided sentence".`,
+            `3. Remove all pronounciation help - foreign words should only be written in the foreign writing system.`,
           ].join("\n"),
         },
       ],
       model: "gpt-4o",
-      max_tokens: 125,
       temperature: 0.1,
     });
     const whyResponse = resp2.choices[0]?.message?.content;

@@ -50,7 +50,7 @@ export const faucet = procedure
       take: 100,
     });
 
-    const random = shuffle([...yes, ...no]).slice(0, 10);
+    const random = shuffle([...yes, ...no]).slice(0, 3);
 
     const results = await Promise.all(
       random.map(async (card) => {
