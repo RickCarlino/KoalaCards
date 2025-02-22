@@ -1,9 +1,8 @@
-import { Quiz, Card } from "@prisma/client";
+import { Card } from "@prisma/client";
 import { QuizResult } from "../shared-types";
 
 type QuizEvaluatorInput = {
-  quiz: Quiz;
-  card: Card;
+  card: Card
   userInput: string;
   userID: string;
 };
