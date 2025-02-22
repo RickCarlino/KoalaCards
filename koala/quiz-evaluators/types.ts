@@ -2,7 +2,7 @@ import { Card } from "@prisma/client";
 import { QuizResult } from "../shared-types";
 
 type QuizEvaluatorInput = {
-  card: Card
+  card: Pick<Card, "term" | "definition" | "langCode">;
   userInput: string;
   userID: string;
 };

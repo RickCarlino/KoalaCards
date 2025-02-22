@@ -3,7 +3,7 @@ import { getUserSettings } from "../auth-helpers";
 import { procedure } from "../trpc-procedure";
 import { prismaClient } from "../prisma-client";
 import { shuffle } from "radash";
-import { grammarCorrectionNG } from "../grammar-ng";
+import { grammarCorrectionNext } from "../grammar-next";
 
 export const faucet = procedure
   .input(z.object({}))
@@ -24,21 +24,31 @@ export const faucet = procedure
     if (!userdId) {
       return [];
     }
-    const cards = await prismaClient.card.findMany({
+    const cards = await prismaClient.trainingData.findMany({
       where: {
-        userId: userdId,
-        flagged: false,
+        yesNo: "no",
+        createdAt: {
+          gte: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30),
+        },
       },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: 100,
     });
 
     const random = shuffle(cards).slice(0, 10);
 
     const results = await Promise.all(
       random.map(async (card) => {
-        const output = await grammarCorrectionNG({
+        const output = await grammarCorrectionNext({
           userID: userdId,
-          card,
-          userInput: card.term,
+          card: {
+            term: card.term,
+            definition: card.definition,
+            langCode: card.langCode,
+          },
+          userInput: card.userInput,
         });
         return {
           id: card.id,

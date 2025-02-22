@@ -1,19 +1,16 @@
-import { z } from "zod";
 import { zodResponseFormat } from "openai/helpers/zod";
-import { prismaClient } from "./prisma-client";
+import { z } from "zod";
 import { getLangName } from "./get-lang-name";
 import { openai } from "./openai";
-import {
-  compare,
-  stripFinalPunctuation,
-} from "./quiz-evaluators/evaluator-utils";
+import { prismaClient } from "./prisma-client";
+import { compare } from "./quiz-evaluators/evaluator-utils";
 import { QuizEvaluator } from "./quiz-evaluators/types";
 
 export type Explanation = z.infer<typeof zodGradeResponse>;
 
 type GrammarCorrectionProps = {
-  term: string;
-  definition: string;
+  term: string; // Prompt term
+  definition: string; // Example correct answer
   langCode: string;
   userInput: string;
 };
@@ -24,20 +21,23 @@ type StoreTrainingData = (
 ) => Promise<void>;
 
 const zodGradeResponse = z.object({
-  grade: z.enum(["correct", "incorrect"]),
+  grade: z.enum(["ok", "edit"]),
   correctedSentence: z.string().optional(),
 });
 
 const storeTrainingData: StoreTrainingData = async (props, exp) => {
   const { term, definition, langCode, userInput } = props;
   const { grade, correctedSentence } = exp;
+
+  const yesNo = grade === "ok" ? "yes" : "no";
+
   await prismaClient.trainingData.create({
     data: {
       term,
       definition,
       langCode,
       userInput,
-      yesNo: grade === "correct" ? "yes" : "no",
+      yesNo,
       explanation: correctedSentence || "",
       quizType: "speaking",
       englishTranslation: "NA",
@@ -45,62 +45,96 @@ const storeTrainingData: StoreTrainingData = async (props, exp) => {
   });
 };
 
-function buildPrompt({ userInput }: GrammarCorrectionProps, lang: string) {
+function systemPrompt() {
   return [
-    `### INPUT: "${userInput}".`,
-    `You are a spelling and grammar checker (language: ${lang}).`,
-    "Your job is strictly to correct spelling and grammar.",
-    "Do not to change word choice or style.",
-    "You will be penalized for adding explanations, style suggestions or nitpicking grammar fixes that are not strictly required.",
-    "Respond with JSON:",
-    '{ "grade": "correct" } or { "grade": "incorrect", "correctedSentence": "..." }',
+    "=== GRAMMAR ERROR DETECTION ===",
+    "=== FOCUS: LEARNER MISTAKES ONLY ===",
+    "Your task: Identify and correct ONLY common language learner grammatical errors.",
+    "DO NOT suggest improvements to:",
+    "- Vocabulary choice/phrasing",
+    "- Style/nuance",
+    "- Regional variations",
+    "- Naturalness of expression",
+    "ONLY correct these specific error types:",
+    "Korean: Particle errors (은/는 vs 이/가), incorrect verb endings",
+    "Japanese: Particle errors (は vs が), verb conjugation mistakes",
+    "Spanish: Gender agreement errors, ser/estar confusion",
+    "Evaluation rules:",
+    "1. If sentence is grammatically correct → RESPOND WITH 'OK'",
+    "2. If contains learner mistake from listed categories → EDIT (minimal changes)",
+    "3. If error not in listed categories → 'OK' even if non-ideal",
+    "4. Preserve user's original words when possible",
+    "Critical constraints:",
+    "- NEVER add suggestions/comments",
+    "- NEVER correct valid regional variations",
+    "- NEVER edit stylistically different but grammatically correct sentences",
+    "Examples:",
+    "- User: 'Él está ingeniero' → 'Él es ingeniero' (ser/estar EDIT)",
+    "- User: 'Watashi wa gakusei desu' → OK (correct particles)",
+    "- User: 'She eat rice' → 'She eats rice' (verb conjugation EDIT)",
+    "- User: 'I consumed breakfast' → OK (different phrasing but correct)",
+    "Output ONLY 'OK' or edited sentence with minimal corrections.",
   ].join("\n");
 }
 
-async function checkGrammar(
+async function run(props: GrammarCorrectionProps): Promise<Explanation> {
+  const messages = [
+    {
+      role: "user" as const,
+      content: systemPrompt(),
+    },
+    {
+      role: "user" as const,
+      content: [
+        `Language: ${getLangName(props.langCode)}`,
+        `Student Prompt: "${props.definition}"`,
+        `Student Response: "${props.userInput}"`,
+      ].join("\n"),
+    },
+  ];
+
+  const response = await openai.beta.chat.completions.parse({
+    messages,
+    model: "gpt-4o",
+    max_tokens: 125,
+    temperature: 0.1,
+    response_format: zodResponseFormat(zodGradeResponse, "grade_response"),
+  });
+
+  const gradeResponse = response.choices[0]?.message?.parsed;
+  if (!gradeResponse) {
+    throw new Error("Invalid response format from OpenAI.");
+  }
+
+  if (
+    gradeResponse.correctedSentence &&
+    compare(props.userInput, gradeResponse.correctedSentence, 0)
+  ) {
+    gradeResponse.grade = "ok";
+    delete gradeResponse.correctedSentence;
+  }
+
+  return gradeResponse;
+}
+
+async function runAndStore(
   props: GrammarCorrectionProps,
 ): Promise<Explanation> {
-  const { userInput, langCode } = props;
-
-  const check = async () => {
-    const response = await openai.beta.chat.completions.parse({
-      messages: [
-        { role: "user", content: buildPrompt(props, getLangName(langCode)) },
-      ],
-      model: "gpt-4o",
-      max_tokens: 125,
-      temperature: 0.1,
-      response_format: zodResponseFormat(zodGradeResponse, "grade_response"),
-    });
-    const gradeResponse = response.choices[0]?.message?.parsed;
-
-    if (!gradeResponse) {
-      throw new Error("Invalid response format from OpenAI.");
-    }
-    const l = stripFinalPunctuation(userInput).toLocaleLowerCase();
-    const r = stripFinalPunctuation(
-      gradeResponse.correctedSentence || "",
-    ).toLocaleLowerCase();
-
-    if (compare(l, r, 0)) {
-      gradeResponse.grade = "correct";
-    }
-    await storeTrainingData(props, gradeResponse);
-    return gradeResponse;
-  };
-
-  const results = await Promise.all([check(), check()]);
-  return results.find((response) => response.grade === "correct") || results[0];
+  const result = await run(props);
+  storeTrainingData(props, result);
+  return result;
 }
 
 export const grammarCorrection: QuizEvaluator = async ({ userInput, card }) => {
-  const resp = await checkGrammar({
-    term: card.term,
-    definition: card.definition,
-    langCode: card.langCode,
-    userInput,
-  });
-  return resp.grade === "correct"
-    ? { result: "pass", userMessage: "" }
-    : { result: "fail", userMessage: `✏️${resp.correctedSentence || ""}` };
+  const chosen = await runAndStore({ ...card, userInput });
+
+  if (chosen.grade === "ok") {
+    return { result: "pass", userMessage: "" };
+  } else {
+    // "edit"
+    return {
+      result: "fail",
+      userMessage: `✏️${chosen.correctedSentence || ""}`,
+    };
+  }
 };
