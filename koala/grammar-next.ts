@@ -4,6 +4,7 @@ import { openai } from "./openai";
 import { prismaClient } from "./prisma-client";
 import { QuizEvaluator } from "./quiz-evaluators/types";
 import { getLangName } from "./get-lang-name";
+import { LangCode } from "./shared-types";
 
 export type Explanation = z.infer<typeof zodGradeResponse>;
 
@@ -42,7 +43,12 @@ const storeTrainingData: StoreTrainingData = async (props, exp) => {
   });
 };
 
+const LANG_OVERRIDES: Partial<Record<LangCode, string>> = {
+  ko: "Oh and for the sake of this discussion, let's say that formality levels don't need to be taken into consideration.",
+};
+
 async function run(props: GrammarCorrectionProps): Promise<Explanation> {
+  const override = LANG_OVERRIDES[props.langCode as LangCode] || "";
   const response = await openai.beta.chat.completions.parse({
     messages: [
       {
@@ -57,9 +63,10 @@ async function run(props: GrammarCorrectionProps): Promise<Explanation> {
         role: "user",
         content: [
           `Let's call the first sentence "the target sentence" and call the second sentence "the provided sentence".`,
-          `In one sentence, explain if I could use "${props.userInput}" in a situation similar to the original sentence.`,
-          `Is it close enough?`,
-          `Don't restate my sentence or the target sentence.`,
+          `Let's say I am in that situation and I say "${props.userInput}" instead.`,
+          `Is that OK?`,
+          `Don't restate the target sentence or the provided sentence.`,
+          override,
         ].join(" "),
       },
     ],

@@ -24,7 +24,7 @@ export const faucet = procedure
     if (!userdId) {
       return [];
     }
-    const cards = await prismaClient.trainingData.findMany({
+    const no = await prismaClient.trainingData.findMany({
       where: {
         yesNo: "no",
         createdAt: {
@@ -37,7 +37,20 @@ export const faucet = procedure
       take: 100,
     });
 
-    const random = shuffle(cards).slice(0, 10);
+    const yes = await prismaClient.trainingData.findMany({
+      where: {
+        yesNo: "yes",
+        createdAt: {
+          gte: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30),
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: 100,
+    });
+
+    const random = shuffle([...yes, ...no]).slice(0, 10);
 
     const results = await Promise.all(
       random.map(async (card) => {
