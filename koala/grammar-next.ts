@@ -72,6 +72,7 @@ async function run(props: GrammarCorrectionProps): Promise<Explanation> {
     messages,
     model: "gpt-4o",
     temperature: 0.1,
+    max_tokens: 1000,
     response_format: zodResponseFormat(zodGradeResponse, "grade_response"),
   });
 
@@ -95,6 +96,7 @@ async function run(props: GrammarCorrectionProps): Promise<Explanation> {
             `Let's edit your response step by step:`,
             `1. Remove any 'mirroring' or repetition of my input. Just say "the original sentence" or "the provided sentence" if you need to.`,
             `2. We know the "orginal" sentence is correct - focus your discussion exclusively on the "provided" sentence.`,
+            `3. We know the "provided" sentence is incorrect. Don't restate that fact - just explain "why" briefly.`,
             `3. Remove all pronounciation help - foreign words should only be written in the foreign writing system.`,
             `4. Shorten your response to one sentence in length.`,
             `5. Double check compliance with these rules before submitting your response.`,
