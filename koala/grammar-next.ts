@@ -105,6 +105,7 @@ async function run(props: GrammarCorrectionProps): Promise<Explanation> {
         },
       ],
       model: "gpt-4o",
+      store: true,
       temperature: 0.1,
     });
     const whyResponse = resp2.choices[0]?.message?.content;

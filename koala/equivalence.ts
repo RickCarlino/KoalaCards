@@ -71,7 +71,6 @@ export const equivalence: QuizEvaluator = async (input) => {
       max_tokens: 125,
       temperature: 0.1,
       response_format: zodResponseFormat(zodGradeResponse, "grade_response"),
-      store: true,
     });
     return response.choices[0]?.message?.parsed;
   };

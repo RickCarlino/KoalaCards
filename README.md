@@ -24,7 +24,7 @@ KoalaCards is a [spaced repetition system](https://en.wikipedia.org/wiki/Spaced_
 - [Project Status and Limitations](#project-status-and-limitations-%EF%B8%8F)
 - [Help Needed](#help-needed-)
 
-## Demo Video
+## Demo / Screenshots
 
 <p align="center">
   <a href="https://www.youtube.com/watch?v=_XX_czYuJkM">
@@ -33,6 +33,8 @@ KoalaCards is a [spaced repetition system](https://en.wikipedia.org/wiki/Spaced_
     <img src="./screenshot.png" alt="KoalaCards UI screenshot"/>
   </a>
 </p>
+
+![](./feedback.png)
 
 ## Officially Supported Languages
 

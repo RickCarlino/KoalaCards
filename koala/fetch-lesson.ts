@@ -169,7 +169,9 @@ async function newCardsAllowed(userId: string, take: number) {
   const weeklyCap = (await getCardsAllowedPerDay(userId)) * 7;
   const thisWeek = await newCardsLearnedThisWeek(userId);
   const deficiency = Math.max(weeklyCap - thisWeek, 0);
-  return Math.min(take, deficiency);
+  const result = Math.min(take, deficiency);
+
+  return result;
 }
 
 export async function getLessons(p: GetLessonInputParams) {
