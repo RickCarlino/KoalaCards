@@ -2,13 +2,6 @@
 
 I host a demo instance of the app [here](https://app.koala.cards/user) but please keep in mind I may **turn off the server during peak usage** to reduce costs. I have set up a [Patreon](https://www.patreon.com/rickcarlino) to help offset hosting costs. Please consider donating if you find the app useful.
 
-## Officially Supported Languages
-Korean, French, Italian, Spanish,
-
-## Supported, But Untested/Limited Support
-
-Arabic, Catalan, Chinese, Czech, Danish, Dutch, English, Finnish, Galician, German, Greek, Gujarati, Hebrew, Hindi, Hungarian, Indonesian, Japanese, Kannada, Latvian, Lithuanian, Malay, Marathi, Norwegian, Polish, Portuguese, Punjabi, Romanian, Russian, Serbian, Slovak, Swedish, Thai, Turkish, Ukrainian, Vietnamese,
-
 # KoalaCards 🐨
 
 <p align="center">
@@ -34,16 +27,20 @@ KoalaCards is a [spaced repetition system](https://en.wikipedia.org/wiki/Spaced_
 ## Demo Video
 
 <p align="center">
-  <a href="https://www.youtube.com/watch?v=xu7NxSei11Q">
-    Watch a short YouTube demo of the app as of August 2024
+  <a href="https://www.youtube.com/watch?v=_XX_czYuJkM">
+    Watch a short YouTube demo of the app as of February 2025
     <br/>
     <img src="./screenshot.png" alt="KoalaCards UI screenshot"/>
   </a>
 </p>
 
-## ~~ALPHA~~ Beta Software
+## Officially Supported Languages
 
-The app is now stable enough to be used for serious studying. If you want to use the app but are hitting stability issues, please reach out.
+Korean, French, Italian, Spanish,
+
+## Supported, But Untested/Limited Support
+
+Arabic, Catalan, Chinese, Czech, Danish, Dutch, English, Finnish, Galician, German, Greek, Gujarati, Hebrew, Hindi, Hungarian, Indonesian, Japanese, Kannada, Latvian, Lithuanian, Malay, Marathi, Norwegian, Polish, Portuguese, Punjabi, Romanian, Russian, Serbian, Slovak, Swedish, Thai, Turkish, Ukrainian, Vietnamese,
 
 ## Features 💡
 
