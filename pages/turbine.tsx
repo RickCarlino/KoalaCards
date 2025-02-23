@@ -10,13 +10,12 @@ export default function Faucet() {
   const [inputText, setInputText] = useState("");
   const [output, setOutput] = useState("");
   const turbineMutation = trpc.turbine.useMutation();
-
   const handleSubmit = async () => {
     setOutput("Loading...");
     const result = await turbineMutation.mutateAsync({ words: inputText });
     const asCSV = result
       .map(({ term, definition }) =>
-        [term, definition].map((x) => JSON.stringify(x)).join(","),
+        [term, definition].join("|"),
       )
       .join("\n");
     setOutput(asCSV);

@@ -7,6 +7,12 @@ import { shuffle } from "radash";
 
 type ColocationGroup = z.infer<typeof ColocationGroup>;
 
+function clean(input: string[]) {
+  return input
+    .map((item) => item.trim())
+    .filter((x) => x.length > 2)
+    .sort();
+}
 const SpeechLabelSchema = z.object({
   words: z.array(
     z.object({
@@ -113,7 +119,7 @@ async function labelWords(words: string[]) {
   const response = await openai.beta.chat.completions.parse({
     messages: [
       { role: "system", content: LABEL_PROMPT },
-      { role: "user" as const, content: words.join(", ") },
+      { role: "user" as const, content: clean(words).join(", ") },
     ],
     model: "gpt-4o",
     temperature: 0.1,
@@ -152,7 +158,7 @@ async function pairColocations(words: string[]): Promise<ColocationGroup[]> {
   const response = await openai.beta.chat.completions.parse({
     messages: [
       { role: "system", content: COLOCATION_PROMPT },
-      { role: "user", content: words.join(", ") },
+      { role: "user", content: clean(words).join(", ") },
     ],
     model: "gpt-4o",
     temperature: 0.1,
@@ -215,7 +221,7 @@ async function translatePhrases(words: string[]) {
   const response = await openai.beta.chat.completions.parse({
     messages: [
       { role: "system", content: PHRASE_TRANSLATION_PROMPT },
-      { role: "user", content: words.join(", ") },
+      { role: "user", content: clean(words).join(", ") },
     ],
     model: "o3-mini",
     reasoning_effort: "medium",
@@ -263,11 +269,7 @@ export const turbine = procedure
   .output(TRANSLATION)
   .mutation(async ({ ctx, input }) => {
     await getUserSettings(ctx.user?.id);
-    const inputWords = input.words
-      .split(/[\s,]+/)
-      .map((item) => item.trim())
-      .filter((x) => x.length > 1)
-      .sort();
+    const inputWords = clean(input.words.split(/[\s,]+/));
     const step1 = await labelWords(inputWords);
     return [
       ...(await processWords(step1.words)),
