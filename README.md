@@ -3,6 +3,7 @@
 I host a demo instance of the app [here](https://app.koala.cards/user) but please keep in mind I may **turn off the server during peak usage** to reduce costs. I have set up a [Patreon](https://www.patreon.com/rickcarlino) to help offset hosting costs. Please consider donating if you find the app useful.
 
 ## Officially Supported Languages
+
 Korean, French, Italian, Spanish,
 
 ## Supported, But Untested/Limited Support
@@ -31,7 +32,7 @@ KoalaCards is a [spaced repetition system](https://en.wikipedia.org/wiki/Spaced_
 - [Project Status and Limitations](#project-status-and-limitations-%EF%B8%8F)
 - [Help Needed](#help-needed-)
 
-## Demo Video
+## Demo / Screenshots
 
 <p align="center">
   <a href="https://www.youtube.com/watch?v=xu7NxSei11Q">
@@ -40,6 +41,8 @@ KoalaCards is a [spaced repetition system](https://en.wikipedia.org/wiki/Spaced_
     <img src="./screenshot.png" alt="KoalaCards UI screenshot"/>
   </a>
 </p>
+
+![](./feedback.png)
 
 ## ~~ALPHA~~ Beta Software
 
