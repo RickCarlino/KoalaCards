@@ -81,12 +81,13 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
       },
     });
 
+    const weeklyTarget = userSettings.cardsPerDayMax * 7;
     const statistics = {
       ...(await getLessonMeta(userId)),
       uniqueCardsLast24Hours,
       uniqueCardsLastWeek,
       newCardsLast24Hours,
-      newCardsLastWeek,
+      newCardsLastWeek: `${newCardsLastWeek} / ${weeklyTarget}`,
       cardsDueNext24Hours,
       globalUsers: await prismaClient.user.count(),
     };
