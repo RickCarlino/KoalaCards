@@ -115,8 +115,14 @@ Examples:
 `;
 
 async function labelWords(words: string[]) {
-  if (words.length < 2) {
-    return [];
+  const results: Record<"objects" | "words" | "misc", string[]> = {
+    objects: [],
+    words: [],
+    misc: [],
+  };
+
+  if (words.length < 1) {
+    return results;
   }
 
   const response = await openai.beta.chat.completions.parse({
@@ -135,11 +141,6 @@ async function labelWords(words: string[]) {
     throw new Error("Invalid response format from OpenAI.");
   }
 
-  const results: Record<"objects" | "words" | "misc", string[]> = {
-    objects: [],
-    words: [],
-    misc: [],
-  };
   parsedResponse.words.forEach((word) => {
     switch (word.partOfSpeech) {
       case "physical-object":
@@ -158,7 +159,7 @@ async function labelWords(words: string[]) {
 }
 
 async function pairColocations(words: string[]): Promise<ColocationGroup[]> {
-  if (words.length < 2) {
+  if (words.length < 1) {
     return [];
   }
   const response = await openai.beta.chat.completions.parse({
@@ -179,7 +180,7 @@ async function pairColocations(words: string[]): Promise<ColocationGroup[]> {
 }
 
 async function generatePhrases(colocations: ColocationGroup[]) {
-  if (colocations.length < 2) {
+  if (colocations.length < 1) {
     return [];
   }
 
@@ -228,7 +229,7 @@ async function generatePhrases(colocations: ColocationGroup[]) {
 }
 
 async function translatePhrases(words: string[]) {
-  if (words.length < 2) {
+  if (words.length < 1) {
     return [];
   }
 
@@ -250,7 +251,7 @@ async function translatePhrases(words: string[]) {
 }
 
 async function translateObject(words: string[]) {
-  if (words.length < 2) {
+  if (words.length < 1) {
     return [];
   }
 
