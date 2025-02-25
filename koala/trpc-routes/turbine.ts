@@ -96,12 +96,11 @@ Keep in mind:
  * The words are provided in "dictionary form" but you are allowed and encouraged to make changes by adding particles, conjugations and verb endings.
 `;
 
-const PHRASE_TRANSLATION_PROMPT = `
-You are a language translator inside of a language learning app.
-You translate phrases and words from the target language to English.
-Your translations are used in flashcards.
-Exposing the nuance and meaning of words is more important than a direct translation.
-`;
+const PHRASE_TRANSLATION_PROMPT = [
+  `Please translate the sentences below.`,
+  ` They will be used in a language learning flash card app,`,
+  `so it is important that the translations are literal and concise.`,
+].join(" ");
 
 const OBJ_TRANSLATION_PROMPT = `
 You are a language AI inside of a language learning app.
@@ -271,9 +270,10 @@ export const turbine = procedure
     await getUserSettings(ctx.user?.id);
     const inputWords = clean(input.words.split(/[\s,]+/));
     const step1 = await labelWords(inputWords);
-    return [
-      ...(await processWords(step1.words)),
-      ...(await translateObject(step1.objects)),
-      ...(await translatePhrases(step1.misc)),
-    ];
+    const x = await Promise.all([
+      processWords(step1.words),
+      translateObject(step1.objects),
+      translatePhrases(step1.misc),
+    ]);
+    return x.flat();
   });

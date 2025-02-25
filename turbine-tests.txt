@@ -1,25 +1,19 @@
-=== On to page 3 + 5
-가두다
-가라앉다
-가르다
-가리다
-가문
-가쁘다
-각도
-각오
-간격
-간절하다
-간지럽다
-갈리다
-감당하다
-감성적
-감싸다
-감추다
-감칠맛
-감탄
-감탄하다
-강도
-강사
+=== On to page 3 + 4
+경치에 감탄합니다|I admire the scenery.
+길이 갈려요|The road splits.
+배가 가라앉았어|The boat sank.
+비밀을 감췄어|I hid the secret.
+사람을 가둔다|I imprison people.
+사람이 감성적이었어요|The person was emotional.
+소망이 간절합니다|My wish is earnest.
+손으로 감쌌습니다|I wrapped it with my hand.
+숨이 가빠|I am short of breath.
+얼굴을 가려요|I cover my face.
+음식에서 감칠맛이 나|The food has umami.
+책임을 감당해|I bear the responsibility.
+칼로 가르어요|I cut it with a knife.
+피부가 간지러워|My skin itches.
+---
 강제
 강화
 갖추다
@@ -40,6 +34,7 @@
 검색하다
 검찰
 겁먹다
+----
 게임기
 결정적
 결제
@@ -60,6 +55,7 @@
 고난
 고등어
 고백하다
+---
 고수
 고작
 고정
@@ -80,6 +76,7 @@
 공개되다
 공사
 공식적
+---
 과감하다
 과제
 과하다
@@ -100,6 +97,7 @@
 국경
 국밥
 국장
+---
 국회
 군대
 군사
@@ -120,6 +118,7 @@
 그림자
 그자
 그전
+---
 극단적
 극복하다
 근무
