@@ -10,9 +10,10 @@ type ColocationGroup = z.infer<typeof ColocationGroup>;
 function clean(input: string[]) {
   return input
     .map((item) => item.trim())
-    .filter((x) => x.length > 2)
+    .filter((x) => x.length > 1)
     .sort();
 }
+
 const SpeechLabelSchema = z.object({
   words: z.array(
     z.object({
