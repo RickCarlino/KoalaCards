@@ -98,8 +98,8 @@ Keep in mind:
 
 const PHRASE_TRANSLATION_PROMPT = [
   `Please translate the sentences below.`,
-  ` They will be used in a language learning flash card app,`,
-  `so it is important that the translations are literal and concise.`,
+  `They will be used in a language learning flash card app,`,
+  `so it is important that the translations are correct and concise.`,
 ].join(" ");
 
 const OBJ_TRANSLATION_PROMPT = `
@@ -115,6 +115,10 @@ Examples:
 `;
 
 async function labelWords(words: string[]) {
+  if (words.length < 2) {
+    return [];
+  }
+
   const response = await openai.beta.chat.completions.parse({
     messages: [
       { role: "system", content: LABEL_PROMPT },
@@ -154,6 +158,9 @@ async function labelWords(words: string[]) {
 }
 
 async function pairColocations(words: string[]): Promise<ColocationGroup[]> {
+  if (words.length < 2) {
+    return [];
+  }
   const response = await openai.beta.chat.completions.parse({
     messages: [
       { role: "system", content: COLOCATION_PROMPT },
@@ -172,6 +179,10 @@ async function pairColocations(words: string[]): Promise<ColocationGroup[]> {
 }
 
 async function generatePhrases(colocations: ColocationGroup[]) {
+  if (colocations.length < 2) {
+    return [];
+  }
+
   const words = colocations
     .map((item, index) => {
       const conjugations = shuffle([
@@ -217,6 +228,10 @@ async function generatePhrases(colocations: ColocationGroup[]) {
 }
 
 async function translatePhrases(words: string[]) {
+  if (words.length < 2) {
+    return [];
+  }
+
   const response = await openai.beta.chat.completions.parse({
     messages: [
       { role: "system", content: PHRASE_TRANSLATION_PROMPT },
@@ -235,6 +250,10 @@ async function translatePhrases(words: string[]) {
 }
 
 async function translateObject(words: string[]) {
+  if (words.length < 2) {
+    return [];
+  }
+
   const response = await openai.beta.chat.completions.parse({
     messages: [
       { role: "system", content: OBJ_TRANSLATION_PROMPT },
