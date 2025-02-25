@@ -29,7 +29,7 @@ export const ServerExplanation = ({
     if (strip(expected).includes(strip(actual))) {
       return (
         <Text>
-          Feedback: {expected}"
+          Feedback: {expected}
         </Text>
       );  
     } else {

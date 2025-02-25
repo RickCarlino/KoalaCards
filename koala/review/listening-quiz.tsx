@@ -114,7 +114,7 @@ export const ListeningQuiz: QuizComp = ({ quiz, onGraded, onComplete }) => {
 
     onGraded(Grade.AGAIN);
     onComplete({
-      status: "fail",
+      status: "fail", // TODO: Create new "self-fail" status.
       feedback: "You gave up.",
       userResponse: "",
     });
