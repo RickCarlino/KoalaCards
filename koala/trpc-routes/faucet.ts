@@ -3,7 +3,7 @@ import { getUserSettings } from "../auth-helpers";
 import { procedure } from "../trpc-procedure";
 import { prismaClient } from "../prisma-client";
 import { shuffle } from "radash";
-import { grammarCorrectionNext } from "../grammar-next";
+import { grammarCorrectionNext } from "../grammar";
 
 export const faucet = procedure
   .input(z.object({}))
