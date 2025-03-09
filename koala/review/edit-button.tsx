@@ -14,7 +14,7 @@ export const EditButton = (props: EditButtonProps) => {
         e.currentTarget.blur(); // Removes focus from the button
       }}
     >
-      Edit Card
+      Edit
     </Button>
   );
 };
