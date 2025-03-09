@@ -1,6 +1,9 @@
 import MicrophonePermissions from "@/koala/microphone-permissions";
 import { ReviewPage } from "@/koala/review/review-page";
 import { trpc } from "@/koala/trpc-config";
+import { Button, Box, Container } from "@mantine/core";
+import { IconArrowLeft } from '@tabler/icons-react';
+import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 
@@ -71,5 +74,20 @@ export default function Review() {
     );
   }
 
-  return MicrophonePermissions(el);
+  return (
+    <Container size="md" px="xs" py="md">
+      <Box mb="md">
+        <Button
+          component={Link}
+          href="/"
+          variant="subtle"
+          leftSection={<IconArrowLeft size={16} />}
+          radius="md"
+        >
+          Exit Review
+        </Button>
+      </Box>
+      {MicrophonePermissions(el)}
+    </Container>
+  );
 }

@@ -1,13 +1,14 @@
 import { reviewReducer } from "@/koala/review/review-reducer";
 import {
   Card,
-  Center,
   Group,
   Image,
   Progress,
   Stack,
   Text,
   Title,
+  Container,
+  Box,
 } from "@mantine/core";
 import { Grade } from "femto-fsrs";
 import { useEffect, useReducer, useState } from "react";
@@ -48,9 +49,9 @@ const UnknownQuiz: QuizComp = (props) => {
     });
   };
   return (
-    <Card shadow="sm" padding="lg" radius="md" withBorder>
-      <Stack>
-        <Title order={2}>Unknown Quiz ({props.quiz.quiz.lessonType})</Title>
+    <Card shadow="sm" p="lg" radius="md" withBorder>
+      <Stack gap="md">
+        <Title order={2} size="h3">Unknown Quiz ({props.quiz.quiz.lessonType})</Title>
         <Text>{props.quiz.quiz.definition}</Text>
         <Text>{props.quiz.quiz.term}</Text>
         <DifficultyButtons
@@ -141,18 +142,18 @@ export const ReviewPage = (props: Props) => {
     const total = state.quizzes.length;
     const percentage = Math.round((done / total) * 100);
     return (
-      // Center the content both vertically and horizontally
-      <Center style={{ width: "100%" }}>
+      <Container size="md" px="xs" py="md">
         <Card
           shadow="sm"
-          padding="lg"
+          p={{ base: 'sm', sm: 'lg' }}
           radius="md"
           withBorder
-          style={{ maxWidth: 600, width: "100%", marginTop: "10px" }} // Set fixed maxWidth
+          w="100%"
         >
-          <Stack>
+          <Stack gap="md">
             <LessonComponent {...quizProps} key={quiz.quizId} />
-            <Group grow>
+            
+            <Group grow gap="xs">
               <PauseReviewButton
                 cardID={quiz.cardId}
                 onClick={() => {
@@ -168,15 +169,19 @@ export const ReviewPage = (props: Props) => {
                 }}
               />
             </Group>
-            <Text size={"xs"}>
-              {props.quizzesDue} due today. {done} of {total} complete in
-              current lesson.{" "}
-            </Text>
-            <Progress radius="lg" size="xl" value={percentage || 1} />
+            
+            <Box>
+              <Text size="xs" mb="xs">
+                {props.quizzesDue} due today. {done} of {total} complete in
+                current lesson.
+              </Text>
+              <Progress radius="xl" size="md" value={percentage || 1} />
+            </Box>
+            
             {illustration}
           </Stack>
         </Card>
-      </Center>
+      </Container>
     );
   } else {
     const reviewOverProps = {
@@ -214,6 +219,10 @@ export const ReviewPage = (props: Props) => {
         dispatch({ type: "SET_GRADE", grade, quizId });
       },
     };
-    return <ReviewOver {...reviewOverProps} />;
+    return (
+      <Container size="md" px="xs" py="md">
+        <ReviewOver {...reviewOverProps} />
+      </Container>
+    );
   }
 };
