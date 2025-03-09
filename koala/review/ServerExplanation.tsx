@@ -27,17 +27,13 @@ export const ServerExplanation = ({
     );
   } else {
     if (strip(expected).includes(strip(actual))) {
-      return (
-        <Text>
-          Feedback: {expected}
-        </Text>
-      );  
+      return <Text>Feedback: {expected}</Text>;
     } else {
       return (
         <Text>
           Feedback: {expected} You said "{actual}"
         </Text>
-      );  
+      );
     }
   }
 };

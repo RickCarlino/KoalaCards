@@ -14,9 +14,7 @@ export default function Faucet() {
     setOutput("Loading...");
     const result = await turbineMutation.mutateAsync({ words: inputText });
     const asCSV = result
-      .map(({ term, definition }) =>
-        [term, definition].join("|"),
-      )
+      .map(({ term, definition }) => [term, definition].join("|"))
       .join("\n");
     setOutput(asCSV);
   };

@@ -6,12 +6,17 @@ import { Notifications } from "@mantine/notifications";
 import { SessionProvider } from "next-auth/react";
 import { AppProps } from "next/app";
 import Head from "next/head";
-import Navbar from "./_nav";
+import dynamic from "next/dynamic";
+
+// Dynamically import the Navbar component to avoid hydration issues
+const NavbarWithNoSSR = dynamic(() => import("./_nav"), { ssr: false });
 
 function App(props: AppProps) {
+  // For the email authentication page, we don't want to show the navigation
   if (props.router.pathname === "/auth/email") {
     return <props.Component {...props.pageProps} />;
   }
+
   return (
     <>
       <Head>
@@ -25,10 +30,9 @@ function App(props: AppProps) {
         <MantineProvider defaultColorScheme="auto">
           <UserSettingsProvider>
             <Notifications />
-            <Navbar />
-            <div style={{ display: "flex", flexDirection: "row" }}>
+            <NavbarWithNoSSR>
               <props.Component {...props.pageProps} />
-            </div>
+            </NavbarWithNoSSR>
           </UserSettingsProvider>
         </MantineProvider>
       </SessionProvider>
