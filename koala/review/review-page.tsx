@@ -104,7 +104,7 @@ export const ReviewPage = (props: Props) => {
     const quiz = currentQuizState.quiz;
     const LessonComponent = quizComponents[quiz.lessonType] || UnknownQuiz;
     const done = state.quizzes.filter(
-      (q) => !!(q.grade || q.serverGradingResult)
+      (q) => !!(q.grade || q.serverGradingResult),
     ).length;
     const total = state.quizzes.length;
     const percentage = Math.round((done / total) * 100);
@@ -147,9 +147,7 @@ export const ReviewPage = (props: Props) => {
                 <Group grow gap="xs">
                   <PauseReviewButton
                     cardID={quiz.cardId}
-                    onClick={() =>
-                      dispatch({ type: "PAUSE_CURRENT_CARD" })
-                    }
+                    onClick={() => dispatch({ type: "PAUSE_CURRENT_CARD" })}
                   />
                   <EditButton cardID={quiz.cardId} />
                   <RemixButton
@@ -175,7 +173,10 @@ export const ReviewPage = (props: Props) => {
                     <ActionIcon
                       size="sm"
                       variant="subtle"
-                      onClick={() => confirm("End lesson without saving?") && router.push("/")}
+                      onClick={() =>
+                        confirm("End lesson without saving?") &&
+                        router.push("/")
+                      }
                       aria-label="Return to home"
                     >
                       ✕
@@ -184,20 +185,18 @@ export const ReviewPage = (props: Props) => {
                 </Box>
               </Stack>
             </Box>
-            {quiz.imageURL && (
-              <Box style={{ flex: 1, minWidth: 300 }}>
-                <Image
-                  src={quiz.imageURL}
-                  fit="contain"
-                  radius="md"
-                  style={{
-                    width: "100%",
-                    height: "auto",
-                    maxHeight: "100%",
-                  }}
-                />
-              </Box>
-            )}
+            <Box style={{ flex: 1, minWidth: 300 }}>
+              <Image
+                src={quiz.imageURL || "https://picsum.photos/1024/1024"}
+                fit="contain"
+                radius="md"
+                style={{
+                  width: "100%",
+                  height: "auto",
+                  maxHeight: "100%",
+                }}
+              />
+            </Box>
           </Flex>
         </Card>
       </Container>
@@ -220,7 +219,7 @@ export const ReviewPage = (props: Props) => {
               });
             }
             return Promise.resolve();
-          })
+          }),
         );
         await props.onSave();
       },
