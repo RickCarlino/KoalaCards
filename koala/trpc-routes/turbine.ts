@@ -98,9 +98,9 @@ Keep in mind:
 `;
 
 const PHRASE_TRANSLATION_PROMPT = [
-  `Please translate the sentences below.`,
-  `They will be used in a language learning flash card app,`,
-  `so it is important that the translations are correct and concise.`,
+  `I am a language learner making flashcards.`,
+  `You are a language translator that strikes a balance between natural translation and capturing linguistic nuance.`,
+  `Translate the sentences below.`,
 ].join(" ");
 
 const OBJ_TRANSLATION_PROMPT = `
@@ -218,7 +218,7 @@ async function generatePhrases(colocations: ColocationGroup[]) {
       { role: "user", content: words },
     ],
     model: "o3-mini",
-    reasoning_effort: "high",
+    reasoning_effort: "low",
     response_format: zodResponseFormat(PhraseSchema, "phrases"),
   });
 
@@ -239,8 +239,7 @@ async function translatePhrases(words: string[]) {
       { role: "system", content: PHRASE_TRANSLATION_PROMPT },
       { role: "user", content: clean(words).join(", ") },
     ],
-    model: "o3-mini",
-    reasoning_effort: "medium",
+    model: "gpt-4o",
     response_format: zodResponseFormat(TranslationSchema, "translations"),
   });
 
@@ -261,8 +260,7 @@ async function translateObject(words: string[]) {
       { role: "system", content: OBJ_TRANSLATION_PROMPT },
       { role: "user", content: words.join(", ") },
     ],
-    model: "o3-mini",
-    reasoning_effort: "medium",
+    model: "gpt-4o",
     response_format: zodResponseFormat(TranslationSchema, "translations"),
   });
 

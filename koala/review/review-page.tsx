@@ -185,18 +185,20 @@ export const ReviewPage = (props: Props) => {
                 </Box>
               </Stack>
             </Box>
-            <Box style={{ flex: 1, minWidth: 300 }}>
-              <Image
-                src={quiz.imageURL || "https://picsum.photos/1024/1024"}
-                fit="contain"
-                radius="md"
-                style={{
-                  width: "100%",
-                  height: "auto",
-                  maxHeight: "100%",
-                }}
-              />
-            </Box>
+            {quiz.imageURL && (
+              <Box style={{ flex: 1, minWidth: 300 }}>
+                <Image
+                  src={quiz.imageURL}
+                  fit="contain"
+                  radius="md"
+                  style={{
+                    width: "100%",
+                    height: "auto",
+                    maxHeight: "100%",
+                  }}
+                />
+              </Box>
+            )}
           </Flex>
         </Card>
       </Container>
