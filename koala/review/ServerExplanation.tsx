@@ -1,5 +1,6 @@
 import { Text } from "@mantine/core";
 import { VisualDiff } from "./visual-diff";
+import { strip } from "../quiz-evaluators/evaluator-utils";
 
 const PENCIL_EMOJI = "✏️";
 
@@ -25,6 +26,14 @@ export const ServerExplanation = ({
       />
     );
   } else {
-    return <Text>Feedback: {expected} You said "{actual}"</Text>;
+    if (strip(expected).includes(strip(actual))) {
+      return <Text>Feedback: {expected}</Text>;
+    } else {
+      return (
+        <Text>
+          Feedback: {expected} You said "{actual}"
+        </Text>
+      );
+    }
   }
 };

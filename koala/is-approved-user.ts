@@ -12,7 +12,7 @@ export const isApprovedUser = (id: string) => {
 };
 
 async function deleteInactiveUser(id: string, email: string | null) {
-  if (isApprovedUser(id)) {
+  if (isApprovedUser(id) || (email && isApprovedUser(email))) {
     return;
   }
   await prismaClient.user.delete({ where: { id } }).then(() => {

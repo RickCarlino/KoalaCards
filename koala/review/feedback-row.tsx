@@ -52,9 +52,6 @@ export function FeedbackRow({ quizState }: FeedbackRowProps) {
         <Text size="sm">
           <strong>Definition:</strong> {quizState.quiz.definition}
         </Text>
-        <Text size="sm">
-          <strong>You said:</strong> {quizState.response || "—"}
-        </Text>
         <ServerExplanation expected={expected} actual={actual} />
       </Stack>
     </Card>

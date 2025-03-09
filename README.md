@@ -35,6 +35,7 @@ KoalaCards is a [spaced repetition system](https://en.wikipedia.org/wiki/Spaced_
 </p>
 
 ![](./feedback.png)
+![](./how-it-works.png)
 
 ## Officially Supported Languages
 

@@ -107,14 +107,13 @@ export const ListeningQuiz: QuizComp = ({ quiz, onGraded, onComplete }) => {
 
   const handleFailClick = async () => {
     await playAudio(card.termAudio);
-    await playAudio(card.definitionAudio);
+    await playAudio(card.termAudio);
     await playAudio(card.termAudio);
     await playAudio(card.definitionAudio);
-    await playAudio(card.termAudio);
 
     onGraded(Grade.AGAIN);
     onComplete({
-      status: "fail",
+      status: "fail", // TODO: Create new "self-fail" status.
       feedback: "You gave up.",
       userResponse: "",
     });

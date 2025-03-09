@@ -7,6 +7,13 @@ import { shuffle } from "radash";
 
 type ColocationGroup = z.infer<typeof ColocationGroup>;
 
+function clean(input: string[]) {
+  return input
+    .map((item) => item.trim())
+    .filter((x) => x.length > 1)
+    .sort();
+}
+
 const SpeechLabelSchema = z.object({
   words: z.array(
     z.object({
@@ -90,12 +97,11 @@ Keep in mind:
  * The words are provided in "dictionary form" but you are allowed and encouraged to make changes by adding particles, conjugations and verb endings.
 `;
 
-const PHRASE_TRANSLATION_PROMPT = `
-You are a language translator inside of a language learning app.
-You translate phrases and words from the target language to English.
-Your translations are used in flashcards.
-Exposing the nuance and meaning of words is more important than a direct translation.
-`;
+const PHRASE_TRANSLATION_PROMPT = [
+  `Please translate the sentences below.`,
+  `They will be used in a language learning flash card app,`,
+  `so it is important that the translations are correct and concise.`,
+].join(" ");
 
 const OBJ_TRANSLATION_PROMPT = `
 You are a language AI inside of a language learning app.
@@ -110,10 +116,20 @@ Examples:
 `;
 
 async function labelWords(words: string[]) {
+  const results: Record<"objects" | "words" | "misc", string[]> = {
+    objects: [],
+    words: [],
+    misc: [],
+  };
+
+  if (words.length < 1) {
+    return results;
+  }
+
   const response = await openai.beta.chat.completions.parse({
     messages: [
       { role: "system", content: LABEL_PROMPT },
-      { role: "user" as const, content: words.join(", ") },
+      { role: "user" as const, content: clean(words).join(", ") },
     ],
     model: "gpt-4o",
     temperature: 0.1,
@@ -126,11 +142,6 @@ async function labelWords(words: string[]) {
     throw new Error("Invalid response format from OpenAI.");
   }
 
-  const results: Record<"objects" | "words" | "misc", string[]> = {
-    objects: [],
-    words: [],
-    misc: [],
-  };
   parsedResponse.words.forEach((word) => {
     switch (word.partOfSpeech) {
       case "physical-object":
@@ -149,10 +160,13 @@ async function labelWords(words: string[]) {
 }
 
 async function pairColocations(words: string[]): Promise<ColocationGroup[]> {
+  if (words.length < 1) {
+    return [];
+  }
   const response = await openai.beta.chat.completions.parse({
     messages: [
       { role: "system", content: COLOCATION_PROMPT },
-      { role: "user", content: words.join(", ") },
+      { role: "user", content: clean(words).join(", ") },
     ],
     model: "gpt-4o",
     temperature: 0.1,
@@ -167,6 +181,10 @@ async function pairColocations(words: string[]): Promise<ColocationGroup[]> {
 }
 
 async function generatePhrases(colocations: ColocationGroup[]) {
+  if (colocations.length < 1) {
+    return [];
+  }
+
   const words = colocations
     .map((item, index) => {
       const conjugations = shuffle([
@@ -212,10 +230,14 @@ async function generatePhrases(colocations: ColocationGroup[]) {
 }
 
 async function translatePhrases(words: string[]) {
+  if (words.length < 1) {
+    return [];
+  }
+
   const response = await openai.beta.chat.completions.parse({
     messages: [
       { role: "system", content: PHRASE_TRANSLATION_PROMPT },
-      { role: "user", content: words.join(", ") },
+      { role: "user", content: clean(words).join(", ") },
     ],
     model: "o3-mini",
     reasoning_effort: "medium",
@@ -230,6 +252,10 @@ async function translatePhrases(words: string[]) {
 }
 
 async function translateObject(words: string[]) {
+  if (words.length < 1) {
+    return [];
+  }
+
   const response = await openai.beta.chat.completions.parse({
     messages: [
       { role: "system", content: OBJ_TRANSLATION_PROMPT },
@@ -263,15 +289,12 @@ export const turbine = procedure
   .output(TRANSLATION)
   .mutation(async ({ ctx, input }) => {
     await getUserSettings(ctx.user?.id);
-    const inputWords = input.words
-      .split(/[\s,]+/)
-      .map((item) => item.trim())
-      .filter((x) => x.length > 1)
-      .sort();
+    const inputWords = clean(input.words.split(/[\s,]+/));
     const step1 = await labelWords(inputWords);
-    return [
-      ...(await processWords(step1.words)),
-      ...(await translateObject(step1.objects)),
-      ...(await translatePhrases(step1.misc)),
-    ];
+    const x = await Promise.all([
+      processWords(step1.words),
+      translateObject(step1.objects),
+      translatePhrases(step1.misc),
+    ]);
+    return x.flat();
   });
