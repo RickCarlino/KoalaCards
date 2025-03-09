@@ -9,7 +9,9 @@ import {
   Title,
   Container,
   Box,
+  ActionIcon,
 } from "@mantine/core";
+import { useRouter } from "next/router";
 import { Grade } from "femto-fsrs";
 import { useEffect, useReducer, useState } from "react";
 import { trpc } from "../trpc-config";
@@ -73,6 +75,7 @@ const quizComponents: Record<Quiz["lessonType"], QuizComp> = {
 };
 
 export const ReviewPage = (props: Props) => {
+  const router = useRouter();
   const [state, dispatch] = useReducer(reviewReducer, {
     quizzes: [],
     currentQuizIndex: 0,
@@ -175,7 +178,17 @@ export const ReviewPage = (props: Props) => {
                 {props.quizzesDue} due today. {done} of {total} complete in
                 current lesson.
               </Text>
-              <Progress radius="xl" size="md" value={percentage || 1} />
+              <Group gap="xs" align="center">
+                <Progress radius="xl" size="md" value={percentage || 1} style={{ flexGrow: 1 }} />
+                <ActionIcon 
+                  size="sm" 
+                  variant="subtle" 
+                  onClick={() => router.push("/")}
+                  aria-label="Return to home"
+                >
+                  ✕
+                </ActionIcon>
+              </Group>
             </Box>
             
             {illustration}
