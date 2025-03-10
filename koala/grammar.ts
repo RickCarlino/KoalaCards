@@ -70,7 +70,7 @@ async function run(props: GrammarCorrectionProps): Promise<Explanation> {
   ];
   const response = await openai.beta.chat.completions.parse({
     messages,
-    model: "gpt-4o-mini",
+    model: "gpt-4o",
     temperature: 0.1,
     max_tokens: 1000,
     response_format: zodResponseFormat(zodGradeResponse, "grade_response"),
