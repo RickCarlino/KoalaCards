@@ -38,7 +38,10 @@ export async function transcribeB64(
           prompt,
           language,
         });
-        const text = y.text || "NO RESPONSE.";
+        const text = y.text;
+        if (!text) {
+          return resolve({ kind: "error" });
+        }
         transcriptionLength.labels({ userID }).inc(y.text.length);
         return resolve({
           kind: "OK",
