@@ -28,6 +28,7 @@ export async function translatePhrases(words: string[]) {
     ],
     model: "gpt-4o",
     response_format: zodResponseFormat(TranslationSchema, "translations"),
+    temperature: 0.1,
   });
 
   const parsedResponse = response.choices[0]?.message?.parsed;
