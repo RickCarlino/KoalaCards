@@ -23,12 +23,7 @@ const PhraseSchema = z.object({
   phrases: z.array(z.string()),
 });
 
-const CLICHE = [
-  "느끼다",
-  "상황",
-  "계획",
-  "계획하다",
-];
+const CLICHE = ["계획하다", "느끼다", "상황", "계획", "행동", "분위기", "하다", "경험"];
 export async function generatePhrases(colocations: ColocationGroup[]) {
   if (colocations.length < 1) {
     return [];
