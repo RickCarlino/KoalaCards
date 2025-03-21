@@ -34,7 +34,7 @@ export async function transcribeB64(
       try {
         const y = await openai.audio.transcriptions.create({
           file: createReadStream(fpath) as any,
-          model: "whisper-1",
+          model: "gpt-4o-mini-transcribe",
           prompt,
           language,
         });
