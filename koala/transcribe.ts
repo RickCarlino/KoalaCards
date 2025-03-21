@@ -40,7 +40,7 @@ export async function transcribeB64(
         });
         const text = y.text;
         if (!text) {
-          return resolve({ kind: "error" });
+          throw new Error("No text returned from transcription.");
         }
         transcriptionLength.labels({ userID }).inc(y.text.length);
         return resolve({
@@ -48,7 +48,7 @@ export async function transcribeB64(
           text,
         });
       } catch (error) {
-        return resolve({ kind: "error" });
+        throw error;
       } finally {
         // Delete the file now that we are done:
         unlink(
