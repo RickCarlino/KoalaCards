@@ -17,7 +17,7 @@ const transcriptionLength = SafeCounter({
 export async function transcribeB64(
   dataURI: string,
   userID: string | number,
-  _prompt: string,
+  prompt: string,
   language: LangCode,
 ): Promise<TranscriptionResult> {
   const writeFileAsync = promisify(writeFile);
@@ -35,7 +35,7 @@ export async function transcribeB64(
         const y = await openai.audio.transcriptions.create({
           file: createReadStream(fpath) as any,
           model: "gpt-4o-mini-transcribe",
-          // prompt,
+          prompt,
           language,
         });
         const text = y.text;
