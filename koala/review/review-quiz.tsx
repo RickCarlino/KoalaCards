@@ -57,7 +57,7 @@ export const ReviewQuiz: QuizComp = ({ quiz, onComplete, onGraded }) => {
       })
       .finally(() => setIsThinking(false));
 
-    const isCorrect = compare(result, removeParens(card.term));
+    const isCorrect = compare(result, removeParens(card.term), 1);
     if (isCorrect) {
       await playAudio(card.termAudio);
       setCorrectAttempts((oldCount) => {
