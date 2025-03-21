@@ -1,6 +1,6 @@
 import { playAudio } from "@/koala/play-audio";
 import { compare, removeParens } from "@/koala/quiz-evaluators/evaluator-utils";
-import { blobToBase64 } from "@/koala/record-button";
+import { blobToBase64, convertBlobToWav } from "@/koala/record-button";
 import { VisualDiff } from "@/koala/review/visual-diff";
 import { LangCode } from "@/koala/shared-types";
 import { trpc } from "@/koala/trpc-config";
@@ -45,9 +45,13 @@ export const ReviewQuiz: QuizComp = ({ quiz, onComplete, onGraded }) => {
   const voiceRecorder = useVoiceRecorder(async (audio: Blob) => {
     setLastAttemptWrong(null); // clear any old “wrong attempt” message
     setIsThinking(true);
+
+    const wavBlob = await convertBlobToWav(audio);
+    const base64Audio = await blobToBase64(wavBlob);
+
     const { result } = await transcribeAudio
       .mutateAsync({
-        audio: await blobToBase64(audio),
+        audio: base64Audio,
         lang: card.langCode as LangCode,
         targetText: card.term,
       })

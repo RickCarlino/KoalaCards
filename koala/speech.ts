@@ -10,10 +10,10 @@ type AudioLessonParams = {
   speed?: number;
 };
 
-const DICTATION = `<speak><prosody rate="{{speed}}%">{{term}}</prosody><break time="0.4s"/><voice language="en-US" gender="female">{{definition}}</voice><break time="0.4s"/></speak>`;
+const DICTATION = `{{term}} {{definition}}`;
 const SSML: Record<LessonType, string> = {
-  speaking: `<speak><voice language="en-US" gender="female">{{definition}}</voice></speak>`,
-  listening: `<speak><prosody rate="{{speed}}%">{{term}}</prosody></speak>`,
+  speaking: `{{definition}}`,
+  listening: `{{term}}`,
   dictation: DICTATION,
   review: DICTATION,
 };

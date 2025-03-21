@@ -17,7 +17,7 @@ const voices = ["alloy", "ash", "coral", "echo", "fable", "onyx", "nova", "sage"
 type Voice = typeof voices[number];
 const randomVoice = () => voices[Math.floor(Math.random() * voices.length)] as "alloy";
 
-const VERSION = "v3"; // Cache-busting version
+const VERSION = "v4"; // Cache-busting version
 
 // New API call using OpenAI's TTS model
 const callTTS = async (voice: Voice, params: AudioLessonParams) => {
