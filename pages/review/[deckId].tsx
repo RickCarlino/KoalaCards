@@ -53,7 +53,7 @@ export default function Review() {
   if (mutation.isError) {
     el = <div>Error occurred: {mutation.error.message}</div>;
   } else if (isFetching) {
-    el = <div>Fetching New Quizzes. This could take a while for new cards...</div>;
+    el = <div>Fetching Quizzes. This could take a while for new cards...</div>;
   } else if (data.quizzes.length > 0) {
     el = (
       <ReviewPage
