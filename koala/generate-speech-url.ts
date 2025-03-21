@@ -26,7 +26,7 @@ const callTTS = async (voice: Voice, params: AudioLessonParams) => {
     model: "gpt-4o-mini-tts",
     voice,
     input: params.text,
-    instructions: "You are a foreign language teacher. Speak foreign languages in a tone that reinforces the emotion of the sentence. Use a plain tone for English.",
+    instructions: "Speak in a tone that reinforces the emotions of the sentence.",
   });
   return response;
 };
