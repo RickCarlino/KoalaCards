@@ -35,7 +35,11 @@ export async function transcribeB64(
         const y = await openai.audio.transcriptions.create({
           file: createReadStream(fpath) as any,
           model: "gpt-4o-transcribe",
-          prompt,
+          // Split words on whitespace and sort:
+          prompt: prompt
+            .split(/\s+/)
+            .sort((a, b) => a.length - b.length)
+            .join(" "),
           language,
         });
         const text = y.text;
