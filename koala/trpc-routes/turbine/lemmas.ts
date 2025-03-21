@@ -6,7 +6,7 @@ import { ChatCompletionMessageParam } from "openai/resources";
 
 const TRANSLATION = z.array(z.string());
 
-const LemmaSchema = z.object({ roots: TRANSLATION, });
+const LemmaSchema = z.object({ roots: TRANSLATION });
 
 const SYSTEM_PROMPT = `
 You are a reverse dictionary.

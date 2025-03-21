@@ -13,9 +13,20 @@ export type AudioLessonParams = {
 };
 
 // All voices available regardless of language/gender
-const voices = ["alloy", "ash", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer"] as const;
-type Voice = typeof voices[number];
-const randomVoice = () => voices[Math.floor(Math.random() * voices.length)] as "alloy";
+const voices = [
+  "alloy",
+  "ash",
+  "coral",
+  "echo",
+  "fable",
+  "onyx",
+  "nova",
+  "sage",
+  "shimmer",
+] as const;
+type Voice = (typeof voices)[number];
+const randomVoice = () =>
+  voices[Math.floor(Math.random() * voices.length)] as "alloy";
 
 const VERSION = "v4"; // Cache-busting version
 

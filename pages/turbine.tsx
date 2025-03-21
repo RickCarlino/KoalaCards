@@ -13,7 +13,7 @@ export default function Faucet() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number | null>(null);
   const turbineMutation = trpc.turbine.useMutation();
-  
+
   // Clean up timer on unmount
   useEffect(() => {
     return () => {
@@ -29,27 +29,29 @@ export default function Faucet() {
     if (timerRef.current) {
       clearInterval(timerRef.current);
     }
-    
+
     startTimeRef.current = Date.now();
     timerRef.current = setInterval(() => {
       if (startTimeRef.current) {
-        const secondsElapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
+        const secondsElapsed = Math.floor(
+          (Date.now() - startTimeRef.current) / 1000,
+        );
         setElapsedTime(secondsElapsed);
       }
     }, 100); // Update every 100ms for smoother display
-    
+
     setOutput("Loading...");
     const result = await turbineMutation.mutateAsync({ words: inputText });
     const asCSV = result
       .map(({ term, definition }) => [term, definition].join("|"))
       .join("\n");
-    
+
     // Stop the timer when setting the actual output
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
-    
+
     setOutput(asCSV);
   };
 
@@ -72,7 +74,7 @@ export default function Faucet() {
             minRows={3}
           />
           <Button onClick={handleSubmit}>
-            Submit {elapsedTime > 0 ? `(${elapsedTime}s elapsed)` : ''}
+            Submit {elapsedTime > 0 ? `(${elapsedTime}s elapsed)` : ""}
           </Button>
           <Textarea
             label="Output (JSON)"
