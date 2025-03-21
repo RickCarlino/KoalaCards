@@ -22,11 +22,14 @@ const VERSION = "v4"; // Cache-busting version
 // New API call using OpenAI's TTS model
 const callTTS = async (voice: Voice, params: AudioLessonParams) => {
   // Note: SSML and speed are not supported on the new API.
+  const instructions = `You are a foreign language instructor teaching example sentences to a class.
+  For English sentences, speak plainly.
+  For non-English sentences, speak clearly and with amplified emotions that echo the sentiment of the sentence."`
   const response = await openai.audio.speech.create({
     model: "gpt-4o-mini-tts",
     voice,
     input: params.text,
-    instructions: "Speak in a tone that reinforces the emotions of the sentence.",
+    instructions,
   });
   return response;
 };
