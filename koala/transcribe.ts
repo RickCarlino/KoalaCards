@@ -1,6 +1,6 @@
 import { createReadStream, writeFile, unlink } from "fs";
 import path from "path";
-import { uid } from "radash";
+import { uid, unique } from "radash";
 import { promisify } from "util";
 import { SafeCounter } from "./counter";
 import { openai } from "./openai";
@@ -34,12 +34,8 @@ export async function transcribeB64(
       try {
         const y = await openai.audio.transcriptions.create({
           file: createReadStream(fpath) as any,
-          model: "gpt-4o-transcribe",
-          // Split words on whitespace and sort:
-          prompt: prompt
-            .split(/\s+/)
-            .sort((a, b) => a.length - b.length)
-            .join(" "),
+          model: "gpt-4o-mini-transcribe",
+          prompt: "Sentence hint: " + unique(prompt.split("")).sort().join(" "),
           language,
         });
         const text = y.text;
