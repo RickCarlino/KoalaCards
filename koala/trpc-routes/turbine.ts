@@ -3,6 +3,7 @@ import { getUserSettings } from "../auth-helpers";
 import { procedure } from "../trpc-procedure";
 import { clean } from "./turbine/util";
 import { clusters } from "./turbine/cluster";
+import { getLangName } from "../get-lang-name";
 
 const TRANSLATION = z.array(
   z.object({
@@ -14,6 +15,7 @@ const TRANSLATION = z.array(
 export const turbine = procedure
   .input(
     z.object({
+      langCode: z.string(),
       words: z.string(),
     }),
   )
@@ -21,5 +23,5 @@ export const turbine = procedure
   .mutation(async ({ ctx, input }) => {
     await getUserSettings(ctx.user?.id);
     const inputWords = clean(input.words.split(/[\s,]+/));
-    return await clusters(inputWords);
+    return await clusters(inputWords, getLangName(input.langCode));
   });

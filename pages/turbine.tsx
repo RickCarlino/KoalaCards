@@ -71,6 +71,7 @@ export default function Turbine(props: Props) {
   const turbineMutation = trpc.turbine.useMutation();
   const selectedWords = output.filter((item) => item.selected);
   const bulkCreateCards = trpc.bulkCreateCards.useMutation();
+  const deck = props.decks.find((d) => d.id === selectedDeck);
 
   // Function to handle saving selected words to the deck
   const handleSaveWordsToDeck = async () => {
@@ -78,7 +79,6 @@ export default function Turbine(props: Props) {
       alert("Please select a deck first");
       return;
     }
-    const deck = props.decks.find((d) => d.id === selectedDeck);
     if (!deck) {
       alert("Deck not found");
       return;
@@ -124,7 +124,15 @@ export default function Turbine(props: Props) {
       }
     }, 100); // Update every 100ms for smoother display
 
-    const result = await turbineMutation.mutateAsync({ words: inputText });
+    if (!deck) {
+      alert("Please select a deck first");
+      return;
+    }
+
+    const result = await turbineMutation.mutateAsync({
+      words: inputText,
+      langCode: deck.langCode,
+    });
     const checkBoxes = result.map((item) => ({ selected: true, ...item }));
 
     // Stop the timer when setting the actual output

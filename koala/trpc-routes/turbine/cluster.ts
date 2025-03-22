@@ -4,6 +4,7 @@ import { z } from "zod";
 import { clean } from "./util";
 import { alphabetical, cluster, template, unique } from "radash";
 import { ChatCompletionMessageParam } from "openai/resources";
+import { supportedLanguages } from "@/koala/shared-types";
 
 const TRANSLATION = z.array(
   z.object({
@@ -113,7 +114,7 @@ async function run(language: string, words: string[]) {
       {
         role: "system",
         content:
-          language === "Korean"
+          language === supportedLanguages.ko
             ? KOREAN_EDIT
             : "Double check your output when you are done.",
       },
@@ -132,7 +133,7 @@ async function run(language: string, words: string[]) {
   return parsedResponse.clusters;
 }
 
-export async function clusters(words: string[], language = "Korean") {
+export async function clusters(words: string[], language: string) {
   if (words.length < 1) {
     return [];
   }
