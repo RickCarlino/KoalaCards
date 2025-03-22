@@ -5,8 +5,11 @@ export const playAudio = (urlOrDataURI: string) => {
       reject(new Error("No audio source provided."));
       return;
     }
+    let done = false;
 
     const ok = () => {
+      if (done) return;
+      done = true;
       resolve("");
     };
 
@@ -15,7 +18,10 @@ export const playAudio = (urlOrDataURI: string) => {
       audio.playbackRate = 0.6;
     }
     lastAudio = urlOrDataURI;
+
     audio.onended = ok;
+    // Resolve after N seconds because sometimes OpenAI TTS has tons of dead air:
+    setTimeout(() => ok(), 3000);
     audio.onerror = (e) => {
       reject(e);
       console.error("Audio playback failed:", e);
