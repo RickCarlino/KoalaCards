@@ -2,7 +2,7 @@ import { openai } from "@/koala/openai";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
 import { clean } from "./util";
-import { template } from "radash";
+import { alphabetical, cluster, template, unique } from "radash";
 import { ChatCompletionMessageParam } from "openai/resources";
 
 const TRANSLATION = z.array(
@@ -72,12 +72,7 @@ function tpl(x: any, y: any) {
   return z;
 }
 
-export async function clusters(words: string[], language = "Korean") {
-  console.log("Hello??");
-  if (words.length < 1) {
-    return [];
-  }
-
+async function run(language: string, words: string[]) {
   const part1: ChatCompletionMessageParam[] = [
     {
       role: "system",
@@ -89,13 +84,25 @@ export async function clusters(words: string[], language = "Korean") {
     },
   ];
 
+  const temperature = Math.min(0.25, 0.1 + 0.1 * Math.random());
+  console.log(`=== temp: ${temperature}`);
   const response1 = await openai.beta.chat.completions.parse({
     messages: part1,
     model: "gpt-4o",
+
+    temperature,
+    max_tokens: Math.max(1000, 2.5 * words.length),
   });
 
   const content = response1.choices[0]?.message?.content ?? "";
 
+  const KOREAN_EDIT = `
+  You are a Korean language content editor.
+  You edit flashcards for a language learning app.
+  Edit the cards so that they conform to the following standards:
+  1. Convert '다' verbs to the '요' form instead. Example: '가다' ⇒ '가요'. Do this for all verbs and double check your work.",
+  2. Avoid over use of pronouns in translations. Translate "음식을 데워요" to just "heat up food" rather than "he/she/they heat up food".
+  `;
   const response2 = await openai.beta.chat.completions.parse({
     messages: [
       ...part1,
@@ -104,9 +111,11 @@ export async function clusters(words: string[], language = "Korean") {
         content: content,
       },
       {
-        role: "user",
+        role: "system",
         content:
-          "For sentences containing '다' form verbs, update them to use '요' form instead. Leave others as is.",
+          language === "Korean"
+            ? KOREAN_EDIT
+            : "Double check your output when you are done.",
       },
     ],
     model: "gpt-4o-mini",
@@ -121,4 +130,16 @@ export async function clusters(words: string[], language = "Korean") {
   }
 
   return parsedResponse.clusters;
+}
+
+export async function clusters(words: string[], language = "Korean") {
+  if (words.length < 1) {
+    return [];
+  }
+
+  const results = await Promise.all(
+    cluster(words.slice(0, 120), 10).map((chunk) => run(language, chunk)),
+  );
+  const c = alphabetical(results.flat(), (x) => x.term);
+  return unique(c, (x) => x.term);
 }
