@@ -29,6 +29,7 @@ export const SpeakingQuiz: QuizComp = (props) => {
   const card = props.quiz.quiz;
   const [isRecording, setIsRecording] = useState(false);
   const [phase, setPhase] = useState<"prompt" | "recording" | "done">("prompt");
+  const [timeLeft, setTimeLeft] = useState(8); // 8 seconds countdown
 
   const { playbackPercentage } = useUserSettings();
   const transcribeAudio = trpc.transcribeAudio.useMutation();
@@ -49,7 +50,34 @@ export const SpeakingQuiz: QuizComp = (props) => {
   useEffect(() => {
     setIsRecording(false);
     setPhase("prompt");
+    setTimeLeft(8); // Reset timer when card changes
   }, [card.term]);
+
+  /**
+   * Countdown timer for recording
+   */
+  useEffect(() => {
+    let timerId: NodeJS.Timeout | null = null;
+    
+    if (isRecording && timeLeft > 0) {
+      timerId = setInterval(() => {
+        setTimeLeft((prevTime) => {
+          const newTime = prevTime - 1;
+          if (newTime <= 0) {
+            // Auto-stop recording when time is up
+            handleRecordClick();
+          }
+          return newTime;
+        });
+      }, 1000);
+    } else if (!isRecording) {
+      setTimeLeft(8); // Reset timer when not recording
+    }
+
+    return () => {
+      if (timerId) clearInterval(timerId);
+    };
+  }, [isRecording, timeLeft]);
 
   /**
    * Toggle recording based on the current phase/recording state.
@@ -65,13 +93,14 @@ export const SpeakingQuiz: QuizComp = (props) => {
 
     setIsRecording(true);
     setPhase("recording");
+    setTimeLeft(8); // Reset timer when starting recording
     voiceRecorder.start();
   }
 
   /**
    * Once the recording is done, this is called. We:
    * 1. Convert to WAV + base64
-   * 2. Optionally play the user’s recording
+   * 2. Optionally play the user's recording
    * 3. Transcribe and grade
    * 4. Signal completion with feedback
    */
@@ -86,7 +115,7 @@ export const SpeakingQuiz: QuizComp = (props) => {
     const wavBlob = await convertBlobToWav(audioBlob);
     const base64Audio = await blobToBase64(wavBlob);
 
-    // Optionally, play user’s own audio
+    // Optionally, play user's own audio
     if (Math.random() < playbackPercentage) {
       await playAudio(base64Audio);
     }
@@ -168,7 +197,7 @@ export const SpeakingQuiz: QuizComp = (props) => {
   const renderPromptControls = () => (
     <>
       <Button onClick={handleRecordClick} color={isRecording ? "red" : "blue"}>
-        {isRecording ? "Stop Recording" : "Begin Recording, Repeat Phrase"}
+        {isRecording ? `Stop Recording (${timeLeft}s)` : "Begin Recording, Repeat Phrase"}
       </Button>
       {isRecording && <Text>Recording...</Text>}
       <FailButton onClick={handleFailClick} />
