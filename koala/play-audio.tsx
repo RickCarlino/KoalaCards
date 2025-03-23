@@ -7,13 +7,15 @@ export const playAudio = (urlOrDataURI: string) => {
     }
     let done = false;
 
+    const audio = new Audio(urlOrDataURI);
+
     const ok = () => {
       if (done) return;
       done = true;
+      // Stop audio from playing:
+      audio.pause();
       resolve("");
     };
-
-    const audio = new Audio(urlOrDataURI);
     if (lastAudio === urlOrDataURI) {
       audio.playbackRate = 0.6;
     }
@@ -21,7 +23,7 @@ export const playAudio = (urlOrDataURI: string) => {
 
     audio.onended = ok;
     // Resolve after N seconds because sometimes OpenAI TTS has tons of dead air:
-    setTimeout(() => ok(), 4000);
+    setTimeout(() => ok(), 8000);
     audio.onerror = (e) => {
       reject(e);
       console.error("Audio playback failed:", e);

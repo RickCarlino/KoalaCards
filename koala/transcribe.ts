@@ -35,7 +35,9 @@ export async function transcribeB64(
         const y = await openai.audio.transcriptions.create({
           file: createReadStream(fpath) as any,
           model: "gpt-4o-transcribe",
-          prompt: "Might contains these characters: " + unique(prompt.split("")).sort().join(" "),
+          prompt:
+            "Might contains these characters: " +
+            unique(prompt.split("")).sort().join(" "),
           language,
         });
         const text = y.text;

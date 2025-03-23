@@ -69,9 +69,9 @@ const NavLink = ({
     return (
       <>
         <style>{keyframes}</style>
-        <UnstyledButton 
-          component={Link} 
-          href={path} 
+        <UnstyledButton
+          component={Link}
+          href={path}
           style={rainbowStyles}
           onClick={onMobileClick}
         >
