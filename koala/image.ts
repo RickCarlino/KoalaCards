@@ -36,18 +36,14 @@ export async function maybeAddImageToCard(card: Card) {
     return;
   }
 
-  if (card.imageBlobId) {
-    return await maybeGetCardImageUrl(card.imageBlobId);
-  }
+  // const quizzes = await prismaClient.quiz.findMany({
+  //   where: { cardId: card.id },
+  // });
 
-  const quizzes = await prismaClient.quiz.findMany({
-    where: { cardId: card.id },
-  });
-
-  const reps = quizzes.map((x) => x.repetitions).reduce((a, b) => a + b, 0);
-  if (reps < 3) {
-    return;
-  }
+  // const reps = quizzes.map((x) => x.repetitions).reduce((a, b) => a + b, 0);
+  // if (reps < 1) {
+  //   return;
+  // }
 
   const prompt = await createDallEPrompt(card.definition, card.term);
   const url = await createDallEImage(prompt);

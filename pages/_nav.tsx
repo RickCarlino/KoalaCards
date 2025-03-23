@@ -19,6 +19,7 @@ interface NavLinkProps {
   name: string;
   rainbow?: boolean;
   active?: boolean;
+  onMobileClick?: () => void;
 }
 
 const NavLink = ({
@@ -26,6 +27,7 @@ const NavLink = ({
   name,
   rainbow = false,
   active = false,
+  onMobileClick,
 }: NavLinkProps) => {
   const theme = useMantineTheme();
 
@@ -67,7 +69,12 @@ const NavLink = ({
     return (
       <>
         <style>{keyframes}</style>
-        <UnstyledButton component={Link} href={path} style={rainbowStyles}>
+        <UnstyledButton
+          component={Link}
+          href={path}
+          style={rainbowStyles}
+          onClick={onMobileClick}
+        >
           <Text>{name}</Text>
         </UnstyledButton>
       </>
@@ -79,6 +86,7 @@ const NavLink = ({
       component={Link}
       href={path}
       style={active ? activeStyles : baseStyles}
+      onClick={onMobileClick}
     >
       <Text>{name}</Text>
     </UnstyledButton>
@@ -141,6 +149,11 @@ const NavBar = ({ children }: NavBarProps) => {
                   name={link.name}
                   rainbow={link.rainbow}
                   active={router.pathname === link.path}
+                  onMobileClick={() => {
+                    if (window.innerWidth < 768) {
+                      toggle();
+                    }
+                  }}
                 />
               </Box>
             ))}

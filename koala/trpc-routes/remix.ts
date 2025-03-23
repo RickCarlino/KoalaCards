@@ -22,12 +22,6 @@ const LANG_SPECIFIC_PROMPT: Record<string, string> = {
   KO: "You will be severely punished for using 'dictionary form' or 'plain form' verbs or the pronouns 그녀, 그, 당신.",
 };
 
-const JSON_PARSE_PROMPT = [
-  "You are a JSON parser.",
-  "You must convert the data into valid JSON that matches the following schema:",
-  "Schema: { result: [ { exampleSentence: string, englishTranslation: string } ] }",
-].join(" ");
-
 const MAX_REMIXES = 7;
 
 const REMIX_SCHEMA = zodResponseFormat(
@@ -63,32 +57,13 @@ const buildRemixPrompt = (
 const fetchOpenAIResponse = async (
   model: string,
   messages: any[],
-): Promise<string> => {
-  const response = await openai.chat.completions.create({
-    model,
-    messages,
-  });
-
-  const choice = response.choices[0];
-  if (!choice || choice.finish_reason !== "stop") {
-    throw new Error(`Bad response from ${model}: ${JSON.stringify(choice)}`);
-  }
-
-  return choice.message?.content || "";
-};
-
-const parseJSONWithOpenAI = async (
-  rawText: string,
 ): Promise<{
   result: { exampleSentence: string; englishTranslation: string }[];
 }> => {
   const response = await openai.beta.chat.completions.parse({
-    model: "o3-mini",
+    model,
+    messages,
     reasoning_effort: "low",
-    messages: [
-      { role: "system", content: JSON_PARSE_PROMPT },
-      { role: "user", content: rawText },
-    ],
     response_format: REMIX_SCHEMA,
   });
 
@@ -112,11 +87,9 @@ const generateRemixes = async (input: RemixParams): Promise<Remix[]> => {
   const { type, langCode, term } = input;
   const prompt = buildRemixPrompt(type, langCode, term);
 
-  const rawText = await fetchOpenAIResponse("o3-mini", [
+  const parsedData = await fetchOpenAIResponse("o3-mini", [
     { role: "user", content: prompt },
   ]);
-
-  const parsedData = await parseJSONWithOpenAI(rawText);
 
   return processRemixes(parsedData);
 };

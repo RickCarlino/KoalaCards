@@ -79,13 +79,11 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
 
   const totalPages = Math.ceil(totalCount / rowsPerPage);
 
-  // Calculate skip/take for pagination
   const skip = (page - 1) * rowsPerPage;
 
-  // Query paginated results (last 30 days, max 500 if you wish, or remove that limit)
   const data = await prismaClient.trainingData.findMany({
     where: {
-      yesNo: "no",
+      // yesNo: "no",
       createdAt: {
         gte: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30),
       },

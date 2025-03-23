@@ -27,15 +27,6 @@ export const getServerSideProps: GetServerSideProps<ReviewPageProps> = async (
   await backfillDecks(dbUser.id);
   const decks = await decksWithReviewInfo(dbUser.id);
 
-  if (decks.length === 1) {
-    return {
-      redirect: {
-        destination: `/review/${decks[0].id}`,
-        permanent: false,
-      },
-    };
-  }
-
   return {
     props: {
       decks,

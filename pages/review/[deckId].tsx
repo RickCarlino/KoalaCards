@@ -1,6 +1,7 @@
 import MicrophonePermissions from "@/koala/microphone-permissions";
 import { ReviewPage } from "@/koala/review/review-page";
 import { trpc } from "@/koala/trpc-config";
+import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 
@@ -53,7 +54,7 @@ export default function Review() {
   if (mutation.isError) {
     el = <div>Error occurred: {mutation.error.message}</div>;
   } else if (isFetching) {
-    el = <div>Fetching New Quizzes...</div>;
+    el = <div>Fetching Quizzes. This could take a while for new cards...</div>;
   } else if (data.quizzes.length > 0) {
     el = (
       <ReviewPage
@@ -65,8 +66,9 @@ export default function Review() {
   } else {
     el = (
       <div>
-        No quizzes found. Add more words to this deck or come back later when
-        cards are due for review.
+        No quizzes found. <Link href="/cards">Add more cards to this deck</Link>{" "}
+        or come back later when cards are due for review.{" "}
+        <Link href="/">Go back to deck overview</Link>
       </div>
     );
   }

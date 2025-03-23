@@ -1,6 +1,6 @@
 import { createReadStream, writeFile, unlink } from "fs";
 import path from "path";
-import { uid } from "radash";
+import { uid, unique } from "radash";
 import { promisify } from "util";
 import { SafeCounter } from "./counter";
 import { openai } from "./openai";
@@ -34,18 +34,23 @@ export async function transcribeB64(
       try {
         const y = await openai.audio.transcriptions.create({
           file: createReadStream(fpath) as any,
-          model: "whisper-1",
-          prompt,
+          model: "gpt-4o-transcribe",
+          prompt:
+            "Might contains these characters: " +
+            unique(prompt.split("")).sort().join(" "),
           language,
         });
-        const text = y.text || "NO RESPONSE.";
+        const text = y.text;
+        if (!text) {
+          throw new Error("No text returned from transcription.");
+        }
         transcriptionLength.labels({ userID }).inc(y.text.length);
         return resolve({
           kind: "OK",
           text,
         });
       } catch (error) {
-        return resolve({ kind: "error" });
+        throw error;
       } finally {
         // Delete the file now that we are done:
         unlink(

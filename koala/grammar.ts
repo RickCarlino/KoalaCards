@@ -63,7 +63,7 @@ async function run(props: GrammarCorrectionProps): Promise<Explanation> {
       content: [
         `Let's say I am in a situation that warrants the sentence above.`,
         `Could I say "${props.userInput}" instead?`,
-        `Would that be OK? (I wrote this via speech recognition)`,
+        `Would that be OK?`,
         override,
       ].join(" "),
     },
@@ -104,7 +104,7 @@ async function run(props: GrammarCorrectionProps): Promise<Explanation> {
           ].join("\n"),
         },
       ],
-      model: "gpt-4o",
+      model: "gpt-4o-mini",
       store: true,
       temperature: 0.1,
     });
