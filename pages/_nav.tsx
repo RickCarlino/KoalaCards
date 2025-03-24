@@ -111,6 +111,7 @@ const NavBar = ({ children }: NavBarProps) => {
     { path: "/review", name: "Review" },
     { path: "/create", name: "Add" },
     { path: "/cards", name: "Cards" },
+    { path: "/writing", name: "Writing Helper" },
     { path: "/user", name: "Settings" },
     { path: "https://github.com/RickCarlino/KoalaCards", name: "Help" },
     { path: "https://discord.gg/jj7wXhQWJe", name: "Discord", rainbow: true },

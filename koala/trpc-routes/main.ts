@@ -17,6 +17,8 @@ import { remix } from "./remix";
 import { transcribeAudio } from "./transcribe-audio";
 import { turbine } from "./turbine";
 import { deleteDeck } from "./delete-deck";
+import { gradeWriting } from "./grade-writing";
+
 export const appRouter = router({
   bulkCreateCards,
   deleteCard,
@@ -36,6 +38,7 @@ export const appRouter = router({
   createRemixCards,
   turbine,
   deleteDeck,
+  gradeWriting,
 });
 
 export type AppRouter = typeof appRouter;
