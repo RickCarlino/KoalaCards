@@ -1,10 +1,10 @@
-
 import { useState } from "react";
 import { trpc } from "@/koala/trpc-config";
 import { useRouter } from "next/router";
 import { notifications } from "@mantine/notifications";
 import { GetServerSideProps } from "next";
 import { getServersideUser } from "@/koala/get-serverside-user";
+import { VisualDiff } from "@/koala/review/visual-diff";
 import {
   Container,
   Title,
@@ -18,12 +18,17 @@ import {
   Alert,
   Loader,
   Card,
-  Badge,
   Stack,
   rem,
   useMantineTheme,
 } from "@mantine/core";
-import { IconCheck, IconX, IconBulb, IconPencil, IconArrowRight } from "@tabler/icons-react";
+import {
+  IconCheck,
+  IconX,
+  IconBulb,
+  IconPencil,
+  IconArrowRight,
+} from "@tabler/icons-react";
 
 import type { EssayResponse } from "@/koala/trpc-routes/grade-writing";
 
@@ -47,14 +52,16 @@ const WritingAssistant = () => {
   const theme = useMantineTheme();
 
   // Get the language code from the URL query parameter if available
-  const langCode = typeof router.query.lang === 'string' ? router.query.lang : undefined;
-  
+  const langCode =
+    typeof router.query.lang === "string" ? router.query.lang : undefined;
+
   // Use the tRPC mutation
   const gradeWritingMutation = trpc.gradeWriting.useMutation({
     onError: (error) => {
       notifications.show({
         title: "Error",
-        message: error.message || "Failed to analyze your writing. Please try again.",
+        message:
+          error.message || "Failed to analyze your writing. Please try again.",
         color: "red",
       });
     },
@@ -62,7 +69,7 @@ const WritingAssistant = () => {
 
   const handleAnalyze = async () => {
     if (!essay.trim()) return;
-    
+
     setLoading(true);
     try {
       const result = await gradeWritingMutation.mutateAsync({
@@ -80,17 +87,21 @@ const WritingAssistant = () => {
   const renderFeedback = () => {
     if (!feedback) return null;
 
-    const correctCount = feedback.sentences.filter((s) => s.ok).length;
-    const totalCount = feedback.sentences.length;
-    const percentCorrect = totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0;
+    // Join all original sentences into a single paragraph
+    const originalText = feedback.sentences.map(s => s.input).join(" ");
+    
+    // Join all corrected sentences into a single paragraph
+    const correctedText = feedback.sentences.map(s => s.ok ? s.input : s.correction).join(" ");
+    
+    // Collect all explanations from sentences that have corrections
+    const allExplanations = feedback.sentences
+      .filter(s => !s.ok)
+      .flatMap(s => s.explanations);
 
     return (
       <Stack gap="md">
         <Group justify="apart">
           <Title order={3}>Feedback</Title>
-          <Badge size="lg" color={percentCorrect > 70 ? "green" : percentCorrect > 40 ? "yellow" : "red"}>
-            {correctCount}/{totalCount} Correct ({percentCorrect}%)
-          </Badge>
         </Group>
 
         <Divider />
@@ -100,49 +111,51 @@ const WritingAssistant = () => {
             Please write a longer essay or use complete sentences.
           </Alert>
         ) : (
-          feedback.sentences.map((sentence, index) => (
-            <Card key={index} withBorder shadow="sm" padding="md" radius="md">
-              <Group justify="apart" mb="xs">
-                <Group gap="xs">
-                  {sentence.ok ? (
-                    <IconCheck size={20} color={theme.colors.green[6]} />
-                  ) : (
-                    <IconX size={20} color={theme.colors.red[6]} />
-                  )}
-                  <Text fw={500}>Sentence {index + 1}</Text>
-                </Group>
-                {!sentence.ok && (
-                  <Badge color="red" variant="light">
-                    Needs correction
-                  </Badge>
-                )}
+          <Stack gap="lg">
+            {/* Original Text */}
+            <Card withBorder shadow="sm" padding="md" radius="md">
+              <Group gap="xs" mb="md">
+                <IconPencil size={20} color={theme.colors.blue[6]} />
+                <Text fw={500}>Original Text</Text>
               </Group>
-
-              <Text mb={sentence.ok ? 0 : "md"} color="dimmed">
-                {sentence.input}
-              </Text>
-
-              {!sentence.ok && (
-                <>
-                  <Group gap="xs" mt="md" mb="xs">
-                    <IconArrowRight size={16} />
-                    <Text fw={500} color="green">
-                      Correction:
-                    </Text>
-                  </Group>
-                  <Text mb="md">{sentence.correction}</Text>
-
-                  <Group gap="xs" mb="xs">
-                    <IconBulb size={16} color={theme.colors.yellow[6]} />
-                    <Text fw={500} color="dimmed">
-                      Explanation:
-                    </Text>
-                  </Group>
-                  <Text size="sm">{sentence.explanation}</Text>
-                </>
-              )}
+              <Text>{originalText}</Text>
             </Card>
-          ))
+
+            {/* Corrected Text */}
+            <Card withBorder shadow="sm" padding="md" radius="md">
+              <Group gap="xs" mb="md">
+                <IconCheck size={20} color={theme.colors.green[6]} />
+                <Text fw={500}>Corrected Text</Text>
+              </Group>
+              <Text>{correctedText}</Text>
+            </Card>
+
+            {/* Visual Diff */}
+            <Card withBorder shadow="sm" padding="md" radius="md">
+              <Group gap="xs" mb="md">
+                <IconArrowRight size={20} color={theme.colors.violet[6]} />
+                <Text fw={500}>Changes</Text>
+              </Group>
+              <VisualDiff actual={originalText} expected={correctedText} />
+            </Card>
+
+            {/* Explanations */}
+            {allExplanations.length > 0 && (
+              <Card withBorder shadow="sm" padding="md" radius="md">
+                <Group gap="xs" mb="md">
+                  <IconBulb size={20} color={theme.colors.yellow[6]} />
+                  <Text fw={500}>Suggestions</Text>
+                </Group>
+                <Stack gap="xs">
+                  {allExplanations.map((explanation, idx) => (
+                    <Text key={idx} size="sm">
+                      • {explanation}
+                    </Text>
+                  ))}
+                </Stack>
+              </Card>
+            )}
+          </Stack>
         )}
       </Stack>
     );
@@ -154,7 +167,8 @@ const WritingAssistant = () => {
         Writing Assistant
       </Title>
       <Text color="dimmed" mb="xl" ta="center">
-        Write a short essay or sentences in your target language and get instant feedback
+        Write a short essay or sentences in your target language and get instant
+        feedback
       </Text>
 
       <Paper withBorder shadow="md" p="md" mb="xl">

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { procedure } from "../trpc-procedure";
 import { openai } from "../openai";
-import { errorReport } from "../error-report";
+import { zodResponseFormat } from "openai/helpers/zod";
 
 // Define the Zod schema for sentence grading
 const SentenceGradeSchema = z.union([
@@ -13,7 +13,7 @@ const SentenceGradeSchema = z.union([
     ok: z.literal(false),
     input: z.string(),
     correction: z.string(),
-    explanation: z.string(),
+    explanations: z.array(z.string()),
   }),
 ]);
 
@@ -30,39 +30,26 @@ export type EssayResponse = z.infer<typeof EssayResponseSchema>;
 const ESSAY_GRADING_PROMPT = `You are an AI language tutor helping foreign language learners improve their writing skills.
 
 Analyze the provided essay or sentences in the target language and provide detailed feedback.
+Only provide REQUIRED feedback, not nice-to-have feedback.
 
 For each sentence in the input:
 1. Determine if it's grammatically correct.
 2. If correct, mark it as "ok: true".
-3. If incorrect, provide:
-   - The corrected version
-   - A clear, concise explanation of the error and how to fix it
+3. If incorrect:
    - Mark it as "ok: false"
+   - The corrected version
+   - A list of clear, concise explanations of errors and how to fix them in English.
+     NOTE: For spelling, capitalization, spacing and punctuation errors, just fix them and leave a bullet that says "Spelling and punctuation fixes."
 
-Format your response as a valid JSON object with the following structure:
-{
-  "sentences": [
-    {
-      "ok": true,
-      "input": "Original correct sentence"
-    },
-    {
-      "ok": false,
-      "input": "Original incorrect sentence",
-      "correction": "Corrected sentence",
-      "explanation": "Explanation of the error"
-    }
-  ]
-}
-
-Focus on grammar, vocabulary, and natural phrasing. Be encouraging and educational in your explanations.`;
+Focus on grammar, vocabulary, and natural phrasing. Be encouraging and educational in your explanations.
+Double check your work against the guidelines before submitting.`;
 
 export const gradeWriting = procedure
   .input(
     z.object({
       text: z.string().min(1),
       langCode: z.string().optional(),
-    })
+    }),
   )
   .output(EssayResponseSchema)
   .mutation(async (opts): Promise<EssayResponse> => {
@@ -72,68 +59,32 @@ export const gradeWriting = procedure
     if (!user) {
       throw new Error("User not authenticated");
     }
+    // Call OpenAI to analyze the essay
+    const response = await openai.beta.chat.completions.parse({
+      messages: [
+        {
+          role: "system",
+          content: ESSAY_GRADING_PROMPT,
+        },
+        {
+          role: "user",
+          content: `Language: ${
+            langCode || "Unknown"
+          }\n\nText to analyze: ${text}`,
+        },
+      ],
+      // model: "o3-mini",
+      model: "gpt-4o",
+      temperature: 0.3,
+      max_tokens: 1024,
+      response_format: zodResponseFormat(EssayResponseSchema, "essay"),
+    });
 
-    try {
-      // Call OpenAI to analyze the essay
-      const response = await openai.chat.completions.create({
-        messages: [
-          {
-            role: "system",
-            content: ESSAY_GRADING_PROMPT,
-          },
-          {
-            role: "user",
-            content: `Language: ${langCode || "Unknown"}\n\nText to analyze: ${text}`,
-          },
-        ],
-        model: "gpt-4o",
-        temperature: 0.3,
-        max_tokens: 1024,
-        response_format: { type: "json_object" },
-      });
+    const parsedResponse = response.choices[0]?.message?.parsed;
 
-      const content = response.choices[0]?.message?.content;
-      
-      if (!content) {
-        throw new Error("No response from OpenAI");
-      }
-
-      try {
-        // Parse the JSON response
-        const parsedResponse = JSON.parse(content) as EssayResponse;
-        
-        // Validate the response structure
-        if (!Array.isArray(parsedResponse.sentences)) {
-          throw new Error("Invalid response format from OpenAI");
-        }
-
-        // Validate each sentence against the schema
-        const validatedResponse = EssayResponseSchema.parse(parsedResponse);
-        return validatedResponse;
-      } catch (parseError) {
-        errorReport(`Failed to parse OpenAI response: ${parseError}`);
-        return {
-          sentences: [
-            {
-              ok: false,
-              input: text,
-              correction: text,
-              explanation: "Sorry, there was an error analyzing your text. Please try again.",
-            },
-          ],
-        };
-      }
-    } catch (error) {
-      errorReport(`Error in gradeWriting: ${error}`);
-      return {
-        sentences: [
-          {
-            ok: false,
-            input: text,
-            correction: text,
-            explanation: "Sorry, there was an error analyzing your text. Please try again.",
-          },
-        ],
-      };
+    if (!parsedResponse) {
+      throw new Error("Invalid response format from OpenAI.");
     }
+
+    return parsedResponse;
   });
