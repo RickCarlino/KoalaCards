@@ -21,6 +21,7 @@ import {
   Stack,
   rem,
   useMantineTheme,
+  ThemeIcon,
 } from "@mantine/core";
 import {
   IconCheck,
@@ -28,6 +29,7 @@ import {
   IconBulb,
   IconPencil,
   IconArrowRight,
+  IconSparkles,
 } from "@tabler/icons-react";
 
 import type { EssayResponse } from "@/koala/trpc-routes/grade-writing";
@@ -50,6 +52,7 @@ const WritingAssistant = () => {
   const [feedback, setFeedback] = useState<EssayResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const theme = useMantineTheme();
+  const primaryColor = theme.primaryColor || "blue";
 
   // Get the language code from the URL query parameter if available
   const langCode =
@@ -88,67 +91,78 @@ const WritingAssistant = () => {
     if (!feedback) return null;
 
     // Join all original sentences into a single paragraph
-    const originalText = feedback.sentences.map(s => s.input).join(" ");
-    
+    const originalText = feedback.sentences.map((s) => s.input).join(" ");
+
     // Join all corrected sentences into a single paragraph
-    const correctedText = feedback.sentences.map(s => s.ok ? s.input : s.correction).join(" ");
-    
+    const correctedText = feedback.sentences
+      .map((s) => (s.ok ? s.input : s.correction))
+      .join(" ");
+
     // Collect all explanations from sentences that have corrections
     const allExplanations = feedback.sentences
-      .filter(s => !s.ok)
-      .flatMap(s => s.explanations);
+      .filter((s) => !s.ok)
+      .flatMap((s) => s.explanations);
 
     return (
-      <Stack gap="md">
-        <Group justify="apart">
-          <Title order={3}>Feedback</Title>
+      <Paper withBorder shadow="lg" p="xl" radius="md">
+        <Group justify="apart" mb="md">
+          <Group>
+            <ThemeIcon size="lg" radius="xl" color={primaryColor}>
+              <IconSparkles size={20} />
+            </ThemeIcon>
+            <Title order={3}>Feedback</Title>
+          </Group>
         </Group>
 
-        <Divider />
+        <Divider mb="xl" />
 
         {feedback.sentences.length === 0 ? (
-          <Alert title="No sentences detected" color="blue">
+          <Alert
+            title="No sentences detected"
+            color="blue"
+            icon={<IconX size={16} />}
+            radius="md"
+          >
             Please write a longer essay or use complete sentences.
           </Alert>
         ) : (
           <Stack gap="lg">
-            {/* Original Text */}
-            <Card withBorder shadow="sm" padding="md" radius="md">
+            <Card withBorder shadow="sm" padding="lg" radius="md">
               <Group gap="xs" mb="md">
-                <IconPencil size={20} color={theme.colors.blue[6]} />
+                <IconPencil size={20} color={theme.colors[primaryColor][6]} />
                 <Text fw={500}>Original Text</Text>
               </Group>
-              <Text>{originalText}</Text>
+              <Text size="md" lh={1.6}>
+                {originalText}
+              </Text>
             </Card>
-
-            {/* Corrected Text */}
-            <Card withBorder shadow="sm" padding="md" radius="md">
+            <Card withBorder shadow="sm" padding="lg" radius="md">
               <Group gap="xs" mb="md">
                 <IconCheck size={20} color={theme.colors.green[6]} />
                 <Text fw={500}>Corrected Text</Text>
               </Group>
-              <Text>{correctedText}</Text>
+              <Text size="md" lh={1.6}>
+                {correctedText}
+              </Text>
             </Card>
-
-            {/* Visual Diff */}
-            <Card withBorder shadow="sm" padding="md" radius="md">
+            <Card withBorder shadow="sm" padding="lg" radius="md">
               <Group gap="xs" mb="md">
                 <IconArrowRight size={20} color={theme.colors.violet[6]} />
                 <Text fw={500}>Changes</Text>
               </Group>
-              <VisualDiff actual={originalText} expected={correctedText} />
+              <Box mt="md">
+                <VisualDiff actual={originalText} expected={correctedText} />
+              </Box>
             </Card>
-
-            {/* Explanations */}
             {allExplanations.length > 0 && (
-              <Card withBorder shadow="sm" padding="md" radius="md">
+              <Card withBorder shadow="sm" padding="lg" radius="md">
                 <Group gap="xs" mb="md">
                   <IconBulb size={20} color={theme.colors.yellow[6]} />
                   <Text fw={500}>Suggestions</Text>
                 </Group>
-                <Stack gap="xs">
+                <Stack gap="sm" mt="md">
                   {allExplanations.map((explanation, idx) => (
-                    <Text key={idx} size="sm">
+                    <Text key={idx} size="sm" lh={1.6}>
                       • {explanation}
                     </Text>
                   ))}
@@ -157,38 +171,64 @@ const WritingAssistant = () => {
             )}
           </Stack>
         )}
-      </Stack>
+      </Paper>
     );
   };
 
   return (
     <Container size="md" py="xl">
-      <Title order={1} mb="lg" ta="center">
-        Writing Assistant
-      </Title>
-      <Text color="dimmed" mb="xl" ta="center">
-        Write a short essay or sentences in your target language and get instant
-        feedback
-      </Text>
+      <Paper
+        withBorder
+        shadow="lg"
+        p="xl"
+        mb="xl"
+        radius="md"
+        styles={{
+          root: {
+            borderLeft: `4px solid ${theme.colors[primaryColor][6]}`,
+            transition: "transform 0.2s ease",
+          },
+        }}
+      >
+        <Group mb="md" align="center">
+          <ThemeIcon size="lg" variant="light" radius="xl">
+            <IconPencil size={20} />
+          </ThemeIcon>
+          <Title order={4}>Your Essay</Title>
+        </Group>
 
-      <Paper withBorder shadow="md" p="md" mb="xl">
         <Textarea
           placeholder="Write your essay here..."
-          label="Your Essay"
           description="Write a few sentences or a short paragraph in your target language"
           autosize
           minRows={6}
           maxRows={12}
           value={essay}
           onChange={(e) => setEssay(e.currentTarget.value)}
-          mb="md"
+          mb="lg"
+          radius="md"
+          styles={{
+            input: {
+              fontSize: "1.05rem",
+              lineHeight: 1.6,
+              padding: theme.spacing.md,
+            },
+          }}
         />
         <Group justify="right">
           <Button
             onClick={handleAnalyze}
-            leftSection={<IconPencil size={rem(16)} />}
+            leftSection={<IconSparkles size={rem(16)} />}
             loading={loading}
             disabled={!essay.trim()}
+            size="md"
+            radius="md"
+            variant="gradient"
+            gradient={{
+              from: theme.colors[primaryColor][7],
+              to: theme.colors[primaryColor][5],
+              deg: 45,
+            }}
           >
             Analyze
           </Button>
@@ -196,9 +236,26 @@ const WritingAssistant = () => {
       </Paper>
 
       {loading ? (
-        <Box py="xl" style={{ display: "flex", justifyContent: "center" }}>
-          <Loader size="lg" variant="dots" />
-        </Box>
+        <Paper withBorder shadow="md" p="xl" radius="md">
+          <Box
+            py="xl"
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              flexDirection: "column",
+              alignItems: "center",
+            }}
+          >
+            <Loader
+              size="lg"
+              variant="dots"
+              color={theme.colors[primaryColor][6]}
+            />
+            <Text mt="md" ta="center" c="dimmed">
+              Analyzing your writing...
+            </Text>
+          </Box>
+        </Paper>
       ) : (
         feedback && renderFeedback()
       )}
