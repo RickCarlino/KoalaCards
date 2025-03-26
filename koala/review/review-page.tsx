@@ -9,7 +9,6 @@ import {
   Container,
   Box,
   ActionIcon,
-  Flex,
 } from "@mantine/core";
 import { useRouter } from "next/router";
 import { Grade } from "femto-fsrs";
@@ -137,56 +136,18 @@ export const ReviewPage = (props: Props) => {
     };
 
     return (
-      <Container size="lg">
-        <Card shadow="sm" radius="md" withBorder w="100%">
-          <Flex direction={{ base: "column", md: "row" }} gap="md" wrap="wrap">
-            {/* UI component gets more space */}
-            <Box style={{ flex: 2, minWidth: 300 }}>
-              <Stack gap="md">
-                <LessonComponent {...quizProps} key={quiz.quizId} />
-                <Group grow gap="xs">
-                  <PauseReviewButton
-                    cardID={quiz.cardId}
-                    onClick={() => dispatch({ type: "PAUSE_CURRENT_CARD" })}
-                  />
-                  <EditButton cardID={quiz.cardId} />
-                  <RemixButton
-                    card={{
-                      id: quiz.cardId,
-                      term: quiz.term,
-                      definition: quiz.definition,
-                    }}
-                  />
-                </Group>
-                <Box>
-                  <Text size="xs" mb="xs">
-                    {props.quizzesDue} due today. {done} of {total} complete in
-                    current lesson.
-                  </Text>
-                  <Group gap="xs" align="center">
-                    <Progress
-                      radius="xl"
-                      size="md"
-                      value={percentage || 1}
-                      style={{ flexGrow: 1 }}
-                    />
-                    <ActionIcon
-                      size="sm"
-                      variant="subtle"
-                      onClick={() =>
-                        confirm("End lesson without saving?") &&
-                        router.push("/")
-                      }
-                      aria-label="Return to home"
-                    >
-                      ✕
-                    </ActionIcon>
-                  </Group>
-                </Box>
-              </Stack>
-            </Box>
+      <Container size="lg" px={{ base: "xs", sm: "md" }} py="md">
+        <Card
+          shadow="sm"
+          radius="md"
+          withBorder
+          w="100%"
+          p={{ base: "sm", sm: "lg" }}
+        >
+          <Stack gap="md">
+            {/* Image at the top on mobile, side by side on desktop */}
             {quiz.imageURL && (
-              <Box style={{ flex: 1, minWidth: 300 }}>
+              <Box mb={{ base: "md", md: 0 }}>
                 <Image
                   src={quiz.imageURL}
                   fit="contain"
@@ -194,12 +155,61 @@ export const ReviewPage = (props: Props) => {
                   style={{
                     width: "100%",
                     height: "auto",
-                    maxHeight: "100%",
+                    maxHeight: "300px",
                   }}
                 />
               </Box>
             )}
-          </Flex>
+
+            {/* Quiz component */}
+            <Box>
+              <LessonComponent {...quizProps} key={quiz.quizId} />
+            </Box>
+
+            {/* Action buttons - stacked on mobile, side by side on larger screens */}
+            <Stack gap="sm">
+              <Group grow gap="sm">
+                <PauseReviewButton
+                  cardID={quiz.cardId}
+                  onClick={() => dispatch({ type: "PAUSE_CURRENT_CARD" })}
+                />
+                <EditButton cardID={quiz.cardId} />
+              </Group>
+              <RemixButton
+                card={{
+                  id: quiz.cardId,
+                  term: quiz.term,
+                  definition: quiz.definition,
+                }}
+              />
+            </Stack>
+
+            {/* Progress information */}
+            <Box>
+              <Text size="sm" mb="xs">
+                {props.quizzesDue} due today. {done} of {total} complete in
+                current lesson.
+              </Text>
+              <Group gap="xs" align="center">
+                <Progress
+                  radius="xl"
+                  size="md"
+                  value={percentage || 1}
+                  style={{ flexGrow: 1 }}
+                />
+                <ActionIcon
+                  size="lg"
+                  variant="subtle"
+                  onClick={() =>
+                    confirm("End lesson without saving?") && router.push("/")
+                  }
+                  aria-label="Return to home"
+                >
+                  ✕
+                </ActionIcon>
+              </Group>
+            </Box>
+          </Stack>
         </Card>
       </Container>
     );
@@ -230,7 +240,7 @@ export const ReviewPage = (props: Props) => {
       },
     };
     return (
-      <Container size="md" px="xs" py="md">
+      <Container size="md" px={{ base: "xs", sm: "md" }} py="md">
         <ReviewOver {...reviewOverProps} />
       </Container>
     );

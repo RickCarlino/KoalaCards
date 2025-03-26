@@ -1,4 +1,4 @@
-import { Text } from "@mantine/core";
+import { Text, Box } from "@mantine/core";
 import { VisualDiff } from "./visual-diff";
 import { strip } from "../quiz-evaluators/evaluator-utils";
 
@@ -27,12 +27,18 @@ export const ServerExplanation = ({
     );
   } else {
     if (strip(expected).includes(strip(actual))) {
-      return <Text>Feedback: {expected}</Text>;
+      return <Text size="md">Feedback: {expected}</Text>;
     } else {
       return (
-        <Text>
-          Feedback: {expected} You said "{actual}"
-        </Text>
+        <Box>
+          <Text size="md" fw={500} mb="xs">
+            Feedback:
+          </Text>
+          <Text size="md">{expected}</Text>
+          <Text size="md" mt="xs" fs="italic">
+            You said: "{actual}"
+          </Text>
+        </Box>
       );
     }
   }

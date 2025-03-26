@@ -2,7 +2,7 @@ import { playAudio } from "@/koala/play-audio";
 import { blobToBase64, convertBlobToWav } from "@/koala/record-button";
 import { trpc } from "@/koala/trpc-config";
 import { useVoiceRecorder } from "@/koala/use-recorder";
-import { Button, Center, Stack, Text } from "@mantine/core";
+import { Button, Stack, Text, Box, Title, Group } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import { Grade } from "femto-fsrs";
 import { useEffect, useState } from "react";
@@ -187,15 +187,21 @@ const PlayPhase = ({
   useHotkeys([[HOTKEYS.PLAY, () => onPlayClick()]]);
 
   return (
-    <Stack>
-      <Center>
-        <Text size="xl">Listen and Repeat</Text>
-      </Center>
-      {showTerm && <Text>{term}</Text>}
-      {isDictation && <Text>Definition: {definition}</Text>}
-      <Button onClick={onPlayClick}>
-        Listen to Audio and Proceed to Exercise
-      </Button>
+    <Stack gap="md">
+      <Title order={2} ta="center" size="h3">
+        Listen and Repeat
+      </Title>
+      {showTerm && (
+        <Text size="lg" fw={500}>
+          {term}
+        </Text>
+      )}
+      {isDictation && <Text size="md">Definition: {definition}</Text>}
+      <Box my="md">
+        <Button onClick={onPlayClick} fullWidth size="lg" h={50}>
+          Listen to Audio and Proceed
+        </Button>
+      </Box>
       <FailButton onClick={onFailClick} />
     </Stack>
   );
@@ -240,16 +246,29 @@ const RecordPhase = ({
     ? `Repeat the Phrase: ${term}`
     : "Repeat the Phrase Without Reading";
   return (
-    <Stack>
-      <Center>
-        <Text size="xl">{header}</Text>
-      </Center>
+    <Stack gap="md">
+      <Title order={2} ta="center" size="h3">
+        {header}
+      </Title>
       {userInput ? <VisualDiff expected={term} actual={userInput} /> : ""}
-      <Button color={color} onClick={onRecordClick} disabled={isProcessing}>
-        {buttonLabel}
-      </Button>
-      <Button onClick={onPlayClick}>Play Audio Again</Button>
-      <FailButton onClick={onFailClick} />
+      <Box my="md">
+        <Button
+          color={color}
+          onClick={onRecordClick}
+          disabled={isProcessing}
+          fullWidth
+          size="lg"
+          h={50}
+        >
+          {buttonLabel}
+        </Button>
+      </Box>
+      <Group grow>
+        <Button onClick={onPlayClick} size="md">
+          Play Audio Again
+        </Button>
+        <FailButton onClick={onFailClick} />
+      </Group>
     </Stack>
   );
 };
@@ -264,17 +283,21 @@ type DonePhaseProps = {
 const DonePhase = ({ userInput, onDifficultySelect, quiz }: DonePhaseProps) => {
   const { term, definition } = quiz;
   return (
-    <Stack>
-      <Center>
-        <Text size="xl">Select Next Review Date</Text>
-      </Center>
+    <Stack gap="md">
+      <Title order={2} ta="center" size="h3">
+        Select Next Review Date
+      </Title>
       <VisualDiff expected={term} actual={userInput || term} />
-      <Text>Definition: {definition}</Text>
-      <DifficultyButtons
-        quiz={quiz}
-        current={undefined}
-        onSelectDifficulty={onDifficultySelect}
-      />
+      <Text size="md" fw={500}>
+        Definition: {definition}
+      </Text>
+      <Box mt="md">
+        <DifficultyButtons
+          quiz={quiz}
+          current={undefined}
+          onSelectDifficulty={onDifficultySelect}
+        />
+      </Box>
     </Stack>
   );
 };

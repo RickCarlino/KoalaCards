@@ -1,4 +1,4 @@
-import { Button } from "@mantine/core";
+import { Button, Box } from "@mantine/core";
 import { trpc } from "../trpc-config";
 
 type PauseButtonProps = {
@@ -14,8 +14,17 @@ export const PauseReviewButton = (props: PauseButtonProps) => {
     e.currentTarget.blur(); // Removes focus from the button
   };
   return (
-    <Button variant="outline" color="yellow" onClick={handlePauseClick}>
-      Pause Reviews
-    </Button>
+    <Box>
+      <Button
+        variant="outline"
+        color="yellow"
+        onClick={handlePauseClick}
+        fullWidth
+        size="md"
+        h={45}
+      >
+        Pause Reviews
+      </Button>
+    </Box>
   );
 };

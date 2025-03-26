@@ -5,7 +5,7 @@ import { VisualDiff } from "@/koala/review/visual-diff";
 import { LangCode } from "@/koala/shared-types";
 import { trpc } from "@/koala/trpc-config";
 import { useVoiceRecorder } from "@/koala/use-recorder";
-import { Button, Center, rem, Stack, Text } from "@mantine/core";
+import { Button, Stack, Text, Box, Title } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import { Grade } from "femto-fsrs";
 import { useEffect, useState } from "react";
@@ -95,33 +95,35 @@ export const ReviewQuiz: QuizComp = ({ quiz, onComplete, onGraded }) => {
 
   return (
     <Stack gap="md">
-      <Center>
-        <Text size="l">
-          {isThinking ? "Grading Response..." : "Let's Try Again"}
-        </Text>
-      </Center>
-      <Text fw={1000}>{card.term}</Text>
-      <Text size="sm">{card.definition}</Text>
-      <Stack gap="xs">
-        <Text size="sm">
-          {card.lapses > 9
-            ? "This card has been unusually difficult for you. Perhaps you should pause reviews?"
-            : "You previously had trouble with this card."}{" "}
-          Repeat <strong>{ATTEMPTS} times</strong> to continue.
-        </Text>
-        <Text size="sm">
-          Current count: <strong>{correctAttempts}</strong>/{ATTEMPTS}
-        </Text>
-        {lastAttemptWrong && (
-          <Diff
-            expected={lastAttemptWrong.expected}
-            actual={lastAttemptWrong.actual}
-          />
-        )}
-      </Stack>
+      <Title order={2} ta="center" size="h3">
+        {isThinking ? "Grading Response..." : "Let's Try Again"}
+      </Title>
+      <Text size="lg" fw={700}>
+        {card.term}
+      </Text>
+      <Text size="md">{card.definition}</Text>
+      <Box my="md">
+        <Stack gap="sm">
+          <Text size="md">
+            {card.lapses > 9
+              ? "This card has been unusually difficult for you. Perhaps you should pause reviews?"
+              : "You previously had trouble with this card."}{" "}
+            Repeat <strong>{ATTEMPTS} times</strong> to continue.
+          </Text>
+          <Text size="md" fw={500}>
+            Current count: <strong>{correctAttempts}</strong>/{ATTEMPTS}
+          </Text>
+          {lastAttemptWrong && (
+            <Diff
+              expected={lastAttemptWrong.expected}
+              actual={lastAttemptWrong.actual}
+            />
+          )}
+        </Stack>
+      </Box>
 
-      <Stack gap="xs" style={{ marginTop: rem(16) }}>
-        <Button onClick={() => playAudio(card.termAudio)}>
+      <Stack gap="md" mt="md">
+        <Button onClick={() => playAudio(card.termAudio)} fullWidth size="md">
           Play Audio Again
         </Button>
         <Button
@@ -131,6 +133,9 @@ export const ReviewQuiz: QuizComp = ({ quiz, onComplete, onGraded }) => {
               ? voiceRecorder.stop()
               : voiceRecorder.start()
           }
+          fullWidth
+          size="lg"
+          h={50}
         >
           {voiceRecorder.isRecording ? "Stop Recording" : "Begin Recording"}
         </Button>
