@@ -16,7 +16,6 @@ import { LangCode } from "../shared-types";
 import { getLangName } from "../get-lang-name";
 import { ServerExplanation } from "./ServerExplanation";
 
-/** A helper to sequentially play any number of audio files. */
 async function playSequence(...audioURLs: (string | undefined)[]) {
   for (const url of audioURLs) {
     if (!url) continue;
@@ -27,8 +26,11 @@ async function playSequence(...audioURLs: (string | undefined)[]) {
 export const SpeakingQuiz: QuizComp = (props) => {
   const { onComplete, onGraded } = props;
   const card = props.quiz.quiz;
+  const RECORDING_TIME = 8;
+  
   const [isRecording, setIsRecording] = useState(false);
   const [phase, setPhase] = useState<"prompt" | "recording" | "done">("prompt");
+  const [timeLeft, setTimeLeft] = useState(RECORDING_TIME);
 
   const { playbackPercentage } = useUserSettings();
   const transcribeAudio = trpc.transcribeAudio.useMutation();
@@ -36,24 +38,41 @@ export const SpeakingQuiz: QuizComp = (props) => {
 
   const voiceRecorder = useVoiceRecorder(handleRecordingResult);
 
-  /**
-   * Plays a beep FX whenever the quiz term changes.
-   */
   useEffect(() => {
     playFX("/speaking-beep.wav");
   }, [card.term]);
 
-  /**
-   * Reset recording state and phase whenever card changes.
-   */
   useEffect(() => {
-    setIsRecording(false);
-    setPhase("prompt");
+    resetQuizState();
   }, [card.term]);
 
-  /**
-   * Toggle recording based on the current phase/recording state.
-   */
+  useEffect(() => {
+    let timerId: NodeJS.Timeout | null = null;
+    
+    if (!isRecording) {
+      return () => {};
+    }
+    
+    if (timeLeft <= 0) {
+      handleRecordClick();
+      return () => {};
+    }
+    
+    timerId = setInterval(() => {
+      setTimeLeft(prevTime => prevTime - 1);
+    }, 1000);
+
+    return () => {
+      if (timerId) clearInterval(timerId);
+    };
+  }, [isRecording, timeLeft]);
+
+  function resetQuizState() {
+    setIsRecording(false);
+    setPhase("prompt");
+    setTimeLeft(RECORDING_TIME);
+  }
+
   function handleRecordClick() {
     if (isRecording) {
       voiceRecorder.stop();
@@ -65,34 +84,29 @@ export const SpeakingQuiz: QuizComp = (props) => {
 
     setIsRecording(true);
     setPhase("recording");
+    setTimeLeft(RECORDING_TIME);
     voiceRecorder.start();
   }
 
-  /**
-   * Once the recording is done, this is called. We:
-   * 1. Convert to WAV + base64
-   * 2. Optionally play the user’s recording
-   * 3. Transcribe and grade
-   * 4. Signal completion with feedback
-   */
   async function handleRecordingResult(audioBlob: Blob) {
     setIsRecording(false);
-
-    // Provide immediate audio feedback by replaying the "correct" term
-    await playAudio(card.termAudio);
-
     setPhase("done");
+    
+    await playAudio(card.termAudio);
 
     const wavBlob = await convertBlobToWav(audioBlob);
     const base64Audio = await blobToBase64(wavBlob);
 
-    // Optionally, play user’s own audio
     if (Math.random() < playbackPercentage) {
       await playAudio(base64Audio);
     }
 
+    processAudioForGrading(base64Audio);
+  }
+  
+  function processAudioForGrading(base64Audio: string) {
     let userTranscription = "";
-    // Send to server for grading.
+    
     transcribeAudio
       .mutateAsync({
         audio: base64Audio,
@@ -116,11 +130,7 @@ export const SpeakingQuiz: QuizComp = (props) => {
       });
   }
 
-  /**
-   * If the user doesn't know the term, we consider that a "fail".
-   */
   async function handleFailClick() {
-    // Play the card's audio multiple times to help the user memorize
     await playSequence(
       card.termAudio,
       card.definitionAudio,
@@ -131,9 +141,7 @@ export const SpeakingQuiz: QuizComp = (props) => {
 
     onGraded(Grade.AGAIN);
 
-    // Wait slightly to let the audio finish before marking quiz complete
     setTimeout(() => {
-      console.log(`=== REMEMBER: TO FIX THIS HACK ===`);
       onComplete({
         status: "fail",
         feedback: "You gave up.",
@@ -142,9 +150,6 @@ export const SpeakingQuiz: QuizComp = (props) => {
     }, 1000);
   }
 
-  /**
-   * Hook for the spacebar to start/stop recording.
-   */
   useHotkeys([
     [
       HOTKEYS.RECORD,
@@ -157,50 +162,47 @@ export const SpeakingQuiz: QuizComp = (props) => {
     ],
   ]);
 
-  /**
-   * The user has chosen a difficulty rating.
-   * Pass that back up and it will eventually mark the card with that rating.
-   */
   function handleDifficultySelect(grade: Grade) {
     onGraded(grade);
   }
 
-  const renderPromptControls = () => (
-    <>
-      <Button onClick={handleRecordClick} color={isRecording ? "red" : "blue"}>
-        {isRecording ? "Stop Recording" : "Begin Recording, Repeat Phrase"}
-      </Button>
-      {isRecording && <Text>Recording...</Text>}
-      <FailButton onClick={handleFailClick} />
-    </>
-  );
-
-  const gradingInfo = () => {
-    switch (props.quiz.serverGradingResult) {
-      case "pass":
-        return <Text size="xs">Congrats! You got this one correct.</Text>;
-      case "fail":
-        const expected = props.quiz.serverResponse || "";
-        const actual = props.quiz.response || expected;
-        const heading = "";
-        return (
-          <>
-            <ServerExplanation {...{ expected, actual, heading }} />
-          </>
-        );
-      default:
-        return (
-          <Text size="xs">
-            Grading in progress. You can keep waiting or review your feedback at
-            the end of the lesson.
-          </Text>
-        );
-    }
-  };
-  const renderDoneControls = () => {
+  function renderPromptControls() {
     return (
       <>
-        {gradingInfo()}
+        <Button onClick={handleRecordClick} color={isRecording ? "red" : "blue"}>
+          {isRecording ? `Stop Recording (${timeLeft}s)` : "Begin Recording, Repeat Phrase"}
+        </Button>
+        {isRecording && <Text>Recording...</Text>}
+        <FailButton onClick={handleFailClick} />
+      </>
+    );
+  }
+
+  function renderGradingInfo() {
+    const { serverGradingResult, serverResponse, response } = props.quiz;
+    
+    if (serverGradingResult === "pass") {
+      return <Text size="xs">Congrats! You got this one correct.</Text>;
+    }
+    
+    if (serverGradingResult === "fail") {
+      const expected = serverResponse || "";
+      const actual = response || expected;
+      return <ServerExplanation expected={expected} actual={actual} heading="" />;
+    }
+    
+    return (
+      <Text size="xs">
+        Grading in progress. You can keep waiting or review your feedback at
+        the end of the lesson.
+      </Text>
+    );
+  }
+  
+  function renderDoneControls() {
+    return (
+      <>
+        {renderGradingInfo()}
         <DifficultyButtons
           quiz={card}
           current={undefined}
@@ -208,13 +210,12 @@ export const SpeakingQuiz: QuizComp = (props) => {
         />
       </>
     );
-  };
+  }
 
   function getHeaderText() {
-    if (phase === "prompt") {
-      return `Say in ${getLangName(card.langCode)}`;
-    }
-    return "Select Next Review Date";
+    return phase === "prompt" 
+      ? `Say in ${getLangName(card.langCode)}`
+      : "Select Next Review Date";
   }
 
   return (

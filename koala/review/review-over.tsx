@@ -14,6 +14,7 @@ import { useState, CSSProperties } from "react";
 import { FeedbackRow } from "./feedback-row";
 import { HOTKEYS } from "./hotkeys";
 import { QuizState } from "./types";
+import Link from "next/link";
 
 type ReviewOverProps = {
   state: QuizState[];
@@ -60,7 +61,7 @@ export function ReviewOver({
     return (
       <Center style={CENTER_FULL_STYLE}>
         <Card shadow="sm" padding="lg" radius="md" withBorder>
-          <Title order={2}>{isSaving ? "" : "All Done!"}</Title>
+          <Title order={2}>{isSaving ? "" : <Link href="/">Go Back</Link>}</Title>
           {!isSaving && (
             <Text color="dimmed" mt="sm">
               There are no quizzes to review.

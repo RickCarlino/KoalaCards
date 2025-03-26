@@ -2,7 +2,7 @@ import { openai } from "@/koala/openai";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
 import { clean } from "./util";
-import { alphabetical, cluster, template, unique } from "radash";
+import { alphabetical, cluster, random, template, unique } from "radash";
 import { ChatCompletionMessageParam } from "openai/resources";
 import { supportedLanguages } from "@/koala/shared-types";
 
@@ -85,7 +85,7 @@ async function run(language: string, words: string[]) {
     },
   ];
 
-  const temperature = Math.min(0.25, 0.1 + 0.1 * Math.random());
+  const temperature = random(0, 0.25);
   console.log(`=== temp: ${temperature}`);
   const response1 = await openai.beta.chat.completions.parse({
     messages: part1,
@@ -101,8 +101,11 @@ async function run(language: string, words: string[]) {
   You are a Korean language content editor.
   You edit flashcards for a language learning app.
   Edit the cards so that they conform to the following standards:
+
   1. Convert '다' verbs to the '요' form instead. Example: '가다' ⇒ '가요'. Do this for all verbs and double check your work.",
   2. Avoid over use of pronouns in translations. Translate "음식을 데워요" to just "heat up food" rather than "he/she/they heat up food".
+
+  Double check your work against these rules when you are done.
   `;
   const response2 = await openai.beta.chat.completions.parse({
     messages: [
