@@ -71,7 +71,7 @@ export const authOptions: AuthOptions = {
       ? GoogleProvider({
           clientId,
           clientSecret,
-          allowDangerousEmailAccountLinking: true,
+          // allowDangerousEmailAccountLinking: true,
         })
       : EmailProvider(EMAIL_SERVER_OPTIONS),
   ],
