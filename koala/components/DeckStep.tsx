@@ -8,6 +8,8 @@ import {
   Flex,
   RadioGroup,
   TextInput,
+  Text,
+  useMantineTheme,
 } from "@mantine/core";
 import { LangCode, supportedLanguages } from "@/koala/shared-types";
 import { getLangName } from "@/koala/get-lang-name";
@@ -16,6 +18,8 @@ import { DeckStepProps } from "../types/create-types";
 const DEFAULT_LANG: LangCode = "ko";
 
 export function DeckStep({ decks, state, dispatch, onNext }: DeckStepProps) {
+  const theme = useMantineTheme();
+
   // Handler for picking an existing deck
   const handleExistingDeckChange = (deckId: number | undefined) => {
     dispatch({ type: "SET_DECK_ID", deckId });
@@ -56,27 +60,61 @@ export function DeckStep({ decks, state, dispatch, onNext }: DeckStepProps) {
   })();
 
   return (
-    <Paper withBorder p="md" radius="md">
+    <Paper 
+      withBorder 
+      p="xl" 
+      radius="lg"
+      style={{
+        border: `1px solid ${theme.colors.pink[2]}`,
+        background: 'rgba(255, 255, 255, 0.8)',
+        boxShadow: '0 4px 8px rgba(0,0,0,0.05)'
+      }}
+    >
       <Flex direction="column" gap="md">
-        <Title order={3}>Step 1: Select or Create Deck</Title>
-        <div style={{ fontSize: 14, color: "gray" }}>
+        <Title 
+          order={3} 
+          mb="xs"
+          style={{ 
+            color: theme.colors.pink[6],
+            fontWeight: 600,
+          }}
+        >
+          ✨ Step 1: Select or Create Deck ✨
+        </Title>
+        <Text size="sm" c="dimmed" mb="md">
           You can add new cards to an existing deck or create a new one below.
-        </div>
+        </Text>
 
         <RadioGroup
-          label="Deck Mode"
+          label={<Text fw={500} c={theme.colors.gray[7]}>Deck Mode</Text>}
           value={state.deckSelection}
           onChange={(value) =>
             handleDeckModeChange(value as "existing" | "new")
           }
         >
-          <Radio value="existing" label="Use an existing deck" />
-          <Radio value="new" label="Create a new deck" />
+          <Radio 
+            value="existing" 
+            label="Use an existing deck" 
+            color="pink"
+            styles={{
+              radio: { cursor: 'pointer' },
+              label: { cursor: 'pointer' }
+            }}
+          />
+          <Radio 
+            value="new" 
+            label="Create a new deck" 
+            color="pink"
+            styles={{
+              radio: { cursor: 'pointer' },
+              label: { cursor: 'pointer' }
+            }}
+          />
         </RadioGroup>
 
         {state.deckSelection === "existing" && (
           <Select
-            label="Existing Deck"
+            label={<Text fw={500} c={theme.colors.gray[7]}>Existing Deck</Text>}
             placeholder="Select your deck"
             value={state.deckId ? String(state.deckId) : null}
             onChange={(val) => handleExistingDeckChange(Number(val))}
@@ -84,13 +122,21 @@ export function DeckStep({ decks, state, dispatch, onNext }: DeckStepProps) {
               label: `${d.name} (${getLangName(d.langCode)})`,
               value: String(d.id),
             }))}
+            styles={{
+              input: {
+                borderColor: theme.colors.pink[1],
+                '&:focus': {
+                  borderColor: theme.colors.pink[5],
+                }
+              }
+            }}
           />
         )}
 
         {state.deckSelection === "new" && (
           <>
             <TextInput
-              label="New Deck Name"
+              label={<Text fw={500} c={theme.colors.gray[7]}>New Deck Name</Text>}
               placeholder="e.g. 'Spanish Travel Phrases'"
               value={state.deckName}
               onChange={(e) =>
@@ -99,9 +145,17 @@ export function DeckStep({ decks, state, dispatch, onNext }: DeckStepProps) {
                   deckName: e.currentTarget.value,
                 })
               }
+              styles={{
+                input: {
+                  borderColor: theme.colors.pink[1],
+                  '&:focus': {
+                    borderColor: theme.colors.pink[5],
+                  }
+                }
+              }}
             />
             <Select
-              label="Language"
+              label={<Text fw={500} c={theme.colors.gray[7]}>Language</Text>}
               placeholder="Choose language"
               value={state.deckLang}
               onChange={(val) =>
@@ -114,13 +168,30 @@ export function DeckStep({ decks, state, dispatch, onNext }: DeckStepProps) {
                   label: supportedLanguages[langCode as LangCode],
                   value: langCode,
                 }))}
+              styles={{
+                input: {
+                  borderColor: theme.colors.pink[1],
+                  '&:focus': {
+                    borderColor: theme.colors.pink[5],
+                  }
+                }
+              }}
             />
           </>
         )}
 
-        <Divider my="sm" />
+        <Divider my="lg" color={theme.colors.pink[1]} />
         <Flex justify="flex-end">
-          <Button onClick={onNext} disabled={isNextDisabled}>
+          <Button 
+            onClick={onNext} 
+            disabled={isNextDisabled}
+            color="pink"
+            radius="md"
+            size="md"
+            style={{
+              boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+            }}
+          >
             Next
           </Button>
         </Flex>
