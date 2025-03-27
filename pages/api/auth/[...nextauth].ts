@@ -6,6 +6,7 @@ import EmailProvider, {
   EmailConfig,
   EmailUserConfig,
 } from "next-auth/providers/email";
+import GoogleProvider from "next-auth/providers/google";
 import { createTransport } from "nodemailer";
 [
   "EMAIL_SERVER_HOST",
@@ -60,9 +61,20 @@ const EMAIL_SERVER_OPTIONS: Partial<EmailUserConfig> = {
   },
 };
 
+const clientId = process.env.GOOGLE_CLIENT_ID;
+const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
 export const authOptions: AuthOptions = {
   adapter: PrismaAdapter(prismaClient),
-  providers: [EmailProvider(EMAIL_SERVER_OPTIONS)],
+  providers: [
+    clientId && clientSecret
+      ? GoogleProvider({
+          clientId,
+          clientSecret,
+          // allowDangerousEmailAccountLinking: true,
+        })
+      : EmailProvider(EMAIL_SERVER_OPTIONS),
+  ],
 };
 
 export default NextAuth(authOptions);

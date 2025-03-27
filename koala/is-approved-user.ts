@@ -12,9 +12,34 @@ export const isApprovedUser = (id: string) => {
 };
 
 async function deleteInactiveUser(id: string, email: string | null) {
-  if (isApprovedUser(id) || (email && isApprovedUser(email))) {
+  if (isApprovedUser(id)) {
     return;
   }
+  const cards = await prismaClient.card.findMany({
+    where: {
+      flagged: true,
+      userId: id,
+    },
+  });
+
+  await prismaClient.quiz.deleteMany({
+    where: {
+      cardId: { in: cards.map((c) => c.id) },
+    },
+  });
+
+  await prismaClient.card.deleteMany({
+    where: {
+      id: { in: cards.map((c) => c.id) },
+    },
+  });
+
+  await prismaClient.deck.deleteMany({
+    where: {
+      userId: id,
+    },
+  });
+
   await prismaClient.user.delete({ where: { id } }).then(() => {
     console.log(`=== Delete ${email}`);
   });

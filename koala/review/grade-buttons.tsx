@@ -1,4 +1,4 @@
-import { Button, Group } from "@mantine/core";
+import { Button, Group, Stack } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import { Grade } from "femto-fsrs";
 import React from "react";
@@ -34,10 +34,23 @@ export const DifficultyButtons: React.FC<DifficultyButtonsProps> = ({
         key={grade}
         disabled={current === grade}
         onClick={() => onSelectDifficulty(grade)}
+        size="md"
+        h={45}
       >
         {label}
       </Button>
     );
   });
-  return <Group grow>{list}</Group>;
+
+  // On mobile, stack the buttons in two rows for better touch targets
+  return (
+    <Stack gap="sm">
+      <Group grow gap="sm">
+        {list.slice(0, 2)}
+      </Group>
+      <Group grow gap="sm">
+        {list.slice(2)}
+      </Group>
+    </Stack>
+  );
 };

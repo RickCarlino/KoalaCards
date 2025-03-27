@@ -2,11 +2,12 @@ import {
   Alert,
   Button,
   Card,
-  Center,
   Stack,
   Text,
   Title,
   useMantineTheme,
+  Box,
+  Container,
 } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import { Grade } from "femto-fsrs";
@@ -33,21 +34,12 @@ export function ReviewOver({
   const [isSaving, setIsSaving] = useState(false);
   useHotkeys([[HOTKEYS.SAVE, onSave]]);
 
-  const CENTER_FULL_STYLE: CSSProperties = { width: "100%", height: "100vh" };
-  const CENTER_MARGIN_STYLE: CSSProperties = {
-    width: "100%",
-    marginTop: "2rem",
-  };
+  // Responsive styles
   const CARD_STYLE: CSSProperties = {
-    width: "90%",
-    maxWidth: 900,
-    border: `1px solid ${isDarkMode ? theme.colors.dark[5] : theme.colors.gray[2]}`,
-  };
-  const BUTTON_CONTAINER_STYLE: CSSProperties = {
-    display: "flex",
-    gap: theme.spacing.sm,
-    flexWrap: "wrap",
-    justifyContent: "flex-start",
+    width: "100%",
+    border: `1px solid ${
+      isDarkMode ? theme.colors.dark[5] : theme.colors.gray[2]
+    }`,
   };
 
   const handleSave = async () => {
@@ -59,16 +51,18 @@ export function ReviewOver({
 
   if (state.length === 0) {
     return (
-      <Center style={CENTER_FULL_STYLE}>
-        <Card shadow="sm" padding="lg" radius="md" withBorder>
-          <Title order={2}>{isSaving ? "" : <Link href="/">Go Back</Link>}</Title>
-          {!isSaving && (
-            <Text color="dimmed" mt="sm">
-              There are no quizzes to review.
-            </Text>
-          )}
+      <Container size="md" py="xl">
+        <Card shadow="sm" p="lg" radius="md" withBorder>
+          <Stack gap="md">
+            <Title order={2}>
+              {isSaving ? "" : <Link href="/">Go Back</Link>}
+            </Title>
+            {!isSaving && (
+              <Text color="dimmed">There are no quizzes to review.</Text>
+            )}
+          </Stack>
         </Card>
-      </Center>
+      </Container>
     );
   }
 
@@ -78,53 +72,59 @@ export function ReviewOver({
 
   if (errorQuizzes.length === 0) {
     return (
-      <Center style={CENTER_MARGIN_STYLE}>
-        <Card
-          shadow="sm"
-          padding="lg"
-          radius="md"
-          withBorder
-          style={CARD_STYLE}
-        >
+      <Container size="md" py="xl">
+        <Card shadow="sm" p="lg" radius="md" withBorder style={CARD_STYLE}>
           <Stack gap="md">
             <Title order={3}>Review Completed</Title>
-            <Text size="sm">
+            <Text size="md">
               Great job! Everything looks correct. You can now save your
               progress to finish.
             </Text>
-            <div style={BUTTON_CONTAINER_STYLE}>
-              <Button onClick={handleSave} loading={isSaving} variant="filled">
+            <Box mt="md">
+              <Button
+                onClick={handleSave}
+                loading={isSaving}
+                variant="filled"
+                fullWidth
+                size="lg"
+              >
                 Save Lesson Progress
               </Button>
-            </div>
+            </Box>
           </Stack>
         </Card>
-      </Center>
+      </Container>
     );
   }
 
   return (
-    <Center style={CENTER_MARGIN_STYLE}>
-      <Card shadow="sm" padding="lg" radius="md" withBorder style={CARD_STYLE}>
+    <Container size="md" py="xl">
+      <Card shadow="sm" p="lg" radius="md" withBorder style={CARD_STYLE}>
         <Stack gap="md">
           <Title order={2}>Almost There!</Title>
           <Alert color="red" variant="light">
             <Text fw={500}>Important:</Text>
-            <Text size="sm">
+            <Text size="md">
               Closing this tab early will cause changes to be lost. Please
               finalize your review and save your progress.
             </Text>
           </Alert>
-          <Text size="sm">
+          <Text size="md">
             The server found some issues with your responses. Check the feedback
-            below. {correctPercent}%
+            below. {correctPercent}% correct
           </Text>
-          <div style={BUTTON_CONTAINER_STYLE}>
-            <Button onClick={handleSave} loading={isSaving} variant="filled">
+          <Box mt="md">
+            <Button
+              onClick={handleSave}
+              loading={isSaving}
+              variant="filled"
+              fullWidth
+              size="lg"
+            >
               Save Lesson Progress
             </Button>
-          </div>
-          <Stack gap="sm">
+          </Box>
+          <Stack gap="md" mt="md">
             {errorQuizzes.map((quiz) => (
               <FeedbackRow
                 key={quiz.quiz.quizId}
@@ -135,6 +135,6 @@ export function ReviewOver({
           </Stack>
         </Stack>
       </Card>
-    </Center>
+    </Container>
   );
 }

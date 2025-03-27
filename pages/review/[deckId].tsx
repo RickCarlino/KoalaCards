@@ -1,6 +1,7 @@
 import MicrophonePermissions from "@/koala/microphone-permissions";
 import { ReviewPage } from "@/koala/review/review-page";
 import { trpc } from "@/koala/trpc-config";
+import { Box, Container, Text, Title, Anchor } from "@mantine/core";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
@@ -49,12 +50,32 @@ export default function Review() {
     fetchQuizzes();
   };
 
-  let el = <div>Loading...</div>;
+  let el;
 
   if (mutation.isError) {
-    el = <div>Error occurred: {mutation.error.message}</div>;
+    el = (
+      <Container size="md" py="xl">
+        <Box p="md">
+          <Title order={3} mb="md">
+            Error
+          </Title>
+          <Text>{mutation.error.message}</Text>
+        </Box>
+      </Container>
+    );
   } else if (isFetching) {
-    el = <div>Fetching Quizzes. This could take a while for new cards...</div>;
+    el = (
+      <Container size="md" py="xl">
+        <Box p="md">
+          <Title order={3} mb="md">
+            Loading
+          </Title>
+          <Text>
+            Fetching Quizzes. This could take a while for new cards...
+          </Text>
+        </Box>
+      </Container>
+    );
   } else if (data.quizzes.length > 0) {
     el = (
       <ReviewPage
@@ -65,11 +86,24 @@ export default function Review() {
     );
   } else {
     el = (
-      <div>
-        No quizzes found. <Link href="/cards">Add more cards to this deck</Link>{" "}
-        or come back later when cards are due for review.{" "}
-        <Link href="/">Go back to deck overview</Link>
-      </div>
+      <Container size="md" py="xl">
+        <Box p="md">
+          <Title order={3} mb="md">
+            No Quizzes Available
+          </Title>
+          <Text mb="md">No quizzes found for this deck. You can:</Text>
+          <Box mb="xs">
+            <Anchor component={Link} href="/cards">
+              Add more cards to this deck
+            </Anchor>
+          </Box>
+          <Box>
+            <Anchor component={Link} href="/">
+              Go back to deck overview
+            </Anchor>
+          </Box>
+        </Box>
+      </Container>
     );
   }
 

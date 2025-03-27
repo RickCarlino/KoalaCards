@@ -201,7 +201,7 @@ Environment variables are crucial for configuring the application. Follow these 
 
 ## Configure Cloud Services
 
-**KoalaCards** integrates with external cloud services like OpenAI and Google Cloud. Follow the steps below to configure these services.
+**KoalaCards** integrates with external cloud services like OpenAI, Google Cloud, and Google OAuth. Follow the steps below to configure these services.
 
 ### 4.1 OpenAI API Key
 
@@ -268,6 +268,48 @@ Environment variables are crucial for configuring the application. Follow these 
    ```
 
    > **Security Tip:** Do not commit your credentials file to version control. Ensure it's listed in your `.gitignore`.
+
+### 4.3 Google OAuth for Sign-In
+
+KoalaCards supports Google Sign-In as an authentication method. Follow these steps to set it up:
+
+1. **Use the Same Google Cloud Project:**
+
+   Use the same project you created in the previous step or create a new one specifically for authentication.
+
+2. **Configure OAuth Consent Screen:**
+
+   - In the Google Cloud Console, go to **APIs & Services > OAuth consent screen**.
+   - Select the appropriate user type (**External** for testing or **Internal** for organization-only use).
+   - Fill in the required information:
+     - App name: **KoalaCards**
+     - User support email: Your email address
+     - Developer contact information: Your email address
+   - Click **Save and Continue**.
+   - Add the necessary scopes (typically `.../auth/userinfo.email` and `.../auth/userinfo.profile`).
+   - Click **Save and Continue** and complete the setup.
+
+3. **Create OAuth Client ID:**
+
+   - Go to **APIs & Services > Credentials**.
+   - Click **Create Credentials** > **OAuth client ID**.
+   - Select **Web application** as the application type.
+   - Add a name for your OAuth client.
+   - Add your domain to **Authorized JavaScript origins** (e.g., `http://localhost:3000` for local development).
+   - Add your callback URL to **Authorized redirect URIs** (e.g., `http://localhost:3000/api/auth/callback/google` for local development).
+   - Click **Create**.
+   - Note your **Client ID** and **Client Secret**.
+
+4. **Update the `.env` File:**
+
+   Add the Google OAuth credentials to your `.env` file:
+
+   ```env
+   GOOGLE_CLIENT_ID="your-client-id"
+   GOOGLE_CLIENT_SECRET="your-client-secret"
+   ```
+
+   > **Note:** For production, make sure to update the authorized origins and redirect URIs with your production domain.
 
 ---
 

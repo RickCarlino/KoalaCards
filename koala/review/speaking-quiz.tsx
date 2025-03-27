@@ -1,7 +1,8 @@
 import { blobToBase64, convertBlobToWav } from "@/koala/record-button";
 import { trpc } from "@/koala/trpc-config";
 import { useVoiceRecorder } from "@/koala/use-recorder";
-import { Button, Stack, Text } from "@mantine/core";
+import { Button, Stack, Text, Box, Title } from "@mantine/core";
+import { textShadowStyle } from "../styles";
 import { useHotkeys } from "@mantine/hooks";
 import { Grade } from "femto-fsrs";
 import { useEffect, useState } from "react";
@@ -27,7 +28,7 @@ export const SpeakingQuiz: QuizComp = (props) => {
   const { onComplete, onGraded } = props;
   const card = props.quiz.quiz;
   const RECORDING_TIME = 8;
-  
+
   const [isRecording, setIsRecording] = useState(false);
   const [phase, setPhase] = useState<"prompt" | "recording" | "done">("prompt");
   const [timeLeft, setTimeLeft] = useState(RECORDING_TIME);
@@ -48,18 +49,18 @@ export const SpeakingQuiz: QuizComp = (props) => {
 
   useEffect(() => {
     let timerId: NodeJS.Timeout | null = null;
-    
+
     if (!isRecording) {
       return () => {};
     }
-    
+
     if (timeLeft <= 0) {
       handleRecordClick();
       return () => {};
     }
-    
+
     timerId = setInterval(() => {
-      setTimeLeft(prevTime => prevTime - 1);
+      setTimeLeft((prevTime) => prevTime - 1);
     }, 1000);
 
     return () => {
@@ -91,7 +92,7 @@ export const SpeakingQuiz: QuizComp = (props) => {
   async function handleRecordingResult(audioBlob: Blob) {
     setIsRecording(false);
     setPhase("done");
-    
+
     await playAudio(card.termAudio);
 
     const wavBlob = await convertBlobToWav(audioBlob);
@@ -103,10 +104,10 @@ export const SpeakingQuiz: QuizComp = (props) => {
 
     processAudioForGrading(base64Audio);
   }
-  
+
   function processAudioForGrading(base64Audio: string) {
     let userTranscription = "";
-    
+
     transcribeAudio
       .mutateAsync({
         audio: base64Audio,
@@ -168,60 +169,82 @@ export const SpeakingQuiz: QuizComp = (props) => {
 
   function renderPromptControls() {
     return (
-      <>
-        <Button onClick={handleRecordClick} color={isRecording ? "red" : "blue"}>
-          {isRecording ? `Stop Recording (${timeLeft}s)` : "Begin Recording, Repeat Phrase"}
-        </Button>
-        {isRecording && <Text>Recording...</Text>}
+      <Stack gap="md">
+        <Box my="md">
+          <Button
+            onClick={handleRecordClick}
+            color={isRecording ? "red" : "pink"}
+            fullWidth
+            size="lg"
+            h={50}
+          >
+            {isRecording
+              ? `Stop Recording (${timeLeft}s)`
+              : "Begin Recording, Repeat Phrase"}
+          </Button>
+        </Box>
+        {isRecording && (
+          <Text ta="center" fw={500}>
+            Recording...
+          </Text>
+        )}
         <FailButton onClick={handleFailClick} />
-      </>
+      </Stack>
     );
   }
 
   function renderGradingInfo() {
     const { serverGradingResult, serverResponse, response } = props.quiz;
-    
+
     if (serverGradingResult === "pass") {
       return <Text size="xs">Congrats! You got this one correct.</Text>;
     }
-    
+
     if (serverGradingResult === "fail") {
       const expected = serverResponse || "";
       const actual = response || expected;
-      return <ServerExplanation expected={expected} actual={actual} heading="" />;
+      return (
+        <ServerExplanation expected={expected} actual={actual} heading="" />
+      );
     }
-    
+
     return (
       <Text size="xs">
-        Grading in progress. You can keep waiting or review your feedback at
-        the end of the lesson.
+        Grading in progress. You can keep waiting or review your feedback at the
+        end of the lesson.
       </Text>
     );
   }
-  
+
   function renderDoneControls() {
     return (
-      <>
+      <Stack gap="md">
         {renderGradingInfo()}
-        <DifficultyButtons
-          quiz={card}
-          current={undefined}
-          onSelectDifficulty={handleDifficultySelect}
-        />
-      </>
+        <Box mt="md">
+          <DifficultyButtons
+            quiz={card}
+            current={undefined}
+            onSelectDifficulty={handleDifficultySelect}
+          />
+        </Box>
+      </Stack>
     );
   }
 
   function getHeaderText() {
-    return phase === "prompt" 
+    return phase === "prompt"
       ? `Say in ${getLangName(card.langCode)}`
       : "Select Next Review Date";
   }
 
   return (
-    <Stack>
-      <Text size="xl">{getHeaderText()}</Text>
-      <Text size="xl">{card.definition}</Text>
+    <Stack gap="md">
+      <Title order={2} ta="center" size="h3" style={textShadowStyle}>
+        {getHeaderText()}
+      </Title>
+      <Text size="lg" fw={500}>
+        {card.definition}
+      </Text>
       {(phase === "prompt" || phase === "recording") && renderPromptControls()}
       {phase === "done" && renderDoneControls()}
     </Stack>

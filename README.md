@@ -70,7 +70,32 @@ Check out the [whitepaper](https://github.com/RickCarlino/gpt-language-learning-
 
 ## Developer Setup 🛠️
 
-See [SETUP.md](SETUP.md)
+See [SETUP.md](SETUP.md) for detailed setup instructions.
+
+### Authentication Setup
+
+KoalaCards supports two authentication methods:
+
+1. **Email Magic Links** - Default method that sends a login link to the user's email.
+2. **Google Sign-In** - Allows users to sign in with their Google accounts.
+
+To set up Google Sign-In:
+
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select an existing one
+3. Navigate to "APIs & Services" > "Credentials"
+4. Click "Create Credentials" > "OAuth client ID"
+5. Select "Web application" as the application type
+6. Add your domain to the "Authorized JavaScript origins" (e.g., `https://yourdomain.com`)
+7. Add your callback URL to the "Authorized redirect URIs" (e.g., `https://yourdomain.com/api/auth/callback/google`)
+8. Click "Create" and note your Client ID and Client Secret
+9. Add these credentials to your `.env` file:
+   ```
+   GOOGLE_CLIENT_ID="your-google-client-id"
+   GOOGLE_CLIENT_SECRET="your-google-client-secret"
+   ```
+
+Both authentication methods can be used simultaneously.
 
 ## Contribution Guidelines 🤝
 

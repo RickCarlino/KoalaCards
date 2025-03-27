@@ -1,5 +1,6 @@
 import { trpc } from "@/koala/trpc-config";
 import { Container, Grid, Center, Button } from "@mantine/core";
+import { fullHeightStyle } from "./styles";
 import { notifications } from "@mantine/notifications";
 import { UserSettings } from "@prisma/client";
 import { signIn } from "next-auth/react";
@@ -50,7 +51,7 @@ export const UserSettingsProvider = ({
   const login = (
     <Container size="s">
       <Grid grow justify="center" align="center">
-        <Center style={{ height: "100%" }}>
+        <Center style={fullHeightStyle}>
           <Grid.Col>
             <h1>Not Logged In</h1>
             <Button onClick={clickLogin} size="xl">
