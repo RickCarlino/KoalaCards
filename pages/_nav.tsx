@@ -144,36 +144,36 @@ const NavBar = ({ children }: NavBarProps) => {
     >
       <AppShell.Header>
         <Group h="100%" px="md">
-          <Burger 
-            opened={opened} 
-            onClick={toggle} 
-            hiddenFrom="sm" 
+          <Burger
+            opened={opened}
+            onClick={toggle}
+            hiddenFrom="sm"
             size="sm"
-            color={theme.colors.pink[6]} 
+            color={theme.colors.pink[6]}
           />
           <Group>
             <Link href="/" style={{ textDecoration: "none" }}>
-              <Text 
-                size="xl" 
-                fw={700} 
-                role="img" 
+              <Text
+                size="xl"
+                fw={700}
+                role="img"
                 aria-label="koala"
-                style={{ 
+                style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: "8px"
+                  gap: "8px",
                 }}
               >
-                <span style={{ fontSize: "1.3em" }}>🐨</span> 
-                <span style={{ 
-                  background: `linear-gradient(45deg, ${theme.colors.pink[5]}, ${theme.colors.pink[7]})`,
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  textShadow: "0px 1px 2px rgba(0,0,0,0.1)"
-                }}>
+                <span
+                  style={{
+                    background: `linear-gradient(45deg, ${theme.colors.pink[5]}, ${theme.colors.pink[7]})`,
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    textShadow: "0px 1px 2px rgba(0,0,0,0.1)",
+                  }}
+                >
                   Koala Cards
                 </span>
-                <span style={{ fontSize: "0.7em" }}>✨</span>
               </Text>
             </Link>
           </Group>
@@ -202,10 +202,11 @@ const NavBar = ({ children }: NavBarProps) => {
         </AppShell.Section>
       </AppShell.Navbar>
 
-      <AppShell.Main 
-        style={{ 
+      <AppShell.Main
+        style={{
           backgroundColor: theme.colors.pink[0],
-          backgroundImage: "radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.8) 0%, rgba(255, 222, 235, 0.3) 100%)"
+          backgroundImage:
+            "radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.8) 0%, rgba(255, 222, 235, 0.3) 100%)",
         }}
       >
         {children}

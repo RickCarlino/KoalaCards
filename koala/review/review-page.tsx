@@ -10,6 +10,7 @@ import {
   Box,
   ActionIcon,
 } from "@mantine/core";
+import { flexGrowStyle } from "../styles";
 import { useRouter } from "next/router";
 import { Grade } from "femto-fsrs";
 import { useEffect, useReducer, useState } from "react";
@@ -195,7 +196,7 @@ export const ReviewPage = (props: Props) => {
                   radius="xl"
                   size="md"
                   value={percentage || 1}
-                  style={{ flexGrow: 1 }}
+                  style={flexGrowStyle}
                 />
                 <ActionIcon
                   size="lg"

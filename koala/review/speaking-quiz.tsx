@@ -2,6 +2,7 @@ import { blobToBase64, convertBlobToWav } from "@/koala/record-button";
 import { trpc } from "@/koala/trpc-config";
 import { useVoiceRecorder } from "@/koala/use-recorder";
 import { Button, Stack, Text, Box, Title } from "@mantine/core";
+import { textShadowStyle } from "../styles";
 import { useHotkeys } from "@mantine/hooks";
 import { Grade } from "femto-fsrs";
 import { useEffect, useState } from "react";
@@ -172,7 +173,7 @@ export const SpeakingQuiz: QuizComp = (props) => {
         <Box my="md">
           <Button
             onClick={handleRecordClick}
-            color={isRecording ? "red" : "blue"}
+            color={isRecording ? "red" : "pink"}
             fullWidth
             size="lg"
             h={50}
@@ -238,7 +239,12 @@ export const SpeakingQuiz: QuizComp = (props) => {
 
   return (
     <Stack gap="md">
-      <Title order={2} ta="center" size="h3">
+      <Title 
+        order={2} 
+        ta="center" 
+        size="h3"
+        style={textShadowStyle}
+      >
         {getHeaderText()}
       </Title>
       <Text size="lg" fw={500}>

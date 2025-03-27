@@ -12,8 +12,8 @@ import { Montserrat } from "next/font/google";
 
 // Initialize the Montserrat font
 const montserrat = Montserrat({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
 // Dynamically import the Navbar component to avoid hydration issues
@@ -37,23 +37,39 @@ function App(props: AppProps) {
           />
         </Head>
         <SessionProvider session={props.pageProps.session}>
-          <MantineProvider 
+          <MantineProvider
             defaultColorScheme="light"
             theme={createTheme({
               colors: {
                 pink: [
-                  '#FFF0F6', '#FFDEEB', '#FCC2D7', '#FAA2C1', '#F783AC', 
-                  '#F06595', '#E64980', '#D6336C', '#C2255C', '#A61E4D'
+                  "#FFF0F6",
+                  "#FFDEEB",
+                  "#FCC2D7",
+                  "#FAA2C1",
+                  "#F783AC",
+                  "#F06595",
+                  "#E64980",
+                  "#D6336C",
+                  "#C2255C",
+                  "#A61E4D",
                 ],
                 pastel: [
-                  '#F8F9FA', '#E9ECEF', '#DEE2E6', '#CED4DA', '#ADB5BD', 
-                  '#868E96', '#495057', '#343A40', '#212529', '#121416'
+                  "#F8F9FA",
+                  "#E9ECEF",
+                  "#DEE2E6",
+                  "#CED4DA",
+                  "#ADB5BD",
+                  "#868E96",
+                  "#495057",
+                  "#343A40",
+                  "#212529",
+                  "#121416",
                 ],
               },
-              primaryColor: 'pink',
+              primaryColor: "pink",
               primaryShade: 5,
               fontFamily: montserrat.style.fontFamily,
-              fontFamilyMonospace: 'Monaco, Courier, monospace',
+              fontFamilyMonospace: "Monaco, Courier, monospace",
               headings: { fontFamily: montserrat.style.fontFamily },
               radius: {
                 xs: rem(4),
@@ -65,24 +81,24 @@ function App(props: AppProps) {
               components: {
                 Button: {
                   defaultProps: {
-                    radius: 'md',
+                    radius: "md",
                   },
                   styles: {
                     root: {
-                      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
+                      boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)",
                     },
                   },
                 },
                 Card: {
                   defaultProps: {
-                    radius: 'md',
-                    shadow: 'sm',
+                    radius: "md",
+                    shadow: "sm",
                   },
                 },
                 Paper: {
                   defaultProps: {
-                    radius: 'md',
-                    shadow: 'sm',
+                    radius: "md",
+                    shadow: "sm",
                   },
                 },
               },
@@ -108,23 +124,39 @@ function App(props: AppProps) {
         />
       </Head>
       <SessionProvider session={props.pageProps.session}>
-        <MantineProvider 
+        <MantineProvider
           defaultColorScheme="light"
           theme={createTheme({
             colors: {
               pink: [
-                '#FFF0F6', '#FFDEEB', '#FCC2D7', '#FAA2C1', '#F783AC', 
-                '#F06595', '#E64980', '#D6336C', '#C2255C', '#A61E4D'
+                "#FFF0F6",
+                "#FFDEEB",
+                "#FCC2D7",
+                "#FAA2C1",
+                "#F783AC",
+                "#F06595",
+                "#E64980",
+                "#D6336C",
+                "#C2255C",
+                "#A61E4D",
               ],
               pastel: [
-                '#F8F9FA', '#E9ECEF', '#DEE2E6', '#CED4DA', '#ADB5BD', 
-                '#868E96', '#495057', '#343A40', '#212529', '#121416'
+                "#F8F9FA",
+                "#E9ECEF",
+                "#DEE2E6",
+                "#CED4DA",
+                "#ADB5BD",
+                "#868E96",
+                "#495057",
+                "#343A40",
+                "#212529",
+                "#121416",
               ],
             },
-            primaryColor: 'pink',
+            primaryColor: "pink",
             primaryShade: 5,
             fontFamily: montserrat.style.fontFamily,
-            fontFamilyMonospace: 'Monaco, Courier, monospace',
+            fontFamilyMonospace: "Monaco, Courier, monospace",
             headings: { fontFamily: montserrat.style.fontFamily },
             radius: {
               xs: rem(4),
@@ -136,24 +168,24 @@ function App(props: AppProps) {
             components: {
               Button: {
                 defaultProps: {
-                  radius: 'md',
+                  radius: "md",
                 },
                 styles: {
                   root: {
-                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
+                    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)",
                   },
                 },
               },
               Card: {
                 defaultProps: {
-                  radius: 'md',
-                  shadow: 'sm',
+                  radius: "md",
+                  shadow: "sm",
                 },
               },
               Paper: {
                 defaultProps: {
-                  radius: 'md',
-                  shadow: 'sm',
+                  radius: "md",
+                  shadow: "sm",
                 },
               },
             },

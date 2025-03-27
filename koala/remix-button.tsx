@@ -208,7 +208,7 @@ export default function RemixButton(props: RemixButtonProps) {
           e.currentTarget.blur(); // Removes focus from the button
         }}
       >
-        🧪 Remix
+        Remix
       </Button>
       {remixModal}
     </>

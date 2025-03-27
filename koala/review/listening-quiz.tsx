@@ -3,6 +3,7 @@ import { blobToBase64, convertBlobToWav } from "@/koala/record-button";
 import { trpc } from "@/koala/trpc-config";
 import { useVoiceRecorder } from "@/koala/use-recorder";
 import { Button, Stack, Text, Box, Title, Group } from "@mantine/core";
+import { textShadowStyle } from "../styles";
 import { useHotkeys } from "@mantine/hooks";
 import { Grade } from "femto-fsrs";
 import { useEffect, useState } from "react";
@@ -188,7 +189,12 @@ const PlayPhase = ({
 
   return (
     <Stack gap="md">
-      <Title order={2} ta="center" size="h3">
+      <Title 
+        order={2} 
+        ta="center" 
+        size="h3"
+        style={textShadowStyle}
+      >
         Listen and Repeat
       </Title>
       {showTerm && (
@@ -198,7 +204,13 @@ const PlayPhase = ({
       )}
       {isDictation && <Text size="md">Definition: {definition}</Text>}
       <Box my="md">
-        <Button onClick={onPlayClick} fullWidth size="lg" h={50}>
+        <Button 
+          onClick={onPlayClick} 
+          fullWidth 
+          size="lg" 
+          h={50}
+          color="pink"
+        >
           Listen to Audio and Proceed
         </Button>
       </Box>
@@ -241,13 +253,18 @@ const RecordPhase = ({
   ]);
   const recordingText = isRecording ? "Stop Recording" : "Begin Recording";
   const buttonLabel = isProcessing ? "Processing..." : recordingText;
-  const color = isRecording ? "red" : "blue";
+  const color = isRecording ? "red" : "pink";
   const header = isDictation
     ? `Repeat the Phrase: ${term}`
     : "Repeat the Phrase Without Reading";
   return (
     <Stack gap="md">
-      <Title order={2} ta="center" size="h3">
+      <Title 
+        order={2} 
+        ta="center" 
+        size="h3"
+        style={textShadowStyle}
+      >
         {header}
       </Title>
       {userInput ? <VisualDiff expected={term} actual={userInput} /> : ""}
@@ -264,7 +281,11 @@ const RecordPhase = ({
         </Button>
       </Box>
       <Group grow>
-        <Button onClick={onPlayClick} size="md">
+        <Button 
+          onClick={onPlayClick} 
+          size="md"
+          color="pink"
+        >
           Play Audio Again
         </Button>
         <FailButton onClick={onFailClick} />
@@ -284,7 +305,12 @@ const DonePhase = ({ userInput, onDifficultySelect, quiz }: DonePhaseProps) => {
   const { term, definition } = quiz;
   return (
     <Stack gap="md">
-      <Title order={2} ta="center" size="h3">
+      <Title 
+        order={2} 
+        ta="center" 
+        size="h3"
+        style={textShadowStyle}
+      >
         Select Next Review Date
       </Title>
       <VisualDiff expected={term} actual={userInput || term} />

@@ -22,28 +22,28 @@ export function ReviewStep({
   const theme = useMantineTheme();
 
   return (
-    <Paper 
-      withBorder 
-      p="xl" 
+    <Paper
+      withBorder
+      p="xl"
       radius="lg"
       style={{
         border: `1px solid ${theme.colors.pink[2]}`,
-        background: 'rgba(255, 255, 255, 0.8)',
-        boxShadow: '0 4px 8px rgba(0,0,0,0.05)'
+        background: "rgba(255, 255, 255, 0.8)",
+        boxShadow: "0 4px 8px rgba(0,0,0,0.05)",
       }}
     >
       <Flex direction="column" gap="md">
-        <Title 
-          order={3} 
+        <Title
+          order={3}
           mb="xs"
-          style={{ 
+          style={{
             color: theme.colors.pink[6],
             fontWeight: 600,
           }}
         >
-          ✨ Step 3: Review & Edit Cards ✨
+          Step 3: Review & Edit Cards
         </Title>
-        
+
         <Text size="sm" c={theme.colors.gray[7]} mb="md">
           Verify each card is correct. You can edit the term or definition if
           needed, or remove cards that you don't want. When satisfied, click
@@ -51,10 +51,10 @@ export function ReviewStep({
         </Text>
 
         {state.processedCards.length === 0 && (
-          <Text 
-            size="sm" 
-            c={theme.colors.gray[6]} 
-            ta="center" 
+          <Text
+            size="sm"
+            c={theme.colors.gray[6]}
+            ta="center"
             p="xl"
             style={{
               backgroundColor: theme.colors.pink[0],
@@ -67,19 +67,23 @@ export function ReviewStep({
         )}
 
         {state.processedCards.map((card, index) => (
-          <Card 
-            key={index} 
-            p="md" 
+          <Card
+            key={index}
+            p="md"
             radius="md"
             style={{
               border: `1px solid ${theme.colors.pink[2]}`,
               backgroundColor: theme.white,
-              boxShadow: '0 2px 4px rgba(0,0,0,0.03)'
+              boxShadow: "0 2px 4px rgba(0,0,0,0.03)",
             }}
           >
             <Flex direction="column" gap="md">
               <TextInput
-                label={<Text fw={500} c={theme.colors.gray[7]}>Term</Text>}
+                label={
+                  <Text fw={500} c={theme.colors.gray[7]}>
+                    Term
+                  </Text>
+                }
                 value={card.term}
                 onChange={(e) =>
                   dispatch({
@@ -91,14 +95,18 @@ export function ReviewStep({
                 styles={{
                   input: {
                     borderColor: theme.colors.pink[1],
-                    '&:focus': {
+                    "&:focus": {
                       borderColor: theme.colors.pink[5],
-                    }
-                  }
+                    },
+                  },
                 }}
               />
               <TextInput
-                label={<Text fw={500} c={theme.colors.gray[7]}>Definition</Text>}
+                label={
+                  <Text fw={500} c={theme.colors.gray[7]}>
+                    Definition
+                  </Text>
+                }
                 value={card.definition}
                 onChange={(e) =>
                   dispatch({
@@ -110,10 +118,10 @@ export function ReviewStep({
                 styles={{
                   input: {
                     borderColor: theme.colors.pink[1],
-                    '&:focus': {
+                    "&:focus": {
                       borderColor: theme.colors.pink[5],
-                    }
-                  }
+                    },
+                  },
                 }}
               />
               <Group justify="flex-end">
@@ -123,7 +131,7 @@ export function ReviewStep({
                   radius="md"
                   onClick={() => dispatch({ type: "REMOVE_CARD", index })}
                   style={{
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+                    boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
                   }}
                 >
                   Remove
@@ -134,16 +142,16 @@ export function ReviewStep({
         ))}
 
         <Divider my="lg" color={theme.colors.pink[1]} />
-        
+
         <Flex justify="space-between">
-          <Button 
-            variant="outline" 
-            onClick={onBack} 
+          <Button
+            variant="outline"
+            onClick={onBack}
             disabled={loading}
             color="pink"
             radius="md"
             style={{
-              boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+              boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
             }}
           >
             Back
@@ -154,7 +162,7 @@ export function ReviewStep({
             color="pink"
             radius="md"
             style={{
-              boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+              boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
             }}
           >
             Save Cards

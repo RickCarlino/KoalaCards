@@ -7,6 +7,7 @@ import {
   useMantineTheme,
   Group,
 } from "@mantine/core";
+import { linkStyle } from "../styles";
 import { Grade } from "femto-fsrs";
 import Link from "next/link";
 import { QuizState } from "./types";
@@ -36,7 +37,7 @@ export function FeedbackRow({ quizState }: FeedbackRowProps) {
             <Link
               target="_blank"
               href={`/cards/${quizState.quiz.cardId}`}
-              style={{ color: theme.colors.blue[6], textDecoration: "none" }}
+              style={linkStyle(theme)}
             >
               {quizState.quiz.term}
             </Link>

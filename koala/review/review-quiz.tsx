@@ -6,6 +6,7 @@ import { LangCode } from "@/koala/shared-types";
 import { trpc } from "@/koala/trpc-config";
 import { useVoiceRecorder } from "@/koala/use-recorder";
 import { Button, Stack, Text, Box, Title } from "@mantine/core";
+import { textShadowStyle } from "../styles";
 import { useHotkeys } from "@mantine/hooks";
 import { Grade } from "femto-fsrs";
 import { useEffect, useState } from "react";
@@ -43,7 +44,7 @@ export const ReviewQuiz: QuizComp = ({ quiz, onComplete, onGraded }) => {
     playFX("/listening-beep.wav");
   }, [card.term]);
   const voiceRecorder = useVoiceRecorder(async (audio: Blob) => {
-    setLastAttemptWrong(null); // clear any old “wrong attempt” message
+    setLastAttemptWrong(null); // clear any old "wrong attempt" message
     setIsThinking(true);
 
     const wavBlob = await convertBlobToWav(audio);
@@ -95,7 +96,12 @@ export const ReviewQuiz: QuizComp = ({ quiz, onComplete, onGraded }) => {
 
   return (
     <Stack gap="md">
-      <Title order={2} ta="center" size="h3">
+      <Title 
+        order={2} 
+        ta="center" 
+        size="h3"
+        style={textShadowStyle}
+      >
         {isThinking ? "Grading Response..." : "Let's Try Again"}
       </Title>
       <Text size="lg" fw={700}>
@@ -123,11 +129,16 @@ export const ReviewQuiz: QuizComp = ({ quiz, onComplete, onGraded }) => {
       </Box>
 
       <Stack gap="md" mt="md">
-        <Button onClick={() => playAudio(card.termAudio)} fullWidth size="md">
+        <Button 
+          onClick={() => playAudio(card.termAudio)} 
+          fullWidth 
+          size="md"
+          color="pink"
+        >
           Play Audio Again
         </Button>
         <Button
-          color={voiceRecorder.isRecording ? "red" : "blue"}
+          color={voiceRecorder.isRecording ? "red" : "pink"}
           onClick={() =>
             voiceRecorder.isRecording
               ? voiceRecorder.stop()
