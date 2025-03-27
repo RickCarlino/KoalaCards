@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   AppShell,
   Burger,
@@ -153,28 +154,17 @@ const NavBar = ({ children }: NavBarProps) => {
           />
           <Group>
             <Link href="/" style={{ textDecoration: "none" }}>
-              <Text
-                size="xl"
-                fw={700}
-                role="img"
-                aria-label="koala"
+              <Image 
+                src="/nav.png" 
+                alt="Koala Cards Logo" 
+                width={150} 
+                height={50}
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
+                  display: "block",
+                  objectFit: "contain", // Maintain aspect ratio within bounds
+                  maxHeight: "100%",
                 }}
-              >
-                <span
-                  style={{
-                    background: `linear-gradient(45deg, ${theme.colors.pink[5]}, ${theme.colors.pink[7]})`,
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                    textShadow: "0px 1px 2px rgba(0,0,0,0.1)",
-                  }}
-                >
-                  Koala Cards
-                </span>
-              </Text>
+              />
             </Link>
           </Group>
         </Group>
