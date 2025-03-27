@@ -68,7 +68,11 @@ export const authOptions: AuthOptions = {
   adapter: PrismaAdapter(prismaClient),
   providers: [
     clientId && clientSecret
-      ? GoogleProvider({ clientId, clientSecret })
+      ? GoogleProvider({
+          clientId,
+          clientSecret,
+          allowDangerousEmailAccountLinking: true,
+        })
       : EmailProvider(EMAIL_SERVER_OPTIONS),
   ],
 };
