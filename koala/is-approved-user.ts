@@ -15,10 +15,22 @@ async function deleteInactiveUser(id: string, email: string | null) {
   if (isApprovedUser(id)) {
     return;
   }
+  const cards = await prismaClient.card.findMany({
+    where: {
+      flagged: true,
+      userId: id,
+    },
+  });
+
+  await prismaClient.quiz.deleteMany({
+    where: {
+      cardId: { in: cards.map((c) => c.id) },
+    },
+  });
 
   await prismaClient.card.deleteMany({
     where: {
-      userId: id,
+      id: { in: cards.map((c) => c.id) },
     },
   });
 
