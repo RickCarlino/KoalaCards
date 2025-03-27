@@ -3,21 +3,22 @@ import {
   DeckWithReviewInfo,
 } from "@/koala/decks/decks-with-review-info";
 import { getServersideUser } from "@/koala/get-serverside-user";
+import { buttonShadow } from "@/koala/styles";
 import { trpc } from "@/koala/trpc-config";
-import Link from "next/link";
-import { GetServerSideProps } from "next/types";
 import {
-  Button,
-  Group,
-  Paper,
-  Title,
-  Text,
-  Container,
-  Card,
   Badge,
   Box,
+  Button,
+  Card,
+  Container,
+  Group,
+  Paper,
+  Text,
+  Title,
   useMantineTheme,
 } from "@mantine/core";
+import Link from "next/link";
+import { GetServerSideProps } from "next/types";
 import { useState } from "react";
 
 type ReviewPageProps = {
@@ -85,7 +86,7 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
             style={{
               display: "block",
               margin: "0 auto",
-              boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+              ...buttonShadow,
             }}
           >
             Add Cards
@@ -129,7 +130,7 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
           style={{
             display: "block",
             margin: "0 auto 20px auto",
-            boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+            ...buttonShadow,
           }}
         >
           {showDeleteButton ? "Cancel Deletion" : "Delete a Deck"}

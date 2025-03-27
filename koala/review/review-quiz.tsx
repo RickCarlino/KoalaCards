@@ -96,12 +96,7 @@ export const ReviewQuiz: QuizComp = ({ quiz, onComplete, onGraded }) => {
 
   return (
     <Stack gap="md">
-      <Title 
-        order={2} 
-        ta="center" 
-        size="h3"
-        style={textShadowStyle}
-      >
+      <Title order={2} ta="center" size="h3" style={textShadowStyle}>
         {isThinking ? "Grading Response..." : "Let's Try Again"}
       </Title>
       <Text size="lg" fw={700}>
@@ -129,9 +124,9 @@ export const ReviewQuiz: QuizComp = ({ quiz, onComplete, onGraded }) => {
       </Box>
 
       <Stack gap="md" mt="md">
-        <Button 
-          onClick={() => playAudio(card.termAudio)} 
-          fullWidth 
+        <Button
+          onClick={() => playAudio(card.termAudio)}
+          fullWidth
           size="md"
           color="pink"
         >

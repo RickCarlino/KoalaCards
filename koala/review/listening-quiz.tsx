@@ -189,12 +189,7 @@ const PlayPhase = ({
 
   return (
     <Stack gap="md">
-      <Title 
-        order={2} 
-        ta="center" 
-        size="h3"
-        style={textShadowStyle}
-      >
+      <Title order={2} ta="center" size="h3" style={textShadowStyle}>
         Listen and Repeat
       </Title>
       {showTerm && (
@@ -204,13 +199,7 @@ const PlayPhase = ({
       )}
       {isDictation && <Text size="md">Definition: {definition}</Text>}
       <Box my="md">
-        <Button 
-          onClick={onPlayClick} 
-          fullWidth 
-          size="lg" 
-          h={50}
-          color="pink"
-        >
+        <Button onClick={onPlayClick} fullWidth size="lg" h={50} color="pink">
           Listen to Audio and Proceed
         </Button>
       </Box>
@@ -259,12 +248,7 @@ const RecordPhase = ({
     : "Repeat the Phrase Without Reading";
   return (
     <Stack gap="md">
-      <Title 
-        order={2} 
-        ta="center" 
-        size="h3"
-        style={textShadowStyle}
-      >
+      <Title order={2} ta="center" size="h3" style={textShadowStyle}>
         {header}
       </Title>
       {userInput ? <VisualDiff expected={term} actual={userInput} /> : ""}
@@ -281,11 +265,7 @@ const RecordPhase = ({
         </Button>
       </Box>
       <Group grow>
-        <Button 
-          onClick={onPlayClick} 
-          size="md"
-          color="pink"
-        >
+        <Button onClick={onPlayClick} size="md" color="pink">
           Play Audio Again
         </Button>
         <FailButton onClick={onFailClick} />
@@ -305,12 +285,7 @@ const DonePhase = ({ userInput, onDifficultySelect, quiz }: DonePhaseProps) => {
   const { term, definition } = quiz;
   return (
     <Stack gap="md">
-      <Title 
-        order={2} 
-        ta="center" 
-        size="h3"
-        style={textShadowStyle}
-      >
+      <Title order={2} ta="center" size="h3" style={textShadowStyle}>
         Select Next Review Date
       </Title>
       <VisualDiff expected={term} actual={userInput || term} />

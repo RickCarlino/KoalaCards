@@ -11,6 +11,7 @@ import {
   Group,
 } from "@mantine/core";
 import { ReviewStepProps } from "../types/create-types";
+import { buttonShadow, paperStyle, titleStyle } from "../styles";
 
 export function ReviewStep({
   state,
@@ -22,24 +23,12 @@ export function ReviewStep({
   const theme = useMantineTheme();
 
   return (
-    <Paper
-      withBorder
-      p="xl"
-      radius="lg"
-      style={{
-        border: `1px solid ${theme.colors.pink[2]}`,
-        background: "rgba(255, 255, 255, 0.8)",
-        boxShadow: "0 4px 8px rgba(0,0,0,0.05)",
-      }}
-    >
+    <Paper withBorder p="xl" radius="lg" style={paperStyle(theme)}>
       <Flex direction="column" gap="md">
         <Title
           order={3}
           mb="xs"
-          style={{
-            color: theme.colors.pink[6],
-            fontWeight: 600,
-          }}
+          style={titleStyle(theme)}
         >
           Step 3: Review & Edit Cards
         </Title>
@@ -130,9 +119,7 @@ export function ReviewStep({
                   color="red"
                   radius="md"
                   onClick={() => dispatch({ type: "REMOVE_CARD", index })}
-                  style={{
-                    boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-                  }}
+                  style={buttonShadow}
                 >
                   Remove
                 </Button>
@@ -150,9 +137,7 @@ export function ReviewStep({
             disabled={loading}
             color="pink"
             radius="md"
-            style={{
-              boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-            }}
+            style={buttonShadow}
           >
             Back
           </Button>
@@ -161,9 +146,7 @@ export function ReviewStep({
             disabled={loading || state.processedCards.length === 0}
             color="pink"
             radius="md"
-            style={{
-              boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-            }}
+            style={buttonShadow}
           >
             Save Cards
           </Button>

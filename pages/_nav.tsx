@@ -42,7 +42,6 @@ const NavLink = ({
     fontSize: theme.fontSizes.sm,
     fontWeight: 500,
     transition: "all 0.2s ease",
-    border: "1px solid transparent",
   };
 
   const activeStyles = {
@@ -154,10 +153,10 @@ const NavBar = ({ children }: NavBarProps) => {
           />
           <Group>
             <Link href="/" style={{ textDecoration: "none" }}>
-              <Image 
-                src="/nav.png" 
-                alt="Koala Cards Logo" 
-                width={150} 
+              <Image
+                src="/nav.png"
+                alt="Koala Cards Logo"
+                width={150}
                 height={50}
                 style={{
                   display: "block",

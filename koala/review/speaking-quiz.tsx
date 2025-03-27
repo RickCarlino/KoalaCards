@@ -239,12 +239,7 @@ export const SpeakingQuiz: QuizComp = (props) => {
 
   return (
     <Stack gap="md">
-      <Title 
-        order={2} 
-        ta="center" 
-        size="h3"
-        style={textShadowStyle}
-      >
+      <Title order={2} ta="center" size="h3" style={textShadowStyle}>
         {getHeaderText()}
       </Title>
       <Text size="lg" fw={500}>

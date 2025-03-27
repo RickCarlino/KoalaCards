@@ -14,6 +14,7 @@ import {
 import { LangCode, supportedLanguages } from "@/koala/shared-types";
 import { getLangName } from "@/koala/get-lang-name";
 import { DeckStepProps } from "../types/create-types";
+import { buttonShadow, paperStyle, titleStyle } from "../styles";
 
 const DEFAULT_LANG: LangCode = "ko";
 
@@ -60,24 +61,12 @@ export function DeckStep({ decks, state, dispatch, onNext }: DeckStepProps) {
   })();
 
   return (
-    <Paper
-      withBorder
-      p="xl"
-      radius="lg"
-      style={{
-        border: `1px solid ${theme.colors.pink[2]}`,
-        background: "rgba(255, 255, 255, 0.8)",
-        boxShadow: "0 4px 8px rgba(0,0,0,0.05)",
-      }}
-    >
+    <Paper withBorder p="xl" radius="lg" style={paperStyle(theme)}>
       <Flex direction="column" gap="md">
         <Title
           order={3}
           mb="xs"
-          style={{
-            color: theme.colors.pink[6],
-            fontWeight: 600,
-          }}
+          style={titleStyle(theme)}
         >
           Step 1: Select or Create Deck
         </Title>
@@ -204,9 +193,7 @@ export function DeckStep({ decks, state, dispatch, onNext }: DeckStepProps) {
             color="pink"
             radius="md"
             size="md"
-            style={{
-              boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-            }}
+            style={buttonShadow}
           >
             Next
           </Button>
