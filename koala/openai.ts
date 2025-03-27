@@ -18,7 +18,7 @@ export async function gptCall(opts: ChatCompletionCreateParamsNonStreaming) {
 
 const SENTENCE = `You are a language learning flash card app.
 You are creating a comic to help users remember the flashcard above.
-It is a fun, single-frame, black and white comic that illustrates the sentence.
+It is a fun, single-frame comic that illustrates the sentence.
 Create a DALL-e prompt to create this comic for the card above.
 Do not add speech bubbles or text. It will give away the answer!
 All characters must be Koalas.`;
