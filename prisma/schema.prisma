@@ -84,6 +84,7 @@ model Deck {
   Card         Card[]
   published    Boolean @default(false)
   parentDeckId Int?
+  createdAt          DateTime @default(now())
 
   @@unique([name, userId])
   @@index([userId])

@@ -13,7 +13,7 @@ import {
   Box,
   Divider,
 } from "@mantine/core";
-import { IconBulb, IconList, IconTable } from "@tabler/icons-react";
+import { IconBulb, IconList, IconTable, IconUsers } from "@tabler/icons-react";
 
 /*
 There are three ways to create flashcards in Koala Cards:
@@ -94,6 +94,14 @@ const CreatePage = () => {
 
   const features = [
     {
+      icon: <IconUsers size={rem(30)} />,
+      title: "Community Decks",
+      description:
+        "Explore decks created by the community and share your own collections with others.",
+      buttonText: "View Decks",
+      onClick: () => router.push("/shared-decks"),
+    },
+    {
       icon: <IconBulb size={rem(30)} />,
       title: "From Vibes",
       description:
@@ -125,7 +133,7 @@ const CreatePage = () => {
       mt={{ base: "md", sm: "xl" }}
       style={{ position: "relative" }}
     >
-      <Box mb="xl" ta="center">
+      <Box mb="xl" style={{ textAlign: "center" }}>
         <Title order={1} mb="sm">
           Create New Cards
         </Title>
@@ -160,7 +168,7 @@ const CreatePage = () => {
           borderRadius: theme.radius.md,
         }}
       >
-        <Text ta="center" fw={500}>
+        <Text style={{ textAlign: "center" }} fw={500}>
           Not sure which to choose? Start with "Create by Vibe" for the easiest
           experience!
         </Text>
