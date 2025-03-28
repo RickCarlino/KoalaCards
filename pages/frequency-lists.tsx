@@ -233,8 +233,8 @@ const FrequencyListsPage = () => {
                     {list.url.includes("wiktionary")
                       ? "Wiktionary"
                       : list.url.includes("talkinarabic")
-                      ? "TalkInArabic"
-                      : "Website"}
+                        ? "TalkInArabic"
+                        : "Website"}
                   </Anchor>
                   <Text fw={500} mt="md" size="sm" c="dimmed">
                     Source: {list.source}

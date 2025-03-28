@@ -2,9 +2,10 @@ import { prismaClient } from "../prisma-client";
 
 export type DeckWithReviewInfo = {
   id: number;
-  deckName: string;
+  name: string;
   quizzesDue: number;
   newQuizzes: number;
+  published: boolean;
 };
 
 const fetchDueQuizzes = (userId: string) => {
@@ -49,7 +50,7 @@ const fetchCardToDeckMap = async (cardIds: number[]) => {
 const fetchUserDecks = (userId: string) =>
   prismaClient.deck.findMany({
     where: { userId },
-    select: { id: true, name: true },
+    select: { id: true, name: true, published: true },
   });
 
 export const decksWithReviewInfo = async (
@@ -85,8 +86,9 @@ export const decksWithReviewInfo = async (
   const decks = await fetchUserDecks(userId);
   return decks.map((deck) => ({
     id: deck.id,
-    deckName: deck.name,
+    name: deck.name,
     quizzesDue: quizCounts[deck.id]?.due || 0,
     newQuizzes: quizCounts[deck.id]?.new || 0,
+    published: deck.published,
   }));
 };

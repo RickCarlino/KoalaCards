@@ -3,20 +3,21 @@ import {
   DeckWithReviewInfo,
 } from "@/koala/decks/decks-with-review-info";
 import { getServersideUser } from "@/koala/get-serverside-user";
-import { buttonShadow } from "@/koala/styles";
 import { trpc } from "@/koala/trpc-config";
 import {
   Badge,
-  Box,
   Button,
   Card,
   Container,
+  Grid,
   Group,
-  Paper,
+  Switch,
   Text,
+  TextInput,
   Title,
   useMantineTheme,
 } from "@mantine/core";
+import { IconPencil, IconCheck, IconX } from "@tabler/icons-react";
 import Link from "next/link";
 import { GetServerSideProps } from "next/types";
 import { useState } from "react";
@@ -47,51 +48,186 @@ export const getServerSideProps: GetServerSideProps<ReviewPageProps> = async (
 };
 
 export default function ReviewPage({ decks }: ReviewPageProps) {
-  const deleteDeck = trpc.deleteDeck.useMutation();
-  const [showDeleteButton, setShowDeleteButton] = useState(false);
   const theme = useMantineTheme();
+
+  function DeckCard({ deck }: { deck: DeckWithReviewInfo }) {
+    const [isEditing, setIsEditing] = useState(false);
+    const [title, setTitle] = useState(deck.name);
+    const updateDeckMutation = trpc.updateDeck.useMutation();
+    const deleteDeckMutation = trpc.deleteDeck.useMutation();
+
+    return (
+      <Card
+        shadow="md"
+        padding="md"
+        radius="lg"
+        withBorder
+        style={{
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+        }}
+      >
+        <Card.Section
+          style={{
+            backgroundColor: theme.colors.pink[0],
+            padding: theme.spacing.md,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          {isEditing ? (
+            <TextInput
+              value={title}
+              onChange={(e) => setTitle(e.currentTarget.value)}
+              autoFocus
+              variant="unstyled"
+              style={{ flex: 1 }}
+            />
+          ) : (
+            <Text fw={700} size="xl" style={{ flex: 1, textAlign: "center" }}>
+              {deck.name}
+            </Text>
+          )}
+          <Group>
+            {isEditing ? (
+              <>
+                <Button
+                  variant="subtle"
+                  color="green"
+                  radius="xl"
+                  onClick={async () => {
+                    if (title !== deck.name && title.trim() !== "") {
+                      await updateDeckMutation.mutateAsync({
+                        deckId: deck.id,
+                        published: deck.published,
+                        name: title,
+                      });
+                    }
+                    setIsEditing(false);
+                    window.location.reload();
+                  }}
+                >
+                  <IconCheck size={16} />
+                </Button>
+                <Button
+                  variant="subtle"
+                  color="red"
+                  radius="xl"
+                  onClick={() => {
+                    setIsEditing(false);
+                    setTitle(deck.name);
+                  }}
+                >
+                  <IconX size={16} />
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="subtle"
+                color="blue"
+                radius="xl"
+                onClick={() => setIsEditing(true)}
+              >
+                <IconPencil size={16} />
+              </Button>
+            )}
+          </Group>
+        </Card.Section>
+        <Group justify="apart" mt="md">
+          <Badge color="pink" variant="light" size="lg">
+            {deck.quizzesDue} Due
+          </Badge>
+          <Badge color="blue" variant="light" size="lg">
+            {deck.newQuizzes} New
+          </Badge>
+        </Group>
+        <Group mt="md" grow>
+          <Button
+            variant="outline"
+            color="red"
+            radius="xl"
+            onClick={async () => {
+              if (!confirm("Are you sure you want to delete this deck?"))
+                return;
+              await deleteDeckMutation.mutateAsync({ deckId: deck.id });
+              window.location.reload();
+            }}
+          >
+            Delete
+          </Button>
+          <Button
+            component={Link}
+            href={`/review/${deck.id}`}
+            variant="filled"
+            color="gray"
+            radius="xl"
+          >
+            Study
+          </Button>
+        </Group>
+        <Group mt="md" grow align="center">
+          <Switch
+            checked={deck.published}
+            onChange={async (event) => {
+              const willPublish = event.currentTarget.checked;
+              if (
+                willPublish &&
+                !confirm("Are you sure you want to share this deck?")
+              ) {
+                return;
+              }
+              await updateDeckMutation.mutateAsync({
+                deckId: deck.id,
+                published: event.currentTarget.checked,
+                name: deck.name,
+              });
+              window.location.reload();
+            }}
+            label="Published"
+          />
+        </Group>
+      </Card>
+    );
+  }
 
   if (decks.length === 0) {
     return (
       <Container size="md" py="xl">
-        <Paper
-          p="xl"
+        <Card
+          shadow="md"
+          padding="xl"
           radius="lg"
-          shadow="sm"
+          withBorder
           style={{
-            border: `1px solid ${theme.colors.pink[1]}`,
-            background: "rgba(255, 255, 255, 0.8)",
+            background: "rgba(255, 255, 255, 0.9)",
+            border: `2px solid ${theme.colors.pink[3]}`,
           }}
         >
           <Title
             order={1}
             mb="lg"
-            style={{
-              color: theme.colors.pink[6],
-              textAlign: "center",
-              fontWeight: 700,
-            }}
+            style={{ textAlign: "center", color: theme.colors.pink[6] }}
           >
-            Welcome! 🌸
+            Welcome to Koala Cards 🌸
           </Title>
-          <Text ta="center" size="lg" mb="xl">
-            Please add some cards to get started with your learning journey
+          <Text size="lg" mb="xl" style={{ textAlign: "center" }}>
+            Start your learning journey by adding some cards. Your progress
+            starts here!
           </Text>
           <Button
             component={Link}
             href="/create"
             color="pink"
-            radius="md"
+            radius="xl"
             size="lg"
-            style={{
-              display: "block",
-              margin: "0 auto",
-              ...buttonShadow,
-            }}
+            fullWidth
           >
             Add Cards
           </Button>
-        </Paper>
+        </Card>
       </Container>
     );
   }
@@ -99,122 +235,22 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
   const sortedByDue = decks.sort((b, a) => a.quizzesDue - b.quizzesDue);
 
   return (
-    <Container size="md" py="xl">
-      <Paper
-        p="xl"
-        radius="lg"
-        shadow="sm"
-        style={{
-          border: `1px solid ${theme.colors.pink[1]}`,
-          background: "rgba(255, 255, 255, 0.8)",
-        }}
+    <Container size="lg" py="md">
+      <Title
+        order={2}
+        mt="md"
+        mb="lg"
+        style={{ textAlign: "center", color: theme.colors.pink[6] }}
       >
-        <Title
-          order={1}
-          mb="lg"
-          style={{
-            color: theme.colors.pink[6],
-            textAlign: "center",
-            fontWeight: 700,
-          }}
-        >
-          Your Decks
-        </Title>
-
-        <Button
-          onClick={() => setShowDeleteButton((prev) => !prev)}
-          mb="xl"
-          variant={showDeleteButton ? "filled" : "outline"}
-          color="pink"
-          radius="md"
-          style={{
-            display: "block",
-            margin: "0 auto 20px auto",
-            ...buttonShadow,
-          }}
-        >
-          {showDeleteButton ? "Cancel Deletion" : "Delete a Deck"}
-        </Button>
-
-        <Box>
-          {sortedByDue.map((deck) => {
-            const cardsDue = deck.quizzesDue ? `${deck.quizzesDue} due` : "";
-            const cardsNew = deck.newQuizzes ? `${deck.newQuizzes} new` : "";
-            const cards = [cardsDue, cardsNew].filter(Boolean).join(", ");
-
-            return (
-              <Card
-                key={deck.id}
-                mb="md"
-                padding="md"
-                radius="md"
-                style={{
-                  borderLeft: `4px solid ${theme.colors.pink[5]}`,
-                  transition: "transform 0.2s ease, box-shadow 0.2s ease",
-                  "&:hover": {
-                    transform: "translateY(-2px)",
-                    boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
-                  },
-                }}
-              >
-                <Group justify="space-between" align="center">
-                  <Group>
-                    {showDeleteButton && (
-                      <Button
-                        color="red"
-                        size="xs"
-                        variant="light"
-                        radius="xl"
-                        onClick={async () => {
-                          if (!confirm("Are you sure?")) return;
-                          await deleteDeck
-                            .mutateAsync({ deckId: deck.id })
-                            .then(() => window.location.reload());
-                        }}
-                      >
-                        Delete
-                      </Button>
-                    )}
-                    <Link
-                      href={`/review/${deck.id}`}
-                      style={{ textDecoration: "none" }}
-                    >
-                      <Text size="lg" fw={600} c={theme.colors.gray[8]}>
-                        {deck.deckName}
-                      </Text>
-                    </Link>
-                  </Group>
-
-                  {cards && (
-                    <Group gap="xs">
-                      {deck.quizzesDue > 0 && (
-                        <Badge
-                          color="pink"
-                          variant="light"
-                          size="lg"
-                          radius="md"
-                        >
-                          {deck.quizzesDue} due
-                        </Badge>
-                      )}
-                      {deck.newQuizzes > 0 && (
-                        <Badge
-                          color="blue"
-                          variant="light"
-                          size="lg"
-                          radius="md"
-                        >
-                          {deck.newQuizzes} new
-                        </Badge>
-                      )}
-                    </Group>
-                  )}
-                </Group>
-              </Card>
-            );
-          })}
-        </Box>
-      </Paper>
+        Your Decks
+      </Title>
+      <Grid gutter="xl">
+        {sortedByDue.map((deck) => (
+          <Grid.Col key={deck.id} span={{ base: 12, sm: 6, md: 4, lg: 3 }}>
+            <DeckCard deck={deck} />
+          </Grid.Col>
+        ))}
+      </Grid>
     </Container>
   );
 }

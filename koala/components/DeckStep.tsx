@@ -63,11 +63,7 @@ export function DeckStep({ decks, state, dispatch, onNext }: DeckStepProps) {
   return (
     <Paper withBorder p="xl" radius="lg" style={paperStyle(theme)}>
       <Flex direction="column" gap="md">
-        <Title
-          order={3}
-          mb="xs"
-          style={titleStyle(theme)}
-        >
+        <Title order={3} mb="xs" style={titleStyle(theme)}>
           Step 1: Select or Create Deck
         </Title>
         <Text size="sm" c="dimmed" mb="md">
