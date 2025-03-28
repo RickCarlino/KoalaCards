@@ -16,8 +16,9 @@ import {
   TextInput,
   Title,
   useMantineTheme,
+  Center,
 } from "@mantine/core";
-import { IconPencil, IconCheck, IconX } from "@tabler/icons-react";
+import { IconPencil, IconCheck, IconX, IconTrash } from "@tabler/icons-react";
 import Link from "next/link";
 import { GetServerSideProps } from "next/types";
 import { useState } from "react";
@@ -124,7 +125,8 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
                   <IconX size={16} />
                 </Button>
               </>
-            ) : (
+          ) : (
+            <>
               <Button
                 variant="subtle"
                 color="blue"
@@ -133,6 +135,20 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
               >
                 <IconPencil size={16} />
               </Button>
+              <Button
+                variant="subtle"
+                color="red"
+                radius="xl"
+                onClick={async () => {
+                  if (!confirm("Are you sure you want to delete this deck?"))
+                    return;
+                  await deleteDeckMutation.mutateAsync({ deckId: deck.id });
+                  window.location.reload();
+                }}
+              >
+                <IconTrash size={16} />
+              </Button>
+            </>
             )}
           </Group>
         </Card.Section>
@@ -144,30 +160,19 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
             {deck.newQuizzes} New
           </Badge>
         </Group>
-        <Group mt="md" grow>
-          <Button
-            variant="outline"
-            color="red"
-            radius="xl"
-            onClick={async () => {
-              if (!confirm("Are you sure you want to delete this deck?"))
-                return;
-              await deleteDeckMutation.mutateAsync({ deckId: deck.id });
-              window.location.reload();
-            }}
-          >
-            Delete
-          </Button>
+        <Center mt="md" style={{ width: "100%" }}>
           <Button
             component={Link}
             href={`/review/${deck.id}`}
             variant="filled"
             color="gray"
             radius="xl"
+            size="sm"
+            style={{ whiteSpace: 'normal', textAlign: 'center' }}
           >
             Study
           </Button>
-        </Group>
+        </Center>
         <Group mt="md" grow align="center">
           <Switch
             checked={deck.published}
@@ -246,7 +251,7 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
       </Title>
       <Grid gutter="xl">
         {sortedByDue.map((deck) => (
-          <Grid.Col key={deck.id} span={{ base: 12, sm: 6, md: 4, lg: 3 }}>
+          <Grid.Col key={deck.id} span={12}>
             <DeckCard deck={deck} />
           </Grid.Col>
         ))}
