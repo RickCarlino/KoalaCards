@@ -13,6 +13,7 @@ import {
 } from "@mantine/core";
 import { useRouter } from "next/router";
 import React from "react";
+import { trpc } from "../koala/trpc-config";
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const { search, lang } = context.query;
@@ -63,6 +64,14 @@ interface SharedDecksProps {
 
 const SharedDecks = ({ decks, languages }: SharedDecksProps) => {
   const router = useRouter();
+  const reportDeckMutation = trpc.reportDeck.useMutation();
+  const copyDeckMutation = trpc.copyDeck.useMutation();
+  const handleReport = (deckId: number) => {
+    reportDeckMutation.mutate({ deckId });
+  };
+  const handleImport = (deckId: number) => {
+    copyDeckMutation.mutate({ deckId });
+  };
   const searchQuery = router.query.search || "";
   const langQuery = router.query.lang || "";
   
@@ -129,6 +138,14 @@ const SharedDecks = ({ decks, languages }: SharedDecksProps) => {
                     : new Date(deck.createdAt).toLocaleDateString()
                 }
               </Text>
+              <Group mt="md">
+                <Button variant="outline" color="red" size="xs" onClick={() => handleReport(deck.id)}>
+                  Report
+                </Button>
+                <Button variant="outline" size="xs" onClick={() => handleImport(deck.id)}>
+                  Import
+                </Button>
+              </Group>
             </Card>
           ))}
         </SimpleGrid>
