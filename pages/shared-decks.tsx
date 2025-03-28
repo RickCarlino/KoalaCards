@@ -10,28 +10,33 @@ import {
   TextInput,
   Button,
   Select,
+  Pagination,
 } from "@mantine/core";
 import { useRouter } from "next/router";
 import React from "react";
 import { trpc } from "../koala/trpc-config";
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
-  const { search, lang } = context.query;
+  const { search, lang, page } = context.query;
+  const pageNum = parseInt((page as string) || "1", 10);
+  const filter = {
+    ...(search ? { name: { contains: String(search), mode: "insensitive" as const } } : {}),
+    ...(lang && lang !== "" ? { langCode: String(lang) } : {}),
+  };
+  const take = 15;
+  const totalCount = await prisma.deck.count({ where: filter });
+  const totalPages = Math.ceil(totalCount / take);
   const decksRaw = await prisma.deck.findMany({
-    where: {
-      ...(search ? { name: { contains: String(search), mode: "insensitive" } } : {}),
-      ...(lang && lang !== "" ? { langCode: String(lang) } : {}),
-    },
-    include: {
-      _count: { select: { Card: true } }
-    }
+    where: filter,
+    include: { _count: { select: { Card: true } } },
+    skip: (pageNum - 1) * take,
+    take,
   });
   // Since Deck model does not have a createdAt field, provide a fallback null
   const decks = decksRaw.map((deck) => ({
     ...deck,
     createdAt: null,
   }));
-  
   const languagesGroup = await prisma.deck.groupBy({
     by: ["langCode"],
   });
@@ -41,6 +46,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     props: {
       decks,
       languages,
+      page: pageNum,
+      totalPages,
     },
   };
 };
@@ -60,9 +67,11 @@ interface Deck {
 interface SharedDecksProps {
   decks: Deck[];
   languages: string[];
+  page: number;
+  totalPages: number;
 }
 
-const SharedDecks = ({ decks, languages }: SharedDecksProps) => {
+const SharedDecks = ({ decks, languages, page, totalPages }: SharedDecksProps) => {
   const router = useRouter();
   const reportDeckMutation = trpc.reportDeck.useMutation();
   const copyDeckMutation = trpc.copyDeck.useMutation();
@@ -103,7 +112,7 @@ const SharedDecks = ({ decks, languages }: SharedDecksProps) => {
           style={{ maxWidth: "150px" }}
           data={[
             { value: "", label: "All Languages" },
-            ...languages.map((lang) => ({ value: lang, label: lang }))
+            ...languages.map((lang) => ({ value: lang, label: lang })),
           ]}
         />
         <Button type="submit">Search</Button>
@@ -114,41 +123,54 @@ const SharedDecks = ({ decks, languages }: SharedDecksProps) => {
           No community decks available.
         </Text>
       ) : (
-        <SimpleGrid cols={1} spacing="md">
-          {decks.map((deck) => (
-            <Card key={deck.id} shadow="sm" padding="lg" radius="md" withBorder>
-              <Group justify="space-between" mb="sm">
-                <Title order={4}>{deck.name}</Title>
-              </Group>
-              <Text size="xs" color="dimmed" mb="xs">
-                Contains {deck._count.Card} cards
-              </Text>
-              <Text size="xs" color="dimmed" mb="sm">
-                By: {deck.userId}
-              </Text>
-              {deck.description && (
-                <Text size="sm" color="dimmed" mb="md">
-                  {deck.description}
+        <>
+          <SimpleGrid cols={1} spacing="md">
+            {decks.map((deck) => (
+              <Card key={deck.id} shadow="sm" padding="lg" radius="md" withBorder>
+                <Group justify="space-between" mb="sm">
+                  <Title order={4}>{deck.name}</Title>
+                </Group>
+                <Text size="xs" color="dimmed" mb="xs">
+                  Contains {deck._count.Card} cards
                 </Text>
-              )}
-              <Text size="xs" color="dimmed">
-                Created on: {
-                  !deck.createdAt || isNaN(new Date(deck.createdAt).getTime())
+                <Text size="xs" color="dimmed" mb="sm">
+                  By: {deck.userId}
+                </Text>
+                {deck.description && (
+                  <Text size="sm" color="dimmed" mb="md">
+                    {deck.description}
+                  </Text>
+                )}
+                <Text size="xs" color="dimmed">
+                  Created on:{" "}
+                  {(!deck.createdAt || isNaN(new Date(deck.createdAt).getTime()))
                     ? "N/A"
-                    : new Date(deck.createdAt).toLocaleDateString()
-                }
-              </Text>
-              <Group mt="md">
-                <Button variant="outline" color="red" size="xs" onClick={() => handleReport(deck.id)}>
-                  Report
-                </Button>
-                <Button variant="outline" size="xs" onClick={() => handleImport(deck.id)}>
-                  Import
-                </Button>
-              </Group>
-            </Card>
-          ))}
-        </SimpleGrid>
+                    : new Date(deck.createdAt).toLocaleDateString()}
+                </Text>
+                <Group mt="md" style={{ gap: "8px" }}>
+                  <Button variant="outline" color="red" size="xs" onClick={() => handleReport(deck.id)}>
+                    Report
+                  </Button>
+                  <Button variant="outline" size="xs" onClick={() => handleImport(deck.id)}>
+                    Import
+                  </Button>
+                </Group>
+              </Card>
+            ))}
+          </SimpleGrid>
+          <Group style={{ justifyContent: "center" }} mt="md">
+            <Pagination
+              value={page}
+              total={totalPages}
+              onChange={(newPage) =>
+                router.push({
+                  pathname: router.pathname,
+                  query: { ...router.query, page: newPage },
+                })
+              }
+            />
+          </Group>
+        </>
       )}
     </Container>
   );
