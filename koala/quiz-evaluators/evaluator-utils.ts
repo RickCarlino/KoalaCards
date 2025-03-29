@@ -8,8 +8,12 @@ function calculateCutoff(length: number): number {
 export function compare(l: string, r: string, cutoffOverride = 0): boolean {
   const sl = strip(l);
   const sr = strip(r);
-  const cutoff =
+  let cutoff =
     cutoffOverride || calculateCutoff(Math.max(sl.length, sr.length));
+  const containsNuumber = /\d/.test(l + r);
+  if (containsNuumber) {
+    cutoff = cutoff * 2;
+  }
 
   if (cutoff === 0) {
     return sl === sr;
