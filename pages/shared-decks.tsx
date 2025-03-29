@@ -20,8 +20,11 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   const { search, lang, page } = context.query;
   const pageNum = parseInt((page as string) || "1", 10);
   const filter = {
-    ...(search ? { name: { contains: String(search), mode: "insensitive" as const } } : {}),
+    ...(search
+      ? { name: { contains: String(search), mode: "insensitive" as const } }
+      : {}),
     ...(lang && lang !== "" ? { langCode: String(lang) } : {}),
+    published: true,
   };
   const take = 15;
   const totalCount = await prisma.deck.count({ where: filter });
@@ -41,7 +44,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     by: ["langCode"],
   });
   const languages = languagesGroup.map((item) => item.langCode);
-  
+
   return {
     props: {
       decks,
@@ -71,7 +74,12 @@ interface SharedDecksProps {
   totalPages: number;
 }
 
-const SharedDecks = ({ decks, languages, page, totalPages }: SharedDecksProps) => {
+const SharedDecks = ({
+  decks,
+  languages,
+  page,
+  totalPages,
+}: SharedDecksProps) => {
   const router = useRouter();
   const reportDeckMutation = trpc.reportDeck.useMutation();
   const copyDeckMutation = trpc.copyDeck.useMutation();
@@ -83,7 +91,7 @@ const SharedDecks = ({ decks, languages, page, totalPages }: SharedDecksProps) =
   };
   const searchQuery = router.query.search || "";
   const langQuery = router.query.lang || "";
-  
+
   return (
     <Container mt="xl">
       <Title order={1} mb="md" style={{ textAlign: "center" }}>
@@ -126,7 +134,13 @@ const SharedDecks = ({ decks, languages, page, totalPages }: SharedDecksProps) =
         <>
           <SimpleGrid cols={1} spacing="md">
             {decks.map((deck) => (
-              <Card key={deck.id} shadow="sm" padding="lg" radius="md" withBorder>
+              <Card
+                key={deck.id}
+                shadow="sm"
+                padding="lg"
+                radius="md"
+                withBorder
+              >
                 <Group justify="space-between" mb="sm">
                   <Title order={4}>{deck.name}</Title>
                 </Group>
@@ -143,15 +157,24 @@ const SharedDecks = ({ decks, languages, page, totalPages }: SharedDecksProps) =
                 )}
                 <Text size="xs" color="dimmed">
                   Created on:{" "}
-                  {(!deck.createdAt || isNaN(new Date(deck.createdAt).getTime()))
+                  {!deck.createdAt || isNaN(new Date(deck.createdAt).getTime())
                     ? "N/A"
                     : new Date(deck.createdAt).toLocaleDateString()}
                 </Text>
                 <Group mt="md" style={{ gap: "8px" }}>
-                  <Button variant="outline" color="red" size="xs" onClick={() => handleReport(deck.id)}>
+                  <Button
+                    variant="outline"
+                    color="red"
+                    size="xs"
+                    onClick={() => handleReport(deck.id)}
+                  >
                     Report
                   </Button>
-                  <Button variant="outline" size="xs" onClick={() => handleImport(deck.id)}>
+                  <Button
+                    variant="outline"
+                    size="xs"
+                    onClick={() => handleImport(deck.id)}
+                  >
                     Import
                   </Button>
                 </Group>
