@@ -104,7 +104,7 @@ async function run(props: GrammarCorrectionProps): Promise<Explanation> {
           ].join("\n"),
         },
       ],
-      model: "gpt-4o-mini",
+      model: "gpt-4o",
       store: true,
       temperature: 0.1,
     });

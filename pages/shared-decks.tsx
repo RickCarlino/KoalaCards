@@ -15,6 +15,7 @@ import {
 import { useRouter } from "next/router";
 import React from "react";
 import { trpc } from "../koala/trpc-config";
+import Link from "next/link";
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const { search, lang, page } = context.query;
@@ -128,7 +129,7 @@ const SharedDecks = ({
 
       {decks.length === 0 ? (
         <Text color="dimmed" style={{ textAlign: "center" }}>
-          No community decks available.
+          No community decks available. Want to try an <Link href="/create-vibe">AI generated deck</Link> instead?
         </Text>
       ) : (
         <>

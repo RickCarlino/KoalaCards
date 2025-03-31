@@ -34,7 +34,7 @@ export const createDallEPrompt = async (term: string, definition: string) => {
   const shortCard = term.split(" ").length < 2;
   const prompt = shortCard ? SINGLE_WORD : SENTENCE;
   const hm = await gptCall({
-    model: "gpt-4o-mini",
+    model: "gpt-4o",
     messages: [
       {
         role: "user",
