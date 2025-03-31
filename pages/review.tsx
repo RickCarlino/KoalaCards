@@ -17,6 +17,7 @@ import {
   Title,
   useMantineTheme,
   Center,
+  NumberInput
 } from "@mantine/core";
 import { IconPencil, IconCheck, IconX, IconTrash } from "@tabler/icons-react";
 import Link from "next/link";
@@ -54,6 +55,7 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
   function DeckCard({ deck }: { deck: DeckWithReviewInfo }) {
     const [isEditing, setIsEditing] = useState(false);
     const [title, setTitle] = useState(deck.name);
+    const [take, setTake] = useState(21);
     const updateDeckMutation = trpc.updateDeck.useMutation();
     const deleteDeckMutation = trpc.deleteDeck.useMutation();
 
@@ -125,30 +127,30 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
                   <IconX size={16} />
                 </Button>
               </>
-          ) : (
-            <>
-              <Button
-                variant="subtle"
-                color="blue"
-                radius="xl"
-                onClick={() => setIsEditing(true)}
-              >
-                <IconPencil size={16} />
-              </Button>
-              <Button
-                variant="subtle"
-                color="red"
-                radius="xl"
-                onClick={async () => {
-                  if (!confirm("Are you sure you want to delete this deck?"))
-                    return;
-                  await deleteDeckMutation.mutateAsync({ deckId: deck.id });
-                  window.location.reload();
-                }}
-              >
-                <IconTrash size={16} />
-              </Button>
-            </>
+            ) : (
+              <>
+                <Button
+                  variant="subtle"
+                  color="blue"
+                  radius="xl"
+                  onClick={() => setIsEditing(true)}
+                >
+                  <IconPencil size={16} />
+                </Button>
+                <Button
+                  variant="subtle"
+                  color="red"
+                  radius="xl"
+                  onClick={async () => {
+                    if (!confirm("Are you sure you want to delete this deck?"))
+                      return;
+                    await deleteDeckMutation.mutateAsync({ deckId: deck.id });
+                    window.location.reload();
+                  }}
+                >
+                  <IconTrash size={16} />
+                </Button>
+              </>
             )}
           </Group>
         </Card.Section>
@@ -161,17 +163,35 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
           </Badge>
         </Group>
         <Center mt="md" style={{ width: "100%" }}>
-          <Button
-            component={Link}
-            href={`/review/${deck.id}`}
-            variant="filled"
-            color="gray"
-            radius="xl"
-            size="sm"
-            style={{ whiteSpace: 'normal', textAlign: 'center' }}
-          >
-            Study
-          </Button>
+          <Group>
+            <NumberInput
+              value={take}
+              onChange={(value) => {
+                if (typeof value === "number") {
+                  setTake(value);
+                } else {
+                  const n = parseFloat(value);
+                  setTake(isNaN(n) ? 21 : n);
+                }
+              }}
+              min={1}
+              placeholder="Take"
+              size="sm"
+              variant="filled"
+              style={{ width: 80 }}
+            />
+            <Button
+              component={Link}
+              href={`/review/${deck.id}?take=${take}`}
+              variant="filled"
+              color="gray"
+              radius="xl"
+              size="sm"
+              style={{ whiteSpace: "normal", textAlign: "center" }}
+            >
+              Study
+            </Button>
+          </Group>
         </Center>
         <Group mt="md" grow align="center">
           <Switch
