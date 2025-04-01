@@ -11,7 +11,6 @@ import { getNextQuizzes } from "./get-next-quizzes";
 import { getUserSettings } from "./get-user-settings";
 import { gradeQuiz } from "./grade-quiz";
 import { gradeSpeakingQuiz } from "./grade-speaking-quiz";
-import { levelReviews } from "./level-reviews";
 import { parseCards } from "./parse-cards";
 import { remix } from "./remix";
 import { transcribeAudio } from "./transcribe-audio";
@@ -33,7 +32,6 @@ export const appRouter = router({
   getNextQuizzes,
   getUserSettings,
   gradeQuiz,
-  levelReviews,
   parseCards,
   transcribeAudio,
   gradeSpeakingQuiz,
