@@ -8,21 +8,22 @@ import {
   Badge,
   Button,
   Card,
+  Center,
   Container,
   Grid,
   Group,
+  NumberInput,
   Switch,
   Text,
   TextInput,
   Title,
   useMantineTheme,
-  Center,
-  NumberInput
 } from "@mantine/core";
-import { IconPencil, IconCheck, IconX, IconTrash } from "@tabler/icons-react";
+import { IconCheck, IconPencil, IconTrash, IconX } from "@tabler/icons-react";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { GetServerSideProps } from "next/types";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 type ReviewPageProps = {
   decks: DeckWithReviewInfo[];
@@ -51,6 +52,11 @@ export const getServerSideProps: GetServerSideProps<ReviewPageProps> = async (
 
 export default function ReviewPage({ decks }: ReviewPageProps) {
   const theme = useMantineTheme();
+  const router = useRouter();
+
+  const refreshData = () => {
+    router.replace(router.asPath);
+  };
 
   function DeckCard({ deck }: { deck: DeckWithReviewInfo }) {
     const [isEditing, setIsEditing] = useState(false);
@@ -58,6 +64,63 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
     const [take, setTake] = useState(21);
     const updateDeckMutation = trpc.updateDeck.useMutation();
     const deleteDeckMutation = trpc.deleteDeck.useMutation();
+
+    const handleEdit = useCallback(() => setIsEditing(true), []);
+    const handleCancel = useCallback(() => {
+      setIsEditing(false);
+      setTitle(deck.name);
+    }, [deck.name]);
+
+    const handleSave = useCallback(async () => {
+      if (title !== deck.name && title.trim() !== "") {
+        await updateDeckMutation.mutateAsync({
+          deckId: deck.id,
+          published: deck.published,
+          name: title.trim(),
+        });
+        refreshData();
+      }
+      setIsEditing(false);
+    }, [
+      deck.id,
+      deck.name,
+      deck.published,
+      title,
+      updateDeckMutation,
+      refreshData,
+    ]);
+
+    const handleDelete = useCallback(async () => {
+      if (!confirm("Are you sure you want to delete this deck?")) return;
+      await deleteDeckMutation.mutateAsync({ deckId: deck.id });
+      refreshData();
+    }, [deck.id, deleteDeckMutation, refreshData]);
+
+    const handlePublishToggle = useCallback(
+      async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const willPublish = event.currentTarget.checked;
+        if (
+          willPublish &&
+          !confirm("Are you sure you want to share this deck?")
+        ) {
+          event.currentTarget.checked = false; // Reset the switch visually if the user cancels
+          return;
+        }
+        await updateDeckMutation.mutateAsync({
+          deckId: deck.id,
+          published: willPublish,
+          name: deck.name,
+        });
+        refreshData();
+      },
+      [deck.id, deck.name, updateDeckMutation, refreshData],
+    );
+
+    const handleTakeChange = useCallback((value: string | number) => {
+      const numValue = typeof value === "number" ? value : parseFloat(value);
+      const clampedValue = Math.max(7, Math.min(45, numValue)); // Ensure value is within range 7-45
+      setTake(isNaN(clampedValue) ? 21 : clampedValue);
+    }, []);
 
     return (
       <Card
@@ -81,7 +144,12 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
             justifyContent: "space-between",
           }}
         >
-          {isEditing ? (
+          {!isEditing && (
+            <Text fw={700} size="xl" style={{ flex: 1, textAlign: "center" }}>
+              {deck.name}
+            </Text>
+          )}
+          {isEditing && (
             <TextInput
               value={title}
               onChange={(e) => setTitle(e.currentTarget.value)}
@@ -89,29 +157,16 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
               variant="unstyled"
               style={{ flex: 1 }}
             />
-          ) : (
-            <Text fw={700} size="xl" style={{ flex: 1, textAlign: "center" }}>
-              {deck.name}
-            </Text>
           )}
           <Group>
-            {isEditing ? (
+            {isEditing && (
               <>
                 <Button
                   variant="subtle"
                   color="green"
                   radius="xl"
-                  onClick={async () => {
-                    if (title !== deck.name && title.trim() !== "") {
-                      await updateDeckMutation.mutateAsync({
-                        deckId: deck.id,
-                        published: deck.published,
-                        name: title,
-                      });
-                    }
-                    setIsEditing(false);
-                    window.location.reload();
-                  }}
+                  onClick={handleSave}
+                  disabled={updateDeckMutation.isLoading}
                 >
                   <IconCheck size={16} />
                 </Button>
@@ -119,21 +174,20 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
                   variant="subtle"
                   color="red"
                   radius="xl"
-                  onClick={() => {
-                    setIsEditing(false);
-                    setTitle(deck.name);
-                  }}
+                  onClick={handleCancel}
+                  disabled={updateDeckMutation.isLoading}
                 >
                   <IconX size={16} />
                 </Button>
               </>
-            ) : (
+            )}
+            {!isEditing && (
               <>
                 <Button
                   variant="subtle"
                   color="blue"
                   radius="xl"
-                  onClick={() => setIsEditing(true)}
+                  onClick={handleEdit}
                 >
                   <IconPencil size={16} />
                 </Button>
@@ -141,12 +195,8 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
                   variant="subtle"
                   color="red"
                   radius="xl"
-                  onClick={async () => {
-                    if (!confirm("Are you sure you want to delete this deck?"))
-                      return;
-                    await deleteDeckMutation.mutateAsync({ deckId: deck.id });
-                    window.location.reload();
-                  }}
+                  onClick={handleDelete}
+                  disabled={deleteDeckMutation.isLoading}
                 >
                   <IconTrash size={16} />
                 </Button>
@@ -166,16 +216,10 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
           <Group>
             <NumberInput
               value={take}
-              onChange={(value) => {
-                if (typeof value === "number") {
-                  setTake(value);
-                } else {
-                  const n = parseFloat(value);
-                  setTake(isNaN(n) ? 21 : n);
-                }
-              }}
-              min={1}
-              placeholder="Take"
+              onChange={handleTakeChange}
+              min={7}
+              max={45}
+              placeholder="Cards"
               size="sm"
               variant="filled"
               style={{ width: 80 }}
@@ -189,36 +233,23 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
               size="sm"
               style={{ whiteSpace: "normal", textAlign: "center" }}
             >
-              Study
+              Study {take} Cards
             </Button>
           </Group>
         </Center>
         <Group mt="md" grow align="center">
           <Switch
             checked={deck.published}
-            onChange={async (event) => {
-              const willPublish = event.currentTarget.checked;
-              if (
-                willPublish &&
-                !confirm("Are you sure you want to share this deck?")
-              ) {
-                return;
-              }
-              await updateDeckMutation.mutateAsync({
-                deckId: deck.id,
-                published: event.currentTarget.checked,
-                name: deck.name,
-              });
-              window.location.reload();
-            }}
+            onChange={handlePublishToggle}
             label="Published"
+            disabled={updateDeckMutation.isLoading}
           />
         </Group>
       </Card>
     );
   }
 
-  if (decks.length === 0) {
+  function NoDecksMessage() {
     return (
       <Container size="md" py="xl">
         <Card
@@ -257,7 +288,11 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
     );
   }
 
-  const sortedByDue = decks.sort((b, a) => a.quizzesDue - b.quizzesDue);
+  if (decks.length === 0) {
+    return <NoDecksMessage />;
+  }
+
+  const sortedDecks = [...decks].sort((a, b) => b.quizzesDue - a.quizzesDue);
 
   return (
     <Container size="lg" py="md">
@@ -270,7 +305,7 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
         Your Decks
       </Title>
       <Grid gutter="xl">
-        {sortedByDue.map((deck) => (
+        {sortedDecks.map((deck) => (
           <Grid.Col key={deck.id} span={12}>
             <DeckCard deck={deck} />
           </Grid.Col>
