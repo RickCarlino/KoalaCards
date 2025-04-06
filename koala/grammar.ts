@@ -72,7 +72,7 @@ async function run(props: GrammarCorrectionProps): Promise<Explanation> {
     messages,
     model: "gpt-4o",
     temperature: 0.1,
-    max_tokens: 85,
+    max_tokens: 500,
     response_format: zodResponseFormat(zodGradeResponse, "grade_response"),
   });
 
@@ -105,7 +105,6 @@ async function run(props: GrammarCorrectionProps): Promise<Explanation> {
         },
       ],
       model: "gpt-4o",
-      store: true,
       temperature: 0.1,
     });
     const whyResponse = resp2.choices[0]?.message?.content;
