@@ -53,22 +53,27 @@ export const faucet = procedure
     const random = shuffle([...yes, ...no]).slice(0, 3);
 
     const results = await Promise.all(
-      random.map(async (card) => {
-        const output = await grammarCorrectionNext({
+      random.map(async (trngData) => {
+        const newResult = await grammarCorrectionNext({
           userID: userdId,
           card: {
-            term: card.term,
-            definition: card.definition,
-            langCode: card.langCode,
+            term: trngData.term,
+            definition: trngData.definition,
+            langCode: trngData.langCode,
           },
-          userInput: card.userInput,
+          userInput: trngData.userInput,
         });
+        console.log(newResult);
+        const mismatch =
+          (newResult.result === "pass" ? "yes" : "no") !== trngData.yesNo;
         return {
-          id: card.id,
-          term: card.term,
-          definition: card.definition,
-          result: output.result,
-          userMessage: output.userMessage,
+          id: trngData.id,
+          term: trngData.term,
+          definition: trngData.definition,
+          result: mismatch ? "fail" : "pass",
+          userMessage: `NEW PROMPT: ${
+            newResult.userMessage || newResult.result
+          }\nOLD PROMPT: ${trngData.explanation}`,
         };
       }),
     );
