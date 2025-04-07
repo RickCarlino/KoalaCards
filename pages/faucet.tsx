@@ -47,14 +47,13 @@ export default function Faucet() {
         <Button onClick={onClick}>Run ({count})</Button>
 
         <Stack mt="md">
+          Diff: {(results.length / 30) * 100}%
           {results.map((item) => (
             <Card key={item.id} shadow="xs" padding="sm" radius="sm" withBorder>
               <Text>Term: {item.term}</Text>
               <Text>Definition: {item.definition}</Text>
               {item.userMessage.split("\n").map((line, index) => (
-                <Text key={index}>
-                  {line}
-                </Text>
+                <Text key={index}>{line}</Text>
               ))}
               <Button onClick={() => flagCard(item.id)}>Flag</Button>
             </Card>
