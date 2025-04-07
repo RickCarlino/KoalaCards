@@ -166,12 +166,13 @@ async function getCardsWithFailures(
 }
 
 async function newCardsAllowed(userId: string, take: number) {
-  const weeklyCap = (await getCardsAllowedPerDay(userId)) * 7;
+  const perDay = await getCardsAllowedPerDay(userId);
+  const weeklyCap = perDay * 7;
+  const dailyCap = perDay * 2;
   const thisWeek = await newCardsLearnedThisWeek(userId);
-  const deficiency = Math.max(weeklyCap - thisWeek, 0);
-  const result = Math.min(take, deficiency);
-
-  return result;
+  if (thisWeek >= weeklyCap) return 0;
+  const diff = Math.max(dailyCap - thisWeek, 0);
+  return Math.min(diff, take);
 }
 
 export async function getLessons(p: GetLessonInputParams) {
