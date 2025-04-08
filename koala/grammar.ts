@@ -49,17 +49,22 @@ const LANG_OVERRIDES: Partial<Record<LangCode, string>> = {
 
 async function run(props: GrammarCorrectionProps): Promise<Explanation> {
   const override = LANG_OVERRIDES[props.langCode as LangCode] || "";
-  const langName = getLangName(props.langCode);
   const messages = [
     {
       role: "user" as const,
       content: [
-        `We know that '${props.term}' means '${props.definition}' in ${langName}.`,
-        `Let's say that I am in a situation that warrants the sentence above.`,
-        `Could I say ${props.userInput} instead?`,
-        `Would that be OK? If not, please explain why.`,
+        `I am learning ${getLangName(props.langCode)}.`,
+        `Translate ${props.term} to English.`,
+      ].join(" "),
+    },
+    { role: "assistant" as const, content: props.definition },
+    {
+      role: "user" as const,
+      content: [
+        `Let's say I am in a situation that warrants the sentence above.`,
+        `Could I say "${props.userInput}" instead?`,
+        `Would that be OK?`,
         override,
-        `Respond in one tweet or less.`,
       ].join(" "),
     },
   ];
@@ -70,8 +75,6 @@ async function run(props: GrammarCorrectionProps): Promise<Explanation> {
     max_tokens: 250,
     response_format: zodResponseFormat(zodGradeResponse, "grade_response"),
   });
-
-  console.log(`=== Repsonse tokens: ${response.usage?.total_tokens} ===`);
 
   const gradeResponse = response.choices[0]?.message?.parsed;
 

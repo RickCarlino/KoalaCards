@@ -93,14 +93,14 @@ const CreatePage = () => {
   const theme = useMantineTheme();
 
   const features = [
-    {
-      icon: <IconUsers size={rem(30)} />,
-      title: "Community Decks",
-      description:
-        "Explore decks created by the community and share your own collections with others.",
-      buttonText: "View Decks",
-      onClick: () => router.push("/shared-decks"),
-    },
+    // {
+    //   icon: <IconUsers size={rem(30)} />,
+    //   title: "Community Decks",
+    //   description:
+    //     "Explore decks created by the community and share your own collections with others.",
+    //   buttonText: "View Decks",
+    //   onClick: () => router.push("/shared-decks"),
+    // },
     {
       icon: <IconBulb size={rem(30)} />,
       title: "From Vibes",
