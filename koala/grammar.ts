@@ -54,17 +54,12 @@ async function run(props: GrammarCorrectionProps): Promise<Explanation> {
       role: "user" as const,
       content: [
         `I am learning ${getLangName(props.langCode)}.`,
-        `Translate ${props.term} to English.`,
-      ].join(" "),
-    },
-    { role: "assistant" as const, content: props.definition },
-    {
-      role: "user" as const,
-      content: [
+        `We know "${props.term}" means "${props.definition}" in English.`,
         `Let's say I am in a situation that warrants the sentence above.`,
         `Could I say "${props.userInput}" instead?`,
         `Would that be OK?`,
         override,
+        `Explain in one tweet or less.`,
       ].join(" "),
     },
   ];
