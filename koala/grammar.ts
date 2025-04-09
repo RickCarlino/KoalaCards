@@ -60,6 +60,7 @@ async function run(props: GrammarCorrectionProps): Promise<Explanation> {
         `Would that be OK?`,
         override,
         `Explain in one tweet or less.`,
+        `Point out typos, but don't mark them as errors since I am using speech-to-text and can't control transcription errors.`,
       ].join(" "),
     },
   ];
