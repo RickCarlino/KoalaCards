@@ -111,7 +111,6 @@ export default function UserSettingsPage(props: Props) {
   const { userSettings } = props;
   const [settings, setSettings] = useState(userSettings);
   const editUserSettings = trpc.editUserSettings.useMutation();
-  const lr = trpc.levelReviews.useMutation();
 
   const handleChange = (value: number | string, name: string) => {
     setSettings({ ...settings, [name]: parseFloat(String(value)) });
@@ -231,39 +230,6 @@ export default function UserSettingsPage(props: Props) {
               }}
             >
               Log Out
-            </Button>
-          </Card>
-          <Title order={2}>Level Reviews</Title>
-          <Text size="sm">
-            If you have too many cards due, you can level your review schedule.
-            This will evenly distribute older cards over the next 7 days.
-            <br />
-            <strong>This operation is irreversible.</strong>
-          </Text>
-          <Card withBorder shadow="xs" p="md" radius="md">
-            <Button
-              variant="outline"
-              color="red"
-              onClick={() =>
-                lr.mutateAsync({}).then(
-                  ({ count }) => {
-                    notifications.show({
-                      title: "Success",
-                      message: `Leveled ${count} cards.`,
-                      color: "green",
-                    });
-                  },
-                  () => {
-                    notifications.show({
-                      title: "Error",
-                      message: "Error leveling cards.",
-                      color: "red",
-                    });
-                  },
-                )
-              }
-            >
-              Level Reviews
             </Button>
           </Card>
         </Stack>

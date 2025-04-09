@@ -1,37 +1,36 @@
 import { prismaClient } from "@/koala/prisma-client";
 
-const EASY_CUTOFF = 8;
-const REP_CUTOFF = 3;
+const REP_CUTOFF = 1;
 
 // Take all listening cards with a difficulty of 8 or lower
-// and a repetition count of 3 or more and convert them to
+// and a repetition count of 2 or more and convert them to
 // speaking-only cards.
 export async function autoPromoteCards(userID: string) {
-  const eligibleCards = await prismaClient.quiz.findMany({
+  // Find listening quizzes for the user that meet the repetition cutoff
+  // and whose associated card has no speaking quiz yet.
+  const eligibleQuizzes = await prismaClient.quiz.findMany({
     where: {
-      Card: { userId: userID },
       quizType: "listening",
       repetitions: { gte: REP_CUTOFF },
-      difficulty: { lte: EASY_CUTOFF },
-    },
-    include: { Card: true },
-  });
-  // Delete listening quiz and create new speaking quiz
-  eligibleCards.map(async (quiz) => {
-    const alreadyExists = await prismaClient.quiz.count({
-      where: {
-        Card: { id: quiz.Card.id },
-        quizType: "speaking",
+      Card: {
+        userId: userID,
+        Quiz: {
+          none: { quizType: "speaking" },
+        },
       },
-    });
-    if (!alreadyExists) {
-      await prismaClient.quiz.create({
+    },
+  });
+
+  // Create a speaking quiz for each eligible listening quiz.
+  await Promise.all(
+    eligibleQuizzes.map((quiz) =>
+      prismaClient.quiz.create({
         data: {
           cardId: quiz.cardId,
           quizType: "speaking",
           nextReview: quiz.nextReview,
         },
-      });
-    }
-  });
+      }),
+    ),
+  );
 }

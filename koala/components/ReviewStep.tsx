@@ -25,11 +25,7 @@ export function ReviewStep({
   return (
     <Paper withBorder p="xl" radius="lg" style={paperStyle(theme)}>
       <Flex direction="column" gap="md">
-        <Title
-          order={3}
-          mb="xs"
-          style={titleStyle(theme)}
-        >
+        <Title order={3} mb="xs" style={titleStyle(theme)}>
           Step 3: Review & Edit Cards
         </Title>
 

@@ -1,0 +1,11 @@
+[
+  {
+    "origin": [
+      "https://app.koala.cards",
+      "http://localhost:3000"
+    ],
+    "method": ["GET", "HEAD", "PUT", "POST"],
+    "responseHeader": ["Content-Type"],
+    "maxAgeSeconds": 3600
+  }
+]

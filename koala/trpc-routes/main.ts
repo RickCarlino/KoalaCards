@@ -11,13 +11,15 @@ import { getNextQuizzes } from "./get-next-quizzes";
 import { getUserSettings } from "./get-user-settings";
 import { gradeQuiz } from "./grade-quiz";
 import { gradeSpeakingQuiz } from "./grade-speaking-quiz";
-import { levelReviews } from "./level-reviews";
 import { parseCards } from "./parse-cards";
 import { remix } from "./remix";
 import { transcribeAudio } from "./transcribe-audio";
 import { turbine } from "./turbine";
 import { deleteDeck } from "./delete-deck";
 import { gradeWriting } from "./grade-writing";
+import { updateDeck } from "./update-deck";
+import { copyDeck } from "./copy-deck";
+import { reportDeck } from "./report-deck";
 
 export const appRouter = router({
   bulkCreateCards,
@@ -30,7 +32,6 @@ export const appRouter = router({
   getNextQuizzes,
   getUserSettings,
   gradeQuiz,
-  levelReviews,
   parseCards,
   transcribeAudio,
   gradeSpeakingQuiz,
@@ -39,6 +40,9 @@ export const appRouter = router({
   turbine,
   deleteDeck,
   gradeWriting,
+  updateDeck,
+  copyDeck,
+  reportDeck,
 });
 
 export type AppRouter = typeof appRouter;

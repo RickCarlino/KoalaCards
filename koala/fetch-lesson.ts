@@ -1,5 +1,5 @@
 import { prismaClient } from "@/koala/prisma-client";
-import { shuffle, unique } from "radash";
+import { unique } from "radash";
 import { getUserSettings } from "./auth-helpers";
 import { autoPromoteCards } from "./autopromote";
 import { errorReport } from "./error-report";
@@ -26,24 +26,6 @@ type QuizKeys =
   | "cardId"
   | "lapses";
 type LocalQuiz = Pick<Quiz, QuizKeys> & { Card: LocalCard };
-
-function interleave<T>(max: number, ...lists: T[][]): T[] {
-  const result: T[] = [];
-  let index = 0;
-  while (result.length < max) {
-    let inserted = false;
-    for (const list of lists) {
-      if (index < list.length) {
-        result.push(list[index]);
-        inserted = true;
-        if (result.length === max) return result;
-      }
-    }
-    if (!inserted) break;
-    index++;
-  }
-  return result;
-}
 
 async function buildQuizPayload(quiz: LocalQuiz, playbackPercentage: number) {
   const r = quiz.repetitions || 0;
@@ -95,34 +77,25 @@ async function newCardsLearnedThisWeek(userId: string) {
   });
 }
 
-async function fetchDueCards(
-  userId: string,
-  deckId: number,
-  now: number,
-  quizType: string,
-  older: boolean,
-  limit: number,
-) {
-  if (limit < 1) return [];
+async function fetchDueCards(userId: string, deckId: number, now: number) {
   return prismaClient.quiz.findMany({
     where: {
       Card: { userId, deckId, flagged: { not: true } },
-      quizType,
       nextReview: { lt: now },
       lastReview: { gt: 0 },
     },
     include: { Card: true },
-    orderBy: { Card: { createdAt: older ? "asc" : "desc" } },
-    take: limit,
+    orderBy: [
+      // "speaking" before "listening"
+      { quizType: "asc" },
+      { nextReview: "asc" },
+    ],
+    take: 45,
   });
 }
 
-async function fetchNewCards(
-  userId: string,
-  deckId: number,
-  older: boolean,
-  limit: number,
-) {
+async function fetchNewCards(userId: string, deckId: number) {
+  const limit = await newCardsAllowed(userId);
   if (limit < 1) return [];
   return prismaClient.quiz.findMany({
     where: {
@@ -130,18 +103,17 @@ async function fetchNewCards(
       lastReview: { equals: 0 },
     },
     include: { Card: true },
-    orderBy: { Card: { createdAt: older ? "asc" : "desc" } },
+    // Pseudo randomize the order of new cards
+    orderBy: { Card: { definition: "asc" } },
     take: limit,
   });
 }
 
-async function getCardsWithFailures(
+async function fetchRemedial(
   userId: string,
   deckId: number,
-  take: number,
 ): Promise<LocalQuiz[]> {
   const cards = await prismaClient.card.findMany({
-    take,
     where: {
       deckId,
       userId: userId,
@@ -165,13 +137,14 @@ async function getCardsWithFailures(
   });
 }
 
-async function newCardsAllowed(userId: string, take: number) {
-  const weeklyCap = (await getCardsAllowedPerDay(userId)) * 7;
+async function newCardsAllowed(userId: string) {
+  const perDay = await getCardsAllowedPerDay(userId);
+  const weeklyCap = perDay * 7;
+  const dailyCap = perDay * 2;
   const thisWeek = await newCardsLearnedThisWeek(userId);
-  const deficiency = Math.max(weeklyCap - thisWeek, 0);
-  const result = Math.min(take, deficiency);
-
-  return result;
+  if (thisWeek >= weeklyCap) return 0;
+  const diff = Math.max(dailyCap - thisWeek, 0);
+  return Math.min(diff, 45);
 }
 
 export async function getLessons(p: GetLessonInputParams) {
@@ -179,60 +152,16 @@ export async function getLessons(p: GetLessonInputParams) {
   await autoPromoteCards(userId);
   if (take > 45) return errorReport("Too many cards requested.");
   const speedPercent = Math.round((await getAudioSpeed(userId)) * 100);
-  const newCardCount = await newCardsAllowed(userId, take);
-  const listeningDueOld = await fetchDueCards(
-    userId,
-    deckId,
-    now,
-    "listening",
-    true,
-    take,
-  );
-  const listeningDueNew = await fetchDueCards(
-    userId,
-    deckId,
-    now,
-    "listening",
-    false,
-    take,
-  );
-  const speakingDueOld = await fetchDueCards(
-    userId,
-    deckId,
-    now,
-    "speaking",
-    true,
-    take,
-  );
-  const speakingDueNew = await fetchDueCards(
-    userId,
-    deckId,
-    now,
-    "speaking",
-    false,
-    take,
-  );
-  const importedEarly = await fetchNewCards(userId, deckId, true, take);
-  const importedLate = await fetchNewCards(userId, deckId, false, take);
-  const newCards = interleave(newCardCount, importedEarly, importedLate);
-  const oldCards = interleave(
-    take,
-    listeningDueOld,
-    listeningDueNew,
-    speakingDueOld,
-    speakingDueNew,
-  );
-  const failedCards = await getCardsWithFailures(userId, deckId, take);
-  const allCards = unique(
-    [...failedCards, ...newCards, ...oldCards],
-    (q) => q.id,
-  );
-  const uniqueByCardId = unique(allCards, (q) => q.cardId);
-  const cardIds = uniqueByCardId.map((q) => q.cardId);
+  const unsorted = [
+    ...(await fetchNewCards(userId, deckId)),
+    ...(await fetchRemedial(userId, deckId)),
+    ...(await fetchDueCards(userId, deckId, now)),
+  ];
+  const allCards = unique(unsorted, (q) => q.cardId);
   const repsByCard = await prismaClient.quiz.groupBy({
     by: ["cardId"],
     where: {
-      cardId: { in: cardIds },
+      cardId: { in: allCards.map((q) => q.cardId) },
     },
     _sum: { repetitions: true },
   });
@@ -241,10 +170,8 @@ export async function getLessons(p: GetLessonInputParams) {
     repsByCard.map((item) => [item.cardId, item._sum.repetitions || 0]),
   );
 
-  return shuffle(uniqueByCardId)
-    .slice(0, take)
-    .map((quiz) => {
-      const quizType = !repsMap[quiz.cardId] ? "dictation" : quiz.quizType;
-      return buildQuizPayload({ ...quiz, quizType }, speedPercent);
-    });
+  return allCards.slice(0, take).map((quiz) => {
+    const quizType = !repsMap[quiz.cardId] ? "dictation" : quiz.quizType;
+    return buildQuizPayload({ ...quiz, quizType }, speedPercent);
+  });
 }

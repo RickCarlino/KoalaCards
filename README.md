@@ -121,7 +121,7 @@ The project could use help in the following areas:
 ```json
 // VIEW: gcloud storage buckets describe gs://....
 // EDIT: gcloud storage buckets update gs://.... --cors-file=foo.json
-[
+// gsutil cors set cors.json gs://BUCKET_NAME
   {
     "origin": ["https://app.koala.cards"],
     "method": ["GET", "HEAD", "PUT", "POST"],

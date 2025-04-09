@@ -76,34 +76,35 @@ model VerificationToken {
 }
 
 model Deck {
-  id       Int    @id @default(autoincrement())
-  langCode String
-  name     String
-  userId   String
-  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  Card     Card[]
+  id           Int     @id @default(autoincrement())
+  langCode     String
+  name         String
+  userId       String
+  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Card         Card[]
+  published    Boolean @default(false)
+  parentDeckId Int?
+  createdAt          DateTime @default(now())
 
   @@unique([name, userId])
   @@index([userId])
 }
 
 model Card {
-  id                    Int                  @id @default(autoincrement())
-  user                  User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId                String
-  flagged               Boolean              @default(false)
-  term                  String
-  definition            String
-  langCode              String
+  id          Int      @id @default(autoincrement())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  flagged     Boolean  @default(false)
+  term        String
+  definition  String
+  langCode    String
   // Gender can be "M"ale, "F"emale, or "N"eutral
-  gender                String               @default("N")
-  createdAt             DateTime             @default(now())
-  Quiz                  Quiz[]
-  imageBlobId           String?
-  SpeakingCorrection    SpeakingCorrection[]
-  mirrorRepetitionCount Int?                 @default(0)
-  deckId                Int? // Nullable for gradual migration
-  Deck                  Deck?                @relation(fields: [deckId], references: [id])
+  gender      String   @default("N")
+  createdAt   DateTime @default(now())
+  Quiz        Quiz[]
+  imageBlobId String?
+  deckId      Int? // Nullable for gradual migration
+  Deck        Deck?    @relation(fields: [deckId], references: [id])
   lastFailure Float    @default(0)
 
   @@unique([userId, term])
@@ -112,17 +113,18 @@ model Card {
 }
 
 model Quiz {
-  id          Int      @id @default(autoincrement())
+  id          Int    @id @default(autoincrement())
   cardId      Int
-  Card        Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  Card        Card   @relation(fields: [cardId], references: [id], onDelete: Cascade)
   quizType    String
-  stability   Float    @default(0)
-  difficulty  Float    @default(0)
-  firstReview Float    @default(0)
-  lastReview  Float    @default(0)
-  nextReview  Float    @default(0)
-  lapses      Float    @default(0)
-  repetitions Float    @default(0)
+  stability   Float  @default(0)
+  difficulty  Float  @default(0)
+  firstReview Float  @default(0)
+  lastReview  Float  @default(0)
+  nextReview  Float  @default(0)
+  lapses      Float  @default(0)
+  repetitions Float  @default(0)
+
   @@unique([cardId, quizType])
   @@index([cardId])
   @@index([nextReview])
@@ -139,16 +141,4 @@ model TrainingData {
   langCode           String
   userInput          String
   englishTranslation String
-}
-
-model SpeakingCorrection {
-  id         Int      @id @default(autoincrement())
-  cardId     Int
-  Card       Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
-  createdAt  DateTime @default(now())
-  isCorrect  Boolean
-  term       String
-  definition String
-  userInput  String
-  correction String   @default("")
 }
