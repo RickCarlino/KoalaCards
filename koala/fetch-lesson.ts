@@ -142,8 +142,9 @@ async function newCardsAllowed(userId: string) {
   const weeklyCap = perDay * 7;
   const dailyCap = perDay * 2;
   const thisWeek = await newCardsLearnedThisWeek(userId);
-  if (thisWeek >= weeklyCap) return 0;
-  const diff = Math.max(dailyCap - thisWeek, 0);
+  const diff = thisWeek >= weeklyCap ? 0 : Math.max(dailyCap - thisWeek, 0);
+  console.log(`== CALCULATE NEW CARDS ALLOWED ==`);
+  console.log({ perDay, weeklyCap, dailyCap, thisWeek, diff });
   return Math.min(diff, 45);
 }
 
