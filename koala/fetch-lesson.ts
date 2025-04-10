@@ -65,18 +65,6 @@ async function getCardsAllowedPerDay(userId: string) {
   return s.cardsPerDayMax || 24;
 }
 
-async function newCardsLearnedThisWeek(userId: string) {
-  const ONE_DAY = 24 * 60 * 60 * 1000;
-  const ONE_WEEK = 7 * ONE_DAY;
-  const t = Date.now() - ONE_WEEK;
-  return prismaClient.card.count({
-    where: {
-      userId,
-      Quiz: { some: { firstReview: { gte: t } } },
-    },
-  });
-}
-
 async function fetchDueCards(userId: string, deckId: number, now: number) {
   return prismaClient.quiz.findMany({
     where: {
@@ -138,14 +126,32 @@ async function fetchRemedial(
 }
 
 async function newCardsAllowed(userId: string) {
-  const perDay = await getCardsAllowedPerDay(userId);
-  const weeklyCap = perDay * 7;
-  const dailyCap = perDay * 2;
-  const thisWeek = await newCardsLearnedThisWeek(userId);
-  const diff = thisWeek >= weeklyCap ? 0 : Math.max(dailyCap - thisWeek, 0);
+  const dailyTarget = await getCardsAllowedPerDay(userId);
+  const maxWeekly = dailyTarget * 7;
+  const dailyMax = Math.min(dailyTarget * 2, 45);
+  const thisWeek = (
+    await prismaClient.quiz.findMany({
+      select: { id: true },
+      where: {
+        Card: { userId },
+        firstReview: {
+          gte: Date.now() - 7 * 24 * 60 * 60 * 1000,
+        },
+      },
+      distinct: ["cardId"],
+    })
+  ).length;
+  const result =
+    thisWeek >= maxWeekly ? 0 : Math.min(maxWeekly - thisWeek, dailyMax);
   console.log(`== CALCULATE NEW CARDS ALLOWED ==`);
-  console.log({ perDay, weeklyCap, dailyCap, thisWeek, diff });
-  return Math.min(diff, 45);
+  console.log({
+    dailyTarget,
+    maxWeekly,
+    dailyMax,
+    thisWeek,
+    result,
+  });
+  return result;
 }
 
 export async function getLessons(p: GetLessonInputParams) {

@@ -48,22 +48,30 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
         },
       },
     });
-    const newCardsLast24Hours = await prismaClient.quiz.count({
-      where: {
-        ...BASE_QUERY,
-        firstReview: {
-          gte: yesterday,
+    const newCardsLast24Hours = (
+      await prismaClient.quiz.findMany({
+        select: { id: true },
+        where: {
+          Card: { userId },
+          firstReview: {
+            gte: yesterday,
+          },
         },
-      },
-    });
-    const newCardsLastWeek = await prismaClient.quiz.count({
-      where: {
-        ...BASE_QUERY,
-        firstReview: {
-          gte: oneWeekAgo,
+        distinct: ["cardId"],
+      })
+    ).length;
+    const newCardsLastWeek = (
+      await prismaClient.quiz.findMany({
+        select: { id: true },
+        where: {
+          Card: { userId },
+          firstReview: {
+            gte: oneWeekAgo,
+          },
         },
-      },
-    });
+        distinct: ["cardId"],
+      })
+    ).length;
     const uniqueCardsLast24Hours = await prismaClient.quiz.count({
       where: {
         ...BASE_QUERY,
