@@ -143,15 +143,8 @@ async function newCardsAllowed(userId: string) {
   ).length;
   const result =
     thisWeek >= maxWeekly ? 0 : Math.min(maxWeekly - thisWeek, dailyMax);
-  console.log(`== CALCULATE NEW CARDS ALLOWED ==`);
-  console.log({
-    dailyTarget,
-    maxWeekly,
-    dailyMax,
-    thisWeek,
-    result,
-  });
-  return result;
+
+    return result;
 }
 
 export async function getLessons(p: GetLessonInputParams) {
