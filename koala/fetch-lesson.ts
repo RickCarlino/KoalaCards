@@ -1,5 +1,5 @@
 import { prismaClient } from "@/koala/prisma-client";
-import { unique } from "radash";
+import { shuffle, unique } from "radash";
 import { getUserSettings } from "./auth-helpers";
 import { autoPromoteCards } from "./autopromote";
 import { errorReport } from "./error-report";
@@ -85,15 +85,23 @@ async function fetchDueCards(userId: string, deckId: number, now: number) {
 async function fetchNewCards(userId: string, deckId: number) {
   const limit = await newCardsAllowed(userId);
   if (limit < 1) return [];
+  const ids = shuffle(
+    await prismaClient.quiz.findMany({
+      where: {
+        Card: { userId, deckId, flagged: { not: true } },
+        lastReview: { equals: 0 },
+      },
+      select: { id: true },
+      take: 1000,
+    }),
+  )
+    .slice(0, limit)
+    .map((q) => q.id);
   return prismaClient.quiz.findMany({
     where: {
-      Card: { userId, deckId, flagged: { not: true } },
-      lastReview: { equals: 0 },
+      id: { in: ids },
     },
     include: { Card: true },
-    // Pseudo randomize the order of new cards
-    orderBy: { Card: { definition: "asc" } },
-    take: limit,
   });
 }
 
@@ -144,7 +152,7 @@ async function newCardsAllowed(userId: string) {
   const result =
     thisWeek >= maxWeekly ? 0 : Math.min(maxWeekly - thisWeek, dailyMax);
 
-    return result;
+  return result;
 }
 
 export async function getLessons(p: GetLessonInputParams) {

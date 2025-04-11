@@ -26,10 +26,10 @@ Instructions:
 
     Input: A list of target words in {{LANGUAGE}}.
 
-    Task: For each target word, identify and output one cluster that:
-        Is widely recognized as natural and idiomatic in everyday {{LANGUAGE}}.
+    Task: For each target word, identify and output two clusters that:
+        Includes the target words.
+        Are widely recognized as natural and idiomatic in everyday {{LANGUAGE}}.
         May be a collocation, idiomatic expression, sentence stem, or common phrase.
-        Includes at least one of the target words.
 
     Output Format:
     For each target word, return one JSON object with the following structure:
