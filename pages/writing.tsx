@@ -7,6 +7,7 @@ import { getServersideUser } from "@/koala/get-serverside-user";
 import { LangCode } from "@/koala/shared-types"; // Removed unused LANG_CODES
 import { getLangName } from "@/koala/get-lang-name"; // Import the helper
 import { VisualDiff } from "@/koala/review/visual-diff";
+import ReactMarkdown from 'react-markdown'; // Import the markdown renderer
 import {
   Container,
   Title,
@@ -290,9 +291,10 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
             </Text>
             <Stack gap="xs">
               {prompts.map((prompt, index) => (
-                <Text key={index} size="sm" lh={1.5}>
-                  • {prompt}
-                </Text>
+                // Use ReactMarkdown, passing only children to the Text component
+                <ReactMarkdown key={index} components={{ p: ({ children }) => <Text size="sm" lh={1.5}>{children}</Text> }}>
+                  {prompt}
+                </ReactMarkdown>
               ))}
             </Stack>
           </Card>

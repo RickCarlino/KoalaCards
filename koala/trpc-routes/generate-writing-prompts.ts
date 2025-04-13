@@ -1,7 +1,11 @@
-import { z } from 'zod';
-import { procedure } from '../trpc-procedure';
-import { LANG_CODES } from '../shared-types';
-import { openai } from '../openai'; // Assuming this is the correct import path and interface
+import { shuffle } from "radash";
+import { z } from "zod";
+import { openai } from "../openai";
+import { zodResponseFormat } from "openai/helpers/zod"; // Import the helper
+import { prismaClient } from "../prisma-client";
+import { LANG_CODES } from "../shared-types";
+import { procedure } from "../trpc-procedure";
+import { getLangName } from "../get-lang-name";
 
 // Define a simple input schema for now, just the language code
 const inputSchema = z.object({
@@ -9,7 +13,12 @@ const inputSchema = z.object({
   // TODO: Add topic, difficulty level later as per IDEA.md
 });
 
-// Define the output schema - an array of strings (the prompts)
+// Zod schema for the expected structured output from OpenAI
+const PromptSchema = z.object({
+  prompts: z.array(z.string()),
+});
+
+// Define the tRPC output schema - still an array of strings
 const outputSchema = z.array(z.string());
 
 export const generateWritingPrompts = procedure
@@ -18,38 +27,77 @@ export const generateWritingPrompts = procedure
   .mutation(async ({ input, ctx }) => {
     const userId = ctx.user?.id;
     if (!userId) {
-      throw new Error('User not found');
+      throw new Error("User not found");
     }
 
     const { langCode } = input;
 
-    // TODO: Refine the prompt engineering based on language and potential future inputs (topic, difficulty)
-    const prompt = `Generate 5 short writing prompts for a language learner practicing ${langCode}. The prompts should be suitable for intermediate learners. Keep them concise and open-ended.`;
+    // Get last 1000 cards
+    const inspiration = shuffle(
+      await prismaClient.card.findMany({
+        where: {
+          userId,
+          langCode,
+        },
+        orderBy: {
+          // get most recent failures:
+          lastFailure: "desc",
+        },
+        take: 1000,
+        select: {
+          term: true,
+        },
+      }),
+    )
+      .slice(0, 10)
+      .map((x) => x.term);
 
-    try {
-      const completion = await openai.chat.completions.create({
-        model: 'gpt-3.5-turbo', // Or potentially a newer/more suitable model
-        messages: [{ role: 'user', content: prompt }],
-        n: 1, // Generate one set of prompts
-        // TODO: Consider adding max_tokens, temperature etc. for better control
-      });
-
-      const content = completion.choices[0]?.message?.content;
-      if (!content) {
-        throw new Error('Failed to generate prompts from OpenAI');
-      }
-
-      // Assuming the LLM returns prompts separated by newlines
-      const prompts = content.split('\n').map(p => p.trim()).filter(p => p.length > 0);
-
-      // Basic validation or cleanup could be added here
-      // For now, just return the split prompts
-
-      return prompts;
-
-    } catch (error) {
-      console.error("Error generating writing prompts:", error);
-      // Rethrow or handle specific errors as needed
-      throw new Error('Failed to generate writing prompts');
+    if (inspiration.length < 10) {
+      return ["Please study more vocabulary to generate prompts."];
     }
+
+    // New prompt incorporating inspiration sentences and specific instructions
+    const prompt = `
+You are an expert language and creative writing instructor. Using a hidden list of inspirational target language sentences (which you can see but the learner cannot), generate five distinct and engaging writing prompts. These prompts should subtly capture the vibes and themes drawn from the hidden sentences without revealing any of their content. Write all prompts in ${getLangName(langCode)}.
+
+Ensure that the writing prompts guide the learner to explore, analyze, and creatively respond to themes implied by the hidden examples –
+this is not a vocabulary quiz but a creative exercise.
+
+The five writing prompt types to generate are:
+
+Opinion Expression:
+Express your opinion on a topic inspired by the themes from the hidden examples. Provide reasons and illustrative details that support your perspective.
+
+Dialog Interpretation:
+Imagine a dialog situation influenced by the underlying themes. Read the scenario and answer this guiding question: What is the main conflict or issue, and how can it be resolved?
+
+Question & Answer:
+Answer a thought-provoking question that arises from a scenario related to the hidden inspiration. Develop a detailed response considering all aspects of the given situation.
+
+Information Interpretation:
+Interpret a piece of informative content reflecting the broader theme. Summarize the key ideas and explain their significance in a clear, creative manner.
+
+Please craft each of these prompts so they inspire creative thinking and clear, thoughtful responses, drawing on the hidden thematic cues without disclosing them to the learner.
+
+`;
+
+    const completion = await openai.beta.chat.completions.parse({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: prompt }],
+      response_format: zodResponseFormat(PromptSchema, "generated_prompts"),
+      temperature: 0,
+    });
+
+    const parsedResponse = completion.choices[0]?.message?.parsed;
+
+    if (!parsedResponse) {
+      console.error(
+        "Invalid or missing parsed response from OpenAI:",
+        completion.choices[0]?.message,
+      );
+      throw new Error("Failed to get structured prompts from OpenAI");
+    }
+
+    // Return the array of prompts from the parsed structure
+    return parsedResponse.prompts;
   });
