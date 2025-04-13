@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/router"; // Import useRouter
 import { trpc } from "@/koala/trpc-config";
 import {
   Button,
@@ -72,6 +73,24 @@ export default function Turbine(props: Props) {
   const selectedWords = output.filter((item) => item.selected);
   const bulkCreateCards = trpc.bulkCreateCards.useMutation();
   const deck = props.decks.find((d) => d.id === selectedDeck);
+  const router = useRouter(); // Initialize router
+
+  // Effect to pre-fill textarea from URL query parameter
+  useEffect(() => {
+    if (router.isReady) { // Ensure router query is populated
+      const wordsQuery = router.query.words;
+      if (typeof wordsQuery === 'string') {
+        try {
+          const decodedWords = decodeURIComponent(wordsQuery);
+          const wordsArray = decodedWords.split(',');
+          setInputText(wordsArray.join('\n'));
+        } catch (e) {
+          console.error("Failed to parse words from URL:", e);
+          // Optionally show a notification to the user
+        }
+      }
+    }
+  }, [router.isReady, router.query]);
 
   // Function to handle saving selected words to the deck
   const handleSaveWordsToDeck = async () => {

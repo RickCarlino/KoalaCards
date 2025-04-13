@@ -21,6 +21,7 @@ import { updateDeck } from "./update-deck";
 import { copyDeck } from "./copy-deck";
 import { reportDeck } from "./report-deck";
 import { generateWritingPrompts } from "./generate-writing-prompts";
+import { defineUnknownWords } from "./define-unknown-words";
 
 export const appRouter = router({
   bulkCreateCards,
@@ -45,6 +46,7 @@ export const appRouter = router({
   copyDeck,
   reportDeck,
   generateWritingPrompts,
+  defineUnknownWords,
 });
 
 export type AppRouter = typeof appRouter;

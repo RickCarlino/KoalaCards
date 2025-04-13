@@ -85,7 +85,7 @@ Please craft each of these prompts so they inspire creative thinking and clear, 
       model: "gpt-4o",
       messages: [{ role: "user", content: prompt }],
       response_format: zodResponseFormat(PromptSchema, "generated_prompts"),
-      temperature: 0,
+      // temperature: 0,
     });
 
     const parsedResponse = completion.choices[0]?.message?.parsed;
