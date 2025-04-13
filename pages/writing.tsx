@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { trpc } from "@/koala/trpc-config";
-import { useRouter } from "next/router";
+// Removed unused useRouter
 import { notifications } from "@mantine/notifications";
 import { GetServerSideProps } from "next";
 import { getServersideUser } from "@/koala/get-serverside-user";
+import { LangCode } from "@/koala/shared-types"; // Removed unused LANG_CODES
+import { getLangName } from "@/koala/get-lang-name"; // Import the helper
 import { VisualDiff } from "@/koala/review/visual-diff";
 import {
   Container,
@@ -30,9 +32,11 @@ import {
   IconPencil,
   IconArrowRight,
   IconSparkles,
+  IconWand, // Added for generate prompts button
 } from "@tabler/icons-react";
 
 import type { EssayResponse } from "@/koala/trpc-routes/grade-writing";
+import { prismaClient } from "@/koala/prisma-client";
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const dbUser = await getServersideUser(context);
@@ -41,24 +45,40 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     return { redirect: { destination: "/api/auth/signin", permanent: false } };
   }
 
+  const codes = await prismaClient.card.findMany({
+    select: {
+      langCode: true,
+    },
+    distinct: ["langCode"],
+    where: {
+      userId: dbUser.id,
+    },
+  });
   return {
-    props: {},
+    props: {
+      langCodes: codes.map((c) => c.langCode),
+    },
   };
 };
 
-const WritingAssistant = () => {
-  const router = useRouter();
+interface WritingAssistantProps {
+  langCodes: LangCode[];
+}
+
+const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
   const [essay, setEssay] = useState("");
   const [feedback, setFeedback] = useState<EssayResponse | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false); // For analyzing
+  const [prompts, setPrompts] = useState<string[]>([]);
+  const [promptsLoading, setPromptsLoading] = useState<LangCode | null>(null); // Track which lang is loading
+  const [promptsError, setPromptsError] = useState<string | null>(null);
+  const [selectedLangCode, setSelectedLangCode] = useState<LangCode | null>(
+     langCodes?.length === 1 ? langCodes[0] : null // Default if only one lang
+  );
   const theme = useMantineTheme();
   const primaryColor = theme.primaryColor || "blue";
 
-  // Get the language code from the URL query parameter if available
-  const langCode =
-    typeof router.query.lang === "string" ? router.query.lang : undefined;
-
-  // Use the tRPC mutation
+  // Use the tRPC mutations
   const gradeWritingMutation = trpc.gradeWriting.useMutation({
     onError: (error) => {
       notifications.show({
@@ -67,24 +87,69 @@ const WritingAssistant = () => {
           error.message || "Failed to analyze your writing. Please try again.",
         color: "red",
       });
+      setLoading(false); // Ensure loading state is reset on error
+    },
+  });
+
+  // tRPC mutation for generating prompts
+  const generatePromptsMutation = trpc.generateWritingPrompts.useMutation({
+    // Use opts to get access to the variables passed to mutate
+    onSuccess: (data, variables) => {
+      setPrompts(data);
+      setPromptsError(null);
+      setSelectedLangCode(variables.langCode); // Set selected lang on success
+      notifications.show({
+        title: "Prompts Generated",
+        message: "New writing prompts are ready!",
+        color: "green",
+      });
+    },
+    onError: (error) => {
+      setPromptsError(error.message || "Failed to generate prompts.");
+      notifications.show({
+        title: "Error Generating Prompts",
+        message: error.message || "Please try again.", // Removed duplicate message property
+        color: "red",
+      });
+    },
+    onSettled: () => {
+      setPromptsLoading(null); // Clear loading state regardless of success/error
     },
   });
 
   const handleAnalyze = async () => {
     if (!essay.trim()) return;
 
+    if (!selectedLangCode) {
+       notifications.show({
+        title: "Language Not Selected",
+        message: "Please generate prompts for a language first to set the context for analysis.",
+        color: "orange",
+      });
+      return;
+    }
+
     setLoading(true);
+    setFeedback(null); // Clear previous feedback
     try {
       const result = await gradeWritingMutation.mutateAsync({
         text: essay,
-        langCode,
+        langCode: selectedLangCode, // Use the selected language
       });
       setFeedback(result);
     } catch (error) {
-      console.error("Error analyzing essay:", error);
+      // Error is handled by the mutation's onError, which also sets loading to false
     } finally {
-      setLoading(false);
+       setLoading(false); // Ensure loading is stopped even if mutateAsync doesn't throw
     }
+  };
+
+  // Updated to accept the specific language code
+  const handleGeneratePrompts = (code: LangCode) => {
+    setPromptsLoading(code); // Set loading state for this specific language
+    setPromptsError(null); // Clear previous errors
+    setPrompts([]); // Clear previous prompts
+    generatePromptsMutation.mutate({ langCode: code });
   };
 
   const renderFeedback = () => {
@@ -177,6 +242,64 @@ const WritingAssistant = () => {
 
   return (
     <Container size="md" py="xl">
+      {/* Section for Generating Prompts */}
+      <Paper withBorder shadow="sm" p="lg" mb="xl" radius="md">
+        <Group justify="space-between" align="center">
+          <Group>
+            <ThemeIcon size="lg" variant="light" radius="xl" color="teal">
+              <IconWand size={20} />
+            </ThemeIcon>
+            <Title order={4}>Need Inspiration?</Title>
+          </Group>
+          {/* Buttons for each language */}
+          <Group>
+            {langCodes.map((code) => (
+              <Button
+                key={code}
+                onClick={() => handleGeneratePrompts(code)} // Pass the specific code
+                leftSection={<IconWand size={rem(16)} />}
+                loading={promptsLoading === code} // Show loading only for this button
+                disabled={!!promptsLoading} // Disable all buttons if any are loading
+                size="sm"
+                radius="md"
+                variant="light"
+                color="teal"
+              >
+                Generate {getLangName(code)} Prompts
+              </Button>
+            ))}
+          </Group>
+        </Group>
+        {/* Show a generic loading indicator if any language is loading */}
+        {promptsLoading && (
+           <Box mt="md" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+             <Loader size="sm" color="teal" />
+             <Text ml="sm" c="dimmed">Generating prompts for {getLangName(promptsLoading)}...</Text>
+           </Box>
+        )}
+        {promptsError && (
+          <Alert title="Error" color="red" mt="md" radius="md">
+            {promptsError}
+          </Alert>
+        )}
+        {/* Show prompts only when not loading */}
+        {prompts.length > 0 && !promptsLoading && selectedLangCode && (
+          <Card withBorder radius="md" mt="lg" p="md">
+            <Text fw={500} mb="sm">
+              Generated {getLangName(selectedLangCode)} Prompts:
+            </Text>
+            <Stack gap="xs">
+              {prompts.map((prompt, index) => (
+                <Text key={index} size="sm" lh={1.5}>
+                  • {prompt}
+                </Text>
+              ))}
+            </Stack>
+          </Card>
+        )}
+      </Paper>
+
+      {/* Existing Essay Input Section */}
       <Paper
         withBorder
         shadow="lg"

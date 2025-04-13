@@ -13,7 +13,7 @@ import {
   Box,
   Divider,
 } from "@mantine/core";
-import { IconBulb, IconList, IconTable, IconUsers } from "@tabler/icons-react";
+import { IconBulb, IconList, IconTable } from "@tabler/icons-react";
 
 /*
 There are three ways to create flashcards in Koala Cards:

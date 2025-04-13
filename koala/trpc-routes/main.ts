@@ -20,6 +20,7 @@ import { gradeWriting } from "./grade-writing";
 import { updateDeck } from "./update-deck";
 import { copyDeck } from "./copy-deck";
 import { reportDeck } from "./report-deck";
+import { generateWritingPrompts } from "./generate-writing-prompts";
 
 export const appRouter = router({
   bulkCreateCards,
@@ -43,6 +44,7 @@ export const appRouter = router({
   updateDeck,
   copyDeck,
   reportDeck,
+  generateWritingPrompts,
 });
 
 export type AppRouter = typeof appRouter;
