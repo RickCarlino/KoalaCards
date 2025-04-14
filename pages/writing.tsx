@@ -33,10 +33,25 @@ import {
 } from "@tabler/icons-react";
 import { GetServerSideProps } from "next";
 import React, { useState } from "react";
+import { List } from "@mantine/core";
 import ReactMarkdown from "react-markdown";
 
 import { prismaClient } from "@/koala/prisma-client";
 import type { EssayResponse } from "@/koala/trpc-routes/grade-writing";
+import { CSSProperties, useMemo } from "react"; // Keep useMemo for now
+
+const centeredFlexStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+};
+
+const loadingBoxStyle: CSSProperties = {
+  ...centeredFlexStyle,
+  flexDirection: "column",
+  paddingTop: rem(20), // Example padding, adjust as needed
+  paddingBottom: rem(20), // Example padding, adjust as needed
+};
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const dbUser = await getServersideUser(context);
@@ -105,7 +120,6 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
       setPrompts(data);
       setPromptsError(null);
       setSelectedLangCode(variables.langCode);
-      setSelectedWords({});
       setDefinitions([]);
       setDefinitionsError(null);
       notifications.show({
@@ -183,8 +197,8 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
     }
 
     setLoading(true);
+    // Reset feedback/definitions, but keep selected words
     setFeedback(null);
-    setSelectedWords({});
     setDefinitions([]);
     setDefinitionsError(null);
     try {
@@ -204,7 +218,7 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
     setPromptsError(null);
     setPrompts([]);
     setFeedback(null);
-    setSelectedWords({});
+    setSelectedWords({}); // Clear selected words for new prompts
     setDefinitions([]);
     setDefinitionsError(null);
     generatePromptsMutation.mutate({ langCode: code });
@@ -230,8 +244,10 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
     }
 
     const sources = new Set(Object.values(selectedWords));
+    const onlyPromptWordsSelected = sources.size === 1 && sources.has("prompt");
     let contextText = essay;
-    if (sources.size === 1 && sources.has("prompt") && prompts.length > 0) {
+
+    if (onlyPromptWordsSelected && prompts.length > 0) {
       contextText = prompts.join("\n\n");
     } else if (!essay.trim()) {
       notifications.show({
@@ -253,13 +269,14 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
     });
   };
 
+  const shouldDisplayLemma = (def: { word: string; lemma?: string }) =>
+    !!def.lemma && def.lemma.toLowerCase() !== def.word.toLowerCase();
+
   const handleCreateCards = () => {
     if (!definitions || definitions.length === 0 || !selectedLangCode) return;
 
     const wordsForCards = definitions.map((def) =>
-      def.lemma && def.lemma.toLowerCase() !== def.word.toLowerCase()
-        ? def.lemma
-        : def.word,
+      shouldDisplayLemma(def) ? def.lemma! : def.word,
     );
 
     const uniqueWords = Array.from(new Set(wordsForCards));
@@ -272,35 +289,46 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
     window.open(url, "_blank");
   };
 
+  const clickableWordStyle = (isSelected: boolean): CSSProperties => ({
+    cursor: "pointer",
+    backgroundColor: isSelected ? theme.colors.yellow[2] : "transparent",
+    borderRadius: theme.radius.sm,
+    padding: "0 2px",
+    margin: "0 1px",
+    display: "inline-block",
+  });
+
+  interface ClickableWordSpanProps {
+    token: string;
+    source: WordSource;
+  }
+
+  const ClickableWordSpan = ({ token, source }: ClickableWordSpanProps) => {
+    const cleanToken = token.replace(/[.,!?;:]$/, "").toLowerCase();
+    const isSelected = !!selectedWords[cleanToken];
+    return (
+      <Text
+        component="span"
+        onClick={() => handleWordClick(token, source)}
+        style={clickableWordStyle(isSelected)}
+      >
+        {token}
+      </Text>
+    );
+  };
+
   const renderClickableText = (text: string, source: WordSource) => {
     return (
       <Text size="md" lh={1.6}>
-        {text.split(/(\s+)/).map((token, index) => {
-          if (/\s+/.test(token) || !token) {
-            return <span key={index}>{token}</span>;
-          }
-          const cleanToken = token.replace(/[.,!?;:]$/, "").toLowerCase();
-          const isSelected = !!selectedWords[cleanToken];
-          return (
-            <Text
-              key={index}
-              component="span"
-              onClick={() => handleWordClick(token, source)}
-              style={{
-                cursor: "pointer",
-                backgroundColor: isSelected
-                  ? theme.colors.yellow[2]
-                  : "transparent",
-                borderRadius: theme.radius.sm,
-                padding: "0 2px",
-                margin: "0 1px",
-                display: "inline-block",
-              }}
-            >
-              {token}
-            </Text>
-          );
-        })}
+        {text
+          .split(/(\s+)/)
+          .map((token, index) =>
+            /\s+/.test(token) || !token ? (
+              <span key={index}>{token}</span>
+            ) : (
+              <ClickableWordSpan key={index} token={token} source={source} />
+            ),
+          )}
       </Text>
     );
   };
@@ -310,32 +338,15 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
     source: WordSource,
   ): React.ReactNode => {
     if (typeof nodes === "string") {
-      return nodes.split(/(\s+)/).map((token, index) => {
-        if (/\s+/.test(token) || !token) {
-          return <span key={index}>{token}</span>;
-        }
-        const cleanToken = token.replace(/[.,!?;:]$/, "").toLowerCase();
-        const isSelected = !!selectedWords[cleanToken];
-        return (
-          <Text
-            key={index}
-            component="span"
-            onClick={() => handleWordClick(token, source)}
-            style={{
-              cursor: "pointer",
-              backgroundColor: isSelected
-                ? theme.colors.yellow[2]
-                : "transparent",
-              borderRadius: theme.radius.sm,
-              padding: "0 2px",
-              margin: "0 1px",
-              display: "inline-block",
-            }}
-          >
-            {token}
-          </Text>
+      return nodes
+        .split(/(\s+)/)
+        .map((token, index) =>
+          /\s+/.test(token) || !token ? (
+            <span key={index}>{token}</span>
+          ) : (
+            <ClickableWordSpan key={index} token={token} source={source} />
+          ),
         );
-      });
     }
 
     if (Array.isArray(nodes)) {
@@ -358,22 +369,44 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
     return nodes;
   };
 
-  const definitionPanel = Object.keys(selectedWords).length > 0 && (
+  const sentences = feedback?.sentences ?? [];
+  const hasSentences = sentences.length > 0;
+  const originalText = useMemo(
+    () => sentences.map((s) => s.input).join(" "),
+    [sentences],
+  );
+  const correctedText = useMemo(
+    () => sentences.map((s) => (s.ok ? s.input : s.correction)).join(" "),
+    [sentences],
+  );
+  const allExplanations = useMemo(
+    () => sentences.filter((s) => !s.ok).flatMap((s) => s.explanations),
+    [sentences],
+  );
+  const hasExplanations = allExplanations.length > 0;
+
+  const numSelectedWords = Object.keys(selectedWords).length;
+  const hasSelectedWords = numSelectedWords > 0;
+  const canExplainWords = !!selectedLangCode && !definitionsLoading;
+  const canCreateCards = !definitionsLoading && definitions.length > 0;
+  const showDefinitions = definitions.length > 0 && !definitionsLoading;
+
+  const definitionPanel = hasSelectedWords && (
     <Card withBorder shadow="sm" padding="lg" radius="md" mt="lg" mb="lg">
       <Group justify="center">
         <Button
           onClick={handleExplainWords}
           loading={definitionsLoading}
-          disabled={!selectedLangCode || definitionsLoading}
+          disabled={!canExplainWords}
           variant="light"
           color="blue"
           leftSection={<IconBulb size={rem(16)} />}
         >
-          Explain Selected Words ({Object.keys(selectedWords).length})
+          Explain Selected Words ({numSelectedWords})
         </Button>
         <Button
           onClick={handleCreateCards}
-          disabled={definitionsLoading || definitions.length === 0}
+          disabled={!canCreateCards}
           variant="light"
           color="green"
           leftSection={<IconCheck size={rem(16)} />}
@@ -382,14 +415,7 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
         </Button>
       </Group>
       {definitionsLoading && (
-        <Box
-          mt="md"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
+        <Box mt="md" style={centeredFlexStyle}>
           <Loader size="sm" color="blue" />
           <Text ml="sm" c="dimmed">
             Getting definitions...
@@ -401,20 +427,19 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
           {definitionsError}
         </Alert>
       )}
-      {definitions.length > 0 && !definitionsLoading && (
+      {showDefinitions && (
         <Stack gap="xs" mt="md">
           {definitions.map((def, idx) => (
             <Box key={idx}>
               <Text fw={700} component="span">
                 {def.word}
               </Text>
-              {def.lemma &&
-                def.lemma.toLowerCase() !== def.word.toLowerCase() && (
-                  <Text component="span" c="dimmed" fs="italic">
-                    {" "}
-                    ({def.lemma})
-                  </Text>
-                )}
+              {shouldDisplayLemma(def) && (
+                <Text component="span" c="dimmed" fs="italic">
+                  {" "}
+                  ({def.lemma!})
+                </Text>
+              )}
               <Text component="span">: {def.definition}</Text>
             </Box>
           ))}
@@ -424,16 +449,6 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
   );
 
   const renderFeedback = () => {
-    if (!feedback) return null;
-
-    const originalText = feedback.sentences.map((s) => s.input).join(" ");
-    const correctedText = feedback.sentences
-      .map((s) => (s.ok ? s.input : s.correction))
-      .join(" ");
-    const allExplanations = feedback.sentences
-      .filter((s) => !s.ok)
-      .flatMap((s) => s.explanations);
-
     return (
       <Paper withBorder shadow="lg" p="xl" radius="md" mt="xl">
         <Group justify="apart" mb="md">
@@ -445,7 +460,7 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
           </Group>
         </Group>
         <Divider mb="xl" />
-        {feedback.sentences.length === 0 ? (
+        {!hasSentences ? (
           <Alert
             title="No sentences detected"
             color="blue"
@@ -481,7 +496,7 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
                 <VisualDiff actual={originalText} expected={correctedText} />
               </Box>
             </Card>
-            {allExplanations.length > 0 && (
+            {hasExplanations && (
               <Card withBorder shadow="sm" padding="lg" radius="md">
                 <Group gap="xs" mb="md">
                   <IconBulb size={20} color={theme.colors.yellow[6]} />
@@ -504,6 +519,7 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
 
   return (
     <Container size="md" py="xl">
+      {definitionPanel}
       <Paper withBorder shadow="sm" p="lg" mb="xl" radius="md">
         <Group justify="space-between" align="center">
           <Group>
@@ -513,32 +529,29 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
             <Title order={4}>Need Inspiration?</Title>
           </Group>
           <Group>
-            {langCodes.map((code) => (
-              <Button
-                key={code}
-                onClick={() => handleGeneratePrompts(code)}
-                leftSection={<IconWand size={rem(16)} />}
-                loading={promptsLoading === code}
-                disabled={!!promptsLoading}
-                size="sm"
-                radius="md"
-                variant="light"
-                color="teal"
-              >
-                Generate {getLangName(code)} Prompts
-              </Button>
-            ))}
+            {langCodes.map((code) => {
+              const isCurrentLangLoading = promptsLoading === code;
+              const isAnyLangLoading = !!promptsLoading;
+              return (
+                <Button
+                  key={code}
+                  onClick={() => handleGeneratePrompts(code)}
+                  leftSection={<IconWand size={rem(16)} />}
+                  loading={isCurrentLangLoading}
+                  disabled={isAnyLangLoading}
+                  size="sm"
+                  radius="md"
+                  variant="light"
+                  color="teal"
+                >
+                  Generate {getLangName(code)} Prompts
+                </Button>
+              );
+            })}
           </Group>
         </Group>
         {promptsLoading && (
-          <Box
-            mt="md"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
+          <Box mt="md" style={centeredFlexStyle}>
             <Loader size="sm" color="teal" />
             <Text ml="sm" c="dimmed">
               Generating prompts for {getLangName(promptsLoading)}...
@@ -569,7 +582,6 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
                     </Text>
                   );
                 };
-                // Define custom renderers for inline elements to make their content clickable
                 const markdownComponents = {
                   p: renderParagraph,
                   strong: ({ children }: { children?: React.ReactNode }) => (
@@ -579,13 +591,19 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
                     <em>{renderClickableNodes(children, "prompt")}</em>
                   ),
                   ol: ({ children }: { children?: React.ReactNode }) => (
-                    <ol>{renderClickableNodes(children, "prompt")}</ol>
+                    <List type="ordered" withPadding>
+                      {renderClickableNodes(children, "prompt")}
+                    </List>
                   ),
                   ul: ({ children }: { children?: React.ReactNode }) => (
-                    <ul>{renderClickableNodes(children, "prompt")}</ul>
+                    <List withPadding>
+                      {renderClickableNodes(children, "prompt")}
+                    </List>
                   ),
                   li: ({ children }: { children?: React.ReactNode }) => (
-                    <li>{renderClickableNodes(children, "prompt")}</li>
+                    <List.Item>
+                      {renderClickableNodes(children, "prompt")}
+                    </List.Item>
                   ),
                   h1: ({ children }: { children?: React.ReactNode }) => (
                     <h1>{renderClickableNodes(children, "prompt")}</h1>
@@ -605,7 +623,6 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
                   h6: ({ children }: { children?: React.ReactNode }) => (
                     <h6>{renderClickableNodes(children, "prompt")}</h6>
                   ),
-                  // Add other elements here if needed (e.g., code, del, li) following the same pattern
                 };
                 return (
                   <ReactMarkdown key={index} components={markdownComponents}>
@@ -617,9 +634,6 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
           </Card>
         )}
       </Paper>
-
-      {definitionPanel}
-
       <Paper withBorder shadow="lg" p="xl" mb="xl" radius="md" styles={{}}>
         <Group mb="md" align="center">
           <ThemeIcon size="lg" variant="light" radius="xl">
@@ -634,13 +648,7 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
           minRows={6}
           maxRows={12}
           value={essay}
-          onChange={(e) => {
-            setEssay(e.currentTarget.value);
-            setFeedback(null);
-            setSelectedWords({});
-            setDefinitions([]);
-            setDefinitionsError(null);
-          }}
+          onChange={(e) => setEssay(e.currentTarget.value)}
           mb="lg"
           radius="md"
           styles={{}}
@@ -665,17 +673,9 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
         </Group>
       </Paper>
 
-      {loading ? (
+      {loading && (
         <Paper withBorder shadow="md" p="xl" radius="md">
-          <Box
-            py="xl"
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              flexDirection: "column",
-              alignItems: "center",
-            }}
-          >
+          <Box style={loadingBoxStyle}>
             <Loader
               size="lg"
               variant="dots"
@@ -686,9 +686,8 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
             </Text>
           </Box>
         </Paper>
-      ) : (
-        feedback && renderFeedback()
       )}
+      {!loading && feedback && renderFeedback()}
     </Container>
   );
 };
