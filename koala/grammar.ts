@@ -37,7 +37,7 @@ const storeTrainingData: StoreTrainingData = async (props, exp) => {
       userInput,
       yesNo,
       explanation: why,
-      quizType: "speaking-v2-prompt",
+      quizType: "speaking-v2-prompt-4.1",
       englishTranslation: "NA",
     },
   });
@@ -66,7 +66,7 @@ async function run(props: GrammarCorrectionProps): Promise<Explanation> {
   ];
   const response = await openai.beta.chat.completions.parse({
     messages,
-    model: "gpt-4o",
+    model: "gpt-4.1",
     temperature: 0.1,
     max_tokens: 250,
     response_format: zodResponseFormat(zodGradeResponse, "grade_response"),
