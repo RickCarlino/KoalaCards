@@ -38,7 +38,7 @@ import ReactMarkdown from "react-markdown";
 
 import { prismaClient } from "@/koala/prisma-client";
 import type { EssayResponse } from "@/koala/trpc-routes/grade-writing";
-import { CSSProperties, useMemo } from "react"; // Keep useMemo for now
+import { CSSProperties, useMemo } from "react"; // useMemo is used below
 
 const centeredFlexStyle: CSSProperties = {
   display: "flex",
@@ -90,10 +90,10 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
   const [selectedLangCode, setSelectedLangCode] = useState<LangCode | null>(
     langCodes?.length === 1 ? langCodes[0] : null,
   );
-  type WordSource = "prompt" | "original" | "corrected" | "diff";
-  const [selectedWords, setSelectedWords] = useState<
-    Record<string, WordSource>
-  >({});
+  // No longer need WordSource type
+  const [selectedWords, setSelectedWords] = useState<Record<string, boolean>>(
+    {},
+  );
   const [definitions, setDefinitions] = useState<
     { word: string; lemma?: string; definition: string }[]
   >([]);
@@ -165,7 +165,7 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
     },
   });
 
-  const handleWordClick = (word: string, source: WordSource) => {
+  const handleWordClick = (word: string) => {
     const cleanWord = word
       .replace(/[.,!?;:]$/, "")
       .trim()
@@ -177,7 +177,7 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
       if (newSelected[cleanWord]) {
         delete newSelected[cleanWord];
       } else {
-        newSelected[cleanWord] = source;
+        newSelected[cleanWord] = true; // Store true to indicate selection
       }
       return newSelected;
     });
@@ -243,21 +243,33 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
       return;
     }
 
-    const sources = new Set(Object.values(selectedWords));
-    const onlyPromptWordsSelected = sources.size === 1 && sources.has("prompt");
-    let contextText = essay;
+    // Kitchen sink context approach
+    const contextParts = [];
+    if (prompts.length > 0) {
+      contextParts.push("Prompts:\n" + prompts.join("\n\n"));
+    }
+    if (essay.trim()) {
+      contextParts.push("Essay:\n" + essay);
+    }
+    if (hasSentences) { // Use the existing hasSentences variable
+      const corrected = sentences
+        .map((s) => (s.ok ? s.input : s.correction))
+        .join(" ");
+      contextParts.push("Corrected Essay:\n" + corrected);
+    }
 
-    if (onlyPromptWordsSelected && prompts.length > 0) {
-      contextText = prompts.join("\n\n");
-    } else if (!essay.trim()) {
-      notifications.show({
+    const contextText = contextParts.join("\n\n---\n\n");
+
+    if (!contextText) {
+       notifications.show({
         title: "Context Missing",
         message:
-          "Please write your essay first to provide context for selected words.",
+          "Need either prompts or essay text to provide context for definitions.",
         color: "orange",
       });
       return;
     }
+
 
     setDefinitionsLoading(true);
     setDefinitionsError(null);
@@ -298,18 +310,18 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
     display: "inline-block",
   });
 
+  // No longer needs source prop
   interface ClickableWordSpanProps {
     token: string;
-    source: WordSource;
   }
 
-  const ClickableWordSpan = ({ token, source }: ClickableWordSpanProps) => {
+  const ClickableWordSpan = ({ token }: ClickableWordSpanProps) => {
     const cleanToken = token.replace(/[.,!?;:]$/, "").toLowerCase();
     const isSelected = !!selectedWords[cleanToken];
     return (
       <Text
         component="span"
-        onClick={() => handleWordClick(token, source)}
+        onClick={() => handleWordClick(token)}
         style={clickableWordStyle(isSelected)}
       >
         {token}
@@ -317,7 +329,8 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
     );
   };
 
-  const renderClickableText = (text: string, source: WordSource) => {
+  // No longer needs source parameter
+  const renderClickableText = (text: string) => {
     return (
       <Text size="md" lh={1.6}>
         {text
@@ -326,17 +339,15 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
             /\s+/.test(token) || !token ? (
               <span key={index}>{token}</span>
             ) : (
-              <ClickableWordSpan key={index} token={token} source={source} />
+              <ClickableWordSpan key={index} token={token} /> // Removed source
             ),
           )}
       </Text>
     );
   };
 
-  const renderClickableNodes = (
-    nodes: React.ReactNode,
-    source: WordSource,
-  ): React.ReactNode => {
+  // No longer needs source parameter
+  const renderClickableNodes = (nodes: React.ReactNode): React.ReactNode => {
     if (typeof nodes === "string") {
       return nodes
         .split(/(\s+)/)
@@ -344,7 +355,7 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
           /\s+/.test(token) || !token ? (
             <span key={index}>{token}</span>
           ) : (
-            <ClickableWordSpan key={index} token={token} source={source} />
+            <ClickableWordSpan key={index} token={token} /> // Removed source
           ),
         );
     }
@@ -352,7 +363,7 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
     if (Array.isArray(nodes)) {
       return nodes.map((node, index) => (
         <React.Fragment key={index}>
-          {renderClickableNodes(node, source)}
+          {renderClickableNodes(node)}
         </React.Fragment>
       ));
     }
@@ -362,7 +373,7 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
       return React.cloneElement(
         nodes,
         { ...nodes.props },
-        renderClickableNodes(children, source),
+        renderClickableNodes(children), // Removed source
       );
     }
 
@@ -476,7 +487,7 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
                 <IconPencil size={20} color={theme.colors[primaryColor][6]} />
                 <Text fw={500}>Original Text (Click words you don't know)</Text>
               </Group>
-              {renderClickableText(originalText, "original")}
+              {renderClickableText(originalText)}
             </Card>
             <Card withBorder shadow="sm" padding="lg" radius="md">
               <Group gap="xs" mb="md">
@@ -485,7 +496,7 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
                   Corrected Text (Click words you don't know)
                 </Text>
               </Group>
-              {renderClickableText(correctedText, "corrected")}
+              {renderClickableText(correctedText)}
             </Card>
             <Card withBorder shadow="sm" padding="lg" radius="md">
               <Group gap="xs" mb="md">
@@ -578,50 +589,48 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
                 }) => {
                   return (
                     <Text size="sm" lh={1.5}>
-                      {renderClickableNodes(children, "prompt")}
+                      {renderClickableNodes(children)}
                     </Text>
                   );
                 };
                 const markdownComponents = {
                   p: renderParagraph,
                   strong: ({ children }: { children?: React.ReactNode }) => (
-                    <strong>{renderClickableNodes(children, "prompt")}</strong>
+                    <strong>{renderClickableNodes(children)}</strong>
                   ),
                   em: ({ children }: { children?: React.ReactNode }) => (
-                    <em>{renderClickableNodes(children, "prompt")}</em>
+                    <em>{renderClickableNodes(children)}</em>
                   ),
                   ol: ({ children }: { children?: React.ReactNode }) => (
                     <List type="ordered" withPadding>
-                      {renderClickableNodes(children, "prompt")}
+                      {renderClickableNodes(children)}
                     </List>
                   ),
                   ul: ({ children }: { children?: React.ReactNode }) => (
                     <List withPadding>
-                      {renderClickableNodes(children, "prompt")}
+                      {renderClickableNodes(children)}
                     </List>
                   ),
                   li: ({ children }: { children?: React.ReactNode }) => (
-                    <List.Item>
-                      {renderClickableNodes(children, "prompt")}
-                    </List.Item>
+                    <List.Item>{renderClickableNodes(children)}</List.Item>
                   ),
                   h1: ({ children }: { children?: React.ReactNode }) => (
-                    <h1>{renderClickableNodes(children, "prompt")}</h1>
+                    <h1>{renderClickableNodes(children)}</h1>
                   ),
                   h2: ({ children }: { children?: React.ReactNode }) => (
-                    <h2>{renderClickableNodes(children, "prompt")}</h2>
+                    <h2>{renderClickableNodes(children)}</h2>
                   ),
                   h3: ({ children }: { children?: React.ReactNode }) => (
-                    <h3>{renderClickableNodes(children, "prompt")}</h3>
+                    <h3>{renderClickableNodes(children)}</h3>
                   ),
                   h4: ({ children }: { children?: React.ReactNode }) => (
-                    <h4>{renderClickableNodes(children, "prompt")}</h4>
+                    <h4>{renderClickableNodes(children)}</h4>
                   ),
                   h5: ({ children }: { children?: React.ReactNode }) => (
-                    <h5>{renderClickableNodes(children, "prompt")}</h5>
+                    <h5>{renderClickableNodes(children)}</h5>
                   ),
                   h6: ({ children }: { children?: React.ReactNode }) => (
-                    <h6>{renderClickableNodes(children, "prompt")}</h6>
+                    <h6>{renderClickableNodes(children)}</h6>
                   ),
                 };
                 return (
