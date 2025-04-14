@@ -122,6 +122,8 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
       setSelectedLangCode(variables.langCode);
       setDefinitions([]);
       setDefinitionsError(null);
+      // Copy generated prompts into the essay textarea
+      setEssay(data.join("\n\n"));
       notifications.show({
         title: "Prompts Generated",
         message: "New writing prompts are ready!",
