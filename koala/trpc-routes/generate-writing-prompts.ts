@@ -76,40 +76,26 @@ You are an expert language and creative writing instructor. Using a hidden list 
 Ensure that the writing prompts guide the learner to explore, analyze, and creatively respond to themes implied by the hidden examples –
 this is not a vocabulary quiz but a creative exercise.
 
-The five writing prompt types to generate are:
+Generate the following writing prompts:
 
-Opinion Expression:
-Express your opinion on a topic inspired by the themes from the hidden examples. Provide reasons and illustrative details that support your perspective.
+1. The first prompt involves responding to an open-ended question in a short, concise manner.
 
-Dialog Interpretation:
-Imagine a dialog situation influenced by the underlying themes. Read the scenario and answer this guiding question: What is the main conflict or issue, and how can it be resolved?
+2. The second question involves playing a role in a scenario. Test-takers are presented with a real-world scenario and asked to act out a role, demonstrating their ability to use the language in a practical context.
 
-Question & Answer:
-Answer a thought-provoking question that arises from a scenario related to the hidden inspiration. Develop a detailed response considering all aspects of the given situation.
-
-Information Interpretation:
-Interpret a piece of informative content reflecting the broader theme. Summarize the key ideas and explain their significance in a clear, creative manner.
+3. The last prompt involves presenting opinions on a given topic. This question tests the ability to articulate personal views and opinions.
 
 Please craft each of these prompts so they inspire creative thinking and clear, thoughtful responses, drawing on the hidden thematic cues without disclosing them to the learner.
 
-`;
+Present the user with the prompt, but don't give the prompts titles or categories. Just provide the prompts directly.
 
-    const completion = await openai.beta.chat.completions.parse({
-      model: "gpt-4o",
-      messages: [{ role: "user", content: prompt }],
-      response_format: zodResponseFormat(PromptSchema, "generated_prompts"),
+Use natural sounding ${getLangName(langCode)}.
+Don't make it sound like it came out of Google translate.
+`;
+    console.log(prompt);
+    const response1 = await openai.beta.chat.completions.parse({
+      messages: [{ role: "system", content: prompt }],
+      model: "chatgpt-4o-latest",
     });
 
-    const parsedResponse = completion.choices[0]?.message?.parsed;
-
-    if (!parsedResponse) {
-      console.error(
-        "Invalid or missing parsed response from OpenAI:",
-        completion.choices[0]?.message,
-      );
-      throw new Error("Failed to get structured prompts from OpenAI");
-    }
-
-    // Return the array of prompts from the parsed structure
-    return parsedResponse.prompts;
+    return [response1.choices[0].message.content];
   });
