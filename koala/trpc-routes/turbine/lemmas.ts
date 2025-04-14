@@ -41,7 +41,7 @@ export async function lemmas(words: string, language = "Korean") {
 
   const response1 = await openai.beta.chat.completions.parse({
     messages: part1,
-    model: "gpt-4.1",
+    model: "gpt-4.1-mini",
     response_format: zodResponseFormat(LemmaSchema, "roots"),
   });
 

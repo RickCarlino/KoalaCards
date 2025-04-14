@@ -116,7 +116,7 @@ async function run(language: string, words: string[]) {
             : "Double check your output when you are done.",
       },
     ],
-    model: "gpt-4.1",
+    model: "gpt-4.1-mini",
     temperature: 0.1,
     response_format: zodResponseFormat(ClusterSchema, "translations"),
   });

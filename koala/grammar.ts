@@ -66,7 +66,7 @@ async function run(props: GrammarCorrectionProps): Promise<Explanation> {
   ];
   const response = await openai.beta.chat.completions.parse({
     messages,
-    model: "gpt-4.1",
+    model: "gpt-4.1-mini",
     temperature: 0.1,
     max_tokens: 250,
     response_format: zodResponseFormat(zodGradeResponse, "grade_response"),

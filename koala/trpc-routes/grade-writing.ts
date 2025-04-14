@@ -79,7 +79,7 @@ export const gradeWriting = procedure
         },
       ],
       // model: "o3-mini",
-      model: "gpt-4.1",
+      model: "gpt-4.1-mini",
       temperature: 0.3,
       max_tokens: 1024,
       response_format: zodResponseFormat(EssayResponseSchema, "essay"),
