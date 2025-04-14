@@ -196,8 +196,9 @@ export const SpeakingQuiz: QuizComp = (props) => {
   function renderGradingInfo() {
     const { serverGradingResult, serverResponse, response } = props.quiz;
 
+    const def = "Congrats! You got this one correct.";
     if (serverGradingResult === "pass") {
-      return <Text size="xs">Congrats! You got this one correct.</Text>;
+      return <Text size="xs">{serverResponse || def}</Text>;
     }
 
     if (serverGradingResult === "fail") {
