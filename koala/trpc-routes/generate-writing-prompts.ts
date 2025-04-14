@@ -1,4 +1,4 @@
-import { shuffle } from "radash";
+import { shuffle, unique } from "radash";
 import { z } from "zod";
 import { openai } from "../openai";
 import { zodResponseFormat } from "openai/helpers/zod"; // Import the helper
@@ -32,25 +32,36 @@ export const generateWritingPrompts = procedure
 
     const { langCode } = input;
 
-    // Get last 1000 cards
+    // Get last 1000 quiz IDs, sorted by lastReview (most recent first), unique by cardId
+    const cardIDs = (
+      await prismaClient.quiz.findMany({
+        where: {
+          Card: {
+            userId,
+            langCode,
+          },
+        },
+        orderBy: {
+          lastReview: "desc",
+        },
+        take: 1000,
+        select: {
+          cardId: true,
+        },
+      })
+    ).map((quiz) => quiz.cardId);
     const inspiration = shuffle(
       await prismaClient.card.findMany({
         where: {
-          userId,
-          langCode,
+          id: {
+            in: shuffle(unique(cardIDs)).slice(0, 10),
+          },
         },
-        orderBy: {
-          // get most recent failures:
-          lastFailure: "desc",
-        },
-        take: 1000,
         select: {
           term: true,
         },
       }),
-    )
-      .slice(0, 10)
-      .map((x) => x.term);
+    ).map((x) => x.term);
 
     if (inspiration.length < 10) {
       return ["Please study more vocabulary to generate prompts."];
@@ -58,7 +69,9 @@ export const generateWritingPrompts = procedure
 
     // New prompt incorporating inspiration sentences and specific instructions
     const prompt = `
-You are an expert language and creative writing instructor. Using a hidden list of inspirational target language sentences (which you can see but the learner cannot), generate five distinct and engaging writing prompts. These prompts should subtly capture the vibes and themes drawn from the hidden sentences without revealing any of their content. Write all prompts in ${getLangName(langCode)}.
+You are an expert language and creative writing instructor. Using a hidden list of inspirational target language sentences (which you can see but the learner cannot), generate five distinct and engaging writing prompts. These prompts should subtly capture the vibes and themes drawn from the hidden sentences without revealing any of their content. Write all prompts in ${getLangName(
+      langCode,
+    )}.
 
 Ensure that the writing prompts guide the learner to explore, analyze, and creatively respond to themes implied by the hidden examples –
 this is not a vocabulary quiz but a creative exercise.
@@ -85,7 +98,6 @@ Please craft each of these prompts so they inspire creative thinking and clear, 
       model: "gpt-4o",
       messages: [{ role: "user", content: prompt }],
       response_format: zodResponseFormat(PromptSchema, "generated_prompts"),
-      // temperature: 0,
     });
 
     const parsedResponse = completion.choices[0]?.message?.parsed;

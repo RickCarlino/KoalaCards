@@ -508,7 +508,7 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
         </Group>
         <Textarea
           placeholder="Write your essay here..."
-          description="Write a few sentences or a short paragraph in your target language"
+          description="Write a few sentences or a short paragraph in your target language. If you don't know a word, write it in english surrounded with question marks (e.g., '?apple?를 먹었어요.')."
           autosize
           minRows={6}
           maxRows={12}

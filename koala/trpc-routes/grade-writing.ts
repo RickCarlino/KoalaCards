@@ -40,6 +40,11 @@ For each sentence in the input:
    - The corrected version
    - A list of clear, concise explanations of errors and how to fix them in English.
      NOTE: For spelling, capitalization, spacing and punctuation errors, just fix them and leave a bullet that says "Spelling and punctuation fixes."
+4. If a word is surrounded by question marks (e.g., "?apple?"), treat it as an unknown word the user replaced with English.
+   - Translate the English word (e.g., "apple") into the target language, ensuring it fits grammatically and contextually within the sentence.
+   - Provide the corrected sentence with the translated word.
+   - Include an explanation bullet point like: "Replaced '?apple?' with the correct word: [translated word]".
+   - Mark the sentence as "ok: false" because the user didn't know the word.
 
 Focus on grammar, vocabulary, and natural phrasing. Be encouraging and educational in your explanations.
 Double check your work against the guidelines before submitting.`;
