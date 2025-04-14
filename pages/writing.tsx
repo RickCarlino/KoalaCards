@@ -578,6 +578,9 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
                   em: ({ children }: { children?: React.ReactNode }) => (
                     <em>{renderClickableNodes(children, "prompt")}</em>
                   ),
+                  ol: ({ children }: { children?: React.ReactNode }) => (
+                    <ol>{renderClickableNodes(children, "prompt")}</ol>
+                  ),
                   ul: ({ children }: { children?: React.ReactNode }) => (
                     <ul>{renderClickableNodes(children, "prompt")}</ul>
                   ),
