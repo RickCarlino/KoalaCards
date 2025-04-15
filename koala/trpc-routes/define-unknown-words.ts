@@ -57,7 +57,7 @@ For each "Word to Define" listed above:
 
     try {
       const completion = await openai.beta.chat.completions.parse({
-        model: "gpt-4.1-mini", // Or a model suitable for definitions
+        model: "gpt-4.1", // Or a model suitable for definitions
         messages: [{ role: "user", content: prompt }],
         n: 1,
         response_format: zodResponseFormat(DefinitionSchema, "word_definitions"),

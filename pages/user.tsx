@@ -180,7 +180,7 @@ export default function UserSettingsPage(props: Props) {
 
               <NumberInput
                 label="Card per day weekly target"
-                description="Your weekly target is 7 times this value. Daily new cards will shrink or grow to meet this weekly target."
+                description="Your weekly target is 7 times this value. Daily new cards will shrink or grow to meet this weekly target. Most users should pick a value between 7 and 21."
                 id="cardsPerDayMax"
                 name="cardsPerDayMax"
                 value={settings.cardsPerDayMax}
