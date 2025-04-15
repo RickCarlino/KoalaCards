@@ -1,69 +1,64 @@
 import { GetServerSideProps } from "next";
 import { useRouter } from "next/router";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useReducer } from "react"; // Added useReducer
 import {
   Button,
   Container,
   Divider,
-  Flex,
+  // Flex, // No longer needed directly here
   Loader,
   Overlay,
   Paper,
-  Select,
+  // Select, // No longer needed directly here
   Table,
   Text,
   Textarea,
   TextInput,
   Title,
+  Flex, // Keep Flex for layout
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { LangCode, supportedLanguages } from "@/koala/shared-types";
-import { getLangName } from "@/koala/get-lang-name";
+import { LangCode } from "@/koala/shared-types"; // Removed supportedLanguages, getLangName (handled by DeckPicker)
+// import { getLangName } from "@/koala/get-lang-name"; // Handled by DeckPicker
 import { trpc } from "@/koala/trpc-config";
 import { prismaClient } from "@/koala/prisma-client";
 import { backfillDecks } from "@/koala/decks/backfill-decks";
 import { getServersideUser } from "@/koala/get-serverside-user";
+import { DeckPicker, Deck } from "@/koala/deck-picker"; // Import DeckPicker and its Deck type
+import { reducer, INITIAL_STATE } from "@/koala/types/create-reducer"; // Import shared reducer
 
-type Deck = {
-  id: number;
-  name: string;
-  langCode: LangCode;
-};
+// Removed local Deck type definition, using the imported one from deck-picker
 
 interface CreateRawPageProps {
-  decks: Deck[];
+  decks: Deck[]; // Use Deck type from DeckPicker
 }
 
 export default function CreateRawPage({ decks }: CreateRawPageProps) {
-  // The user can either pick an existing deck or create a new one:
-  type DeckMode = "existing" | "new";
-  const [deckMode, setDeckMode] = useState<DeckMode>(
-    decks.length > 0 ? "existing" : "new",
-  );
-  const [deckId, setDeckId] = useState<number | undefined>(
-    decks.length > 0 ? decks[0].id : undefined,
-  );
-  const [deckName, setDeckName] = useState("");
-  const [deckLang, setDeckLang] = useState<LangCode>(
-    decks.length > 0 ? decks[0].langCode : "ko",
-  );
+  // Use reducer for state management (deck + rawInput)
+  const [state, dispatch] = useReducer(reducer, {
+    ...INITIAL_STATE,
+    // Initialize based on fetched decks
+    deckLang: (decks?.[0]?.langCode as LangCode) || INITIAL_STATE.deckLang,
+    deckSelection: decks.length > 0 ? "existing" : "new",
+    // Set initial deckId if using existing and decks are available
+    deckId: decks.length > 0 ? decks[0].id : undefined,
+    // Set initial deckName if using existing and decks are available
+    deckName: decks.length > 0 ? decks[0].name : "",
+  });
 
-  // The user-supplied field separator (for term vs. definition)
-  // The line separator is always a newline, so we don't store it in state.
-  const [separator, setSeparator] = useState(","); // default to comma (user can change)
-
-  // The raw text area
-  const [rawInput, setRawInput] = useState("");
+  // Keep separator state local as it's specific to this page
+  const [separator, setSeparator] = useState(",");
 
   // We'll always split lines by newline (\n), ignoring the user-supplied separator
   // Limit to 1500 lines
+  // Use state.rawInput from reducer
   const lines = useMemo(() => {
-    return rawInput
+    return state.rawInput
       .split("\n") // line = carriage return
       .map((line) => line.trim())
       .filter(Boolean)
       .slice(0, 1500);
-  }, [rawInput]);
+  }, [state.rawInput]);
 
   // For each line, we split by the user-supplied "separator"
   // The first part is the term, the rest is combined as the definition
@@ -95,16 +90,32 @@ export default function CreateRawPage({ decks }: CreateRawPageProps) {
 
     setLoading(true);
     try {
-      // If using an existing deck, override deckName/deckLang from that deck
-      let finalDeckName = deckName.trim();
-      let finalDeckLang = deckLang;
+      // Read deck info from reducer state
+      let finalDeckName = state.deckName.trim();
+      let finalDeckLang = state.deckLang;
 
-      if (deckMode === "existing") {
-        const existing = decks.find((d) => d.id === deckId);
-        if (existing) {
-          finalDeckName = existing.name;
-          finalDeckLang = existing.langCode;
-        }
+      // If using an existing deck, ensure the name/lang are from the selected deck
+      // The DeckPicker's handleExistingDeckChange should already set state.deckName
+      // and state.deckLang correctly when an existing deck is chosen.
+      // We just need to ensure finalDeckName isn't empty if 'new' mode was selected.
+      if (state.deckSelection === "new" && !finalDeckName) {
+         notifications.show({
+           title: "Missing Deck Name",
+           message: "Please provide a name for the new deck.",
+           color: "red",
+         });
+         setLoading(false);
+         return;
+      }
+      // If existing deck mode, deckId must be set
+      if (state.deckSelection === "existing" && !state.deckId) {
+         notifications.show({
+           title: "Missing Deck Selection",
+           message: "Please select an existing deck.",
+           color: "red",
+         });
+         setLoading(false);
+         return;
       }
 
       // Convert lines into card-like data
@@ -152,90 +163,24 @@ export default function CreateRawPage({ decks }: CreateRawPageProps) {
       )}
 
       <Title order={2} mb="md">
-        Advanced Raw Input
+        Create Cards from CSV/Text
       </Title>
 
-      {/* STEP 1: Deck selection */}
-      <Paper withBorder p="md" radius="md" mb="md">
-        <Title order={4} mb="sm">
-          Deck Selection
-        </Title>
-        <Flex direction="column" gap="md">
-          {/* We must handle null values for Mantine’s Select */}
-          <Select
-            label="Mode"
-            data={[
-              { label: "Use existing deck", value: "existing" },
-              { label: "Create new deck", value: "new" },
-            ]}
-            value={deckMode}
-            // onChange expects (value: string | null) => void
-            onChange={(val) => {
-              if (!val) return;
-              // We know val must be either "existing" or "new"
-              setDeckMode(val as DeckMode);
-              if (val === "existing") {
-                // Reset new deck fields
-                setDeckName("");
-                // If we have decks, pick the first by default
-                if (decks.length > 0) {
-                  setDeckId(decks[0].id);
-                  setDeckLang(decks[0].langCode);
-                }
-              } else {
-                // Reset existing deck fields
-                setDeckId(undefined);
-              }
-            }}
-          />
-
-          {deckMode === "existing" && decks.length > 0 && (
-            <Select
-              label="Existing Deck"
-              placeholder="Select deck"
-              value={deckId ? String(deckId) : null}
-              data={decks.map((d) => ({
-                label: `${d.name} (${getLangName(d.langCode)})`,
-                value: String(d.id),
-              }))}
-              onChange={(val) => {
-                // If user picks a deck from the list
-                if (!val) return;
-                setDeckId(parseInt(val, 10));
-              }}
-            />
-          )}
-
-          {deckMode === "new" && (
-            <>
-              <TextInput
-                label="New Deck Name"
-                placeholder="e.g. 'Spanish Travel Phrases'"
-                value={deckName}
-                onChange={(e) => setDeckName(e.currentTarget.value)}
-              />
-              <Select
-                label="Language"
-                value={deckLang}
-                data={Object.entries(supportedLanguages).map(
-                  ([code, name]) => ({
-                    label: name,
-                    value: code,
-                  }),
-                )}
-                // TS: val could be null, so guard or cast
-                onChange={(val) => {
-                  if (!val) return;
-                  setDeckLang(val as LangCode);
-                }}
-              />
-            </>
-          )}
-        </Flex>
-      </Paper>
+      {/* STEP 1: Use DeckPicker Component */}
+      <DeckPicker
+        decks={decks}
+        state={state}
+        dispatch={dispatch}
+        onNext={() => {
+          /* This page doesn't have explicit steps, so onNext might not do much */
+          /* Could potentially scroll to the next section or just be ignored */
+          console.log("Deck selected/created");
+        }}
+        title="Step 1: Choose or Create Deck" // Override default title
+      />
 
       {/* STEP 2: Raw input (each line is separated by newline) */}
-      <Paper withBorder p="md" radius="md" mb="md">
+      <Paper withBorder p="md" radius="md" my="md"> {/* Added my="md" for spacing */}
         <Title order={4} mb="sm">
           Raw Text Input
         </Title>
@@ -257,11 +202,13 @@ export default function CreateRawPage({ decks }: CreateRawPageProps) {
 
         <Textarea
           label="Raw Input (max 1500 lines)"
-          placeholder={`Term1,Definition1\nTerm2,Definition2\n...`}
+          placeholder={`Term1${separator}Definition1\nTerm2${separator}Definition2\n...`}
           minRows={10}
           autosize
-          value={rawInput}
-          onChange={(e) => setRawInput(e.currentTarget.value)}
+          value={state.rawInput} // Use rawInput from reducer state
+          onChange={(e) =>
+            dispatch({ type: "SET_RAW_INPUT", rawInput: e.currentTarget.value })
+          } // Dispatch action to update rawInput
         />
 
         <Divider my="sm" />
@@ -269,7 +216,7 @@ export default function CreateRawPage({ decks }: CreateRawPageProps) {
         {/* Info about how many lines were parsed */}
         <Text size="sm" mt="xs">
           <strong>{lines.length}</strong> lines parsed
-          {rawInput.split("\n").length > 1500 && (
+          {state.rawInput.split("\n").length > 1500 && ( // Check length from state.rawInput
             <Text component="span" color="red" ml="xs">
               (over 1500 lines detected, truncated!)
             </Text>
