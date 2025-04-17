@@ -78,10 +78,10 @@ export const gradeWriting = procedure
           }\n\nText to analyze: ${text}`,
         },
       ],
-      // model: "o3-mini",
-      model: "gpt-4.1",
-      temperature: 0.3,
-      max_tokens: 1024,
+      model: "o4-mini",
+      // model: "gpt-4.1",
+      // temperature: 0.3,
+      // max_tokens: 1024,
       response_format: zodResponseFormat(EssayResponseSchema, "essay"),
     });
 

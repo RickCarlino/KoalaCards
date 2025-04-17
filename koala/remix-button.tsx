@@ -126,7 +126,7 @@ export default function RemixButton(props: RemixButtonProps) {
         }
         setOpened(false);
       }}
-      title="🧪 Remix Card (SLOW, EXPERIMENTAL)"
+      title="🧪 Remix Card (EXPERIMENTAL)"
       size="lg"
       overlayProps={{ opacity: 0.5, blur: 1 }}
     >

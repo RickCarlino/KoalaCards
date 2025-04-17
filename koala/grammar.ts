@@ -56,11 +56,10 @@ async function run(props: GrammarCorrectionProps): Promise<Explanation> {
         `I am learning ${getLangName(props.langCode)}.`,
         `We know "${props.term}" means "${props.definition}" in English.`,
         `Let's say I am in a situation that warrants the sentence above.`,
-        `Could I say "${props.userInput}" instead?`,
+        `Could I say "${props.userInput}" instead (note: I entered it via speech-to-text)?`,
         `Would that be OK?`,
         override,
         `Explain in one tweet or less.`,
-        `Point out typos, but don't mark them as errors since I am using speech-to-text and can't control transcription errors.`,
       ].join(" "),
     },
   ];

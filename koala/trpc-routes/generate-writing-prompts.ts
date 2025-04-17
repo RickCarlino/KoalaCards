@@ -98,7 +98,7 @@ Don't make it sound like it came out of Google translate.
     console.log(prompt);
     const response1 = await openai.beta.chat.completions.parse({
       messages: [{ role: "system", content: prompt }],
-      model: "gpt-4.1",
+      model: "o3-mini",
     });
 
     return [response1.choices[0].message.content || "No prompts generated."];
