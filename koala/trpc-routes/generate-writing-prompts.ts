@@ -6,18 +6,7 @@ import { prismaClient } from "../prisma-client";
 import { LANG_CODES } from "../shared-types";
 import { procedure } from "../trpc-procedure";
 
-// Define a simple input schema for now, just the language code
-const inputSchema = z.object({
-  langCode: LANG_CODES,
-  // TODO: Add topic, difficulty level later as per IDEA.md
-});
-
-// Zod schema for the expected structured output from OpenAI
-// const PromptSchema = z.object({
-//   prompts: z.array(z.string()),
-// });
-
-// Define the tRPC output schema - still an array of strings
+const inputSchema = z.object({ langCode: LANG_CODES });
 const outputSchema = z.array(z.string());
 
 export const generateWritingPrompts = procedure
@@ -31,75 +20,108 @@ export const generateWritingPrompts = procedure
 
     const { langCode } = input;
 
-    // Get last 1000 quiz IDs, sorted by lastReview (most recent first), unique by cardId
-    const cardIDs = (
-      await prismaClient.quiz.findMany({
-        where: {
-          Card: {
-            userId,
-            langCode,
-          },
-        },
-        orderBy: {
-          lastReview: "desc",
-        },
-        take: 1000,
-        select: {
-          cardId: true,
-        },
-      })
-    ).map((quiz) => quiz.cardId);
-    const inspiration = shuffle(
-      await prismaClient.card.findMany({
-        where: {
-          id: {
-            in: shuffle(unique(cardIDs)).slice(0, 3),
-          },
-        },
-        select: {
-          term: true,
-        },
-      }),
-    ).map((x) => x.term);
-
-    if (inspiration.length < 1) {
-      return ["Please study more vocabulary to generate prompts."];
-    }
-
-    // New prompt incorporating inspiration sentences and specific instructions
-    const prompt = `
-
-You are an expert language and creative writing instructor.
-Using a hidden list of inspirational target language sentences (which you can see but the learner cannot),
-generate distinct and engaging writing prompts that avoiding being cliche or overly broad.
-These prompts should subtly capture the vibes and themes drawn from the hidden sentences without revealing any of their content.
-Write all prompts in ${getLangName(langCode)}.
-
-Ensure that the writing prompts engage themes and situations implied by the hidden examples.
-
-Generate the following writing prompts:
-
-1. The first prompt involves responding to an open-ended question in a short, concise manner.
-SECRET INSPRIATION: ${inspiration[0]}
-
-2. The second question involves playing a role in a scenario. Test-takers are presented with a real-world scenario and asked to act out a role, demonstrating their ability to use the language in a practical context.
-SECRET INSPRIATION: ${inspiration[1]}
-
-3. The last prompt involves presenting opinions on a given topic. This question tests the ability to articulate personal views and opinions.
-SECRET INSPRIATION: ${inspiration[3]}
-
-Please craft each of these prompts so they inspire creative thinking and clear, thoughtful responses, drawing on the hidden thematic cues without disclosing them to the learner.
-
-Present the user with the prompt, but don't give the prompts titles or categories. Just provide the prompts directly.
-
-Use natural sounding ${getLangName(langCode)}.
-Don't make it sound like it came out of Google translate.
-`;
-    console.log(prompt);
-    const response1 = await openai.beta.chat.completions.parse({
-      messages: [{ role: "system", content: prompt }],
-      model: "o3-mini",
+    const recentQuizzes = await prismaClient.quiz.findMany({
+      where: { Card: { userId, langCode } },
+      orderBy: { lastReview: "desc" },
+      take: 1000,
+      select: { cardId: true },
     });
 
-    return [response1.choices[0].message.content || "No prompts generated."];
+    const uniqueIds = unique(recentQuizzes.map((q) => q.cardId));
+    const sampleIds = shuffle(uniqueIds).slice(0, 7);
+    const inspirations = shuffle(
+      await prismaClient.card.findMany({
+        where: { id: { in: sampleIds } },
+        select: { term: true },
+      }),
+    ).map((c) => c.term);
+
+    if (inspirations.length < 7) {
+      return ["Please review more cards to generate prompts."];
+    }
+
+    const promptTemplates = [
+      {
+        key: "personalNarrative",
+        description:
+          "Personal Narrative: Draw on the theme hinted by the hidden sentence.",
+        secretIndex: 0,
+      },
+      {
+        key: "hypotheticalRolePlay",
+        description:
+          "Hypothetical Scenario (Role-Play): Present a real-world scenario and ask the learner to act a role, using language practically.",
+        secretIndex: 1,
+      },
+      {
+        key: "opinionArgument",
+        description:
+          "Opinion / Argument: Invite the learner to give and support their viewpoint on a topic inspired by the hidden sentence.",
+        secretIndex: 2,
+      },
+      {
+        key: "descriptive",
+        description:
+          "Descriptive: Ask the learner to vividly describe a scene or object suggested by the hidden sentence.",
+        secretIndex: 3,
+      },
+      {
+        key: "comparativeEvaluative",
+        description:
+          "Comparative / Evaluative: Have the learner compare two ideas or experiences implied by the hidden sentence.",
+        secretIndex: 4,
+      },
+      {
+        key: "reflectiveMetacognitive",
+        description:
+          "Reflective / Metacognitive: Encourage the learner to reflect on their own beliefs or habits suggested by the hidden sentence.",
+        secretIndex: 5,
+      },
+      {
+        key: "proceduralHowTo",
+        description:
+          "Procedural / How-to: Ask the learner to explain a process or give advice based on the hidden sentence.",
+        secretIndex: 6,
+      },
+    ];
+
+    // Randomly pick three different prompt types
+    const selectedTemplates = shuffle(promptTemplates).slice(0, 3);
+
+    // Build the system prompt for OpenAI
+    let systemPrompt = `You are a creative writing instructor. Using three hidden example sentences in ${getLangName(
+      langCode,
+    )}, generate three distinct writing prompts.
+
+- Do NOT reveal the example sentences.
+- Keep prompts fresh, non-cliché, and engaging.`;
+
+    selectedTemplates.forEach((tpl, idx) => {
+      systemPrompt += `
+
+${idx + 1}. ${tpl.description}
+   SECRET: ${inspirations[tpl.secretIndex]}`;
+    });
+
+    systemPrompt += `
+
+Write each prompt directly in ${getLangName(
+      langCode,
+    )}, without titles, labels, or numbering. Use natural phrasing suited to a language learner.`;
+
+    // Call OpenAI
+    const aiResponse = await openai.beta.chat.completions.parse({
+      model: "gpt-4.1",
+      messages: [{ role: "system", content: systemPrompt }],
+    });
+
+    console.log(systemPrompt);
+    // Split the AI's output into individual prompts
+    const raw = aiResponse.choices[0].message.content || "";
+    const prompts = raw
+      .split(/\r?\n+/)
+      .map((line) => line.trim())
+      .filter((line) => line);
+
+    return prompts;
   });
