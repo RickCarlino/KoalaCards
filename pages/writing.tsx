@@ -11,6 +11,7 @@ import {
   Container,
   Divider,
   Group,
+  List,
   Loader,
   Paper,
   Stack,
@@ -33,11 +34,11 @@ import {
 } from "@tabler/icons-react";
 import { GetServerSideProps } from "next";
 import React, { useState } from "react";
-import { List } from "@mantine/core";
 import ReactMarkdown from "react-markdown";
 
 import { prismaClient } from "@/koala/prisma-client";
 import type { EssayResponse } from "@/koala/trpc-routes/grade-writing";
+import Link from "next/link";
 import { CSSProperties, useMemo } from "react"; // useMemo is used below
 
 const centeredFlexStyle: CSSProperties = {
@@ -59,19 +60,23 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   if (!dbUser) {
     return { redirect: { destination: "/api/auth/signin", permanent: false } };
   }
-
-  const codes = await prismaClient.card.findMany({
-    select: {
-      langCode: true,
-    },
-    distinct: ["langCode"],
-    where: {
-      userId: dbUser.id,
-    },
+  const decksWith7OrMoreCards = await prismaClient.card.groupBy({
+    by: ["deckId"],
+    _count: { deckId: true },
+    having: { deckId: { _count: { gt: 6 } } },
   });
+
+  const deckIds = decksWith7OrMoreCards.map((d) => d.deckId);
+
+  const uniqueLangCodes = await prismaClient.card.findMany({
+    where: { deckId: { in: deckIds as number[] } },
+    distinct: ["langCode"],
+    select: { langCode: true },
+  });
+
   return {
     props: {
-      langCodes: codes.map((c) => c.langCode),
+      langCodes: uniqueLangCodes.map((c) => c.langCode).sort(),
     },
   };
 };
@@ -81,14 +86,33 @@ interface WritingAssistantProps {
 }
 
 const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
+  if (!langCodes || langCodes.length === 0) {
+    return (
+      <Container size="md" py="xl">
+        <Paper withBorder shadow="lg" p="xl" radius="md">
+          <Group mb="md" align="center">
+            <ThemeIcon size="lg" variant="light" radius="xl">
+              <IconPencil size={20} />
+            </ThemeIcon>
+            <Title order={4}>No Suitable Decks Found</Title>
+          </Group>
+          <Alert title="7 cards minimum" color="red">
+            Please{" "}
+            <Link href="/create">create a deck with more than 7 cards</Link>{" "}
+            first.
+          </Alert>
+        </Paper>
+      </Container>
+    );
+  }
   const [essay, setEssay] = useState("");
   const [feedback, setFeedback] = useState<EssayResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [prompts, setPrompts] = useState<string[]>([]);
   const [promptsLoading, setPromptsLoading] = useState<LangCode | null>(null);
   const [promptsError, setPromptsError] = useState<string | null>(null);
-  const [selectedLangCode, setSelectedLangCode] = useState<LangCode | null>(
-    langCodes?.length === 1 ? langCodes[0] : null,
+  const [selectedLangCode, setSelectedLangCode] = useState<LangCode>(
+    langCodes[0],
   );
   // No longer need WordSource type
   const [selectedWords, setSelectedWords] = useState<Record<string, boolean>>(
@@ -253,7 +277,8 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
     if (essay.trim()) {
       contextParts.push("Essay:\n" + essay);
     }
-    if (hasSentences) { // Use the existing hasSentences variable
+    if (hasSentences) {
+      // Use the existing hasSentences variable
       const corrected = sentences
         .map((s) => (s.ok ? s.input : s.correction))
         .join(" ");
@@ -263,7 +288,7 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
     const contextText = contextParts.join("\n\n---\n\n");
 
     if (!contextText) {
-       notifications.show({
+      notifications.show({
         title: "Context Missing",
         message:
           "Need either prompts or essay text to provide context for definitions.",
@@ -271,7 +296,6 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
       });
       return;
     }
-
 
     setDefinitionsLoading(true);
     setDefinitionsError(null);
@@ -335,15 +359,13 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
   const renderClickableText = (text: string) => {
     return (
       <Text size="md" lh={1.6}>
-        {text
-          .split(/(\s+)/)
-          .map((token, index) =>
-            /\s+/.test(token) || !token ? (
-              <span key={index}>{token}</span>
-            ) : (
-              <ClickableWordSpan key={index} token={token} /> // Removed source
-            ),
-          )}
+        {text.split(/(\s+)/).map((token, index) =>
+          /\s+/.test(token) || !token ? (
+            <span key={index}>{token}</span>
+          ) : (
+            <ClickableWordSpan key={index} token={token} /> // Removed source
+          ),
+        )}
       </Text>
     );
   };
@@ -351,15 +373,13 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
   // No longer needs source parameter
   const renderClickableNodes = (nodes: React.ReactNode): React.ReactNode => {
     if (typeof nodes === "string") {
-      return nodes
-        .split(/(\s+)/)
-        .map((token, index) =>
-          /\s+/.test(token) || !token ? (
-            <span key={index}>{token}</span>
-          ) : (
-            <ClickableWordSpan key={index} token={token} /> // Removed source
-          ),
-        );
+      return nodes.split(/(\s+)/).map((token, index) =>
+        /\s+/.test(token) || !token ? (
+          <span key={index}>{token}</span>
+        ) : (
+          <ClickableWordSpan key={index} token={token} /> // Removed source
+        ),
+      );
     }
 
     if (Array.isArray(nodes)) {
@@ -609,9 +629,7 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
                     </List>
                   ),
                   ul: ({ children }: { children?: React.ReactNode }) => (
-                    <List withPadding>
-                      {renderClickableNodes(children)}
-                    </List>
+                    <List withPadding>{renderClickableNodes(children)}</List>
                   ),
                   li: ({ children }: { children?: React.ReactNode }) => (
                     <List.Item>{renderClickableNodes(children)}</List.Item>
