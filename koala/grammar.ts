@@ -95,7 +95,7 @@ export const grammarCorrectionNext: QuizEvaluator = async ({
   const chosen = await runAndStore({ ...card, userInput });
   console.log(JSON.stringify(chosen));
   if (chosen.yesNo === "yes") {
-    return { result: "pass", userMessage: "" };
+    return { result: "pass", userMessage: chosen.why };
   } else {
     return {
       result: "fail",

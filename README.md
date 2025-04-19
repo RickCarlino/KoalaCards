@@ -1,132 +1,137 @@
-## WHERE DO I SIGN UP?
-
-I host a demo instance of the app [here](https://app.koala.cards/user) but please keep in mind I may **turn off the server during peak usage** to reduce costs. I have set up a [Patreon](https://www.patreon.com/rickcarlino) to help offset hosting costs. Please consider donating if you find the app useful.
-
 # KoalaCards 🐨
 
 <p align="center">
   <img width="33%" src="./logo.png" alt="The KoalaCards Logo"/>
 </p>
-<a href="https://codeclimate.com/github/RickCarlino/KoalaCards/maintainability"><img src="https://api.codeclimate.com/v1/badges/b7666624c14bf8dcfb9b/maintainability" /></a>
+<p align="center">
+  <a href="https://codeclimate.com/github/RickCarlino/KoalaCards/maintainability"><img src="https://api.codeclimate.com/v1/badges/b7666624c14bf8dcfb9b/maintainability" /></a>
+  <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"/>
+</p>
 
-KoalaCards is a [spaced repetition system](https://en.wikipedia.org/wiki/Spaced_repetition) that focuses on listening and speaking skills. KoalaCards captures your voice input using speech-to-text and large language models for human-like test assessments. This has two advantages over traditional spaced repetition systems:
+KoalaCards is an advanced [spaced repetition system (SRS)](https://en.wikipedia.org/wiki/Spaced_repetition) designed to enhance language learning, with a strong focus on **listening and speaking skills**. It leverages modern technologies like speech-to-text and large language models (LLMs) for objective, human-like assessment of user responses.
 
-1. Results are recorded objectively via machine-assisted grading rather than self-grading.
-2. "Close enough" answers that match the meaning of the target sentence and which demonstrate understanding will be accepted. This captures the flexibility of self-grading with the objectivity of external grading.
+Unlike traditional SRS apps that often rely on self-grading, KoalaCards provides:
+
+1.  **Objective Grading:** Machine-assisted grading ensures consistent and unbiased evaluation of listening and speaking skills.
+2.  **Flexible Assessment:** Accepts "close enough" answers that convey the correct meaning, mirroring the flexibility of human tutors while maintaining objectivity.
 
 ## Table of Contents 📑
 
-- [Demo](#demo-video)
+- [Demo / Screenshots](#demo--screenshots)
 - [Features](#features-)
-- [Another Spaced Repetition System?](#another-spaced-repetition-system)
+- [Supported Languages](#supported-languages)
+- [Technology Stack](#technology-stack-)
 - [Developer Setup](#developer-setup-%EF%B8%8F)
-- [Contribution Guidelines](#contribution-guidelines-)
+- [Authentication](#authentication-)
 - [Project Status and Limitations](#project-status-and-limitations-%EF%B8%8F)
-- [Help Needed](#help-needed-)
+- [Contributing](#contributing-)
+- [License](#license-)
 
 ## Demo / Screenshots
 
 <p align="center">
   <a href="https://www.youtube.com/watch?v=_XX_czYuJkM">
-    Watch a short YouTube demo of the app as of February 2025
+    Watch a short YouTube demo of the app (as of February 2025)
     <br/>
     <img src="./screenshot.png" alt="KoalaCards UI screenshot"/>
   </a>
 </p>
 
+*Example feedback:*
 ![](./feedback.png)
+
+*How grading works:*
 ![](./how-it-works.png)
-
-## Officially Supported Languages
-
-Korean, French, Italian, Spanish,
-
-## Supported, But Untested/Limited Support
-
-Arabic, Catalan, Chinese, Czech, Danish, Dutch, English, Finnish, Galician, German, Greek, Gujarati, Hebrew, Hindi, Hungarian, Indonesian, Japanese, Kannada, Latvian, Lithuanian, Malay, Marathi, Norwegian, Polish, Portuguese, Punjabi, Romanian, Russian, Serbian, Slovak, Swedish, Thai, Turkish, Ukrainian, Vietnamese,
 
 ## Features 💡
 
-Here's how the app works:
+*   **Spaced Repetition:** Utilizes the [FSRS scheduling algorithm](https://github.com/open-spaced-repetition/fsrs4anki) for efficient review scheduling.
+*   **Quiz Types:**
+    *   **Listening Quiz:** Listen to a target language phrase and translate it into English.
+    *   **Speaking Quiz:** Read an English prompt and speak the translation in the target language. Responses are transcribed and graded by an LLM (e.g., GPT). 🎤
+*   **Card Management:**
+    *   Create cards manually, from text input, CSV files, or word lists.
+    *   Bulk card creation and import capabilities.
+    *   Edit and delete individual cards.
+    *   Pause specific cards from review.
+    *   Associate AI-generated images with cards.
+*   **Deck Management:**
+    *   Organize cards into decks.
+    *   Create, copy, update, and delete decks.
+    *   Share and report decks.
+*   **AI-Powered Features:**
+    *   Text-to-Speech (TTS) for listening practice. 🗣️
+    *   Speech-to-Text (STT) for transcribing spoken answers.
+    *   LLM-based grading for speaking quizzes.
+    *   Grammar correction and explanation.
+    *   Auto-define of unknown words.
+    *   Generation of writing prompts for writing practice exercises.
+    *   "Remix" existing cards to create variations.
+*   **User Experience:**
+    *   User settings customization.
+    *   Review history and progress tracking.
+    *   Handling of failed quizzes ("Repair" queue).
+    *   Keyboard hotkeys for efficient review.
+    *   Microphone permission handling.
+*   **Admin & Infrastructure:**
+    *   Admin panel for user management (implied).
+    *   "Faucet" system (potentially for managing API credits/usage).
+    *   Docker support for easy deployment.
+    *   tRPC for type-safe API routes.
+    *   Prisma for database interaction.
+    *   Monitoring via Prometheus endpoint.
 
-1. You input target language (KO/ES/FR/IT) sentences with English translations into the app.
-1. The app schedules a queue of sentences using the [FSRS scheduling algorithm](https://github.com/open-spaced-repetition/fsrs4anki).
-1. The app asks the user to take a listening or speaking quiz. All quizzes involve listening to target language speech or speaking target language sentences into the microphone. 🎤
-1. The user must pass a quiz to move on to the next card.
-1. The process goes on until the queue is empty.
+## Supported Languages
 
-The app has two types of quizzes:
+*   **Officially Supported:** Korean, French, Italian, Spanish
+*   **Untested/Limited Support:** Arabic, Catalan, Chinese, Czech, Danish, Dutch, English, Finnish, Galician, German, Greek, Gujarati, Hebrew, Hindi, Hungarian, Indonesian, Japanese, Kannada, Latvian, Lithuanian, Malay, Marathi, Norwegian, Polish, Portuguese, Punjabi, Romanian, Russian, Serbian, Slovak, Swedish, Thai, Turkish, Ukrainian, Vietnamese
 
-- **Listening quiz:** You listen to a target language phrase and then translate it to English. This quiz comes after the dictation phase. 🎶
-- **Speaking quiz:** You get an English text and are asked to say it in the target language. The app transcribes your phrase via speech-to-text, and GPT-3 grades your answer. 📣
+*Note: While multiple languages are supported, the primary focus is English speakers learning Korean.*
 
-Other types of quizzes, such as listening comprehension, may be added in the future.
+## Technology Stack 💻
 
-## Another Spaced Repetition System?
-
-I studied Korean at university and did self-study for many years before that. I saw lots of flaws in existing solutions but couldn't build alternatives because software tools weren't ready yet. I've been dreaming about building this spaced repetition system for over a decade! Finally, in 2023, it became possible thanks to large language models (LLMs) like GPT and affordable, high-quality text-to-speech and speech-to-text APIs. 🎉
-
-Check out the [whitepaper](https://github.com/RickCarlino/gpt-language-learning-experiments) I wrote that explains the main idea. I also wrote a [blog article back in 2019](https://rickcarlino.com/2019/problems-and-solutions-for-spaced-repetition-software.html) about some problems and solutions with SRS systems.
+*   **Framework:** Next.js (React)
+*   **Language:** TypeScript
+*   **API:** tRPC
+*   **Database ORM:** Prisma
+*   **Database:** PostgreSQL (implied)
+*   **Styling:** MantineJS
+*   **Testing:** Jest
+*   **Linting/Formatting:** ESLint, Prettier
+*   **Containerization:** Docker
+*   **External Services:**
+    *   OpenAI (GPT for grading, potentially TTS/STT)
+    *   Google Cloud (Cloud Storage for audio/images, potentially TTS/STT)
+    *   Authentication Providers (e.g., Google)
 
 ## Developer Setup 🛠️
 
-See [SETUP.md](SETUP.md) for detailed setup instructions.
+Detailed setup instructions can be found in [SETUP.md](SETUP.md).
 
-### Authentication Setup
+A Docker setup is available via `docker-compose.yml` for easier environment configuration.
 
-KoalaCards supports two authentication methods:
+## Authentication 🔑
 
-1. **Email Magic Links** - Default method that sends a login link to the user's email.
-2. **Google Sign-In** - Allows users to sign in with their Google accounts.
+KoalaCards supports multiple authentication methods:
 
-To set up Google Sign-In:
+1.  **Email Magic Links (Self-hosted):** Default method sending a login link via email.
+2.  **Google Sign-In:** Allows users to sign in using their Google accounts.
 
-1. Go to the [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project or select an existing one
-3. Navigate to "APIs & Services" > "Credentials"
-4. Click "Create Credentials" > "OAuth client ID"
-5. Select "Web application" as the application type
-6. Add your domain to the "Authorized JavaScript origins" (e.g., `https://yourdomain.com`)
-7. Add your callback URL to the "Authorized redirect URIs" (e.g., `https://yourdomain.com/api/auth/callback/google`)
-8. Click "Create" and note your Client ID and Client Secret
-9. Add these credentials to your `.env` file:
-   ```
-   GOOGLE_CLIENT_ID="your-google-client-id"
-   GOOGLE_CLIENT_SECRET="your-google-client-secret"
-   ```
-
-Both authentication methods can be used simultaneously.
-
-## Contribution Guidelines 🤝
-
-The source code is permissively licensed and open for review by software developers. Got questions? Raise an issue! You can also reach me via DM on Reddit for general discussion (GitHub and Reddit usernames are the same).
+Configuration details for Google Sign-In can be found in the `.env.example` file and require setting up OAuth credentials in the Google Cloud Console. Both methods can be enabled simultaneously.
 
 ## Project Status and Limitations ⚠️
 
-- I use the app every day, multiple times per day for studying. It is stable, but the documentation is not great. If you want to use this app, consider DMing me on Reddit/LinkedIn for help.
-- By design, the app won't quiz on reading or writing. This is a speaking/listening app and there are better ways to practice writing and reading.
-- The target user is English speakers trying to learn Korean. I have added beta support for ES/FR/IT, but the main focus right now is EN/KO.
+*   The application is actively used but may have areas with limited documentation.
+*   While supporting multiple languages, the primary development focus has been on Korean for English speakers. Support and testing for other languages may vary.
 
-## Help Needed 📛
+## Contributing 🤝
 
-The project could use help in the following areas:
+Contributions are welcome! The source code is open source under the MIT license.
 
-1. I'd like to create a large library of example sentences that are appropriate for use with the app. For this, I'd need the help of a Korean native speaker who can curate and moderate a large corpus of AI-generated phrases containing target grammar/vocab.
-1. UI/UX needs an overall and has not been a priority due to time constraints. If you would like to improve the UI, please reach out.
-1. If you have a background in linguistics or Korean language education, please reach out.
-1. The app relies heavily on Google Cloud and OpenAI for text-to-speech and AI features. I would be interested in exploring other options, such as different TTS or LLM providers.
+*   **Bug Reports & Feature Requests:** Please open an issue on GitHub.
+*   **Code Contributions:** Fork the repository, make your changes, and submit a pull request.
+*   **Questions/Discussion:** Use GitHub Issues or contact the maintainer (if contact info is provided elsewhere).
 
-## CORS Setup on Google Cloud
+## License 📄
 
-```json
-// VIEW: gcloud storage buckets describe gs://....
-// EDIT: gcloud storage buckets update gs://.... --cors-file=foo.json
-// gsutil cors set cors.json gs://BUCKET_NAME
-  {
-    "origin": ["https://app.koala.cards"],
-    "method": ["GET", "HEAD", "PUT", "POST"],
-    "responseHeader": ["Content-Type"],
-    "maxAgeSeconds": 3600
-  }
-]
-```
+This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
