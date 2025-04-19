@@ -78,7 +78,6 @@ async function fetchDueCards(userId: string, deckId: number, now: number) {
       { quizType: "asc" },
       { nextReview: "asc" },
     ],
-    take: 45,
   });
 }
 
@@ -92,7 +91,6 @@ async function fetchNewCards(userId: string, deckId: number) {
         lastReview: { equals: 0 },
       },
       select: { id: true },
-      take: 1000,
     }),
   )
     .slice(0, limit)
@@ -178,7 +176,7 @@ export async function getLessons(p: GetLessonInputParams) {
     repsByCard.map((item) => [item.cardId, item._sum.repetitions || 0]),
   );
 
-  return allCards.slice(0, take).map((quiz) => {
+  return shuffle(allCards).slice(0, take).map((quiz) => {
     const quizType = !repsMap[quiz.cardId] ? "dictation" : quiz.quizType;
     return buildQuizPayload({ ...quiz, quizType }, speedPercent);
   });
