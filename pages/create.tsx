@@ -103,7 +103,7 @@ const CreatePage = () => {
     // },
     {
       icon: <IconBulb size={rem(30)} />,
-      title: "From Vibes",
+      title: "Vibes",
       description:
         "Perfect for casual users just trying the app. Tell the AI what you want to learn, and it creates cards based on your request. Great for exploring new topics!",
       buttonText: "Get Started",
@@ -111,7 +111,7 @@ const CreatePage = () => {
     },
     {
       icon: <IconList size={rem(30)} />,
-      title: "From Word Lists",
+      title: "Vocab Lists",
       description:
         "Ideal for serious learners with specific words to learn. Your words will be transformed into example sentences with definitions. Perfect for frequency lists or reading goals.",
       buttonText: "Create from Words",
@@ -119,7 +119,7 @@ const CreatePage = () => {
     },
     {
       icon: <IconTable size={rem(30)} />,
-      title: "From CSV",
+      title: "Spreadsheet",
       description:
         "For users with existing data from other spaced repetition systems like Anki. Import your CSV data directly and continue your learning journey.",
       buttonText: "Import CSV",

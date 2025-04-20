@@ -79,6 +79,7 @@ export const gradeWriting = procedure
         },
       ],
       model: "o4-mini",
+      reasoning_effort: "low",
       // model: "gpt-4.1",
       // temperature: 0.3,
       // max_tokens: 1024,

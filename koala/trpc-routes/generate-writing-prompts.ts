@@ -111,7 +111,8 @@ Write each prompt directly in ${getLangName(
 
     // Call OpenAI
     const aiResponse = await openai.beta.chat.completions.parse({
-      model: "gpt-4.1",
+      model: "o4-mini",
+      reasoning_effort: "low",
       messages: [{ role: "system", content: systemPrompt }],
     });
 
