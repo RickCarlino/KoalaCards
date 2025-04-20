@@ -1,24 +1,40 @@
-import { z } from 'zod';
-import { openai } from '../openai';
-import { zodResponseFormat } from 'openai/helpers/zod';
-import { LangCode, LANG_CODES } from '../shared-types'; // Import LangCode type
-import { procedure } from '../trpc-procedure';
-import { getLangName } from '../get-lang-name';
+import { z } from "zod";
+import { openai } from "../openai";
+import { zodResponseFormat } from "openai/helpers/zod";
+import { LANG_CODES } from "../shared-types"; // Import LangCode type
+import { procedure } from "../trpc-procedure";
+import { getLangName } from "../get-lang-name";
 
 // Updated Input schema: context text, words to define, and language code
 const inputSchema = z.object({
   langCode: LANG_CODES,
-  contextText: z.string().describe("The full text block where the words appeared."),
-  wordsToDefine: z.array(z.string()).min(1).describe("The specific words selected by the user."),
+  contextText: z
+    .string()
+    .describe("The full text block where the words appeared."),
+  wordsToDefine: z
+    .array(z.string())
+    .min(1)
+    .describe("The specific words selected by the user."),
 });
 
 // Updated Zod schema for the expected structured output from OpenAI
 const DefinitionSchema = z.object({
-  definitions: z.array(z.object({
-    word: z.string().describe("The unknown word that was provided."),
-    lemma: z.string().optional().describe("The dictionary form (lemma) of the word, if applicable."),
-    definition: z.string().describe("A concise definition of the word in English, suitable for a language learner, considering the context of the provided text."),
-  })).describe("An array of definitions for the provided words."),
+  definitions: z
+    .array(
+      z.object({
+        word: z.string().describe("The unknown word that was provided."),
+        lemma: z
+          .string()
+          .optional()
+          .describe("The dictionary form (lemma) of the word, if applicable."),
+        definition: z
+          .string()
+          .describe(
+            "A concise definition of the word in English, suitable for a language learner, considering the context of the provided text.",
+          ),
+      }),
+    )
+    .describe("An array of definitions for the provided words."),
 });
 
 // Output schema for the tRPC route - includes lemma now
@@ -30,7 +46,7 @@ export const defineUnknownWords = procedure
   .mutation(async ({ input, ctx }) => {
     const userId = ctx.user?.id;
     if (!userId) {
-      throw new Error('User not found');
+      throw new Error("User not found");
     }
 
     // Use the new input fields
@@ -46,7 +62,7 @@ ${contextText}
 ---
 
 Words to Define:
-${wordsToDefine.join('\n')}
+${wordsToDefine.join("\n")}
 
 ---
 
@@ -60,20 +76,25 @@ For each "Word to Define" listed above:
         model: "gpt-4.1", // Or a model suitable for definitions
         messages: [{ role: "user", content: prompt }],
         n: 1,
-        response_format: zodResponseFormat(DefinitionSchema, "word_definitions"),
+        response_format: zodResponseFormat(
+          DefinitionSchema,
+          "word_definitions",
+        ),
         temperature: 0.3, // Lower temperature for more factual definitions
       });
 
       const parsedResponse = completion.choices[0]?.message?.parsed;
 
       if (!parsedResponse) {
-        console.error("Invalid or missing parsed response from OpenAI for definitions:", completion.choices[0]?.message);
+        console.error(
+          "Invalid or missing parsed response from OpenAI for definitions:",
+          completion.choices[0]?.message,
+        );
         throw new Error("Failed to get structured definitions from OpenAI");
       }
 
       // Return the structured definitions
       return parsedResponse;
-
     } catch (error) {
       console.error("Error generating definitions:", error);
       throw new Error("Failed to generate definitions for unknown words");

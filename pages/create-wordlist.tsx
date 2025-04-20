@@ -69,7 +69,8 @@ export default function Turbine(props: Props) {
   const [state, dispatch] = useReducer(reducer, {
     ...INITIAL_STATE,
     // Initialize based on fetched decks
-    deckLang: (props.decks?.[0]?.langCode as LangCode) || INITIAL_STATE.deckLang,
+    deckLang:
+      (props.decks?.[0]?.langCode as LangCode) || INITIAL_STATE.deckLang,
     deckSelection: props.decks.length > 0 ? "existing" : "new",
     deckId: props.decks.length > 0 ? props.decks[0].id : undefined,
     deckName: props.decks.length > 0 ? props.decks[0].name : "",
@@ -85,13 +86,14 @@ export default function Turbine(props: Props) {
 
   // Effect to pre-fill textarea from URL query parameter (remains the same)
   useEffect(() => {
-    if (router.isReady) { // Ensure router query is populated
+    if (router.isReady) {
+      // Ensure router query is populated
       const wordsQuery = router.query.words;
-      if (typeof wordsQuery === 'string') {
+      if (typeof wordsQuery === "string") {
         try {
           const decodedWords = decodeURIComponent(wordsQuery);
-          const wordsArray = decodedWords.split(',');
-          setInputText(wordsArray.join('\n'));
+          const wordsArray = decodedWords.split(",");
+          setInputText(wordsArray.join("\n"));
         } catch (e) {
           console.error("Failed to parse words from URL:", e);
           // Optionally show a notification to the user
@@ -169,7 +171,7 @@ export default function Turbine(props: Props) {
       setElapsedTime(0);
       return;
     }
-     if (state.deckSelection === "new" && !state.deckName.trim()) {
+    if (state.deckSelection === "new" && !state.deckName.trim()) {
       alert("Please provide a name for the new deck first.");
       clearInterval(timerRef.current); // Stop timer
       timerRef.current = null;
@@ -202,7 +204,9 @@ export default function Turbine(props: Props) {
         withBorder
         style={{ width: "80%" }}
       >
-        <Stack gap="lg"> {/* Changed spacing to gap */}
+        <Stack gap="lg">
+          {" "}
+          {/* Changed spacing to gap */}
           {/* Replace Select with DeckPicker */}
           <DeckPicker
             decks={props.decks}

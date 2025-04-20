@@ -75,7 +75,7 @@ export function DeckPicker({
       dispatch({ type: "SET_DECK_NAME", deckName: selectedDeck.name });
     } else {
       // Clear deck name if selection is cleared
-       dispatch({ type: "SET_DECK_NAME", deckName: "" });
+      dispatch({ type: "SET_DECK_NAME", deckName: "" });
     }
   };
 
@@ -153,7 +153,9 @@ export function DeckPicker({
             }
             placeholder="Select your deck"
             value={state.deckId ? String(state.deckId) : null}
-            onChange={(val) => handleExistingDeckChange(val ? Number(val) : undefined)} // Handle null case
+            onChange={(val) =>
+              handleExistingDeckChange(val ? Number(val) : undefined)
+            } // Handle null case
             data={decks.map((d) => ({
               label: `${d.name} (${getLangName(d.langCode)})`,
               value: String(d.id),
@@ -170,10 +172,11 @@ export function DeckPicker({
             clearable // Allow clearing the selection
           />
         )}
-         {state.deckSelection === "existing" && decks.length === 0 && (
-           <Text size="sm" c="dimmed" mt="sm">No existing decks found. Please create a new one.</Text>
-         )}
-
+        {state.deckSelection === "existing" && decks.length === 0 && (
+          <Text size="sm" c="dimmed" mt="sm">
+            No existing decks found. Please create a new one.
+          </Text>
+        )}
 
         {state.deckSelection === "new" && (
           <>

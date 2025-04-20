@@ -86,6 +86,43 @@ interface WritingAssistantProps {
 }
 
 const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
+  // --- Hooks moved to top level ---
+  const [essay, setEssay] = useState("");
+  const [feedback, setFeedback] = useState<EssayResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [prompts, setPrompts] = useState<string[]>([]);
+  const [promptsLoading, setPromptsLoading] = useState<LangCode | null>(null);
+  const [promptsError, setPromptsError] = useState<string | null>(null);
+  // Initialize selectedLangCode carefully, checking langCodes later if needed
+  const [selectedLangCode, setSelectedLangCode] = useState<LangCode | null>(
+    langCodes && langCodes.length > 0 ? langCodes[0] : null,
+  );
+  const [selectedWords, setSelectedWords] = useState<Record<string, boolean>>(
+    {},
+  );
+  const [definitions, setDefinitions] = useState<
+    { word: string; lemma?: string; definition: string }[]
+  >([]);
+  const [definitionsLoading, setDefinitionsLoading] = useState(false);
+  const [definitionsError, setDefinitionsError] = useState<string | null>(null);
+  const theme = useMantineTheme();
+
+  // --- Moved useMemo hooks ---
+  const sentences = feedback?.sentences ?? []; // Moved from below
+  const originalText = useMemo(
+    () => sentences.map((s) => s.input).join(" "),
+    [sentences],
+  );
+  const correctedText = useMemo(
+    () => sentences.map((s) => (s.ok ? s.input : s.correction)).join(" "),
+    [sentences],
+  );
+  const allExplanations = useMemo(
+    () => sentences.filter((s) => !s.ok).flatMap((s) => s.explanations),
+    [sentences],
+  );
+  // --- End moved hooks ---
+
   if (!langCodes || langCodes.length === 0) {
     return (
       <Container size="md" py="xl">
@@ -105,26 +142,7 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
       </Container>
     );
   }
-  const [essay, setEssay] = useState("");
-  const [feedback, setFeedback] = useState<EssayResponse | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [prompts, setPrompts] = useState<string[]>([]);
-  const [promptsLoading, setPromptsLoading] = useState<LangCode | null>(null);
-  const [promptsError, setPromptsError] = useState<string | null>(null);
-  const [selectedLangCode, setSelectedLangCode] = useState<LangCode>(
-    langCodes[0],
-  );
-  // No longer need WordSource type
-  const [selectedWords, setSelectedWords] = useState<Record<string, boolean>>(
-    {},
-  );
-  const [definitions, setDefinitions] = useState<
-    { word: string; lemma?: string; definition: string }[]
-  >([]);
-  const [definitionsLoading, setDefinitionsLoading] = useState(false);
-  const [definitionsError, setDefinitionsError] = useState<string | null>(null);
-
-  const theme = useMantineTheme();
+  // Hooks were moved to the top
   const primaryColor = theme.primaryColor || "blue";
 
   const gradeWritingMutation = trpc.gradeWriting.useMutation({
@@ -402,20 +420,8 @@ const WritingAssistant = ({ langCodes }: WritingAssistantProps) => {
     return nodes;
   };
 
-  const sentences = feedback?.sentences ?? [];
-  const hasSentences = sentences.length > 0;
-  const originalText = useMemo(
-    () => sentences.map((s) => s.input).join(" "),
-    [sentences],
-  );
-  const correctedText = useMemo(
-    () => sentences.map((s) => (s.ok ? s.input : s.correction)).join(" "),
-    [sentences],
-  );
-  const allExplanations = useMemo(
-    () => sentences.filter((s) => !s.ok).flatMap((s) => s.explanations),
-    [sentences],
-  );
+  // sentences, originalText, correctedText, allExplanations moved up
+  const hasSentences = sentences.length > 0; // Keep this, depends on 'sentences' moved up
   const hasExplanations = allExplanations.length > 0;
 
   const numSelectedWords = Object.keys(selectedWords).length;

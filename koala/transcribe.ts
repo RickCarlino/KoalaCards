@@ -30,7 +30,10 @@ export async function transcribeB64(
   });
   await writeFileAsync(fpath, buffer);
   // Words split on whitespace and punctuation
-  const words = prompt.split(/\s+|[.,!?;:()]/).filter(Boolean).sort();
+  const words = prompt
+    .split(/\s+|[.,!?;:()]/)
+    .filter(Boolean)
+    .sort();
   const transcribePromise = new Promise<TranscriptionResult>(
     async (resolve) => {
       try {

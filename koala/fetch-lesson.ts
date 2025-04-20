@@ -176,8 +176,10 @@ export async function getLessons(p: GetLessonInputParams) {
     repsByCard.map((item) => [item.cardId, item._sum.repetitions || 0]),
   );
 
-  return shuffle(allCards).slice(0, take).map((quiz) => {
-    const quizType = !repsMap[quiz.cardId] ? "dictation" : quiz.quizType;
-    return buildQuizPayload({ ...quiz, quizType }, speedPercent);
-  });
+  return shuffle(allCards)
+    .slice(0, take)
+    .map((quiz) => {
+      const quizType = !repsMap[quiz.cardId] ? "dictation" : quiz.quizType;
+      return buildQuizPayload({ ...quiz, quizType }, speedPercent);
+    });
 }

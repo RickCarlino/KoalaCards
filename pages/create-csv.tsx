@@ -99,23 +99,23 @@ export default function CreateRawPage({ decks }: CreateRawPageProps) {
       // and state.deckLang correctly when an existing deck is chosen.
       // We just need to ensure finalDeckName isn't empty if 'new' mode was selected.
       if (state.deckSelection === "new" && !finalDeckName) {
-         notifications.show({
-           title: "Missing Deck Name",
-           message: "Please provide a name for the new deck.",
-           color: "red",
-         });
-         setLoading(false);
-         return;
+        notifications.show({
+          title: "Missing Deck Name",
+          message: "Please provide a name for the new deck.",
+          color: "red",
+        });
+        setLoading(false);
+        return;
       }
       // If existing deck mode, deckId must be set
       if (state.deckSelection === "existing" && !state.deckId) {
-         notifications.show({
-           title: "Missing Deck Selection",
-           message: "Please select an existing deck.",
-           color: "red",
-         });
-         setLoading(false);
-         return;
+        notifications.show({
+          title: "Missing Deck Selection",
+          message: "Please select an existing deck.",
+          color: "red",
+        });
+        setLoading(false);
+        return;
       }
 
       // Convert lines into card-like data
@@ -180,7 +180,9 @@ export default function CreateRawPage({ decks }: CreateRawPageProps) {
       />
 
       {/* STEP 2: Raw input (each line is separated by newline) */}
-      <Paper withBorder p="md" radius="md" my="md"> {/* Added my="md" for spacing */}
+      <Paper withBorder p="md" radius="md" my="md">
+        {" "}
+        {/* Added my="md" for spacing */}
         <Title order={4} mb="sm">
           Raw Text Input
         </Title>
@@ -189,7 +191,6 @@ export default function CreateRawPage({ decks }: CreateRawPageProps) {
           treated as a separate card. Within each line, we’ll split the term
           from the definition using the separator below. (Up to 1500 lines.)
         </Text>
-
         <Flex gap="sm" mb="sm">
           <TextInput
             label="Term→Definition Separator"
@@ -199,7 +200,6 @@ export default function CreateRawPage({ decks }: CreateRawPageProps) {
             onChange={(e) => setSeparator(e.currentTarget.value)}
           />
         </Flex>
-
         <Textarea
           label="Raw Input (max 1500 lines)"
           placeholder={`Term1${separator}Definition1\nTerm2${separator}Definition2\n...`}
@@ -210,9 +210,7 @@ export default function CreateRawPage({ decks }: CreateRawPageProps) {
             dispatch({ type: "SET_RAW_INPUT", rawInput: e.currentTarget.value })
           } // Dispatch action to update rawInput
         />
-
         <Divider my="sm" />
-
         {/* Info about how many lines were parsed */}
         <Text size="sm" mt="xs">
           <strong>{lines.length}</strong> lines parsed
@@ -222,7 +220,6 @@ export default function CreateRawPage({ decks }: CreateRawPageProps) {
             </Text>
           )}
         </Text>
-
         {/* Preview Table (first 10 lines) */}
         <Title order={5} mt="md" mb="xs">
           Preview (first 10 lines)
