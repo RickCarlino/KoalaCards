@@ -235,6 +235,17 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
             >
               Study {take} Cards
             </Button>
+            <Button
+              component={Link}
+              href={`/writing/${deck.id}`}
+              variant="outline"
+              color="pink"
+              radius="xl"
+              size="sm"
+              style={{ whiteSpace: "normal", textAlign: "center" }}
+            >
+              Writing Practice
+            </Button>
           </Group>
         </Center>
         <Group mt="md" grow align="center">

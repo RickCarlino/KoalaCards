@@ -11,6 +11,7 @@ export const editUserSettings = procedure
       playbackSpeed: z.number().min(0.5).max(2),
       cardsPerDayMax: z.number().min(1),
       playbackPercentage: z.number().min(0).max(1),
+      dailyWritingGoal: z.number().int().min(1).optional(), // Added dailyWritingGoal (optional)
       updatedAt: z.date(), // Assuming you pass this from the frontend
     }),
   )
@@ -29,10 +30,20 @@ export const editUserSettings = procedure
         userId: ctx.user?.id,
       },
       data: {
-        playbackSpeed: input.playbackSpeed,
-        cardsPerDayMax: input.cardsPerDayMax,
-        playbackPercentage: input.playbackPercentage,
-        updatedAt: new Date(), // Update the updatedAt field to current time
+        // Only update fields that are provided in the input
+        ...(input.playbackSpeed !== undefined && {
+          playbackSpeed: input.playbackSpeed,
+        }),
+        ...(input.cardsPerDayMax !== undefined && {
+          cardsPerDayMax: input.cardsPerDayMax,
+        }),
+        ...(input.playbackPercentage !== undefined && {
+          playbackPercentage: input.playbackPercentage,
+        }),
+        ...(input.dailyWritingGoal !== undefined && {
+          dailyWritingGoal: input.dailyWritingGoal,
+        }),
+        updatedAt: new Date(), // Always update the updatedAt field to current time
       },
     });
 

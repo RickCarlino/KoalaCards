@@ -2,6 +2,7 @@ import { getUserSettingsFromEmail } from "@/koala/auth-helpers";
 import { prismaClient } from "@/koala/prisma-client";
 import { trpc } from "@/koala/trpc-config";
 import { getLessonMeta } from "@/koala/trpc-routes/get-next-quizzes";
+import { AreaChart } from "@mantine/charts"; // Import AreaChart
 import {
   Button,
   Card,
@@ -14,7 +15,6 @@ import {
   Text,
   Title,
 } from "@mantine/core";
-import { AreaChart } from "@mantine/charts"; // Import AreaChart
 import { notifications } from "@mantine/notifications";
 import { UnwrapPromise } from "@prisma/client/runtime/library";
 import { GetServerSidePropsContext } from "next";
@@ -278,6 +278,18 @@ export default function UserSettingsPage(props: Props) {
                 value={settings.cardsPerDayMax}
                 onChange={(value) => handleChange(value, "cardsPerDayMax")}
                 min={1}
+                required
+              />
+
+              <NumberInput
+                label="Daily writing goal (characters)"
+                description="Set your daily writing practice target in characters."
+                id="dailyWritingGoal"
+                name="dailyWritingGoal"
+                value={settings.dailyWritingGoal || 300}
+                onChange={(value) => handleChange(value, "dailyWritingGoal")}
+                min={0}
+                step={50}
                 required
               />
 

@@ -123,7 +123,6 @@ export default function Turbine(props: Props) {
           definition: item.definition,
           gender: "N",
         })),
-        cardType: "both",
         deckName: finalDeckName, // Use finalDeckName (handles both new/existing)
       });
       // Reset state:

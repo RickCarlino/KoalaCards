@@ -1,12 +1,12 @@
-import { shuffle, unique } from "radash";
+import { shuffle } from "radash";
 import { z } from "zod";
 import { getLangName } from "../get-lang-name";
 import { openai } from "../openai";
 import { prismaClient } from "../prisma-client";
-import { LANG_CODES } from "../shared-types";
 import { procedure } from "../trpc-procedure";
+import { TRPCError } from "@trpc/server";
 
-const inputSchema = z.object({ langCode: LANG_CODES });
+const inputSchema = z.object({ deckId: z.number() }); // Changed input to deckId
 const outputSchema = z.array(z.string());
 
 export const generateWritingPrompts = procedure
@@ -15,30 +15,45 @@ export const generateWritingPrompts = procedure
   .mutation(async ({ input, ctx }) => {
     const userId = ctx.user?.id;
     if (!userId) {
-      throw new Error("User not found");
+      throw new TRPCError({ code: "UNAUTHORIZED", message: "User not found" });
     }
 
-    const { langCode } = input;
+    const { deckId } = input;
 
-    const recentQuizzes = await prismaClient.quiz.findMany({
-      where: { Card: { userId, langCode } },
-      orderBy: { lastReview: "desc" },
-      take: 1000,
-      select: { cardId: true },
+    // Fetch the deck to verify ownership and get langCode
+    const deck = await prismaClient.deck.findUnique({
+      where: { id: deckId, userId },
     });
 
-    const uniqueIds = unique(recentQuizzes.map((q) => q.cardId));
-    const sampleIds = shuffle(uniqueIds).slice(0, 7);
-    const inspirations = shuffle(
-      await prismaClient.card.findMany({
-        where: { id: { in: sampleIds } },
-        select: { term: true },
-      }),
-    ).map((c) => c.term);
+    if (!deck) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Deck not found or user does not have access.",
+      });
+    }
+    const { langCode } = deck;
+
+    // Fetch inspiration terms specifically from this deck
+    const cardsInDeck = await prismaClient.card.findMany({
+      where: { userId, deckId },
+      select: { term: true },
+      take: 100, // Limit the number of cards fetched for performance
+    });
+
+    // Use terms from the specific deck as inspiration, declare before the check
+    const inspirations = shuffle(cardsInDeck.map((c) => c.term));
 
     if (inspirations.length < 7) {
-      return ["Please review more cards to generate prompts."];
+      // Need at least 7 cards to pick from for the 7 prompt templates
+      return [
+        `Please add at least 7 cards to the deck "${deck.name}" to generate diverse writing prompts.`,
+        "Alternatively, write about a topic of your choice.",
+        "You can start by describing your day.",
+      ];
     }
+
+    // Slice inspirations *after* the length check
+    const slicedInspirations = inspirations.slice(0, 7);
 
     const promptTemplates = [
       {
@@ -96,11 +111,12 @@ export const generateWritingPrompts = procedure
 - Do NOT reveal the example sentences.
 - Keep prompts fresh, non-cliché, and engaging.`;
 
+    // Use the sliced inspirations for the prompt generation
     selectedTemplates.forEach((tpl, idx) => {
       systemPrompt += `
 
 ${idx + 1}. ${tpl.description}
-   SECRET: ${inspirations[tpl.secretIndex]}`;
+   SECRET: ${slicedInspirations[tpl.secretIndex]}`;
     });
 
     systemPrompt += `
@@ -119,10 +135,27 @@ Write each prompt directly in ${getLangName(
     console.log(systemPrompt);
     // Split the AI's output into individual prompts
     const raw = aiResponse.choices[0].message.content || "";
-    const prompts = raw
+    let prompts = raw
       .split(/\r?\n+/)
       .map((line) => line.trim())
       .filter((line) => line);
+
+    // Ensure we return exactly 3 prompts if possible, handle edge cases
+    // Use the original inspirations array for fallback, checking its length
+    if (prompts.length === 0 && inspirations.length >= 3) {
+      // Fallback if AI fails but we have at least 3 inspirations
+      prompts = [
+        `Describe something related to: ${inspirations[0]}`,
+        `What is your opinion on: ${inspirations[1]}?`,
+        `Imagine a situation involving: ${inspirations[2]}`,
+      ];
+    } else if (prompts.length === 0 && inspirations.length > 0) {
+      // Fallback if AI fails and we have < 3 inspirations
+      prompts = [`Describe something related to: ${inspirations[0]}`];
+    } else if (prompts.length > 3) {
+      prompts = prompts.slice(0, 3); // Take the first 3 if more are returned
+    }
+    // If fewer than 3 are returned by AI (and not zero), we return what we got.
 
     return prompts;
   });

@@ -17,6 +17,7 @@ const EMPTY: UserSettings = {
   playbackPercentage: 0.5,
   createdAt: new Date(),
   updatedAt: new Date(),
+  dailyWritingGoal: 300,
 };
 
 const UserSettingsContext = createContext<UserSettings>(EMPTY);

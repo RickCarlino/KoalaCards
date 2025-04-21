@@ -22,31 +22,35 @@ import { copyDeck } from "./copy-deck";
 import { reportDeck } from "./report-deck";
 import { generateWritingPrompts } from "./generate-writing-prompts";
 import { defineUnknownWords } from "./define-unknown-words";
+import { translate } from "./translate";
+import { getDailyWritingProgress } from "./get-daily-writing-progress"; // Added import
 
 export const appRouter = router({
   bulkCreateCards,
+  copyDeck,
+  createRemixCards,
+  defineUnknownWords,
   deleteCard,
+  deleteDeck,
   deletePausedCards,
   editCard,
   editUserSettings,
   faucet,
-  pauseCard,
+  generateWritingPrompts,
+  getDailyWritingProgress,
   getNextQuizzes,
   getUserSettings,
   gradeQuiz,
-  parseCards,
-  transcribeAudio,
   gradeSpeakingQuiz,
-  remix,
-  createRemixCards,
-  turbine,
-  deleteDeck,
   gradeWriting,
-  updateDeck,
-  copyDeck,
+  parseCards,
+  pauseCard,
+  remix,
   reportDeck,
-  generateWritingPrompts,
-  defineUnknownWords,
+  transcribeAudio,
+  translate,
+  turbine,
+  updateDeck,
 });
 
 export type AppRouter = typeof appRouter;

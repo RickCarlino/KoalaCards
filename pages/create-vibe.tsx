@@ -104,7 +104,6 @@ const LanguageInputPage = (props: LanguageInputPageProps) => {
       await bulkCreateCards.mutateAsync({
         langCode: state.deckLang,
         input: state.processedCards,
-        cardType: state.cardType,
         deckName: finalDeckName, // find-or-create by deck name
       });
 

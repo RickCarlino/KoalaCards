@@ -129,7 +129,6 @@ export default function CreateRawPage({ decks }: CreateRawPageProps) {
       await bulkCreateCards.mutateAsync({
         langCode: finalDeckLang,
         input: cardData,
-        cardType: "speaking", // or "listening" / "both" depending on your needs
         deckName: finalDeckName,
       });
 
