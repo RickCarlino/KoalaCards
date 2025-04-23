@@ -79,6 +79,54 @@ export const getServerSideProps: GetServerSideProps<
   }
 
   const isNumeric = /^\d+$/.test(deckIdParam);
+  const numericDeckId = isNumeric ? parseInt(deckIdParam, 10) : null;
+
+  // Check user settings for writingFirst preference
+  const userSettings = await prismaClient.userSettings.findUnique({
+    where: { userId: dbUser.id },
+    select: { writingFirst: true, dailyWritingGoal: true },
+  });
+
+  // If user has writingFirst enabled, check their writing progress
+  if (userSettings?.writingFirst && numericDeckId) {
+    // First check if there are enough cards to require writing
+    // If there are less than 7 cards, don't redirect to writing
+    const cardCount = await prismaClient.card.count({
+      where: { 
+        userId: dbUser.id,
+        deckId: numericDeckId,
+        flagged: false,
+      },
+    });
+
+    if (cardCount >= 7) {
+      // Calculate the timestamp for 24 hours ago
+      const now = new Date();
+      const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+      // Get user's writing progress in the last 24 hours
+      const writingProgress = await prismaClient.writingSubmission.aggregate({
+        _sum: { correctionCharacterCount: true },
+        where: {
+          userId: dbUser.id,
+          createdAt: { gte: last24Hours },
+        },
+      });
+
+      const progress = writingProgress._sum.correctionCharacterCount ?? 0;
+      const goal = userSettings.dailyWritingGoal ?? 500;
+
+      // If progress is less than the goal, redirect to writing page
+      if (progress < goal) {
+        return { 
+          redirect: { 
+            destination: `/writing/${numericDeckId}`, 
+            permanent: false 
+          } 
+        };
+      }
+    }
+  }
 
   if (isNumeric) {
     return handleNumericDeckId(parseInt(deckIdParam, 10), dbUser.id);

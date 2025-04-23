@@ -12,6 +12,7 @@ export const editUserSettings = procedure
       cardsPerDayMax: z.number().min(1),
       playbackPercentage: z.number().min(0).max(1),
       dailyWritingGoal: z.number().int().min(1).optional(), // Added dailyWritingGoal (optional)
+      writingFirst: z.boolean().optional(), // Added writingFirst (optional)
       updatedAt: z.date(), // Assuming you pass this from the frontend
     }),
   )
@@ -42,6 +43,9 @@ export const editUserSettings = procedure
         }),
         ...(input.dailyWritingGoal !== undefined && {
           dailyWritingGoal: input.dailyWritingGoal,
+        }),
+        ...(input.writingFirst !== undefined && {
+          writingFirst: input.writingFirst,
         }),
         updatedAt: new Date(), // Always update the updatedAt field to current time
       },

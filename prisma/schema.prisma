@@ -67,6 +67,7 @@ model UserSettings {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
   dailyWritingGoal   Int      @default(500) // Default goal of 500 characters
+  writingFirst       Boolean  @default(false) // Always quiz writing before reviewing cards
 }
 
 model VerificationToken {

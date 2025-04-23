@@ -12,6 +12,7 @@ import {
   Paper,
   Radio,
   Stack,
+  Switch,
   Text,
   Title,
 } from "@mantine/core";
@@ -306,6 +307,15 @@ export default function UserSettingsPage(props: Props) {
                 <Radio value="0.125" label="Sometimes" />
                 <Radio value="0" label="Never" />
               </Radio.Group>
+
+              <Switch
+                checked={settings.writingFirst || false}
+                onChange={(event) => setSettings({ ...settings, writingFirst: event.currentTarget.checked })}
+                label="Do not allow review of cards if daily writing goal is not met"
+                description="Prioritize writing practice by requiring it before card review"
+                size="md"
+                color="blue"
+              />
 
               <Group justify="flex-end" mt="md">
                 <Button type="submit">Save Settings</Button>
