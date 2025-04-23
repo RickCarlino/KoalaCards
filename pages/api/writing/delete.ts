@@ -1,7 +1,7 @@
 import { prismaClient } from "@/koala/prisma-client";
 import { NextApiRequest, NextApiResponse } from "next";
-import { unstable_getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]";
+import { getServerSession } from "next-auth";
 
 export default async function handler(
   req: NextApiRequest,
@@ -13,9 +13,7 @@ export default async function handler(
 
   try {
     // Get server-side session using the auth options from [...nextauth].ts
-    const session = await unstable_getServerSession(req, res, authOptions);
-
-    console.log("Session data:", JSON.stringify(session));
+    const session = await getServerSession(req, res, authOptions);
 
     if (!session?.user?.email) {
       return res

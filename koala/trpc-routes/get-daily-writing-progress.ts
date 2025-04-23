@@ -22,11 +22,9 @@ export const getDailyWritingProgress = procedure
       throw new TRPCError({ code: "UNAUTHORIZED", message: "User not found" });
     }
 
-    // Calculate the start of the current day in UTC
+    // Calculate the timestamp for 24 hours ago
     const now = new Date();
-    const startOfTodayUTC = new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
-    );
+    const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
     try {
       // Get the user's daily writing goal from settings
@@ -47,7 +45,7 @@ export const getDailyWritingProgress = procedure
         where: {
           userId: userId,
           createdAt: {
-            gte: startOfTodayUTC, // Greater than or equal to the start of today UTC
+            gte: last24Hours, // Greater than or equal to 24 hours ago
           },
         },
       });

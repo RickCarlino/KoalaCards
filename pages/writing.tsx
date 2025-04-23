@@ -17,6 +17,7 @@ import {
 } from "@mantine/core";
 import { IconTrash } from "@tabler/icons-react";
 import { GetServerSideProps } from "next";
+import Link from "next/link";
 import { useState } from "react";
 
 const ITEMS_PER_PAGE = 5;
@@ -112,8 +113,9 @@ export default function WritingHistoryPage({
 
       {submissions.length === 0 ? (
         <Alert title="No submissions found" color="blue">
-          You haven't submitted any writing practice yet. Try creating some
-          writing exercises!
+          You haven't submitted any writing practice yet.{" "}
+          <Link href="/create">Add a deck</Link> and{" "}
+          <Link href="/review">do some writing exercises!</Link>
         </Alert>
       ) : (
         <Stack gap="xl">

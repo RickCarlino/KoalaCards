@@ -465,6 +465,9 @@ export default function WritingPage({ deckId, langCode }: WritingPageProps) {
       <Paper withBorder p="sm" mb="md" bg="rgba(0,0,0,0.03)">
         <Text>{selectedPrompt}</Text>
       </Paper>
+      <Text size="sm" c="dimmed" mb="xs">
+        TIP: Don't know a word? Surround the word you want to use in question marks and it will be replaced with an appropriate word when graded. Example: ?apple?를 먹어요.
+      </Text>
 
       <Textarea
         placeholder="Write your essay here..."
