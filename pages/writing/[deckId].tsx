@@ -501,15 +501,15 @@ export default function WritingPage({ deckId, langCode }: WritingPageProps) {
   const renderFeedbackStep = () => (
     <Paper withBorder shadow="sm" p="md" mt="md">
       <Stack gap="md">
-        <Title order={3}>Feedback</Title>
+        <Title order={3}>Feedback  (Click unknown words)</Title>
 
-        <Text fw={600}>Selected Prompt (Click words you don't know)</Text>
+        <Text fw={600}>Selected Prompt</Text>
         {selectedPrompt && renderClickableText(selectedPrompt)}
 
-        <Text fw={600}>Original Text (Click words you don't know)</Text>
+        <Text fw={600}>Original Text</Text>
         {renderClickableText(essay)}
 
-        <Text fw={600}>Corrected Text (Click words you don't know)</Text>
+        <Text fw={600}>Corrected Text</Text>
         {renderClickableText(corrected)}
 
         <Text fw={600}>Changes</Text>
