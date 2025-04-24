@@ -9,6 +9,24 @@ import { TRPCError } from "@trpc/server";
 const inputSchema = z.object({ deckId: z.number() }); // Changed input to deckId
 const outputSchema = z.array(z.string());
 
+const promptIntro = `
+You are a creative writing instructor for language learners. Using three hidden example sentences only as loose inspiration, generate three distinct, engaging prompts.
+- Do NOT reveal, paraphrase, or reference the example sentences directly.
+- Treat each example sentence purely as a thematic springboard.
+- Focus on natural, contextually appropriate phrasing suited to learners.
+- Avoid overly literal or off-beat interpretations of the hidden sentences.
+`.trim();
+
+const promptTemplates = [
+  "Comparative / Evaluative: Have the learner compare two ideas or experiences implied by the hidden sentence.",
+  "Descriptive: Ask the learner to vividly describe a scene or object suggested by the hidden sentence.",
+  "Hypothetical Scenario (Role-Play): Present a real-world scenario and ask the learner to act a role, using language practically.",
+  "Opinion / Argument: Invite the learner to give and support their viewpoint on a topic inspired by the hidden sentence.",
+  "Personal Narrative: Draw on the theme hinted by the hidden sentence.",
+  "Procedural / How-to: Ask the learner to explain a process or give advice based on the hidden sentence.",
+  "Reflective / Metacognitive: Encourage the learner to reflect on their own beliefs or habits suggested by the hidden sentence.",
+];
+
 export const generateWritingPrompts = procedure
   .input(inputSchema)
   .output(outputSchema)
@@ -41,90 +59,37 @@ export const generateWritingPrompts = procedure
     });
 
     // Use terms from the specific deck as inspiration, declare before the check
-    const inspirations = shuffle(cardsInDeck.map((c) => c.term));
+    const inspirations = shuffle(cardsInDeck.map((c) => c.term)).slice(0, 7);
 
     if (inspirations.length < 7) {
-      // Need at least 7 cards to pick from for the 7 prompt templates
-      return [
-        `Please add at least 7 cards to the deck "${deck.name}" to generate diverse writing prompts.`,
-        "Alternatively, write about a topic of your choice.",
-        "You can start by describing your day.",
-      ];
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "You need at least 7 cards in the deck to generate prompts.",
+      });
     }
+    const shuffledPrompts = shuffle(promptTemplates);
+    // 3. Specify exactly which three types of prompts to generate
+    const promptTasks = `
+Create one of each of these prompt types:
+1. Prompt: ${shuffledPrompts[0]}
+   Inspiration: ${inspirations[0]}
+2. Prompt: ${shuffledPrompts[1]}
+   Inspiration: ${inspirations[1]}
+3. Prompt: ${shuffledPrompts[2]}
+   Inspiration: ${inspirations[2]}
+`.trim();
 
-    // Slice inspirations *after* the length check
-    const slicedInspirations = inspirations.slice(0, 7);
+    // 4. Put it all together, and remind it to write in the learner’s target language
+    let systemPrompt = `
+${promptIntro}
 
-    const promptTemplates = [
-      {
-        key: "personalNarrative",
-        description:
-          "Personal Narrative: Draw on the theme hinted by the hidden sentence.",
-        secretIndex: 0,
-      },
-      {
-        key: "hypotheticalRolePlay",
-        description:
-          "Hypothetical Scenario (Role-Play): Present a real-world scenario and ask the learner to act a role, using language practically.",
-        secretIndex: 1,
-      },
-      {
-        key: "opinionArgument",
-        description:
-          "Opinion / Argument: Invite the learner to give and support their viewpoint on a topic inspired by the hidden sentence.",
-        secretIndex: 2,
-      },
-      {
-        key: "descriptive",
-        description:
-          "Descriptive: Ask the learner to vividly describe a scene or object suggested by the hidden sentence.",
-        secretIndex: 3,
-      },
-      {
-        key: "comparativeEvaluative",
-        description:
-          "Comparative / Evaluative: Have the learner compare two ideas or experiences implied by the hidden sentence.",
-        secretIndex: 4,
-      },
-      {
-        key: "reflectiveMetacognitive",
-        description:
-          "Reflective / Metacognitive: Encourage the learner to reflect on their own beliefs or habits suggested by the hidden sentence.",
-        secretIndex: 5,
-      },
-      {
-        key: "proceduralHowTo",
-        description:
-          "Procedural / How-to: Ask the learner to explain a process or give advice based on the hidden sentence.",
-        secretIndex: 6,
-      },
-    ];
-
-    // Randomly pick three different prompt types
-    const selectedTemplates = shuffle(promptTemplates).slice(0, 3);
-
-    // Build the system prompt for OpenAI
-    let systemPrompt = `You are a creative writing instructor. Using three hidden example sentences in ${getLangName(
-      langCode,
-    )}, generate three distinct writing prompts.
-
-- Do NOT reveal the example sentences.
-- Keep prompts fresh, non-cliché, and engaging.`;
-
-    // Use the sliced inspirations for the prompt generation
-    selectedTemplates.forEach((tpl, idx) => {
-      systemPrompt += `
-
-${idx + 1}. ${tpl.description}
-   SECRET: ${slicedInspirations[tpl.secretIndex]}`;
-    });
-
-    systemPrompt += `
+${promptTasks}
 
 Write each prompt directly in ${getLangName(
       langCode,
-    )}, without titles, labels, or numbering. Use natural phrasing suited to a language learner.`;
-
+    )}, without numbering or labels.
+`.trim();
+    console.log(systemPrompt);
     // Call OpenAI
     const aiResponse = await openai.beta.chat.completions.parse({
       model: "o4-mini",
@@ -139,23 +104,6 @@ Write each prompt directly in ${getLangName(
       .split(/\r?\n+/)
       .map((line) => line.trim())
       .filter((line) => line);
-
-    // Ensure we return exactly 3 prompts if possible, handle edge cases
-    // Use the original inspirations array for fallback, checking its length
-    if (prompts.length === 0 && inspirations.length >= 3) {
-      // Fallback if AI fails but we have at least 3 inspirations
-      prompts = [
-        `Describe something related to: ${inspirations[0]}`,
-        `What is your opinion on: ${inspirations[1]}?`,
-        `Imagine a situation involving: ${inspirations[2]}`,
-      ];
-    } else if (prompts.length === 0 && inspirations.length > 0) {
-      // Fallback if AI fails and we have < 3 inspirations
-      prompts = [`Describe something related to: ${inspirations[0]}`];
-    } else if (prompts.length > 3) {
-      prompts = prompts.slice(0, 3); // Take the first 3 if more are returned
-    }
-    // If fewer than 3 are returned by AI (and not zero), we return what we got.
 
     return prompts;
   });

@@ -310,7 +310,12 @@ export default function UserSettingsPage(props: Props) {
 
               <Switch
                 checked={settings.writingFirst || false}
-                onChange={(event) => setSettings({ ...settings, writingFirst: event.currentTarget.checked })}
+                onChange={(event) =>
+                  setSettings({
+                    ...settings,
+                    writingFirst: event.currentTarget.checked,
+                  })
+                }
                 label="Do not allow review of cards if daily writing goal is not met"
                 description="Prioritize writing practice by requiring it before card review"
                 size="md"

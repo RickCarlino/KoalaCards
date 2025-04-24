@@ -92,7 +92,7 @@ export const getServerSideProps: GetServerSideProps<
     // First check if there are enough cards to require writing
     // If there are less than 7 cards, don't redirect to writing
     const cardCount = await prismaClient.card.count({
-      where: { 
+      where: {
         userId: dbUser.id,
         deckId: numericDeckId,
         flagged: false,
@@ -118,11 +118,11 @@ export const getServerSideProps: GetServerSideProps<
 
       // If progress is less than the goal, redirect to writing page
       if (progress < goal) {
-        return { 
-          redirect: { 
-            destination: `/writing/${numericDeckId}`, 
-            permanent: false 
-          } 
+        return {
+          redirect: {
+            destination: `/writing/${numericDeckId}`,
+            permanent: false,
+          },
         };
       }
     }

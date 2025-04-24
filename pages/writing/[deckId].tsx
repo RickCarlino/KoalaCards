@@ -25,6 +25,12 @@ import { GetServerSideProps } from "next";
 import { useCallback, useMemo, useState } from "react";
 
 type WritingPageProps = { deckId: number; langCode: LangCode };
+// Match the schema defined in koala/trpc-routes/grade-writing.ts
+type Feedback = {
+  fullCorrection: string;
+  fullText: string;
+  feedback: string[]; // Per schema in grade-writing.ts
+};
 
 export const getServerSideProps: GetServerSideProps<WritingPageProps> = async (
   ctx,
@@ -76,7 +82,7 @@ export default function WritingPage({ deckId, langCode }: WritingPageProps) {
   const [translations, setTranslations] = useState<string[]>([]);
   const [translatingIdx, setTranslatingIdx] = useState<number | null>(null);
 
-  const [feedback, setFeedback] = useState<any | null>(null);
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [loadingReview, setLoadingReview] = useState(false);
 
   // Fetch daily writing progress data
@@ -300,8 +306,10 @@ export default function WritingPage({ deckId, langCode }: WritingPageProps) {
           color: "yellow",
         });
       }
-    } catch (err: any) {
-      setDefinitionsError(err.message || "Failed to get definitions.");
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to get definitions.";
+      setDefinitionsError(errorMessage);
     } finally {
       setDefinitionsLoading(false);
     }
@@ -334,25 +342,7 @@ export default function WritingPage({ deckId, langCode }: WritingPageProps) {
   const showDefs = definitions.length > 0 && !definitionsLoading;
 
   // Get corrected text from feedback
-  const corrected = useMemo(
-    () =>
-      feedback?.sentences.map((s: any) => s.correction || s.input).join(" "),
-    [feedback],
-  );
-
-  // Extract all explanations from the feedback
-  const explanations = useMemo(() => {
-    if (!feedback?.sentences) return [];
-    return feedback.sentences
-      .filter((s: any) => s.explanations && s.explanations.length > 0)
-      .flatMap((s: any) => s.explanations);
-  }, [feedback]);
-
-  // For backward compatibility
-  const suggestions = useMemo(
-    () => feedback?.sentences.filter((s: any) => !s).flat() || [],
-    [feedback],
-  );
+  const corrected = useMemo(() => feedback?.fullCorrection || "", [feedback]);
 
   // Extract writing progress data
   const writingProgressData = dailyWritingProgressQuery.data;
@@ -364,7 +354,6 @@ export default function WritingPage({ deckId, langCode }: WritingPageProps) {
       <Stack gap="md">
         <Title order={4}>Begin Writing Exercise</Title>
 
-        {/* Progress section */}
         <Stack gap="sm">
           <Text fw={600}>Daily Progress</Text>
           {isLoadingProgress ? (
@@ -466,7 +455,9 @@ export default function WritingPage({ deckId, langCode }: WritingPageProps) {
         <Text>{selectedPrompt}</Text>
       </Paper>
       <Text size="sm" c="dimmed" mb="xs">
-        TIP: Don't know a word? Surround the word you want to use in question marks and it will be replaced with an appropriate word when graded. Example: ?apple?를 먹어요.
+        TIP: Don't know a word? Surround the word you want to use in question
+        marks and it will be replaced with an appropriate word when graded.
+        Example: ?apple?를 먹어요.
       </Text>
 
       <Textarea
@@ -501,40 +492,24 @@ export default function WritingPage({ deckId, langCode }: WritingPageProps) {
   const renderFeedbackStep = () => (
     <Paper withBorder shadow="sm" p="md" mt="md">
       <Stack gap="md">
-        <Title order={3}>Feedback  (Click unknown words)</Title>
-
+        <Title order={3}>Feedback (Click unknown words)</Title>
         <Text fw={600}>Selected Prompt</Text>
         {selectedPrompt && renderClickableText(selectedPrompt)}
-
         <Text fw={600}>Original Text</Text>
         {renderClickableText(essay)}
-
         <Text fw={600}>Corrected Text</Text>
         {renderClickableText(corrected)}
-
         <Text fw={600}>Changes</Text>
         <VisualDiff actual={essay} expected={corrected} />
-
-        {/* Explanations from the grading feedback */}
-        {explanations.length > 0 && (
+        {feedback?.feedback && feedback.feedback.length > 0 && (
           <>
-            <Text fw={600}>Explanations</Text>
-            {explanations.map((explanation: string, idx: number) => (
-              <Text key={idx} size="sm" style={{ marginLeft: 8 }}>
-                • {explanation}
-              </Text>
-            ))}
-          </>
-        )}
-
-        {/* Keep suggestions for backward compatibility */}
-        {suggestions.length > 0 && (
-          <>
-            <Text fw={600}>Suggestions</Text>
-            {suggestions.map((s: string, idx: number) => (
-              <Text key={idx} size="sm" style={{ marginLeft: 8 }}>
-                • {s}
-              </Text>
+            <Text fw={600}>Feedback</Text>
+            {feedback.feedback.map((feedbackItem, itemIdx) => (
+              <Box key={itemIdx} mb="xs">
+                <Text size="sm" style={{ marginLeft: 8 }}>
+                  • {feedbackItem}
+                </Text>
+              </Box>
             ))}
           </>
         )}
@@ -618,7 +593,6 @@ export default function WritingPage({ deckId, langCode }: WritingPageProps) {
         Writing Practice
       </Title>
 
-      {/* Render the current step in the writing flow */}
       {currentStep === "prompt-selection" && (
         <>
           {!hasPrompts && renderInitialStep()}

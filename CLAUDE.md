@@ -11,6 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Code Guidelines
 - TypeScript strictly typed - avoid using `any` types
+- No seriously, never use any type. It's never OK. Use `unknown` if you must.
 - React functional components with explicit return types
 - Imports ordered: React, external packages, internal modules, types
 - PascalCase for components, camelCase for functions/variables
@@ -20,6 +21,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - UI uses Mantine component library for consistent styling
 - Avoid hard-coded values - use environment variables for secrets
 - I prefer serverside props over trpc methods where possible
-- 
+- When the feature is done, run `npm run lint` and `tsc --noEmit` to make sure it's cleaned up.
 
 KoalaCards is a language learning app with listening and speaking flashcards using spaced repetition and automated grading via speech recognition and LLMs.
