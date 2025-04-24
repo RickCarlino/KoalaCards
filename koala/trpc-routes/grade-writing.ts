@@ -6,32 +6,21 @@ import { prismaClient } from "../prisma-client"; // Added prisma client
 import { TRPCError } from "@trpc/server"; // Added TRPCError
 import { getLangName } from "../get-lang-name"; // Added getLangName
 
-// Define the Zod schema for feedback item
-// const FeedbackItemSchema = z.object({
-//   input: z.string(),
-//   correction: z.string(),
-//   explanations: z.array(z.string()),
-// });
-
-// Schema for the API response from OpenAI
 const ApiResponseSchema = z.object({
   fullCorrection: z.string(),
   feedback: z.array(z.string()),
 });
 
-// Schema for the complete response to client
 const EssayResponseSchema = z.object({
   fullText: z.string(),
   fullCorrection: z.string(),
   feedback: z.array(z.string()),
 });
 
-// Export types derived from the schema
 export type FeedbackItem = string[];
 export type ApiResponse = z.infer<typeof ApiResponseSchema>;
 export type EssayResponse = z.infer<typeof EssayResponseSchema>;
 
-// Define the system prompt for essay grading
 const ESSAY_GRADING_PROMPT = `You are an AI language tutor helping foreign language learners improve their writing skills.
 
 Analyze the provided essay or sentences in the target language and provide detailed feedback.
@@ -43,11 +32,9 @@ I want you to return a response object with only:
 
 DO NOT include the original full text in your response as we already have it.
 
-For each feedback item in the array:
-1. Include the original problematic text (input)
-2. Provide the corrected version (correction)
-3. Add a list of clear, concise explanations for errors and how to fix them in English (explanations)
-   NOTE: For spelling, capitalization, spacing and punctuation errors, just fix them and leave a bullet that says "Spelling and punctuation fixes."
+Use the feedback array as a list of clear, concise explanations of errors and how to fix them in English (explanations)
+NOTE: For spelling, capitalization, spacing and punctuation errors, just fix them and leave a bullet that says "Spelling and punctuation fixes."
+It's really annoying for the user to see 10 "Spacing and punctuation fixes" bullet points.
 
 If a word is surrounded by question marks (e.g., "?apple?"), treat it as an unknown word the user replaced with English:
 - Translate the English word (e.g., "apple") into the target language, ensuring it fits grammatically and contextually within the sentence

@@ -43,6 +43,9 @@ export const getServerSideProps: GetServerSideProps<Props> = async (
     where: {
       userId: dbUser?.id,
     },
+    orderBy: {
+      createdAt: "desc",
+    }
   });
 
   return {
