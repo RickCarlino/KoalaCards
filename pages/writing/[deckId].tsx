@@ -381,15 +381,27 @@ export default function WritingPage({ deckId, langCode }: WritingPageProps) {
           )}
         </Stack>
 
-        <Button
-          onClick={handleGeneratePrompts}
-          leftSection={<IconWand size={rem(16)} />}
-          loading={loadingPrompts}
-          size="md"
-          fullWidth
-        >
-          Generate New Writing Prompts
-        </Button>
+        <Group grow>
+          <Button
+            onClick={handleGeneratePrompts}
+            leftSection={<IconWand size={rem(16)} />}
+            loading={loadingPrompts}
+            size="md"
+          >
+            Write with a prompt
+          </Button>
+          <Button
+            onClick={() => {
+              setSelectedPrompt("Not set.");
+              setCurrentStep("writing");
+            }}
+            leftSection={<IconPencil size={rem(16)} />}
+            size="md"
+            variant="light"
+          >
+            Write without a prompt
+          </Button>
+        </Group>
 
         {promptsError && (
           <Alert title="Error" color="red">
