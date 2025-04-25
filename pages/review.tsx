@@ -87,14 +87,13 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
       deck.published,
       title,
       updateDeckMutation,
-      refreshData,
     ]);
 
     const handleDelete = useCallback(async () => {
       if (!confirm("Are you sure you want to delete this deck?")) return;
       await deleteDeckMutation.mutateAsync({ deckId: deck.id });
       refreshData();
-    }, [deck.id, deleteDeckMutation, refreshData]);
+    }, [deck.id, deleteDeckMutation]);
 
     const handlePublishToggle = useCallback(
       async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -113,7 +112,7 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
         });
         refreshData();
       },
-      [deck.id, deck.name, updateDeckMutation, refreshData],
+      [deck.id, deck.name, updateDeckMutation],
     );
 
     const handleTakeChange = useCallback((value: string | number) => {

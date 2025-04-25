@@ -463,9 +463,15 @@ export default function WritingPage({ deckId, langCode }: WritingPageProps) {
       <Title order={4} mb="xs">
         Writing Prompt
       </Title>
-      <Paper withBorder p="sm" mb="md" bg="rgba(0,0,0,0.03)">
-        <Text>{selectedPrompt}</Text>
-      </Paper>
+      <Textarea
+        value={selectedPrompt || ""}
+        onChange={(e) => setSelectedPrompt(e.currentTarget.value)}
+        autosize
+        minRows={2}
+        maxRows={4}
+        mb="md"
+        disabled={loadingReview}
+      />
       <Text size="sm" c="dimmed" mb="xs">
         TIP: Don't know a word? Surround the word you want to use in question
         marks and it will be replaced with an appropriate word when graded.

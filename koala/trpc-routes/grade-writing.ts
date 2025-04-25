@@ -24,6 +24,7 @@ export type EssayResponse = z.infer<typeof EssayResponseSchema>;
 const ESSAY_GRADING_PROMPT = `You are an AI language tutor helping foreign language learners improve their writing skills.
 
 Analyze the provided essay or sentences in the target language and provide detailed feedback.
+You will be provided a "prompt" string that will help you understand what the learner is writing about.
 Only provide REQUIRED feedback, not nice-to-have feedback.
 
 I want you to return a response object with only:

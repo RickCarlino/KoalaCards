@@ -128,6 +128,7 @@ function Card({ cardData }: CardData) {
             )}
             {cardData.imageURL && (
               <Paper withBorder p="sm" radius="md">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   width="100%"
                   src={cardData.imageURL}

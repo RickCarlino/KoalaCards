@@ -92,8 +92,8 @@ Write each prompt directly in ${getLangName(
     console.log(systemPrompt);
     // Call OpenAI
     const aiResponse = await openai.beta.chat.completions.parse({
-      model: "o4-mini",
-      reasoning_effort: "low",
+      model: "gpt-4.1",
+      // reasoning_effort: "low",
       messages: [{ role: "system", content: systemPrompt }],
     });
 
@@ -105,5 +105,29 @@ Write each prompt directly in ${getLangName(
       .map((line) => line.trim())
       .filter((line) => line);
 
-    return prompts;
+    const refinementPrompt =
+      "Think about what makes a writing prompt good. Re-write these writing prompts to simplify them and make them better for writing practice. One prompt per line, no numbers or commentary please.";
+
+    // Refine the generated prompts using the refinement prompt
+    const refinedResponse = await openai.beta.chat.completions.parse({
+      model: "gpt-4.1",
+      messages: [
+        { 
+          role: "system", 
+          content: refinementPrompt 
+        },
+        {
+          role: "user",
+          content: prompts.join("\n\n")
+        }
+      ],
+    });
+
+    const refinedRaw = refinedResponse.choices[0].message.content || "";
+    const refinedPrompts = refinedRaw
+      .split(/\r?\n+/)
+      .map((line) => line.trim())
+      .filter((line) => line);
+
+    return refinedPrompts;
   });
