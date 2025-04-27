@@ -14,14 +14,9 @@ import {
   Divider,
 } from "@mantine/core";
 import { IconBulb, IconList, IconTable } from "@tabler/icons-react";
-
-/*
-There are three ways to create flashcards in Koala Cards:
-
-1. "Create by vibe" (/create-vibe) This is best for casual users who are just trying the app out. You tell the AI what you want to learn and it creates cards based on what you ask.
-2. "Create from word list" (/create-wordlist) You have a list of words you want to learn (such as unknown words spotted while reading). The words will intelligiently be transformed into example sentences with definitions. This is the best choice for serious learners memorizing word frequency lists or setting daily reading goals.
-3. "Create from CSV" (/create-csv) Use this method if you have a list of CSV data that you want to import. This is best for users importing their data from other spaced repeittion systems. systsmes like Anki.
-*/
+import { GetServerSideProps } from "next";
+import { getServersideUser } from "@/koala/get-serverside-user";
+import { prismaClient } from "@/koala/prisma-client";
 
 interface FeatureCardProps {
   icon: React.ReactNode;
@@ -175,6 +170,32 @@ const CreatePage = () => {
       </Box>
     </Container>
   );
+};
+
+export const getServerSideProps: GetServerSideProps = async (ctx) => {
+  const dbUser = await getServersideUser(ctx);
+  const userId = dbUser?.id;
+
+  if (!userId) {
+    return { redirect: { destination: "/api/auth/signin", permanent: false } };
+  }
+
+  const cardCount = await prismaClient.card.count({
+    where: { userId },
+  });
+
+  if (cardCount === 0) {
+    return {
+      redirect: {
+        destination: "/start",
+        permanent: false,
+      },
+    };
+  }
+
+  return {
+    props: {}, // will be passed to the page component as props
+  };
 };
 
 export default CreatePage;

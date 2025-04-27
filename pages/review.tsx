@@ -279,7 +279,7 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
           </Text>
           <Button
             component={Link}
-            href="/create"
+            href="/start"
             color="pink"
             radius="xl"
             size="lg"
