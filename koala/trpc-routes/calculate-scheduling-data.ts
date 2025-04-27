@@ -86,6 +86,9 @@ export function getGradeButtonText(quiz: PartialQuiz): [Grade, string][] {
   return [Grade.AGAIN, Grade.HARD, Grade.GOOD, Grade.EASY].map((grade) => {
     const emoji = SCALE[grade];
     const { nextReview } = calculateSchedulingData(quiz, grade, now);
+    if (!nextReview) {
+      return [grade, "❓SOON"];
+    }
     const diff = nextReview - now;
     const minutes = Math.floor(diff / (60 * 1000));
     if (minutes < 5) {

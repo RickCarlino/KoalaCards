@@ -22,6 +22,10 @@ export const ReviewQuiz: QuizComp = ({ quiz, onComplete, onGraded }) => {
     expected: string;
     actual: string;
   }>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  let diffContent: React.ReactNode;
+  let recordButtonLabel = "Begin Recording";
+  let recordButtonColor = "pink";
 
   useEffect(() => {
     playFX("/listening-beep.wav");
@@ -29,43 +33,80 @@ export const ReviewQuiz: QuizComp = ({ quiz, onComplete, onGraded }) => {
 
   const voiceRecorder = useVoiceRecorder(async (audio: Blob) => {
     setLastAttemptWrong(null);
+    setIsProcessing(true);
 
-    const wavBlob = await convertBlobToWav(audio);
-    const base64Audio = await blobToBase64(wavBlob);
+    try {
+      const wavBlob = await convertBlobToWav(audio);
+      const base64Audio = await blobToBase64(wavBlob);
 
-    const { result } = await transcribeAudio.mutateAsync({
-      audio: base64Audio,
-      lang: card.langCode as LangCode,
-      targetText: card.term,
-    });
-
-    const isCorrect = compare(result, removeParens(card.term));
-    if (isCorrect) {
-      await playAudio(card.termAudio);
-      await repairCard.mutateAsync({ id: quiz.quiz.cardId, lastFailure: 0 });
-      onGraded(Grade.EASY);
-      onComplete({
-        status: "pass",
-        feedback: "Card re-reviewed",
-        userResponse: result,
+      const { result } = await transcribeAudio.mutateAsync({
+        audio: base64Audio,
+        lang: card.langCode as LangCode,
+        targetText: card.term,
       });
-    } else {
-      setLastAttemptWrong({ expected: card.term, actual: result });
+
+      const isCorrect = compare(result, removeParens(card.term));
+      if (isCorrect) {
+        await playAudio(card.termAudio);
+        await repairCard.mutateAsync({ id: quiz.quiz.cardId, lastFailure: 0 });
+        onGraded(Grade.EASY);
+        onComplete({
+          status: "pass",
+          feedback: "Card re-reviewed",
+          userResponse: result,
+        });
+      } else {
+        setLastAttemptWrong({ expected: card.term, actual: result });
+      }
+    } finally {
+      setIsProcessing(false);
     }
   });
+
+  const handleRecordClick = () => {
+    if (isProcessing) {
+      return;
+    }
+    if (voiceRecorder.isRecording) {
+      voiceRecorder.stop();
+    } else {
+      voiceRecorder.start();
+    }
+  };
 
   useHotkeys([
     [
       HOTKEYS.RECORD,
       (e) => {
         e.preventDefault();
-        voiceRecorder.isRecording
-          ? voiceRecorder.stop()
-          : voiceRecorder.start();
+        handleRecordClick();
       },
     ],
     [HOTKEYS.PLAY, () => playAudio(card.termAudio)],
   ]);
+
+  if (lastAttemptWrong) {
+    diffContent = (
+      <VisualDiff
+        expected={lastAttemptWrong.expected}
+        actual={lastAttemptWrong.actual}
+      />
+    );
+  } else {
+    diffContent = "Please repeat the phrase to continue.";
+  }
+
+  if (isProcessing) {
+    recordButtonLabel = "Processing...";
+  }
+
+  if (voiceRecorder.isRecording) {
+    recordButtonLabel = "Stop Recording";
+  }
+
+  if (voiceRecorder.isRecording) {
+    recordButtonColor = "red";
+  }
 
   return (
     <Stack gap="md">
@@ -79,14 +120,7 @@ export const ReviewQuiz: QuizComp = ({ quiz, onComplete, onGraded }) => {
       <Box my="md">
         <Stack gap="sm">
           <Text size="md" fw={500}>
-            {lastAttemptWrong ? (
-              <VisualDiff
-                expected={lastAttemptWrong.expected}
-                actual={lastAttemptWrong.actual}
-              />
-            ) : (
-              "Please repeat the phrase to continue."
-            )}
+            {diffContent}
           </Text>
         </Stack>
       </Box>
@@ -101,17 +135,14 @@ export const ReviewQuiz: QuizComp = ({ quiz, onComplete, onGraded }) => {
           Play Audio Again
         </Button>
         <Button
-          color={voiceRecorder.isRecording ? "red" : "pink"}
-          onClick={() =>
-            voiceRecorder.isRecording
-              ? voiceRecorder.stop()
-              : voiceRecorder.start()
-          }
+          onClick={handleRecordClick}
+          disabled={isProcessing}
           fullWidth
           size="lg"
           h={50}
+          color={recordButtonColor}
         >
-          {voiceRecorder.isRecording ? "Stop Recording" : "Begin Recording"}
+          {recordButtonLabel}
         </Button>
       </Stack>
     </Stack>

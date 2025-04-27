@@ -121,7 +121,12 @@ async function fetchRemedial(
     const lastQuiz = Card.Quiz[0]!;
     return {
       ...lastQuiz,
-      repetitions: 1,
+      cardId: 0,
+      stability: 0,
+      difficulty: 0,
+      lastReview: 0,
+      lapses: 0,
+      repetitions: 0,
       quizType: "review",
       Card,
     };
