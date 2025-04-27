@@ -112,14 +112,14 @@ Write each prompt directly in ${getLangName(
     const refinedResponse = await openai.beta.chat.completions.parse({
       model: "gpt-4.1",
       messages: [
-        { 
-          role: "system", 
-          content: refinementPrompt 
+        {
+          role: "system",
+          content: refinementPrompt,
         },
         {
           role: "user",
-          content: prompts.join("\n\n")
-        }
+          content: prompts.join("\n\n"),
+        },
       ],
     });
 

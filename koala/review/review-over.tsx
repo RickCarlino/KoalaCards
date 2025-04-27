@@ -20,7 +20,7 @@ import Link from "next/link";
 type ReviewOverProps = {
   state: QuizState[];
   onSave: () => Promise<void>;
-  onUpdateDifficulty: (quizId: number, grade: Grade) => void;
+  onUpdateDifficulty: (uuid: string, grade: Grade) => void;
 };
 
 export function ReviewOver({
@@ -127,7 +127,7 @@ export function ReviewOver({
           <Stack gap="md" mt="md">
             {errorQuizzes.map((quiz) => (
               <FeedbackRow
-                key={quiz.quiz.quizId}
+                key={quiz.quiz.uuid}
                 quizState={quiz}
                 onUpdateDifficulty={onUpdateDifficulty}
               />

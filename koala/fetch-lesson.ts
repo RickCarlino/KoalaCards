@@ -115,17 +115,14 @@ async function fetchRemedial(
       flagged: { not: true },
     },
     orderBy: { lastFailure: "asc" },
+    include: { Quiz: true },
   });
   return cards.map((Card): LocalQuiz => {
+    const lastQuiz = Card.Quiz[0]!;
     return {
-      id: -1 * Math.round(Math.random() * 1000000),
+      ...lastQuiz,
       repetitions: 1,
-      lapses: 1,
-      lastReview: 999,
-      difficulty: 999,
-      stability: 999,
       quizType: "review",
-      cardId: Card.id,
       Card,
     };
   });

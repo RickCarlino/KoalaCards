@@ -81,13 +81,7 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
         refreshData();
       }
       setIsEditing(false);
-    }, [
-      deck.id,
-      deck.name,
-      deck.published,
-      title,
-      updateDeckMutation,
-    ]);
+    }, [deck.id, deck.name, deck.published, title, updateDeckMutation]);
 
     const handleDelete = useCallback(async () => {
       if (!confirm("Are you sure you want to delete this deck?")) return;

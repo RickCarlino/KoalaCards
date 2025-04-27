@@ -16,7 +16,7 @@ import { ServerExplanation } from "./ServerExplanation";
 
 type FeedbackRowProps = {
   quizState: QuizState;
-  onUpdateDifficulty: (quizId: number, grade: Grade) => void;
+  onUpdateDifficulty: (uuid: string, grade: Grade) => void;
 };
 
 export function FeedbackRow({ quizState }: FeedbackRowProps) {
@@ -30,7 +30,7 @@ export function FeedbackRow({ quizState }: FeedbackRowProps) {
   };
 
   return (
-    <Card key={quizState.quiz.quizId} radius="md" p="md" withBorder>
+    <Card key={quizState.quiz.uuid} radius="md" p="md" withBorder>
       <Stack gap="md">
         <Group justify="space-between" align="center">
           <Title order={4}>

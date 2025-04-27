@@ -9,6 +9,8 @@ import { getServersideUser } from "@/koala/get-serverside-user";
 import { prismaClient } from "@/koala/prisma-client";
 import { decksWithReviewInfo } from "@/koala/decks/decks-with-review-info";
 import { ParsedUrlQuery } from "querystring";
+import { Quiz } from "@/koala/review/types";
+import { uid } from "radash";
 
 type ReviewDeckPageProps = {
   deckId: number;
@@ -137,7 +139,7 @@ export const getServerSideProps: GetServerSideProps<
 
 type QuizData = {
   quizzesDue: number;
-  quizzes: any[];
+  quizzes: Quiz[];
 };
 
 const LoadingState = () => (
@@ -190,6 +192,27 @@ export default function Review({ deckId }: ReviewDeckPageProps) {
   const [data, setData] = useState<QuizData>({ quizzesDue: 0, quizzes: [] });
   const [isFetching, setIsFetching] = useState(true);
 
+  function doSetData(data: QuizData) {
+    const quizzes = data.quizzes;
+    const addSpeaking = quizzes.filter((quiz) => {
+      return quiz.repetitions === 0 || quiz.lessonType === "review";
+    });
+
+    const fakeQuizzes = addSpeaking.map((quiz) => {
+      return {
+        ...quiz,
+        lessonType: "speaking" as const,
+        dontGrade: true,
+        uuid: uid(8), // Important
+      };
+    });
+
+    setData({
+      quizzesDue: data.quizzesDue,
+      quizzes: [...quizzes, ...fakeQuizzes],
+    });
+  }
+
   const fetchQuizzes = (currentDeckId: number) => {
     setIsFetching(true);
     const takeParam = new URLSearchParams(window.location.search).get("take");
@@ -198,7 +221,18 @@ export default function Review({ deckId }: ReviewDeckPageProps) {
     mutation
       .mutateAsync(
         { take, deckId: currentDeckId },
-        { onSuccess: (fetchedData) => setData(fetchedData) },
+        {
+          onSuccess: (fetchedData) => {
+            const withUUID = fetchedData.quizzes.map((q) => ({
+              ...q,
+              uuid: uid(8),
+            }));
+            doSetData({
+              quizzesDue: fetchedData.quizzesDue,
+              quizzes: withUUID,
+            });
+          },
+        },
       )
       .finally(() => setIsFetching(false));
   };
