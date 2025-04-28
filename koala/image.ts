@@ -11,6 +11,7 @@ import {
 type Card = {
   id: number;
   term: string;
+  userId: string;
   definition: string;
   imageBlobId: string | null;
 };
@@ -32,18 +33,19 @@ export async function maybeAddImageToCard(card: Card) {
     return;
   }
 
-  if (Math.random() < CHEAPNESS / 100) {
+  const cardCount = await prismaClient.card.count({
+    where: {
+      userId: card.userId,
+      imageBlobId: { not: null },
+    },
+  });
+
+  const cheap = Math.random() < CHEAPNESS / 100;
+  const skip = cardCount < 50 ? false : cheap;
+
+  if (skip) {
     return;
   }
-
-  // const quizzes = await prismaClient.quiz.findMany({
-  //   where: { cardId: card.id },
-  // });
-
-  // const reps = quizzes.map((x) => x.repetitions).reduce((a, b) => a + b, 0);
-  // if (reps < 1) {
-  //   return;
-  // }
 
   const prompt = await createDallEPrompt(card.definition, card.term);
   const url = await createDallEImage(prompt);

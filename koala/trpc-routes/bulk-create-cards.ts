@@ -4,6 +4,7 @@ import { procedure } from "../trpc-procedure";
 import { backfillDecks } from "../decks/backfill-decks";
 import { LANG_CODES } from "../shared-types";
 import { TRPCError } from "@trpc/server"; // Added TRPCError
+import { maybeAddImageToCard } from "../image";
 
 // Corrected input schema
 const inputSchema = z.object({
@@ -86,8 +87,9 @@ export const bulkCreateCards = procedure
 
     // Now 'deck' and 'langCode' are guaranteed to be set
     const deckId = deck.id;
-
+    let j = 0;
     for (const i of input.input) {
+      j++;
       const { term: foreignLanguage, definition: english, gender } = i;
       const alreadyExists = await prismaClient.card.findFirst({
         where: {
@@ -133,6 +135,7 @@ export const bulkCreateCards = procedure
           term: foreignLanguage,
           definition: english,
         });
+        j < 50 && maybeAddImageToCard(card);
       } else {
         const ERR = "(Duplicate) ";
         results.push({
