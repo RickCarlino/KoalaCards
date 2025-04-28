@@ -217,9 +217,9 @@ const StartPage: React.FC<StartPageProps> = ({ userSettings }) => {
           value={form.cardsPerWeek}
           onChange={(val: string) => updateField("cardsPerWeek", val)}
         >
-          <Radio value="7" label="Casual learner (7)" />
-          <Radio value="14" label="Serious learner (14)" />
-          <Radio value="21" label="Fulltime (21)" />
+          <Radio value="7" label="Casual learner (7 cards / day)" />
+          <Radio value="14" label="Serious learner (14 cards / day)" />
+          <Radio value="21" label="Fulltime (21 cards / day)" />
         </Radio.Group>
       ),
     },
