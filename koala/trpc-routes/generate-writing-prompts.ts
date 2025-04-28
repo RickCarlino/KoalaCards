@@ -10,7 +10,8 @@ const inputSchema = z.object({ deckId: z.number() }); // Changed input to deckId
 const outputSchema = z.array(z.string());
 
 const promptIntro = `
-You are a creative writing instructor for language learners. Using three hidden example sentences only as loose inspiration, generate three distinct, engaging prompts.
+You are a creative writing instructor for language learners.
+Using three hidden example sentences only as loose inspiration, generate three distinct, engaging prompts.
 - Do NOT reveal, paraphrase, or reference the example sentences directly.
 - Treat each example sentence purely as a thematic springboard.
 - Focus on natural, contextually appropriate phrasing suited to learners.
