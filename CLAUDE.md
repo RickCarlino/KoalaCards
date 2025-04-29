@@ -22,5 +22,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Avoid hard-coded values - use environment variables for secrets
 - I prefer serverside props over trpc methods where possible
 - When the feature is done, run `npm run lint` and `tsc --noEmit` to make sure it's cleaned up.
+- Never use dangerouslySetInnerHTML.
 
 KoalaCards is a language learning app with listening and speaking flashcards using spaced repetition and automated grading via speech recognition and LLMs.

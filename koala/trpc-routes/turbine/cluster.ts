@@ -79,7 +79,7 @@ async function run(language: string, words: string[]) {
     },
     {
       role: "user",
-      content: tpl(USER_PROMPT, { WORDS: clean(words).join("\n") }),
+      content: tpl(USER_PROMPT, { WORDS: clean(words.join("\n")) }),
     },
   ];
 

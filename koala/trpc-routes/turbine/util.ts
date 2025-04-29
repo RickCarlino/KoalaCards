@@ -1,6 +1,7 @@
-export function clean(input: string[]) {
-  return input
-    .map((item) => item.trim())
-    .filter((x) => x.length > 1)
+export function clean(input: string) {
+  return (input || "")
+    .split(/\r?\n|,+/)
+    .map((phrase) => phrase.trim())
+    .filter(Boolean)
     .sort();
 }

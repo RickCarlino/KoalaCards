@@ -12,6 +12,7 @@ import {
   Text,
   Box,
 } from "@mantine/core";
+import { clean } from "@/koala/trpc-routes/turbine/util";
 import { backfillDecks } from "@/koala/decks/backfill-decks";
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { prismaClient } from "@/koala/prisma-client";
@@ -66,6 +67,7 @@ export default function Turbine(props: Props) {
     definition: string;
   };
   const [inputText, setInputText] = useState("");
+  const [previewText, setPreviewText] = useState("");
   const [output, setOutput] = useState<CheckBoxItem[]>([]);
   const [elapsedTime, setElapsedTime] = useState(0);
   // Replace selectedDeck state with reducer
@@ -224,10 +226,19 @@ export default function Turbine(props: Props) {
             label="Input Words (one per line)" // Updated label
             placeholder="Enter text here..."
             value={inputText}
-            onChange={(event) => setInputText(event.currentTarget.value)}
+            onChange={(event) => {
+              const text = event.currentTarget.value;
+              setInputText(text);
+              const preview = clean(text)
+                .map((word: string) => `'${word}'`)
+                .slice(0, 3)
+                .join(", ");
+              setPreviewText(preview);
+            }}
             autosize
             minRows={3}
           />
+          {previewText ? `Input will be processed as ${previewText}...` : ""}
           <div style={{ display: "flex", gap: "1rem" }}>
             <Button onClick={handleSubmit}>
               Generate Sentences{" "}

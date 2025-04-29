@@ -22,6 +22,6 @@ export const turbine = procedure
   .output(TRANSLATION)
   .mutation(async ({ ctx, input }) => {
     await getUserSettings(ctx.user?.id);
-    const inputWords = clean(input.words.split(/[\s,]+/));
+    const inputWords = clean(input.words);
     return await clusters(inputWords, getLangName(input.langCode));
   });
