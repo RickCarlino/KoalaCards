@@ -107,7 +107,11 @@ Write each prompt directly in ${getLangName(
       .filter((line) => line);
 
     const refinementPrompt =
-      "Think about what makes a writing prompt good. Re-write these writing prompts to simplify them and make them better for writing practice. One prompt per line, no numbers or commentary please.";
+      "Think about what makes a writing prompt good." +
+      " Re-write the prompts to simplify them and make them better for writing practice." +
+      " Be clear about what is being written about- concerete is better than abstract." +
+      " Concise is better than open-ended." +
+      " One prompt per line, no numbers or commentary please.";
 
     // Refine the generated prompts using the refinement prompt
     const refinedResponse = await openai.beta.chat.completions.parse({
