@@ -26,7 +26,11 @@ const DEFAULT_STATE = {
   userInput: undefined as string | undefined,
 };
 
-export const ListeningQuiz: QuizComp = ({ quiz, onGraded, onComplete }) => {
+export const ListeningQuiz: QuizComp = ({
+  quiz,
+  onGraded,
+  onComplete,
+}) => {
   const card = quiz.quiz;
   // State variables
   const [state, setState] = useState(DEFAULT_STATE);
@@ -68,7 +72,9 @@ export const ListeningQuiz: QuizComp = ({ quiz, onGraded, onComplete }) => {
       isProcessing: true,
     }));
     try {
-      const base64Audio = await blobToBase64(await convertBlobToWav(audioBlob));
+      const base64Audio = await blobToBase64(
+        await convertBlobToWav(audioBlob),
+      );
       const { result: transcription } = await transcribeAudio.mutateAsync({
         audio: base64Audio,
         lang: card.langCode as LangCode,
@@ -79,7 +85,8 @@ export const ListeningQuiz: QuizComp = ({ quiz, onGraded, onComplete }) => {
       if (OK) {
         await playAudio(card.definitionAudio);
         await playAudio(card.termAudio);
-        Math.random() < playbackPercentage && (await playAudio(base64Audio));
+        Math.random() < playbackPercentage &&
+          (await playAudio(base64Audio));
         setState((prevState) => {
           return {
             ...prevState,
@@ -199,7 +206,13 @@ const PlayPhase = ({
       )}
       {isDictation && <Text size="md">Definition: {definition}</Text>}
       <Box my="md">
-        <Button onClick={onPlayClick} fullWidth size="lg" h={50} color="pink">
+        <Button
+          onClick={onPlayClick}
+          fullWidth
+          size="lg"
+          h={50}
+          color="pink"
+        >
           Listen to Audio and Proceed
         </Button>
       </Box>
@@ -281,7 +294,11 @@ type DonePhaseProps = {
 };
 
 // Done Phase Component
-const DonePhase = ({ userInput, onDifficultySelect, quiz }: DonePhaseProps) => {
+const DonePhase = ({
+  userInput,
+  onDifficultySelect,
+  quiz,
+}: DonePhaseProps) => {
   const { term, definition } = quiz;
   return (
     <Stack gap="md">

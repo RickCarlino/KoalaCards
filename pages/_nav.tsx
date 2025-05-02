@@ -119,7 +119,11 @@ const NavBar = ({ children }: NavBarProps) => {
     { path: "/writing", name: "View Writing" },
     { path: "/user", name: "Settings" },
     { path: "https://github.com/RickCarlino/KoalaCards", name: "GitHub" },
-    { path: "https://discord.gg/jj7wXhQWJe", name: "Discord", rainbow: true },
+    {
+      path: "https://discord.gg/jj7wXhQWJe",
+      name: "Discord",
+      rainbow: true,
+    },
   ];
 
   return (

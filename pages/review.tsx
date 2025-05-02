@@ -21,7 +21,13 @@ import {
   useMantineTheme,
   Alert,
 } from "@mantine/core";
-import { IconCheck, IconPencil, IconTrash, IconX, IconGitMerge } from "@tabler/icons-react";
+import {
+  IconCheck,
+  IconPencil,
+  IconTrash,
+  IconX,
+  IconGitMerge,
+} from "@tabler/icons-react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { GetServerSideProps } from "next/types";
@@ -31,13 +37,15 @@ type ReviewPageProps = {
   decks: DeckWithReviewInfo[];
 };
 
-export const getServerSideProps: GetServerSideProps<ReviewPageProps> = async (
-  context,
-) => {
+export const getServerSideProps: GetServerSideProps<
+  ReviewPageProps
+> = async (context) => {
   const dbUser = await getServersideUser(context);
 
   if (!dbUser) {
-    return { redirect: { destination: "/api/auth/signin", permanent: false } };
+    return {
+      redirect: { destination: "/api/auth/signin", permanent: false },
+    };
   }
 
   const { backfillDecks } = await import("@/koala/decks/backfill-decks");
@@ -58,7 +66,7 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
   const [selectedDeckIds, setSelectedDeckIds] = useState<number[]>([]);
   const [isMerging, setIsMerging] = useState(false);
   const [mergeError, setMergeError] = useState<string | null>(null);
-  
+
   const mergeDecks = trpc.mergeDecks.useMutation({
     onSuccess: () => {
       setSelectedDeckIds([]);
@@ -72,34 +80,36 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
   const refreshData = () => {
     router.replace(router.asPath);
   };
-  
+
   const handleToggleDeckSelection = (deckId: number) => {
-    setSelectedDeckIds((prev) => 
+    setSelectedDeckIds((prev) =>
       prev.includes(deckId)
-        ? prev.filter(id => id !== deckId)
-        : [...prev, deckId]
+        ? prev.filter((id) => id !== deckId)
+        : [...prev, deckId],
     );
   };
-  
+
   const handleMergeDecks = async () => {
     if (selectedDeckIds.length < 2) {
       setMergeError("Please select at least 2 decks to merge");
       return;
     }
-    
+
     setIsMerging(true);
     try {
       // Find the first selected deck to use its name
-      const firstSelectedDeck = decks.find(deck => deck.id === selectedDeckIds[0]);
+      const firstSelectedDeck = decks.find(
+        (deck) => deck.id === selectedDeckIds[0],
+      );
       if (!firstSelectedDeck) {
         throw new Error("Could not find the first selected deck");
       }
-      
+
       await mergeDecks.mutateAsync({
         deckIds: selectedDeckIds,
         newDeckName: `${firstSelectedDeck.name} (Merged)`,
       });
-      
+
       setMergeError(null);
     } catch (error) {
       console.error("Error merging decks:", error);
@@ -160,7 +170,8 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
     );
 
     const handleTakeChange = useCallback((value: string | number) => {
-      const numValue = typeof value === "number" ? value : parseFloat(value);
+      const numValue =
+        typeof value === "number" ? value : parseFloat(value);
       const clampedValue = Math.max(7, Math.min(45, numValue)); // Ensure value is within range 7-45
       setTake(isNaN(clampedValue) ? 21 : clampedValue);
     }, []);
@@ -194,7 +205,11 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
             mr="sm"
           />
           {!isEditing && (
-            <Text fw={700} size="xl" style={{ flex: 1, textAlign: "center" }}>
+            <Text
+              fw={700}
+              size="xl"
+              style={{ flex: 1, textAlign: "center" }}
+            >
               {deck.name}
             </Text>
           )}
@@ -352,7 +367,9 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
     return <NoDecksMessage />;
   }
 
-  const sortedDecks = [...decks].sort((a, b) => b.quizzesDue - a.quizzesDue);
+  const sortedDecks = [...decks].sort(
+    (a, b) => b.quizzesDue - a.quizzesDue,
+  );
 
   return (
     <Container size="lg" py="md">
@@ -364,7 +381,7 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
       >
         Your Decks
       </Title>
-      
+
       {selectedDeckIds.length >= 2 && (
         <>
           <Group justify="center" mb="lg">
@@ -378,15 +395,22 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
               Merge {selectedDeckIds.length} Decks
             </Button>
           </Group>
-          
+
           {mergeError && (
-            <Alert color="red" title="Error" mb="md" radius="md" withCloseButton onClose={() => setMergeError(null)}>
+            <Alert
+              color="red"
+              title="Error"
+              mb="md"
+              radius="md"
+              withCloseButton
+              onClose={() => setMergeError(null)}
+            >
               {mergeError}
             </Alert>
           )}
         </>
       )}
-      
+
       <Grid gutter="xl">
         {sortedDecks.map((deck) => (
           <Grid.Col key={deck.id} span={12}>

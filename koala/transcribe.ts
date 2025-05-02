@@ -6,7 +6,9 @@ import { SafeCounter } from "./counter";
 import { openai } from "./openai";
 import { LangCode } from "./shared-types";
 
-type TranscriptionResult = { kind: "OK"; text: string } | { kind: "error" };
+type TranscriptionResult =
+  | { kind: "OK"; text: string }
+  | { kind: "error" };
 
 const transcriptionLength = SafeCounter({
   name: "transcriptionLength",

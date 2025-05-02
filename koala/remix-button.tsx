@@ -95,7 +95,10 @@ export default function RemixButton(props: RemixButtonProps) {
   };
 
   const saveButton = (
-    <Button onClick={handleSaveRemixes} disabled={saveRemixCards.isLoading}>
+    <Button
+      onClick={handleSaveRemixes}
+      disabled={saveRemixCards.isLoading}
+    >
       {saveRemixCards.isLoading ? "Saving..." : "Save Remixes"}
     </Button>
   );
@@ -135,7 +138,9 @@ export default function RemixButton(props: RemixButtonProps) {
           label="Select a Remix Type"
           description="Remixing creates new cards from old ones."
           value={selectedType.toString()}
-          onChange={(value) => setSelectedType(Number(value) as RemixTypes)}
+          onChange={(value) =>
+            setSelectedType(Number(value) as RemixTypes)
+          }
         >
           {Object.entries(RemixTypes)
             .filter(([key, _value]) => isNaN(Number(key)))

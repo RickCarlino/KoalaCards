@@ -12,7 +12,9 @@ const configuration = { apiKey };
 
 export const openai = new OpenAI(configuration);
 
-export async function gptCall(opts: ChatCompletionCreateParamsNonStreaming) {
+export async function gptCall(
+  opts: ChatCompletionCreateParamsNonStreaming,
+) {
   return await openai.chat.completions.create(opts);
 }
 
@@ -30,7 +32,10 @@ The illustration must convey the word's meaning to the student.
 humans must be shown as anthropomorphized animals.
 Do not add text. It will give away the answer!`;
 
-export const createDallEPrompt = async (term: string, definition: string) => {
+export const createDallEPrompt = async (
+  term: string,
+  definition: string,
+) => {
   const shortCard = term.split(" ").length < 2;
   const prompt = shortCard ? SINGLE_WORD : SENTENCE;
   const hm = await gptCall({

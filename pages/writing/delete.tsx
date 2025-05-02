@@ -6,7 +6,9 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   // Authenticate user using the standard method in this project
   const dbUser = await getServersideUser(context);
   if (!dbUser) {
-    return { redirect: { destination: "/api/auth/signin", permanent: false } };
+    return {
+      redirect: { destination: "/api/auth/signin", permanent: false },
+    };
   }
 
   // Get params

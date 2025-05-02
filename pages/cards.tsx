@@ -44,7 +44,9 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const userId = dbUser?.id;
 
   if (!userId) {
-    return { redirect: { destination: "/api/auth/signin", permanent: false } };
+    return {
+      redirect: { destination: "/api/auth/signin", permanent: false },
+    };
   }
 
   const { sortBy, sortOrder, page } = parseQueryParams(ctx.query);
@@ -74,7 +76,11 @@ function parseQueryParams(query: Record<string, unknown>) {
   const finalSortOrder = rawSortOrder === "asc" ? "asc" : "desc";
   const finalPage = !isNaN(rawPage) && rawPage > 0 ? rawPage : 1;
 
-  return { sortBy: validSortBy, sortOrder: finalSortOrder, page: finalPage };
+  return {
+    sortBy: validSortBy,
+    sortOrder: finalSortOrder,
+    page: finalPage,
+  };
 }
 
 async function fetchCards(
@@ -131,7 +137,11 @@ export default function Edit({
     e.preventDefault();
     router.push({
       pathname: "/cards",
-      query: { sortBy: currentSortBy, sortOrder: currentSortOrder, page: "1" },
+      query: {
+        sortBy: currentSortBy,
+        sortOrder: currentSortOrder,
+        page: "1",
+      },
     });
   };
 
@@ -154,7 +164,10 @@ export default function Edit({
       <Text>
         Page {page} of {totalPages}
       </Text>
-      <Button disabled={page >= totalPages} onClick={() => goToPage(page + 1)}>
+      <Button
+        disabled={page >= totalPages}
+        onClick={() => goToPage(page + 1)}
+      >
         Next
       </Button>
     </Group>

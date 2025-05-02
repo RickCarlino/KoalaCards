@@ -18,7 +18,10 @@ export const translate = procedure
   .mutation(async ({ input, ctx }) => {
     const userId = ctx.user?.id;
     if (!userId) {
-      throw new TRPCError({ code: "UNAUTHORIZED", message: "User not found" });
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message: "User not found",
+      });
     }
 
     const { text } = input;

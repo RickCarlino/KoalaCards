@@ -21,7 +21,8 @@ describe("MicrophonePermissions", () => {
 
   it("shows waiting message while requesting permissions", () => {
     mockGetUserMedia.mockImplementation(() => new Promise(() => {})); // Never resolves
-    const TestComponent = () => MicrophonePermissions(<div>Test Content</div>);
+    const TestComponent = () =>
+      MicrophonePermissions(<div>Test Content</div>);
     render(<TestComponent />);
 
     expect(
@@ -36,7 +37,8 @@ describe("MicrophonePermissions", () => {
   it("renders child element after permissions granted", async () => {
     mockGetUserMedia.mockResolvedValue({}); // Mock successful permission
 
-    const TestComponent = () => MicrophonePermissions(<div>Test Content</div>);
+    const TestComponent = () =>
+      MicrophonePermissions(<div>Test Content</div>);
     render(<TestComponent />);
 
     // Initially shows waiting message
@@ -55,7 +57,8 @@ describe("MicrophonePermissions", () => {
     const errorMessage = "Permission denied";
     mockGetUserMedia.mockRejectedValue(new Error(errorMessage));
 
-    const TestComponent = () => MicrophonePermissions(<div>Test Content</div>);
+    const TestComponent = () =>
+      MicrophonePermissions(<div>Test Content</div>);
     render(<TestComponent />);
 
     // Initially shows waiting message
@@ -74,14 +77,17 @@ describe("MicrophonePermissions", () => {
   it("shows generic error message when no specific error provided", async () => {
     mockGetUserMedia.mockRejectedValue(new Error());
 
-    const TestComponent = () => MicrophonePermissions(<div>Test Content</div>);
+    const TestComponent = () =>
+      MicrophonePermissions(<div>Test Content</div>);
     render(<TestComponent />);
 
     // Wait for error state
     expect(
       await screen.findByText("Microphone Access Error"),
     ).toBeInTheDocument();
-    expect(screen.getByText("Failed to access microphone")).toBeInTheDocument();
+    expect(
+      screen.getByText("Failed to access microphone"),
+    ).toBeInTheDocument();
     expect(screen.queryByText("Test Content")).not.toBeInTheDocument();
   });
 });

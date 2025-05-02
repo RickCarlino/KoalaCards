@@ -1,5 +1,8 @@
 import { playAudio } from "@/koala/play-audio";
-import { compare, removeParens } from "@/koala/quiz-evaluators/evaluator-utils";
+import {
+  compare,
+  removeParens,
+} from "@/koala/quiz-evaluators/evaluator-utils";
 import { blobToBase64, convertBlobToWav } from "@/koala/record-button";
 import { VisualDiff } from "@/koala/review/visual-diff";
 import { LangCode } from "@/koala/shared-types";
@@ -48,7 +51,10 @@ export const ReviewQuiz: QuizComp = ({ quiz, onComplete, onGraded }) => {
       const isCorrect = compare(result, removeParens(card.term));
       if (isCorrect) {
         await playAudio(card.termAudio);
-        await repairCard.mutateAsync({ id: quiz.quiz.cardId, lastFailure: 0 });
+        await repairCard.mutateAsync({
+          id: quiz.quiz.cardId,
+          lastFailure: 0,
+        });
         onGraded(Grade.EASY);
         onComplete({
           status: "pass",

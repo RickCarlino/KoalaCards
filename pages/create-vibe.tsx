@@ -18,7 +18,8 @@ function handleError(error: unknown) {
   console.error(error);
   notifications.show({
     title: "Error",
-    message: "Something went wrong. Please report this issue if it persists.",
+    message:
+      "Something went wrong. Please report this issue if it persists.",
     color: "red",
   });
 }
@@ -27,7 +28,9 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   const dbUser = await getServersideUser(context);
 
   if (!dbUser) {
-    return { redirect: { destination: "/api/auth/signin", permanent: false } };
+    return {
+      redirect: { destination: "/api/auth/signin", permanent: false },
+    };
   }
 
   // Ensure user has a default set of decks

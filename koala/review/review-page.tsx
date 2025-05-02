@@ -116,13 +116,15 @@ export const ReviewPage = (props: Props) => {
         dispatch({ type: "NEXT_QUIZ" });
         const nextQuiz = state.quizzes[state.currentQuizIndex + 1];
         if (nextQuiz) {
-          fetchAudioAsBase64(nextQuiz.quiz.termAudio).then((audioBase64) => {
-            dispatch({
-              type: "UPDATE_AUDIO_URL",
-              uuid: nextQuiz.quiz.uuid,
-              audioBase64,
-            });
-          });
+          fetchAudioAsBase64(nextQuiz.quiz.termAudio).then(
+            (audioBase64) => {
+              dispatch({
+                type: "UPDATE_AUDIO_URL",
+                uuid: nextQuiz.quiz.uuid,
+                audioBase64,
+              });
+            },
+          );
         }
       },
       onComplete({ status, feedback, userResponse }) {
@@ -200,7 +202,8 @@ export const ReviewPage = (props: Props) => {
                   size="lg"
                   variant="subtle"
                   onClick={() =>
-                    confirm("End lesson without saving?") && router.push("/")
+                    confirm("End lesson without saving?") &&
+                    router.push("/")
                   }
                   aria-label="Return to home"
                 >

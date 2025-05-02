@@ -34,7 +34,10 @@ export const generateWritingPrompts = procedure
   .mutation(async ({ input, ctx }) => {
     const userId = ctx.user?.id;
     if (!userId) {
-      throw new TRPCError({ code: "UNAUTHORIZED", message: "User not found" });
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message: "User not found",
+      });
     }
 
     const { deckId } = input;
@@ -60,12 +63,16 @@ export const generateWritingPrompts = procedure
     });
 
     // Use terms from the specific deck as inspiration, declare before the check
-    const inspirations = shuffle(cardsInDeck.map((c) => c.term)).slice(0, 7);
+    const inspirations = shuffle(cardsInDeck.map((c) => c.term)).slice(
+      0,
+      7,
+    );
 
     if (inspirations.length < 7) {
       throw new TRPCError({
         code: "BAD_REQUEST",
-        message: "You need at least 7 cards in the deck to generate prompts.",
+        message:
+          "You need at least 7 cards in the deck to generate prompts.",
       });
     }
     const shuffledPrompts = shuffle(promptTemplates);

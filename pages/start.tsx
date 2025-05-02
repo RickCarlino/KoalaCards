@@ -49,7 +49,9 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   const dbUser = await getServersideUser(context);
 
   if (!dbUser) {
-    return { redirect: { destination: "/api/auth/signin", permanent: false } };
+    return {
+      redirect: { destination: "/api/auth/signin", permanent: false },
+    };
   }
 
   // Fetch user settings
@@ -172,13 +174,13 @@ const StartPage: React.FC<StartPageProps> = ({ userSettings }) => {
         <div>
           <h2>Let's Learn About Your Needs</h2>
           <p>
-            We are going to ask you a few questions to create your first set of
-            cards. This will help us understand your learning style and
-            preferences.
+            We are going to ask you a few questions to create your first
+            set of cards. This will help us understand your learning style
+            and preferences.
           </p>
           <p>
-            We will create your first deck using the information you provide, so
-            please be sure to answer the questions adequately.
+            We will create your first deck using the information you
+            provide, so please be sure to answer the questions adequately.
           </p>
         </div>
       ),
@@ -200,13 +202,17 @@ const StartPage: React.FC<StartPageProps> = ({ userSettings }) => {
         <Select
           label="What language are you learning?"
           placeholder="Pick one"
-          data={Object.entries(supportedLanguages).map(([value, label]) => ({
-            value,
-            label,
-          }))}
+          data={Object.entries(supportedLanguages).map(
+            ([value, label]) => ({
+              value,
+              label,
+            }),
+          )}
           searchable
           value={form.language}
-          onChange={(val: string | null) => updateField("language", val || "")}
+          onChange={(val: string | null) =>
+            updateField("language", val || "")
+          }
         />
       ),
     },
@@ -274,7 +280,9 @@ const StartPage: React.FC<StartPageProps> = ({ userSettings }) => {
                 </Button>
                 <Button
                   onClick={handleSave}
-                  loading={bulkCreateCards.isLoading || editSettings.isLoading}
+                  loading={
+                    bulkCreateCards.isLoading || editSettings.isLoading
+                  }
                 >
                   Save & Continue
                 </Button>

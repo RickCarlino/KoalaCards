@@ -14,7 +14,12 @@ type GetLessonInputParams = {
   now: number;
   take: number;
 };
-type CardKeys = "imageBlobId" | "definition" | "langCode" | "gender" | "term";
+type CardKeys =
+  | "imageBlobId"
+  | "definition"
+  | "langCode"
+  | "gender"
+  | "term";
 type LocalCard = Pick<Card, CardKeys>;
 type QuizKeys =
   | "id"
@@ -27,7 +32,10 @@ type QuizKeys =
   | "lapses";
 type LocalQuiz = Pick<Quiz, QuizKeys> & { Card: LocalCard };
 
-async function buildQuizPayload(quiz: LocalQuiz, playbackPercentage: number) {
+async function buildQuizPayload(
+  quiz: LocalQuiz,
+  playbackPercentage: number,
+) {
   const r = quiz.repetitions || 0;
   return {
     quizId: quiz.id,

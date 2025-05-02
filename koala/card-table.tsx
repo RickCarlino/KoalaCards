@@ -70,7 +70,10 @@ function CardRow({ card, onDelete }: CardRowProps) {
   );
 }
 
-export const CardTable: React.FC<CardTableProps> = ({ cards, onDelete }) => {
+export const CardTable: React.FC<CardTableProps> = ({
+  cards,
+  onDelete,
+}) => {
   return (
     <Table>
       <thead>

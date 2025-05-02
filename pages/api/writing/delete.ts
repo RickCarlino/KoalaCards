@@ -29,7 +29,9 @@ export default async function handler(
     console.log("User found:", dbUser?.id);
 
     if (!dbUser) {
-      return res.status(401).json({ message: "Unauthorized - User not found" });
+      return res
+        .status(401)
+        .json({ message: "Unauthorized - User not found" });
     }
 
     // Get submission ID from request body

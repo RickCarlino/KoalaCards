@@ -43,13 +43,15 @@ interface WritingHistory {
   };
 }
 
-export const getServerSideProps: GetServerSideProps<WritingHistory> = async (
-  ctx,
-) => {
+export const getServerSideProps: GetServerSideProps<
+  WritingHistory
+> = async (ctx) => {
   // Authenticate user
   const dbUser = await getServersideUser(ctx);
   if (!dbUser) {
-    return { redirect: { destination: "/api/auth/signin", permanent: false } };
+    return {
+      redirect: { destination: "/api/auth/signin", permanent: false },
+    };
   }
 
   // Get page from query params

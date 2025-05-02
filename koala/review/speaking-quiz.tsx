@@ -30,7 +30,9 @@ export const SpeakingQuiz: QuizComp = (props) => {
   const RECORDING_TIME = 8;
 
   const [isRecording, setIsRecording] = useState(false);
-  const [phase, setPhase] = useState<"prompt" | "recording" | "done">("prompt");
+  const [phase, setPhase] = useState<"prompt" | "recording" | "done">(
+    "prompt",
+  );
   const [timeLeft, setTimeLeft] = useState(RECORDING_TIME);
 
   const { playbackPercentage } = useUserSettings();
@@ -205,14 +207,18 @@ export const SpeakingQuiz: QuizComp = (props) => {
       const expected = serverResponse || "";
       const actual = response || expected;
       return (
-        <ServerExplanation expected={expected} actual={actual} heading="" />
+        <ServerExplanation
+          expected={expected}
+          actual={actual}
+          heading=""
+        />
       );
     }
 
     return (
       <Text size="xs">
-        Grading in progress. You can keep waiting or review your feedback at the
-        end of the lesson.
+        Grading in progress. You can keep waiting or review your feedback
+        at the end of the lesson.
       </Text>
     );
   }
@@ -246,7 +252,8 @@ export const SpeakingQuiz: QuizComp = (props) => {
       <Text size="lg" fw={500}>
         {card.definition}
       </Text>
-      {(phase === "prompt" || phase === "recording") && renderPromptControls()}
+      {(phase === "prompt" || phase === "recording") &&
+        renderPromptControls()}
       {phase === "done" && renderDoneControls()}
     </Stack>
   );

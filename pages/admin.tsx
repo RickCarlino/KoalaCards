@@ -1,5 +1,8 @@
 import React from "react";
-import { GetServerSidePropsContext, InferGetServerSidePropsType } from "next";
+import {
+  GetServerSidePropsContext,
+  InferGetServerSidePropsType,
+} from "next";
 import { getSession } from "next-auth/react";
 import { prismaClient } from "@/koala/prisma-client";
 import { Container, Table, Title } from "@mantine/core";
@@ -12,7 +15,9 @@ function daysSince(date: Date | null): number {
   return Math.floor((Date.now() - date.getTime()) / ONE_DAY);
 }
 
-export async function getServerSideProps(context: GetServerSidePropsContext) {
+export async function getServerSideProps(
+  context: GetServerSidePropsContext,
+) {
   const session = await getSession({ req: context.req });
   const email = session?.user?.email?.toLowerCase() ?? null;
 

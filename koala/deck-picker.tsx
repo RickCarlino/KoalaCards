@@ -109,7 +109,8 @@ export function DeckPicker({
           {title}
         </Title>
         <Text size="sm" c="dimmed" mb="md">
-          You can add new items to an existing deck or create a new one below.
+          You can add new items to an existing deck or create a new one
+          below.
         </Text>
 
         <RadioGroup
@@ -212,7 +213,10 @@ export function DeckPicker({
               placeholder="Choose language"
               value={state.deckLang}
               onChange={(val) =>
-                dispatch({ type: "SET_DECK_LANG", deckLang: val as LangCode })
+                dispatch({
+                  type: "SET_DECK_LANG",
+                  deckLang: val as LangCode,
+                })
               }
               data={Object.keys(supportedLanguages)
                 .sort()

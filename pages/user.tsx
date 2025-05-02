@@ -33,7 +33,9 @@ function formatDate(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-export async function getServerSideProps(context: GetServerSidePropsContext) {
+export async function getServerSideProps(
+  context: GetServerSidePropsContext,
+) {
   const session = await getSession({ req: context.req });
   if (!session?.user?.email) {
     // Handle case where session or email is missing, perhaps redirect
@@ -167,7 +169,10 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
       }
 
       // Add the cumulative count for the current date
-      cumulativeChartData.push({ date: dateString, count: cumulativeCount });
+      cumulativeChartData.push({
+        date: dateString,
+        count: cumulativeCount,
+      });
 
       // Move to the next day
       currentDate.setDate(currentDate.getDate() + 1);
@@ -205,7 +210,9 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
 
 // Update Props type to include chartData
 type ChartDataPoint = { date: string; count: number };
-type Props = UnwrapPromise<ReturnType<typeof getServerSideProps>>["props"] & {
+type Props = UnwrapPromise<
+  ReturnType<typeof getServerSideProps>
+>["props"] & {
   chartData: ChartDataPoint[];
 };
 
@@ -288,7 +295,9 @@ export default function UserSettingsPage(props: Props) {
                 id="dailyWritingGoal"
                 name="dailyWritingGoal"
                 value={settings.dailyWritingGoal || 300}
-                onChange={(value) => handleChange(value, "dailyWritingGoal")}
+                onChange={(value) =>
+                  handleChange(value, "dailyWritingGoal")
+                }
                 min={0}
                 step={50}
                 required
@@ -300,7 +309,9 @@ export default function UserSettingsPage(props: Props) {
                 id="playbackPercentage"
                 name="playbackPercentage"
                 value={String(settings.playbackPercentage)}
-                onChange={(value) => handleChange(value, "playbackPercentage")}
+                onChange={(value) =>
+                  handleChange(value, "playbackPercentage")
+                }
                 required
               >
                 <Radio value="1" label="Always" />
@@ -369,7 +380,13 @@ export default function UserSettingsPage(props: Props) {
               xAxisLabel="Date"
               tooltipProps={{
                 content: ({ label, payload }) => (
-                  <Paper px="md" py="sm" withBorder shadow="md" radius="md">
+                  <Paper
+                    px="md"
+                    py="sm"
+                    withBorder
+                    shadow="md"
+                    radius="md"
+                  >
                     <Text fw={500} mb={5}>
                       {label} {/* Display date */}
                     </Text>

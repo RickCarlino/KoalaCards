@@ -54,7 +54,9 @@ function Card({ cardData }: CardData) {
     term: string;
     flagged: boolean;
   }) => {
-    updateMutation.mutateAsync({ id, ...values }).then(() => router.back());
+    updateMutation
+      .mutateAsync({ id, ...values })
+      .then(() => router.back());
   };
 
   const deleteCard = () => {

@@ -112,7 +112,10 @@ function handleFlagCurrentCard(state: ReviewState): ReviewState {
   };
 }
 
-export function reviewReducer(state: ReviewState, action: Action): ReviewState {
+export function reviewReducer(
+  state: ReviewState,
+  action: Action,
+): ReviewState {
   console.log(`=== ${action.type}`);
   switch (action.type) {
     case "LOAD_QUIZZES":

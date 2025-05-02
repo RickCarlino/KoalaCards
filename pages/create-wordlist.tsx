@@ -12,7 +12,6 @@ import {
   Text,
   Box,
   TextInput,
-  Grid,
   Group,
   ActionIcon,
   Modal,
@@ -39,7 +38,9 @@ export const getServerSideProps: GetServerSideProps<Props> = async (
   const dbUser = await getServersideUser(context);
 
   if (!dbUser) {
-    return { redirect: { destination: "/api/auth/signin", permanent: false } };
+    return {
+      redirect: { destination: "/api/auth/signin", permanent: false },
+    };
   }
 
   // Ensure user has a default set of decks
@@ -78,7 +79,11 @@ export default function Turbine(props: Props) {
   const [output, setOutput] = useState<CheckBoxItem[]>([]);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [editModalOpen, setEditModalOpen] = useState(false);
-  const [currentEditItem, setCurrentEditItem] = useState<{index: number; term: string; definition: string} | null>(null);
+  const [currentEditItem, setCurrentEditItem] = useState<{
+    index: number;
+    term: string;
+    definition: string;
+  } | null>(null);
   // Replace selectedDeck state with reducer
   const [state, dispatch] = useReducer(reducer, {
     ...INITIAL_STATE,
@@ -142,7 +147,9 @@ export default function Turbine(props: Props) {
       // Reset state:
       setOutput([]);
       // Optionally show success notification
-      alert(`Saved ${selectedWords.length} words to deck: ${finalDeckName}`);
+      alert(
+        `Saved ${selectedWords.length} words to deck: ${finalDeckName}`,
+      );
     } catch (error) {
       console.error("Failed to save words:", error);
       alert("An error occurred while saving words.");
@@ -247,7 +254,9 @@ export default function Turbine(props: Props) {
             autosize
             minRows={3}
           />
-          {previewText ? `Input will be processed as ${previewText}...` : ""}
+          {previewText
+            ? `Input will be processed as ${previewText}...`
+            : ""}
           <div style={{ display: "flex", gap: "1rem" }}>
             <Button onClick={handleSubmit}>
               Generate Sentences{" "}
@@ -271,33 +280,34 @@ export default function Turbine(props: Props) {
             </Text>
             {output.length > 0 ? (
               output.map((item, index) => (
-                <Card 
-                  key={index} 
-                  shadow="xs" 
-                  padding="xs" 
-                  radius="sm" 
+                <Card
+                  key={index}
+                  shadow="xs"
+                  padding="xs"
+                  radius="sm"
                   mb="sm"
                   withBorder
                 >
-                  <Group position="apart" noWrap>
+                  <Group justify="space-between">
                     <Checkbox
                       label={`${item.term} - ${item.definition}`}
                       checked={item.selected}
                       onChange={(event) => {
                         const newOutput = [...output];
-                        newOutput[index].selected = event.currentTarget.checked;
+                        newOutput[index].selected =
+                          event.currentTarget.checked;
                         setOutput(newOutput);
                       }}
                       style={{ flexGrow: 1 }}
                     />
-                    <ActionIcon 
-                      color="blue" 
+                    <ActionIcon
+                      color="blue"
                       variant="subtle"
                       onClick={() => {
                         setCurrentEditItem({
                           index,
                           term: item.term,
-                          definition: item.definition
+                          definition: item.definition,
                         });
                         setEditModalOpen(true);
                       }}
@@ -323,14 +333,14 @@ export default function Turbine(props: Props) {
         centered
       >
         {currentEditItem && (
-          <Stack spacing="md">
+          <Stack gap="md">
             <TextInput
               label="Word"
               value={currentEditItem.term}
-              onChange={(event) => 
+              onChange={(event) =>
                 setCurrentEditItem({
                   ...currentEditItem,
-                  term: event.currentTarget.value
+                  term: event.currentTarget.value,
                 })
               }
             />
@@ -340,16 +350,16 @@ export default function Turbine(props: Props) {
               onChange={(event) =>
                 setCurrentEditItem({
                   ...currentEditItem,
-                  definition: event.currentTarget.value
+                  definition: event.currentTarget.value,
                 })
               }
             />
-            <Group position="right" spacing="sm">
-              <Button 
-                variant="outline" 
+            <Group justify="flex-end" gap="sm">
+              <Button
+                variant="outline"
                 color="red"
                 onClick={() => setEditModalOpen(false)}
-                leftIcon={<IconX size="1rem" />}
+                leftSection={<IconX size="1rem" />}
               >
                 Cancel
               </Button>
@@ -361,13 +371,13 @@ export default function Turbine(props: Props) {
                     newOutput[currentEditItem.index] = {
                       ...newOutput[currentEditItem.index],
                       term: currentEditItem.term,
-                      definition: currentEditItem.definition
+                      definition: currentEditItem.definition,
                     };
                     setOutput(newOutput);
                     setEditModalOpen(false);
                   }
                 }}
-                leftIcon={<IconCheck size="1rem" />}
+                leftSection={<IconCheck size="1rem" />}
               >
                 Save Changes
               </Button>

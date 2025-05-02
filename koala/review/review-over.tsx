@@ -47,7 +47,8 @@ export function ReviewOver({
     await onSave().finally(() => setIsSaving(false));
   };
 
-  const hasError = (quiz: QuizState) => quiz.serverGradingResult === "fail";
+  const hasError = (quiz: QuizState) =>
+    quiz.serverGradingResult === "fail";
 
   if (state.length === 0) {
     return (
@@ -110,8 +111,8 @@ export function ReviewOver({
             </Text>
           </Alert>
           <Text size="md">
-            The server found some issues with your responses. Check the feedback
-            below. {correctPercent}% correct
+            The server found some issues with your responses. Check the
+            feedback below. {correctPercent}% correct
           </Text>
           <Box mt="md">
             <Button

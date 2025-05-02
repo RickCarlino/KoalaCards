@@ -39,7 +39,10 @@ export const bulkCreateCards = procedure
     const results: { term: string; definition: string }[] = [];
     const userId = ctx.user?.id;
     if (!userId) {
-      throw new TRPCError({ code: "UNAUTHORIZED", message: "User not found" });
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message: "User not found",
+      });
     }
 
     let deck;

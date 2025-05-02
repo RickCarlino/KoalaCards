@@ -26,7 +26,9 @@ const DefinitionSchema = z.object({
         lemma: z
           .string()
           .optional()
-          .describe("The dictionary form (lemma) of the word, if applicable."),
+          .describe(
+            "The dictionary form (lemma) of the word, if applicable.",
+          ),
         definition: z
           .string()
           .describe(
@@ -90,7 +92,9 @@ For each "Word to Define" listed above:
           "Invalid or missing parsed response from OpenAI for definitions:",
           completion.choices[0]?.message,
         );
-        throw new Error("Failed to get structured definitions from OpenAI");
+        throw new Error(
+          "Failed to get structured definitions from OpenAI",
+        );
       }
 
       // Return the structured definitions

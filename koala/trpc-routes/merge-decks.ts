@@ -11,10 +11,12 @@ export const mergeDecks = procedure
       newDeckName: z.string().min(1),
     }),
   )
-  .output(z.object({
-    newDeckId: z.number(),
-    cardsUpdated: z.number(),
-  }))
+  .output(
+    z.object({
+      newDeckId: z.number(),
+      cardsUpdated: z.number(),
+    }),
+  )
   .mutation(async ({ input, ctx }) => {
     const userSettings = await getUserSettings(ctx.user?.id);
     const userId = userSettings.user.id;
@@ -31,7 +33,8 @@ export const mergeDecks = procedure
     if (decks.length !== input.deckIds.length) {
       throw new TRPCError({
         code: "FORBIDDEN",
-        message: "You don't have access to one or more of the selected decks",
+        message:
+          "You don't have access to one or more of the selected decks",
       });
     }
 
@@ -39,7 +42,7 @@ export const mergeDecks = procedure
     const langCode = decks[0].langCode;
 
     // Verify all decks have the same language
-    if (!decks.every(deck => deck.langCode === langCode)) {
+    if (!decks.every((deck) => deck.langCode === langCode)) {
       throw new TRPCError({
         code: "BAD_REQUEST",
         message: "All decks must be in the same language",

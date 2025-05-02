@@ -40,7 +40,9 @@ export default function MicrophonePermissions<T extends Element>(el: T) {
         <div className="text-2xl font-bold mb-4 text-red-600">
           Microphone Access Error
         </div>
-        <div className="text-gray-600 text-center max-w-md">{errorMessage}</div>
+        <div className="text-gray-600 text-center max-w-md">
+          {errorMessage}
+        </div>
       </div>
     );
   }

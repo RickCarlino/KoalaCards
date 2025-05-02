@@ -346,7 +346,8 @@ const callTTS = async (voice: string, params: AudioLessonParams) => {
           ],
       },
       audioConfig: {
-        audioEncoding: protos.google.cloud.texttospeech.v1.AudioEncoding.MP3,
+        audioEncoding:
+          protos.google.cloud.texttospeech.v1.AudioEncoding.MP3,
         speakingRate: params.speed || 1.0,
       },
     };
@@ -373,7 +374,11 @@ const hashURL = (text: string, langCode: string, gender: string) => {
 export async function generateSpeechURL(
   params: AudioLessonParams,
 ): Promise<string> {
-  const base64UrlHash = hashURL(params.text, params.langCode, params.gender);
+  const base64UrlHash = hashURL(
+    params.text,
+    params.langCode,
+    params.gender,
+  );
   const fileName = `lesson-audio/${base64UrlHash}.mp3`;
   const file = bucket.file(fileName);
   const [exists] = await file.exists();

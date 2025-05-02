@@ -153,7 +153,8 @@ const frequencyListsData: LanguageData[] = [
     name: "Korean",
     lists: [
       {
-        title: "National Institute of Korean Language (NIKL) Frequency List",
+        title:
+          "National Institute of Korean Language (NIKL) Frequency List",
         description:
           "A list of the most common Korean words based on a large corpus compiled by NIKL. Wiktionary hosts a 5,800-word frequency list that was generated from an official NIKL file.",
         url: "https://en.wiktionary.org/wiki/Wiktionary:Frequency_lists/Korean_5800",
@@ -200,50 +201,54 @@ const FrequencyListsPage = () => {
           Language Frequency Lists
         </Title>
         <Text size="lg" c="dimmed" maw={600} mx="auto">
-          A collection of word frequency lists for various languages to help you
-          build your vocabulary
+          A collection of word frequency lists for various languages to
+          help you build your vocabulary
         </Text>
         <Divider my="lg" />
       </Box>
 
       <Accordion variant="filled" radius="md" styles={accordionStyles}>
-        {alphabetical(frequencyListsData, (x) => x.name).map((language) => (
-          <Accordion.Item
-            value={language.name.toLowerCase()}
-            key={language.name.toLowerCase()}
-          >
-            <Accordion.Control>
-              <Title order={3}>{language.name}</Title>
-            </Accordion.Control>
-            <Accordion.Panel>
-              {language.lists.map((list, index) => (
-                <Paper
-                  p="md"
-                  withBorder
-                  mb="md"
-                  key={index}
-                  style={{ borderLeft: `4px solid ${theme.colors.pink[6]}` }}
-                >
-                  <Title order={4} mb="xs">
-                    {list.title}
-                  </Title>
-                  <Text mb="xs">{list.description}</Text>
-                  <Anchor href={list.url} target="_blank">
-                    View on{" "}
-                    {list.url.includes("wiktionary")
-                      ? "Wiktionary"
-                      : list.url.includes("talkinarabic")
-                        ? "TalkInArabic"
-                        : "Website"}
-                  </Anchor>
-                  <Text fw={500} mt="md" size="sm" c="dimmed">
-                    Source: {list.source}
-                  </Text>
-                </Paper>
-              ))}
-            </Accordion.Panel>
-          </Accordion.Item>
-        ))}
+        {alphabetical(frequencyListsData, (x) => x.name).map(
+          (language) => (
+            <Accordion.Item
+              value={language.name.toLowerCase()}
+              key={language.name.toLowerCase()}
+            >
+              <Accordion.Control>
+                <Title order={3}>{language.name}</Title>
+              </Accordion.Control>
+              <Accordion.Panel>
+                {language.lists.map((list, index) => (
+                  <Paper
+                    p="md"
+                    withBorder
+                    mb="md"
+                    key={index}
+                    style={{
+                      borderLeft: `4px solid ${theme.colors.pink[6]}`,
+                    }}
+                  >
+                    <Title order={4} mb="xs">
+                      {list.title}
+                    </Title>
+                    <Text mb="xs">{list.description}</Text>
+                    <Anchor href={list.url} target="_blank">
+                      View on{" "}
+                      {list.url.includes("wiktionary")
+                        ? "Wiktionary"
+                        : list.url.includes("talkinarabic")
+                          ? "TalkInArabic"
+                          : "Website"}
+                    </Anchor>
+                    <Text fw={500} mt="md" size="sm" c="dimmed">
+                      Source: {list.source}
+                    </Text>
+                  </Paper>
+                ))}
+              </Accordion.Panel>
+            </Accordion.Item>
+          ),
+        )}
       </Accordion>
 
       <Box
@@ -255,9 +260,9 @@ const FrequencyListsPage = () => {
         }}
       >
         <Text ta="center" size="sm">
-          These frequency lists are derived from large language corpora and are
-          valuable for language learners interested in the most commonly used
-          words in each target language.
+          These frequency lists are derived from large language corpora and
+          are valuable for language learners interested in the most
+          commonly used words in each target language.
         </Text>
       </Box>
 

@@ -19,7 +19,10 @@ export const getDailyWritingProgress = procedure
   .query(async ({ ctx }) => {
     const userId = ctx.user?.id;
     if (!userId) {
-      throw new TRPCError({ code: "UNAUTHORIZED", message: "User not found" });
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message: "User not found",
+      });
     }
 
     // Calculate the timestamp for 24 hours ago
@@ -52,7 +55,10 @@ export const getDailyWritingProgress = procedure
 
       // Calculate progress and percentage
       const progress = result._sum.correctionCharacterCount ?? 0;
-      const percentage = Math.min(Math.round((progress / goal) * 100), 100);
+      const percentage = Math.min(
+        Math.round((progress / goal) * 100),
+        100,
+      );
 
       return { progress, goal, percentage };
     } catch (error) {

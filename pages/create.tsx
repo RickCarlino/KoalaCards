@@ -164,8 +164,8 @@ const CreatePage = () => {
         }}
       >
         <Text style={{ textAlign: "center" }} fw={500}>
-          Not sure which to choose? Start with "Create by Vibe" for the easiest
-          experience!
+          Not sure which to choose? Start with "Create by Vibe" for the
+          easiest experience!
         </Text>
       </Box>
     </Container>
@@ -177,7 +177,9 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const userId = dbUser?.id;
 
   if (!userId) {
-    return { redirect: { destination: "/api/auth/signin", permanent: false } };
+    return {
+      redirect: { destination: "/api/auth/signin", permanent: false },
+    };
   }
 
   const cardCount = await prismaClient.card.count({

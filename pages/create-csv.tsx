@@ -144,7 +144,8 @@ export default function CreateRawPage({ decks }: CreateRawPageProps) {
       console.error(error);
       notifications.show({
         title: "Error",
-        message: "Something went wrong. Please try again or contact support.",
+        message:
+          "Something went wrong. Please try again or contact support.",
         color: "red",
       });
     } finally {
@@ -186,9 +187,10 @@ export default function CreateRawPage({ decks }: CreateRawPageProps) {
           Raw Text Input
         </Title>
         <Text size="sm" mb="xs">
-          Paste or upload your large text file content here. Each line will be
-          treated as a separate card. Within each line, we’ll split the term
-          from the definition using the separator below. (Up to 1500 lines.)
+          Paste or upload your large text file content here. Each line will
+          be treated as a separate card. Within each line, we’ll split the
+          term from the definition using the separator below. (Up to 1500
+          lines.)
         </Text>
         <Flex gap="sm" mb="sm">
           <TextInput
@@ -206,7 +208,10 @@ export default function CreateRawPage({ decks }: CreateRawPageProps) {
           autosize
           value={state.rawInput} // Use rawInput from reducer state
           onChange={(e) =>
-            dispatch({ type: "SET_RAW_INPUT", rawInput: e.currentTarget.value })
+            dispatch({
+              type: "SET_RAW_INPUT",
+              rawInput: e.currentTarget.value,
+            })
           } // Dispatch action to update rawInput
         />
         <Divider my="sm" />
@@ -263,7 +268,9 @@ export default function CreateRawPage({ decks }: CreateRawPageProps) {
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const dbUser = await getServersideUser(ctx);
   if (!dbUser) {
-    return { redirect: { destination: "/api/auth/signin", permanent: false } };
+    return {
+      redirect: { destination: "/api/auth/signin", permanent: false },
+    };
   }
 
   // Ensure user has a default set of decks

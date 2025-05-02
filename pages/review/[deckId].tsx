@@ -59,7 +59,10 @@ const handleLanguageCode = async (
     languageDecksInfo.sort((a, b) => b.quizzesDue - a.quizzesDue);
     const bestDeck = languageDecksInfo[0];
     return {
-      redirect: { destination: `/review/${bestDeck.id}`, permanent: false },
+      redirect: {
+        destination: `/review/${bestDeck.id}`,
+        permanent: false,
+      },
     };
   } else {
     return { redirect: { destination: "/review", permanent: false } };
@@ -72,7 +75,9 @@ export const getServerSideProps: GetServerSideProps<
   const dbUser = await getServersideUser(context);
 
   if (!dbUser) {
-    return { redirect: { destination: "/api/auth/signin", permanent: false } };
+    return {
+      redirect: { destination: "/api/auth/signin", permanent: false },
+    };
   }
 
   const { deckId: deckIdParam } = context.params as ParsedUrlQuery;
@@ -107,13 +112,14 @@ export const getServerSideProps: GetServerSideProps<
       const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
       // Get user's writing progress in the last 24 hours
-      const writingProgress = await prismaClient.writingSubmission.aggregate({
-        _sum: { correctionCharacterCount: true },
-        where: {
-          userId: dbUser.id,
-          createdAt: { gte: last24Hours },
-        },
-      });
+      const writingProgress =
+        await prismaClient.writingSubmission.aggregate({
+          _sum: { correctionCharacterCount: true },
+          where: {
+            userId: dbUser.id,
+            createdAt: { gte: last24Hours },
+          },
+        });
 
       const progress = writingProgress._sum.correctionCharacterCount ?? 0;
       const goal = userSettings.dailyWritingGoal ?? 500;
@@ -148,7 +154,9 @@ const LoadingState = () => (
       <Title order={3} mb="md">
         Loading
       </Title>
-      <Text>Fetching Quizzes. This could take a while for new cards...</Text>
+      <Text>
+        Fetching Quizzes. This could take a while for new cards...
+      </Text>
     </Box>
   </Container>
 );
@@ -194,7 +202,10 @@ const NoQuizzesState = ({ deckId }: { deckId: number }) => (
 
 export default function Review({ deckId }: ReviewDeckPageProps) {
   const mutation = trpc.getNextQuizzes.useMutation();
-  const [data, setData] = useState<QuizData>({ quizzesDue: 0, quizzes: [] });
+  const [data, setData] = useState<QuizData>({
+    quizzesDue: 0,
+    quizzes: [],
+  });
   const [isFetching, setIsFetching] = useState(true);
 
   function doSetData(data: QuizData) {
@@ -220,7 +231,9 @@ export default function Review({ deckId }: ReviewDeckPageProps) {
 
   const fetchQuizzes = (currentDeckId: number) => {
     setIsFetching(true);
-    const takeParam = new URLSearchParams(window.location.search).get("take");
+    const takeParam = new URLSearchParams(window.location.search).get(
+      "take",
+    );
     const take = Math.min(parseInt(takeParam || "21", 10), 44);
 
     mutation

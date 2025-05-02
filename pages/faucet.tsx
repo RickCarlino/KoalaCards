@@ -49,7 +49,13 @@ export default function Faucet() {
         <Stack mt="md">
           Diff: {(results.length / 30) * 100}%
           {results.map((item) => (
-            <Card key={item.id} shadow="xs" padding="sm" radius="sm" withBorder>
+            <Card
+              key={item.id}
+              shadow="xs"
+              padding="sm"
+              radius="sm"
+              withBorder
+            >
               <Text>Term: {item.term}</Text>
               <Text>Definition: {item.definition}</Text>
               {item.userMessage.split("\n").map((line, index) => (

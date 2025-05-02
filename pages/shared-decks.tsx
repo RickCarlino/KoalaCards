@@ -22,7 +22,9 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   const pageNum = parseInt((page as string) || "1", 10);
   const filter = {
     ...(search
-      ? { name: { contains: String(search), mode: "insensitive" as const } }
+      ? {
+          name: { contains: String(search), mode: "insensitive" as const },
+        }
       : {}),
     ...(lang && lang !== "" ? { langCode: String(lang) } : {}),
     published: true,
@@ -159,7 +161,8 @@ const SharedDecks = ({
                 )}
                 <Text size="xs" color="dimmed">
                   Created on:{" "}
-                  {!deck.createdAt || isNaN(new Date(deck.createdAt).getTime())
+                  {!deck.createdAt ||
+                  isNaN(new Date(deck.createdAt).getTime())
                     ? "N/A"
                     : new Date(deck.createdAt).toLocaleDateString()}
                 </Text>

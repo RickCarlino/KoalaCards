@@ -7,10 +7,16 @@ import { prismaClient } from "@/koala/prisma-client";
 export default trpcNext.createNextApiHandler({
   router: appRouter,
   createContext: async (_opts) => {
-    const session = await getServerSession(_opts.req, _opts.res, authOptions);
+    const session = await getServerSession(
+      _opts.req,
+      _opts.res,
+      authOptions,
+    );
     const email = session?.user?.email;
     const query = { where: { email } };
-    const user = email ? await prismaClient.user.findFirst(query) : undefined;
+    const user = email
+      ? await prismaClient.user.findFirst(query)
+      : undefined;
     user &&
       prismaClient.user
         .update({

@@ -20,7 +20,12 @@ import {
   useMantineTheme,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { IconBulb, IconCheck, IconPencil, IconWand } from "@tabler/icons-react";
+import {
+  IconBulb,
+  IconCheck,
+  IconPencil,
+  IconWand,
+} from "@tabler/icons-react";
 import { GetServerSideProps } from "next";
 import { useCallback, useMemo, useState } from "react";
 
@@ -32,12 +37,14 @@ type Feedback = {
   feedback: string[]; // Per schema in grade-writing.ts
 };
 
-export const getServerSideProps: GetServerSideProps<WritingPageProps> = async (
-  ctx,
-) => {
+export const getServerSideProps: GetServerSideProps<
+  WritingPageProps
+> = async (ctx) => {
   const dbUser = await getServersideUser(ctx);
   if (!dbUser) {
-    return { redirect: { destination: "/api/auth/signin", permanent: false } };
+    return {
+      redirect: { destination: "/api/auth/signin", permanent: false },
+    };
   }
   const { deckId } = ctx.params as { deckId: string };
   const parsedId = parseInt(deckId, 10);
@@ -66,7 +73,10 @@ export const getServerSideProps: GetServerSideProps<WritingPageProps> = async (
 // Step type to track the current writing flow step
 type Step = "prompt-selection" | "writing" | "feedback";
 
-export default function WritingPage({ deckId, langCode }: WritingPageProps) {
+export default function WritingPage({
+  deckId,
+  langCode,
+}: WritingPageProps) {
   const theme = useMantineTheme();
 
   // State for tracking the current step in the writing flow
@@ -77,10 +87,14 @@ export default function WritingPage({ deckId, langCode }: WritingPageProps) {
   const [promptsError, setPromptsError] = useState<string | null>(null);
 
   const [essay, setEssay] = useState("");
-  const [selectedPrompt, setSelectedPrompt] = useState<string | null>(null);
+  const [selectedPrompt, setSelectedPrompt] = useState<string | null>(
+    null,
+  );
 
   const [translations, setTranslations] = useState<string[]>([]);
-  const [translatingIdx, setTranslatingIdx] = useState<number | null>(null);
+  const [translatingIdx, setTranslatingIdx] = useState<number | null>(
+    null,
+  );
 
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [loadingReview, setLoadingReview] = useState(false);
@@ -91,9 +105,9 @@ export default function WritingPage({ deckId, langCode }: WritingPageProps) {
     { refetchOnWindowFocus: false },
   );
 
-  const [selectedWords, setSelectedWords] = useState<Record<string, boolean>>(
-    {},
-  );
+  const [selectedWords, setSelectedWords] = useState<
+    Record<string, boolean>
+  >({});
   const [definitions, setDefinitions] = useState<
     {
       word: string;
@@ -102,7 +116,9 @@ export default function WritingPage({ deckId, langCode }: WritingPageProps) {
     }[]
   >([]);
   const [definitionsLoading, setDefinitionsLoading] = useState(false);
-  const [definitionsError, setDefinitionsError] = useState<string | null>(null);
+  const [definitionsError, setDefinitionsError] = useState<string | null>(
+    null,
+  );
 
   const gradeWriting = trpc.gradeWriting.useMutation({
     onSuccess: (data) => {
@@ -158,7 +174,9 @@ export default function WritingPage({ deckId, langCode }: WritingPageProps) {
       {
         onSuccess: (res) => {
           const first = Array.isArray(res) ? res[0] : res;
-          setTranslations((t) => t.map((val, i) => (i === idx ? first : val)));
+          setTranslations((t) =>
+            t.map((val, i) => (i === idx ? first : val)),
+          );
           setTranslatingIdx(null);
         },
         onError: () => setTranslatingIdx(null),
@@ -237,7 +255,9 @@ export default function WritingPage({ deckId, langCode }: WritingPageProps) {
           }
 
           // For words, make them clickable with consistent styling
-          const normalizedToken = token.replace(/[.,!?;:]$/, "").toLowerCase();
+          const normalizedToken = token
+            .replace(/[.,!?;:]$/, "")
+            .toLowerCase();
           const isSelected = Boolean(selectedWords[normalizedToken]);
 
           return (
@@ -342,7 +362,10 @@ export default function WritingPage({ deckId, langCode }: WritingPageProps) {
   const showDefs = definitions.length > 0 && !definitionsLoading;
 
   // Get corrected text from feedback
-  const corrected = useMemo(() => feedback?.fullCorrection || "", [feedback]);
+  const corrected = useMemo(
+    () => feedback?.fullCorrection || "",
+    [feedback],
+  );
 
   // Extract writing progress data
   const writingProgressData = dailyWritingProgressQuery.data;
@@ -473,9 +496,9 @@ export default function WritingPage({ deckId, langCode }: WritingPageProps) {
         disabled={loadingReview}
       />
       <Text size="sm" c="dimmed" mb="xs">
-        TIP: Don't know a word? Surround the word you want to use in question
-        marks and it will be replaced with an appropriate word when graded.
-        Example: ?apple?를 먹어요.
+        TIP: Don't know a word? Surround the word you want to use in
+        question marks and it will be replaced with an appropriate word
+        when graded. Example: ?apple?를 먹어요.
       </Text>
 
       <Textarea
