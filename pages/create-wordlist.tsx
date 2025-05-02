@@ -11,7 +11,13 @@ import {
   Textarea,
   Text,
   Box,
+  TextInput,
+  Grid,
+  Group,
+  ActionIcon,
+  Modal,
 } from "@mantine/core";
+import { IconEdit, IconCheck, IconX } from "@tabler/icons-react";
 import { clean } from "@/koala/trpc-routes/turbine/util";
 import { backfillDecks } from "@/koala/decks/backfill-decks";
 import { getServersideUser } from "@/koala/get-serverside-user";
@@ -65,11 +71,14 @@ export default function Turbine(props: Props) {
     selected: boolean;
     term: string;
     definition: string;
+    isEditing?: boolean;
   };
   const [inputText, setInputText] = useState("");
   const [previewText, setPreviewText] = useState("");
   const [output, setOutput] = useState<CheckBoxItem[]>([]);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [currentEditItem, setCurrentEditItem] = useState<{index: number; term: string; definition: string} | null>(null);
   // Replace selectedDeck state with reducer
   const [state, dispatch] = useReducer(reducer, {
     ...INITIAL_STATE,
@@ -262,17 +271,41 @@ export default function Turbine(props: Props) {
             </Text>
             {output.length > 0 ? (
               output.map((item, index) => (
-                <Checkbox
-                  key={index}
-                  label={`${item.term} - ${item.definition}`}
-                  checked={item.selected}
-                  onChange={(event) => {
-                    const newOutput = [...output];
-                    newOutput[index].selected = event.currentTarget.checked;
-                    setOutput(newOutput);
-                  }}
-                  style={{ marginBottom: "0.5rem" }}
-                />
+                <Card 
+                  key={index} 
+                  shadow="xs" 
+                  padding="xs" 
+                  radius="sm" 
+                  mb="sm"
+                  withBorder
+                >
+                  <Group position="apart" noWrap>
+                    <Checkbox
+                      label={`${item.term} - ${item.definition}`}
+                      checked={item.selected}
+                      onChange={(event) => {
+                        const newOutput = [...output];
+                        newOutput[index].selected = event.currentTarget.checked;
+                        setOutput(newOutput);
+                      }}
+                      style={{ flexGrow: 1 }}
+                    />
+                    <ActionIcon 
+                      color="blue" 
+                      variant="subtle"
+                      onClick={() => {
+                        setCurrentEditItem({
+                          index,
+                          term: item.term,
+                          definition: item.definition
+                        });
+                        setEditModalOpen(true);
+                      }}
+                    >
+                      <IconEdit size="1.2rem" />
+                    </ActionIcon>
+                  </Group>
+                </Card>
               ))
             ) : (
               <Text>Output will appear here...</Text>
@@ -280,6 +313,68 @@ export default function Turbine(props: Props) {
           </Box>
         </Stack>
       </Card>
+
+      {/* Edit Modal */}
+      <Modal
+        opened={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        title="Edit Word and Translation"
+        size="md"
+        centered
+      >
+        {currentEditItem && (
+          <Stack spacing="md">
+            <TextInput
+              label="Word"
+              value={currentEditItem.term}
+              onChange={(event) => 
+                setCurrentEditItem({
+                  ...currentEditItem,
+                  term: event.currentTarget.value
+                })
+              }
+            />
+            <TextInput
+              label="Translation"
+              value={currentEditItem.definition}
+              onChange={(event) =>
+                setCurrentEditItem({
+                  ...currentEditItem,
+                  definition: event.currentTarget.value
+                })
+              }
+            />
+            <Group position="right" spacing="sm">
+              <Button 
+                variant="outline" 
+                color="red"
+                onClick={() => setEditModalOpen(false)}
+                leftIcon={<IconX size="1rem" />}
+              >
+                Cancel
+              </Button>
+              <Button
+                color="green"
+                onClick={() => {
+                  if (currentEditItem) {
+                    const newOutput = [...output];
+                    newOutput[currentEditItem.index] = {
+                      ...newOutput[currentEditItem.index],
+                      term: currentEditItem.term,
+                      definition: currentEditItem.definition
+                    };
+                    setOutput(newOutput);
+                    setEditModalOpen(false);
+                  }
+                }}
+                leftIcon={<IconCheck size="1rem" />}
+              >
+                Save Changes
+              </Button>
+            </Group>
+          </Stack>
+        )}
+      </Modal>
     </Center>
   );
 }
