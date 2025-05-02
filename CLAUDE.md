@@ -1,27 +1,27 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+### Commands
 
-## Build/Test/Lint Commands
-- Build: Never run this
-- Dev: It's running on localhost:3000 never attempt to start the server.
-- Lint: `npm run lint` - Run ESLint
-- Reset DB: Never attempt to do DB operations (migrations, reset, etc...)
-- Start: Never do this
+- **Lint:** `npm run lint`
+- **Never run:** build, dev (localhost:3000 already running), start, or any DB ops
 
-## Code Guidelines
-- TypeScript strictly typed - avoid using `any` types
-- No seriously, never use any type. It's never OK. Use `unknown` if you must.
-- React functional components with explicit return types
-- Imports ordered: React, external packages, internal modules, types
-- PascalCase for components, camelCase for functions/variables
-- Follow existing patterns when adding new features
-- Components should be small, focused, and reusable
-- Use Next.js conventions for routing and data fetching
-- UI uses Mantine component library for consistent styling
-- Avoid hard-coded values - use environment variables for secrets
-- I prefer serverside props over trpc methods where possible
-- When the feature is done, run `npm run lint`, `npm run format`, and `tsc --noEmit` to make sure it's cleaned up.
-- Never use dangerouslySetInnerHTML.
+### Coding Rules
 
-KoalaCards is a language learning app with listening and speaking flashcards using spaced repetition and automated grading via speech recognition and LLMs.
+- **TypeScript:** strict; never use `any` (use `unknown` only when unavoidable)
+- **React:** functional components with explicit return types
+- **Naming:** PascalCase components; camelCase functions & variables; kebabe-case files.
+- **Structure:** small, focused, reusable components; follow existing patterns; Next.js routing & data fetching
+- **UI:** Mantine library for styling
+- **Config:** store secrets in environment variables
+- **Data:** prefer `getServerSideProps` over `trpc`
+- **Style:** avoid inline expressions, long one‑liners, and ternaries; expand code vertically
+- **Control flow:** no `else if`—use early returns, switch, or lookup tables
+- **Safety:** never use `dangerouslySetInnerHTML`
+
+### Finishing Checklist
+
+1. `npm run lint`
+2. `npm run format`
+3. `tsc --noEmit`
+
+KoalaCards is a language‑learning flashcard app with SRS, speech recognition, and LLM grading.

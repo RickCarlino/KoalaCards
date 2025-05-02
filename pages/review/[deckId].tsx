@@ -178,6 +178,11 @@ const NoQuizzesState = ({ deckId }: { deckId: number }) => (
           Add more cards to this deck
         </Anchor>
       </Box>
+      <Box mb="xs">
+        <Anchor component={Link} href={`/writing/${deckId}`}>
+          Practice Writing
+        </Anchor>
+      </Box>
       <Box>
         <Anchor component={Link} href="/review">
           Go back to deck selection
