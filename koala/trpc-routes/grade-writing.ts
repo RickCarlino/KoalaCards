@@ -88,13 +88,12 @@ export const gradeWriting = procedure
         },
         {
           role: "user",
-
           content: `Language: ${getLangName(
             langCode,
           )}\n\nText to analyze: ${text}`,
         },
       ],
-      model: "gpt-4.1",
+      model: "o4-mini",
 
       response_format: zodResponseFormat(ApiResponseSchema, "essay"),
     });

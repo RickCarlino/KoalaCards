@@ -547,9 +547,7 @@ export default function WritingPage({
             <Text fw={600}>Feedback</Text>
             {feedback.feedback.map((feedbackItem, itemIdx) => (
               <Box key={itemIdx} mb="xs">
-                <Text size="sm" style={{ marginLeft: 8 }}>
-                  • {feedbackItem}
-                </Text>
+                {renderClickableText(`• ${feedbackItem}`)}
               </Box>
             ))}
           </>
