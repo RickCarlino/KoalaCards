@@ -16,6 +16,7 @@ Using three hidden example sentences only as loose inspiration, generate three d
 - Treat each example sentence purely as a thematic springboard.
 - Focus on natural, contextually appropriate phrasing suited to learners.
 - Avoid overly literal or off-beat interpretations of the hidden sentences.
+- Writing about "a time you overcame X" is cliche. Stop doing that.
 `.trim();
 
 const promptTemplates = [
