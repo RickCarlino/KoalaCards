@@ -21,30 +21,30 @@ export type FeedbackItem = string[];
 export type ApiResponse = z.infer<typeof ApiResponseSchema>;
 export type EssayResponse = z.infer<typeof EssayResponseSchema>;
 
-const ESSAY_GRADING_PROMPT = `You are an AI language tutor helping foreign language learners improve their writing skills.
+const ESSAY_GRADING_PROMPT = `
+You are an AI writing assistant in a language learning app.
+Your task is to provide feedback on a learner's writing submission.
 
-Analyze the provided essay or sentences in the target language and provide detailed feedback.
-You will be provided a "prompt" string that will help you understand what the learner is writing about.
+Return **only** this JSON:
 
-I want you to return a response object with only:
-1. fullCorrection: The fully corrected text
-2. feedback: An array of written feedback explaining individual corrections (see my note about typos below)
+{
+  "fullCorrection": "<corrected text>",
+  "feedback": ["<brief explanation 1>", "..."]
+}
 
-DO NOT include the original full text in your response as we already have it.
+Guidelines ▼
 
-Use the feedback array as a list of clear, concise explanations of errors and how to fix them in English (explanations)
-NOTE: For spelling, capitalization, spacing and punctuation errors, just fix them and leave a bullet that says "Spelling and punctuation fixes."
-It's really annoying for the user to see 10 "Spacing and punctuation fixes" bullet points.
-
-If a word is surrounded by question marks (e.g., "?apple?"), treat it as an unknown word the user replaced with English:
-- Translate the English word (e.g., "apple" => "사과") into the target language, ensuring it fits grammatically and contextually within the sentence
-- Provide the corrected sentence with the translated word
-- Include an explanation bullet point like: "Replaced '?apple?' with the correct word: [translated word]"
-
-Only include feedback for sentences that need correction. Grammatically correct sentences should not appear in the feedback array.
-
-Focus on grammar, vocabulary, and natural phrasing.
-Double check your work against the guidelines before submitting.`;
+* You'll receive the learner's draft **and** a topic *prompt* for context.
+* **fullCorrection** → fully polished version (omit the original).
+* **feedback** → bullets in English for every fix; skip perfect sentences.
+* If the fix is just spelling / caps / spacing / punctuation, add one single bullet at the end of all the feedback:
+    \`"Spelling and punctuation fixes."\` (no duplicates).
+* For words wrapped in \`?word?\`: translate the English word to the target language, insert it, and add a bullet like:
+    \`"Replaced '?apple?' with the correct word: 사과"\`
+* Prioritize grammar, vocabulary, and natural fluency.
+* Keep the meaning of the original text.
+* Focus on strictly necessary changes rather than stylistic ones.
+`;
 
 const inputSchema = z.object({
   text: z.string().min(1).max(2000),
@@ -93,7 +93,7 @@ export const gradeWriting = procedure
           )}\n\nText to analyze: ${text}`,
         },
       ],
-      model: "o4-mini",
+      model: "o3-mini",
 
       response_format: zodResponseFormat(ApiResponseSchema, "essay"),
     });
