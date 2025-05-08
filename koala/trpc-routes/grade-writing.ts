@@ -38,7 +38,8 @@ Guidelines ▼
 * **fullCorrection** → fully polished version (omit the original).
 * **feedback** → bullets in English for every fix; skip perfect sentences.
 * If the fix is just spelling / caps / spacing / punctuation, add one single bullet at the end of all the feedback:
-    \`"Spelling and punctuation fixes."\` (no duplicates).
+    \`"Spelling fixes."\` (no duplicates).
+* Read that last one again.
 * For words wrapped in \`?word?\`: translate the English word to the target language, insert it, and add a bullet like:
     \`"Replaced '?apple?' with the correct word: 사과"\`
 * Prioritize grammar, vocabulary, and natural fluency.
