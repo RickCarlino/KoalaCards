@@ -91,6 +91,7 @@ async function fetchDueCards(userId: string, deckId: number, now: number) {
 
 async function fetchNewCards(userId: string, deckId: number) {
   const limit = await newCardsAllowed(userId);
+  console.log(`New cards allowed: ${limit}`);
   if (limit < 1) return [];
   const ids = shuffle(
     await prismaClient.quiz.findMany({
@@ -135,7 +136,32 @@ async function fetchRemedial(
   });
 }
 
+// EXPERIMENT: Turn off the faucet if too many cards are due
+const TODO_MAKE_THIS_CUSTOMIZABLE = 100;
+const maybeSlowLearningRate = async (userId: string) => {
+  // Return 0 if > 100 cards due in next 24 hours:
+  const dueCards = await prismaClient.quiz.count({
+    where: {
+      Card: {
+        userId,
+        flagged: { not: true },
+      },
+      nextReview: { lt: Date.now() + 24 * 60 * 60 * 1000 },
+      lastReview: { gt: 0 },
+    },
+  });
+  if (dueCards > TODO_MAKE_THIS_CUSTOMIZABLE) {
+    console.log(
+      `User ${userId} has ${dueCards} due cards. Slowing down learning rate.`,
+    );
+    return 1;
+  }
+};
+
 async function newCardsAllowed(userId: string) {
+  const slowLearningRate = await maybeSlowLearningRate(userId);
+  if (typeof slowLearningRate === "number") return slowLearningRate;
+
   const dailyTarget = await getCardsAllowedPerDay(userId);
   const maxWeekly = dailyTarget * 7;
   const dailyMax = Math.min(dailyTarget * 2, 45);
