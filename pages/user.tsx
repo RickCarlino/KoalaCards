@@ -2,7 +2,7 @@ import { getUserSettingsFromEmail } from "@/koala/auth-helpers";
 import { prismaClient } from "@/koala/prisma-client";
 import { trpc } from "@/koala/trpc-config";
 import { getLessonMeta } from "@/koala/trpc-routes/get-next-quizzes";
-import { AreaChart } from "@mantine/charts"; // Import AreaChart
+import { AreaChart } from "@mantine/charts";
 import {
   Button,
   Card,
@@ -25,7 +25,6 @@ import React, { useState } from "react";
 const ONE_DAY = 24 * 60 * 60 * 1000;
 const ONE_WEEK = 7 * ONE_DAY;
 
-// Helper function to format date as YYYY-MM-DD
 function formatDate(date: Date): string {
   const year = date.getFullYear();
   const month = (date.getMonth() + 1).toString().padStart(2, "0");
@@ -38,18 +37,16 @@ export async function getServerSideProps(
 ) {
   const session = await getSession({ req: context.req });
   if (!session?.user?.email) {
-    // Handle case where session or email is missing, perhaps redirect
     return { redirect: { destination: "/", permanent: false } };
   }
   const userSettings = await getUserSettingsFromEmail(session.user.email);
   if (!userSettings) {
-    // Handle case where user settings are not found
     return { redirect: { destination: "/", permanent: false } };
   }
   const userId = userSettings.userId;
 
   async function getUserCardStatistics(userId: string) {
-    const today = new Date(); // Use Date object for easier manipulation
+    const today = new Date();
     const oneWeekAgo = new Date(today.getTime() - ONE_WEEK);
     const yesterday = new Date(today.getTime() - ONE_DAY);
     const tomorrow = new Date(today.getTime() + ONE_DAY);
@@ -67,7 +64,7 @@ export async function getServerSideProps(
       where: {
         ...BASE_QUERY,
         nextReview: {
-          lt: tomorrow.getTime(), // Use getTime() for comparison
+          lt: tomorrow.getTime(),
         },
         firstReview: {
           gt: 0,
@@ -80,7 +77,7 @@ export async function getServerSideProps(
         where: {
           Card: { userId },
           firstReview: {
-            gte: yesterday.getTime(), // Use getTime() for Prisma timestamp comparison
+            gte: yesterday.getTime(),
           },
         },
         distinct: ["cardId"],
@@ -92,7 +89,7 @@ export async function getServerSideProps(
         where: {
           Card: { userId },
           firstReview: {
-            gte: oneWeekAgo.getTime(), // Use getTime()
+            gte: oneWeekAgo.getTime(),
           },
         },
         distinct: ["cardId"],
@@ -102,7 +99,7 @@ export async function getServerSideProps(
       where: {
         ...BASE_QUERY,
         lastReview: {
-          gte: yesterday.getTime(), // Use getTime()
+          gte: yesterday.getTime(),
         },
       },
     });
@@ -110,18 +107,17 @@ export async function getServerSideProps(
       where: {
         ...BASE_QUERY,
         lastReview: {
-          gte: oneWeekAgo.getTime(), // Use getTime()
+          gte: oneWeekAgo.getTime(),
         },
       },
     });
 
-    // --- Fetch data for the chart ---
     const recentLearnedQuizzes = await prismaClient.quiz.findMany({
       where: {
         Card: { userId },
         firstReview: {
-          gt: 0, // Ensure it's actually reviewed
-          gte: threeMonthsAgo.getTime(), // Within the last 3 months
+          gt: 0,
+          gte: threeMonthsAgo.getTime(),
         },
       },
       select: {
@@ -129,37 +125,32 @@ export async function getServerSideProps(
         firstReview: true,
       },
       orderBy: {
-        firstReview: "asc", // Get the earliest review first
+        firstReview: "asc",
       },
     });
 
-    // Process in JS to find the first time each card was learned
     const firstLearnedDates: Record<string, Date> = {};
     for (const quiz of recentLearnedQuizzes) {
-      // Ensure firstReview is not null and the card hasn't been recorded yet
       if (quiz.firstReview && !firstLearnedDates[quiz.cardId]) {
         firstLearnedDates[quiz.cardId] = new Date(quiz.firstReview);
       }
     }
 
-    // --- Calculate Cumulative Count ---
     const cumulativeChartData: ChartDataPoint[] = [];
     let cumulativeCount = 0;
-    // Sort the first learned dates chronologically
+
     const sortedLearnedDates = Object.values(firstLearnedDates).sort(
       (a, b) => a.getTime() - b.getTime(),
     );
     let learnedDateIndex = 0;
     const endDate = new Date();
-    let currentDate = new Date(threeMonthsAgo); // Start from 3 months ago
+    let currentDate = new Date(threeMonthsAgo);
 
-    // Iterate through each day from 3 months ago until today
     while (currentDate <= endDate) {
       const dateString = formatDate(currentDate);
       const currentDayEnd = new Date(currentDate);
-      currentDayEnd.setHours(23, 59, 59, 999); // Set to end of the day for comparison
+      currentDayEnd.setHours(23, 59, 59, 999);
 
-      // Add count of cards whose first learned date is on or before the current day
       while (
         learnedDateIndex < sortedLearnedDates.length &&
         sortedLearnedDates[learnedDateIndex] <= currentDayEnd
@@ -168,20 +159,64 @@ export async function getServerSideProps(
         learnedDateIndex++;
       }
 
-      // Add the cumulative count for the current date
       cumulativeChartData.push({
         date: dateString,
         count: cumulativeCount,
       });
 
-      // Move to the next day
       currentDate.setDate(currentDate.getDate() + 1);
     }
-    // --- End Cumulative Count Calculation ---
 
-    // Assign the cumulative data to the chartData variable
-    const chartData = cumulativeChartData;
-    // --- End chart data fetching ---
+    const writingSubmissions =
+      await prismaClient.writingSubmission.findMany({
+        where: {
+          userId: userId,
+          createdAt: {
+            gte: threeMonthsAgo,
+          },
+        },
+        select: {
+          createdAt: true,
+          correctionCharacterCount: true,
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+      });
+
+    const dailyWritingData: Record<string, number> = {};
+
+    let initDate = new Date(threeMonthsAgo);
+    while (initDate <= endDate) {
+      dailyWritingData[formatDate(initDate)] = 0;
+      initDate.setDate(initDate.getDate() + 1);
+    }
+
+    for (const submission of writingSubmissions) {
+      const submissionDate = formatDate(submission.createdAt);
+      dailyWritingData[submissionDate] =
+        (dailyWritingData[submissionDate] || 0) +
+        submission.correctionCharacterCount;
+    }
+
+    const cumulativeWritingData: ChartDataPoint[] = [];
+    let cumulativeWritingCount = 0;
+
+    currentDate = new Date(threeMonthsAgo);
+    while (currentDate <= endDate) {
+      const dateString = formatDate(currentDate);
+      cumulativeWritingCount += dailyWritingData[dateString] || 0;
+
+      cumulativeWritingData.push({
+        date: dateString,
+        count: cumulativeWritingCount,
+      });
+
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    const cardChartData = cumulativeChartData;
+    const writingChartData = cumulativeWritingData;
 
     const weeklyTarget = userSettings.cardsPerDayMax * 7;
     const statistics = {
@@ -194,30 +229,32 @@ export async function getServerSideProps(
       globalUsers: await prismaClient.user.count(),
     };
 
-    return { statistics, chartData }; // Return both stats and chartData
+    return { statistics, cardChartData, writingChartData };
   }
 
-  const { statistics, chartData } = await getUserCardStatistics(userId);
+  const { statistics, cardChartData, writingChartData } =
+    await getUserCardStatistics(userId);
 
   return {
     props: {
       userSettings: JSON.parse(JSON.stringify(userSettings)),
       stats: statistics,
-      chartData: chartData, // Pass chartData as prop
+      cardChartData: cardChartData,
+      writingChartData: writingChartData,
     },
   };
 }
 
-// Update Props type to include chartData
 type ChartDataPoint = { date: string; count: number };
 type Props = UnwrapPromise<
   ReturnType<typeof getServerSideProps>
 >["props"] & {
-  chartData: ChartDataPoint[];
+  cardChartData: ChartDataPoint[];
+  writingChartData: ChartDataPoint[];
 };
 
 export default function UserSettingsPage(props: Props) {
-  const { userSettings, stats, chartData } = props; // Destructure chartData
+  const { userSettings, stats, cardChartData, writingChartData } = props;
   const [settings, setSettings] = useState(userSettings);
   const editUserSettings = trpc.editUserSettings.useMutation();
 
@@ -351,7 +388,6 @@ export default function UserSettingsPage(props: Props) {
             <Stack gap="xs">
               {statLabels.map(
                 ([key, label]) =>
-                  // Ensure stats[key] exists before rendering
                   stats[key] !== undefined && (
                     <Group key={key} gap="xs">
                       <Text fw={500}>{label}:</Text>
@@ -363,20 +399,20 @@ export default function UserSettingsPage(props: Props) {
           </Card>
         </Stack>
 
-        {/* Add the Chart Section */}
+        {/* Cards Chart Section */}
         <Stack gap="md">
           <Title order={2}>
             Total Cards Learned (Cumulative, Last 3 Months)
           </Title>
           <Card withBorder shadow="xs" p="md" radius="md">
             <AreaChart
-              h={300} // Set height for the chart
-              data={chartData}
-              dataKey="date" // Key for the x-axis (date)
+              h={300}
+              data={cardChartData}
+              dataKey="date"
               series={[
                 { name: "count", color: "blue", label: "Total Learned" },
-              ]} // Data series to plot
-              curveType="natural" // Smoothen the line
+              ]}
+              curveType="natural"
               yAxisLabel="Total Cards Learned"
               xAxisLabel="Date"
               tooltipProps={{
@@ -399,7 +435,47 @@ export default function UserSettingsPage(props: Props) {
                   </Paper>
                 ),
               }}
-              // Optional: Add grid lines, reference lines etc. if needed
+              gridProps={{ strokeDasharray: "3 3" }}
+            />
+          </Card>
+        </Stack>
+
+        {/* Writing Progress Chart Section */}
+        <Stack gap="md">
+          <Title order={2}>
+            Total Writing Progress (Cumulative, Last 3 Months)
+          </Title>
+          <Card withBorder shadow="xs" p="md" radius="md">
+            <AreaChart
+              h={300}
+              data={writingChartData}
+              dataKey="date"
+              series={[
+                { name: "count", color: "blue", label: "Total Learned" },
+              ]}
+              curveType="natural"
+              yAxisLabel="Total Cards Learned"
+              xAxisLabel="Date"
+              tooltipProps={{
+                content: ({ label, payload }) => (
+                  <Paper
+                    px="md"
+                    py="sm"
+                    withBorder
+                    shadow="md"
+                    radius="md"
+                  >
+                    <Text fw={500} mb={5}>
+                      {label} {/* Display date */}
+                    </Text>
+                    {payload?.map((item: any) => (
+                      <Text key={item.name} c={item.color} fz="sm">
+                        {item.name}: {item.value} {/* Display count */}
+                      </Text>
+                    ))}
+                  </Paper>
+                ),
+              }}
               gridProps={{ strokeDasharray: "3 3" }}
             />
           </Card>
