@@ -37,13 +37,13 @@ Guidelines ▼
 * You'll receive the learner's draft **and** a topic *prompt* for context.
 * **fullCorrection** → fully polished version (omit the original).
 * **feedback** → bullets in English for every fix; skip perfect sentences.
-* If the fix is just spelling / caps / spacing / punctuation, add one single bullet at the end of all the feedback:
-    \`"Spelling fixes."\` (no duplicates).
-* Read that last one again.
+* If the fix is just spelling / caps / spacing / punctuation, DO NOT make comments about it in the feedback section.
+* Fix spelling / capitalization / punctuation issues, but do not add feedback for these items.
+* You will be penalized for saying things like "adjusted spelling" or "corrected spacing" etc... Just make the correction and move on.
 * For words wrapped in \`?word?\`: translate the English word to the target language, insert it, and add a bullet like:
     \`"Replaced '?apple?' with the correct word: 사과"\`
 * Prioritize grammar, vocabulary, and natural fluency.
-* Keep the meaning of the original text.
+* Maintain the writer's tone and formality level.
 * Focus on strictly necessary changes rather than stylistic ones.
 `;
 

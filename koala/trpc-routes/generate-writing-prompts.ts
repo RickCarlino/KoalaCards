@@ -21,12 +21,12 @@ Using three hidden example sentences only as loose inspiration, generate three d
 
 const promptTemplates = [
   "Comparative / Evaluative: Have the learner compare two ideas or experiences implied by the hidden sentence.",
-  "Descriptive: Ask the learner to vividly describe a scene or object suggested by the hidden sentence.",
-  "Hypothetical Scenario (Role-Play): Present a real-world scenario and ask the learner to act a role, using language practically.",
+  "Descriptive: Ask the learner to describe a scene or object suggested by the hidden sentence.",
   "Opinion / Argument: Invite the learner to give and support their viewpoint on a topic inspired by the hidden sentence.",
   "Personal Narrative: Draw on the theme hinted by the hidden sentence.",
   "Procedural / How-to: Ask the learner to explain a process or give advice based on the hidden sentence.",
   "Reflective / Metacognitive: Encourage the learner to reflect on their own beliefs or habits suggested by the hidden sentence.",
+  "Scenario + Response: Present a real-world scenario and ask the learner to act a role, using language practically.",
 ];
 
 export const generateWritingPrompts = procedure
