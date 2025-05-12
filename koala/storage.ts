@@ -66,7 +66,11 @@ export async function storeURLGoogleCloud(
 /** Creates a hex MD5 checksum with file extension
  * Example: cards/0b1d578f7d3b0e8d7e9e6d5f3e0f4f3a.jpg
  */
-export const createBlobID = (kind: string, content: string, ext: string) => {
+export const createBlobID = (
+  kind: string,
+  content: string,
+  ext: string,
+) => {
   const hash = createHash("md5").update(content).digest("base64url");
   return `${kind}/${hash}.${ext}`;
 };

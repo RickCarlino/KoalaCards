@@ -37,7 +37,7 @@ const storeTrainingData: StoreTrainingData = async (props, exp) => {
       userInput,
       yesNo,
       explanation: why,
-      quizType: "speaking-v2-prompt",
+      quizType: "speaking-v2-prompt-4.1",
       englishTranslation: "NA",
     },
   });
@@ -56,7 +56,7 @@ async function run(props: GrammarCorrectionProps): Promise<Explanation> {
         `I am learning ${getLangName(props.langCode)}.`,
         `We know "${props.term}" means "${props.definition}" in English.`,
         `Let's say I am in a situation that warrants the sentence above.`,
-        `Could I say "${props.userInput}" instead?`,
+        `Could I say "${props.userInput}" instead (note: I entered it via speech-to-text)?`,
         `Would that be OK?`,
         override,
         `Explain in one tweet or less.`,
@@ -65,7 +65,7 @@ async function run(props: GrammarCorrectionProps): Promise<Explanation> {
   ];
   const response = await openai.beta.chat.completions.parse({
     messages,
-    model: "gpt-4o",
+    model: "gpt-4.1",
     temperature: 0.1,
     max_tokens: 250,
     response_format: zodResponseFormat(zodGradeResponse, "grade_response"),
@@ -95,7 +95,7 @@ export const grammarCorrectionNext: QuizEvaluator = async ({
   const chosen = await runAndStore({ ...card, userInput });
   console.log(JSON.stringify(chosen));
   if (chosen.yesNo === "yes") {
-    return { result: "pass", userMessage: "" };
+    return { result: "pass", userMessage: chosen.why };
   } else {
     return {
       result: "fail",

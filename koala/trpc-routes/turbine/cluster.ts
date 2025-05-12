@@ -2,7 +2,7 @@ import { openai } from "@/koala/openai";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
 import { clean } from "./util";
-import { alphabetical, cluster, random, template, unique } from "radash";
+import { alphabetical, cluster, template, unique } from "radash";
 import { ChatCompletionMessageParam } from "openai/resources";
 import { supportedLanguages } from "@/koala/shared-types";
 
@@ -26,10 +26,10 @@ Instructions:
 
     Input: A list of target words in {{LANGUAGE}}.
 
-    Task: For each target word, identify and output one cluster that:
-        Is widely recognized as natural and idiomatic in everyday {{LANGUAGE}}.
+    Task: For each target word, identify and output two clusters that:
+        Includes the target words.
+        Are widely recognized as natural and idiomatic in everyday {{LANGUAGE}}.
         May be a collocation, idiomatic expression, sentence stem, or common phrase.
-        Includes at least one of the target words.
 
     Output Format:
     For each target word, return one JSON object with the following structure:
@@ -56,6 +56,7 @@ Examples of High Quality Chunks:
     공연 ⇒ {"term": "인상적인 공연", "definition": "An impressive performance."}
 
 Avoid examples with poor grammar, non-idiomatic usage, or incorrect translations.
+Skip obscure or misspelled.
 `;
 
 const USER_PROMPT = `
@@ -67,10 +68,7 @@ Double check your output when you are done.
 `;
 
 function tpl(x: any, y: any) {
-  const z = template(x, y);
-  console.log(`=====`);
-  console.log(z);
-  return z;
+  return template(x, y);
 }
 
 async function run(language: string, words: string[]) {
@@ -81,22 +79,17 @@ async function run(language: string, words: string[]) {
     },
     {
       role: "user",
-      content: tpl(USER_PROMPT, { WORDS: clean(words).join("\n") }),
+      content: tpl(USER_PROMPT, { WORDS: clean(words.join("\n")) }),
     },
   ];
 
-  const temperature = random(0, 0.25);
-  console.log(`=== temp: ${temperature}`);
   const response1 = await openai.beta.chat.completions.parse({
     messages: part1,
-    model: "gpt-4o",
-
-    temperature,
-    max_tokens: Math.max(1000, 2.5 * words.length),
+    model: "chatgpt-4o-latest",
   });
 
   const content = response1.choices[0]?.message?.content ?? "";
-
+  console.log(content);
   const KOREAN_EDIT = `
   You are a Korean language content editor.
   You edit flashcards for a language learning app.
@@ -104,6 +97,7 @@ async function run(language: string, words: string[]) {
 
   1. Convert '다' verbs to the '요' form instead. Example: '가다' ⇒ '가요'. Do this for all verbs and double check your work.",
   2. Avoid over use of pronouns in translations. Translate "음식을 데워요" to just "heat up food" rather than "he/she/they heat up food".
+  3. Remove strange, obscure or non-idiomatic examples.
 
   Double check your work against these rules when you are done.
   `;
@@ -122,7 +116,7 @@ async function run(language: string, words: string[]) {
             : "Double check your output when you are done.",
       },
     ],
-    model: "gpt-4o",
+    model: "gpt-4.1",
     temperature: 0.1,
     response_format: zodResponseFormat(ClusterSchema, "translations"),
   });

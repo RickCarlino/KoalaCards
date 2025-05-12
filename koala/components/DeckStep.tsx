@@ -18,7 +18,12 @@ import { buttonShadow, paperStyle, titleStyle } from "../styles";
 
 const DEFAULT_LANG: LangCode = "ko";
 
-export function DeckStep({ decks, state, dispatch, onNext }: DeckStepProps) {
+export function DeckStep({
+  decks,
+  state,
+  dispatch,
+  onNext,
+}: DeckStepProps) {
   const theme = useMantineTheme();
 
   // Handler for picking an existing deck
@@ -67,7 +72,8 @@ export function DeckStep({ decks, state, dispatch, onNext }: DeckStepProps) {
           Step 1: Select or Create Deck
         </Title>
         <Text size="sm" c="dimmed" mb="md">
-          You can add new cards to an existing deck or create a new one below.
+          You can add new cards to an existing deck or create a new one
+          below.
         </Text>
 
         <RadioGroup
@@ -160,7 +166,10 @@ export function DeckStep({ decks, state, dispatch, onNext }: DeckStepProps) {
               placeholder="Choose language"
               value={state.deckLang}
               onChange={(val) =>
-                dispatch({ type: "SET_DECK_LANG", deckLang: val as LangCode })
+                dispatch({
+                  type: "SET_DECK_LANG",
+                  deckLang: val as LangCode,
+                })
               }
               data={Object.keys(supportedLanguages)
                 .sort()

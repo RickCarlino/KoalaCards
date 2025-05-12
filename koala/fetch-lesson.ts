@@ -1,5 +1,5 @@
 import { prismaClient } from "@/koala/prisma-client";
-import { unique } from "radash";
+import { shuffle, unique } from "radash";
 import { getUserSettings } from "./auth-helpers";
 import { autoPromoteCards } from "./autopromote";
 import { errorReport } from "./error-report";
@@ -14,7 +14,12 @@ type GetLessonInputParams = {
   now: number;
   take: number;
 };
-type CardKeys = "imageBlobId" | "definition" | "langCode" | "gender" | "term";
+type CardKeys =
+  | "imageBlobId"
+  | "definition"
+  | "langCode"
+  | "gender"
+  | "term";
 type LocalCard = Pick<Card, CardKeys>;
 type QuizKeys =
   | "id"
@@ -27,7 +32,10 @@ type QuizKeys =
   | "lapses";
 type LocalQuiz = Pick<Quiz, QuizKeys> & { Card: LocalCard };
 
-async function buildQuizPayload(quiz: LocalQuiz, playbackPercentage: number) {
+async function buildQuizPayload(
+  quiz: LocalQuiz,
+  playbackPercentage: number,
+) {
   const r = quiz.repetitions || 0;
   return {
     quizId: quiz.id,
@@ -65,18 +73,6 @@ async function getCardsAllowedPerDay(userId: string) {
   return s.cardsPerDayMax || 24;
 }
 
-async function newCardsLearnedThisWeek(userId: string) {
-  const ONE_DAY = 24 * 60 * 60 * 1000;
-  const ONE_WEEK = 7 * ONE_DAY;
-  const t = Date.now() - ONE_WEEK;
-  return prismaClient.card.count({
-    where: {
-      userId,
-      Quiz: { some: { firstReview: { gte: t } } },
-    },
-  });
-}
-
 async function fetchDueCards(userId: string, deckId: number, now: number) {
   return prismaClient.quiz.findMany({
     where: {
@@ -90,22 +86,29 @@ async function fetchDueCards(userId: string, deckId: number, now: number) {
       { quizType: "asc" },
       { nextReview: "asc" },
     ],
-    take: 45,
   });
 }
 
 async function fetchNewCards(userId: string, deckId: number) {
   const limit = await newCardsAllowed(userId);
+  console.log(`New cards allowed: ${limit}`);
   if (limit < 1) return [];
+  const ids = shuffle(
+    await prismaClient.quiz.findMany({
+      where: {
+        Card: { userId, deckId, flagged: { not: true } },
+        lastReview: { equals: 0 },
+      },
+      select: { id: true },
+    }),
+  )
+    .slice(0, limit)
+    .map((q) => q.id);
   return prismaClient.quiz.findMany({
     where: {
-      Card: { userId, deckId, flagged: { not: true } },
-      lastReview: { equals: 0 },
+      id: { in: ids },
     },
     include: { Card: true },
-    // Pseudo randomize the order of new cards
-    orderBy: { Card: { definition: "asc" } },
-    take: limit,
   });
 }
 
@@ -121,30 +124,63 @@ async function fetchRemedial(
       flagged: { not: true },
     },
     orderBy: { lastFailure: "asc" },
+    include: { Quiz: true },
   });
   return cards.map((Card): LocalQuiz => {
+    const lastQuiz = Card.Quiz[0]!;
     return {
-      id: -1 * Math.round(Math.random() * 1000000),
-      repetitions: 1,
-      lapses: 1,
-      lastReview: 999,
-      difficulty: 999,
-      stability: 999,
+      ...lastQuiz,
       quizType: "review",
-      cardId: Card.id,
       Card,
     };
   });
 }
 
+// EXPERIMENT: Turn off the faucet if too many cards are due
+const TODO_MAKE_THIS_CUSTOMIZABLE = 100;
+const maybeSlowLearningRate = async (userId: string) => {
+  // Return 0 if > 100 cards due in next 24 hours:
+  const dueCards = await prismaClient.quiz.count({
+    where: {
+      Card: {
+        userId,
+        flagged: { not: true },
+      },
+      nextReview: { lt: Date.now() + 24 * 60 * 60 * 1000 },
+      lastReview: { gt: 0 },
+    },
+  });
+  if (dueCards > TODO_MAKE_THIS_CUSTOMIZABLE) {
+    console.log(
+      `User ${userId} has ${dueCards} due cards. Slowing down learning rate.`,
+    );
+    return 1;
+  }
+};
+
 async function newCardsAllowed(userId: string) {
-  const perDay = await getCardsAllowedPerDay(userId);
-  const weeklyCap = perDay * 7;
-  const dailyCap = perDay * 2;
-  const thisWeek = await newCardsLearnedThisWeek(userId);
-  if (thisWeek >= weeklyCap) return 0;
-  const diff = Math.max(dailyCap - thisWeek, 0);
-  return Math.min(diff, 45);
+  const slowLearningRate = await maybeSlowLearningRate(userId);
+  if (typeof slowLearningRate === "number") return slowLearningRate;
+
+  const dailyTarget = await getCardsAllowedPerDay(userId);
+  const maxWeekly = dailyTarget * 7;
+  const dailyMax = Math.min(dailyTarget * 2, 45);
+  const thisWeek = (
+    await prismaClient.quiz.findMany({
+      select: { id: true },
+      where: {
+        Card: { userId },
+        firstReview: {
+          gte: Date.now() - 7 * 24 * 60 * 60 * 1000,
+        },
+      },
+      distinct: ["cardId"],
+    })
+  ).length;
+  const result =
+    thisWeek >= maxWeekly ? 0 : Math.min(maxWeekly - thisWeek, dailyMax);
+
+  return result;
 }
 
 export async function getLessons(p: GetLessonInputParams) {
@@ -170,8 +206,10 @@ export async function getLessons(p: GetLessonInputParams) {
     repsByCard.map((item) => [item.cardId, item._sum.repetitions || 0]),
   );
 
-  return allCards.slice(0, take).map((quiz) => {
-    const quizType = !repsMap[quiz.cardId] ? "dictation" : quiz.quizType;
-    return buildQuizPayload({ ...quiz, quizType }, speedPercent);
-  });
+  return shuffle(allCards)
+    .slice(0, take)
+    .map((quiz) => {
+      const quizType = !repsMap[quiz.cardId] ? "dictation" : quiz.quizType;
+      return buildQuizPayload({ ...quiz, quizType }, speedPercent);
+    });
 }

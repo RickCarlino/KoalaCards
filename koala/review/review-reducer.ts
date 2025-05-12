@@ -6,18 +6,24 @@ import {
   SetGradeAction,
   ServerFeedbackAction,
   UpdateAudioUrlAction,
+  QuizState,
 } from "./types";
 
 function updateQuiz(
   state: ReviewState,
-  quizId: number,
-  updateFn: (quiz: any) => any,
+  uuid: string,
+  updateFn: (quiz: QuizState) => any,
 ): ReviewState {
   return {
     ...state,
-    quizzes: state.quizzes.map((q) =>
-      q.quiz.quizId === quizId ? updateFn(q) : q,
-    ),
+    quizzes: state.quizzes.map((q) => {
+      if (q.quiz.uuid !== uuid) return q;
+
+      return {
+        ...q,
+        ...updateFn(q),
+      };
+    }),
   };
 }
 
@@ -36,9 +42,9 @@ function handleSetGrade(
   state: ReviewState,
   action: SetGradeAction,
 ): ReviewState {
-  const quiz = state.quizzes.find((q) => q.quiz.quizId === action.quizId);
+  const quiz = state.quizzes.find((q) => q.quiz.uuid === action.uuid);
   if (!quiz) {
-    console.warn("Quiz not found: ", action.quizId);
+    console.warn("Quiz not found: ", action.uuid);
     return state;
   }
 
@@ -47,13 +53,13 @@ function handleSetGrade(
 
   if (llmThinksYoureWrong && !reviewIsOver) {
     // Prevent user's guess from overriding LLM's feedback
-    return updateQuiz(state, action.quizId, (q) => ({
+    return updateQuiz(state, action.uuid, (q) => ({
       ...q,
       grade: Grade.AGAIN,
     }));
   }
 
-  return updateQuiz(state, action.quizId, (q) => ({
+  return updateQuiz(state, action.uuid, (q) => ({
     ...q,
     grade: action.grade,
   }));
@@ -63,12 +69,11 @@ function handleServerFeedback(
   state: ReviewState,
   action: ServerFeedbackAction,
 ): ReviewState {
-  return updateQuiz(state, action.quizId, (q) => ({
+  return updateQuiz(state, action.uuid, (q) => ({
     ...q,
     serverGradingResult: action.result,
     serverResponse: action.serverResponse,
     status: "graded",
-    // grade: action.result === "fail" ? Grade.AGAIN : q.grade,
     response: action.userResponse,
   }));
 }
@@ -77,7 +82,7 @@ function handleUpdateAudioUrl(
   state: ReviewState,
   action: UpdateAudioUrlAction,
 ): ReviewState {
-  return updateQuiz(state, action.quizId, (q) => ({
+  return updateQuiz(state, action.uuid, (q) => ({
     ...q,
     quiz: {
       ...q.quiz,
@@ -107,7 +112,10 @@ function handleFlagCurrentCard(state: ReviewState): ReviewState {
   };
 }
 
-export function reviewReducer(state: ReviewState, action: Action): ReviewState {
+export function reviewReducer(
+  state: ReviewState,
+  action: Action,
+): ReviewState {
   console.log(`=== ${action.type}`);
   switch (action.type) {
     case "LOAD_QUIZZES":

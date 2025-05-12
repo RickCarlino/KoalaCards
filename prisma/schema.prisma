@@ -45,11 +45,13 @@ model User {
   emailVerified DateTime?
   lastSeen      DateTime?
   image         String?
+  createdAt     DateTime      @default(now())
   accounts      Account[]
   sessions      Session[]
-  userSettings  UserSettings?
-  Card          Card[]
-  Deck          Deck[]
+  userSettings       UserSettings?
+  Card               Card[]
+  Deck               Deck[]
+  writingSubmissions WritingSubmission[] // Added relation to WritingSubmission
 }
 
 model UserSettings {
@@ -65,6 +67,8 @@ model UserSettings {
   playbackPercentage Float    @default(1)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
+  dailyWritingGoal   Int      @default(500) // Default goal of 500 characters
+  writingFirst       Boolean  @default(false) // Always quiz writing before reviewing cards
 }
 
 model VerificationToken {
@@ -83,8 +87,9 @@ model Deck {
   user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   Card         Card[]
   published    Boolean @default(false)
-  parentDeckId Int?
+  parentDeckId       Int?
   createdAt          DateTime @default(now())
+  writingSubmissions WritingSubmission[] // Added relation to WritingSubmission
 
   @@unique([name, userId])
   @@index([userId])
@@ -141,4 +146,22 @@ model TrainingData {
   langCode           String
   userInput          String
   englishTranslation String
+}
+
+model WritingSubmission {
+  id                       Int      @id @default(autoincrement())
+  user                     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId                   String
+  deck                     Deck     @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  deckId                   Int
+  prompt                   String
+  submission               String   @db.Text // Use Text for potentially long submissions
+  submissionCharacterCount Int
+  correction               String   @db.Text // Use Text for potentially long corrections
+  correctionCharacterCount Int
+  createdAt                DateTime @default(now())
+
+  @@index([userId])
+  @@index([deckId])
+  @@index([userId, createdAt]) // For querying daily progress
 }

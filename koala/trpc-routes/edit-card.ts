@@ -29,7 +29,9 @@ export const editCard = procedure
     });
 
     if (!card) {
-      return errorReport(`Card not found: card: ${input.id}, user: ${userId}`);
+      return errorReport(
+        `Card not found: card: ${input.id}, user: ${userId}`,
+      );
     }
 
     await prismaClient.card.update({

@@ -13,15 +13,10 @@ import {
   Box,
   Divider,
 } from "@mantine/core";
-import { IconBulb, IconList, IconTable, IconUsers } from "@tabler/icons-react";
-
-/*
-There are three ways to create flashcards in Koala Cards:
-
-1. "Create by vibe" (/create-vibe) This is best for casual users who are just trying the app out. You tell the AI what you want to learn and it creates cards based on what you ask.
-2. "Create from word list" (/create-wordlist) You have a list of words you want to learn (such as unknown words spotted while reading). The words will intelligiently be transformed into example sentences with definitions. This is the best choice for serious learners memorizing word frequency lists or setting daily reading goals.
-3. "Create from CSV" (/create-csv) Use this method if you have a list of CSV data that you want to import. This is best for users importing their data from other spaced repeittion systems. systsmes like Anki.
-*/
+import { IconBulb, IconList, IconTable } from "@tabler/icons-react";
+import { GetServerSideProps } from "next";
+import { getServersideUser } from "@/koala/get-serverside-user";
+import { prismaClient } from "@/koala/prisma-client";
 
 interface FeatureCardProps {
   icon: React.ReactNode;
@@ -103,7 +98,7 @@ const CreatePage = () => {
     // },
     {
       icon: <IconBulb size={rem(30)} />,
-      title: "From Vibes",
+      title: "Vibes",
       description:
         "Perfect for casual users just trying the app. Tell the AI what you want to learn, and it creates cards based on your request. Great for exploring new topics!",
       buttonText: "Get Started",
@@ -111,7 +106,7 @@ const CreatePage = () => {
     },
     {
       icon: <IconList size={rem(30)} />,
-      title: "From Word Lists",
+      title: "Vocab Lists",
       description:
         "Ideal for serious learners with specific words to learn. Your words will be transformed into example sentences with definitions. Perfect for frequency lists or reading goals.",
       buttonText: "Create from Words",
@@ -119,7 +114,7 @@ const CreatePage = () => {
     },
     {
       icon: <IconTable size={rem(30)} />,
-      title: "From CSV",
+      title: "Spreadsheet",
       description:
         "For users with existing data from other spaced repetition systems like Anki. Import your CSV data directly and continue your learning journey.",
       buttonText: "Import CSV",
@@ -169,12 +164,40 @@ const CreatePage = () => {
         }}
       >
         <Text style={{ textAlign: "center" }} fw={500}>
-          Not sure which to choose? Start with "Create by Vibe" for the easiest
-          experience!
+          Not sure which to choose? Start with "Create by Vibe" for the
+          easiest experience!
         </Text>
       </Box>
     </Container>
   );
+};
+
+export const getServerSideProps: GetServerSideProps = async (ctx) => {
+  const dbUser = await getServersideUser(ctx);
+  const userId = dbUser?.id;
+
+  if (!userId) {
+    return {
+      redirect: { destination: "/api/auth/signin", permanent: false },
+    };
+  }
+
+  const cardCount = await prismaClient.card.count({
+    where: { userId },
+  });
+
+  if (cardCount === 0) {
+    return {
+      redirect: {
+        destination: "/start",
+        permanent: false,
+      },
+    };
+  }
+
+  return {
+    props: {}, // will be passed to the page component as props
+  };
 };
 
 export default CreatePage;

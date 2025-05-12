@@ -42,7 +42,11 @@ export default function Train({ data, totalPages, page }: TrainProps) {
         {data.length === 0 ? NULL_TABLE : table(data)}
       </Paper>
       <Space h="md" />
-      <Pagination value={page} onChange={onPageChange} total={totalPages} />
+      <Pagination
+        value={page}
+        onChange={onPageChange}
+        total={totalPages}
+      />
     </Container>
   );
 }

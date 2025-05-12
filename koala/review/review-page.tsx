@@ -91,7 +91,7 @@ export const ReviewPage = (props: Props) => {
       fetchAudioAsBase64(firstQuiz.termAudio).then((audioBase64) => {
         dispatch({
           type: "UPDATE_AUDIO_URL",
-          quizId: firstQuiz.quizId,
+          uuid: firstQuiz.uuid,
           audioBase64,
         });
       });
@@ -112,23 +112,25 @@ export const ReviewPage = (props: Props) => {
     const quizProps: QuizProps = {
       quiz: currentQuizState,
       onGraded(grade) {
-        dispatch({ type: "SET_GRADE", grade, quizId: quiz.quizId });
+        dispatch({ type: "SET_GRADE", grade, uuid: quiz.uuid });
         dispatch({ type: "NEXT_QUIZ" });
         const nextQuiz = state.quizzes[state.currentQuizIndex + 1];
         if (nextQuiz) {
-          fetchAudioAsBase64(nextQuiz.quiz.termAudio).then((audioBase64) => {
-            dispatch({
-              type: "UPDATE_AUDIO_URL",
-              quizId: nextQuiz.quiz.quizId,
-              audioBase64,
-            });
-          });
+          fetchAudioAsBase64(nextQuiz.quiz.termAudio).then(
+            (audioBase64) => {
+              dispatch({
+                type: "UPDATE_AUDIO_URL",
+                uuid: nextQuiz.quiz.uuid,
+                audioBase64,
+              });
+            },
+          );
         }
       },
       onComplete({ status, feedback, userResponse }) {
         dispatch({
           type: "SERVER_FEEDBACK",
-          quizId: quiz.quizId,
+          uuid: quiz.uuid,
           result: status,
           serverResponse: feedback,
           userResponse,
@@ -162,12 +164,10 @@ export const ReviewPage = (props: Props) => {
               </Box>
             )}
 
-            {/* Quiz component */}
             <Box>
-              <LessonComponent {...quizProps} key={quiz.quizId} />
+              <LessonComponent {...quizProps} key={quiz.uuid} />
             </Box>
 
-            {/* Action buttons - stacked on mobile, side by side on larger screens */}
             <Stack gap="sm">
               <Group grow gap="sm">
                 <PauseReviewButton
@@ -202,7 +202,8 @@ export const ReviewPage = (props: Props) => {
                   size="lg"
                   variant="subtle"
                   onClick={() =>
-                    confirm("End lesson without saving?") && router.push("/")
+                    confirm("End lesson without saving?") &&
+                    router.push("/")
                   }
                   aria-label="Return to home"
                 >
@@ -218,11 +219,16 @@ export const ReviewPage = (props: Props) => {
     const reviewOverProps = {
       state: state.quizzes,
       async onSave() {
-        const grades = state.quizzes.map((q) => ({
-          quizID: q.quiz.quizId,
-          perceivedDifficulty:
-            q.serverGradingResult === "fail" ? Grade.AGAIN : q.grade,
-        }));
+        const grades = state.quizzes
+          .filter((q) => {
+            // Remove items with a `dontGrade` === true prop:
+            return !q.quiz.dontGrade;
+          })
+          .map((q) => ({
+            quizID: q.quiz.quizId,
+            perceivedDifficulty:
+              q.serverGradingResult === "fail" ? Grade.AGAIN : q.grade,
+          }));
         await Promise.all(
           grades.map((grade) => {
             if (grade.perceivedDifficulty) {
@@ -236,8 +242,8 @@ export const ReviewPage = (props: Props) => {
         );
         await props.onSave();
       },
-      onUpdateDifficulty(quizId: number, grade: Grade) {
-        dispatch({ type: "SET_GRADE", grade, quizId });
+      onUpdateDifficulty(uuid: string, grade: Grade) {
+        dispatch({ type: "SET_GRADE", grade, uuid });
       },
     };
     return (

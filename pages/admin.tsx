@@ -1,5 +1,8 @@
 import React from "react";
-import { GetServerSidePropsContext, InferGetServerSidePropsType } from "next";
+import {
+  GetServerSidePropsContext,
+  InferGetServerSidePropsType,
+} from "next";
 import { getSession } from "next-auth/react";
 import { prismaClient } from "@/koala/prisma-client";
 import { Container, Table, Title } from "@mantine/core";
@@ -12,7 +15,9 @@ function daysSince(date: Date | null): number {
   return Math.floor((Date.now() - date.getTime()) / ONE_DAY);
 }
 
-export async function getServerSideProps(context: GetServerSidePropsContext) {
+export async function getServerSideProps(
+  context: GetServerSidePropsContext,
+) {
   const session = await getSession({ req: context.req });
   const email = session?.user?.email?.toLowerCase() ?? null;
 
@@ -56,6 +61,7 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
       id: u.id,
       email: u.email ?? "(no email??)",
       lastSeen: u.lastSeen?.toISOString() ?? null,
+      createdAt: u.createdAt?.toISOString() ?? null,
       daysSinceLastSeen: daysSince(u.lastSeen),
       cardCount: u._count.Card,
       isAdmin: !!u.email && superUsers.includes(u.email.toLowerCase()),
@@ -84,6 +90,7 @@ export default function AdminPage({ userData }: Props) {
             <th>Days Since</th>
             <th># Cards</th>
             <th>Admin?</th>
+            <th>Created At</th>
           </tr>
         </thead>
         <tbody>
@@ -93,6 +100,7 @@ export default function AdminPage({ userData }: Props) {
               <td>{u.daysSinceLastSeen}</td>
               <td>{u.cardCount}</td>
               <td>{u.isAdmin ? "Yes" : "No"}</td>
+              <td>{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "No"}</td>
             </tr>
           ))}
         </tbody>

@@ -87,7 +87,7 @@ const generateRemixes = async (input: RemixParams): Promise<Remix[]> => {
   const { type, langCode, term } = input;
   const prompt = buildRemixPrompt(type, langCode, term);
 
-  const parsedData = await fetchOpenAIResponse("o3-mini", [
+  const parsedData = await fetchOpenAIResponse("o4-mini", [
     { role: "user", content: prompt },
   ]);
 

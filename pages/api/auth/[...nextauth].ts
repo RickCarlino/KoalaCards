@@ -41,7 +41,10 @@ const EMAIL_SERVER_OPTIONS: Partial<EmailUserConfig> = {
     const { identifier, provider, token } = params;
     console.log(`=== Log in ${token}`);
     const url = new URL(params.url);
-    const signInURL = new URL(`/auth/email?${url.searchParams}`, url.origin);
+    const signInURL = new URL(
+      `/auth/email?${url.searchParams}`,
+      url.origin,
+    );
 
     const result = await createTransport(server).sendMail({
       to: identifier,
@@ -56,7 +59,9 @@ const EMAIL_SERVER_OPTIONS: Partial<EmailUserConfig> = {
     });
     const failed = result.rejected.concat(result.pending).filter(Boolean);
     if (failed.length) {
-      return errorReport(`Email(s) (${failed.join(", ")}) could not be sent`);
+      return errorReport(
+        `Email(s) (${failed.join(", ")}) could not be sent`,
+      );
     }
   },
 };

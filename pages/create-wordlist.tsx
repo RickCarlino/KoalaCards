@@ -1,29 +1,35 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useReducer } from "react"; // Added useReducer
+import { useRouter } from "next/router";
 import { trpc } from "@/koala/trpc-config";
 import {
   Button,
   Card,
   Center,
   Checkbox,
-  Select,
+  // Select, // Replaced by DeckPicker
   Stack,
   Textarea,
   Text,
   Box,
+  TextInput,
+  Group,
+  ActionIcon,
+  Modal,
 } from "@mantine/core";
+import { IconEdit, IconCheck, IconX } from "@tabler/icons-react";
+import { clean } from "@/koala/trpc-routes/turbine/util";
 import { backfillDecks } from "@/koala/decks/backfill-decks";
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { prismaClient } from "@/koala/prisma-client";
 import { GetServerSideProps } from "next";
-import { getLangName } from "@/koala/get-lang-name";
+// import { getLangName } from "@/koala/get-lang-name"; // Handled by DeckPicker
 import { LangCode } from "@/koala/shared-types";
+import { DeckPicker, Deck } from "@/koala/deck-picker"; // Import DeckPicker and Deck type
+import { reducer, INITIAL_STATE } from "@/koala/types/create-reducer"; // Import shared reducer
 
+// Use Deck type from DeckPicker
 type Props = {
-  decks: {
-    id: number;
-    name: string;
-    langCode: string;
-  }[];
+  decks: Deck[];
 };
 
 export const getServerSideProps: GetServerSideProps<Props> = async (
@@ -32,7 +38,9 @@ export const getServerSideProps: GetServerSideProps<Props> = async (
   const dbUser = await getServersideUser(context);
 
   if (!dbUser) {
-    return { redirect: { destination: "/api/auth/signin", permanent: false } };
+    return {
+      redirect: { destination: "/api/auth/signin", permanent: false },
+    };
   }
 
   // Ensure user has a default set of decks
@@ -42,6 +50,9 @@ export const getServerSideProps: GetServerSideProps<Props> = async (
   const decks = await prismaClient.deck.findMany({
     where: {
       userId: dbUser?.id,
+    },
+    orderBy: {
+      createdAt: "desc",
     },
   });
 
@@ -61,41 +72,88 @@ export default function Turbine(props: Props) {
     selected: boolean;
     term: string;
     definition: string;
+    isEditing?: boolean;
   };
   const [inputText, setInputText] = useState("");
+  const [previewText, setPreviewText] = useState("");
   const [output, setOutput] = useState<CheckBoxItem[]>([]);
   const [elapsedTime, setElapsedTime] = useState(0);
-  const [selectedDeck, setSelectedDeck] = useState<number | null>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [currentEditItem, setCurrentEditItem] = useState<{
+    index: number;
+    term: string;
+    definition: string;
+  } | null>(null);
+  // Replace selectedDeck state with reducer
+  const [state, dispatch] = useReducer(reducer, {
+    ...INITIAL_STATE,
+    // Initialize based on fetched decks
+    deckLang:
+      (props.decks?.[0]?.langCode as LangCode) || INITIAL_STATE.deckLang,
+    deckSelection: props.decks.length > 0 ? "existing" : "new",
+    deckId: props.decks.length > 0 ? props.decks[0].id : undefined,
+    deckName: props.decks.length > 0 ? props.decks[0].name : "",
+  });
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number | null>(null);
   const turbineMutation = trpc.turbine.useMutation();
   const selectedWords = output.filter((item) => item.selected);
   const bulkCreateCards = trpc.bulkCreateCards.useMutation();
-  const deck = props.decks.find((d) => d.id === selectedDeck);
+  // Deck info will now come from 'state' (reducer)
+  // const deck = props.decks.find((d) => d.id === state.deckId); // Example: Access via state.deckId
+  const router = useRouter();
+
+  // Effect to pre-fill textarea from URL query parameter (remains the same)
+  useEffect(() => {
+    if (router.isReady) {
+      // Ensure router query is populated
+      const wordsQuery = router.query.words;
+      if (typeof wordsQuery === "string") {
+        try {
+          const decodedWords = decodeURIComponent(wordsQuery);
+          const wordsArray = decodedWords.split(",");
+          setInputText(wordsArray.join("\n"));
+        } catch (e) {
+          console.error("Failed to parse words from URL:", e);
+          // Optionally show a notification to the user
+        }
+      }
+    }
+  }, [router.isReady, router.query]);
 
   // Function to handle saving selected words to the deck
   const handleSaveWordsToDeck = async () => {
-    if (!selectedDeck) {
-      alert("Please select a deck first");
+    // Validate based on reducer state
+    const finalDeckName = state.deckName.trim();
+    if (state.deckSelection === "existing" && !state.deckId) {
+      alert("Please select an existing deck.");
       return;
     }
-    if (!deck) {
-      alert("Deck not found");
+    if (state.deckSelection === "new" && !finalDeckName) {
+      alert("Please provide a name for the new deck.");
       return;
     }
 
-    await bulkCreateCards.mutateAsync({
-      langCode: deck.langCode as LangCode,
-      input: selectedWords.map((item) => ({
-        term: item.term,
-        definition: item.definition,
-        gender: "N",
-      })),
-      cardType: "both",
-      deckName: deck.name,
-    });
-    // Reset state:
-    setOutput([]);
+    try {
+      await bulkCreateCards.mutateAsync({
+        langCode: state.deckLang, // Use lang from state
+        input: selectedWords.map((item) => ({
+          term: item.term,
+          definition: item.definition,
+          gender: "N",
+        })),
+        deckName: finalDeckName, // Use finalDeckName (handles both new/existing)
+      });
+      // Reset state:
+      setOutput([]);
+      // Optionally show success notification
+      alert(
+        `Saved ${selectedWords.length} words to deck: ${finalDeckName}`,
+      );
+    } catch (error) {
+      console.error("Failed to save words:", error);
+      alert("An error occurred while saving words.");
+    }
   };
 
   // Clean up timer on unmount
@@ -122,16 +180,29 @@ export default function Turbine(props: Props) {
         );
         setElapsedTime(secondsElapsed);
       }
-    }, 100); // Update every 100ms for smoother display
+    }, 100);
 
-    if (!deck) {
-      alert("Please select a deck first");
+    // Validate deck selection from state
+    if (state.deckSelection === "existing" && !state.deckId) {
+      alert("Please select an existing deck first.");
+      clearInterval(timerRef.current); // Stop timer
+      timerRef.current = null;
+      startTimeRef.current = null;
+      setElapsedTime(0);
+      return;
+    }
+    if (state.deckSelection === "new" && !state.deckName.trim()) {
+      alert("Please provide a name for the new deck first.");
+      clearInterval(timerRef.current); // Stop timer
+      timerRef.current = null;
+      startTimeRef.current = null;
+      setElapsedTime(0);
       return;
     }
 
     const result = await turbineMutation.mutateAsync({
       words: inputText,
-      langCode: deck.langCode,
+      langCode: state.deckLang, // Use langCode from state
     });
     const checkBoxes = result.map((item) => ({ selected: true, ...item }));
 
@@ -153,32 +224,50 @@ export default function Turbine(props: Props) {
         withBorder
         style={{ width: "80%" }}
       >
-        <Stack>
-          <Select
-            label="Deck"
-            placeholder="Select your deck"
-            value={String(selectedDeck)}
-            onChange={(val) => setSelectedDeck(Number(val))}
-            data={props.decks.map((d) => ({
-              label: `${d.name} (${getLangName(d.langCode)})`,
-              value: String(d.id),
-            }))}
+        <Stack gap="lg">
+          {" "}
+          {/* Changed spacing to gap */}
+          {/* Replace Select with DeckPicker */}
+          <DeckPicker
+            decks={props.decks}
+            state={state}
+            dispatch={dispatch}
+            onNext={() => {
+              /* No explicit next step here, maybe focus input? */
+              console.log("Deck selected/created");
+            }}
+            title="Choose or Create Deck" // Custom title
           />
           <Textarea
-            label="Input"
+            label="Input Words (one per line)" // Updated label
             placeholder="Enter text here..."
             value={inputText}
-            onChange={(event) => setInputText(event.currentTarget.value)}
+            onChange={(event) => {
+              const text = event.currentTarget.value;
+              setInputText(text);
+              const preview = clean(text)
+                .map((word: string) => `'${word}'`)
+                .slice(0, 3)
+                .join(", ");
+              setPreviewText(preview);
+            }}
             autosize
             minRows={3}
           />
+          {previewText
+            ? `Input will be processed as ${previewText}...`
+            : ""}
           <div style={{ display: "flex", gap: "1rem" }}>
             <Button onClick={handleSubmit}>
               Generate Sentences{" "}
               {elapsedTime > 0 ? `(${elapsedTime}s elapsed)` : ""}
             </Button>
             <Button
-              disabled={selectedWords.length < 1 || !selectedDeck}
+              disabled={
+                selectedWords.length < 1 ||
+                (state.deckSelection === "existing" && !state.deckId) ||
+                (state.deckSelection === "new" && !state.deckName.trim())
+              }
               color="green"
               onClick={handleSaveWordsToDeck}
             >
@@ -191,17 +280,42 @@ export default function Turbine(props: Props) {
             </Text>
             {output.length > 0 ? (
               output.map((item, index) => (
-                <Checkbox
+                <Card
                   key={index}
-                  label={`${item.term} - ${item.definition}`}
-                  checked={item.selected}
-                  onChange={(event) => {
-                    const newOutput = [...output];
-                    newOutput[index].selected = event.currentTarget.checked;
-                    setOutput(newOutput);
-                  }}
-                  style={{ marginBottom: "0.5rem" }}
-                />
+                  shadow="xs"
+                  padding="xs"
+                  radius="sm"
+                  mb="sm"
+                  withBorder
+                >
+                  <Group justify="space-between">
+                    <Checkbox
+                      label={`${item.term} - ${item.definition}`}
+                      checked={item.selected}
+                      onChange={(event) => {
+                        const newOutput = [...output];
+                        newOutput[index].selected =
+                          event.currentTarget.checked;
+                        setOutput(newOutput);
+                      }}
+                      style={{ flexGrow: 1 }}
+                    />
+                    <ActionIcon
+                      color="blue"
+                      variant="subtle"
+                      onClick={() => {
+                        setCurrentEditItem({
+                          index,
+                          term: item.term,
+                          definition: item.definition,
+                        });
+                        setEditModalOpen(true);
+                      }}
+                    >
+                      <IconEdit size="1.2rem" />
+                    </ActionIcon>
+                  </Group>
+                </Card>
               ))
             ) : (
               <Text>Output will appear here...</Text>
@@ -209,6 +323,68 @@ export default function Turbine(props: Props) {
           </Box>
         </Stack>
       </Card>
+
+      {/* Edit Modal */}
+      <Modal
+        opened={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        title="Edit Word and Translation"
+        size="md"
+        centered
+      >
+        {currentEditItem && (
+          <Stack gap="md">
+            <TextInput
+              label="Word"
+              value={currentEditItem.term}
+              onChange={(event) =>
+                setCurrentEditItem({
+                  ...currentEditItem,
+                  term: event.currentTarget.value,
+                })
+              }
+            />
+            <TextInput
+              label="Translation"
+              value={currentEditItem.definition}
+              onChange={(event) =>
+                setCurrentEditItem({
+                  ...currentEditItem,
+                  definition: event.currentTarget.value,
+                })
+              }
+            />
+            <Group justify="flex-end" gap="sm">
+              <Button
+                variant="outline"
+                color="red"
+                onClick={() => setEditModalOpen(false)}
+                leftSection={<IconX size="1rem" />}
+              >
+                Cancel
+              </Button>
+              <Button
+                color="green"
+                onClick={() => {
+                  if (currentEditItem) {
+                    const newOutput = [...output];
+                    newOutput[currentEditItem.index] = {
+                      ...newOutput[currentEditItem.index],
+                      term: currentEditItem.term,
+                      definition: currentEditItem.definition,
+                    };
+                    setOutput(newOutput);
+                    setEditModalOpen(false);
+                  }
+                }}
+                leftSection={<IconCheck size="1rem" />}
+              >
+                Save Changes
+              </Button>
+            </Group>
+          </Stack>
+        )}
+      </Modal>
     </Center>
   );
 }

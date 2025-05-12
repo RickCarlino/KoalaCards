@@ -4,7 +4,12 @@ import { fullHeightStyle } from "./styles";
 import { notifications } from "@mantine/notifications";
 import { UserSettings } from "@prisma/client";
 import { signIn } from "next-auth/react";
-import React, { createContext, useState, useEffect, useContext } from "react";
+import React, {
+  createContext,
+  useState,
+  useEffect,
+  useContext,
+} from "react";
 
 interface UserSettingsProviderProps {
   children: React.ReactNode;
@@ -17,6 +22,8 @@ const EMPTY: UserSettings = {
   playbackPercentage: 0.5,
   createdAt: new Date(),
   updatedAt: new Date(),
+  dailyWritingGoal: 300,
+  writingFirst: false,
 };
 
 const UserSettingsContext = createContext<UserSettings>(EMPTY);

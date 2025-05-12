@@ -35,7 +35,11 @@ const reducer = (state: State, action: Actions): State => {
     case "stop":
       return { ...state, isRecording: false };
     case "startRecording":
-      return { ...state, isRecording: true, recorder: action.payload.recorder };
+      return {
+        ...state,
+        isRecording: true,
+        recorder: action.payload.recorder,
+      };
     case "hasError":
       return { ...state, isRecording: false, error: action.payload.error };
     default:
@@ -43,7 +47,9 @@ const reducer = (state: State, action: Actions): State => {
   }
 };
 
-export const useVoiceRecorder = (cb: (result: Blob) => void): ReturnedSig => {
+export const useVoiceRecorder = (
+  cb: (result: Blob) => void,
+): ReturnedSig => {
   const [state, dispatch] = useReducer(reducer, initState);
 
   // Ref for our persistent microphone stream.

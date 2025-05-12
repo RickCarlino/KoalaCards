@@ -1,10 +1,7 @@
 import { createDeck, Grade } from "femto-fsrs";
-import { errorReport } from "../error-report";
 import { Quiz } from "@prisma/client";
 
-const FSRS = createDeck({
-  requestedRetentionRate: 0.86,
-});
+const FSRS = createDeck({ requestedRetentionRate: 0.8 });
 
 const DAYS = 24 * 60 * 60 * 1000;
 
@@ -32,23 +29,11 @@ function fuzzNumber(num: number) {
 
 function scheduleNewCard(grade: Grade, now = Date.now()): SchedulingData {
   const x = FSRS.newCard(grade);
-  const MINUTE = 60000;
-  const grades: Record<Grade, number> = {
-    [Grade.AGAIN]: 6 * MINUTE,
-    [Grade.HARD]: 2.5 * DAYS,
-    [Grade.GOOD]: 4 * DAYS,
-    [Grade.EASY]: 8 * DAYS,
-  };
-  const nextReview = now + fuzzNumber(grades[grade]);
-
-  if (!nextReview || nextReview < now) {
-    return errorReport(`Invalid new card grade: ${grade}`);
-  }
 
   return {
     difficulty: x.D,
     stability: x.S,
-    nextReview,
+    nextReview: now + fuzzNumber(x.I * DAYS),
   };
 }
 
@@ -86,6 +71,9 @@ export function getGradeButtonText(quiz: PartialQuiz): [Grade, string][] {
   return [Grade.AGAIN, Grade.HARD, Grade.GOOD, Grade.EASY].map((grade) => {
     const emoji = SCALE[grade];
     const { nextReview } = calculateSchedulingData(quiz, grade, now);
+    if (!nextReview) {
+      return [grade, "❓SOON"];
+    }
     const diff = nextReview - now;
     const minutes = Math.floor(diff / (60 * 1000));
     if (minutes < 5) {

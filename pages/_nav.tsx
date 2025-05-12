@@ -113,13 +113,17 @@ const NavBar = ({ children }: NavBarProps) => {
   const theme = useMantineTheme();
 
   const links: NavLink[] = [
-    { path: "/review", name: "Review" },
-    { path: "/create", name: "Add" },
-    { path: "/cards", name: "Cards" },
-    { path: "/writing", name: "Experimental Stuff" },
+    { path: "/review", name: "Study Cards" },
+    { path: "/create", name: "Create Cards" },
+    { path: "/cards", name: "View Cards" },
+    { path: "/writing", name: "View Writing" },
     { path: "/user", name: "Settings" },
-    { path: "https://github.com/RickCarlino/KoalaCards", name: "Help" },
-    { path: "https://discord.gg/jj7wXhQWJe", name: "Discord", rainbow: true },
+    { path: "https://github.com/RickCarlino/KoalaCards", name: "GitHub" },
+    {
+      path: "https://discord.gg/jj7wXhQWJe",
+      name: "Discord",
+      rainbow: true,
+    },
   ];
 
   return (

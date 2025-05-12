@@ -27,13 +27,15 @@ type RepairPageProps = {
 
 const ATTEMPTS = 2;
 
-export const getServerSideProps: GetServerSideProps<RepairPageProps> = async (
-  context,
-) => {
+export const getServerSideProps: GetServerSideProps<
+  RepairPageProps
+> = async (context) => {
   const dbUser = await getServersideUser(context);
 
   if (!dbUser) {
-    return { redirect: { destination: "/api/auth/signin", permanent: false } };
+    return {
+      redirect: { destination: "/api/auth/signin", permanent: false },
+    };
   }
 
   const { getRepairCards } = await import("@/koala/fetch-failures");
@@ -168,7 +170,9 @@ function CardRepairFlow({
         </Stack>
 
         <Stack gap="xs" style={{ marginTop: rem(16) }}>
-          <Button onClick={() => playAudio(card.termAudio)}>Play Term</Button>
+          <Button onClick={() => playAudio(card.termAudio)}>
+            Play Term
+          </Button>
 
           {!voiceRecorder.isRecording && (
             <Button color="blue" onClick={voiceRecorder.start}>
@@ -218,7 +222,9 @@ export default function RepairPage({ cards }: RepairPageProps) {
           <Title order={3}>Session Complete</Title>
           <Text size="md" color="dimmed">
             You repaired {cards.length} cards.
-            <Button onClick={() => window.location.reload()}>Load More?</Button>
+            <Button onClick={() => window.location.reload()}>
+              Load More?
+            </Button>
           </Text>
         </Stack>
       </Center>

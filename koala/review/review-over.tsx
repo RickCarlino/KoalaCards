@@ -20,7 +20,7 @@ import Link from "next/link";
 type ReviewOverProps = {
   state: QuizState[];
   onSave: () => Promise<void>;
-  onUpdateDifficulty: (quizId: number, grade: Grade) => void;
+  onUpdateDifficulty: (uuid: string, grade: Grade) => void;
 };
 
 export function ReviewOver({
@@ -47,7 +47,8 @@ export function ReviewOver({
     await onSave().finally(() => setIsSaving(false));
   };
 
-  const hasError = (quiz: QuizState) => quiz.serverGradingResult === "fail";
+  const hasError = (quiz: QuizState) =>
+    quiz.serverGradingResult === "fail";
 
   if (state.length === 0) {
     return (
@@ -110,8 +111,8 @@ export function ReviewOver({
             </Text>
           </Alert>
           <Text size="md">
-            The server found some issues with your responses. Check the feedback
-            below. {correctPercent}% correct
+            The server found some issues with your responses. Check the
+            feedback below. {correctPercent}% correct
           </Text>
           <Box mt="md">
             <Button
@@ -127,7 +128,7 @@ export function ReviewOver({
           <Stack gap="md" mt="md">
             {errorQuizzes.map((quiz) => (
               <FeedbackRow
-                key={quiz.quiz.quizId}
+                key={quiz.quiz.uuid}
                 quizState={quiz}
                 onUpdateDifficulty={onUpdateDifficulty}
               />

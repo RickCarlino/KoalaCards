@@ -30,9 +30,9 @@ export function ReviewStep({
         </Title>
 
         <Text size="sm" c={theme.colors.gray[7]} mb="md">
-          Verify each card is correct. You can edit the term or definition if
-          needed, or remove cards that you don't want. When satisfied, click
-          "Save Cards".
+          Verify each card is correct. You can edit the term or definition
+          if needed, or remove cards that you don't want. When satisfied,
+          click "Save Cards".
         </Text>
 
         {state.processedCards.length === 0 && (

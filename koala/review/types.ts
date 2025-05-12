@@ -16,6 +16,8 @@ export type Quiz = {
   difficulty: number;
   stability: number;
   lastReview: number;
+  dontGrade?: boolean;
+  uuid: string;
 };
 
 export interface Props {
@@ -63,12 +65,12 @@ export type LoadQuizzesAction = { type: "LOAD_QUIZZES"; quizzes: Quiz[] };
 export type SetGradeAction = {
   type: "SET_GRADE";
   grade: Grade;
-  quizId: number;
+  uuid: string;
 };
 export type PauseCurrentCardAction = { type: "PAUSE_CURRENT_CARD" };
 export type ServerFeedbackAction = {
   type: "SERVER_FEEDBACK";
-  quizId: number;
+  uuid: string;
   result: QuizStatus;
   serverResponse: string;
   userResponse: string;
@@ -76,7 +78,7 @@ export type ServerFeedbackAction = {
 export type NextQuizAction = { type: "NEXT_QUIZ" };
 export type UpdateAudioUrlAction = {
   type: "UPDATE_AUDIO_URL";
-  quizId: number;
+  uuid: string;
   audioBase64: string;
 };
 

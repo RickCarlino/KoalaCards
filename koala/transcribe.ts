@@ -6,7 +6,9 @@ import { SafeCounter } from "./counter";
 import { openai } from "./openai";
 import { LangCode } from "./shared-types";
 
-type TranscriptionResult = { kind: "OK"; text: string } | { kind: "error" };
+type TranscriptionResult =
+  | { kind: "OK"; text: string }
+  | { kind: "error" };
 
 const transcriptionLength = SafeCounter({
   name: "transcriptionLength",
@@ -29,6 +31,11 @@ export async function transcribeB64(
     ext: ".wav",
   });
   await writeFileAsync(fpath, buffer);
+  // Words split on whitespace and punctuation
+  const words = prompt
+    .split(/\s+|[.,!?;:()]/)
+    .filter(Boolean)
+    .sort();
   const transcribePromise = new Promise<TranscriptionResult>(
     async (resolve) => {
       try {
@@ -36,8 +43,8 @@ export async function transcribeB64(
           file: createReadStream(fpath) as any,
           model: "gpt-4o-transcribe",
           prompt:
-            "Might contains these characters: " +
-            unique(prompt.split("")).sort().join(" "),
+            "Might contains these words or related words: " +
+            unique(words).join(" "),
           language,
         });
         const text = y.text;
