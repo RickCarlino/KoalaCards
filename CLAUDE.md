@@ -4,6 +4,7 @@
 
 - **Lint:** `npm run lint`
 - **Never run:** build, dev (localhost:3000 already running), start, or any DB ops
+- **THE DEV SERVER RUNS IN A CONTAINER!!!** Don't expect the DB to be available on local. Ask me to run the commands.
 
 ### Coding Rules
 

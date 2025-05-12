@@ -74,10 +74,11 @@ type User = {
   id: string;
   email: string | null;
   lastSeen: Date | null;
+  createdAt: Date | null;
 };
 
 const userCleanup = async (user: User) => {
-  const { email, id, lastSeen } = user;
+  const { email, id, lastSeen, createdAt } = user;
   const lastSeenDays = calculateDays(lastSeen);
   if (lastSeenDays < 28) {
     const su = userApproval(id, email);
@@ -89,8 +90,14 @@ const userCleanup = async (user: User) => {
       return;
     } else {
       // Users must create a card within 5 days of signing up.
-      if (cardCount === 0 && lastSeenDays > 5) {
-        await deleteInactiveUser(id, email);
+      if (cardCount === 0) {
+        // Calculate days since registration using createdAt
+        const daysSinceRegistration = calculateDays(createdAt);
+        const a = daysSinceRegistration > 1;
+        const b = lastSeenDays > 1;
+        if (a || b) {
+          await deleteInactiveUser(id, email);
+        }
       }
     }
   } else {

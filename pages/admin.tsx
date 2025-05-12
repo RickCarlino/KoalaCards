@@ -61,6 +61,7 @@ export async function getServerSideProps(
       id: u.id,
       email: u.email ?? "(no email??)",
       lastSeen: u.lastSeen?.toISOString() ?? null,
+      createdAt: u.createdAt?.toISOString() ?? null,
       daysSinceLastSeen: daysSince(u.lastSeen),
       cardCount: u._count.Card,
       isAdmin: !!u.email && superUsers.includes(u.email.toLowerCase()),
@@ -89,6 +90,7 @@ export default function AdminPage({ userData }: Props) {
             <th>Days Since</th>
             <th># Cards</th>
             <th>Admin?</th>
+            <th>Created At</th>
           </tr>
         </thead>
         <tbody>
@@ -98,6 +100,7 @@ export default function AdminPage({ userData }: Props) {
               <td>{u.daysSinceLastSeen}</td>
               <td>{u.cardCount}</td>
               <td>{u.isAdmin ? "Yes" : "No"}</td>
+              <td>{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "No"}</td>
             </tr>
           ))}
         </tbody>
