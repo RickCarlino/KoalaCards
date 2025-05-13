@@ -15,7 +15,7 @@ import { useRouter } from "next/router";
 import React, { useCallback, useState } from "react";
 import { GetServerSideProps } from "next";
 import { getServersideUser } from "@/koala/get-serverside-user";
-import { prismaClient } from "@/koala/prisma-client";
+import { getUserSettings } from "@/koala/auth-helpers";
 
 interface Card {
   term: string;
@@ -46,42 +46,28 @@ const initialForm = {
 };
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
-  const dbUser = await getServersideUser(context);
+  const dbUser = await getServersideUser(context)!;
 
   if (!dbUser) {
     return {
-      redirect: { destination: "/api/auth/signin", permanent: false },
+      redirect: { destination: "/api/auth/x", permanent: false },
     };
   }
 
   // Fetch user settings
-  const userSettings = await prismaClient.userSettings.findUnique({
-    where: {
-      userId: dbUser.id,
-    },
-    select: {
-      id: true,
-      playbackSpeed: true,
-      playbackPercentage: true,
-      cardsPerDayMax: true,
-      updatedAt: true,
-    },
-  });
+  const userSettings = await getUserSettings(dbUser.id);
 
   if (!userSettings) {
-    return {
-      redirect: {
-        destination: "/api/auth/signin",
-        permanent: false,
-      },
-    };
+    throw new Error("User settings not found. Please contact support.");
   }
 
   return {
     props: {
       userSettings: {
         ...userSettings,
+        createdAt: userSettings.updatedAt.toISOString(),
         updatedAt: userSettings.updatedAt.toISOString(),
+        user: null,
       },
     },
   };
