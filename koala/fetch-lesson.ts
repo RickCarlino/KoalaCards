@@ -137,7 +137,7 @@ async function fetchRemedial(
 }
 
 // EXPERIMENT: Turn off the faucet if too many cards are due
-const TODO_MAKE_THIS_CUSTOMIZABLE = 100;
+const FAUCET_CAPACITY = 85;
 const maybeSlowLearningRate = async (userId: string): Promise<boolean> => {
   // Return 0 if > 100 cards due in next 24 hours:
   const dueCards = await prismaClient.quiz.count({
@@ -150,7 +150,7 @@ const maybeSlowLearningRate = async (userId: string): Promise<boolean> => {
       lastReview: { gt: 0 },
     },
   });
-  if (dueCards > TODO_MAKE_THIS_CUSTOMIZABLE) {
+  if (dueCards > FAUCET_CAPACITY) {
     console.log(
       `User ${userId} has ${dueCards} due cards. Slowing down learning rate.`,
     );
