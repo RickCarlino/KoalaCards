@@ -32,8 +32,8 @@ const handleNumericDeckId = async (
 };
 
 const handleLanguageCode = async (
-  langCode: string,
-  userId: string,
+  _langCode: string,
+  _userId: string,
 ): Promise<ServerSideResult> => {
   return { redirect: { destination: "/review", permanent: false } };
 };
@@ -55,7 +55,7 @@ export const getServerSideProps: GetServerSideProps<
   }
 
   const isNumeric = /^\d+$/.test(deckIdParam);
-  
+
   if (isNumeric) {
     return handleNumericDeckId(parseInt(deckIdParam, 10), dbUser.id);
   } else {
@@ -178,7 +178,7 @@ export default function ReviewNext({ deckId }: ReviewDeckPageProps) {
         <Title order={3} mb="md">
           Reviews ({data.quizzesDue} due)
         </Title>
-        
+
         <Table>
           <Table.Thead>
             <Table.Tr>
@@ -201,7 +201,7 @@ export default function ReviewNext({ deckId }: ReviewDeckPageProps) {
             ))}
           </Table.Tbody>
         </Table>
-        
+
         <Box mt="lg">
           <Anchor component={Link} href="/review">
             Back to Review Dashboard
