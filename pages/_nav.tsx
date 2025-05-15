@@ -18,7 +18,6 @@ import { useRouter } from "next/router";
 interface NavLinkProps {
   path: string;
   name: string;
-  rainbow?: boolean;
   active?: boolean;
   onMobileClick?: () => void;
 }
@@ -26,7 +25,6 @@ interface NavLinkProps {
 const NavLink = ({
   path,
   name,
-  rainbow = false,
   active = false,
   onMobileClick,
 }: NavLinkProps) => {
@@ -51,40 +49,6 @@ const NavLink = ({
     borderColor: theme.colors.pink[2],
   };
 
-  if (rainbow) {
-    const rainbowStyles = {
-      ...baseStyles,
-      animation: "rainbow 1s linear 1",
-    };
-
-    const keyframes = `
-      @keyframes rainbow {
-        0% { color: #FF85A2; rotate: 0deg; }
-        14% { color: #FFA8B6; rotate: 10deg; }
-        28% { color: #FFCAD4; rotate: -10deg; }
-        42% { color: #FFE5D9; rotate: 10deg; }
-        57% { color: #D8E2DC; rotate: -10deg; }
-        71% { color: #BBE1FA; rotate: 10deg; }
-        85% { color: #A0C4FF; rotate: -10deg; }
-        100% { color: #FF85A2; rotate: 0deg; }
-      }
-    `;
-
-    return (
-      <>
-        <style>{keyframes}</style>
-        <UnstyledButton
-          component={Link}
-          href={path}
-          style={rainbowStyles}
-          onClick={onMobileClick}
-        >
-          <Text>{name}</Text>
-        </UnstyledButton>
-      </>
-    );
-  }
-
   return (
     <UnstyledButton
       component={Link}
@@ -100,7 +64,6 @@ const NavLink = ({
 interface NavLink {
   path: string;
   name: string;
-  rainbow?: boolean;
 }
 
 interface NavBarProps {
@@ -113,17 +76,13 @@ const NavBar = ({ children }: NavBarProps) => {
   const theme = useMantineTheme();
 
   const links: NavLink[] = [
-    { path: "/review", name: "Study Cards" },
+    { path: "/review", name: "⭐️ Study Cards" },
     { path: "/create", name: "Create Cards" },
     { path: "/cards", name: "View Cards" },
     { path: "/writing", name: "View Writing" },
     { path: "/user", name: "Settings" },
     { path: "https://github.com/RickCarlino/KoalaCards", name: "GitHub" },
-    {
-      path: "https://discord.gg/jj7wXhQWJe",
-      name: "Discord",
-      rainbow: true,
-    },
+    { path: "https://discord.gg/jj7wXhQWJe", name: "Discord" },
   ];
 
   return (
@@ -181,7 +140,6 @@ const NavBar = ({ children }: NavBarProps) => {
                 <NavLink
                   path={link.path}
                   name={link.name}
-                  rainbow={link.rainbow}
                   active={router.pathname === link.path}
                   onMobileClick={() => {
                     if (window.innerWidth < 768) {

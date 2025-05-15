@@ -27,11 +27,12 @@ import {
   IconTrash,
   IconX,
   IconGitMerge,
+  IconStars,
 } from "@tabler/icons-react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { GetServerSideProps } from "next/types";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 
 type ReviewPageProps = {
   decks: DeckWithReviewInfo[];
@@ -66,6 +67,37 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
   const [selectedDeckIds, setSelectedDeckIds] = useState<number[]>([]);
   const [isMerging, setIsMerging] = useState(false);
   const [mergeError, setMergeError] = useState<string | null>(null);
+  const [sparkleStyles, setSparkleStyles] = useState<React.CSSProperties>(
+    {},
+  );
+
+  // CSS for subtle highlight animation that plays once
+  const sparkleKeyframes = `
+    @keyframes subtleHighlight {
+      0% { transform: scale(1); box-shadow: 0 0 0px rgba(255, 133, 162, 0); }
+      50% { transform: scale(1.08); box-shadow: 0 0 15px rgba(255, 133, 162, 0.5); }
+      100% { transform: scale(1); box-shadow: 0 0 5px rgba(255, 133, 162, 0.2); }
+    }
+    
+    @keyframes gentleGlow {
+      0% { text-shadow: none; }
+      50% { text-shadow: 0 0 8px rgba(255, 133, 162, 0.8); }
+      100% { text-shadow: 0 0 3px rgba(255, 133, 162, 0.3); }
+    }
+  `;
+
+  // Apply animation on mount - plays once and stops
+  useEffect(() => {
+    setSparkleStyles({
+      animation:
+        "subtleHighlight 1.2s ease-in-out forwards, gentleGlow 1.5s ease-in-out forwards",
+      fontWeight: 700,
+      position: "relative",
+      zIndex: 1,
+      boxShadow: "0 0 5px rgba(255, 133, 162, 0.2)",
+      transition: "all 0.3s ease",
+    });
+  }, []);
 
   const mergeDecks = trpc.mergeDecks.useMutation({
     onSuccess: () => {
@@ -288,17 +320,26 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
               variant="filled"
               style={{ width: 80 }}
             />
-            <Button
-              component={Link}
-              href={`/review/${deck.id}?take=${take}`}
-              variant="filled"
-              color="gray"
-              radius="xl"
-              size="sm"
-              style={{ whiteSpace: "normal", textAlign: "center" }}
-            >
-              Study {take} Cards
-            </Button>
+            <>
+              <style>{sparkleKeyframes}</style>
+              <Button
+                component={Link}
+                href={`/review/${deck.id}?take=${take}`}
+                variant="filled"
+                color="pink"
+                radius="xl"
+                size="md"
+                leftSection={<IconStars size={16} />}
+                style={{
+                  ...sparkleStyles,
+                  whiteSpace: "normal",
+                  textAlign: "center",
+                  fontWeight: 700,
+                }}
+              >
+                Study {take} Cards
+              </Button>
+            </>
             <Button
               component={Link}
               href={`/writing/${deck.id}`}
@@ -350,7 +391,7 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
           </Text>
           <Button
             component={Link}
-            href="/start"
+            href="/create"
             color="pink"
             radius="xl"
             size="lg"
