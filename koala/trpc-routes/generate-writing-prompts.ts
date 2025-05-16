@@ -60,17 +60,16 @@ export const generateWritingPrompts = procedure
     const cards = await prismaClient.card.findMany({
       where: { userId, deckId: input.deckId },
       select: { term: true },
-      take: 100,
+      orderBy: { createdAt: "desc" },
+      take: 1000,
     });
     if (cards.length < MIN_CARDS)
       throw new TRPCError({ code: "BAD_REQUEST" });
-
-    const seeds = shuffle(cards.map(({ term }) => term));
-
+    const terms = cards.map(({ term }) => term);
     const rawDrafts = await Promise.all(
       Array.from({ length: 3 }, () => {
-        const seeds2 = seeds.slice(0, MIN_CARDS);
-        return draftPrompts(seeds2, deck)
+        const seeds2 = shuffle(terms).slice(0, MIN_CARDS);
+        return draftPrompts(seeds2, deck);
       }),
     );
 
