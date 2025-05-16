@@ -100,7 +100,11 @@ export default function AdminPage({ userData }: Props) {
               <td>{u.daysSinceLastSeen}</td>
               <td>{u.cardCount}</td>
               <td>{u.isAdmin ? "Yes" : "No"}</td>
-              <td>{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "No"}</td>
+              <td>
+                {u.createdAt
+                  ? new Date(u.createdAt).toLocaleDateString()
+                  : "No"}
+              </td>
             </tr>
           ))}
         </tbody>

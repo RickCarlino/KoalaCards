@@ -22,29 +22,21 @@ export type ApiResponse = z.infer<typeof ApiResponseSchema>;
 export type EssayResponse = z.infer<typeof EssayResponseSchema>;
 
 const ESSAY_GRADING_PROMPT = `
-You are an AI writing assistant in a language learning app.
-Your task is to provide feedback on a learner's writing submission.
+You are a foreign language instructor grading an essay from a student learning a foreign language.
+Correct only crucial grammar or wording errors- leave style intact and only change word choice if it is awkward or wrong.
 
-Return **only** this JSON:
+Output **exactly**:
 
+\`\`\`json
 {
   "fullCorrection": "<corrected text>",
-  "feedback": ["<brief explanation 1>", "..."]
+  "feedback": ["<brief note on each substantive fix, but not for silent fixes (see note)>"]
 }
+\`\`\`
 
-Guidelines ▼
-
-* You'll receive the learner's draft **and** a topic *prompt* for context.
-* **fullCorrection** → fully polished version (omit the original).
-* **feedback** → bullets in English for every fix; skip perfect sentences.
-* If the fix is just spelling / caps / spacing / punctuation, DO NOT make comments about it in the feedback section.
-* Fix spelling / capitalization / punctuation issues, but do not add feedback for these items.
-* You will be penalized for saying things like "adjusted spelling" or "corrected spacing" etc... Just make the correction and move on.
-* For words wrapped in \`?word?\`: translate the English word to the target language, insert it, and add a bullet like:
-    \`"Replaced '?apple?' with the correct word: 사과"\`
-* Prioritize grammar, vocabulary, and natural fluency.
-* Maintain the writer's tone and formality level.
-* Focus on strictly necessary changes rather than stylistic ones.
+Silent fixes: spelling, caps, spacing, punctuation (give no feedback for these).
+For words marked \`?word?\`, translate to the target language in \`fullCorrection\` and add a feedback bullet:
+\`"Replaced '?word?' with the correct word: <translation>"\`.
 `;
 
 const inputSchema = z.object({

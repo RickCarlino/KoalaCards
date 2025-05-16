@@ -407,7 +407,6 @@ export default function WritingPage({
         <Group grow>
           <Button
             onClick={handleGeneratePrompts}
-            leftSection={<IconWand size={rem(16)} />}
             loading={loadingPrompts}
             size="md"
           >
@@ -418,7 +417,6 @@ export default function WritingPage({
               setSelectedPrompt("Not set.");
               setCurrentStep("writing");
             }}
-            leftSection={<IconPencil size={rem(16)} />}
             size="md"
             variant="light"
           >
@@ -518,11 +516,7 @@ export default function WritingPage({
           <Text c="dimmed">Analyzing your writing...</Text>
         </Group>
       ) : (
-        <Button
-          onClick={handleReview}
-          disabled={!essay.trim()}
-          leftSection={<IconCheck size={rem(16)} />}
-        >
+        <Button onClick={handleReview} disabled={!essay.trim()}>
           Save and Review Feedback
         </Button>
       )}
@@ -554,26 +548,15 @@ export default function WritingPage({
         )}
 
         <Group>
-          <Button
-            onClick={handleExplain}
-            leftSection={<IconBulb size={rem(16)} />}
-            disabled={!canExplain}
-          >
+          <Button onClick={handleExplain} disabled={!canExplain}>
             Explain Selected Words ({selectedCount})
           </Button>
           {canCreate && (
-            <Button
-              onClick={handleCreateCards}
-              leftSection={<IconCheck size={rem(16)} />}
-            >
+            <Button onClick={handleCreateCards}>
               Create Cards from Words ({definitions.length})
             </Button>
           )}
-          <Button
-            onClick={handleWriteMore}
-            leftSection={<IconPencil size={rem(16)} />}
-            variant="outline"
-          >
+          <Button onClick={handleWriteMore} variant="outline">
             Write More
           </Button>
         </Group>

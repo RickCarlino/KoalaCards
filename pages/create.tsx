@@ -189,7 +189,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   if (cardCount === 0) {
     return {
       redirect: {
-        destination: "/start",
+        destination: "/create",
         permanent: false,
       },
     };

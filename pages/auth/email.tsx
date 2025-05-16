@@ -5,9 +5,13 @@ export default function EmailSignin() {
   return (
     <form action="/api/auth/callback/email" method="get">
       <h1>Almost There!</h1>
-      <input type="hidden" name="token" value={query.token} />
-      <input type="hidden" name="callbackUrl" value={query.callbackUrl} />
-      <input type="hidden" name="email" value={query.email} />
+      <input type="hidden" name="token" defaultValue={query.token} />
+      <input
+        type="hidden"
+        name="callbackUrl"
+        defaultValue={query.callbackUrl}
+      />
+      <input type="hidden" name="email" defaultValue={query.email} />
       <button type="submit">Continue to App</button>
       <h2>Having trouble signing in?</h2>
       <p>
