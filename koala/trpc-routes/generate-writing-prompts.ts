@@ -65,13 +65,13 @@ export const generateWritingPrompts = procedure
     if (cards.length < MIN_CARDS)
       throw new TRPCError({ code: "BAD_REQUEST" });
 
-    const seeds = shuffle(cards.map(({ term }) => term)).slice(
-      0,
-      MIN_CARDS,
-    );
+    const seeds = shuffle(cards.map(({ term }) => term));
 
     const rawDrafts = await Promise.all(
-      Array.from({ length: 3 }, () => draftPrompts(seeds, deck)),
+      Array.from({ length: 3 }, () => {
+        const seeds2 = seeds.slice(0, MIN_CARDS);
+        return draftPrompts(seeds2, deck)
+      }),
     );
 
     const refined = await refinePrompts(rawDrafts.join("\n\n"));
