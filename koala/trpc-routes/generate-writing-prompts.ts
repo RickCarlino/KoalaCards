@@ -9,7 +9,7 @@ import { TRPCError } from "@trpc/server";
 const inputSchema = z.object({ deckId: z.number() });
 const outputSchema = z.array(z.string());
 
-const promptIntro = `
+const PROMPT_INTRO = `
 You create writing prompts for language‑learners (CEFR B1–C1).
 Guidelines:
 • one sentence per prompt. Keep it short.
@@ -19,7 +19,7 @@ Guidelines:
 • The three hidden example sentences are *inspiration only*; never reveal or paraphrase them.
 `.trim();
 
-const promptTypes = [
+const PROMPT_TYPES = [
   "Comparative / Evaluative: Compare two ideas or experiences implied by the hidden sentence.",
   "Descriptive: Describe a scene or object suggested by the hidden sentence.",
   "Opinion / Argument: Give and support a viewpoint on a topic inspired by the hidden sentence.",
@@ -29,6 +29,8 @@ const promptTypes = [
   "Scenario + Response: Ask the learner to act a role in a particular scenario.",
 ];
 
+const DRAFT_COUNT = 3; // number of drafts to generate
+const OUTPUT_COUNT = 4; // number of prompts to return
 const MIN_CARDS = 7;
 const HIGH_TEMP = 1.2; // diversify first draft
 const LOW_TEMP = 0.2; // tighten during refinement
@@ -67,7 +69,7 @@ export const generateWritingPrompts = procedure
       throw new TRPCError({ code: "BAD_REQUEST" });
     const terms = cards.map(({ term }) => term);
     const rawDrafts = await Promise.all(
-      Array.from({ length: 3 }, () => {
+      Array.from({ length: DRAFT_COUNT }, () => {
         const seeds2 = shuffle(terms).slice(0, MIN_CARDS);
         return draftPrompts(seeds2, deck);
       }),
@@ -80,17 +82,17 @@ export const generateWritingPrompts = procedure
       .map((t) => t.trim())
       .filter(Boolean)
       .sort((a, b) => a.length - b.length)
-      .slice(0, 4); // keep the four best‑sized prompts
+      .slice(0, OUTPUT_COUNT); // keep the four best‑sized prompts
   });
 
 async function draftPrompts(seeds: string[], deck: { langCode: string }) {
-  const tasks = shuffle(promptTypes)
+  const tasks = shuffle(PROMPT_TYPES)
     .slice(0, 2)
     .map((tpl, i) => `Prompt: ${tpl}\nInspiration: ${seeds[i]}`)
     .join("\n\n");
 
   const systemPrompt = [
-    promptIntro,
+    PROMPT_INTRO,
     tasks,
     `Write each prompt directly in ${getLangName(
       deck.langCode,
@@ -111,9 +113,10 @@ async function refinePrompts(raw: string) {
   const reviewerPrompt = `You are a writing‑prompt reviewer.
 Evaluate the following prompts (one per line) for clarity, concreteness, and suitability for B1–C1 learners.
 Revise each prompt so that it:
-• stays within 100–700 characters;
+• stays under 100 characters;
 • avoids mentions of overcoming obstacles;
 • remains lively and specific.
+• (extremely important) Does not sound like LLM generated nonsense.
 Return the improved prompts, one per line, with no extra commentary.`;
 
   const refined = await chat(reviewerPrompt, compression, LOW_TEMP);
