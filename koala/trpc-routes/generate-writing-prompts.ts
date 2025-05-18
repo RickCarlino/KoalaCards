@@ -77,12 +77,11 @@ export const generateWritingPrompts = procedure
 
     const refined = await refinePrompts(rawDrafts.join("\n\n"));
 
-    return refined
+    const cleaned = refined
       .split(/\r?\n+/)
       .map((t) => t.trim())
-      .filter(Boolean)
-      .sort((a, b) => a.length - b.length)
-      .slice(0, OUTPUT_COUNT); // keep the four best‑sized prompts
+      .filter(Boolean);
+    return shuffle(cleaned).slice(0, OUTPUT_COUNT); // keep the four best‑sized prompts
   });
 
 async function draftPrompts(seeds: string[], deck: { langCode: string }) {
