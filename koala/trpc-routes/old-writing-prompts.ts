@@ -15,15 +15,16 @@ Using three hidden example sentences only as loose inspiration, generate three d
 - Do NOT reveal, paraphrase, or reference the example sentences directly.
 - Treat each example sentence purely as a thematic springboard.
 - Focus on natural, contextually appropriate phrasing suited to learners.
-- Avoid overly literal or off‑beat interpretations of the hidden sentences.
-- Writing about "a time you overcame X" is cliché. Stop doing that.
+- Avoid overly literal or off-beat interpretations of the hidden sentences.
+- Writing about "a time you overcame X" is cliche. Stop doing that.
 `.trim();
 
 const promptTemplates = [
   "Comparative / Evaluative: Compare two ideas or experiences implied by the hidden sentence.",
+  "Descriptive: Describe a scene or object suggested by the hidden sentence.",
   "Opinion / Argument: Give and support a viewpoint on a topic inspired by the hidden sentence.",
   "Personal Narrative: Draw on the theme hinted by the hidden sentence.",
-  "Procedural / How‑to: Explain a process or give advice based on the hidden sentence.",
+  "Procedural / How-to: Explain a process or give advice based on the hidden sentence.",
   "Reflective / Metacognitive: Encourage the learner to reflect on their beliefs or habits suggested by the hidden sentence.",
   "Scenario + Response: Ask the learner to act a role in a particular scenario.",
 ];
@@ -32,7 +33,7 @@ const MIN_CARDS = 7;
 
 const chat = async (system: string, user?: string) =>
   openai.beta.chat.completions.parse({
-    model: "gpt-4o",
+    model: "gpt-4.1",
     messages: user
       ? [
           { role: "system", content: system },
@@ -51,6 +52,7 @@ export const generateWritingPrompts = procedure
     const deck = await prismaClient.deck.findUnique({
       where: { id: input.deckId, userId },
     });
+
     if (!deck) throw new TRPCError({ code: "NOT_FOUND" });
 
     const cards = await prismaClient.card.findMany({
@@ -61,19 +63,41 @@ export const generateWritingPrompts = procedure
     if (cards.length < MIN_CARDS)
       throw new TRPCError({ code: "BAD_REQUEST" });
 
-    const pickSeeds = () =>
+    const getSeeds = () =>
       shuffle(cards.map(({ term }) => term)).slice(0, MIN_CARDS);
 
-    const rawDrafts = await Promise.all([
-      draftPrompts(pickSeeds(), deck),
-      draftPrompts(pickSeeds(), deck),
-      draftPrompts(pickSeeds(), deck),
+    const raw = await Promise.all([
+      draftPrompts(getSeeds(), deck),
+      draftPrompts(getSeeds(), deck),
+      draftPrompts(getSeeds(), deck),
     ]);
 
-    const refined = await refinePrompts(rawDrafts.join("\n\n"));
-
-    return postProcess(refined).slice(0, 4);
+    const refinedRaw = await refinePrompts(raw.join("\n\n"));
+    return refinedRaw
+      .split(/\r?\n+/)
+      .filter(Boolean)
+      .map((s) => s.trim())
+      .sort((x, y) => x.length - y.length)
+      .slice(0, 4);
   });
+
+async function refinePrompts(raw: string) {
+  const firstPass = raw
+    .split(/\r?\n+/)
+    .filter(Boolean)
+    .map((s) => s.trim())
+    .join("\n");
+
+  const refinement = `You are a creative writing instructor for language learners.
+  You have been given a list of writing prompts, each one on its own line.
+  These prompts are intended for language learners, and they should be engaging and appropriate for that audience.
+  Your task is to refine the following writing prompts so that they make sense and are of high quality.
+  Make sure that t:`;
+
+  const refinedRaw =
+    (await chat(refinement, firstPass)).choices[0].message.content ?? "";
+  return refinedRaw;
+}
 
 async function draftPrompts(
   seeds: string[],
@@ -97,34 +121,9 @@ async function draftPrompts(
     tasks,
     `Write each prompt directly in ${getLangName(
       deck.langCode,
-    )}, **without numbering, bullets, or labels** – one per line, no extra text.`,
+    )}, without numbering or labels.`,
   ].join("\n\n");
 
-  const response = await chat(systemPrompt);
-  return response.choices[0].message.content ?? "";
-}
-
-async function refinePrompts(raw: string) {
-  const firstPass = raw
-    .split(/\r?\n+/)
-    .filter(Boolean)
-    .map((s) => s.trim())
-    .join("\n");
-
-  const systemPrompt =
-    `You are a creative writing instructor for language learners.\n\n` +
-    `Below is a rough list of writing prompts. Please rewrite **each** prompt so it is clear, natural, and engaging **for the target language learner**.\n` +
-    `Return **only** the final prompts – one per line – with **no numbering, bullets, or commentary**.`;
-
-  const refined =
-    (await chat(systemPrompt, firstPass)).choices[0].message.content ?? "";
-  return refined;
-}
-
-function postProcess(raw: string): string[] {
-  return raw
-    .split(/\r?\n+/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .sort((a, b) => a.length - b.length);
+  const raw = (await chat(systemPrompt)).choices[0].message.content ?? "";
+  return raw;
 }

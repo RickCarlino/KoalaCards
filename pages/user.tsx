@@ -413,7 +413,7 @@ export default function UserSettingsPage(props: Props) {
                 { name: "count", color: "blue", label: "Total Learned" },
               ]}
               curveType="natural"
-              yAxisLabel="Total Cards Learned"
+              yAxisLabel="Cards Learned"
               xAxisLabel="Date"
               tooltipProps={{
                 content: ({ label, payload }) => (
@@ -454,7 +454,7 @@ export default function UserSettingsPage(props: Props) {
                 { name: "count", color: "blue", label: "Total Learned" },
               ]}
               curveType="natural"
-              yAxisLabel="Total Cards Learned"
+              yAxisLabel="Characters Written"
               xAxisLabel="Date"
               tooltipProps={{
                 content: ({ label, payload }) => (
