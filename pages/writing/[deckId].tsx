@@ -1,8 +1,8 @@
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { prismaClient } from "@/koala/prisma-client";
 import { VisualDiff } from "@/koala/review/visual-diff";
-import { trpc } from "@/koala/trpc-config";
 import { LangCode } from "@/koala/shared-types";
+import { trpc } from "@/koala/trpc-config";
 import {
   Alert,
   Box,
@@ -12,19 +12,15 @@ import {
   Loader,
   Paper,
   Progress,
-  rem,
   Stack,
   Text,
   Textarea,
   Title,
-  useMantineTheme,
+  useMantineTheme
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import {
-  IconBulb,
-  IconCheck,
-  IconPencil,
-  IconWand,
+  IconCheck
 } from "@tabler/icons-react";
 import { GetServerSideProps } from "next";
 import { useCallback, useMemo, useState } from "react";
@@ -506,9 +502,34 @@ export default function WritingPage({
         maxRows={12}
         value={essay}
         onChange={(e) => setEssay(e.currentTarget.value)}
-        mb="md"
+        mb="xs"
         disabled={loadingReview}
       />
+      
+      <Box mb="md">
+        <Stack gap="xs" style={{ flexGrow: 1 }}>
+          <Group justify="space-between">
+            <Text size="sm" c="dimmed">
+              {(writingProgressData?.progress || 0) + essay.length} characters
+              {writingProgressData?.goal ? ` / ${writingProgressData.goal} goal` : ''}
+            </Text>
+            {writingProgressData?.goal && ((writingProgressData?.progress || 0) + essay.length) >= writingProgressData.goal && (
+              <Group gap="xs">
+                <IconCheck size={16} color={theme.colors.teal[6]} />
+                <Text size="sm" c="teal">Goal reached!</Text>
+              </Group>
+            )}
+          </Group>
+          {writingProgressData?.goal && (
+            <Progress 
+              value={(((writingProgressData?.progress || 0) + essay.length) / writingProgressData.goal) * 100} 
+              size="sm"
+              color={"blue"}
+              {...(((writingProgressData?.progress || 0) + essay.length) >= writingProgressData.goal ? { striped: true, animated: true } : {})}
+            />
+          )}
+        </Stack>
+      </Box>
 
       {loadingReview ? (
         <Group>

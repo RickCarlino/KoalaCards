@@ -9,19 +9,18 @@ import { TRPCError } from "@trpc/server";
 const inputSchema = z.object({ deckId: z.number() });
 const outputSchema = z.array(z.string());
 
-const PROMPT_INTRO = `
-You create writing prompts for language‑learners (CEFR B1–C1).
-Guidelines:
-• one sentence per prompt. Keep it short.
-• No references to “overcoming obstacles,” trauma, or hardship.
-• Avoid overly abstract or vague language.
-• Keep language natural, concrete, and engaging.
-• The three hidden example sentences are *inspiration only*; never reveal or paraphrase them.
+const promptIntro = `
+You are a creative writing instructor for language learners.
+Using three hidden example sentences only as loose inspiration, generate three distinct, engaging prompts.
+- Do NOT reveal, paraphrase, or reference the example sentences directly.
+- Treat each example sentence purely as a thematic springboard.
+- Focus on natural, contextually appropriate phrasing suited to learners.
+- Avoid overly literal or off‑beat interpretations of the hidden sentences.
+- Writing about "a time you overcame X" is cliché. Stop doing that.
 `.trim();
 
-const PROMPT_TYPES = [
+const promptTemplates = [
   "Comparative / Evaluative: Compare two ideas or experiences implied by the hidden sentence.",
-  "Descriptive: Describe a scene or object suggested by the hidden sentence.",
   "Opinion / Argument: Give and support a viewpoint on a topic inspired by the hidden sentence.",
   "Personal Narrative: Draw on the theme hinted by the hidden sentence.",
   "Procedural / How‑to: Explain a process or give advice based on the hidden sentence.",
@@ -29,16 +28,11 @@ const PROMPT_TYPES = [
   "Scenario + Response: Ask the learner to act a role in a particular scenario.",
 ];
 
-const DRAFT_COUNT = 3; // number of drafts to generate
-const OUTPUT_COUNT = 4; // number of prompts to return
 const MIN_CARDS = 7;
-const HIGH_TEMP = 1.2; // diversify first draft
-const LOW_TEMP = 0.2; // tighten during refinement
 
-const chat = async (system: string, user?: string, temperature = 1) =>
+const chat = async (system: string, user?: string) =>
   openai.beta.chat.completions.parse({
-    model: "gpt-4.1",
-    temperature,
+    model: "gpt-4o-mini",
     messages: user
       ? [
           { role: "system", content: system },
@@ -62,62 +56,75 @@ export const generateWritingPrompts = procedure
     const cards = await prismaClient.card.findMany({
       where: { userId, deckId: input.deckId },
       select: { term: true },
-      orderBy: { createdAt: "desc" },
-      take: 1000,
+      take: 100,
     });
     if (cards.length < MIN_CARDS)
       throw new TRPCError({ code: "BAD_REQUEST" });
-    const terms = cards.map(({ term }) => term);
-    const rawDrafts = await Promise.all(
-      Array.from({ length: DRAFT_COUNT }, () => {
-        const seeds2 = shuffle(terms).slice(0, MIN_CARDS);
-        return draftPrompts(seeds2, deck);
-      }),
-    );
+
+    const pickSeeds = () =>
+      shuffle(cards.map(({ term }) => term)).slice(0, MIN_CARDS);
+
+    const rawDrafts = await Promise.all([
+      draftPrompts(pickSeeds(), deck),
+      draftPrompts(pickSeeds(), deck),
+      draftPrompts(pickSeeds(), deck),
+    ]);
 
     const refined = await refinePrompts(rawDrafts.join("\n\n"));
 
-    const cleaned = refined
-      .split(/\r?\n+/)
-      .map((t) => t.trim())
-      .filter(Boolean);
-    return shuffle(cleaned).slice(0, OUTPUT_COUNT); // keep the four best‑sized prompts
+    return postProcess(refined).slice(0, 4);
   });
 
-async function draftPrompts(seeds: string[], deck: { langCode: string }) {
-  const tasks = shuffle(PROMPT_TYPES)
-    .slice(0, 2)
+async function draftPrompts(
+  seeds: string[],
+  deck: {
+    name: string;
+    id: number;
+    createdAt: Date;
+    userId: string;
+    langCode: string;
+    published: boolean;
+    parentDeckId: number | null;
+  },
+) {
+  const tasks = shuffle(promptTemplates)
+    .slice(0, 3)
     .map((tpl, i) => `Prompt: ${tpl}\nInspiration: ${seeds[i]}`)
     .join("\n\n");
 
   const systemPrompt = [
-    PROMPT_INTRO,
+    promptIntro,
     tasks,
     `Write each prompt directly in ${getLangName(
       deck.langCode,
-    )}, no numbers or labels.`,
+    )}, **without numbering, bullets, or labels** – one per line, no extra text.`,
   ].join("\n\n");
 
-  const response = await chat(systemPrompt, undefined, HIGH_TEMP);
+  const response = await chat(systemPrompt);
   return response.choices[0].message.content ?? "";
 }
 
 async function refinePrompts(raw: string) {
-  const compression = raw
+  const firstPass = raw
     .split(/\r?\n+/)
-    .map((s) => s.trim())
     .filter(Boolean)
+    .map((s) => s.trim())
     .join("\n");
 
-  const reviewerPrompt = `You are a writing‑prompt reviewer.
-Evaluate the following prompts (one per line) for clarity, concreteness, and suitability for B1–C1 learners.
-Revise each prompt so that it:
-• stays under 100 characters;
-• avoids mentions of overcoming obstacles;
-• remains lively and specific.
-• (extremely important) Does not sound like LLM generated nonsense.
-Return the improved prompts, one per line, with no extra commentary.`;
+  const systemPrompt =
+    `You are a creative writing instructor for language learners.\n\n` +
+    `Below is a rough list of writing prompts. Please rewrite **each** prompt so it is clear, natural, and engaging **for the target language learner**.\n` +
+    `Return **only** the final prompts – one per line – with **no numbering, bullets, or commentary**.`;
 
-  const refined = await chat(reviewerPrompt, compression, LOW_TEMP);
-  return refined.choices[0].message.content ?? "";
+  const refined =
+    (await chat(systemPrompt, firstPass)).choices[0].message.content ?? "";
+  return refined;
+}
+
+function postProcess(raw: string): string[] {
+  return raw
+    .split(/\r?\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .sort((a, b) => a.length - b.length);
 }
