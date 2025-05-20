@@ -32,7 +32,7 @@ const MIN_CARDS = 7;
 
 const chat = async (system: string, user?: string) =>
   openai.beta.chat.completions.parse({
-    model: "gpt-4o-mini",
+    model: "gpt-4o",
     messages: user
       ? [
           { role: "system", content: system },
