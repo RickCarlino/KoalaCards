@@ -25,6 +25,7 @@ import { defineUnknownWords } from "./define-unknown-words";
 import { translate } from "./translate";
 import { getDailyWritingProgress } from "./get-daily-writing-progress"; // Added import
 import { mergeDecks } from "./merge-decks";
+import { generateWritingSample } from "./generate-writing-sample";
 
 export const appRouter = router({
   bulkCreateCards,
@@ -38,6 +39,7 @@ export const appRouter = router({
   editUserSettings,
   faucet,
   generateWritingPrompts,
+  generateWritingSample,
   getDailyWritingProgress,
   getNextQuizzes,
   getUserSettings,
