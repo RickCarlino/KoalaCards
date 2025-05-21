@@ -43,5 +43,5 @@ export const generateWritingSample = procedure
     });
     if (!deck) throw new TRPCError({ code: "NOT_FOUND" });
     const language = getLangName(deck.langCode as LangCode);
-    return await chat(`Respond in ${language}.`, input.prompt);
+    return await chat(`Provide a sample response to the question. Respond in ${language}.`, input.prompt);
   });
