@@ -5,6 +5,7 @@ import {
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { trpc } from "@/koala/trpc-config";
 import {
+  Alert,
   Badge,
   Button,
   Card,
@@ -13,26 +14,24 @@ import {
   Container,
   Grid,
   Group,
-  NumberInput,
   Switch,
   Text,
   TextInput,
   Title,
   useMantineTheme,
-  Alert,
 } from "@mantine/core";
 import {
   IconCheck,
+  IconGitMerge,
   IconPencil,
+  IconStars,
   IconTrash,
   IconX,
-  IconGitMerge,
-  IconStars,
 } from "@tabler/icons-react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { GetServerSideProps } from "next/types";
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type ReviewPageProps = {
   decks: DeckWithReviewInfo[];
@@ -153,7 +152,7 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
   function DeckCard({ deck }: { deck: DeckWithReviewInfo }) {
     const [isEditing, setIsEditing] = useState(false);
     const [title, setTitle] = useState(deck.name);
-    const [take, setTake] = useState(21);
+    const take = 7; // Hard-coded to 7 cards
     const updateDeckMutation = trpc.updateDeck.useMutation();
     const deleteDeckMutation = trpc.deleteDeck.useMutation();
 
@@ -201,12 +200,6 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
       [deck.id, deck.name, updateDeckMutation],
     );
 
-    const handleTakeChange = useCallback((value: string | number) => {
-      const numValue =
-        typeof value === "number" ? value : parseFloat(value);
-      const clampedValue = Math.max(7, Math.min(45, numValue)); // Ensure value is within range 7-45
-      setTake(isNaN(clampedValue) ? 21 : clampedValue);
-    }, []);
 
     return (
       <Card
@@ -310,16 +303,6 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
         </Group>
         <Center mt="md" style={{ width: "100%" }}>
           <Group>
-            <NumberInput
-              value={take}
-              onChange={handleTakeChange}
-              min={7}
-              max={45}
-              placeholder="Cards"
-              size="sm"
-              variant="filled"
-              style={{ width: 80 }}
-            />
             <>
               <style>{sparkleKeyframes}</style>
               <Button
@@ -337,7 +320,7 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
                   fontWeight: 700,
                 }}
               >
-                Study {take} Cards
+                Study Cards
               </Button>
             </>
             <Button
