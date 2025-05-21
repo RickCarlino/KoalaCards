@@ -16,13 +16,12 @@ import {
   Text,
   Textarea,
   Title,
-  useMantineTheme
+  useMantineTheme,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import {
-  IconCheck
-} from "@tabler/icons-react";
+import { IconCheck } from "@tabler/icons-react";
 import { GetServerSideProps } from "next";
+import { alphabetical } from "radash";
 import { useCallback, useMemo, useState } from "react";
 
 type WritingPageProps = { deckId: number; langCode: LangCode };
@@ -94,7 +93,7 @@ export default function WritingPage({
 
   const [sampleResponse, setSampleResponse] = useState<string>("");
   const [loadingSample, setLoadingSample] = useState(false);
-  
+
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [loadingReview, setLoadingReview] = useState(false);
 
@@ -202,20 +201,20 @@ export default function WritingPage({
     setSelectedPrompt(prompt);
     setCurrentStep("writing");
   };
-  
+
   const handleReadSample = (prompt: string) => {
     setSelectedPrompt(prompt);
     setLoadingSample(true);
     setSelectedWords({});
     setDefinitions([]);
     setCurrentStep("sample-reading");
-    
+
     generateSample.mutate({
       deckId,
-      prompt
+      prompt,
     });
   };
-  
+
   const handleProceedToWriting = () => {
     setCurrentStep("writing");
   };
@@ -522,16 +521,13 @@ export default function WritingPage({
       ))}
     </Paper>
   );
-  
   // Render sample reading step
   const renderSampleReadingStep = () => (
     <Paper withBorder shadow="sm" p="md" mb="lg">
       <Stack gap="md">
         <Title order={4}>Sample Response</Title>
-        
         <Text fw={600}>Selected Prompt</Text>
         {selectedPrompt && renderClickableText(selectedPrompt)}
-        
         <Text fw={600}>Sample Response (Click unknown words)</Text>
         {loadingSample ? (
           <Group>
@@ -541,7 +537,7 @@ export default function WritingPage({
         ) : (
           renderClickableText(sampleResponse)
         )}
-        
+
         <Group>
           <Button onClick={handleExplain} disabled={!canExplain}>
             Explain Selected Words ({selectedCount})
@@ -557,7 +553,13 @@ export default function WritingPage({
         </Group>
 
         {definitionsLoading && (
-          <Box style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+          <Box
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+            }}
+          >
             <Loader size="sm" color="blue" />
             <Text ml="sm" c="dimmed">
               Getting definitions...
@@ -574,7 +576,7 @@ export default function WritingPage({
         {showDefs && (
           <Stack gap="xs">
             <Text fw={600}>Word Definitions</Text>
-            {definitions.map((d, i) => {
+            {alphabetical(definitions, (x) => x.definition).map((d, i) => {
               const showLemma =
                 d.lemma && d.lemma.toLowerCase() !== d.word.toLowerCase();
               return (
@@ -629,27 +631,41 @@ export default function WritingPage({
         mb="xs"
         disabled={loadingReview}
       />
-      
+
       <Box mb="md">
         <Stack gap="xs" style={{ flexGrow: 1 }}>
           <Group justify="space-between">
             <Text size="sm" c="dimmed">
-              {(writingProgressData?.progress || 0) + essay.length} characters
-              {writingProgressData?.goal ? ` / ${writingProgressData.goal} goal` : ''}
+              {(writingProgressData?.progress || 0) + essay.length}{" "}
+              characters
+              {writingProgressData?.goal
+                ? ` / ${writingProgressData.goal} goal`
+                : ""}
             </Text>
-            {writingProgressData?.goal && ((writingProgressData?.progress || 0) + essay.length) >= writingProgressData.goal && (
-              <Group gap="xs">
-                <IconCheck size={16} color={theme.colors.teal[6]} />
-                <Text size="sm" c="teal">Goal reached!</Text>
-              </Group>
-            )}
+            {writingProgressData?.goal &&
+              (writingProgressData?.progress || 0) + essay.length >=
+                writingProgressData.goal && (
+                <Group gap="xs">
+                  <IconCheck size={16} color={theme.colors.teal[6]} />
+                  <Text size="sm" c="teal">
+                    Goal reached!
+                  </Text>
+                </Group>
+              )}
           </Group>
           {writingProgressData?.goal && (
-            <Progress 
-              value={(((writingProgressData?.progress || 0) + essay.length) / writingProgressData.goal) * 100} 
+            <Progress
+              value={
+                (((writingProgressData?.progress || 0) + essay.length) /
+                  writingProgressData.goal) *
+                100
+              }
               size="sm"
               color={"blue"}
-              {...(((writingProgressData?.progress || 0) + essay.length) >= writingProgressData.goal ? { striped: true, animated: true } : {})}
+              {...((writingProgressData?.progress || 0) + essay.length >=
+              writingProgressData.goal
+                ? { striped: true, animated: true }
+                : {})}
             />
           )}
         </Stack>
@@ -730,7 +746,7 @@ export default function WritingPage({
         {showDefs && (
           <Stack gap="xs">
             <Text fw={600}>Word Definitions</Text>
-            {definitions.map((d, i) => {
+            {alphabetical(definitions, (x) => x.definition).map((d, i) => {
               const showLemma =
                 d.lemma && d.lemma.toLowerCase() !== d.word.toLowerCase();
               return (

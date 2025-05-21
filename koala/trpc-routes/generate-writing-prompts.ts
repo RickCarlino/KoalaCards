@@ -56,7 +56,7 @@ export const generateWritingPrompts = procedure
     const cards = await prismaClient.card.findMany({
       where: { userId, deckId: input.deckId },
       select: { term: true },
-      take: 100,
+      take: 1000,
     });
     if (cards.length < MIN_CARDS)
       throw new TRPCError({ code: "BAD_REQUEST" });
@@ -95,7 +95,7 @@ async function draftPrompts(
   const systemPrompt = [
     promptIntro,
     tasks,
-    `Write each prompt directly in ${getLangName(
+    `Write the prompt in ${getLangName(
       deck.langCode,
     )}, **without numbering, bullets, or labels** – one per line, no extra text.`,
   ].join("\n\n");
