@@ -16,8 +16,8 @@ const montserrat = Montserrat({
   weight: ["400", "500", "600", "700"],
 });
 
-// Dynamically import the Navbar component to avoid hydration issues
-const NavbarWithNoSSR = dynamic(() => import("./_nav"), { ssr: false });
+// Dynamically import the TopBar component to avoid hydration issues
+const TopBarWithNoSSR = dynamic(() => import("./_topbar"), { ssr: false });
 
 function App(props: AppProps) {
   // For the email authentication page, we don't want to show any UI components
@@ -193,9 +193,9 @@ function App(props: AppProps) {
         >
           <UserSettingsProvider>
             <Notifications />
-            <NavbarWithNoSSR>
+            <TopBarWithNoSSR>
               <props.Component {...props.pageProps} />
-            </NavbarWithNoSSR>
+            </TopBarWithNoSSR>
           </UserSettingsProvider>
         </MantineProvider>
       </SessionProvider>

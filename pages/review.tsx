@@ -200,7 +200,6 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
       [deck.id, deck.name, updateDeckMutation],
     );
 
-
     return (
       <Card
         shadow="md"
