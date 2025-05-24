@@ -1,23 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import {
-  AppShell,
-  Group,
-  useMantineTheme,
-  Menu,
-  Button,
-  rem,
-} from "@mantine/core";
-import {
-  IconStar,
-  IconPlus,
-  IconCards,
-  IconPencil,
-  IconSettings,
-  IconBrandGithub,
-  IconBrandDiscord,
-} from "@tabler/icons-react";
+import { AppShell, Group, useMantineTheme } from "@mantine/core";
 
 interface TopBarProps {
   children: React.ReactNode;
@@ -25,24 +9,6 @@ interface TopBarProps {
 
 const TopBar = ({ children }: TopBarProps) => {
   const theme = useMantineTheme();
-
-  const menuItems = [
-    { path: "/review", name: "Study Cards", icon: IconStar },
-    { path: "/create", name: "Create Cards", icon: IconPlus },
-    { path: "/cards", name: "View Cards", icon: IconCards },
-    { path: "/writing", name: "View Writing", icon: IconPencil },
-    { path: "/user", name: "Settings", icon: IconSettings },
-    {
-      path: "https://github.com/RickCarlino/KoalaCards",
-      name: "GitHub",
-      icon: IconBrandGithub,
-    },
-    {
-      path: "https://discord.gg/jj7wXhQWJe",
-      name: "Discord",
-      icon: IconBrandDiscord,
-    },
-  ];
 
   return (
     <AppShell
@@ -56,7 +22,7 @@ const TopBar = ({ children }: TopBarProps) => {
       }}
     >
       <AppShell.Header>
-        <Group h="100%" px="md" justify="space-between">
+        <Group h="100%" px="md" justify="center">
           <Link href="/" style={{ textDecoration: "none" }}>
             <Image
               src="/nav.png"
@@ -70,47 +36,6 @@ const TopBar = ({ children }: TopBarProps) => {
               }}
             />
           </Link>
-
-          <Menu shadow="md" width={200}>
-            <Menu.Target>
-              <Button variant="subtle" color="pink">
-                Menu
-              </Button>
-            </Menu.Target>
-
-            <Menu.Dropdown>
-              {menuItems.map((item, index) => {
-                const Icon = item.icon;
-                const isExternal = item.path.startsWith("http");
-
-                if (isExternal) {
-                  return (
-                    <Menu.Item
-                      key={index}
-                      leftSection={<Icon size={rem(14)} />}
-                      component="a"
-                      href={item.path}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {item.name}
-                    </Menu.Item>
-                  );
-                }
-                
-                return (
-                  <Menu.Item
-                    key={index}
-                    leftSection={<Icon size={rem(14)} />}
-                    component={Link}
-                    href={item.path}
-                  >
-                    {item.name}
-                  </Menu.Item>
-                );
-              })}
-            </Menu.Dropdown>
-          </Menu>
         </Group>
       </AppShell.Header>
 
