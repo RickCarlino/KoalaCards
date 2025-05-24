@@ -120,11 +120,16 @@ const Index: React.FC<IndexProps> = (props) => {
 
   return (
     <Container size="sm" py="xl">
-      <Text size="xl" fw={700} ta="center" mb="xl">
-        Welcome to Koala Cards
-      </Text>
+      <div style={{ textAlign: "center", marginBottom: rem(40) }}>
+        <Text size={rem(32)} fw={700} c="pink.6" mb="xs">
+          Welcome to Koala Cards
+        </Text>
+        <Text size="md" c="gray.6">
+          Your language learning marsupial companion.
+        </Text>
+      </div>
 
-      <Stack gap="md">
+      <Stack gap="xs">
         {visibleItems.map((item, index) => {
           const Icon = item.icon;
           const path = item.path(props);
@@ -134,20 +139,25 @@ const Index: React.FC<IndexProps> = (props) => {
           const cardContent = (
             <Card
               key={index}
-              shadow="sm"
-              p="lg"
+              p="xs"
+              px="sm"
               radius="md"
-              withBorder
               style={{
                 cursor: "pointer",
-                transition: "all 0.2s ease",
-                animation: shouldBlink ? "blink 1s infinite" : undefined,
+                transition: "all 0.3s ease",
+                animation: shouldBlink
+                  ? "blink 2s ease-in-out infinite"
+                  : undefined,
+                backgroundColor: "#FFF0F6",
+                border: "1px solid #FFDEEB",
               }}
               styles={{
                 root: {
                   "&:hover": {
-                    transform: "translateY(-2px)",
-                    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+                    transform: "translateY(-1px)",
+                    boxShadow: "0 4px 12px rgba(246, 101, 149, 0.1)",
+                    backgroundColor: "#FFDEEB",
+                    borderColor: "#FCC2D7",
                   },
                 },
               }}
@@ -156,11 +166,22 @@ const Index: React.FC<IndexProps> = (props) => {
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: rem(12),
+                  gap: rem(8),
                 }}
               >
-                <Icon size={rem(24)} stroke={1.5} />
-                <Text size="lg" fw={500}>
+                <div
+                  style={{
+                    backgroundColor: "#FFDEEB",
+                    borderRadius: "6px",
+                    padding: rem(4),
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Icon size={rem(16)} stroke={1.5} color="#E64980" />
+                </div>
+                <Text size="sm" fw={500} c="pink.7">
                   {item.name}
                 </Text>
               </div>
@@ -196,13 +217,16 @@ const Index: React.FC<IndexProps> = (props) => {
       <style jsx>{`
         @keyframes blink {
           0% {
-            border-color: inherit;
+            border-color: #ffdeeb;
+            box-shadow: 0 4px 12px rgba(246, 101, 149, 0);
           }
           50% {
             border-color: #f06595;
+            box-shadow: 0 4px 20px rgba(246, 101, 149, 0.3);
           }
           100% {
-            border-color: inherit;
+            border-color: #ffdeeb;
+            box-shadow: 0 4px 12px rgba(246, 101, 149, 0);
           }
         }
       `}</style>
