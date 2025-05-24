@@ -139,9 +139,6 @@ const Index: React.FC<IndexProps> = (props) => {
           const cardContent = (
             <Card
               key={index}
-              p="xs"
-              px="sm"
-              radius="md"
               style={{
                 cursor: "pointer",
                 transition: "all 0.3s ease",
@@ -150,38 +147,49 @@ const Index: React.FC<IndexProps> = (props) => {
                   : undefined,
                 backgroundColor: "#FFF0F6",
                 border: "1px solid #FFDEEB",
+                padding: "12px 16px",
+                borderRadius: "8px",
               }}
-              styles={{
-                root: {
-                  "&:hover": {
-                    transform: "translateY(-1px)",
-                    boxShadow: "0 4px 12px rgba(246, 101, 149, 0.1)",
-                    backgroundColor: "#FFDEEB",
-                    borderColor: "#FCC2D7",
-                  },
-                },
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-1px)";
+                e.currentTarget.style.boxShadow =
+                  "0 4px 12px rgba(246, 101, 149, 0.1)";
+                e.currentTarget.style.backgroundColor = "#FFDEEB";
+                e.currentTarget.style.borderColor = "#FCC2D7";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = "none";
+                e.currentTarget.style.backgroundColor = "#FFF0F6";
+                e.currentTarget.style.borderColor = "#FFDEEB";
               }}
             >
               <div
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: rem(8),
+                  gap: "8px",
                 }}
               >
                 <div
                   style={{
                     backgroundColor: "#FFDEEB",
                     borderRadius: "6px",
-                    padding: rem(4),
+                    padding: "4px",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
+                    flexShrink: 0,
                   }}
                 >
-                  <Icon size={rem(16)} stroke={1.5} color="#E64980" />
+                  <Icon size={16} stroke={1.5} color="#E64980" />
                 </div>
-                <Text size="sm" fw={500} c="pink.7">
+                <Text
+                  size="sm"
+                  fw={500}
+                  c="pink.7"
+                  style={{ lineHeight: 1.2 }}
+                >
                   {item.name}
                 </Text>
               </div>
