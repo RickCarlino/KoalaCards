@@ -27,16 +27,6 @@ const Voices: LangLookTable = {
       "ar-XA-Wavenet-D",
     ],
   },
-  cn: {
-    F: ["cmn-CN-Wavenet-A", "cmn-CN-Wavenet-D"],
-    M: ["cmn-CN-Wavenet-B", "cmn-CN-Wavenet-C"],
-    N: [
-      "cmn-CN-Wavenet-A",
-      "cmn-CN-Wavenet-B",
-      "cmn-CN-Wavenet-C",
-      "cmn-CN-Wavenet-D",
-    ],
-  },
   he: {
     F: ["he-IL-Wavenet-A", "he-IL-Wavenet-C"],
     M: ["he-IL-Wavenet-B", "he-IL-Wavenet-D"],
@@ -68,13 +58,6 @@ const Voices: LangLookTable = {
       "tr-TR-Wavenet-D",
       "tr-TR-Wavenet-E",
     ],
-  },
-  th: {
-    F: ["th-TH-Standard-A"],
-    M: [
-      "th-TH-Standard-A", // THIS IS NOT ACTUALLY A MALE VOICE. NO MALE OPTION AVAILABLE.
-    ],
-    N: ["th-TH-Standard-A"],
   },
   en: {
     F: ["en-US-Wavenet-C"],
@@ -195,16 +178,6 @@ const Voices: LangLookTable = {
       "id-ID-Wavenet-B",
       "id-ID-Wavenet-C",
       "id-ID-Wavenet-D",
-    ],
-  },
-  ja: {
-    F: ["ja-JP-Wavenet-A", "ja-JP-Wavenet-C"],
-    M: ["ja-JP-Wavenet-B", "ja-JP-Wavenet-D"],
-    N: [
-      "ja-JP-Wavenet-A",
-      "ja-JP-Wavenet-B",
-      "ja-JP-Wavenet-C",
-      "ja-JP-Wavenet-D",
     ],
   },
   ms: {

@@ -71,18 +71,6 @@ const frequencyListsData: LanguageData[] = [
     ],
   },
   {
-    name: "Mandarin Chinese",
-    lists: [
-      {
-        title: "Mandarin Word Frequency List (Academia Sinica, 10k Words)",
-        description:
-          "A frequency list of the 10,000 most common Mandarin words used in modern Taiwanese Mandarin. This list was compiled by Academia Sinica (CKIP group).",
-        url: "https://en.wiktionary.org/wiki/Appendix:Mandarin_Frequency_lists",
-        source: "Academia Sinica Mandarin corpus (10k words)",
-      },
-    ],
-  },
-  {
     name: "Italian",
     lists: [
       {
@@ -98,18 +86,6 @@ const frequencyListsData: LanguageData[] = [
           "For a quick view, Wiktionary also provides the top 1,000 Italian words from subtitles, derived from a 5.6 million-word subtitle corpus (movies/TV, compiled in 2008).",
         url: "https://en.wiktionary.org/wiki/Wiktionary:Frequency_lists/Italian1000",
         source: "Italian subtitles corpus (5.6M words, 2008)",
-      },
-    ],
-  },
-  {
-    name: "Japanese",
-    lists: [
-      {
-        title: "Japanese Wikipedia Frequency Lists",
-        description:
-          "Frequency lists drawn from Japanese Wikipedia dumps (2013 and 2022). These lists provide rankings of high-frequency Japanese words in current use on Wikipedia.",
-        url: "https://en.wiktionary.org/wiki/Wiktionary:Frequency_lists/Japanese",
-        source: "Japanese Wikipedia corpus (2013, 2022)",
       },
     ],
   },
