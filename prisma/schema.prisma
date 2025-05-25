@@ -61,13 +61,13 @@ model UserSettings {
   // Audio playback speed min: 0.5 max: 2
   playbackSpeed      Float    @default(1)
   // Cards/day max
-  cardsPerDayMax     Int      @default(21)
+  cardsPerDayMax     Int      @default(7)
   // Value from 0 to 1 representing the percentage liklihood
   // of a random playback of the user's audio.
-  playbackPercentage Float    @default(1)
+  playbackPercentage Float    @default(0.125)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
-  dailyWritingGoal   Int      @default(500) // Default goal of 500 characters
+  dailyWritingGoal   Int      @default(150)
   writingFirst       Boolean  @default(false) // Always quiz writing before reviewing cards
 }
 
