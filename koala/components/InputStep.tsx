@@ -72,11 +72,13 @@ export function InputStep({
         </Text>
 
         <Text size="sm" c={theme.colors.gray[7]} mb="md">
-          <b>Koala is built for self-study learners who have a textbook or
-          language course to follow.</b> If you don't have material of your
-          own, that's OK. Koala can generate content for you to study.
-          Click the button below until you find a topic that is interesting
-          to you.
+          <b>
+            Koala is built for self-study learners who have a textbook or
+            language course to follow.
+          </b>{" "}
+          If you don't have material of your own, that's OK. Koala can
+          generate content for you to study. Click the button below until
+          you find a topic that is interesting to you.
         </Text>
 
         <Button

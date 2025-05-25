@@ -56,6 +56,40 @@ export async function getServerSideProps(
     },
   });
 
+  // Get studied card counts for all users
+  const studiedCounts = await prismaClient.quiz.groupBy({
+    by: ["cardId"],
+    where: {
+      repetitions: {
+        gt: 0,
+      },
+    },
+    _count: {
+      cardId: true,
+    },
+  });
+
+  // Get cards with their userIds
+  const cardIds = studiedCounts.map((s) => s.cardId);
+  const cards = await prismaClient.card.findMany({
+    where: {
+      id: {
+        in: cardIds,
+      },
+    },
+    select: {
+      id: true,
+      userId: true,
+    },
+  });
+
+  // Create a map of userId to studied card count
+  const studiedByUser = new Map<string, number>();
+  cards.forEach((card) => {
+    const count = studiedByUser.get(card.userId) || 0;
+    studiedByUser.set(card.userId, count + 1);
+  });
+
   const userData = users.map((u) => {
     return {
       id: u.id,
@@ -64,6 +98,7 @@ export async function getServerSideProps(
       createdAt: u.createdAt?.toISOString() ?? null,
       daysSinceLastSeen: daysSince(u.lastSeen),
       cardCount: u._count.Card,
+      studiedCount: studiedByUser.get(u.id) || 0,
       isAdmin: !!u.email && superUsers.includes(u.email.toLowerCase()),
     };
   });
@@ -89,6 +124,7 @@ export default function AdminPage({ userData }: Props) {
             <th>Email</th>
             <th>Days Since</th>
             <th># Cards</th>
+            <th>Studied</th>
             <th>Admin?</th>
             <th>Created At</th>
           </tr>
@@ -99,6 +135,7 @@ export default function AdminPage({ userData }: Props) {
               <td>{u.email}</td>
               <td>{u.daysSinceLastSeen}</td>
               <td>{u.cardCount}</td>
+              <td>{u.studiedCount}</td>
               <td>{u.isAdmin ? "Yes" : "No"}</td>
               <td>
                 {u.createdAt

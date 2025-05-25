@@ -84,7 +84,7 @@ Unlike traditional SRS apps that often rely on self-grading, KoalaCards provides
 ## Supported Languages
 
 *   **Officially Supported:** Korean, French, Italian, Spanish
-*   **Untested/Limited Support:** Arabic, Catalan, Chinese, Czech, Danish, Dutch, English, Finnish, Galician, German, Greek, Gujarati, Hebrew, Hindi, Hungarian, Indonesian, Japanese, Kannada, Latvian, Lithuanian, Malay, Marathi, Norwegian, Polish, Portuguese, Punjabi, Romanian, Russian, Serbian, Slovak, Swedish, Thai, Turkish, Ukrainian, Vietnamese
+*   **Untested/Limited Support:** Arabic, Catalan, Czech, Danish, Dutch, English, Finnish, Galician, German, Greek, Gujarati, Hebrew, Hindi, Hungarian, Indonesian, Kannada, Latvian, Lithuanian, Malay, Marathi, Norwegian, Polish, Portuguese, Punjabi, Romanian, Russian, Serbian, Slovak, Swedish, Turkish, Ukrainian, Vietnamese
 
 *Note: While multiple languages are supported, the primary focus is English speakers learning Korean.*
 

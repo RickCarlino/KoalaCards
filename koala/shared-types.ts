@@ -4,7 +4,6 @@ export type Gender = "M" | "F" | "N";
 export type LangCode =
   | "ar" // Arabic
   | "ca" // Catalan
-  | "cn" // Chinese
   | "cs" // Czech
   | "da" // Danish
   | "de" // German
@@ -20,7 +19,6 @@ export type LangCode =
   | "hu" // Hungarian
   | "id" // Indonesian
   | "it" // Italian
-  | "ja" // Japanese
   | "kn" // Kannada
   | "ko" // Korean
   | "lt" // Lithuanian
@@ -37,10 +35,9 @@ export type LangCode =
   | "sk" // Slovak
   | "sr" // Serbian
   | "sv" // Swedish
-  | "th"
   | "tr" // Turkish
   | "uk" // Ukrainian
-  | "vi"; // Vietnamese // Thai
+  | "vi"; // Vietnamese
 export type LessonType = "listening" | "speaking" | "dictation" | "review";
 export type QuizResult = "error" | "fail" | "pass";
 export type YesNo = "yes" | "no";
@@ -48,7 +45,6 @@ export type YesNo = "yes" | "no";
 export const LANG_CODES = z.union([
   z.literal("ar"),
   z.literal("ca"),
-  z.literal("cn"),
   z.literal("cs"),
   z.literal("da"),
   z.literal("de"),
@@ -64,7 +60,6 @@ export const LANG_CODES = z.union([
   z.literal("hu"),
   z.literal("id"),
   z.literal("it"),
-  z.literal("ja"),
   z.literal("kn"),
   z.literal("ko"),
   z.literal("lt"),
@@ -81,7 +76,6 @@ export const LANG_CODES = z.union([
   z.literal("sk"),
   z.literal("sr"),
   z.literal("sv"),
-  z.literal("th"),
   z.literal("tr"),
   z.literal("uk"),
   z.literal("vi"),
@@ -90,7 +84,6 @@ export const LANG_CODES = z.union([
 export const supportedLanguages: Record<LangCode, string> = {
   ar: "Arabic",
   ca: "Catalan",
-  cn: "Chinese",
   cs: "Czech",
   da: "Danish",
   de: "German",
@@ -106,7 +99,6 @@ export const supportedLanguages: Record<LangCode, string> = {
   hu: "Hungarian",
   id: "Indonesian",
   it: "Italian",
-  ja: "Japanese",
   kn: "Kannada",
   ko: "Korean",
   lt: "Lithuanian",
@@ -123,7 +115,6 @@ export const supportedLanguages: Record<LangCode, string> = {
   sk: "Slovak",
   sr: "Serbian",
   sv: "Swedish",
-  th: "Thai",
   tr: "Turkish",
   uk: "Ukrainian",
   vi: "Vietnamese",

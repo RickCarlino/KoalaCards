@@ -135,7 +135,7 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
   function DeckCard({ deck }: { deck: DeckWithReviewInfo }) {
     const [isEditing, setIsEditing] = useState(false);
     const [title, setTitle] = useState(deck.name);
-    const take = 7; // Hard-coded to 7 cards
+    const take = 4;
     const updateDeckMutation = trpc.updateDeck.useMutation();
     const deleteDeckMutation = trpc.deleteDeck.useMutation();
 
