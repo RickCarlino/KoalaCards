@@ -52,7 +52,9 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     },
   });
 
-  const writingCount = await prismaClient.quiz.count({});
+  const writingCount = await prismaClient.writingSubmission.count({
+    where: { userId: dbUser.id },
+  });
 
   return {
     props: {
@@ -88,28 +90,28 @@ const navItems: NavItem[] = [
   {
     path: () => "/writing",
     name: "View Writing",
-    show: (props) => props.didWrite,
+    show: (props) => props.didWrite && props.didStudy,
     blink: () => false,
     icon: IconPencil,
   },
   {
     path: () => "/user",
     name: "Settings",
-    show: (props) => props.hasCards,
+    show: (props) => props.hasCards && props.didStudy,
     blink: () => false,
     icon: IconSettings,
   },
   {
     path: () => "https://github.com/RickCarlino/KoalaCards",
     name: "GitHub",
-    show: (props) => props.hasCards,
+    show: (props) => props.hasCards && props.didStudy,
     blink: () => false,
     icon: IconBrandGithub,
   },
   {
     path: () => "https://discord.gg/jj7wXhQWJe",
     name: "Discord",
-    show: (props) => props.hasCards,
+    show: (props) => props.hasCards && props.didStudy,
     blink: () => false,
     icon: IconBrandDiscord,
   },
