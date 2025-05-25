@@ -15,15 +15,16 @@ Using three hidden example sentences only as loose inspiration, generate three d
 - Do NOT reveal, paraphrase, or reference the example sentences directly.
 - Treat each example sentence purely as a thematic springboard.
 - Focus on natural, contextually appropriate phrasing suited to learners.
-- Avoid overly literal or off‑beat interpretations of the hidden sentences.
+- Avoid overly literal or off-beat interpretations of the hidden sentences.
 - Writing about "a time you overcame X" is cliché. Stop doing that.
+- Reply in the target language (not English).
 `.trim();
 
 const promptTemplates = [
-  "Comparative / Evaluative: Compare two ideas or experiences implied by the hidden sentence.",
+  // "Comparative / Evaluative: Compare two ideas or experiences implied by the hidden sentence.",
   "Opinion / Argument: Give and support a viewpoint on a topic inspired by the hidden sentence.",
   "Personal Narrative: Draw on the theme hinted by the hidden sentence.",
-  "Procedural / How‑to: Explain a process or give advice based on the hidden sentence.",
+  "Procedural / How-to: Explain a process or give advice based on the hidden sentence.",
   "Reflective / Metacognitive: Encourage the learner to reflect on their beliefs or habits suggested by the hidden sentence.",
   "Scenario + Response: Ask the learner to act a role in a particular scenario.",
 ];
@@ -56,7 +57,7 @@ export const generateWritingPrompts = procedure
     const cards = await prismaClient.card.findMany({
       where: { userId, deckId: input.deckId },
       select: { term: true },
-      take: 100,
+      take: 1000,
     });
     if (cards.length < MIN_CARDS)
       throw new TRPCError({ code: "BAD_REQUEST" });
@@ -95,11 +96,12 @@ async function draftPrompts(
   const systemPrompt = [
     promptIntro,
     tasks,
-    `Write each prompt directly in ${getLangName(
+    `Write your response in ${getLangName(
       deck.langCode,
-    )}, **without numbering, bullets, or labels** – one per line, no extra text.`,
+    )} (not English). **No numbering, bullets, or labels** - one per line, no extra text.`,
   ].join("\n\n");
 
+  console.log(systemPrompt);
   const response = await chat(systemPrompt);
   return response.choices[0].message.content ?? "";
 }
@@ -114,7 +116,7 @@ async function refinePrompts(raw: string) {
   const systemPrompt =
     `You are a creative writing instructor for language learners.\n\n` +
     `Below is a rough list of writing prompts. Please rewrite **each** prompt so it is clear, natural, and engaging **for the target language learner**.\n` +
-    `Return **only** the final prompts – one per line – with **no numbering, bullets, or commentary**.`;
+    `Return **only** the final prompts - one per line - with **no numbering, bullets, or commentary**.`;
 
   const refined =
     (await chat(systemPrompt, firstPass)).choices[0].message.content ?? "";

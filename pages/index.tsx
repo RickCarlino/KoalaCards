@@ -1,8 +1,37 @@
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { prismaClient } from "@/koala/prisma-client";
-import { Container } from "@mantine/core";
+import { Card, Container, rem, Stack, Text } from "@mantine/core";
+import {
+  IconBrandDiscord,
+  IconBrandGithub,
+  IconCards,
+  IconPencil,
+  IconPlus,
+  IconSettings,
+  IconStar,
+} from "@tabler/icons-react";
+import Link from "next/link";
 import { GetServerSideProps } from "next/types";
 import * as React from "react";
+
+interface IndexProps {
+  // Does the user have ANY cards?
+  hasCards: boolean;
+  // Has the user EVER studied?
+  didStudy: boolean;
+  // Has the user EVER done a writing exercise?
+  didWrite: boolean;
+}
+
+interface NavItem {
+  path: (props: IndexProps) => string;
+  name: string;
+  // Don't show the item if it returns true
+  show: (props: IndexProps) => boolean; // See my instructions.
+  // Blink the border
+  blink: (props: IndexProps) => boolean;
+  icon: typeof IconStar;
+}
 
 // Get serverside props:
 export const getServerSideProps: GetServerSideProps = async (context) => {
@@ -16,29 +45,201 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     where: { userId: dbUser.id },
   });
 
-  if (cardCount === 0) {
-    return { redirect: { destination: "/create", permanent: false } };
-  }
+  const reviewCount = await prismaClient.quiz.count({
+    where: {
+      Card: { userId: dbUser.id },
+      repetitions: { gt: 0 },
+    },
+  });
 
-  return { redirect: { destination: "/review", permanent: false } };
+  const writingCount = await prismaClient.writingSubmission.count({
+    where: { userId: dbUser.id },
+  });
+
+  return {
+    props: {
+      hasCards: cardCount > 0,
+      didStudy: reviewCount > 0,
+      didWrite: writingCount > 0,
+    },
+  };
 };
 
-const Index: React.FC = () => {
+const navItems: NavItem[] = [
+  {
+    path: () => "/review",
+    name: "Study Cards",
+    show: (props) => props.hasCards,
+    blink: (props) => props.hasCards && !props.didStudy,
+    icon: IconStar,
+  },
+  {
+    path: (p) => (p.hasCards ? "/create" : "/create-vibe"),
+    name: "Create Cards",
+    show: (_props) => true,
+    blink: (props) => !props.hasCards,
+    icon: IconPlus,
+  },
+  {
+    path: () => "/cards",
+    name: "View Cards",
+    show: (props) => props.hasCards && props.didStudy,
+    blink: () => false,
+    icon: IconCards,
+  },
+  {
+    path: () => "/writing",
+    name: "View Writing",
+    show: (props) => props.didWrite && props.didStudy,
+    blink: () => false,
+    icon: IconPencil,
+  },
+  {
+    path: () => "/user",
+    name: "Settings",
+    show: (props) => props.hasCards && props.didStudy,
+    blink: () => false,
+    icon: IconSettings,
+  },
+  {
+    path: () => "https://github.com/RickCarlino/KoalaCards",
+    name: "GitHub",
+    show: (props) => props.hasCards && props.didStudy,
+    blink: () => false,
+    icon: IconBrandGithub,
+  },
+  {
+    path: () => "https://discord.gg/jj7wXhQWJe",
+    name: "Discord",
+    show: (props) => props.hasCards && props.didStudy,
+    blink: () => false,
+    icon: IconBrandDiscord,
+  },
+];
+
+const Index: React.FC<IndexProps> = (props) => {
+  const visibleItems = navItems.filter((item) => item.show(props));
+
   return (
-    <Container size="xs">
-      <header
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          marginBottom: "20px",
-        }}
-      >
-        <span style={{ fontSize: "24px", fontWeight: "bold" }}>
-          Welcome
-        </span>
-      </header>
-      <p>Click "Study" on the left panel to begin a lesson.</p>
+    <Container size="sm" py="xl">
+      <div style={{ textAlign: "center", marginBottom: rem(40) }}>
+        <Text size={rem(32)} fw={700} c="pink.6" mb="xs">
+          Welcome to Koala Cards
+        </Text>
+        <Text size="md" c="gray.6">
+          Your language learning marsupial companion.
+        </Text>
+      </div>
+
+      <Stack gap="xs">
+        {visibleItems.map((item, index) => {
+          const Icon = item.icon;
+          const path = item.path(props);
+          const isExternal = path.startsWith("http");
+          const shouldBlink = item.blink(props);
+
+          const cardContent = (
+            <Card
+              key={index}
+              style={{
+                cursor: "pointer",
+                transition: "all 0.3s ease",
+                animation: shouldBlink
+                  ? "blink 2s ease-in-out infinite"
+                  : undefined,
+                backgroundColor: "#FFF0F6",
+                border: "1px solid #FFDEEB",
+                padding: "12px 16px",
+                borderRadius: "8px",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-1px)";
+                e.currentTarget.style.boxShadow =
+                  "0 4px 12px rgba(246, 101, 149, 0.1)";
+                e.currentTarget.style.backgroundColor = "#FFDEEB";
+                e.currentTarget.style.borderColor = "#FCC2D7";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = "none";
+                e.currentTarget.style.backgroundColor = "#FFF0F6";
+                e.currentTarget.style.borderColor = "#FFDEEB";
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                <div
+                  style={{
+                    backgroundColor: "#FFDEEB",
+                    borderRadius: "6px",
+                    padding: "4px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  <Icon size={16} stroke={1.5} color="#E64980" />
+                </div>
+                <Text
+                  size="sm"
+                  fw={500}
+                  c="pink.7"
+                  style={{ lineHeight: 1.2 }}
+                >
+                  {item.name}
+                </Text>
+              </div>
+            </Card>
+          );
+
+          if (isExternal) {
+            return (
+              <a
+                key={index}
+                href={path}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ textDecoration: "none" }}
+              >
+                {cardContent}
+              </a>
+            );
+          }
+
+          return (
+            <Link
+              key={index}
+              href={path}
+              style={{ textDecoration: "none" }}
+            >
+              {cardContent}
+            </Link>
+          );
+        })}
+      </Stack>
+
+      <style jsx>{`
+        @keyframes blink {
+          0% {
+            border-color: #ffdeeb;
+            box-shadow: 0 4px 12px rgba(246, 101, 149, 0);
+          }
+          50% {
+            border-color: #f06595;
+            box-shadow: 0 4px 20px rgba(246, 101, 149, 0.3);
+          }
+          100% {
+            border-color: #ffdeeb;
+            box-shadow: 0 4px 12px rgba(246, 101, 149, 0);
+          }
+        }
+      `}</style>
     </Container>
   );
 };

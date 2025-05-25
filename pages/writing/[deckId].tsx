@@ -16,13 +16,12 @@ import {
   Text,
   Textarea,
   Title,
-  useMantineTheme
+  useMantineTheme,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import {
-  IconCheck
-} from "@tabler/icons-react";
+import { IconCheck } from "@tabler/icons-react";
 import { GetServerSideProps } from "next";
+import { alphabetical } from "radash";
 import { useCallback, useMemo, useState } from "react";
 
 type WritingPageProps = { deckId: number; langCode: LangCode };
@@ -67,7 +66,7 @@ export const getServerSideProps: GetServerSideProps<
 };
 
 // Step type to track the current writing flow step
-type Step = "prompt-selection" | "writing" | "feedback";
+type Step = "prompt-selection" | "sample-reading" | "writing" | "feedback";
 
 export default function WritingPage({
   deckId,
@@ -91,6 +90,9 @@ export default function WritingPage({
   const [translatingIdx, setTranslatingIdx] = useState<number | null>(
     null,
   );
+
+  const [sampleResponse, setSampleResponse] = useState<string>("");
+  const [loadingSample, setLoadingSample] = useState(false);
 
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [loadingReview, setLoadingReview] = useState(false);
@@ -152,6 +154,20 @@ export default function WritingPage({
 
   const translate = trpc.translate.useMutation();
   const defineWords = trpc.defineUnknownWords.useMutation();
+  const generateSample = trpc.generateWritingSample.useMutation({
+    onSuccess: (data) => {
+      setSampleResponse(data);
+      setLoadingSample(false);
+    },
+    onError: (err) => {
+      notifications.show({
+        title: "Error",
+        message: err.message || "Failed to generate sample response",
+        color: "red",
+      });
+      setLoadingSample(false);
+    },
+  });
 
   const handleGeneratePrompts = () => {
     setLoadingPrompts(true);
@@ -160,6 +176,7 @@ export default function WritingPage({
     setSelectedWords({});
     setDefinitions([]);
     setDefinitionsError(null);
+    setSampleResponse("");
     generatePrompts.mutate({ deckId });
   };
 
@@ -185,6 +202,23 @@ export default function WritingPage({
     setCurrentStep("writing");
   };
 
+  const handleReadSample = (prompt: string) => {
+    setSelectedPrompt(prompt);
+    setLoadingSample(true);
+    setSelectedWords({});
+    setDefinitions([]);
+    setCurrentStep("sample-reading");
+
+    generateSample.mutate({
+      deckId,
+      prompt,
+    });
+  };
+
+  const handleProceedToWriting = () => {
+    setCurrentStep("writing");
+  };
+
   const handleReview = () => {
     if (!selectedPrompt || !essay.trim()) return;
     setLoadingReview(true);
@@ -200,6 +234,7 @@ export default function WritingPage({
     setSelectedPrompt(null);
     setEssay("");
     setFeedback(null);
+    setSampleResponse("");
     setSelectedWords({});
     setDefinitions([]);
     setDefinitionsError(null);
@@ -294,6 +329,11 @@ export default function WritingPage({
       // Add the essay if it exists
       if (essay.trim()) {
         contextText += "Essay:\n" + essay;
+      }
+
+      // Add the sample response if viewing it
+      if (currentStep === "sample-reading" && sampleResponse) {
+        contextText += "Sample Response:\n" + sampleResponse;
       }
 
       // Add corrected text if available
@@ -458,6 +498,14 @@ export default function WritingPage({
               >
                 {translations[i] ? "Translated" : "Translate"}
               </Button>
+              <Button
+                size="sm"
+                variant="subtle"
+                loading={loadingSample && selectedPrompt === p}
+                onClick={() => handleReadSample(p)}
+              >
+                Read sample response
+              </Button>
             </Group>
           </Stack>
           {translations[i] && (
@@ -471,6 +519,84 @@ export default function WritingPage({
           )}
         </Paper>
       ))}
+    </Paper>
+  );
+  // Render sample reading step
+  const renderSampleReadingStep = () => (
+    <Paper withBorder shadow="sm" p="md" mb="lg">
+      <Stack gap="md">
+        <Title order={4}>Sample Response</Title>
+        <Text fw={600}>Selected Prompt</Text>
+        {selectedPrompt && renderClickableText(selectedPrompt)}
+        <Text fw={600}>Sample Response (Click unknown words)</Text>
+        {loadingSample ? (
+          <Group>
+            <Loader size="sm" />
+            <Text c="dimmed">Generating sample response...</Text>
+          </Group>
+        ) : (
+          renderClickableText(sampleResponse)
+        )}
+
+        <Group>
+          <Button onClick={handleExplain} disabled={!canExplain}>
+            Explain Selected Words ({selectedCount})
+          </Button>
+          {canCreate && (
+            <Button onClick={handleCreateCards}>
+              Create Cards from Words ({definitions.length})
+            </Button>
+          )}
+          <Button onClick={handleProceedToWriting} variant="filled">
+            Continue to Writing
+          </Button>
+        </Group>
+
+        {definitionsLoading && (
+          <Box
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+            }}
+          >
+            <Loader size="sm" color="blue" />
+            <Text ml="sm" c="dimmed">
+              Getting definitions...
+            </Text>
+          </Box>
+        )}
+
+        {definitionsError && (
+          <Alert title="Error" color="red">
+            {definitionsError}
+          </Alert>
+        )}
+
+        {showDefs && (
+          <Stack gap="xs">
+            <Text fw={600}>Word Definitions</Text>
+            {alphabetical(definitions, (x) => x.definition).map((d, i) => {
+              const showLemma =
+                d.lemma && d.lemma.toLowerCase() !== d.word.toLowerCase();
+              return (
+                <Box key={i}>
+                  <Text fw={700} component="span">
+                    {d.word}
+                  </Text>
+                  {showLemma && (
+                    <Text component="span" c="dimmed" fs="italic">
+                      {" "}
+                      ({d.lemma})
+                    </Text>
+                  )}
+                  <Text component="span">: {d.definition}</Text>
+                </Box>
+              );
+            })}
+          </Stack>
+        )}
+      </Stack>
     </Paper>
   );
 
@@ -505,27 +631,41 @@ export default function WritingPage({
         mb="xs"
         disabled={loadingReview}
       />
-      
+
       <Box mb="md">
         <Stack gap="xs" style={{ flexGrow: 1 }}>
           <Group justify="space-between">
             <Text size="sm" c="dimmed">
-              {(writingProgressData?.progress || 0) + essay.length} characters
-              {writingProgressData?.goal ? ` / ${writingProgressData.goal} goal` : ''}
+              {(writingProgressData?.progress || 0) + essay.length}{" "}
+              characters
+              {writingProgressData?.goal
+                ? ` / ${writingProgressData.goal} goal`
+                : ""}
             </Text>
-            {writingProgressData?.goal && ((writingProgressData?.progress || 0) + essay.length) >= writingProgressData.goal && (
-              <Group gap="xs">
-                <IconCheck size={16} color={theme.colors.teal[6]} />
-                <Text size="sm" c="teal">Goal reached!</Text>
-              </Group>
-            )}
+            {writingProgressData?.goal &&
+              (writingProgressData?.progress || 0) + essay.length >=
+                writingProgressData.goal && (
+                <Group gap="xs">
+                  <IconCheck size={16} color={theme.colors.teal[6]} />
+                  <Text size="sm" c="teal">
+                    Goal reached!
+                  </Text>
+                </Group>
+              )}
           </Group>
           {writingProgressData?.goal && (
-            <Progress 
-              value={(((writingProgressData?.progress || 0) + essay.length) / writingProgressData.goal) * 100} 
+            <Progress
+              value={
+                (((writingProgressData?.progress || 0) + essay.length) /
+                  writingProgressData.goal) *
+                100
+              }
               size="sm"
               color={"blue"}
-              {...(((writingProgressData?.progress || 0) + essay.length) >= writingProgressData.goal ? { striped: true, animated: true } : {})}
+              {...((writingProgressData?.progress || 0) + essay.length >=
+              writingProgressData.goal
+                ? { striped: true, animated: true }
+                : {})}
             />
           )}
         </Stack>
@@ -606,7 +746,7 @@ export default function WritingPage({
         {showDefs && (
           <Stack gap="xs">
             <Text fw={600}>Word Definitions</Text>
-            {definitions.map((d, i) => {
+            {alphabetical(definitions, (x) => x.definition).map((d, i) => {
               const showLemma =
                 d.lemma && d.lemma.toLowerCase() !== d.word.toLowerCase();
               return (
@@ -642,6 +782,7 @@ export default function WritingPage({
           {hasPrompts && renderPromptSelectionStep()}
         </>
       )}
+      {currentStep === "sample-reading" && renderSampleReadingStep()}
       {currentStep === "writing" && renderWritingStep()}
       {currentStep === "feedback" && renderFeedbackStep()}
     </Container>

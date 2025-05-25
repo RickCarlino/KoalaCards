@@ -5,34 +5,31 @@ import {
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { trpc } from "@/koala/trpc-config";
 import {
+  Alert,
   Badge,
   Button,
   Card,
-  Center,
   Checkbox,
   Container,
   Grid,
   Group,
-  NumberInput,
   Switch,
   Text,
   TextInput,
-  Title,
-  useMantineTheme,
-  Alert,
 } from "@mantine/core";
 import {
   IconCheck,
+  IconGitMerge,
   IconPencil,
+  IconPlus,
+  IconStars,
   IconTrash,
   IconX,
-  IconGitMerge,
-  IconStars,
 } from "@tabler/icons-react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { GetServerSideProps } from "next/types";
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useState } from "react";
 
 type ReviewPageProps = {
   decks: DeckWithReviewInfo[];
@@ -62,42 +59,27 @@ export const getServerSideProps: GetServerSideProps<
 };
 
 export default function ReviewPage({ decks }: ReviewPageProps) {
-  const theme = useMantineTheme();
   const router = useRouter();
   const [selectedDeckIds, setSelectedDeckIds] = useState<number[]>([]);
   const [isMerging, setIsMerging] = useState(false);
   const [mergeError, setMergeError] = useState<string | null>(null);
-  const [sparkleStyles, setSparkleStyles] = useState<React.CSSProperties>(
-    {},
-  );
-
-  // CSS for subtle highlight animation that plays once
-  const sparkleKeyframes = `
-    @keyframes subtleHighlight {
-      0% { transform: scale(1); box-shadow: 0 0 0px rgba(255, 133, 162, 0); }
-      50% { transform: scale(1.08); box-shadow: 0 0 15px rgba(255, 133, 162, 0.5); }
-      100% { transform: scale(1); box-shadow: 0 0 5px rgba(255, 133, 162, 0.2); }
-    }
-    
-    @keyframes gentleGlow {
-      0% { text-shadow: none; }
-      50% { text-shadow: 0 0 8px rgba(255, 133, 162, 0.8); }
-      100% { text-shadow: 0 0 3px rgba(255, 133, 162, 0.3); }
+  // Blink animation styles from index.tsx
+  const blinkKeyframes = `
+    @keyframes blink {
+      0% {
+        border-color: #ffdeeb;
+        box-shadow: 0 4px 12px rgba(246, 101, 149, 0);
+      }
+      50% {
+        border-color: #f06595;
+        box-shadow: 0 4px 20px rgba(246, 101, 149, 0.3);
+      }
+      100% {
+        border-color: #ffdeeb;
+        box-shadow: 0 4px 12px rgba(246, 101, 149, 0);
+      }
     }
   `;
-
-  // Apply animation on mount - plays once and stops
-  useEffect(() => {
-    setSparkleStyles({
-      animation:
-        "subtleHighlight 1.2s ease-in-out forwards, gentleGlow 1.5s ease-in-out forwards",
-      fontWeight: 700,
-      position: "relative",
-      zIndex: 1,
-      boxShadow: "0 0 5px rgba(255, 133, 162, 0.2)",
-      transition: "all 0.3s ease",
-    });
-  }, []);
 
   const mergeDecks = trpc.mergeDecks.useMutation({
     onSuccess: () => {
@@ -153,7 +135,7 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
   function DeckCard({ deck }: { deck: DeckWithReviewInfo }) {
     const [isEditing, setIsEditing] = useState(false);
     const [title, setTitle] = useState(deck.name);
-    const [take, setTake] = useState(21);
+    const take = 7; // Hard-coded to 7 cards
     const updateDeckMutation = trpc.updateDeck.useMutation();
     const deleteDeckMutation = trpc.deleteDeck.useMutation();
 
@@ -201,30 +183,35 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
       [deck.id, deck.name, updateDeckMutation],
     );
 
-    const handleTakeChange = useCallback((value: string | number) => {
-      const numValue =
-        typeof value === "number" ? value : parseFloat(value);
-      const clampedValue = Math.max(7, Math.min(45, numValue)); // Ensure value is within range 7-45
-      setTake(isNaN(clampedValue) ? 21 : clampedValue);
-    }, []);
-
     return (
       <Card
-        shadow="md"
-        padding="md"
-        radius="lg"
-        withBorder
         style={{
           height: "100%",
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
+          backgroundColor: "#FFF0F6",
+          border: "2px solid #FFDEEB",
+          borderRadius: "12px",
+          padding: "16px",
+          transition: "all 0.3s ease",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = "translateY(-2px)";
+          e.currentTarget.style.boxShadow =
+            "0 6px 16px rgba(246, 101, 149, 0.12)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = "translateY(0)";
+          e.currentTarget.style.boxShadow = "none";
         }}
       >
         <Card.Section
           style={{
-            backgroundColor: theme.colors.pink[0],
-            padding: theme.spacing.md,
+            backgroundColor: "#FFDEEB",
+            padding: "12px",
+            marginBottom: "12px",
+            borderRadius: "8px",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
@@ -301,58 +288,108 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
           </Group>
         </Card.Section>
         <Group justify="apart" mt="md">
-          <Badge color="pink" variant="light" size="lg">
+          <Badge
+            style={{
+              backgroundColor: "#FFDEEB",
+              color: "#E64980",
+              border: "1px solid #FCC2D7",
+              padding: "6px 12px",
+              fontSize: "14px",
+            }}
+          >
             {deck.quizzesDue} Due
           </Badge>
-          <Badge color="blue" variant="light" size="lg">
+          <Badge
+            style={{
+              backgroundColor: "#E3F2FD",
+              color: "#1976D2",
+              border: "1px solid #90CAF9",
+              padding: "6px 12px",
+              fontSize: "14px",
+            }}
+          >
             {deck.newQuizzes} New
           </Badge>
         </Group>
-        <Center mt="md" style={{ width: "100%" }}>
-          <Group>
-            <NumberInput
-              value={take}
-              onChange={handleTakeChange}
-              min={7}
-              max={45}
-              placeholder="Cards"
-              size="sm"
-              variant="filled"
-              style={{ width: 80 }}
-            />
-            <>
-              <style>{sparkleKeyframes}</style>
-              <Button
-                component={Link}
-                href={`/review/${deck.id}?take=${take}`}
-                variant="filled"
-                color="pink"
-                radius="xl"
-                size="md"
-                leftSection={<IconStars size={16} />}
-                style={{
-                  ...sparkleStyles,
-                  whiteSpace: "normal",
-                  textAlign: "center",
-                  fontWeight: 700,
-                }}
-              >
-                Study {take} Cards
-              </Button>
-            </>
-            <Button
-              component={Link}
-              href={`/writing/${deck.id}`}
-              variant="outline"
-              color="pink"
-              radius="xl"
-              size="sm"
-              style={{ whiteSpace: "normal", textAlign: "center" }}
+        <div style={{ marginTop: "16px" }}>
+          <style>{blinkKeyframes}</style>
+          <Link
+            href={`/review/${deck.id}?take=${take}`}
+            style={{
+              textDecoration: "none",
+              display: "block",
+              marginBottom: "8px",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+                padding: "10px 20px",
+                backgroundColor: "#F06595",
+                color: "white",
+                borderRadius: "8px",
+                fontWeight: 600,
+                fontSize: "16px",
+                cursor: "pointer",
+                transition: "all 0.3s ease",
+                border: "2px solid #F06595",
+                animation:
+                  deck.quizzesDue > 0
+                    ? "blink 2s ease-in-out infinite"
+                    : undefined,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#E64980";
+                e.currentTarget.style.borderColor = "#E64980";
+                e.currentTarget.style.transform = "translateY(-1px)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "#F06595";
+                e.currentTarget.style.borderColor = "#F06595";
+                e.currentTarget.style.transform = "translateY(0)";
+              }}
             >
+              <IconStars size={20} stroke={2} />
+              Study Cards
+            </div>
+          </Link>
+          <Link
+            href={`/writing/${deck.id}`}
+            style={{ textDecoration: "none", display: "block" }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+                padding: "8px 16px",
+                backgroundColor: "transparent",
+                color: "#E64980",
+                borderRadius: "8px",
+                fontWeight: 500,
+                fontSize: "14px",
+                cursor: "pointer",
+                transition: "all 0.3s ease",
+                border: "1px solid #FCC2D7",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#FFDEEB";
+                e.currentTarget.style.borderColor = "#F06595";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+                e.currentTarget.style.borderColor = "#FCC2D7";
+              }}
+            >
+              <IconPencil size={16} stroke={1.5} />
               Writing Practice
-            </Button>
-          </Group>
-        </Center>
+            </div>
+          </Link>
+        </div>
         <Group mt="md" grow align="center">
           <Switch
             checked={deck.published}
@@ -368,37 +405,67 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
   function NoDecksMessage() {
     return (
       <Container size="md" py="xl">
-        <Card
-          shadow="md"
-          padding="xl"
-          radius="lg"
-          withBorder
-          style={{
-            background: "rgba(255, 255, 255, 0.9)",
-            border: `2px solid ${theme.colors.pink[3]}`,
-          }}
-        >
-          <Title
-            order={1}
-            mb="lg"
-            style={{ textAlign: "center", color: theme.colors.pink[6] }}
+        <div style={{ textAlign: "center", marginBottom: "40px" }}>
+          <Text
+            style={{
+              fontSize: "32px",
+              fontWeight: 700,
+              color: "#E64980",
+              marginBottom: "8px",
+            }}
           >
             Welcome to Koala Cards 🌸
-          </Title>
-          <Text size="lg" mb="xl" style={{ textAlign: "center" }}>
-            Start your learning journey by adding some cards. Your progress
-            starts here!
           </Text>
-          <Button
-            component={Link}
-            href="/create"
-            color="pink"
-            radius="xl"
-            size="lg"
-            fullWidth
+          <Text
+            style={{
+              fontSize: "16px",
+              color: "#868E96",
+              marginBottom: "32px",
+            }}
           >
-            Add Cards
-          </Button>
+            Start your learning journey by adding some cards
+          </Text>
+        </div>
+        <Card
+          style={{
+            backgroundColor: "#FFF0F6",
+            border: "2px solid #FFDEEB",
+            borderRadius: "12px",
+            padding: "32px",
+            textAlign: "center",
+          }}
+        >
+          <Link href="/create" style={{ textDecoration: "none" }}>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "12px",
+                padding: "14px 32px",
+                backgroundColor: "#F06595",
+                color: "white",
+                borderRadius: "8px",
+                fontWeight: 600,
+                fontSize: "18px",
+                cursor: "pointer",
+                transition: "all 0.3s ease",
+                border: "2px solid #F06595",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#E64980";
+                e.currentTarget.style.borderColor = "#E64980";
+                e.currentTarget.style.transform = "translateY(-2px)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "#F06595";
+                e.currentTarget.style.borderColor = "#F06595";
+                e.currentTarget.style.transform = "translateY(0)";
+              }}
+            >
+              <IconPlus size={24} stroke={2} />
+              Add Your First Cards
+            </div>
+          </Link>
         </Card>
       </Container>
     );
@@ -414,14 +481,21 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
 
   return (
     <Container size="lg" py="md">
-      <Title
-        order={2}
-        mt="md"
-        mb="lg"
-        style={{ textAlign: "center", color: theme.colors.pink[6] }}
-      >
-        Your Decks
-      </Title>
+      <div style={{ textAlign: "center", marginBottom: "32px" }}>
+        <Text
+          style={{
+            fontSize: "32px",
+            fontWeight: 700,
+            color: "#E64980",
+            marginBottom: "8px",
+          }}
+        >
+          Your Decks
+        </Text>
+        <Text style={{ fontSize: "16px", color: "#868E96" }}>
+          Choose a deck to start studying
+        </Text>
+      </div>
 
       {selectedDeckIds.length >= 2 && (
         <>
