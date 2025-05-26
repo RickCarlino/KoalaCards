@@ -6,7 +6,7 @@ import { removeParens } from "./quiz-evaluators/evaluator-utils";
 
 type AudioLessonParams = {
   card: Pick<Card, "term" | "definition" | "gender" | "langCode">;
-  lessonType: LessonType | "dictation";
+  lessonType: LessonType | "new";
   speed?: number;
 };
 
@@ -14,8 +14,8 @@ const DICTATION = `<speak><prosody rate="{{speed}}%">{{term}}</prosody><break ti
 const SSML: Record<LessonType, string> = {
   speaking: `<speak><voice language="en-US" gender="female">{{definition}}</voice></speak>`,
   listening: `<speak><prosody rate="{{speed}}%">{{term}}</prosody></speak>`,
-  dictation: DICTATION,
-  review: DICTATION,
+  new: DICTATION,
+  remedial: DICTATION,
 };
 
 export async function generateLessonAudio(params: AudioLessonParams) {

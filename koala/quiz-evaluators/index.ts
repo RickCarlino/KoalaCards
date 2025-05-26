@@ -12,8 +12,8 @@ const NO_OP: QuizEvaluator = (_: unknown) => {
 
 const QUIZ_EVALUATORS: Record<LessonType, QuizEvaluator> = {
   listening: NO_OP,
-  dictation: NO_OP,
-  review: NO_OP,
+  new: NO_OP,
+  remedial: NO_OP,
   speaking,
 };
 

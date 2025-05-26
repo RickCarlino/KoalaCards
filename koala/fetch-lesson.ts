@@ -130,7 +130,7 @@ async function fetchRemedial(
     const lastQuiz = Card.Quiz[0]!;
     return {
       ...lastQuiz,
-      quizType: "review",
+      quizType: "remedial",
       Card,
     };
   });
@@ -210,7 +210,7 @@ export async function getLessons(p: GetLessonInputParams) {
   return shuffle(allCards)
     .slice(0, take)
     .map((quiz) => {
-      const quizType = !repsMap[quiz.cardId] ? "dictation" : quiz.quizType;
+      const quizType = !repsMap[quiz.cardId] ? "new" : quiz.quizType;
       return buildQuizPayload({ ...quiz, quizType }, speedPercent);
     });
 }

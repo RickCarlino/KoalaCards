@@ -47,7 +47,7 @@ export const ListeningQuiz: QuizComp = ({
     playFX("/listening-beep.wav");
   }, [card.term]);
 
-  const isDictation = card.lessonType === "dictation";
+  const isDictation = card.lessonType === "new";
 
   const handlePlayClick = async () => {
     await playAudio(card.termAudio);

@@ -70,10 +70,10 @@ const UnknownQuiz: QuizComp = (props) => {
 };
 
 const quizComponents: Record<Quiz["lessonType"], QuizComp> = {
-  dictation: ListeningQuiz,
+  new: ListeningQuiz,
   listening: ListeningQuiz,
   speaking: SpeakingQuiz,
-  review: ReviewQuiz,
+  remedial: ReviewQuiz,
 };
 
 export const ReviewPage = (props: Props) => {

@@ -211,7 +211,7 @@ export default function Review({ deckId }: ReviewDeckPageProps) {
   function doSetData(data: QuizData) {
     const quizzes = data.quizzes;
     const addSpeaking = quizzes.filter((quiz) => {
-      return quiz.repetitions === 0 || quiz.lessonType === "review";
+      return quiz.repetitions === 0 || quiz.lessonType === "remedial";
     });
 
     const fakeQuizzes = addSpeaking.map((quiz) => {
