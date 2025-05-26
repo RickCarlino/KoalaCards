@@ -5,8 +5,8 @@ import { useState, useEffect, useReducer } from "react";
 import { trpc } from "../trpc-config";
 
 type QuizList = z.infer<typeof QuizList>["quizzes"];
-
-type QueueItem = { cardUUID: string; itemType: keyof Queue };
+export type ItemType = keyof Queue;
+type QueueItem = { cardUUID: string; itemType: ItemType };
 
 type QueueType =
   | "feedback"
@@ -16,12 +16,11 @@ type QueueType =
   | "pending"
   | "remedialIntro"
   | "remedialOutro"
-  | "removed"
   | "speaking";
 
 type Queue = Record<QueueType, QueueItem[]>;
 
-type Quiz = QuizList[number] & { uuid: string };
+export type Quiz = QuizList[number] & { uuid: string };
 
 type State = {
   queue: Queue;
@@ -37,7 +36,6 @@ const queue = (): Queue => ({
   newWordOutro: [],
   remedialOutro: [],
   pending: [],
-  removed: [],
 });
 
 type Action = { type: "REPLACE_CARDS"; payload: Quiz[] };
@@ -51,7 +49,6 @@ const PRIORTY: (keyof Queue)[] = [
   "newWordOutro",
   "remedialOutro",
   "pending",
-  "removed",
 ];
 
 function getItemsDue(queue: Queue): number {

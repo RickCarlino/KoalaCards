@@ -1,5 +1,6 @@
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { prismaClient } from "@/koala/prisma-client";
+import { CardReview } from "@/koala/review2/card-ui";
 import { useReview } from "@/koala/review2/logic";
 import { Box, Container, Text, Title } from "@mantine/core";
 import { GetServerSideProps, GetServerSidePropsResult } from "next";
@@ -12,19 +13,19 @@ type ReviewDeckPageProps = {
 type ServerSideResult = GetServerSidePropsResult<ReviewDeckPageProps | {}>;
 
 const handleNumericDeckId = async (
-  numericDeckId: number,
+  id: number,
   userId: string,
 ): Promise<ServerSideResult> => {
   const deck = await prismaClient.deck.findUnique({
-    where: { id: numericDeckId },
+    where: { userId, id, },
     select: { userId: true },
   });
 
-  if (!deck || deck.userId !== userId) {
+  if (!deck) {
     return { redirect: { destination: "/review", permanent: false } };
   }
 
-  return { props: { deckId: numericDeckId } };
+  return { props: { deckId: id } };
 };
 
 export const getServerSideProps: GetServerSideProps<
@@ -100,6 +101,14 @@ export default function ReviewNext({ deckId }: ReviewDeckPageProps) {
     return <NoQuizzesState deckId={deckId} />;
   }
 
+  const { cardUUID, itemType } = currentItem;
+
+  const card = state.cards[cardUUID];
+
+  if (!card) {
+    return <div>No cards... Hmm....</div>;
+  }
+
   return (
     <Container size="xl" py="md">
       <Box p="md">
@@ -107,10 +116,14 @@ export default function ReviewNext({ deckId }: ReviewDeckPageProps) {
           Reviews ({totalDue} due)
         </Title>
         <Box mt="lg">
-          <Text>
-            Current Item: {currentItem.itemType}
-            URL: {state.cards[currentItem.cardUUID]?.termAudio}
-          </Text>
+          <pre>{JSON.stringify(state.queue, null, 2)}</pre>
+          <CardReview
+            card={card}
+            itemType={itemType}
+            onProceed={() => {
+              // Logic to proceed to the next card
+            }}
+          />
         </Box>
       </Box>
     </Container>
