@@ -21,23 +21,22 @@ export type FeedbackItem = string[];
 export type ApiResponse = z.infer<typeof ApiResponseSchema>;
 export type EssayResponse = z.infer<typeof EssayResponseSchema>;
 
-const ESSAY_GRADING_PROMPT = `
-You are a foreign language instructor grading an essay from a student learning a foreign language.
-Correct only crucial grammar or wording errors- leave style intact and only change word choice if it is awkward or wrong.
+const BASIC_CLEANUP_PROMPT = `You are a meticulous copyeditor. Correct only spelling, capitalization, spacing, and punctuation errors in the text provided. **Do not** change word choice, grammar, or style. **Output exactly the corrected text and nothing else.**`;
+
+const ESSAY_GRADING_PROMPT = `You are a foreign-language instructor grading an essay.
+Correct crucial grammar issues, word choice errors and unnatural wording.
+Focus on substantive issues that would affect comprehension or correctness in the target language.
 
 Output **exactly**:
-
-\`\`\`json
+\n\n\`\`\`json
 {
   "fullCorrection": "<corrected text>",
-  "feedback": ["<brief note on each substantive fix, but not for silent fixes (see note)>"]
+  "feedback": ["<brief note on each substantive fix>"]
 }
 \`\`\`
 
-Silent fixes: spelling, caps, spacing, punctuation (give no feedback for these).
-For words marked \`?word?\`, translate to the target language in \`fullCorrection\` and add a feedback bullet:
-\`"Replaced '?word?' with the correct word: <translation>"\`.
-`;
+For words marked \`?word?\`, translate to the target language in \`fullCorrection\` and add a feedback bullet of the form:
+"Replaced '?word?' with the correct word: <translation>".`;
 
 const inputSchema = z.object({
   text: z.string().min(1).max(2000),
@@ -73,26 +72,38 @@ export const gradeWriting = procedure
     }
     const { langCode } = deck;
 
-    const response = await openai.beta.chat.completions.parse({
+    const cleanupResponse = await openai.beta.chat.completions.parse({
+      model: "o3-mini",
       messages: [
-        {
-          role: "system",
-          content: ESSAY_GRADING_PROMPT,
-        },
+        { role: "system", content: BASIC_CLEANUP_PROMPT },
+        { role: "user", content: text },
+      ],
+    });
+
+    const cleanedText =
+      cleanupResponse.choices[0]?.message?.content?.trim();
+    if (!cleanedText) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Cleanup step produced no output.",
+      });
+    }
+
+    const gradingResponse = await openai.beta.chat.completions.parse({
+      model: "o3-mini",
+      response_format: zodResponseFormat(ApiResponseSchema, "essay"),
+      messages: [
+        { role: "system", content: ESSAY_GRADING_PROMPT },
         {
           role: "user",
           content: `Language: ${getLangName(
             langCode,
-          )}\n\nText to analyze: ${text}`,
+          )}\n\nText to analyze: ${cleanedText}`,
         },
       ],
-      model: "o3-mini",
-
-      response_format: zodResponseFormat(ApiResponseSchema, "essay"),
     });
 
-    const apiResponse = response.choices[0]?.message?.parsed;
-
+    const apiResponse = gradingResponse.choices[0]?.message?.parsed;
     if (!apiResponse) {
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
@@ -100,27 +111,21 @@ export const gradeWriting = procedure
       });
     }
 
-    const submissionCharacterCount = text.length;
-
-    const correctionCharacterCount = apiResponse.fullCorrection.length;
-
     await prismaClient.writingSubmission.create({
       data: {
         userId,
         deckId,
         prompt,
         submission: text,
-        submissionCharacterCount,
+        submissionCharacterCount: text.length,
         correction: apiResponse.fullCorrection,
-        correctionCharacterCount,
+        correctionCharacterCount: apiResponse.fullCorrection.length,
       },
     });
 
-    const completeResponse: EssayResponse = {
+    return {
       fullText: text,
       fullCorrection: apiResponse.fullCorrection,
       feedback: apiResponse.feedback,
     };
-
-    return completeResponse;
   });
