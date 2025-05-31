@@ -39,22 +39,24 @@ export async function transcribeB64(
   const transcribePromise = new Promise<TranscriptionResult>(
     async (resolve) => {
       try {
-        const _oldPrompt = "Might contains these words or related words: " +
-            unique(words).join(" ");
         const y = await openai.audio.transcriptions.create({
           file: createReadStream(fpath) as any,
-          model: "whisper-1",
-          // prompt: _oldPrompt,
+          model: "gpt-4o-transcribe",
+          prompt:
+            "Might contains these words or related words: " +
+            unique(words).join(" "),
           language,
         });
         const text = y.text;
         if (!text) {
           throw new Error("No text returned from transcription.");
         }
+        console.log(`=== Transcription: ${text}`);
         transcriptionLength.labels({ userID }).inc(y.text.length);
+        const OPENAI_API_BUG = text.split("\n")[0];
         return resolve({
           kind: "OK",
-          text,
+          text: OPENAI_API_BUG,
         });
       } catch (error) {
         throw error;
