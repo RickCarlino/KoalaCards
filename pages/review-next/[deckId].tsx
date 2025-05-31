@@ -112,12 +112,11 @@ export default function ReviewNext({ deckId }: ReviewDeckPageProps) {
   return (
     <Container size="xl" py="md">
       <Box p="md">
-        <Title order={3} mb="md">
-          Reviews ({totalDue} due)
-        </Title>
         <CardReview
           card={card}
           itemType={itemType}
+          itemsComplete={state.itemsComplete}
+          totalItems={state.totalItems}
           onProceed={() => {
             // Logic to proceed to the next card
           }}

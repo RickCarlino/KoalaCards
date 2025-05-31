@@ -23,6 +23,8 @@ type Queue = Record<QueueType, QueueItem[]>;
 export type Quiz = QuizList[number] & { uuid: string };
 
 type State = {
+  totalItems: number;
+  itemsComplete: number;
   queue: Queue;
   cards: Record<string, Quiz>;
 };
@@ -73,7 +75,7 @@ function nextQueueItem(queue: Queue): QueueItem | undefined {
 }
 
 export function initialState(): State {
-  return { queue: queue(), cards: {} };
+  return { queue: queue(), cards: {}, totalItems: 0, itemsComplete: 0 };
 }
 
 export function useReview(deckId: number) {
@@ -124,59 +126,84 @@ export function reducer(state: State, action: Action): State {
         {} as Record<string, Quiz>,
       );
 
-      const queue = action.payload.reduce((acc, item) => {
+      const nextState = action.payload.reduce((acc, item): State => {
         switch (item.lessonType) {
           case "new":
             return {
               ...acc,
-              newWordIntro: [
-                ...acc.newWordIntro,
-                { cardUUID: item.uuid, itemType: "newWordIntro" as const },
-              ],
-              newWordOutro: [
-                ...acc.newWordOutro,
-                { cardUUID: item.uuid, itemType: "newWordOutro" as const },
-              ],
+              totalItems: acc.totalItems + 2,
+              queue: {
+                ...acc.queue,
+                newWordIntro: [
+                  ...acc.queue.newWordIntro,
+                  {
+                    cardUUID: item.uuid,
+                    itemType: "newWordIntro" as const,
+                  },
+                ],
+                newWordOutro: [
+                  ...acc.queue.newWordOutro,
+                  {
+                    cardUUID: item.uuid,
+                    itemType: "newWordOutro" as const,
+                  },
+                ],
+              },
             };
           case "listening":
             return {
               ...acc,
-              listening: [
-                ...acc.listening,
-                { cardUUID: item.uuid, itemType: "listening" as const },
-              ],
+              totalItems: acc.totalItems + 1,
+              queue: {
+                ...acc.queue,
+                listening: [
+                  ...acc.queue.listening,
+                  { cardUUID: item.uuid, itemType: "listening" as const },
+                ],
+              },
             };
           case "speaking":
             return {
               ...acc,
-              speaking: [
-                ...acc.speaking,
-                { cardUUID: item.uuid, itemType: "speaking" as const },
-              ],
+              totalItems: acc.totalItems + 1,
+              queue: {
+                ...acc.queue,
+                speaking: [
+                  ...acc.queue.speaking,
+                  { cardUUID: item.uuid, itemType: "speaking" as const },
+                ],
+              },
             };
           case "remedial":
             return {
               ...acc,
-              remedialIntro: [
-                ...acc.remedialIntro,
-                {
-                  cardUUID: item.uuid,
-                  itemType: "remedialIntro" as const,
-                },
-              ],
-              remedialOutro: [
-                ...acc.remedialOutro,
-                {
-                  cardUUID: item.uuid,
-                  itemType: "remedialOutro" as const,
-                },
-              ],
+              totalItems: acc.totalItems + 2,
+              queue: {
+                ...acc.queue,
+                remedialIntro: [
+                  ...acc.queue.remedialIntro,
+                  {
+                    cardUUID: item.uuid,
+                    itemType: "remedialIntro" as const,
+                  },
+                ],
+                remedialOutro: [
+                  ...acc.queue.remedialOutro,
+                  {
+                    cardUUID: item.uuid,
+                    itemType: "remedialOutro" as const,
+                  },
+                ],
+              },
             };
           default:
             throw new Error(`Unknown lesson type: ${item.lessonType}`);
         }
-      }, state.queue);
-      return { ...state, queue, cards };
+      }, state);
+      return {
+        ...nextState,
+        cards,
+      };
     default:
       return state;
   }

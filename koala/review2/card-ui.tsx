@@ -15,9 +15,11 @@ import React from "react";
 import { ItemType, Quiz } from "./logic";
 
 type CardReviewProps = {
-  card: Quiz;
-  itemType: ItemType;
   onProceed: () => void;
+  itemsComplete: number;
+  totalItems: number;
+  itemType: ItemType;
+  card: Quiz;
 };
 
 type CardUI = React.FC<CardReviewProps>;
@@ -42,10 +44,9 @@ export const CardReview = (props: CardReviewProps) => {
   const unknown = <div>TODO: Unknown Item Type: {card.uuid}</div>;
   const CardUI = cardUIs[itemType] || unknown;
 
-  // Stub values for progress calculation
-  const currentPosition = 0; // TODO: Get from review state
-  const totalCards = 10; // TODO: Get from review state
-  const progressPercentage = 25;
+  const progressPercentage = props.totalItems
+    ? (props.itemsComplete / props.totalItems) * 100
+    : 0;
 
   const handleSkip = () => {
     console.log("Skip card:", card.uuid);
@@ -71,7 +72,7 @@ export const CardReview = (props: CardReviewProps) => {
         size="lg"
         radius="xs"
         color="teal"
-        aria-label={`Progress: ${currentPosition} of ${totalCards} cards`}
+        aria-label={`${props.itemsComplete} of ${props.totalItems} cards complete.`}
       />
       <Group>
         <Group>
