@@ -17,7 +17,7 @@ const handleNumericDeckId = async (
   userId: string,
 ): Promise<ServerSideResult> => {
   const deck = await prismaClient.deck.findUnique({
-    where: { userId, id, },
+    where: { userId, id },
     select: { userId: true },
   });
 
@@ -115,16 +115,13 @@ export default function ReviewNext({ deckId }: ReviewDeckPageProps) {
         <Title order={3} mb="md">
           Reviews ({totalDue} due)
         </Title>
-        <Box mt="lg">
-          <pre>{JSON.stringify(state.queue, null, 2)}</pre>
-          <CardReview
-            card={card}
-            itemType={itemType}
-            onProceed={() => {
-              // Logic to proceed to the next card
-            }}
-          />
-        </Box>
+        <CardReview
+          card={card}
+          itemType={itemType}
+          onProceed={() => {
+            // Logic to proceed to the next card
+          }}
+        />
       </Box>
     </Container>
   );

@@ -12,7 +12,6 @@ koala/review2/card-ui.tsx      - JSX Components
 koala/review/**                - The legacy version we are replacing.
 
 # The Overall UI
-
 There are some elements that are shown throught out the lifecycle of the review session:
 
 * A progress bar shows how far through the lesson they've progressed.
@@ -21,6 +20,30 @@ There are some elements that are shown throught out the lifecycle of the review 
 * An "EDIT" button opens the edit page in a new tab: /cards/[cardID]
 
 This UI will wrap a "card type" component that has UI elements specific to the step (details next).
+
+# Common UI: Record button
+
+It will have a countdown timer.
+
+# Common UI: Grade buttons
+
+4 buttons.
+
+# Common UI: Remix Button
+
+...
+
+# Common UI: Progress Bar
+
+Need to add the total starting count.
+
+# Common UI: Ask a question
+
+...
+
+# Common UI: Give Up
+
+Play the term/definition thrice.
 
 # Card Type: newWordIntro
 This is the first time a user has seen the card.
@@ -61,7 +84,21 @@ Description coming soon.
 Description coming soon.
 
 # Card Type: remedialOutro
-Description coming soon.
+If user passes speaking exam, we update the card. Unlike speaking exam, it's pass/fail.
 
 # Card Type: pending
 Description coming soon.
+
+# Ideas For Later
+
+Make listening and speaking a two part process?
+
+Listinening 1: Repeat the phrase. Write what it means.
+Speaking 1: Say the phrase in Korean
+
+--- User presses "Submit for grading and Continue" ---
+
+...User gets feedback later.
+
+If they were correct, they can pick a grade.
+If they were wrong, they can re-grade (and wait), re-listen to their response then finally continue to the next card.
