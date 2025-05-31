@@ -14,8 +14,8 @@ export function compare(
   const sr = strip(r);
   let cutoff =
     cutoffOverride || calculateCutoff(Math.max(sl.length, sr.length));
-  const containsNuumber = /\d/.test(l + r);
-  if (containsNuumber) {
+  const containsNumber = /\d/.test(l + r);
+  if (containsNumber) {
     cutoff = cutoff * 2;
   }
 

@@ -39,12 +39,12 @@ export async function transcribeB64(
   const transcribePromise = new Promise<TranscriptionResult>(
     async (resolve) => {
       try {
+        const _oldPrompt = "Might contains these words or related words: " +
+            unique(words).join(" ");
         const y = await openai.audio.transcriptions.create({
           file: createReadStream(fpath) as any,
-          model: "gpt-4o-transcribe",
-          prompt:
-            "Might contains these words or related words: " +
-            unique(words).join(" "),
+          model: "whisper-1",
+          // prompt: _oldPrompt,
           language,
         });
         const text = y.text;

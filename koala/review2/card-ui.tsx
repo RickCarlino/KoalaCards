@@ -1,19 +1,18 @@
-import React from "react";
-import { ItemType, Quiz } from "./logic";
 import {
-  Box,
-  Progress,
-  Group,
-  Button,
-  Stack,
   ActionIcon,
+  Box,
+  Button,
+  Group,
+  Progress,
+  Stack,
 } from "@mantine/core";
 import {
   IconArchive,
   IconEdit,
-  IconPlayerPauseFilled,
   IconPlayerSkipForwardFilled,
 } from "@tabler/icons-react";
+import React from "react";
+import { ItemType, Quiz } from "./logic";
 
 type CardReviewProps = {
   card: Quiz;
