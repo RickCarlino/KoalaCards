@@ -98,6 +98,7 @@ async function run(language: string, words: string[]) {
   1. Convert '다' verbs to the '요' form instead. Example: '가다' ⇒ '가요'. Do this for all verbs and double check your work.",
   2. Avoid over use of pronouns in translations. Translate "음식을 데워요" to just "heat up food" rather than "he/she/they heat up food".
   3. Remove strange, obscure or non-idiomatic examples.
+  4. Avoid overused words like: 분위기, 상황, 느낌, 느끼다, 계획
 
   Double check your work against these rules when you are done.
   `;

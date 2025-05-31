@@ -25,6 +25,7 @@ const BASIC_CLEANUP_PROMPT = `You are a meticulous copyeditor. Correct only spel
 
 const ESSAY_GRADING_PROMPT = `You are a foreign-language instructor grading an essay.
 Correct crucial grammar issues, word choice errors and unnatural wording.
+Maintain the formality level and style of the original text.
 Focus on substantive issues that would affect comprehension or correctness in the target language.
 
 Output **exactly**:
