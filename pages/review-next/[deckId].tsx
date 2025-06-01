@@ -86,7 +86,7 @@ const NoQuizzesState = (_: { deckId: number }) => (
 );
 
 export default function ReviewNext({ deckId }: ReviewDeckPageProps) {
-  const { state, isFetching, error, currentItem, totalDue } =
+  const { state, isFetching, error, currentItem, skipCard } =
     useReview(deckId);
 
   if (error) {
@@ -117,6 +117,9 @@ export default function ReviewNext({ deckId }: ReviewDeckPageProps) {
           itemType={itemType}
           itemsComplete={state.itemsComplete}
           totalItems={state.totalItems}
+          onSkip={(uuid: string) => {
+            skipCard(uuid);
+          }}
           onProceed={() => {
             // Logic to proceed to the next card
           }}

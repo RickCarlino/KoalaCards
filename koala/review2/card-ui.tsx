@@ -16,6 +16,7 @@ import { ItemType, Quiz } from "./logic";
 
 type CardReviewProps = {
   onProceed: () => void;
+  onSkip: (uuid: string) => void;
   itemsComplete: number;
   totalItems: number;
   itemType: ItemType;
@@ -48,10 +49,6 @@ export const CardReview = (props: CardReviewProps) => {
     ? (props.itemsComplete / props.totalItems) * 100
     : 0;
 
-  const handleSkip = () => {
-    console.log("Skip card:", card.uuid);
-  };
-
   const handleRemix = () => {
     console.log("Remix card:", card.uuid);
   };
@@ -83,7 +80,9 @@ export const CardReview = (props: CardReviewProps) => {
           <ActionIcon
             variant="subtle"
             size="lg"
-            onClick={handleSkip}
+            onClick={() => {
+              props.onSkip(card.uuid);
+            }}
             aria-label="Skip card"
           >
             <IconPlayerSkipForwardFilled size={20} />

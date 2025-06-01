@@ -18,15 +18,17 @@ type QueueType =
   | "remedialOutro"
   | "speaking";
 
+type QuizMap = Record<string, Quiz>;
 type Queue = Record<QueueType, QueueItem[]>;
+type UUID = { uuid: string };
 
-export type Quiz = QuizList[number] & { uuid: string };
+export type Quiz = QuizList[number] & UUID;
 
 type State = {
   totalItems: number;
   itemsComplete: number;
   queue: Queue;
-  cards: Record<string, Quiz>;
+  cards: QuizMap;
 };
 
 const queue = (): Queue => ({
@@ -40,7 +42,9 @@ const queue = (): Queue => ({
   pending: [],
 });
 
-type Action = { type: "REPLACE_CARDS"; payload: Quiz[] };
+type ReplaceCardAction = { type: "REPLACE_CARDS"; payload: Quiz[] };
+type SkipCardAction = { type: "SKIP_CARD"; payload: UUID };
+type Action = ReplaceCardAction | SkipCardAction;
 
 const PRIORTY: (keyof Queue)[] = [
   "feedback",
@@ -113,97 +117,118 @@ export function useReview(deckId: number) {
     state,
     currentItem: nextQueueItem(state.queue),
     totalDue: getItemsDue(state.queue),
+    skipCard: (cardUUID: string) => {
+      dispatch({ type: "SKIP_CARD", payload: { uuid: cardUUID } });
+    },
+  };
+}
+
+function replaceCards(action: ReplaceCardAction, state: State) {
+  const cards = action.payload.reduce((acc: QuizMap, item) => {
+    return { ...acc, [item.uuid]: item };
+  }, {} as QuizMap);
+
+  const nextState = action.payload.reduce((acc, item): State => {
+    switch (item.lessonType) {
+      case "new":
+        return {
+          ...acc,
+          totalItems: acc.totalItems + 2,
+          queue: {
+            ...acc.queue,
+            newWordIntro: [
+              ...acc.queue.newWordIntro,
+              {
+                cardUUID: item.uuid,
+                itemType: "newWordIntro" as const,
+              },
+            ],
+            newWordOutro: [
+              ...acc.queue.newWordOutro,
+              {
+                cardUUID: item.uuid,
+                itemType: "newWordOutro" as const,
+              },
+            ],
+          },
+        };
+      case "listening":
+        return {
+          ...acc,
+          totalItems: acc.totalItems + 1,
+          queue: {
+            ...acc.queue,
+            listening: [
+              ...acc.queue.listening,
+              { cardUUID: item.uuid, itemType: "listening" as const },
+            ],
+          },
+        };
+      case "speaking":
+        return {
+          ...acc,
+          totalItems: acc.totalItems + 1,
+          queue: {
+            ...acc.queue,
+            speaking: [
+              ...acc.queue.speaking,
+              { cardUUID: item.uuid, itemType: "speaking" as const },
+            ],
+          },
+        };
+      case "remedial":
+        return {
+          ...acc,
+          totalItems: acc.totalItems + 2,
+          queue: {
+            ...acc.queue,
+            remedialIntro: [
+              ...acc.queue.remedialIntro,
+              {
+                cardUUID: item.uuid,
+                itemType: "remedialIntro" as const,
+              },
+            ],
+            remedialOutro: [
+              ...acc.queue.remedialOutro,
+              {
+                cardUUID: item.uuid,
+                itemType: "remedialOutro" as const,
+              },
+            ],
+          },
+        };
+      default:
+        throw new Error(`Unknown lesson type: ${item.lessonType}`);
+    }
+  }, state);
+  return {
+    ...nextState,
+    cards,
+  };
+}
+
+function skipCard(action: SkipCardAction, state: State) {
+  const cardUUID = action.payload.uuid;
+  const newQueue = { ...state.queue };
+  for (const type of PRIORTY) {
+    newQueue[type] = newQueue[type].filter(
+      (item) => item.cardUUID !== cardUUID,
+    );
+  }
+  return {
+    ...state,
+    queue: newQueue,
+    itemsComplete: state.itemsComplete + 1,
   };
 }
 
 export function reducer(state: State, action: Action): State {
   switch (action.type) {
     case "REPLACE_CARDS":
-      const cards = action.payload.reduce(
-        (acc: Record<string, Quiz>, item) => {
-          return { ...acc, [item.uuid]: item };
-        },
-        {} as Record<string, Quiz>,
-      );
-
-      const nextState = action.payload.reduce((acc, item): State => {
-        switch (item.lessonType) {
-          case "new":
-            return {
-              ...acc,
-              totalItems: acc.totalItems + 2,
-              queue: {
-                ...acc.queue,
-                newWordIntro: [
-                  ...acc.queue.newWordIntro,
-                  {
-                    cardUUID: item.uuid,
-                    itemType: "newWordIntro" as const,
-                  },
-                ],
-                newWordOutro: [
-                  ...acc.queue.newWordOutro,
-                  {
-                    cardUUID: item.uuid,
-                    itemType: "newWordOutro" as const,
-                  },
-                ],
-              },
-            };
-          case "listening":
-            return {
-              ...acc,
-              totalItems: acc.totalItems + 1,
-              queue: {
-                ...acc.queue,
-                listening: [
-                  ...acc.queue.listening,
-                  { cardUUID: item.uuid, itemType: "listening" as const },
-                ],
-              },
-            };
-          case "speaking":
-            return {
-              ...acc,
-              totalItems: acc.totalItems + 1,
-              queue: {
-                ...acc.queue,
-                speaking: [
-                  ...acc.queue.speaking,
-                  { cardUUID: item.uuid, itemType: "speaking" as const },
-                ],
-              },
-            };
-          case "remedial":
-            return {
-              ...acc,
-              totalItems: acc.totalItems + 2,
-              queue: {
-                ...acc.queue,
-                remedialIntro: [
-                  ...acc.queue.remedialIntro,
-                  {
-                    cardUUID: item.uuid,
-                    itemType: "remedialIntro" as const,
-                  },
-                ],
-                remedialOutro: [
-                  ...acc.queue.remedialOutro,
-                  {
-                    cardUUID: item.uuid,
-                    itemType: "remedialOutro" as const,
-                  },
-                ],
-              },
-            };
-          default:
-            throw new Error(`Unknown lesson type: ${item.lessonType}`);
-        }
-      }, state);
-      return {
-        ...nextState,
-        cards,
-      };
+      return replaceCards(action, state);
+    case "SKIP_CARD":
+      return skipCard(action, state);
     default:
       return state;
   }

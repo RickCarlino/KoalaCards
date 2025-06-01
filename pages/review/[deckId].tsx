@@ -259,6 +259,7 @@ export default function Review({ deckId }: ReviewDeckPageProps) {
     if (deckId) {
       fetchQuizzes(deckId);
     }
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [deckId]);
 
   const handleSave = async () => {
