@@ -3,126 +3,78 @@ import { prismaClient } from "@/koala/prisma-client";
 import { CardReview } from "@/koala/review2/card-ui";
 import { useReview } from "@/koala/review2/logic";
 import { Box, Container, Text, Title } from "@mantine/core";
-import { GetServerSideProps, GetServerSidePropsResult } from "next";
-import { ParsedUrlQuery } from "querystring";
+import { GetServerSideProps } from "next";
+import React from "react";
 
-type ReviewDeckPageProps = {
-  deckId: number;
-};
+export type ReviewDeckPageProps = { deckId: number };
 
-type ServerSideResult = GetServerSidePropsResult<ReviewDeckPageProps | {}>;
-
-const handleNumericDeckId = async (
-  id: number,
-  userId: string,
-): Promise<ServerSideResult> => {
-  const deck = await prismaClient.deck.findUnique({
-    where: { userId, id },
-    select: { userId: true },
-  });
-
-  if (!deck) {
-    return { redirect: { destination: "/review", permanent: false } };
-  }
-
-  return { props: { deckId: id } };
-};
+const redirect = (destination: string) => ({
+  redirect: { destination, permanent: false } as const,
+});
 
 export const getServerSideProps: GetServerSideProps<
-  ReviewDeckPageProps | {}
-> = async (context) => {
-  const dbUser = await getServersideUser(context);
+  ReviewDeckPageProps
+> = async (ctx) => {
+  const user = await getServersideUser(ctx);
+  if (!user) return redirect("/api/auth/signin");
 
-  if (!dbUser) {
-    return {
-      redirect: { destination: "/api/auth/signin", permanent: false },
-    };
-  }
+  const deckId = Number(ctx.params?.deckId);
+  if (!deckId) return redirect("/review");
 
-  const { deckId: deckIdParam } = context.params as ParsedUrlQuery;
+  const deck = await prismaClient.deck.findUnique({
+    where: { userId: user.id, id: deckId },
+    select: { id: true },
+  });
 
-  if (!deckIdParam || typeof deckIdParam !== "string") {
-    return { redirect: { destination: "/review", permanent: false } };
-  }
-
-  return handleNumericDeckId(parseInt(deckIdParam, 10), dbUser.id);
+  return deck ? { props: { deckId } } : redirect("/review");
 };
 
-const LoadingState = () => (
+const MessageState = ({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) => (
   <Container size="md" py="xl">
     <Box p="md">
       <Title order={3} mb="md">
-        Loading
+        {title}
       </Title>
-      <Text>
-        Fetching Quizzes. This could take a while for new cards...
-      </Text>
+      <Text>{children}</Text>
     </Box>
   </Container>
 );
 
-const ErrorState = ({ message }: { message: string }) => (
-  <Container size="md" py="xl">
-    <Box p="md">
-      <Title order={3} mb="md">
-        Error
-      </Title>
-      <Text>{message}</Text>
-    </Box>
-  </Container>
-);
-
-const NoQuizzesState = (_: { deckId: number }) => (
-  <Container size="md" py="xl">
-    <Box p="md">
-      <Title order={3} mb="md">
-        No More Quizzes Available
-      </Title>
-      <Text mb="md">
-        You've reviewed all available quizzes for this session. You can:
-      </Text>
-    </Box>
-  </Container>
-);
-
-export default function ReviewNext({ deckId }: ReviewDeckPageProps) {
+export default function ReviewDeckPage({ deckId }: ReviewDeckPageProps) {
   const { state, isFetching, error, currentItem, skipCard } =
     useReview(deckId);
 
-  if (error) {
-    return <ErrorState message={error.message || ""} />;
-  }
+  if (error)
+    return <MessageState title="Error">{error.message}</MessageState>;
+  if (isFetching)
+    return <MessageState title="Loading">Fetching quizzes…</MessageState>;
+  if (!currentItem)
+    return (
+      <MessageState title="No More Quizzes">
+        All done for now!
+      </MessageState>
+    );
 
-  if (isFetching) {
-    return <LoadingState />;
-  }
-
-  if (!currentItem) {
-    return <NoQuizzesState deckId={deckId} />;
-  }
-
-  const { cardUUID, itemType } = currentItem;
-
-  const card = state.cards[cardUUID];
-
-  if (!card) {
-    return <div>No cards... Hmm....</div>;
-  }
+  const card = state.cards[currentItem.cardUUID];
+  if (!card)
+    return <MessageState title="Oops">No card data.</MessageState>;
 
   return (
     <Container size="xl" py="md">
       <Box p="md">
         <CardReview
           card={card}
-          itemType={itemType}
+          itemType={currentItem.itemType}
           itemsComplete={state.itemsComplete}
           totalItems={state.totalItems}
-          onSkip={(uuid: string) => {
-            skipCard(uuid);
-          }}
-          onProceed={() => {
-            // Logic to proceed to the next card
-          }}
+          onSkip={skipCard}
+          onProceed={() => {}}
         />
       </Box>
     </Container>

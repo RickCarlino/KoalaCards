@@ -1,18 +1,12 @@
-import {
-  ActionIcon,
-  Box,
-  Group,
-  Progress,
-  Stack,
-} from "@mantine/core";
+import React from "react";
+import { ActionIcon, Box, Group, Progress, Stack } from "@mantine/core";
 import {
   IconArchive,
   IconEdit,
   IconPlayerSkipForwardFilled,
 } from "@tabler/icons-react";
-import React from "react";
+import RemixButton from "../remix-button";
 import { ItemType, Quiz } from "./logic";
-import RemixButton from "../remix-button"; // Adjusted path
 
 type CardReviewProps = {
   onProceed: () => void;
@@ -25,49 +19,43 @@ type CardReviewProps = {
 
 type CardUI = React.FC<CardReviewProps>;
 
+const placeholder =
+  (label: string): CardUI =>
+  ({ card }) => <div>{`TODO: ${label}: ${card.uuid}`}</div>;
+
 const cardUIs: Record<ItemType, CardUI> = {
-  newWordIntro: ({ card }) => <div>TODO: New Word Intro: {card.uuid}</div>,
-  newWordOutro: ({ card }) => <div>TODO: New Word Outro: {card.uuid}</div>,
-  listening: ({ card }) => <div>TODO: Listening: {card.uuid}</div>,
-  speaking: ({ card }) => <div>TODO: Speaking: {card.uuid}</div>,
-  remedialIntro: ({ card }) => (
-    <div>TODO: Remedial Intro: {card.uuid}</div>
-  ),
-  remedialOutro: ({ card }) => (
-    <div>TODO: Remedial Outro: {card.uuid}</div>
-  ),
-  feedback: ({ card }) => <div>TODO: Feedback: {card.uuid}</div>,
-  pending: ({ card }) => <div>TODO: Waiting on: {card.uuid}</div>,
+  newWordIntro: placeholder("New Word Intro"),
+  newWordOutro: placeholder("New Word Outro"),
+  listening: placeholder("Listening"),
+  speaking: placeholder("Speaking"),
+  remedialIntro: placeholder("Remedial Intro"),
+  remedialOutro: placeholder("Remedial Outro"),
+  feedback: placeholder("Feedback"),
+  pending: placeholder("Waiting on"),
 };
 
-export const CardReview = (props: CardReviewProps) => {
-  const { card, itemType }: CardReviewProps = props;
-  const unknown = <div>TODO: Unknown Item Type: {card.uuid}</div>;
-  const CardUI = cardUIs[itemType] || unknown;
+const UnknownCard: CardUI = placeholder("Unknown Item Type");
 
-  const progressPercentage = props.totalItems
-    ? (props.itemsComplete / props.totalItems) * 100
-    : 0;
+export const CardReview: React.FC<CardReviewProps> = (props) => {
+  const { card, itemType, itemsComplete, totalItems, onSkip } = props;
 
-  const handleArchive = () => {
-    console.log("Archive card:", card.uuid);
-  };
+  const CardComponent = cardUIs[itemType] ?? UnknownCard;
+  const progress = totalItems ? (itemsComplete / totalItems) * 100 : 0;
 
-  const handleEdit = (quiz: Quiz) => {
-    const cardId = quiz.cardId;
-    window.open(`/cards/${cardId}`, "_blank");
-  };
+  const openCardEditor = () =>
+    window.open(`/cards/${card.cardId}`, "_blank");
 
   return (
     <Stack>
       <Progress
-        value={progressPercentage}
+        value={progress}
         size="lg"
         radius="xs"
         color="teal"
-        aria-label={`${props.itemsComplete} of ${props.totalItems} cards complete.`}
+        aria-label={`${itemsComplete} of ${totalItems} cards complete.`}
       />
-      <Group>
+
+      <Group justify="space-between">
         <Group>
           <RemixButton
             card={{
@@ -76,36 +64,38 @@ export const CardReview = (props: CardReviewProps) => {
               definition: card.definition,
             }}
           />
+
           <ActionIcon
             variant="subtle"
             size="lg"
-            onClick={() => {
-              props.onSkip(card.uuid);
-            }}
-            aria-label="Skip card"
+            onClick={() => onSkip(card.uuid)}
+            aria-label="Skip"
           >
             <IconPlayerSkipForwardFilled size={20} />
           </ActionIcon>
+
           <ActionIcon
             variant="subtle"
             size="lg"
-            onClick={handleArchive}
-            aria-label="Skip card"
+            onClick={() => console.log("Archive card:", card.uuid)}
+            aria-label="Archive"
           >
             <IconArchive size={20} />
           </ActionIcon>
         </Group>
+
         <ActionIcon
           variant="subtle"
           size="lg"
-          onClick={() => handleEdit(card)}
-          aria-label="Edit card"
+          onClick={openCardEditor}
+          aria-label="Edit"
         >
           <IconEdit size={20} />
         </ActionIcon>
       </Group>
+
       <Box>
-        <CardUI {...props} card={card} itemType={itemType} />
+        <CardComponent {...props} />
       </Box>
     </Stack>
   );
