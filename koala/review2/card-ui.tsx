@@ -1,7 +1,6 @@
 import {
   ActionIcon,
   Box,
-  Button,
   Group,
   Progress,
   Stack,
@@ -13,6 +12,7 @@ import {
 } from "@tabler/icons-react";
 import React from "react";
 import { ItemType, Quiz } from "./logic";
+import RemixButton from "../remix-button"; // Adjusted path
 
 type CardReviewProps = {
   onProceed: () => void;
@@ -49,10 +49,6 @@ export const CardReview = (props: CardReviewProps) => {
     ? (props.itemsComplete / props.totalItems) * 100
     : 0;
 
-  const handleRemix = () => {
-    console.log("Remix card:", card.uuid);
-  };
-
   const handleArchive = () => {
     console.log("Archive card:", card.uuid);
   };
@@ -73,10 +69,13 @@ export const CardReview = (props: CardReviewProps) => {
       />
       <Group>
         <Group>
-          <Button variant="subtle" size="sm" onClick={handleRemix}>
-            Remix
-          </Button>
-
+          <RemixButton
+            card={{
+              id: card.cardId,
+              term: card.term,
+              definition: card.definition,
+            }}
+          />
           <ActionIcon
             variant="subtle"
             size="lg"
