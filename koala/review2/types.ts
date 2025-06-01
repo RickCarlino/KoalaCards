@@ -42,3 +42,13 @@ export const EVERY_QUEUE_TYPE: (keyof Queue)[] = [
   "remedialOutro",
   "pending",
 ];
+
+export type CardReviewProps = {
+  onProceed: () => void;
+  onSkip: (uuid: string) => void;
+  itemsComplete: number;
+  totalItems: number;
+  itemType: ItemType;
+  card: Quiz;
+};
+export type CardUI = React.FC<CardReviewProps>;

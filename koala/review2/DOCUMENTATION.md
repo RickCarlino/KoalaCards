@@ -2,12 +2,12 @@ It's a spaced repetition flash card app similar to Anki, or iknow.jp or old vers
 The user is shown one "thing" at a time and works their way through the cards until the lesson is over.
 The thing varies on context. It might be:
 
- * A new card they are learning for the first time (new card review).
- * An overview of a card they recently failed a quiz on (remedial review).
- * AI feedback for a card they finished testing on.
- * A "repeat after me" drill (a listening quiz)
- * A speaking drill (user is asked to say a phrase in the target language)
- * A quiz on a remedial or new card review that was presented at lesson start.
+- A new card they are learning for the first time (new card review).
+- An overview of a card they recently failed a quiz on (remedial review).
+- AI feedback for a card they finished testing on.
+- A "repeat after me" drill (a listening quiz)
+- A speaking drill (user is asked to say a phrase in the target language)
+- A quiz on a remedial or new card review that was presented at lesson start.
 
 Once they finish the lesson, they can study more or exit to "/".
 

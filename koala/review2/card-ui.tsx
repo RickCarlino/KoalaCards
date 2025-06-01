@@ -1,30 +1,20 @@
-import React from "react";
 import { ActionIcon, Box, Group, Progress, Stack } from "@mantine/core";
 import {
   IconArchive,
   IconEdit,
   IconPlayerSkipForwardFilled,
 } from "@tabler/icons-react";
+import React from "react";
 import RemixButton from "../remix-button";
-import { ItemType, Quiz } from "./logic";
-
-type CardReviewProps = {
-  onProceed: () => void;
-  onSkip: (uuid: string) => void;
-  itemsComplete: number;
-  totalItems: number;
-  itemType: ItemType;
-  card: Quiz;
-};
-
-type CardUI = React.FC<CardReviewProps>;
+import { NewWordIntro } from "./lesson-steps/new-card-intro";
+import { CardReviewProps, CardUI, ItemType } from "./types";
 
 const placeholder =
   (label: string): CardUI =>
   ({ card }) => <div>{`TODO: ${label}: ${card.uuid}`}</div>;
 
 const cardUIs: Record<ItemType, CardUI> = {
-  newWordIntro: placeholder("New Word Intro"),
+  newWordIntro: NewWordIntro,
   newWordOutro: placeholder("New Word Outro"),
   listening: placeholder("Listening"),
   speaking: placeholder("Speaking"),

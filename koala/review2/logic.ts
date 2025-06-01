@@ -3,7 +3,13 @@ import { useEffect, useReducer, useState } from "react";
 import { trpc } from "../trpc-config";
 import { replaceCards } from "./replace-cards";
 import { skipCard } from "./skip-card";
-import { Action, EVERY_QUEUE_TYPE, Queue, QueueItem, State } from "./types";
+import {
+  Action,
+  EVERY_QUEUE_TYPE,
+  Queue,
+  QueueItem,
+  State,
+} from "./types";
 
 const queue = (): Queue => ({
   feedback: [],
