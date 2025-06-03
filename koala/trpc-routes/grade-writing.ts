@@ -37,7 +37,11 @@ Output **exactly**:
 \`\`\`
 
 For words marked \`?word?\`, translate to the target language in \`fullCorrection\` and add a feedback bullet of the form:
-"Replaced '?word?' with the correct word: <translation>".`;
+"Replaced '?word?' with the correct word: <translation>".
+
+The user loses points for each substantive error, so focus on the most impactful corrections.
+Don't nitpick minor issues.
+`;
 
 const inputSchema = z.object({
   text: z.string().min(1).max(2000),
