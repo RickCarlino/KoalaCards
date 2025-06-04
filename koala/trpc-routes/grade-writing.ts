@@ -6,6 +6,11 @@ import { openai } from "../openai";
 import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc-procedure";
 
+/**
+ * ----------------------------
+ *  Schema definitions
+ * ----------------------------
+ */
 const ApiResponseSchema = z.object({
   fullCorrection: z.string(),
   feedback: z.array(z.string()),
@@ -21,28 +26,45 @@ export type FeedbackItem = string[];
 export type ApiResponse = z.infer<typeof ApiResponseSchema>;
 export type EssayResponse = z.infer<typeof EssayResponseSchema>;
 
-const BASIC_CLEANUP_PROMPT = `You are a meticulous copyeditor. Correct only spelling, capitalization, spacing, and punctuation errors in the text provided. **Do not** change word choice, grammar, or style. **Output exactly the corrected text and nothing else.**`;
+/**
+ * ----------------------------
+ *  Prompt definitions
+ * ----------------------------
+ */
+const BASIC_CLEANUP_PROMPT = `You are a meticulous copy-editor. Correct only spelling, capitalization, spacing, and punctuation errors in the text provided. **Do not** change word choice, grammar, or style. **Output exactly the corrected text and nothing else.**`;
 
-const ESSAY_GRADING_PROMPT = `You are a foreign-language instructor grading an essay.
-Correct crucial grammar issues, word choice errors and unnatural wording.
-Maintain the formality level and style of the original text.
-Focus on substantive issues that would affect comprehension or correctness in the target language.
+const ESSAY_GRADING_PROMPT = String.raw`
+You are a certified native-speaker instructor grading a student essay written in the target language.
 
-Output **exactly**:
-\n\n\`\`\`json
+🔍 **Your mission**
+Identify and correct only **objective errors** (grammar, conjugation, agreement, particles, clearly unnatural word choice) **and** phrasing that *collocates unnaturally* or mixes fixed expressions in a way a native speaker would find odd.  If the sentence is already correct and idiomatic, **leave it untouched** - do **not** paraphrase, reorder, or replace words merely for stylistic preference.
+
+📏 **Rules**
+1. Prefer the *smallest possible edit* that resolves the problem.  
+   **1-B.** If a phrase is grammatically correct but *collocates unnaturally* (e.g., 잠이 푹 좋아졌어요), replace only the minimum words necessary so it sounds natural.
+   **1-C.** If you change a word for collocation reasons, prefer the most common native phrasing (consult corpus frequency) rather than simply swapping synonyms.
+2. Keep the author's tone, register, and vocabulary whenever they are acceptable.
+3. Colloquial or creative phrasing is fine if natural; do not “formalize” unless the original register demands it.
+4. When several variants are equally correct, keep the author's choice.
+5. Never introduce personal style preferences (e.g., punctuation quirks, synonyms like "등" vs "같은").
+6. Do **not** add or remove whole sentences.
+7. If a word is wrapped like \`?word?\`, translate that word into the target language in the correction and add a feedback bullet:  
+   "Replaced '?word?' with the correct word: <translation>'."
+
+📤 **Output exactly**
+
 {
-  "fullCorrection": "<corrected text>",
-  "feedback": ["<brief note on each substantive fix>"]
+  "fullCorrection": "<complete corrected essay>",
+  "feedback": ["<one concise note per substantive change>"]
 }
-\`\`\`
 
-For words marked \`?word?\`, translate to the target language in \`fullCorrection\` and add a feedback bullet of the form:
-"Replaced '?word?' with the correct word: <translation>".
+Do **not** output anything else - no prose before or after the JSON block.`;
 
-The user loses points for each substantive error, so focus on the most impactful corrections.
-Don't nitpick minor issues.
-`;
-
+/**
+ * ----------------------------
+ *  Procedure definition
+ * ----------------------------
+ */
 const inputSchema = z.object({
   text: z.string().min(1).max(2000),
   prompt: z.string(),
@@ -52,10 +74,9 @@ const inputSchema = z.object({
 export const gradeWriting = procedure
   .input(inputSchema)
   .output(EssayResponseSchema)
-  .mutation(async (opts): Promise<EssayResponse> => {
-    const { text, prompt, deckId } = opts.input;
-    const user = opts.ctx.user;
-    const userId = user?.id;
+  .mutation(async ({ input, ctx }): Promise<EssayResponse> => {
+    const { text, prompt, deckId } = input;
+    const userId = ctx.user?.id;
 
     if (!userId) {
       throw new TRPCError({
@@ -64,6 +85,7 @@ export const gradeWriting = procedure
       });
     }
 
+    // 1️⃣ Verify deck ownership / language
     const deck = await prismaClient.deck.findUnique({
       where: { id: deckId, userId },
       select: { langCode: true },
@@ -75,18 +97,20 @@ export const gradeWriting = procedure
         message: "Deck not found or user does not have access.",
       });
     }
-    const { langCode } = deck;
 
-    const cleanupResponse = await openai.beta.chat.completions.parse({
-      model: "o3-mini",
+    /**
+     * 2️⃣ Basic cleanup - purely mechanical fixes
+     */
+    const cleanup = await openai.beta.chat.completions.parse({
+      model: "gpt-4o-mini",
+      temperature: 0,
       messages: [
         { role: "system", content: BASIC_CLEANUP_PROMPT },
         { role: "user", content: text },
       ],
     });
 
-    const cleanedText =
-      cleanupResponse.choices[0]?.message?.content?.trim();
+    const cleanedText = cleanup.choices[0]?.message?.content?.trim();
     if (!cleanedText) {
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
@@ -94,21 +118,25 @@ export const gradeWriting = procedure
       });
     }
 
-    const gradingResponse = await openai.beta.chat.completions.parse({
-      model: "o3-mini",
+    /**
+     * 3️⃣ Substantive grading - grammar + collocation checks
+     */
+    const grading = await openai.beta.chat.completions.parse({
+      model: "o4-mini",
+      reasoning_effort: "high",
       response_format: zodResponseFormat(ApiResponseSchema, "essay"),
       messages: [
         { role: "system", content: ESSAY_GRADING_PROMPT },
         {
           role: "user",
           content: `Language: ${getLangName(
-            langCode,
-          )}\n\nText to analyze: ${cleanedText}`,
+            deck.langCode,
+          )}\n\nText to analyze:\n${cleanedText}`,
         },
       ],
     });
 
-    const apiResponse = gradingResponse.choices[0]?.message?.parsed;
+    const apiResponse = grading.choices[0]?.message?.parsed;
     if (!apiResponse) {
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
@@ -116,6 +144,7 @@ export const gradeWriting = procedure
       });
     }
 
+    // 4️⃣ Persist submission & correction
     await prismaClient.writingSubmission.create({
       data: {
         userId,
