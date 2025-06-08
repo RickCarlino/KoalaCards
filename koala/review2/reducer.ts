@@ -13,12 +13,12 @@ import {
 
 const queue = (): Queue => ({
   feedback: [],
-  newWordIntro: [],
-  remedialIntro: [],
+  newWordIntro: [], // DONE
+  remedialIntro: [], // DONE
   listening: [],
-  speaking: [],
-  newWordOutro: [],
-  remedialOutro: [],
+  speaking: [], // Needs testing.
+  newWordOutro: [], // DONE
+  remedialOutro: [], // DONE
   pending: [],
 });
 
