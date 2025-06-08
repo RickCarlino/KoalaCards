@@ -110,7 +110,12 @@ AI Grading is slow. Instead of forcing the user to wait after they submit a reco
 # Card Type: newWordOutro
 
 We showed them the term and definition at the lesson's start.
-At the end of the lesson, we ask them to do a forced recall of the word (hear english prompt => produce target language sentence from memory)
+At the end of the lesson, we ask them to do a forced recall of the word (hear english prompt => produce target language sentence from memory).
+
+Here's the flow:
+
+1. Do you remember how to say {{term}}? Use the "Record" or "Fail" buttons above to move to the next card.
+2. If they don't push  
 
 # Card Type: remedialOutro
 

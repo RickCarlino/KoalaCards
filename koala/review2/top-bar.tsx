@@ -1,8 +1,8 @@
-import { ActionIcon, Group, Progress } from "@mantine/core";
+import { ActionIcon, Group, Progress, Tooltip } from "@mantine/core";
 import {
   IconArchive,
-  IconCircleFilled,
   IconEdit,
+  IconMicrophone,
   IconPlayerPlayFilled,
   IconPlayerSkipForwardFilled,
   IconPlayerStopFilled,
@@ -10,10 +10,9 @@ import {
 } from "@tabler/icons-react";
 import React from "react";
 import { playAudio } from "../play-audio";
-import RemixButton from "../remix-button";
-import { CardReviewProps } from "./types";
-import { useVoiceRecorder } from "../use-recorder";
 import { blobToBase64, convertBlobToWav } from "../record-button";
+import { useVoiceRecorder } from "../use-recorder";
+import { CardReviewProps } from "./types";
 
 interface TopBarProps extends CardReviewProps {
   onRecordingComplete?: (base64: string) => void;
@@ -21,6 +20,10 @@ interface TopBarProps extends CardReviewProps {
 }
 
 export const TopBar: React.FC<TopBarProps> = (props) => {
+  const { card, itemsComplete, totalItems, onSkip, onGiveUp } = props;
+  const voiceRecorder = useVoiceRecorder(handleRecordingResult);
+  const progress = totalItems ? (itemsComplete / totalItems) * 100 : 0;
+
   const openCardEditor = () =>
     window.open(`/cards/${card.cardId}`, "_blank");
 
@@ -30,17 +33,13 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
     }
   };
 
-  const handleRecordingResult = async (blob: Blob) => {
+  async function handleRecordingResult(blob: Blob) {
     if (props.onRecordingComplete) {
       const wav = await convertBlobToWav(blob);
       const base64 = await blobToBase64(wav);
       props.onRecordingComplete(base64);
     }
-  };
-
-  const { card, itemsComplete, totalItems, onSkip, onGiveUp } = props;
-
-  const voiceRecorder = useVoiceRecorder(handleRecordingResult);
+  }
 
   const handleRecordClick = () => {
     if (voiceRecorder.isRecording) {
@@ -49,89 +48,84 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
       voiceRecorder.start();
     }
   };
-  const progress = totalItems ? (itemsComplete / totalItems) * 100 : 0;
 
   return (
     <>
-      <Group justify="space-between">
-        <Group>
+      <Group justify="center" wrap="wrap" gap="xs">
+        <Tooltip
+          label={
+            voiceRecorder.isRecording
+              ? "Stop recording"
+              : "Start recording"
+          }
+        >
           <ActionIcon
-            variant="subtle"
+            variant={voiceRecorder.isRecording ? "filled" : "outline"}
             size="lg"
             onClick={handleRecordClick}
-            aria-label={
-              voiceRecorder.isRecording
-                ? "Stop Recording"
-                : "Start Recording"
-            }
-            color={voiceRecorder.isRecording ? "red" : undefined}
           >
             {voiceRecorder.isRecording ? (
-              <IconPlayerStopFilled size={24} />
+              <IconPlayerStopFilled size={20} />
             ) : (
-              <IconCircleFilled size={24} />
+              <IconMicrophone size={20} />
             )}
           </ActionIcon>
+        </Tooltip>
 
-          {card.termAudio && (
+        {card.termAudio && (
+          <Tooltip label="Play audio">
             <ActionIcon
-              variant="subtle"
+              variant="outline"
               size="lg"
               onClick={handlePlayAudio}
-              aria-label="Play Audio"
             >
               <IconPlayerPlayFilled size={20} />
             </ActionIcon>
-          )}
+          </Tooltip>
+        )}
+
+        <Tooltip label="Skip card">
           <ActionIcon
-            variant="subtle"
+            variant="outline"
             size="lg"
             onClick={() => onSkip(card.uuid)}
-            aria-label="Skip"
           >
             <IconPlayerSkipForwardFilled size={20} />
           </ActionIcon>
-          <ActionIcon
-            variant="subtle"
-            size="lg"
-            onClick={openCardEditor}
-            aria-label="Edit"
-          >
+        </Tooltip>
+
+        <Tooltip label="Edit card">
+          <ActionIcon variant="outline" size="lg" onClick={openCardEditor}>
             <IconEdit size={20} />
           </ActionIcon>
+        </Tooltip>
 
+        <Tooltip label="Archive card">
           <ActionIcon
-            variant="subtle"
+            variant="outline"
             size="lg"
             onClick={() => console.log("Archive card:", card.uuid)}
-            aria-label="Archive"
           >
             <IconArchive size={20} />
           </ActionIcon>
-          <RemixButton
-            card={{
-              id: card.cardId,
-              term: card.term,
-              definition: card.definition,
-            }}
-          />
+        </Tooltip>
+
+        <Tooltip label="Give up on card">
           <ActionIcon
-            variant="subtle"
+            variant="outline"
             size="lg"
             onClick={() => onGiveUp(card.uuid)}
-            aria-label="Give up"
-            color="red"
           >
             <IconX size={20} />
           </ActionIcon>
-        </Group>
+        </Tooltip>
       </Group>
       <Progress
         value={progress}
         size="lg"
         radius="xs"
         color="teal"
-        aria-label={`${itemsComplete} of ${totalItems} cards complete.`}
+        mt="xs"
       />
     </>
   );
