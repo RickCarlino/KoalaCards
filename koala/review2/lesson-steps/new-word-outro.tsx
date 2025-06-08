@@ -185,7 +185,7 @@ export const NewWordOutro: CardUI = ({
             quizData={{
               difficulty: card.difficulty,
               stability: card.stability,
-              lastReview: card.lastReview 
+              lastReview: card.lastReview
                 ? typeof card.lastReview === "number"
                   ? card.lastReview
                   : new Date(card.lastReview).getTime()
