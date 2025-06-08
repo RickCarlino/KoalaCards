@@ -1,6 +1,6 @@
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { prismaClient } from "@/koala/prisma-client";
-import { CardReview } from "@/koala/review2/card-ui";
+import { CardReview } from "@/koala/review2";
 import { useReview } from "@/koala/review2/logic";
 import { Box, Container, Text, Title } from "@mantine/core";
 import { GetServerSideProps } from "next";

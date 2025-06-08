@@ -5,17 +5,20 @@ import {
   IconEdit,
   IconPlayerPlayFilled,
   IconPlayerSkipForwardFilled,
+  IconPlayerStopFilled,
 } from "@tabler/icons-react";
 import React from "react";
 import { playAudio } from "../play-audio";
 import RemixButton from "../remix-button";
 import { CardReviewProps } from "./types";
+import { useVoiceRecorder } from "../use-recorder";
+import { blobToBase64, convertBlobToWav } from "../record-button";
 
-export const TopBar: React.FC<CardReviewProps> = (props) => {
-  const { card, itemsComplete, totalItems, onSkip } = props;
+interface TopBarProps extends CardReviewProps {
+  onRecordingComplete?: (base64: string) => void;
+}
 
-  const progress = totalItems ? (itemsComplete / totalItems) * 100 : 0;
-
+export const TopBar: React.FC<TopBarProps> = (props) => {
   const openCardEditor = () =>
     window.open(`/cards/${card.cardId}`, "_blank");
 
@@ -25,9 +28,26 @@ export const TopBar: React.FC<CardReviewProps> = (props) => {
     }
   };
 
-  const handleRecord = () => {
-    console.log("Record action for card:", card.uuid);
+  const handleRecordingResult = async (blob: Blob) => {
+    if (props.onRecordingComplete) {
+      const wav = await convertBlobToWav(blob);
+      const base64 = await blobToBase64(wav);
+      props.onRecordingComplete(base64);
+    }
   };
+
+  const { card, itemsComplete, totalItems, onSkip } = props;
+
+  const voiceRecorder = useVoiceRecorder(handleRecordingResult);
+
+  const handleRecordClick = () => {
+    if (voiceRecorder.isRecording) {
+      voiceRecorder.stop();
+    } else {
+      voiceRecorder.start();
+    }
+  };
+  const progress = totalItems ? (itemsComplete / totalItems) * 100 : 0;
 
   return (
     <>
@@ -36,10 +56,19 @@ export const TopBar: React.FC<CardReviewProps> = (props) => {
           <ActionIcon
             variant="subtle"
             size="lg"
-            onClick={handleRecord}
-            aria-label="Record"
+            onClick={handleRecordClick}
+            aria-label={
+              voiceRecorder.isRecording
+                ? "Stop Recording"
+                : "Start Recording"
+            }
+            color={voiceRecorder.isRecording ? "red" : undefined}
           >
-            <IconCircleFilled size={24} />
+            {voiceRecorder.isRecording ? (
+              <IconPlayerStopFilled size={24} />
+            ) : (
+              <IconCircleFilled size={24} />
+            )}
           </ActionIcon>
 
           {card.termAudio && (

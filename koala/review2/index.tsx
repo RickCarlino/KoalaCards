@@ -10,6 +10,7 @@ import { RemedialOutro } from "./lesson-steps/remedial-outro";
 import { Speaking } from "./lesson-steps/speaking";
 import { TopBar } from "./top-bar";
 import { CardReviewProps, CardUI, ItemType } from "./types";
+import { playAudio } from "../play-audio";
 
 const cardUIs: Record<ItemType, CardUI> = {
   newWordIntro: NewWordIntro,
@@ -33,7 +34,7 @@ export const CardReview: React.FC<CardReviewProps> = (props) => {
 
   return (
     <Stack>
-      <TopBar {...props} />
+      <TopBar {...props} onRecordingComplete={playAudio} />
       <Box>
         <CardComponent {...props} />
       </Box>
