@@ -104,6 +104,10 @@ export function useReview(deckId: number) {
 }
 
 export function reducer(state: State, action: Action): State {
+  console.log({
+    ...state,
+    recordings: Object.keys(state.recordings).length,
+  });
   switch (action.type) {
     case "REPLACE_CARDS":
       return replaceCards(action, state);
@@ -130,14 +134,14 @@ export function reducer(state: State, action: Action): State {
     case "COMPLETE_ITEM":
       const { uuid } = action.payload;
       const updatedQueue = { ...state.queue };
-      
-      // Remove the item from all queue types
+
+      // Remove the item from all queue types by stepUuid
       for (const queueType of EVERY_QUEUE_TYPE) {
         updatedQueue[queueType] = updatedQueue[queueType].filter(
-          item => item.cardUUID !== uuid
+          (item) => item.stepUuid !== uuid,
         );
       }
-      
+
       return {
         ...state,
         queue: updatedQueue,

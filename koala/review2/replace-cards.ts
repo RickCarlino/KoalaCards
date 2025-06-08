@@ -1,3 +1,4 @@
+import { uid } from "radash";
 import { ReplaceCardAction, State, QuizMap } from "./types";
 
 export function replaceCards(
@@ -21,6 +22,7 @@ export function replaceCards(
               {
                 cardUUID: item.uuid,
                 itemType: "newWordIntro" as const,
+                stepUuid: uid(8),
               },
             ],
             newWordOutro: [
@@ -28,6 +30,7 @@ export function replaceCards(
               {
                 cardUUID: item.uuid,
                 itemType: "newWordOutro" as const,
+                stepUuid: uid(8),
               },
             ],
           },
@@ -40,7 +43,11 @@ export function replaceCards(
             ...acc.queue,
             listening: [
               ...acc.queue.listening,
-              { cardUUID: item.uuid, itemType: "listening" as const },
+              { 
+                cardUUID: item.uuid, 
+                itemType: "listening" as const,
+                stepUuid: uid(8),
+              },
             ],
           },
         };
@@ -52,7 +59,11 @@ export function replaceCards(
             ...acc.queue,
             speaking: [
               ...acc.queue.speaking,
-              { cardUUID: item.uuid, itemType: "speaking" as const },
+              { 
+                cardUUID: item.uuid, 
+                itemType: "speaking" as const,
+                stepUuid: uid(8),
+              },
             ],
           },
         };
@@ -67,6 +78,7 @@ export function replaceCards(
               {
                 cardUUID: item.uuid,
                 itemType: "remedialIntro" as const,
+                stepUuid: uid(8),
               },
             ],
             remedialOutro: [
@@ -74,6 +86,7 @@ export function replaceCards(
               {
                 cardUUID: item.uuid,
                 itemType: "remedialOutro" as const,
+                stepUuid: uid(8),
               },
             ],
           },

@@ -82,12 +82,12 @@ export default function ReviewDeckPage({ deckId }: ReviewDeckPageProps) {
           totalItems={state.totalItems}
           onSkip={skipCard}
           onProceed={() => {
-            completeItem(card.uuid);
+            completeItem(currentItem.stepUuid);
           }}
           recordings={state.recordings}
-          currentStepUuid={card.uuid}
+          currentStepUuid={currentItem.stepUuid}
           onRecordingComplete={(audio: string) => {
-            onRecordingCaptured(card.uuid, audio);
+            onRecordingCaptured(currentItem.stepUuid, audio);
           }}
         />
       </Box>

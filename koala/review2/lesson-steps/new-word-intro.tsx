@@ -8,8 +8,8 @@ import { LangCode } from "@/koala/shared-types";
 
 type Phase = "ready" | "processing" | "retry" | "success";
 
-export const NewWordIntro: CardUI = ({ card, recordings, onProceed }) => {
-  const { term, definition, uuid } = card;
+export const NewWordIntro: CardUI = ({ card, recordings, onProceed, currentStepUuid }) => {
+  const { term, definition } = card;
   const [phase, setPhase] = useState<Phase>("ready");
   const [userTranscription, setUserTranscription] = useState<string>("");
 
@@ -24,11 +24,11 @@ export const NewWordIntro: CardUI = ({ card, recordings, onProceed }) => {
     }
   }, [card.termAudio]);
 
-  // Reset phase when card changes
+  // Reset phase when step changes
   useEffect(() => {
     setPhase("ready");
     setUserTranscription("");
-  }, [card.uuid]);
+  }, [currentStepUuid]);
 
   const processRecording = async (base64Audio: string) => {
     setPhase("processing");
@@ -59,11 +59,11 @@ export const NewWordIntro: CardUI = ({ card, recordings, onProceed }) => {
 
   // Listen for recordings from TopBar
   useEffect(() => {
-    const currentRecording = recordings?.[uuid];
+    const currentRecording = recordings?.[currentStepUuid];
     if (currentRecording?.audio) {
       processRecording(currentRecording.audio);
     }
-  }, [recordings?.[uuid]?.audio]);
+  }, [recordings?.[currentStepUuid]?.audio]);
 
   const renderContent = () => {
     switch (phase) {

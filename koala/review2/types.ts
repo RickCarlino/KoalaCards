@@ -4,7 +4,7 @@ import { QuizList as ZodQuizList } from "../types/zod"; // Renamed to avoid conf
 // Types from logic.ts
 export type QuizList = z.infer<typeof ZodQuizList>["quizzes"];
 export type ItemType = keyof Queue;
-export type QueueItem = { cardUUID: string; itemType: ItemType };
+export type QueueItem = { cardUUID: string; itemType: ItemType; stepUuid: string };
 
 export type QueueType =
   | "feedback"
@@ -75,5 +75,6 @@ export type CardReviewProps = {
   itemType: ItemType;
   card: Quiz;
   recordings: Record<string, Recording>;
+  currentStepUuid: string;
 };
 export type CardUI = React.FC<CardReviewProps>;

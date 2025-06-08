@@ -2,7 +2,7 @@ import { Box, Stack } from "@mantine/core";
 import React from "react";
 import { Feedback } from "./lesson-steps/feedback";
 import { Listening } from "./lesson-steps/listening";
-import { NewWordIntro } from "./lesson-steps/new-card-intro";
+import { NewWordIntro } from "./lesson-steps/new-word-intro";
 import { NewWordOutro } from "./lesson-steps/new-word-outro";
 import { Pending } from "./lesson-steps/pending";
 import { RemedialIntro } from "./lesson-steps/remedial-intro";
