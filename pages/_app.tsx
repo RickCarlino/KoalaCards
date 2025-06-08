@@ -26,7 +26,10 @@ function App(props: AppProps) {
   }
 
   // For review pages, we want to exclude the navigation bar but keep other UI components
-  if (props.router.pathname.startsWith("/review/")) {
+  if (
+    props.router.pathname.startsWith("/review/") ||
+    props.router.pathname.startsWith("/review-next/")
+  ) {
     return (
       <>
         <Head>

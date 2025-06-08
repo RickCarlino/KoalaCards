@@ -1,0 +1,163 @@
+import {
+  ActionIcon,
+  Group,
+  RingProgress,
+  Text,
+  Tooltip,
+} from "@mantine/core";
+import {
+  IconArchive,
+  IconDoorExit,
+  IconEdit,
+  IconMicrophone,
+  IconPlayerPlayFilled,
+  IconPlayerSkipForwardFilled,
+  IconPlayerStopFilled,
+  IconLetterF,
+} from "@tabler/icons-react";
+import React from "react";
+import { playAudio } from "../play-audio";
+import { blobToBase64, convertBlobToWav } from "../record-button";
+import { useVoiceRecorder } from "../use-recorder";
+import { CardReviewProps } from "./types";
+
+interface ControlBarProps extends CardReviewProps {
+  onRecordingComplete?: (base64: string) => void;
+  currentStepUuid: string;
+}
+
+export const ControlBar: React.FC<ControlBarProps> = (props) => {
+  const { card, itemsComplete, totalItems, onSkip, onGiveUp } = props;
+  const voiceRecorder = useVoiceRecorder(handleRecordingResult);
+  const progress = totalItems ? (itemsComplete / totalItems) * 100 : 0;
+
+  const openCardEditor = () =>
+    window.open(`/cards/${card.cardId}`, "_blank");
+
+  const handlePlayAudio = () => {
+    if (card.termAudio) {
+      playAudio(card.termAudio);
+    }
+  };
+
+  async function handleRecordingResult(blob: Blob) {
+    if (props.onRecordingComplete) {
+      const wav = await convertBlobToWav(blob);
+      const base64 = await blobToBase64(wav);
+      props.onRecordingComplete(base64);
+    }
+  }
+
+  const handleRecordClick = () => {
+    if (voiceRecorder.isRecording) {
+      voiceRecorder.stop();
+    } else {
+      voiceRecorder.start();
+    }
+  };
+
+  return (
+    <Group justify="center" wrap="wrap" gap="xs">
+      <Tooltip label={`${itemsComplete} of ${totalItems} cards complete`}>
+        <RingProgress
+          size={44}
+          thickness={4}
+          sections={[{ value: progress, color: "pink.6" }]}
+          label={
+            <Text size="xs" ta="center">
+              {Math.round(progress)}%
+            </Text>
+          }
+        />
+      </Tooltip>
+
+      <Tooltip label="Exit lesson">
+        <ActionIcon
+          component="a"
+          href="/"
+          variant="outline"
+          size="lg"
+          color="pink.7"
+        >
+          <IconDoorExit size={20} />
+        </ActionIcon>
+      </Tooltip>
+
+      <Tooltip label="Edit card">
+        <ActionIcon
+          variant="outline"
+          size="lg"
+          onClick={openCardEditor}
+          color="pink.7"
+        >
+          <IconEdit size={20} />
+        </ActionIcon>
+      </Tooltip>
+
+      <Tooltip label="Archive card">
+        <ActionIcon
+          variant="outline"
+          size="lg"
+          onClick={() => console.log("Archive card:", card.uuid)}
+          color="pink.7"
+        >
+          <IconArchive size={20} />
+        </ActionIcon>
+      </Tooltip>
+
+      <Tooltip label="Give up on card">
+        <ActionIcon
+          variant="outline"
+          size="lg"
+          onClick={() => onGiveUp(card.uuid)}
+          color="pink.7"
+        >
+          <IconLetterF size={20} />
+        </ActionIcon>
+      </Tooltip>
+
+      <Tooltip label="Skip card">
+        <ActionIcon
+          variant="outline"
+          size="lg"
+          onClick={() => onSkip(card.uuid)}
+          color="pink.7"
+        >
+          <IconPlayerSkipForwardFilled size={20} />
+        </ActionIcon>
+      </Tooltip>
+
+      <Tooltip label="Play audio">
+        <ActionIcon
+          variant="outline"
+          size="lg"
+          onClick={handlePlayAudio}
+          color="pink.7"
+        >
+          <IconPlayerPlayFilled size={20} />
+        </ActionIcon>
+      </Tooltip>
+
+      <Tooltip
+        label={
+          voiceRecorder.isRecording
+            ? "Stop recording"
+            : "Record a response"
+        }
+      >
+        <ActionIcon
+          variant={voiceRecorder.isRecording ? "filled" : "outline"}
+          size="lg"
+          onClick={handleRecordClick}
+          color="pink.7"
+        >
+          {voiceRecorder.isRecording ? (
+            <IconPlayerStopFilled size={20} />
+          ) : (
+            <IconMicrophone size={20} />
+          )}
+        </ActionIcon>
+      </Tooltip>
+    </Group>
+  );
+};

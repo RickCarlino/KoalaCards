@@ -115,7 +115,7 @@ At the end of the lesson, we ask them to do a forced recall of the word (hear en
 Here's the flow:
 
 1. Do you remember how to say {{term}}? Use the "Record" or "Fail" buttons above to move to the next card.
-2. If they don't push  
+2. If they don't push
 
 # Card Type: remedialOutro
 
