@@ -37,14 +37,25 @@ export type State = {
 
 export type ReplaceCardAction = { type: "REPLACE_CARDS"; payload: Quiz[] };
 export type SkipCardAction = { type: "SKIP_CARD"; payload: UUID };
-export type RecordingCapturedAction = { type: "RECORDING_CAPTURED"; payload: { uuid: string; audio: string } };
-export type ClearRecordingAction = { type: "CLEAR_RECORDING"; payload: { uuid: string } };
+export type RecordingCapturedAction = {
+  type: "RECORDING_CAPTURED";
+  payload: { uuid: string; audio: string };
+};
+export type ClearRecordingAction = {
+  type: "CLEAR_RECORDING";
+  payload: { uuid: string };
+};
+export type CompleteItemAction = {
+  type: "COMPLETE_ITEM";
+  payload: { uuid: string };
+};
 
-export type Action = 
-  | ReplaceCardAction 
+export type Action =
+  | ReplaceCardAction
   | SkipCardAction
   | RecordingCapturedAction
-  | ClearRecordingAction;
+  | ClearRecordingAction
+  | CompleteItemAction;
 export const EVERY_QUEUE_TYPE: (keyof Queue)[] = [
   "feedback",
   "newWordIntro",

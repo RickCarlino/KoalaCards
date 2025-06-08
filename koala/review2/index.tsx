@@ -31,15 +31,17 @@ interface CardReviewWithRecordingProps extends CardReviewProps {
   onRecordingComplete: (audio: string) => void;
 }
 
-export const CardReview: React.FC<CardReviewWithRecordingProps> = (props) => {
+export const CardReview: React.FC<CardReviewWithRecordingProps> = (
+  props,
+) => {
   const { itemType, currentStepUuid, onRecordingComplete } = props;
 
   const CardComponent = cardUIs[itemType] ?? UnknownCard;
 
   return (
     <Stack>
-      <TopBar 
-        {...props} 
+      <TopBar
+        {...props}
         onRecordingComplete={onRecordingComplete}
         currentStepUuid={currentStepUuid}
       />

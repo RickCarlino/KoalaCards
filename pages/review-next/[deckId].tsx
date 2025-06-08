@@ -47,8 +47,15 @@ const MessageState = ({
 );
 
 export default function ReviewDeckPage({ deckId }: ReviewDeckPageProps) {
-  const { state, isFetching, error, currentItem, skipCard, onRecordingCaptured } =
-    useReview(deckId);
+  const {
+    state,
+    isFetching,
+    error,
+    currentItem,
+    skipCard,
+    onRecordingCaptured,
+    completeItem,
+  } = useReview(deckId);
 
   if (error)
     return <MessageState title="Error">{error.message}</MessageState>;
@@ -74,7 +81,9 @@ export default function ReviewDeckPage({ deckId }: ReviewDeckPageProps) {
           itemsComplete={state.itemsComplete}
           totalItems={state.totalItems}
           onSkip={skipCard}
-          onProceed={() => {}}
+          onProceed={() => {
+            completeItem(card.uuid);
+          }}
           recordings={state.recordings}
           currentStepUuid={card.uuid}
           onRecordingComplete={(audio: string) => {

@@ -97,6 +97,9 @@ export function useReview(deckId: number) {
     clearRecording: (uuid: string) => {
       dispatch({ type: "CLEAR_RECORDING", payload: { uuid } });
     },
+    completeItem: (uuid: string) => {
+      dispatch({ type: "COMPLETE_ITEM", payload: { uuid } });
+    },
   };
 }
 
@@ -123,6 +126,22 @@ export function reducer(state: State, action: Action): State {
       return {
         ...state,
         recordings: remainingRecordings,
+      };
+    case "COMPLETE_ITEM":
+      const { uuid } = action.payload;
+      const updatedQueue = { ...state.queue };
+      
+      // Remove the item from all queue types
+      for (const queueType of EVERY_QUEUE_TYPE) {
+        updatedQueue[queueType] = updatedQueue[queueType].filter(
+          item => item.cardUUID !== uuid
+        );
+      }
+      
+      return {
+        ...state,
+        queue: updatedQueue,
+        itemsComplete: state.itemsComplete + 1,
       };
     default:
       return state;
