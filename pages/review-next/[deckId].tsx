@@ -53,6 +53,7 @@ export default function ReviewDeckPage({ deckId }: ReviewDeckPageProps) {
     error,
     currentItem,
     skipCard,
+    giveUp,
     onRecordingCaptured,
     completeItem,
   } = useReview(deckId);
@@ -81,6 +82,7 @@ export default function ReviewDeckPage({ deckId }: ReviewDeckPageProps) {
           itemsComplete={state.itemsComplete}
           totalItems={state.totalItems}
           onSkip={skipCard}
+          onGiveUp={giveUp}
           onProceed={() => {
             completeItem(currentItem.stepUuid);
           }}

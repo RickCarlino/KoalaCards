@@ -6,6 +6,7 @@ import {
   IconPlayerPlayFilled,
   IconPlayerSkipForwardFilled,
   IconPlayerStopFilled,
+  IconX,
 } from "@tabler/icons-react";
 import React from "react";
 import { playAudio } from "../play-audio";
@@ -37,7 +38,7 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
     }
   };
 
-  const { card, itemsComplete, totalItems, onSkip } = props;
+  const { card, itemsComplete, totalItems, onSkip, onGiveUp } = props;
 
   const voiceRecorder = useVoiceRecorder(handleRecordingResult);
 
@@ -114,6 +115,15 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
               definition: card.definition,
             }}
           />
+          <ActionIcon
+            variant="subtle"
+            size="lg"
+            onClick={() => onGiveUp(card.uuid)}
+            aria-label="Give up"
+            color="red"
+          >
+            <IconX size={20} />
+          </ActionIcon>
         </Group>
       </Group>
       <Progress

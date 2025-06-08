@@ -8,7 +8,12 @@ import { LangCode } from "@/koala/shared-types";
 
 type Phase = "ready" | "processing" | "retry" | "success";
 
-export const NewWordIntro: CardUI = ({ card, recordings, onProceed, currentStepUuid }) => {
+export const NewWordIntro: CardUI = ({
+  card,
+  recordings,
+  onProceed,
+  currentStepUuid,
+}) => {
   const { term, definition } = card;
   const [phase, setPhase] = useState<Phase>("ready");
   const [userTranscription, setUserTranscription] = useState<string>("");

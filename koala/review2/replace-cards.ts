@@ -43,8 +43,8 @@ export function replaceCards(
             ...acc.queue,
             listening: [
               ...acc.queue.listening,
-              { 
-                cardUUID: item.uuid, 
+              {
+                cardUUID: item.uuid,
                 itemType: "listening" as const,
                 stepUuid: uid(8),
               },
@@ -59,8 +59,8 @@ export function replaceCards(
             ...acc.queue,
             speaking: [
               ...acc.queue.speaking,
-              { 
-                cardUUID: item.uuid, 
+              {
+                cardUUID: item.uuid,
                 itemType: "speaking" as const,
                 stepUuid: uid(8),
               },

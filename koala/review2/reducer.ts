@@ -91,6 +91,9 @@ export function useReview(deckId: number) {
     skipCard: (cardUUID: string) => {
       dispatch({ type: "SKIP_CARD", payload: { uuid: cardUUID } });
     },
+    giveUp: (cardUUID: string) => {
+      dispatch({ type: "GIVE_UP", payload: { cardUUID } });
+    },
     onRecordingCaptured: (uuid: string, audio: string) => {
       dispatch({ type: "RECORDING_CAPTURED", payload: { uuid, audio } });
     },
@@ -146,6 +149,21 @@ export function reducer(state: State, action: Action): State {
         ...state,
         queue: updatedQueue,
         itemsComplete: state.itemsComplete + 1,
+      };
+    case "GIVE_UP":
+      const { cardUUID } = action.payload;
+      const giveUpQueue = { ...state.queue };
+
+      // Remove all items with matching cardUUID from all queue types
+      for (const queueType of EVERY_QUEUE_TYPE) {
+        giveUpQueue[queueType] = giveUpQueue[queueType].filter(
+          (item) => item.cardUUID !== cardUUID,
+        );
+      }
+
+      return {
+        ...state,
+        queue: giveUpQueue,
       };
     default:
       return state;

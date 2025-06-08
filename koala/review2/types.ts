@@ -4,7 +4,11 @@ import { QuizList as ZodQuizList } from "../types/zod"; // Renamed to avoid conf
 // Types from logic.ts
 export type QuizList = z.infer<typeof ZodQuizList>["quizzes"];
 export type ItemType = keyof Queue;
-export type QueueItem = { cardUUID: string; itemType: ItemType; stepUuid: string };
+export type QueueItem = {
+  cardUUID: string;
+  itemType: ItemType;
+  stepUuid: string;
+};
 
 export type QueueType =
   | "feedback"
@@ -49,13 +53,18 @@ export type CompleteItemAction = {
   type: "COMPLETE_ITEM";
   payload: { uuid: string };
 };
+export type GiveUpAction = {
+  type: "GIVE_UP";
+  payload: { cardUUID: string };
+};
 
 export type Action =
   | ReplaceCardAction
   | SkipCardAction
   | RecordingCapturedAction
   | ClearRecordingAction
-  | CompleteItemAction;
+  | CompleteItemAction
+  | GiveUpAction;
 export const EVERY_QUEUE_TYPE: (keyof Queue)[] = [
   "feedback",
   "newWordIntro",
@@ -70,6 +79,7 @@ export const EVERY_QUEUE_TYPE: (keyof Queue)[] = [
 export type CardReviewProps = {
   onProceed: () => void;
   onSkip: (uuid: string) => void;
+  onGiveUp: (cardUUID: string) => void;
   itemsComplete: number;
   totalItems: number;
   itemType: ItemType;
