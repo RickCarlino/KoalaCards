@@ -2,6 +2,7 @@ import { Stack, Text, Image, Button } from "@mantine/core";
 import { CardUI } from "../types";
 import { useEffect, useState } from "react";
 import { useVoiceGrading } from "../use-voice-grading";
+import { useQuizGrading } from "../use-quiz-grading";
 import { LangCode } from "@/koala/shared-types";
 
 type Phase = "ready" | "processing" | "success" | "failure";
@@ -75,6 +76,10 @@ export const NewWordOutro: CardUI = ({
     quizId: card.quizId,
   });
 
+  const { gradeWithAgain } = useQuizGrading({
+    quizId: card.quizId,
+  });
+
   // Reset phase when step changes
   useEffect(() => {
     setPhase("ready");
@@ -110,6 +115,13 @@ export const NewWordOutro: CardUI = ({
     }
   }, [recordings?.[currentStepUuid]?.audio]);
 
+  const handleFailureContinue = async () => {
+    // Grade the quiz as AGAIN (failed)
+    await gradeWithAgain();
+    // Then proceed to the next item
+    onProceed();
+  };
+
   // Early return for failure case
   if (phase === "failure") {
     return (
@@ -119,7 +131,7 @@ export const NewWordOutro: CardUI = ({
         definition={definition}
         userTranscription={userTranscription}
         feedback={feedback}
-        onContinue={onProceed}
+        onContinue={handleFailureContinue}
       />
     );
   }
