@@ -44,7 +44,13 @@ function nextQueueItem(queue: Queue): QueueItem | undefined {
 }
 
 export function initialState(): State {
-  return { queue: queue(), cards: {}, totalItems: 0, itemsComplete: 0 };
+  return {
+    queue: queue(),
+    cards: {},
+    totalItems: 0,
+    itemsComplete: 0,
+    recordings: {},
+  };
 }
 
 export function useReview(deckId: number) {
@@ -85,6 +91,12 @@ export function useReview(deckId: number) {
     skipCard: (cardUUID: string) => {
       dispatch({ type: "SKIP_CARD", payload: { uuid: cardUUID } });
     },
+    onRecordingCaptured: (uuid: string, audio: string) => {
+      dispatch({ type: "RECORDING_CAPTURED", payload: { uuid, audio } });
+    },
+    clearRecording: (uuid: string) => {
+      dispatch({ type: "CLEAR_RECORDING", payload: { uuid } });
+    },
   };
 }
 
@@ -94,6 +106,24 @@ export function reducer(state: State, action: Action): State {
       return replaceCards(action, state);
     case "SKIP_CARD":
       return skipCard(action, state);
+    case "RECORDING_CAPTURED":
+      return {
+        ...state,
+        recordings: {
+          ...state.recordings,
+          [action.payload.uuid]: {
+            stepUuid: action.payload.uuid,
+            audio: action.payload.audio,
+          },
+        },
+      };
+    case "CLEAR_RECORDING":
+      const { [action.payload.uuid]: _, ...remainingRecordings } =
+        state.recordings;
+      return {
+        ...state,
+        recordings: remainingRecordings,
+      };
     default:
       return state;
   }

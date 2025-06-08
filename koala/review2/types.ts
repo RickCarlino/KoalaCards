@@ -22,16 +22,29 @@ export type UUID = { uuid: string };
 
 export type Quiz = QuizList[number] & UUID;
 
+export type Recording = {
+  stepUuid: string;
+  audio: string;
+};
+
 export type State = {
   totalItems: number;
   itemsComplete: number;
   queue: Queue;
   cards: QuizMap;
+  recordings: Record<string, Recording>;
 };
 
 export type ReplaceCardAction = { type: "REPLACE_CARDS"; payload: Quiz[] };
 export type SkipCardAction = { type: "SKIP_CARD"; payload: UUID };
-export type Action = ReplaceCardAction | SkipCardAction;
+export type RecordingCapturedAction = { type: "RECORDING_CAPTURED"; payload: { uuid: string; audio: string } };
+export type ClearRecordingAction = { type: "CLEAR_RECORDING"; payload: { uuid: string } };
+
+export type Action = 
+  | ReplaceCardAction 
+  | SkipCardAction
+  | RecordingCapturedAction
+  | ClearRecordingAction;
 export const EVERY_QUEUE_TYPE: (keyof Queue)[] = [
   "feedback",
   "newWordIntro",
@@ -50,5 +63,6 @@ export type CardReviewProps = {
   totalItems: number;
   itemType: ItemType;
   card: Quiz;
+  recordings: Record<string, Recording>;
 };
 export type CardUI = React.FC<CardReviewProps>;

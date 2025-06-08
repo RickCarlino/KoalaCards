@@ -16,6 +16,7 @@ import { blobToBase64, convertBlobToWav } from "../record-button";
 
 interface TopBarProps extends CardReviewProps {
   onRecordingComplete?: (base64: string) => void;
+  currentStepUuid: string;
 }
 
 export const TopBar: React.FC<TopBarProps> = (props) => {

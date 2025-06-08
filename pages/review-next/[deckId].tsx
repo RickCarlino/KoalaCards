@@ -1,7 +1,7 @@
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { prismaClient } from "@/koala/prisma-client";
 import { CardReview } from "@/koala/review2";
-import { useReview } from "@/koala/review2/logic";
+import { useReview } from "@/koala/review2/reducer";
 import { Box, Container, Text, Title } from "@mantine/core";
 import { GetServerSideProps } from "next";
 import React from "react";
@@ -47,7 +47,7 @@ const MessageState = ({
 );
 
 export default function ReviewDeckPage({ deckId }: ReviewDeckPageProps) {
-  const { state, isFetching, error, currentItem, skipCard } =
+  const { state, isFetching, error, currentItem, skipCard, onRecordingCaptured } =
     useReview(deckId);
 
   if (error)
@@ -75,6 +75,11 @@ export default function ReviewDeckPage({ deckId }: ReviewDeckPageProps) {
           totalItems={state.totalItems}
           onSkip={skipCard}
           onProceed={() => {}}
+          recordings={state.recordings}
+          currentStepUuid={card.uuid}
+          onRecordingComplete={(audio: string) => {
+            onRecordingCaptured(card.uuid, audio);
+          }}
         />
       </Box>
     </Container>

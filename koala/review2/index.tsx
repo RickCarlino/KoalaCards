@@ -10,7 +10,6 @@ import { RemedialOutro } from "./lesson-steps/remedial-outro";
 import { Speaking } from "./lesson-steps/speaking";
 import { TopBar } from "./top-bar";
 import { CardReviewProps, CardUI, ItemType } from "./types";
-import { playAudio } from "../play-audio";
 
 const cardUIs: Record<ItemType, CardUI> = {
   newWordIntro: NewWordIntro,
@@ -27,14 +26,23 @@ const UnknownCard: CardUI = ({ card }) => (
   <div>{`UNKNOWN CARD TYPE: ${card.uuid}`}</div>
 );
 
-export const CardReview: React.FC<CardReviewProps> = (props) => {
-  const { itemType } = props;
+interface CardReviewWithRecordingProps extends CardReviewProps {
+  currentStepUuid: string;
+  onRecordingComplete: (audio: string) => void;
+}
+
+export const CardReview: React.FC<CardReviewWithRecordingProps> = (props) => {
+  const { itemType, currentStepUuid, onRecordingComplete } = props;
 
   const CardComponent = cardUIs[itemType] ?? UnknownCard;
 
   return (
     <Stack>
-      <TopBar {...props} onRecordingComplete={playAudio} />
+      <TopBar 
+        {...props} 
+        onRecordingComplete={onRecordingComplete}
+        currentStepUuid={currentStepUuid}
+      />
       <Box>
         <CardComponent {...props} />
       </Box>

@@ -3,11 +3,10 @@ import { Stack, Text, Image } from "@mantine/core";
 import { CardUI } from "../types";
 import { useEffect } from "react";
 
-export const NewWordIntro: CardUI = ({ card }) => {
-  const {
-    term = "Placeholder Term",
-    definition = "Placeholder Definition",
-  } = card;
+export const NewWordIntro: CardUI = ({ card, recordings }) => {
+  const { term, definition, uuid } = card;
+
+  const recordingStatus = !!recordings?.[uuid];
 
   useEffect(() => {
     if (card.termAudio) {
@@ -30,6 +29,9 @@ export const NewWordIntro: CardUI = ({ card }) => {
         {term}
       </Text>
       <Text ta="center">{definition}</Text>
+      <Text ta="center">
+        {recordingStatus ? "Have a recording" : "No recording available"}
+      </Text>
     </Stack>
   );
 };
