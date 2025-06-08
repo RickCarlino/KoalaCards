@@ -6,25 +6,30 @@ import {
 } from "@tabler/icons-react";
 import React from "react";
 import RemixButton from "../remix-button";
+import { Feedback } from "./lesson-steps/feedback";
+import { Listening } from "./lesson-steps/listening";
 import { NewWordIntro } from "./lesson-steps/new-card-intro";
+import { NewWordOutro } from "./lesson-steps/new-word-outro";
+import { Pending } from "./lesson-steps/pending";
+import { RemedialIntro } from "./lesson-steps/remedial-intro";
+import { RemedialOutro } from "./lesson-steps/remedial-outro";
+import { Speaking } from "./lesson-steps/speaking";
 import { CardReviewProps, CardUI, ItemType } from "./types";
-
-const placeholder =
-  (label: string): CardUI =>
-  ({ card }) => <div>{`TODO: ${label}: ${card.uuid}`}</div>;
 
 const cardUIs: Record<ItemType, CardUI> = {
   newWordIntro: NewWordIntro,
-  newWordOutro: placeholder("New Word Outro"),
-  listening: placeholder("Listening"),
-  speaking: placeholder("Speaking"),
-  remedialIntro: placeholder("Remedial Intro"),
-  remedialOutro: placeholder("Remedial Outro"),
-  feedback: placeholder("Feedback"),
-  pending: placeholder("Waiting on"),
+  newWordOutro: NewWordOutro,
+  listening: Listening,
+  speaking: Speaking,
+  remedialIntro: RemedialIntro,
+  remedialOutro: RemedialOutro,
+  feedback: Feedback,
+  pending: Pending,
 };
 
-const UnknownCard: CardUI = placeholder("Unknown Item Type");
+const UnknownCard: CardUI = ({ card }) => (
+  <div>{`UNKNOWN CARD TYPE: ${card.uuid}`}</div>
+);
 
 export const CardReview: React.FC<CardReviewProps> = (props) => {
   const { card, itemType, itemsComplete, totalItems, onSkip } = props;
