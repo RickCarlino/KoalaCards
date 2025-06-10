@@ -3,58 +3,9 @@ import { CardUI } from "../types";
 import { useEffect, useState } from "react";
 import { useRepair } from "../use-repair";
 import { LangCode } from "@/koala/shared-types";
+import { FailureView } from "../components/FailureView";
 
 type Phase = "ready" | "processing" | "success" | "failure";
-
-const FailureView = ({
-  imageURL,
-  term,
-  definition,
-  userTranscription,
-  onContinue,
-}: {
-  imageURL?: string;
-  term: string;
-  definition: string;
-  userTranscription: string;
-  onContinue: () => void;
-}) => {
-  return (
-    <Stack align="center" gap="md">
-      {imageURL && (
-        <Image
-          src={imageURL}
-          alt={`Image: ${term}`}
-          maw="100%"
-          mah={240}
-          fit="contain"
-        />
-      )}
-
-      <Text ta="center" c="red" fw={500} size="lg">
-        Not quite right
-      </Text>
-
-      <Text size="xl" fw={700} ta="center">
-        {term}
-      </Text>
-
-      <Text ta="center">{definition}</Text>
-
-      <Text ta="center" size="sm" c="dimmed">
-        You said: "{userTranscription}"
-      </Text>
-
-      <Text ta="center" c="dimmed">
-        We'll review this again later.
-      </Text>
-
-      <Button onClick={onContinue} variant="light" color="blue">
-        Continue
-      </Button>
-    </Stack>
-  );
-};
 
 const SuccessView = ({
   imageURL,
@@ -158,6 +109,7 @@ export const RemedialOutro: CardUI = ({
         definition={definition}
         userTranscription={userTranscription}
         onContinue={handleContinue}
+        failureText="Not quite right"
       />
     );
   }
