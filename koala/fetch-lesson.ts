@@ -209,7 +209,7 @@ export async function getLessons(p: GetLessonInputParams) {
   return shuffle(allCards)
     .slice(0, take)
     .map((quiz) => {
-      const quizType = !repsMap[quiz.cardId] ? "new" : quiz.quizType;
+      const quizType = "listening"; // !repsMap[quiz.cardId] ? "new" : quiz.quizType;
       return buildQuizPayload({ ...quiz, quizType }, speedPercent);
     });
 }
