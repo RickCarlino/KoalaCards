@@ -75,8 +75,7 @@ export const RemedialIntro: CardUI = ({
       case "ready":
         return (
           <Text ta="center" c="dimmed">
-            Let's review this word. Press the record button above and
-            repeat the phrase.
+            Press the record button and repeat the phrase.
           </Text>
         );
 

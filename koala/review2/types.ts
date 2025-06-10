@@ -34,6 +34,7 @@ export type Recording = {
 export type State = {
   totalItems: number;
   itemsComplete: number;
+  currentItem: QueueItem | undefined;
   queue: Queue;
   cards: QuizMap;
   recordings: Record<string, Recording>;

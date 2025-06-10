@@ -2,12 +2,12 @@ import { uid } from "radash";
 import { useEffect, useReducer, useState } from "react";
 import { trpc } from "../trpc-config";
 import { replaceCards } from "./replace-cards";
-import { skipCard } from "./skip-card";
 import {
   Action,
   EVERY_QUEUE_TYPE,
   Queue,
   QueueItem,
+  SkipCardAction,
   State,
 } from "./types";
 
@@ -22,6 +22,22 @@ const queue = (): Queue => ({
   pending: [],
 });
 
+export function skipCard(action: SkipCardAction, state: State): State {
+  const cardUUID = action.payload.uuid;
+  const newQueue = { ...state.queue };
+  for (const type of EVERY_QUEUE_TYPE) {
+    newQueue[type] = newQueue[type].filter(
+      (item) => item.cardUUID !== cardUUID,
+    );
+  }
+  return {
+    ...state,
+    queue: newQueue,
+    itemsComplete: state.itemsComplete + 1,
+    currentItem: nextQueueItem(newQueue),
+  };
+}
+
 function getItemsDue(queue: Queue): number {
   const relevant: (keyof Queue)[] = [
     "newWordIntro",
@@ -34,7 +50,7 @@ function getItemsDue(queue: Queue): number {
   return relevant.reduce((acc, type) => acc + queue[type].length, 0);
 }
 
-function nextQueueItem(queue: Queue): QueueItem | undefined {
+export function nextQueueItem(queue: Queue): QueueItem | undefined {
   // Get first item from the queue with the highest priority:
   for (const type of EVERY_QUEUE_TYPE) {
     const item = queue[type][0];
@@ -47,6 +63,7 @@ export function initialState(): State {
   return {
     queue: queue(),
     cards: {},
+    currentItem: undefined,
     totalItems: 0,
     itemsComplete: 0,
     recordings: {},
@@ -86,7 +103,7 @@ export function useReview(deckId: number) {
     error: mutation.isError ? mutation.error || "" : null,
     isFetching,
     state,
-    currentItem: nextQueueItem(state.queue),
+    currentItem: state.currentItem,
     totalDue: getItemsDue(state.queue),
     skipCard: (cardUUID: string) => {
       dispatch({ type: "SKIP_CARD", payload: { uuid: cardUUID } });
@@ -148,6 +165,7 @@ export function reducer(state: State, action: Action): State {
       return {
         ...state,
         queue: updatedQueue,
+        currentItem: nextQueueItem(updatedQueue),
         itemsComplete: state.itemsComplete + 1,
       };
     case "GIVE_UP":
@@ -164,6 +182,8 @@ export function reducer(state: State, action: Action): State {
       return {
         ...state,
         queue: giveUpQueue,
+        currentItem: nextQueueItem(giveUpQueue),
+        itemsComplete: state.itemsComplete + 1, // Increment complete count
       };
     default:
       return state;

@@ -1,5 +1,5 @@
-It's a spaced repetition flash card app similar to Anki, or iknow.jp or old versions of Memrise before they pivoted.
-The user is shown one "thing" at a time and works their way through the cards until the lesson is over.
+This is a spaced repetition flash card app that guides the user through steps of a structrued review one "thing" at a time and works their way through the cards until the lesson is over.
+
 The thing varies on context. It might be:
 
 - A new card they are learning for the first time (new card review).
@@ -13,125 +13,154 @@ Once they finish the lesson, they can study more or exit to "/".
 
 # Coding Conventions
 
-Here some (not all) relevant files:
+Here are the relevant files:
 
 pages/review-next/[deckId].tsx - The actual page in Next.js
-koala/review2/logic.ts - All the logic, excluding JSX UI components.
-koala/review2/card-ui.tsx - JSX Components
-koala/review/\*\* - The legacy version we are replacing.
+koala/review2/index.tsx - Main component that renders card types with control bar
+koala/review2/reducer.ts - State management, reducer logic, and main useReview hook
+koala/review2/types.ts - TypeScript types and interfaces
+koala/review2/control-bar.tsx - Fixed bottom control bar with buttons and progress
+koala/review2/lesson-steps/*.tsx - Individual card type components
+koala/review2/replace-cards.ts - Logic for initializing cards into queues
+koala/review2/use-*.ts - Custom hooks for voice grading, transcription, etc.
+koala/review/** - The legacy version we are replacing.
 
 # The Overall UI
 
-There are some elements that are shown throught out the lifecycle of the review session:
+The main component (index.tsx) renders:
+- A card-specific component based on the current item type
+- A fixed bottom control bar with universal buttons and progress
 
-- A progress bar shows how far through the lesson they've progressed.
-- A "Skip" button allows them to remove the card from the current lesson
-- An "Archive" button allows them to archive the card (stop studying)
-- An "EDIT" button opens the edit page in a new tab: /cards/[cardID]
-
-This UI will wrap a "card type" component that has UI elements specific to the step (details next).
+The control bar includes:
+- Progress ring showing completion percentage
+- Exit button (links to home "/")
+- Edit button (opens card editor in new tab)
+- Archive button (placeholder - logs to console)
+- Give up button (removes card from lesson with "F" icon)
+- Skip button (removes card from current lesson)
+- Play audio button (plays term audio)
+- Record button (starts/stops voice recording)
 
 # Common UI: Record button
 
-All recording will be limited to 10 seconds.
-The user presses the record button.
-It changes color and begins a countdown.
-They can click it again or wait for the timer to finish, at which point it will grab whatever was recorded (much of the infra for this is working just fine in the old version)
-
-# Common UI: Grade buttons
-
-We use the FSRS algorithm, so we need "AGAIN", "HARD", "GOOD", "EASY" buttons.
-
-# Common UI: Remix Button
-
-The user can create new cards based off of old cards. We are going to just use the old modal for this one.
+Recording is handled in the control bar:
+- User presses the microphone button to start recording
+- Button changes to stop icon while recording
+- User can click again or wait for automatic timeout
+- Recording is processed as base64 audio and passed to the current card component
 
 # Common UI: Progress Bar
 
-The progress bar proceeds as the user finishes each item in the lesson.
-
-# Common UI: Ask a question
-
-The user can shift to a chat session with an LLM to ask questions.
-
-# Common UI: Give Up
-
-The "I don't know" button for hard quizzes.
-Play the term/definition thrice and then proceed to the next card.
-
-# Common UI: Give Up
-
-It's like giving up, but you will be quizzed on it later.
+The progress ring in the control bar shows completion as a percentage:
+- Based on itemsComplete / totalItems
+- Updates automatically as items are completed
 
 # CARD TYPES
 
-There are several "card" types in the lesson state. These are just stages of the lesson.
+There are several card types, each implemented as a separate component in lesson-steps/:
 
-# Card Type: newWordIntro
+# Card Type: newWordIntro (COMPLETE)
 
+Located: lesson-steps/new-word-intro.tsx
 This is the first time a user has seen the card.
-They will be show the "term" and "definition" of the card.
-They can play the audio.
-They will be shown the card image if it has one, but not all cards have images (the UI needs to handle this gracefully even on mobile).
-When the user is ready, they will record a response.
-They will wait for the server to check their pronounciation (we will re-use much of the logic and trpc methods from the old versions).
-They can proceed once it is corrrect.
-They must retry (or give up or skip) if they fail.
-They will be quizzed at the end of the lesson via forced active recal (shown english, expected to recite in target language)
+- Shows term, definition, and image (if present)
+- Plays term audio automatically on load
+- User records their pronunciation attempt
+- Uses voice transcription to check pronunciation
+- Shows visual diff if incorrect, allows retry
+- On success, plays definition audio then term audio, then proceeds
+- Handles recording via recordings prop from control bar
 
-# Card Type: remedialIntro
+# Card Type: remedialIntro (COMPLETE)
 
-The user has seen this one before, but they failed a quiz previously.
-It is like the new word card except that the user already saw the card.
+Located: lesson-steps/remedial-intro.tsx
+The user has seen this card before but failed a quiz previously.
+- Similar to newWordIntro but shows "Reviewing Previous Mistake" header
+- Same pronunciation checking flow as newWordIntro
+- Uses voice transcription for grading
 
-# Card Type: listening
+# Card Type: listening (NOT COMPLETE)
 
-They are shown the image if present.
-They will hear the phrase in target language
-They will recite the phrase again.
-If they pronounce correctly, it will play the english definition.
-It will render the term and definition.
-There will be 4 buttons to select a difficulty level, like in Anki (see the legacy version for inspiration)
+Located: lesson-steps/listening.tsx
+Currently shows "TODO: Listening" placeholder.
+Intended to be a repeat-after-me drill:
+- User hears phrase in target language
+- They repeat it back
+- If correct, plays English definition and shows grading buttons
 
-# Card Type: speaking
+# Card Type: speaking (COMPLETE)
 
-They are shown the image if present.
-They will hear the phrase in English
-They will recite the phrase in the target language.
-The server will grade their response in the background async.
-It will render the term and definition.
-There will be 4 buttons to select a difficulty level, like in Anki (see the legacy version for inspiration)
-Later, they will get feedback when it comes back from the server.
+Located: lesson-steps/speaking.tsx
+User is asked to translate from English to target language:
+- Shows "Say '[definition]' in the target language"
+- User records their attempt
+- Uses voice grading (more sophisticated than transcription)
+- On success: shows grading success component with FSRS buttons (Again/Hard/Good/Easy)
+- On failure: shows feedback and "Continue" button, automatically grades as "Again"
 
-# Card Type: feedback
+# Card Type: newWordOutro (COMPLETE)
 
-AI Grading is slow. Instead of forcing the user to wait after they submit a recording for grading, we move to the next card and manage a pending items queue. Once the grading is done, the next item in the lesson will be a review of what they said, why it was wrong, etc...
+Located: lesson-steps/new-word-outro.tsx
+Final quiz on new cards introduced at lesson start:
+- Shows "How would you say '[definition]'?"
+- User must recall and speak the target language term
+- Uses voice grading like speaking quiz
+- Success shows FSRS grading buttons
+- Failure shows feedback and continues with "Again" grade
 
-# Card Type: newWordOutro
+# Card Type: remedialOutro (COMPLETE)
 
-We showed them the term and definition at the lesson's start.
-At the end of the lesson, we ask them to do a forced recall of the word (see english prompt => produce target language sentence from memory).
+Located: lesson-steps/remedial-outro.tsx
+Similar to newWordOutro but for cards that were previously failed.
+Currently implemented identically to newWordOutro.
 
-This means that the play button should be disabled (to not give away the answer)
+# State Management
 
-Here's the flow:
+The app uses a reducer pattern with these key concepts:
 
-1. Do you remember how to say {{term}}? Use the "Record" or "Fail" buttons above to move to the next card.
-2. If they don't push
+## Queue System
 
-# Card Type: remedialOutro
+Cards are organized into priority-ordered queues:
 
-If user passes speaking exam, we update the card. Unlike speaking exam, it's pass/fail.
+1. newWordIntro
+1. remedialIntro  
+1. listening
+1. speaking
+1. newWordOutro
+1. remedialOutro
 
-# Card Type: pending
+Certain reducer actions, such as skipping an item, failing an item, etc.. cause the current item to change.
 
-If the user finished all of the lesson, but stuff is still grading (pending queue length > 0) we tell them to please wait.
+It is important that the reducer can add and remove items from the review in the background without accidentally switching the current item (this is why we explicitly set the current item in the state tree).
+
+## Card Initialization
+
+When cards are fetched (replace-cards.ts):
+- "new" lesson type → creates newWordIntro + newWordOutro items (2 total items)
+- "remedial" lesson type → creates remedialIntro + remedialOutro items (2 total items)  
+- "listening" lesson type → creates listening item (1 total item)
+- "speaking" lesson type → creates speaking item (1 total item)
+
+## Actions
+- REPLACE_CARDS: Initialize cards into queues
+- SKIP_CARD: Remove all items for a card from all queues
+- GIVE_UP: Same as skip but increments completion count
+- RECORDING_CAPTURED: Store audio recording by stepUuid
+- CLEAR_RECORDING: Remove stored recording
+- COMPLETE_ITEM: Remove item by stepUuid and proceed to next
+
+## Custom Hooks
+
+- useVoiceTranscription: Simple pronunciation checking (used in intro cards)
+- useVoiceGrading: Advanced AI grading with feedback (used in quiz cards)
+- useQuizGrading: FSRS grading integration with server
+- useReview: Main hook that manages the entire lesson state
 
 # Ideas For Later
 
 Make listening and speaking a two part process?
 
-Listinening 1: Repeat the phrase. Write what it means.
+Listening 1: Repeat the phrase. Write what it means.
 Speaking 1: Say the phrase in Korean
 
 --- User presses "Submit for grading and Continue" ---
