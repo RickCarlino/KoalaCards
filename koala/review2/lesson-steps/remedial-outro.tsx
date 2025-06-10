@@ -1,9 +1,12 @@
 import { Stack, Text, Image, Button } from "@mantine/core";
 import { CardUI } from "../types";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRepair } from "../use-repair";
 import { LangCode } from "@/koala/shared-types";
 import { FailureView } from "../components/FailureView";
+import { CardImage } from "../components/CardImage";
+import { usePhaseManager } from "../hooks/usePhaseManager";
+import { useRecordingProcessor } from "../hooks/useRecordingProcessor";
 
 type Phase = "ready" | "processing" | "success" | "failure";
 
@@ -54,7 +57,6 @@ export const RemedialOutro: CardUI = ({
   currentStepUuid,
 }) => {
   const { term, definition } = card;
-  const [phase, setPhase] = useState<Phase>("ready");
   const [userTranscription, setUserTranscription] = useState<string>("");
 
   const { processAudio } = useRepair({
@@ -63,11 +65,11 @@ export const RemedialOutro: CardUI = ({
     langCode: card.langCode as LangCode,
   });
 
-  // Reset phase when step changes
-  useEffect(() => {
-    setPhase("ready");
-    setUserTranscription("");
-  }, [currentStepUuid]);
+  const { phase, setPhase } = usePhaseManager<Phase>(
+    "ready",
+    currentStepUuid,
+    () => setUserTranscription(""),
+  );
 
   const processRecording = async (base64Audio: string) => {
     setPhase("processing");
@@ -88,13 +90,11 @@ export const RemedialOutro: CardUI = ({
     }
   };
 
-  // Listen for recordings from TopBar
-  useEffect(() => {
-    const currentRecording = recordings?.[currentStepUuid];
-    if (currentRecording?.audio) {
-      processRecording(currentRecording.audio);
-    }
-  }, [recordings?.[currentStepUuid]?.audio]);
+  useRecordingProcessor({
+    recordings,
+    currentStepUuid,
+    onAudioReceived: processRecording,
+  });
 
   const handleContinue = () => {
     onProceed();
@@ -150,15 +150,7 @@ export const RemedialOutro: CardUI = ({
 
   return (
     <Stack align="center" gap="md">
-      {card.imageURL && (
-        <Image
-          src={card.imageURL}
-          alt={`Image: ${term}`}
-          maw="100%"
-          mah={240}
-          fit="contain"
-        />
-      )}
+      <CardImage imageURL={card.imageURL} term={term} />
 
       <Text ta="center" c="orange" fw={500} size="sm">
         Remedial Review

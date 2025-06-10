@@ -1,4 +1,5 @@
-import { Stack, Text, Image, Button } from "@mantine/core";
+import { Stack, Text, Button } from "@mantine/core";
+import { CardImage } from "./CardImage";
 
 interface FailureViewProps {
   imageURL?: string;
@@ -21,15 +22,7 @@ export const FailureView: React.FC<FailureViewProps> = ({
 }) => {
   return (
     <Stack align="center" gap="md">
-      {imageURL && (
-        <Image
-          src={imageURL}
-          alt={`Image: ${term}`}
-          maw="100%"
-          mah={240}
-          fit="contain"
-        />
-      )}
+      <CardImage imageURL={imageURL} term={term} />
 
       <Text ta="center" c="red" fw={500} size="lg">
         {failureText}

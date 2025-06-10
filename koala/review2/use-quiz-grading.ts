@@ -17,29 +17,29 @@ export function useQuizGrading({
     onError,
   });
 
-  const gradeWithAgain = async () => {
-    return gradeQuiz.mutateAsync({
+  const gradeWithAgain = async (): Promise<void> => {
+    await gradeQuiz.mutateAsync({
       perceivedDifficulty: Grade.AGAIN,
       quizID: quizId,
     });
   };
 
-  const gradeWithHard = async () => {
-    return gradeQuiz.mutateAsync({
+  const gradeWithHard = async (): Promise<void> => {
+    await gradeQuiz.mutateAsync({
       perceivedDifficulty: Grade.HARD,
       quizID: quizId,
     });
   };
 
-  const gradeWithGood = async () => {
-    return gradeQuiz.mutateAsync({
+  const gradeWithGood = async (): Promise<void> => {
+    await gradeQuiz.mutateAsync({
       perceivedDifficulty: Grade.GOOD,
       quizID: quizId,
     });
   };
 
-  const gradeWithEasy = async () => {
-    return gradeQuiz.mutateAsync({
+  const gradeWithEasy = async (): Promise<void> => {
+    await gradeQuiz.mutateAsync({
       perceivedDifficulty: Grade.EASY,
       quizID: quizId,
     });

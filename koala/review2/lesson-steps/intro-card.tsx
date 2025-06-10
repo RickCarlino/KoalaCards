@@ -1,10 +1,13 @@
-import { playAudio } from "@/koala/play-audio";
-import { Stack, Text, Image } from "@mantine/core";
+import { Stack, Text } from "@mantine/core";
 import { CardReviewProps } from "../types";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useVoiceTranscription } from "../use-voice-transcription";
 import { VisualDiff } from "@/koala/review/visual-diff";
 import { LangCode } from "@/koala/shared-types";
+import { usePhaseManager } from "../hooks/usePhaseManager";
+import { useRecordingProcessor } from "../hooks/useRecordingProcessor";
+import { useAudioPlayback } from "../hooks/useAudioPlayback";
+import { CardImage } from "../components/CardImage";
 
 type Phase = "ready" | "processing" | "retry" | "success";
 
@@ -20,7 +23,6 @@ export const IntroCard: React.FC<IntroCardProps> = ({
   isRemedial = false,
 }) => {
   const { term, definition } = card;
-  const [phase, setPhase] = useState<Phase>("ready");
   const [userTranscription, setUserTranscription] = useState<string>("");
 
   const { transcribe } = useVoiceTranscription({
@@ -28,17 +30,16 @@ export const IntroCard: React.FC<IntroCardProps> = ({
     langCode: card.langCode as LangCode,
   });
 
-  useEffect(() => {
-    if (card.termAudio) {
-      playAudio(card.termAudio);
-    }
-  }, [card.termAudio]);
+  const { phase, setPhase } = usePhaseManager<Phase>(
+    "ready",
+    currentStepUuid,
+    () => setUserTranscription(""),
+  );
 
-  // Reset phase when step changes
-  useEffect(() => {
-    setPhase("ready");
-    setUserTranscription("");
-  }, [currentStepUuid]);
+  const { playSuccessSequence } = useAudioPlayback({
+    termAudio: card.termAudio,
+    autoPlay: true,
+  });
 
   const processRecording = async (base64Audio: string) => {
     setPhase("processing");
@@ -50,15 +51,12 @@ export const IntroCard: React.FC<IntroCardProps> = ({
       if (isMatch) {
         // Success - show success state, play audio, then proceed
         setPhase("success");
-        if (card.definitionAudio) {
-          await playAudio(card.definitionAudio);
-        }
-        await playAudio(card.termAudio);
+        await playSuccessSequence(card.definitionAudio);
         onProceed();
       } else {
         // Failed - show retry state and replay term
         setPhase("retry");
-        await playAudio(card.termAudio);
+        await playSuccessSequence(); // Just plays term audio
       }
     } catch (error) {
       console.error("Transcription error:", error);
@@ -67,13 +65,11 @@ export const IntroCard: React.FC<IntroCardProps> = ({
     }
   };
 
-  // Listen for recordings from TopBar
-  useEffect(() => {
-    const currentRecording = recordings?.[currentStepUuid];
-    if (currentRecording?.audio) {
-      processRecording(currentRecording.audio);
-    }
-  }, [recordings?.[currentStepUuid]?.audio]);
+  useRecordingProcessor({
+    recordings,
+    currentStepUuid,
+    onAudioReceived: processRecording,
+  });
 
   const renderContent = () => {
     switch (phase) {
@@ -115,15 +111,7 @@ export const IntroCard: React.FC<IntroCardProps> = ({
 
   return (
     <Stack align="center" gap="md">
-      {card.imageURL && (
-        <Image
-          src={card.imageURL}
-          alt={`Image: ${term}`}
-          maw="100%"
-          mah={240}
-          fit="contain"
-        />
-      )}
+      <CardImage imageURL={card.imageURL} term={term} />
 
       {isRemedial && (
         <Text ta="center" c="orange" fw={500} size="sm">

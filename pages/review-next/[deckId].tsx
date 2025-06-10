@@ -1,4 +1,5 @@
 import { getServersideUser } from "@/koala/get-serverside-user";
+import MicrophonePermissions from "@/koala/microphone-permissions";
 import { prismaClient } from "@/koala/prisma-client";
 import { CardReview } from "@/koala/review2";
 import { useReview } from "@/koala/review2/reducer";
@@ -45,8 +46,7 @@ const MessageState = ({
     </Box>
   </Container>
 );
-
-export default function ReviewDeckPage({ deckId }: ReviewDeckPageProps) {
+function InnerReviewPage({ deckId }: ReviewDeckPageProps) {
   const {
     state,
     isFetching,
@@ -95,4 +95,8 @@ export default function ReviewDeckPage({ deckId }: ReviewDeckPageProps) {
       </Box>
     </Container>
   );
+}
+
+export default function ReviewDeckPageWrapper(props: ReviewDeckPageProps) {
+  return MicrophonePermissions(<InnerReviewPage {...props} />);
 }
