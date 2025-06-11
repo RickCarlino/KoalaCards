@@ -10,6 +10,7 @@ import {
   SkipCardAction,
   State,
 } from "./types";
+import { playAudio } from "../play-audio";
 
 const queue = (): Queue => ({
   feedback: [],
@@ -112,6 +113,7 @@ export function useReview(deckId: number) {
       dispatch({ type: "GIVE_UP", payload: { cardUUID } });
     },
     onRecordingCaptured: (uuid: string, audio: string) => {
+      playAudio(audio);
       dispatch({ type: "RECORDING_CAPTURED", payload: { uuid, audio } });
     },
     clearRecording: (uuid: string) => {
