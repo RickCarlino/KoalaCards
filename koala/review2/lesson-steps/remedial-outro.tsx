@@ -96,10 +96,6 @@ export const RemedialOutro: CardUI = ({
     onAudioReceived: processRecording,
   });
 
-  const handleContinue = () => {
-    onProceed();
-  };
-
   // Early return for failure case
   if (phase === "failure") {
     return (
@@ -108,7 +104,7 @@ export const RemedialOutro: CardUI = ({
         term={term}
         definition={definition}
         userTranscription={userTranscription}
-        onContinue={handleContinue}
+        onContinue={onProceed}
         failureText="Not quite right"
       />
     );
@@ -121,7 +117,7 @@ export const RemedialOutro: CardUI = ({
         imageURL={card.imageURL}
         term={term}
         definition={definition}
-        onContinue={handleContinue}
+        onContinue={onProceed}
       />
     );
   }

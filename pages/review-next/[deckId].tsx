@@ -84,7 +84,9 @@ function InnerReviewPage({ deckId }: ReviewDeckPageProps) {
           onSkip={skipCard}
           onGiveUp={giveUp}
           onProceed={() => {
+            console.log("Trying to proceed...");
             completeItem(currentItem.stepUuid);
+            console.log("Proceeding to next item...");
           }}
           recordings={state.recordings}
           currentStepUuid={currentItem.stepUuid}

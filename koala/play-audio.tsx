@@ -25,13 +25,13 @@ export const playAudio = (urlOrDataURI: string) => {
     // Resolve after N seconds because sometimes OpenAI TTS has tons of dead air:
     setTimeout(() => ok(), 8000);
     audio.onerror = (e) => {
-      reject(e);
       console.error("Audio playback failed:", e);
+      reject(e);
     };
 
     audio.play().catch((e) => {
-      reject(e);
       console.error("Audio playback failed:", e);
+      reject(e);
     });
   });
 };

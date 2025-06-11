@@ -51,7 +51,9 @@ export const IntroCard: React.FC<IntroCardProps> = ({
       if (isMatch) {
         // Success - show success state, play audio, then proceed
         setPhase("success");
+        console.log("PlaySuccessSequence - start");
         await playSuccessSequence(card.definitionAudio);
+        console.log("PlaySuccessSequence - end");
         onProceed();
       } else {
         // Failed - show retry state and replay term
