@@ -20,6 +20,7 @@ import { playAudio } from "../play-audio";
 import { blobToBase64, convertBlobToWav } from "../record-button";
 import { useVoiceRecorder } from "../use-recorder";
 import { CardReviewProps } from "./types";
+import { HOTKEYS } from "./hotkeys";
 
 interface ControlBarProps extends CardReviewProps {
   onRecordingComplete?: (base64: string) => void;
@@ -71,7 +72,7 @@ export const ControlBar: React.FC<ControlBarProps> = (props) => {
         />
       </Tooltip>
 
-      <Tooltip label="Exit lesson">
+      <Tooltip label={`Exit lesson`}>
         <ActionIcon
           component="a"
           href="/"
@@ -83,7 +84,7 @@ export const ControlBar: React.FC<ControlBarProps> = (props) => {
         </ActionIcon>
       </Tooltip>
 
-      <Tooltip label="Edit card">
+      <Tooltip label={`Edit card (${HOTKEYS.EDIT})`}>
         <ActionIcon
           variant="outline"
           size="lg"
@@ -94,7 +95,7 @@ export const ControlBar: React.FC<ControlBarProps> = (props) => {
         </ActionIcon>
       </Tooltip>
 
-      <Tooltip label="Archive card">
+      <Tooltip label={`Archive card (${HOTKEYS.ARCHIVE})`}>
         <ActionIcon
           variant="outline"
           size="lg"
@@ -105,7 +106,7 @@ export const ControlBar: React.FC<ControlBarProps> = (props) => {
         </ActionIcon>
       </Tooltip>
 
-      <Tooltip label="Give up on card">
+      <Tooltip label={`Fail card (${HOTKEYS.FAIL})`}>
         <ActionIcon
           variant="outline"
           size="lg"
@@ -116,7 +117,7 @@ export const ControlBar: React.FC<ControlBarProps> = (props) => {
         </ActionIcon>
       </Tooltip>
 
-      <Tooltip label="Skip card">
+      <Tooltip label={`Skip card (${HOTKEYS.SKIP})`}>
         <ActionIcon
           variant="outline"
           size="lg"
@@ -127,7 +128,7 @@ export const ControlBar: React.FC<ControlBarProps> = (props) => {
         </ActionIcon>
       </Tooltip>
 
-      <Tooltip label="Play audio">
+      <Tooltip label={`Play audio (${HOTKEYS.PLAY})`}>
         <ActionIcon
           variant="outline"
           size="lg"

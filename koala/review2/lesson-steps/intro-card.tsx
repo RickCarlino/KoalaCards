@@ -113,11 +113,14 @@ export const IntroCard: React.FC<IntroCardProps> = ({
     <Stack align="center" gap="md">
       <CardImage imageURL={card.imageURL} term={term} />
 
-      {isRemedial && (
-        <Text ta="center" c="orange" fw={500} size="sm">
-          Reviewing Previous Mistake
-        </Text>
-      )}
+      <Text
+        ta="center"
+        c={isRemedial ? "orange" : "green"}
+        fw={500}
+        size="sm"
+      >
+        {isRemedial ? "Difficult Card" : "New Card"}
+      </Text>
 
       <Text size="xl" fw={700} ta="center">
         {term}
