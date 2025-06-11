@@ -25,10 +25,9 @@ export const transcribeAudio = procedure
       input.targetText,
       input.lang,
     );
-
-    if (result.kind !== "OK") {
-      return { result: "Server ERROR" }; // TODO: better error handling
+    if (result.kind === "error") {
+      throw new Error("Transcription failed: " + result);
     }
-
+    
     return { result: result.text };
   });
