@@ -1,5 +1,6 @@
 import { Stack, Text, Button } from "@mantine/core";
 import { CardImage } from "./CardImage";
+import { HOTKEYS } from "../hotkeys";
 
 interface FailureViewProps {
   imageURL?: string;
@@ -49,7 +50,7 @@ export const FailureView: React.FC<FailureViewProps> = ({
       </Text>
 
       <Button onClick={onContinue} variant="light" color="blue">
-        Continue
+        Continue ({HOTKEYS.RECORD_OR_CONTINUE})
       </Button>
     </Stack>
   );
