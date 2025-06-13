@@ -126,6 +126,9 @@ export function useReview(deckId: number, playbackPercentage = 0.125) {
     completeItem: (uuid: string) => {
       dispatch({ type: "COMPLETE_ITEM", payload: { uuid } });
     },
+    refetchQuizzes: () => {
+      fetchQuizzes(deckId);
+    },
   };
 }
 

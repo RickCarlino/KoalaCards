@@ -3,8 +3,16 @@ import MicrophonePermissions from "@/koala/microphone-permissions";
 import { prismaClient } from "@/koala/prisma-client";
 import { CardReview } from "@/koala/review2";
 import { useReview } from "@/koala/review2/reducer";
-import { Box, Container, Text, Title } from "@mantine/core";
+import {
+  Anchor,
+  Box,
+  Button,
+  Container,
+  Text,
+  Title,
+} from "@mantine/core";
 import { GetServerSideProps } from "next";
+import Link from "next/link";
 import React from "react";
 
 export type ReviewDeckPageProps = {
@@ -62,6 +70,46 @@ const MessageState = ({
     </Box>
   </Container>
 );
+
+const NoMoreQuizzesState = ({
+  deckId,
+  onReload,
+}: {
+  deckId: number;
+  onReload: () => void;
+}) => (
+  <Container size="md" py="xl">
+    <Box p="md">
+      <Title order={3} mb="md">
+        No More Quizzes Available
+      </Title>
+      <Text mb="md">
+        You've reviewed all available quizzes for this session. You can:
+      </Text>
+      <Box mb="lg">
+        <Button onClick={onReload} variant="filled" fullWidth mb="xs">
+          Continue Lesson (Fetch More Quizzes)
+        </Button>
+      </Box>
+      <Box mb="xs">
+        <Anchor component={Link} href={`/cards?deckId=${deckId}`}>
+          Add more cards to this deck
+        </Anchor>
+      </Box>
+      <Box mb="xs">
+        <Anchor component={Link} href={`/writing/${deckId}`}>
+          Practice Writing
+        </Anchor>
+      </Box>
+      <Box>
+        <Anchor component={Link} href="/review">
+          Go back to deck selection
+        </Anchor>
+      </Box>
+    </Box>
+  </Container>
+);
+
 function InnerReviewPage({
   deckId,
   playbackPercentage,
@@ -75,6 +123,7 @@ function InnerReviewPage({
     giveUp,
     onRecordingCaptured,
     completeItem,
+    refetchQuizzes,
   } = useReview(deckId, playbackPercentage);
 
   if (error)
@@ -83,9 +132,7 @@ function InnerReviewPage({
     return <MessageState title="Loading">Fetching quizzes…</MessageState>;
   if (!currentItem)
     return (
-      <MessageState title="No More Quizzes">
-        All done for now!
-      </MessageState>
+      <NoMoreQuizzesState deckId={deckId} onReload={refetchQuizzes} />
     );
 
   const card = state.cards[currentItem.cardUUID];
