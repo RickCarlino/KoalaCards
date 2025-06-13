@@ -112,8 +112,8 @@ export function useReview(deckId: number) {
     giveUp: (cardUUID: string) => {
       dispatch({ type: "GIVE_UP", payload: { cardUUID } });
     },
-    onRecordingCaptured: (uuid: string, audio: string) => {
-      playAudio(audio);
+    onRecordingCaptured: async (uuid: string, audio: string) => {
+      await playAudio(audio);
       dispatch({ type: "RECORDING_CAPTURED", payload: { uuid, audio } });
     },
     clearRecording: (uuid: string) => {

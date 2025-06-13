@@ -11,7 +11,7 @@ export function usePhaseManager<T extends string>(
   useEffect(() => {
     setPhase(initialPhase);
     additionalResetStates?.();
-  }, [currentStepUuid, initialPhase, additionalResetStates]);
+  }, [currentStepUuid]);
 
   return { phase, setPhase };
 }
