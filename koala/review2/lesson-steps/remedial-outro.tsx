@@ -106,6 +106,7 @@ export const RemedialOutro: CardUI = ({
         userTranscription={userTranscription}
         onContinue={onProceed}
         failureText="Not quite right"
+        termAudio={card.termAudio}
       />
     );
   }
