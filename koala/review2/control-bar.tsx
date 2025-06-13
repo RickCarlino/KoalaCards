@@ -17,19 +17,25 @@ import {
 } from "@tabler/icons-react";
 import React from "react";
 import { playAudio } from "../play-audio";
-import { blobToBase64, convertBlobToWav } from "../record-button";
-import { useVoiceRecorder } from "../use-recorder";
 import { CardReviewProps } from "./types";
 import { HOTKEYS } from "./hotkeys";
 
 interface ControlBarProps extends CardReviewProps {
-  onRecordingComplete?: (base64: string) => void;
   currentStepUuid: string;
+  isRecording: boolean;
+  onRecordClick: () => void;
 }
 
 export const ControlBar: React.FC<ControlBarProps> = (props) => {
-  const { card, itemsComplete, totalItems, onSkip, onGiveUp } = props;
-  const voiceRecorder = useVoiceRecorder(handleRecordingResult);
+  const {
+    card,
+    itemsComplete,
+    totalItems,
+    onSkip,
+    onGiveUp,
+    isRecording,
+    onRecordClick,
+  } = props;
   const progress = totalItems ? (itemsComplete / totalItems) * 100 : 0;
 
   const openCardEditor = () =>
@@ -38,22 +44,6 @@ export const ControlBar: React.FC<ControlBarProps> = (props) => {
   const handlePlayAudio = () => {
     if (card.termAudio) {
       playAudio(card.termAudio);
-    }
-  };
-
-  async function handleRecordingResult(blob: Blob) {
-    if (props.onRecordingComplete) {
-      const wav = await convertBlobToWav(blob);
-      const base64 = await blobToBase64(wav);
-      props.onRecordingComplete(base64);
-    }
-  }
-
-  const handleRecordClick = () => {
-    if (voiceRecorder.isRecording) {
-      voiceRecorder.stop();
-    } else {
-      voiceRecorder.start();
     }
   };
 
@@ -141,18 +131,18 @@ export const ControlBar: React.FC<ControlBarProps> = (props) => {
 
       <Tooltip
         label={
-          voiceRecorder.isRecording
-            ? "Stop recording"
-            : "Record a response"
+          isRecording
+            ? `Stop recording (${HOTKEYS.RECORD_OR_CONTINUE})`
+            : `Record a response (${HOTKEYS.RECORD_OR_CONTINUE})`
         }
       >
         <ActionIcon
-          variant={voiceRecorder.isRecording ? "filled" : "outline"}
+          variant={isRecording ? "filled" : "outline"}
           size="lg"
-          onClick={handleRecordClick}
+          onClick={onRecordClick}
           color="pink.7"
         >
-          {voiceRecorder.isRecording ? (
+          {isRecording ? (
             <IconPlayerStopFilled size={20} />
           ) : (
             <IconMicrophone size={20} />

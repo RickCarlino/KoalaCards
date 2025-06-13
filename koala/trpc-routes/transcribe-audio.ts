@@ -28,6 +28,6 @@ export const transcribeAudio = procedure
     if (result.kind === "error") {
       throw new Error("Transcription failed: " + result);
     }
-    
+
     return { result: result.text };
   });

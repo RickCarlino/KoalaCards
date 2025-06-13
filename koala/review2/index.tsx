@@ -2,6 +2,8 @@ import { Box } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import React from "react";
 import { playAudio } from "../play-audio";
+import { blobToBase64, convertBlobToWav } from "../record-button";
+import { useVoiceRecorder } from "../use-recorder";
 import { ControlBar } from "./control-bar";
 import { HOTKEYS } from "./hotkeys";
 import { Feedback } from "./lesson-steps/feedback";
@@ -48,6 +50,14 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
 
   const CardComponent = cardUIs[itemType] ?? UnknownCard;
 
+  async function handleRecordingResult(blob: Blob) {
+    const wav = await convertBlobToWav(blob);
+    const base64 = await blobToBase64(wav);
+    onRecordingComplete(base64);
+  }
+
+  const voiceRecorder = useVoiceRecorder(handleRecordingResult);
+
   const openCardEditor = () =>
     window.open(`/cards/${card.cardId}`, "_blank");
 
@@ -61,12 +71,21 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
     console.log("Archive card:", card.uuid);
   };
 
+  const handleRecordToggle = () => {
+    if (voiceRecorder.isRecording) {
+      voiceRecorder.stop();
+    } else {
+      voiceRecorder.start();
+    }
+  };
+
   useHotkeys([
     [HOTKEYS.PLAY, handlePlayAudio],
     [HOTKEYS.EDIT, openCardEditor],
     [HOTKEYS.SKIP, () => onSkip(card.uuid)],
     [HOTKEYS.ARCHIVE, handleArchive],
     [HOTKEYS.FAIL, () => onGiveUp(card.uuid)],
+    [HOTKEYS.RECORD_OR_CONTINUE, handleRecordToggle],
   ] as [string, () => void][]);
 
   return (
@@ -94,8 +113,9 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
       >
         <ControlBar
           {...props}
-          onRecordingComplete={onRecordingComplete}
           currentStepUuid={currentStepUuid}
+          isRecording={voiceRecorder.isRecording}
+          onRecordClick={handleRecordToggle}
         />
       </Box>
     </Box>
