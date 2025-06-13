@@ -71,7 +71,7 @@ export function initialState(): State {
   };
 }
 
-export function useReview(deckId: number) {
+export function useReview(deckId: number, playbackPercentage = 0.125) {
   const mutation = trpc.getNextQuizzes.useMutation();
   const [state, dispatch] = useReducer(reducer, initialState());
   const [isFetching, setIsFetching] = useState(true);
@@ -113,7 +113,11 @@ export function useReview(deckId: number) {
       dispatch({ type: "GIVE_UP", payload: { cardUUID } });
     },
     onRecordingCaptured: async (uuid: string, audio: string) => {
-      await playAudio(audio);
+      // Playback based on user setting prefs.
+      const shouldPlayback = Math.random() < playbackPercentage;
+      if (shouldPlayback) {
+        await playAudio(audio);
+      }
       dispatch({ type: "RECORDING_CAPTURED", payload: { uuid, audio } });
     },
     clearRecording: (uuid: string) => {

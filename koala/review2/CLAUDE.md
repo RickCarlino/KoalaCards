@@ -1,3 +1,7 @@
+# TODO
+
+- Hotkeys for EASY/HARD/etc...
+
 This is a spaced repetition flash card app that guides the user through steps of a structrued review one "thing" at a time and works their way through the cards until the lesson is over.
 
 The thing varies on context. It might be:

@@ -7,7 +7,10 @@ import { Box, Container, Text, Title } from "@mantine/core";
 import { GetServerSideProps } from "next";
 import React from "react";
 
-export type ReviewDeckPageProps = { deckId: number };
+export type ReviewDeckPageProps = {
+  deckId: number;
+  playbackPercentage: number;
+};
 
 const redirect = (destination: string) => ({
   redirect: { destination, permanent: false } as const,
@@ -27,7 +30,20 @@ export const getServerSideProps: GetServerSideProps<
     select: { id: true },
   });
 
-  return deck ? { props: { deckId } } : redirect("/review");
+  if (!deck) return redirect("/review");
+
+  // Fetch user settings for audio playback percentage
+  const userSettings = await prismaClient.userSettings.findUnique({
+    where: { userId: user.id },
+    select: { playbackPercentage: true },
+  });
+
+  return {
+    props: {
+      deckId,
+      playbackPercentage: userSettings?.playbackPercentage ?? 0.125,
+    },
+  };
 };
 
 const MessageState = ({
@@ -46,7 +62,10 @@ const MessageState = ({
     </Box>
   </Container>
 );
-function InnerReviewPage({ deckId }: ReviewDeckPageProps) {
+function InnerReviewPage({
+  deckId,
+  playbackPercentage,
+}: ReviewDeckPageProps) {
   const {
     state,
     isFetching,
@@ -56,7 +75,7 @@ function InnerReviewPage({ deckId }: ReviewDeckPageProps) {
     giveUp,
     onRecordingCaptured,
     completeItem,
-  } = useReview(deckId);
+  } = useReview(deckId, playbackPercentage);
 
   if (error)
     return <MessageState title="Error">{error.message}</MessageState>;
