@@ -121,7 +121,7 @@ export const IntroCard: React.FC<IntroCardProps> = ({
         fw={500}
         size="sm"
       >
-        {isRemedial ? "Difficult Card" : "New Card"}
+        {isRemedial ? "Re-Learn a Card" : "New Card"}
       </Text>
 
       <Text size="xl" fw={700} ta="center">
