@@ -13,17 +13,17 @@ import {
 import { playAudio } from "../play-audio";
 
 const queue = (): Queue => ({
-  feedback: [],
+  feedback: [], // Unused ... ?
   newWordIntro: [], // DONE
   remedialIntro: [], // DONE
   listening: [],
   speaking: [], // Needs testing.
   newWordOutro: [], // DONE
   remedialOutro: [], // DONE
-  pending: [],
+  pending: [], // Unused ... ?
 });
 
-export function skipCard(action: SkipCardAction, state: State): State {
+function skipCard(action: SkipCardAction, state: State): State {
   const cardUUID = action.payload.uuid;
   const newQueue = { ...state.queue };
   for (const type of EVERY_QUEUE_TYPE) {
@@ -60,7 +60,7 @@ export function nextQueueItem(queue: Queue): QueueItem | undefined {
   return;
 }
 
-export function initialState(): State {
+function initialState(): State {
   return {
     queue: queue(),
     cards: {},
@@ -132,7 +132,7 @@ export function useReview(deckId: number, playbackPercentage = 0.125) {
   };
 }
 
-export function reducer(state: State, action: Action): State {
+function reducer(state: State, action: Action): State {
   console.log({
     ...state,
     recordings: Object.keys(state.recordings).length,

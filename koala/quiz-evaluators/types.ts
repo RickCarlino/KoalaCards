@@ -7,7 +7,7 @@ type QuizEvaluatorInput = {
   userID: string;
 };
 
-export type QuizEvaluatorOutput = {
+type QuizEvaluatorOutput = {
   result: QuizResult;
   userMessage: string;
 };

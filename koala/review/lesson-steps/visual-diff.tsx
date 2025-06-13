@@ -1,6 +1,6 @@
 import { Text, Box } from "@mantine/core";
 import { diffWords } from "diff";
-import { stripFinalPunctuation } from "../quiz-evaluators/evaluator-utils";
+import { stripFinalPunctuation } from "../../quiz-evaluators/evaluator-utils";
 
 interface SentencecorrectionProps {
   expected: string;

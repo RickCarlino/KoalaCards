@@ -77,6 +77,3 @@ export const UserSettingsProvider = ({
     </UserSettingsContext.Provider>
   );
 };
-
-// Custom hook to use the context
-export const useUserSettings = () => useContext(UserSettingsContext);

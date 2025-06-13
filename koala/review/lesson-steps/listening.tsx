@@ -1,26 +1,24 @@
 import { Stack, Text } from "@mantine/core";
-import { CardReviewProps } from "../types";
+import { CardUI } from "../types";
 import { useState } from "react";
 import { useVoiceTranscription } from "../use-voice-transcription";
-import { VisualDiff } from "@/koala/review/visual-diff";
+import { useQuizGrading } from "../use-quiz-grading";
+import { VisualDiff } from "@/koala/review/lesson-steps/visual-diff";
 import { LangCode } from "@/koala/shared-types";
+import { GradingSuccess } from "../components/GradingSuccess";
+import { CardImage } from "../components/CardImage";
 import { usePhaseManager } from "../hooks/usePhaseManager";
 import { useRecordingProcessor } from "../hooks/useRecordingProcessor";
 import { useAudioPlayback } from "../hooks/useAudioPlayback";
-import { CardImage } from "../components/CardImage";
+import { useGradeHandler } from "../hooks/useGradeHandler";
 
 type Phase = "ready" | "processing" | "retry" | "success";
 
-interface IntroCardProps extends CardReviewProps {
-  isRemedial?: boolean;
-}
-
-export const IntroCard: React.FC<IntroCardProps> = ({
+export const Listening: CardUI = ({
   card,
   recordings,
   onProceed,
   currentStepUuid,
-  isRemedial = false,
 }) => {
   const { term, definition } = card;
   const [userTranscription, setUserTranscription] = useState<string>("");
@@ -28,6 +26,17 @@ export const IntroCard: React.FC<IntroCardProps> = ({
   const { transcribe } = useVoiceTranscription({
     targetText: card.term,
     langCode: card.langCode as LangCode,
+  });
+
+  const {
+    gradeWithAgain,
+    gradeWithHard,
+    gradeWithGood,
+    gradeWithEasy,
+    isLoading,
+  } = useQuizGrading({
+    quizId: card.quizId,
+    onSuccess: onProceed,
   });
 
   const { phase, setPhase } = usePhaseManager<Phase>(
@@ -41,6 +50,13 @@ export const IntroCard: React.FC<IntroCardProps> = ({
     autoPlay: true,
   });
 
+  const { handleGradeSelect } = useGradeHandler({
+    gradeWithAgain,
+    gradeWithHard,
+    gradeWithGood,
+    gradeWithEasy,
+  });
+
   const processRecording = async (base64Audio: string) => {
     setPhase("processing");
 
@@ -49,12 +65,9 @@ export const IntroCard: React.FC<IntroCardProps> = ({
       setUserTranscription(transcription);
 
       if (isMatch) {
-        // Success - show success state, play audio, then proceed
+        // Success - play definition audio, show term/definition, then show grading
         setPhase("success");
-        console.log("PlaySuccessSequence - start");
         await playSuccessSequence(card.definitionAudio);
-        console.log("PlaySuccessSequence - end");
-        onProceed();
       } else {
         // Failed - show retry state and replay term
         setPhase("retry");
@@ -77,9 +90,14 @@ export const IntroCard: React.FC<IntroCardProps> = ({
     switch (phase) {
       case "ready":
         return (
-          <Text ta="center" c="dimmed">
-            Press the record button above and repeat the phrase.
-          </Text>
+          <>
+            <Text ta="center" c="dimmed">
+              Press the record button and repeat what you heard.
+            </Text>
+            <Text ta="center" c="dimmed">
+              As you repeat the phrase, can you remember the definition?
+            </Text>
+          </>
         );
 
       case "processing":
@@ -101,9 +119,29 @@ export const IntroCard: React.FC<IntroCardProps> = ({
 
       case "success":
         return (
-          <Text ta="center" c="green" fw={500}>
-            Correct!
-          </Text>
+          <>
+            <Text size="xl" fw={700} ta="center">
+              {term}
+            </Text>
+
+            <Text ta="center">{definition}</Text>
+
+            <GradingSuccess
+              quizData={{
+                difficulty: card.difficulty,
+                stability: card.stability,
+                lastReview: card.lastReview
+                  ? typeof card.lastReview === "number"
+                    ? card.lastReview
+                    : new Date(card.lastReview).getTime()
+                  : 0,
+                lapses: card.lapses,
+                repetitions: card.repetitions,
+              }}
+              onGradeSelect={handleGradeSelect}
+              isLoading={isLoading}
+            />
+          </>
         );
 
       default:
@@ -115,20 +153,9 @@ export const IntroCard: React.FC<IntroCardProps> = ({
     <Stack align="center" gap="md">
       <CardImage imageURL={card.imageURL} term={term} />
 
-      <Text
-        ta="center"
-        c={isRemedial ? "orange" : "green"}
-        fw={500}
-        size="sm"
-      >
-        {isRemedial ? "Re-Learn a Card" : "New Card"}
+      <Text ta="center" c="blue" fw={500} size="sm">
+        Listening Quiz
       </Text>
-
-      <Text size="xl" fw={700} ta="center">
-        {term}
-      </Text>
-
-      <Text ta="center">{definition}</Text>
 
       {renderContent()}
     </Stack>

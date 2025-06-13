@@ -28,7 +28,7 @@ export function compare(
   return score <= cutoff;
 }
 
-export function levenshtein(a: string, b: string): number {
+function levenshtein(a: string, b: string): number {
   const an = a ? a.length : 0;
   const bn = b ? b.length : 0;
   if (an === 0) {
@@ -67,7 +67,7 @@ export const stripFinalPunctuation = (str: string) => {
   return str.replace(/[.,!?]$/, "");
 };
 
-export function strip(input: string): string {
+function strip(input: string): string {
   // This regex matches any punctuation, space, or number
   // \p{P} matches any kind of punctuation character
   // \s matches any whitespace character

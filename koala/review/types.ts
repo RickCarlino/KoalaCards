@@ -1,91 +1,91 @@
-import { Grade } from "femto-fsrs";
+import { z } from "zod";
+import { QuizList as ZodQuizList } from "../types/zod"; // Renamed to avoid conflict
 
-// Define the types
-export type Quiz = {
-  cardId: number;
-  definition: string;
-  definitionAudio: string;
-  imageURL?: string | undefined;
-  langCode: string;
-  lessonType: "listening" | "speaking" | "new" | "remedial";
-  quizId: number;
-  term: string;
-  termAudio: string;
-  lapses: number;
-  repetitions: number;
-  difficulty: number;
-  stability: number;
-  lastReview: number;
-  dontGrade?: boolean;
-  uuid: string;
+// Types from logic.ts
+export type QuizList = z.infer<typeof ZodQuizList>["quizzes"];
+export type ItemType = keyof Queue;
+export type QueueItem = {
+  cardUUID: string;
+  itemType: ItemType;
+  stepUuid: string;
 };
 
-export interface Props {
-  quizzes: Quiz[];
-  quizzesDue: number;
-  onSave(): Promise<void>;
-}
-export type OnCompleteProps = {
-  status: QuizStatus;
-  feedback: string;
-  userResponse: string;
+type QueueType =
+  | "feedback"
+  | "listening"
+  | "newWordIntro"
+  | "newWordOutro"
+  | "pending"
+  | "remedialIntro"
+  | "remedialOutro"
+  | "speaking";
+
+export type QuizMap = Record<string, Quiz>;
+export type Queue = Record<QueueType, QueueItem[]>;
+type UUID = { uuid: string };
+
+export type Quiz = QuizList[number] & UUID;
+
+export type Recording = {
+  stepUuid: string;
+  audio: string;
 };
 
-export interface QuizProps {
-  quiz: QuizState;
-  // Called when user sets grade.
-  onGraded: (grade: Grade) => void;
-  // Called when all async tasks / grading are done.
-  // Quiz will be stuck in "awaitingGrading" until this is called.
-  onComplete: (p: OnCompleteProps) => void;
-}
-
-export type QuizComp = React.FC<QuizProps>;
-
-// Define the status for each quiz
-type QuizStatus = "pass" | "fail" | "error";
-
-// Define the state for each quiz in the session
-export interface QuizState {
-  quiz: Quiz;
-  response?: string; // User's response (text, audio, etc.)
-  grade?: Grade;
-  serverGradingResult?: QuizStatus;
-  serverResponse?: string; // Response from the server
-}
-
-// Define the overall state for the review session
-export interface ReviewState {
-  quizzes: QuizState[];
-  currentQuizIndex: number;
-}
-
-// Define the possible actions
-export type LoadQuizzesAction = { type: "LOAD_QUIZZES"; quizzes: Quiz[] };
-export type SetGradeAction = {
-  type: "SET_GRADE";
-  grade: Grade;
-  uuid: string;
+export type State = {
+  totalItems: number;
+  itemsComplete: number;
+  currentItem: QueueItem | undefined;
+  queue: Queue;
+  cards: QuizMap;
+  recordings: Record<string, Recording>;
 };
-export type PauseCurrentCardAction = { type: "PAUSE_CURRENT_CARD" };
-export type ServerFeedbackAction = {
-  type: "SERVER_FEEDBACK";
-  uuid: string;
-  result: QuizStatus;
-  serverResponse: string;
-  userResponse: string;
+
+export type ReplaceCardAction = { type: "REPLACE_CARDS"; payload: Quiz[] };
+export type SkipCardAction = { type: "SKIP_CARD"; payload: UUID };
+export type RecordingCapturedAction = {
+  type: "RECORDING_CAPTURED";
+  payload: { uuid: string; audio: string };
 };
-export type NextQuizAction = { type: "NEXT_QUIZ" };
-export type UpdateAudioUrlAction = {
-  type: "UPDATE_AUDIO_URL";
-  uuid: string;
-  audioBase64: string;
+export type ClearRecordingAction = {
+  type: "CLEAR_RECORDING";
+  payload: { uuid: string };
+};
+export type CompleteItemAction = {
+  type: "COMPLETE_ITEM";
+  payload: { uuid: string };
+};
+export type GiveUpAction = {
+  type: "GIVE_UP";
+  payload: { cardUUID: string };
 };
 
 export type Action =
-  | LoadQuizzesAction
-  | SetGradeAction
-  | PauseCurrentCardAction
-  | ServerFeedbackAction
-  | NextQuizAction
-  | UpdateAudioUrlAction;
+  | ReplaceCardAction
+  | SkipCardAction
+  | RecordingCapturedAction
+  | ClearRecordingAction
+  | CompleteItemAction
+  | GiveUpAction;
+export const EVERY_QUEUE_TYPE: (keyof Queue)[] = [
+  "feedback",
+  "newWordIntro",
+  "remedialIntro",
+  "listening",
+  "speaking",
+  "newWordOutro",
+  "remedialOutro",
+  "pending",
+];
+
+export type CardReviewProps = {
+  onProceed: () => void;
+  onSkip: (uuid: string) => void;
+  onGiveUp: (cardUUID: string) => void;
+  itemsComplete: number;
+  totalItems: number;
+  itemType: ItemType;
+  card: Quiz;
+  recordings: Record<string, Recording>;
+  currentStepUuid: string;
+};
+export type CardUI = React.FC<CardReviewProps>;

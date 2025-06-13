@@ -40,7 +40,6 @@ export type LangCode =
   | "vi"; // Vietnamese
 export type LessonType = "listening" | "speaking" | "new" | "remedial";
 export type QuizResult = "error" | "fail" | "pass";
-export type YesNo = "yes" | "no";
 
 export const LANG_CODES = z.union([
   z.literal("ar"),

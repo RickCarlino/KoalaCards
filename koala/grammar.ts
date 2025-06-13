@@ -6,7 +6,7 @@ import { QuizEvaluator } from "./quiz-evaluators/types";
 import { getLangName } from "./get-lang-name";
 import { LangCode } from "./shared-types";
 
-export type Explanation = z.infer<typeof zodGradeResponse>;
+type Explanation = z.infer<typeof zodGradeResponse>;
 
 type GrammarCorrectionProps = {
   term: string; // Prompt term

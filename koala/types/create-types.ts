@@ -1,12 +1,12 @@
 import { Gender, LangCode } from "@/koala/shared-types";
 
-export interface ProcessedCard {
+interface ProcessedCard {
   term: string;
   definition: string;
   gender: Gender;
 }
 
-export interface Deck {
+interface Deck {
   id: number;
   name: string;
   langCode: string;
@@ -39,17 +39,17 @@ export type Action =
   | { type: "SET_DECK_LANG"; deckLang: LangCode };
 
 // Component-specific action types
-export type DeckAction =
+type DeckAction =
   | { type: "SET_DECK_SELECTION"; deckSelection: "existing" | "new" }
   | { type: "SET_DECK_ID"; deckId: number | undefined }
   | { type: "SET_DECK_NAME"; deckName: string }
   | { type: "SET_DECK_LANG"; deckLang: LangCode };
 
-export type InputAction =
+type InputAction =
   | { type: "SET_RAW_INPUT"; rawInput: string }
   | { type: "SET_CARD_TYPE"; cardType: string };
 
-export type ReviewAction =
+type ReviewAction =
   | { type: "EDIT_CARD"; card: ProcessedCard; index: number }
   | { type: "REMOVE_CARD"; index: number };
 

@@ -15,8 +15,7 @@ import { LangCode, supportedLanguages } from "@/koala/shared-types";
 import { getLangName } from "@/koala/get-lang-name";
 import { DeckStepProps } from "../types/create-types";
 import { buttonShadow, paperStyle, titleStyle } from "../styles";
-
-const DEFAULT_LANG: LangCode = "ko";
+import { DEFAULT_LANG } from "../types/create-reducer";
 
 export function DeckStep({
   decks,

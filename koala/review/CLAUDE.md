@@ -1,6 +1,15 @@
 # TODO
 
-- Hotkeys for EASY/HARD/etc...
+- Run ts-unused-exports
+- Add playFX after finding a good free sound pack
+- Remove or implement "// Unused ... ?" state tree branches
+
+Dead exports: koala/review/types.ts: QuizList, Quiz, RecordingCapturedAction, ClearRecordingAction, CompleteItemAction, GiveUpAction
+Dead exports: koala/review/components/index.ts: CardImage, FailureView, GradingSuccess
+Dead exports: koala/review/hooks/index.ts: usePhaseManager, useRecordingProcessor, useGradeHandler, useAudioPlayback
+Dead exports: koala/trpc-routes/grade-writing.ts: FeedbackItem, ApiResponse, EssayResponse
+
+---
 
 This is a spaced repetition flash card app that guides the user through steps of a structrued review one "thing" at a time and works their way through the cards until the lesson is over.
 
