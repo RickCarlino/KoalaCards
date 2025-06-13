@@ -1,6 +1,8 @@
 import { Stack, Text, Button } from "@mantine/core";
+import { useHotkeys } from "@mantine/hooks";
 import { getGradeButtonText } from "@/koala/trpc-routes/calculate-scheduling-data";
 import { Grade } from "femto-fsrs";
+import { HOTKEYS } from "../hotkeys";
 
 interface GradingSuccessProps {
   quizData: {
@@ -28,6 +30,13 @@ export function GradingSuccess({
 }: GradingSuccessProps) {
   const gradeOptions = getGradeButtonText(quizData);
 
+  useHotkeys([
+    [HOTKEYS.GRADE_AGAIN, () => !isLoading && onGradeSelect(Grade.AGAIN)],
+    [HOTKEYS.GRADE_HARD, () => !isLoading && onGradeSelect(Grade.HARD)],
+    [HOTKEYS.GRADE_GOOD, () => !isLoading && onGradeSelect(Grade.GOOD)],
+    [HOTKEYS.GRADE_EASY, () => !isLoading && onGradeSelect(Grade.EASY)],
+  ]);
+
   return (
     <Stack gap="md" align="center">
       <Text ta="center" c="green" fw={500} size="lg">
@@ -43,6 +52,13 @@ export function GradingSuccess({
             [Grade.HARD]: "HARD",
             [Grade.GOOD]: "GOOD",
             [Grade.EASY]: "EASY",
+          };
+
+          const gradeHotkeys = {
+            [Grade.AGAIN]: HOTKEYS.GRADE_AGAIN,
+            [Grade.HARD]: HOTKEYS.GRADE_HARD,
+            [Grade.GOOD]: HOTKEYS.GRADE_GOOD,
+            [Grade.EASY]: HOTKEYS.GRADE_EASY,
           };
 
           return (
@@ -71,7 +87,8 @@ export function GradingSuccess({
               }}
             >
               <span style={{ fontWeight: 600 }}>
-                {gradeLabels[grade as Grade]}
+                {gradeLabels[grade as Grade]} (
+                {gradeHotkeys[grade as Grade]})
               </span>
               <span style={{ fontSize: "0.875em", opacity: 0.8 }}>
                 {timeText}
