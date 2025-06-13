@@ -85,7 +85,7 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
     [HOTKEYS.SKIP, () => onSkip(card.uuid)],
     [HOTKEYS.ARCHIVE, handleArchive],
     [HOTKEYS.FAIL, () => onGiveUp(card.uuid)],
-    [HOTKEYS.RECORD_OR_CONTINUE, handleRecordToggle],
+    [HOTKEYS.RECORD, handleRecordToggle],
   ] as [string, () => void][]);
 
   return (

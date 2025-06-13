@@ -81,16 +81,16 @@ const NoMoreQuizzesState = ({
   <Container size="md" py="xl">
     <Box p="md">
       <Title order={3} mb="md">
-        No More Quizzes Available
+        Lesson Complete
       </Title>
+      <Box mb="lg">
+        <Button onClick={onReload} variant="filled" fullWidth mb="xs">
+          Fetch More Quizzes
+        </Button>
+      </Box>
       <Text mb="md">
         You've reviewed all available quizzes for this session. You can:
       </Text>
-      <Box mb="lg">
-        <Button onClick={onReload} variant="filled" fullWidth mb="xs">
-          Continue Lesson (Fetch More Quizzes)
-        </Button>
-      </Box>
       <Box mb="xs">
         <Anchor component={Link} href={`/cards?deckId=${deckId}`}>
           Add more cards to this deck

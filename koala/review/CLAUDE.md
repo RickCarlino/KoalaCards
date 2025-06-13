@@ -3,6 +3,8 @@
 - Run ts-unused-exports
 - Add playFX after finding a good free sound pack
 - Remove or implement "// Unused ... ?" state tree branches
+- failing a quiz should show the answer
+- Need a "continue" hotkey.
 
 Dead exports: koala/review/types.ts: QuizList, Quiz, RecordingCapturedAction, ClearRecordingAction, CompleteItemAction, GiveUpAction
 Dead exports: koala/review/components/index.ts: CardImage, FailureView, GradingSuccess

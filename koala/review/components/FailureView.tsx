@@ -55,7 +55,7 @@ export const FailureView: React.FC<FailureViewProps> = ({
       </Text>
 
       <Button onClick={onContinue} variant="light" color="blue">
-        Continue ({HOTKEYS.RECORD_OR_CONTINUE})
+        Continue
       </Button>
     </Stack>
   );

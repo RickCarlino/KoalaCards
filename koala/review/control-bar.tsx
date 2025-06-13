@@ -132,8 +132,8 @@ export const ControlBar: React.FC<ControlBarProps> = (props) => {
       <Tooltip
         label={
           isRecording
-            ? `Stop recording (${HOTKEYS.RECORD_OR_CONTINUE})`
-            : `Record a response (${HOTKEYS.RECORD_OR_CONTINUE})`
+            ? `Stop recording (${HOTKEYS.RECORD})`
+            : `Record a response (${HOTKEYS.RECORD})`
         }
       >
         <ActionIcon
