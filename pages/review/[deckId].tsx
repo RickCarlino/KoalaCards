@@ -2,6 +2,7 @@ import { getServersideUser } from "@/koala/get-serverside-user";
 import MicrophonePermissions from "@/koala/microphone-permissions";
 import { prismaClient } from "@/koala/prisma-client";
 import { CardReview } from "@/koala/review";
+import { HOTKEYS } from "@/koala/review/hotkeys";
 import { useReview } from "@/koala/review/reducer";
 import {
   Anchor,
@@ -85,7 +86,7 @@ const NoMoreQuizzesState = ({
       </Title>
       <Box mb="lg">
         <Button onClick={onReload} variant="filled" fullWidth mb="xs">
-          Fetch More Quizzes
+          Fetch More Quizzes ({HOTKEYS.CONTINUE})
         </Button>
       </Box>
       <Text mb="md">
@@ -124,6 +125,7 @@ function InnerReviewPage({
     onRecordingCaptured,
     completeItem,
     refetchQuizzes,
+    onGradingResultCaptured,
   } = useReview(deckId, playbackPercentage);
 
   if (error)
@@ -160,6 +162,7 @@ function InnerReviewPage({
             onRecordingCaptured(currentItem.stepUuid, audio);
           }}
           completeItem={completeItem}
+          onGradingResultCaptured={onGradingResultCaptured}
         />
       </Box>
     </Container>

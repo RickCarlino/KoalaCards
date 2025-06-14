@@ -31,6 +31,12 @@ export type Recording = {
   audio: string;
 };
 
+export type GradingResult = {
+  transcription: string;
+  isCorrect: boolean;
+  feedback: string;
+};
+
 export type State = {
   totalItems: number;
   itemsComplete: number;
@@ -38,6 +44,7 @@ export type State = {
   queue: Queue;
   cards: QuizMap;
   recordings: Record<string, Recording>;
+  gradingResults: Record<string, GradingResult>;
 };
 
 export type ReplaceCardAction = { type: "REPLACE_CARDS"; payload: Quiz[] };
@@ -58,6 +65,10 @@ export type GiveUpAction = {
   type: "GIVE_UP";
   payload: { cardUUID: string };
 };
+export type GradingResultCapturedAction = {
+  type: "STORE_GRADE_RESULT";
+  payload: { cardUUID: string; result: GradingResult };
+};
 
 export type Action =
   | ReplaceCardAction
@@ -65,7 +76,8 @@ export type Action =
   | RecordingCapturedAction
   | ClearRecordingAction
   | CompleteItemAction
-  | GiveUpAction;
+  | GiveUpAction
+  | GradingResultCapturedAction;
 export const EVERY_QUEUE_TYPE: (keyof Queue)[] = [
   "feedback",
   "newWordIntro",
@@ -87,5 +99,9 @@ export type CardReviewProps = {
   card: Quiz;
   recordings: Record<string, Recording>;
   currentStepUuid: string;
+  onGradingResultCaptured: (
+    cardUUID: string,
+    result: GradingResult,
+  ) => void;
 };
 export type CardUI = React.FC<CardReviewProps>;

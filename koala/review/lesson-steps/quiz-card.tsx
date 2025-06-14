@@ -59,6 +59,7 @@ export const QuizCard: React.FC<QuizCardProps> = ({
   onProceed,
   currentStepUuid,
   quizType,
+  onGradingResultCaptured,
 }) => {
   const { term, definition } = card;
   const [userTranscription, setUserTranscription] = useState<string>("");
@@ -70,6 +71,8 @@ export const QuizCard: React.FC<QuizCardProps> = ({
     targetText: card.term,
     langCode: card.langCode as LangCode,
     quizId: card.quizId,
+    cardUUID: card.uuid,
+    onGradingResultCaptured,
   });
 
   const {

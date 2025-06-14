@@ -68,6 +68,7 @@ function initialState(): State {
     totalItems: 0,
     itemsComplete: 0,
     recordings: {},
+    gradingResults: {},
   };
 }
 
@@ -106,6 +107,7 @@ export function useReview(deckId: number, playbackPercentage = 0.125) {
     state,
     currentItem: state.currentItem,
     totalDue: getItemsDue(state.queue),
+    gradingResults: state.gradingResults,
     skipCard: (cardUUID: string) => {
       dispatch({ type: "SKIP_CARD", payload: { uuid: cardUUID } });
     },
@@ -126,6 +128,19 @@ export function useReview(deckId: number, playbackPercentage = 0.125) {
     completeItem: (uuid: string) => {
       dispatch({ type: "COMPLETE_ITEM", payload: { uuid } });
     },
+    onGradingResultCaptured: (
+      cardUUID: string,
+      result: {
+        transcription: string;
+        isCorrect: boolean;
+        feedback: string;
+      },
+    ) => {
+      dispatch({
+        type: "STORE_GRADE_RESULT",
+        payload: { cardUUID, result },
+      });
+    },
     refetchQuizzes: () => {
       fetchQuizzes(deckId);
     },
@@ -136,6 +151,7 @@ function reducer(state: State, action: Action): State {
   console.log({
     ...state,
     recordings: Object.keys(state.recordings).length,
+    gradingResults: Object.keys(state.gradingResults).length,
     action: action.type,
   });
   switch (action.type) {
@@ -194,6 +210,14 @@ function reducer(state: State, action: Action): State {
         queue: giveUpQueue,
         currentItem: nextQueueItem(giveUpQueue),
         itemsComplete: state.itemsComplete + 1, // Increment complete count
+      };
+    case "STORE_GRADE_RESULT":
+      return {
+        ...state,
+        gradingResults: {
+          ...state.gradingResults,
+          [action.payload.cardUUID]: action.payload.result,
+        },
       };
     default:
       return state;

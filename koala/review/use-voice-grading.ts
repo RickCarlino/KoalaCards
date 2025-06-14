@@ -5,6 +5,11 @@ interface UseVoiceGradingOptions {
   targetText: string; // For transcription accuracy (e.g., card.term)
   langCode: LangCode; // Language for transcription
   quizId: number; // Quiz ID for server grading
+  cardUUID: string; // Card UUID for storing results
+  onGradingResultCaptured?: (
+    cardUUID: string,
+    result: GradingResult,
+  ) => void; // Callback to store results
 }
 
 interface GradingResult {
@@ -17,6 +22,8 @@ export function useVoiceGrading({
   targetText,
   langCode,
   quizId,
+  cardUUID,
+  onGradingResultCaptured,
 }: UseVoiceGradingOptions) {
   const transcribeAudio = trpc.transcribeAudio.useMutation();
   const gradeSpeakingQuiz = trpc.gradeSpeakingQuiz.useMutation();
@@ -37,11 +44,18 @@ export function useVoiceGrading({
       quizID: quizId,
     });
 
-    return {
+    const result = {
       transcription,
       isCorrect,
       feedback,
     };
+
+    // Store the grading result in state
+    if (onGradingResultCaptured) {
+      onGradingResultCaptured(cardUUID, result);
+    }
+
+    return result;
   };
 
   return {

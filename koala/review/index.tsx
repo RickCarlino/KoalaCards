@@ -70,7 +70,7 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
   };
 
   const handleArchive = () => {
-    console.log("Archive card:", card.uuid);
+    console.log("TODO: Archive card and skip to next card:", card.uuid);
   };
 
   const handleRecordToggle = () => {
@@ -88,7 +88,9 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
     [HOTKEYS.ARCHIVE, handleArchive],
     [HOTKEYS.FAIL, () => onGiveUp(card.uuid)],
     [HOTKEYS.RECORD, handleRecordToggle],
-    [HOTKEYS.CONTINUE, () => completeItem(currentStepUuid)],
+    [HOTKEYS.CONTINUE, () => {
+      completeItem(currentStepUuid);
+    }],
   ] as [string, () => void][]);
 
   return (

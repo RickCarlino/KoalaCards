@@ -12,9 +12,11 @@
 - Claude CLI custom notification hook??
 - bring back "H" hotkey to load more lessons.
 - UI on the "Not quite right" page sucks. Explanation should be more legible.
-- Archiving a card needs to remove it from the lesson
+- Archive needs to remove it from the lesson
 - Bring back the `take` param maybe hmm
 - When you get a speaking quiz correct, play quiz.term.
+- It's possible to record at strange times. Need a way of knowing when recording is even required maybe?
+- show tips and tricks while loading.
 
 Dead exports: koala/review/types.ts: QuizList, Quiz, RecordingCapturedAction, ClearRecordingAction, CompleteItemAction, GiveUpAction
 Dead exports: koala/review/components/index.ts: CardImage, FailureView, GradingSuccess
