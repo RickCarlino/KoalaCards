@@ -6,7 +6,7 @@ import { deletePausedCards } from "./delete-paused-card";
 import { editCard } from "./edit-card";
 import { editUserSettings } from "./edit-user-settings";
 import { faucet } from "./faucet";
-import { pauseCard } from "./pause-card";
+import { archiveCard } from "./archive-card";
 import { getNextQuizzes } from "./get-next-quizzes";
 import { getUserSettings } from "./get-user-settings";
 import { gradeQuiz } from "./grade-quiz";
@@ -48,7 +48,7 @@ export const appRouter = router({
   gradeWriting,
   mergeDecks,
   parseCards,
-  pauseCard,
+  archiveCard,
   remix,
   reportDeck,
   transcribeAudio,

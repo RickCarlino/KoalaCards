@@ -3,6 +3,7 @@ import { useHotkeys } from "@mantine/hooks";
 import React from "react";
 import { playAudio } from "../play-audio";
 import { blobToBase64, convertBlobToWav } from "../record-button";
+import { trpc } from "../trpc-config";
 import { useVoiceRecorder } from "../use-recorder";
 import { ControlBar } from "./control-bar";
 import { HOTKEYS } from "./hotkeys";
@@ -69,8 +70,16 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
     }
   };
 
-  const handleArchive = () => {
-    console.log("TODO: Archive card and skip to next card:", card.uuid);
+  const archiveCardMutation = trpc.archiveCard.useMutation();
+
+  const handleArchive = async () => {
+    try {
+      await archiveCardMutation.mutateAsync({ cardID: card.cardId });
+    } catch (error) {
+      console.error("Failed to archive card:", error);
+    } finally {
+      onSkip(card.uuid);
+    }
   };
 
   const handleRecordToggle = () => {
