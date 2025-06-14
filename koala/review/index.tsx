@@ -88,9 +88,7 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
     [HOTKEYS.ARCHIVE, handleArchive],
     [HOTKEYS.FAIL, () => onGiveUp(card.uuid)],
     [HOTKEYS.RECORD, handleRecordToggle],
-    [HOTKEYS.CONTINUE, () => {
-      completeItem(currentStepUuid);
-    }],
+    [HOTKEYS.CONTINUE, () => completeItem(currentStepUuid)],
   ] as [string, () => void][]);
 
   return (

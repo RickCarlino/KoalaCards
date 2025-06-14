@@ -17,6 +17,7 @@
 - When you get a speaking quiz correct, play quiz.term.
 - It's possible to record at strange times. Need a way of knowing when recording is even required maybe?
 - show tips and tricks while loading.
+- The "How would you say" UI gives away the answer by playing the term. (koala/review/lesson-steps/remedial-outro.tsx)
 
 Dead exports: koala/review/types.ts: QuizList, Quiz, RecordingCapturedAction, ClearRecordingAction, CompleteItemAction, GiveUpAction
 Dead exports: koala/review/components/index.ts: CardImage, FailureView, GradingSuccess

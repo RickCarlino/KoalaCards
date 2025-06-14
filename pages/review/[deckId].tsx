@@ -12,6 +12,7 @@ import {
   Text,
   Title,
 } from "@mantine/core";
+import { useHotkeys } from "@mantine/hooks";
 import { GetServerSideProps } from "next";
 import Link from "next/link";
 import React from "react";
@@ -78,38 +79,42 @@ const NoMoreQuizzesState = ({
 }: {
   deckId: number;
   onReload: () => void;
-}) => (
-  <Container size="md" py="xl">
-    <Box p="md">
-      <Title order={3} mb="md">
-        Lesson Complete
-      </Title>
-      <Box mb="lg">
-        <Button onClick={onReload} variant="filled" fullWidth mb="xs">
-          Fetch More Quizzes ({HOTKEYS.CONTINUE})
-        </Button>
+}) => {
+  useHotkeys([[HOTKEYS.CONTINUE, onReload]]);
+
+  return (
+    <Container size="md" py="xl">
+      <Box p="md">
+        <Title order={3} mb="md">
+          Lesson Complete
+        </Title>
+        <Box mb="lg">
+          <Button onClick={onReload} variant="filled" fullWidth mb="xs">
+            Fetch More Quizzes ({HOTKEYS.CONTINUE})
+          </Button>
+        </Box>
+        <Text mb="md">
+          You've reviewed all available quizzes for this session. You can:
+        </Text>
+        <Box mb="xs">
+          <Anchor component={Link} href={`/cards?deckId=${deckId}`}>
+            Add more cards to this deck
+          </Anchor>
+        </Box>
+        <Box mb="xs">
+          <Anchor component={Link} href={`/writing/${deckId}`}>
+            Practice Writing
+          </Anchor>
+        </Box>
+        <Box>
+          <Anchor component={Link} href="/review">
+            Go back to deck selection
+          </Anchor>
+        </Box>
       </Box>
-      <Text mb="md">
-        You've reviewed all available quizzes for this session. You can:
-      </Text>
-      <Box mb="xs">
-        <Anchor component={Link} href={`/cards?deckId=${deckId}`}>
-          Add more cards to this deck
-        </Anchor>
-      </Box>
-      <Box mb="xs">
-        <Anchor component={Link} href={`/writing/${deckId}`}>
-          Practice Writing
-        </Anchor>
-      </Box>
-      <Box>
-        <Anchor component={Link} href="/review">
-          Go back to deck selection
-        </Anchor>
-      </Box>
-    </Box>
-  </Container>
-);
+    </Container>
+  );
+};
 
 function InnerReviewPage({
   deckId,
