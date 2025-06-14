@@ -1,10 +1,20 @@
 # TODO
 
-- Run ts-unused-exports
 - Add playFX after finding a good free sound pack
+- Run ts-unused-exports
 - Remove or implement "// Unused ... ?" state tree branches
 - failing a quiz should show the answer
 - Need a "continue" hotkey.
+- Implement O3 based follow-up lessons.
+- lesson progress is 100% broke.
+- Re-write this doc after analysis.
+- Show AI feedback when you get it right (not just when you get it wrong)
+- Claude CLI custom notification hook??
+- bring back "H" hotkey to load more lessons.
+- UI on the "Not quite right" page sucks. Explanation should be more legible.
+- CONTINUE button needs a hotkey. Or just auto-push continue after 2000ms. Or one of those things where it auto-fades the button or whatever.
+- Archiving a card needs to remove it from the lesson
+
 
 Dead exports: koala/review/types.ts: QuizList, Quiz, RecordingCapturedAction, ClearRecordingAction, CompleteItemAction, GiveUpAction
 Dead exports: koala/review/components/index.ts: CardImage, FailureView, GradingSuccess
