@@ -1,10 +1,13 @@
 export const HOTKEYS = {
   GRADE_AGAIN: "a",
+  GRADE_HARD: "s",
   GRADE_GOOD: "d",
   GRADE_EASY: "f",
-  GRADE_HARD: "s",
-  SAVE: "h",
   FAIL: "g",
-  RECORD: "space",
+  EDIT: "n",
   PLAY: "j",
+  SKIP: "k",
+  ARCHIVE: "l",
+  RECORD: "space",
+  CONTINUE: "h",
 };

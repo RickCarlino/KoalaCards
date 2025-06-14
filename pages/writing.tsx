@@ -1,6 +1,6 @@
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { prismaClient } from "@/koala/prisma-client";
-import { VisualDiff } from "@/koala/review/visual-diff";
+import { VisualDiff } from "@/koala/review/lesson-steps/visual-diff";
 import {
   ActionIcon,
   Alert,

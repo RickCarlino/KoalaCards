@@ -51,10 +51,12 @@ export async function transcribeB64(
         if (!text) {
           throw new Error("No text returned from transcription.");
         }
+        console.log(`=== Transcription: ${text}`);
         transcriptionLength.labels({ userID }).inc(y.text.length);
+        const OPENAI_API_BUG = text.split("\n")[0];
         return resolve({
           kind: "OK",
-          text,
+          text: OPENAI_API_BUG,
         });
       } catch (error) {
         throw error;

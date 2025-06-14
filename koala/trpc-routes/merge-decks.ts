@@ -61,6 +61,16 @@ export const mergeDecks = procedure
         },
       });
 
+      await tx.writingSubmission.updateMany({
+        where: {
+          userId,
+          deckId: { in: input.deckIds },
+        },
+        data: {
+          deckId: newDeck.id,
+        },
+      });
+
       // Update all cards from the source decks to point to the new deck
       const updateResult = await tx.card.updateMany({
         where: {

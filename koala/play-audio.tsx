@@ -6,7 +6,7 @@ export const playAudio = (urlOrDataURI: string) => {
       return;
     }
     let done = false;
-
+    console.log("Playing audio: ", urlOrDataURI.slice(0, 65));
     const audio = new Audio(urlOrDataURI);
 
     const ok = () => {
@@ -22,16 +22,15 @@ export const playAudio = (urlOrDataURI: string) => {
     lastAudio = urlOrDataURI;
 
     audio.onended = ok;
-    // Resolve after N seconds because sometimes OpenAI TTS has tons of dead air:
-    setTimeout(() => ok(), 8000);
+
     audio.onerror = (e) => {
-      reject(e);
       console.error("Audio playback failed:", e);
+      reject(e);
     };
 
     audio.play().catch((e) => {
-      reject(e);
       console.error("Audio playback failed:", e);
+      reject(e);
     });
   });
 };

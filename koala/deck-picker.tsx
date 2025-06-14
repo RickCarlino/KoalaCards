@@ -15,8 +15,7 @@ import {
 import { LangCode, supportedLanguages } from "./shared-types"; // Adjusted path
 import { getLangName } from "./get-lang-name"; // Adjusted path
 import { buttonShadow, paperStyle, titleStyle } from "./styles"; // Adjusted path
-
-const DEFAULT_LANG: LangCode = "ko";
+import { DEFAULT_LANG } from "./types/create-reducer";
 
 // --- Define types specific to DeckPicker ---
 
@@ -28,7 +27,7 @@ export interface Deck {
 }
 
 // Define relevant state parts needed by the picker
-export interface DeckPickerState {
+interface DeckPickerState {
   deckSelection: "existing" | "new";
   deckId?: number;
   deckName: string;
@@ -36,14 +35,14 @@ export interface DeckPickerState {
 }
 
 // Define relevant action types the picker needs to dispatch
-export type DeckPickerAction =
+type DeckPickerAction =
   | { type: "SET_DECK_SELECTION"; deckSelection: "existing" | "new" }
   | { type: "SET_DECK_ID"; deckId: number | undefined }
   | { type: "SET_DECK_NAME"; deckName: string }
   | { type: "SET_DECK_LANG"; deckLang: LangCode };
 
 // Define the props for the new component
-export interface DeckPickerProps {
+interface DeckPickerProps {
   decks: Deck[];
   state: DeckPickerState;
   dispatch: React.Dispatch<DeckPickerAction>;

@@ -1,42 +1,8 @@
 import { getLessons } from "@/koala/fetch-lesson";
-import { z } from "zod";
 import { getUserSettings } from "../auth-helpers";
 import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc-procedure";
-
-export const Quiz = z.object({
-  quizId: z.number(),
-  cardId: z.number(),
-  definition: z.string(),
-  term: z.string(),
-  repetitions: z.number(),
-  lapses: z.number(),
-  lessonType: z.union([
-    z.literal("listening"),
-    z.literal("speaking"),
-    z.literal("dictation"),
-    z.literal("review"),
-  ]),
-  definitionAudio: z.string(),
-  termAudio: z.string(),
-  langCode: z.string(),
-  lastReview: z.number(),
-  imageURL: z.string().optional(),
-  stability: z.number(),
-  difficulty: z.number(),
-});
-
-const QuizList = z.object({
-  quizzes: z.array(Quiz),
-  totalCards: z.number(),
-  quizzesDue: z.number(),
-  newCards: z.number(),
-});
-
-const QuizInput = z.object({
-  take: z.number(),
-  deckId: z.number(),
-});
+import { QuizInput, QuizList } from "../types/zod";
 
 export async function getLessonMeta(userId: string, deckId?: number) {
   const currentDate = new Date().getTime(); // Current time in milliseconds

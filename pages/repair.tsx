@@ -15,7 +15,7 @@ import { blobToBase64 } from "@/koala/record-button";
 import { compare } from "@/koala/quiz-evaluators/evaluator-utils";
 import { playAudio } from "@/koala/play-audio";
 import { useVoiceRecorder } from "@/koala/use-recorder";
-import { VisualDiff } from "@/koala/review/visual-diff";
+import { VisualDiff } from "@/koala/review/lesson-steps/visual-diff";
 import { LangCode } from "@/koala/shared-types";
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { GetRepairOutputParams } from "@/koala/fetch-failure-types";

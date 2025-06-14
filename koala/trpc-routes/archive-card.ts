@@ -3,7 +3,7 @@ import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc-procedure";
 import { getCardOrFail } from "@/koala/get-card-or-fail";
 
-export const pauseCard = procedure
+export const archiveCard = procedure
   .input(
     z.object({
       cardID: z.number(),

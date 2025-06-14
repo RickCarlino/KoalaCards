@@ -37,12 +37,6 @@ Unlike traditional SRS apps that often rely on self-grading, KoalaCards provides
   </a>
 </p>
 
-*Example feedback:*
-![](./feedback.png)
-
-*How grading works:*
-![](./how-it-works.png)
-
 ## Features 💡
 
 *   **Spaced Repetition:** Utilizes the [FSRS scheduling algorithm](https://github.com/open-spaced-repetition/fsrs4anki) for efficient review scheduling.
