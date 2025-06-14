@@ -8,5 +8,6 @@ export const HOTKEYS = {
   PLAY: "j",
   SKIP: "k",
   ARCHIVE: "l",
-  RECORD: "space"
+  RECORD: "space",
+  CONTINUE: "enter",
 };

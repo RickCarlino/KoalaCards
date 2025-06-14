@@ -12,9 +12,10 @@
 - Claude CLI custom notification hook??
 - bring back "H" hotkey to load more lessons.
 - UI on the "Not quite right" page sucks. Explanation should be more legible.
-- CONTINUE button needs a hotkey. Or just auto-push continue after 2000ms. Or one of those things where it auto-fades the button or whatever.
+- CONTINUE button needs a hotkey. Or just auto-push continue after 2000ms. Or one of those things where it auto-fades the button or whatever. Just use A/S/D/F??
 - Archiving a card needs to remove it from the lesson
-
+- Bring back the `take` param maybe hmm
+- When you get a speaking quiz correct, play quiz.term.
 
 Dead exports: koala/review/types.ts: QuizList, Quiz, RecordingCapturedAction, ClearRecordingAction, CompleteItemAction, GiveUpAction
 Dead exports: koala/review/components/index.ts: CardImage, FailureView, GradingSuccess
