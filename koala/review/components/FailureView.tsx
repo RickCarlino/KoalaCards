@@ -1,6 +1,5 @@
 import { Stack, Text, Button } from "@mantine/core";
 import { CardImage } from "./CardImage";
-import { HOTKEYS } from "../hotkeys";
 import { useAudioPlayback } from "../hooks/useAudioPlayback";
 
 interface FailureViewProps {

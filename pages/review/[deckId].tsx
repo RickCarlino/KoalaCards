@@ -159,6 +159,7 @@ function InnerReviewPage({
           onRecordingComplete={(audio: string) => {
             onRecordingCaptured(currentItem.stepUuid, audio);
           }}
+          completeItem={completeItem}
         />
       </Box>
     </Container>

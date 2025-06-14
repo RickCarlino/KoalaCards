@@ -34,6 +34,7 @@ const UnknownCard: CardUI = ({ card }) => (
 interface CardReviewWithRecordingProps extends CardReviewProps {
   currentStepUuid: string;
   onRecordingComplete: (audio: string) => void;
+  completeItem: (uuid: string) => void;
 }
 
 export const CardReview: React.FC<CardReviewWithRecordingProps> = (
@@ -46,6 +47,7 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
     card,
     onSkip,
     onGiveUp,
+    completeItem,
   } = props;
 
   const CardComponent = cardUIs[itemType] ?? UnknownCard;
@@ -86,6 +88,7 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
     [HOTKEYS.ARCHIVE, handleArchive],
     [HOTKEYS.FAIL, () => onGiveUp(card.uuid)],
     [HOTKEYS.RECORD, handleRecordToggle],
+    [HOTKEYS.CONTINUE, () => completeItem(currentStepUuid)],
   ] as [string, () => void][]);
 
   return (
