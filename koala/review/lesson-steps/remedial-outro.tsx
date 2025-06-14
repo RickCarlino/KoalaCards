@@ -7,6 +7,7 @@ import { FailureView } from "../components/FailureView";
 import { CardImage } from "../components/CardImage";
 import { usePhaseManager } from "../hooks/usePhaseManager";
 import { useRecordingProcessor } from "../hooks/useRecordingProcessor";
+import { HOTKEYS } from "../hotkeys";
 
 type Phase = "ready" | "processing" | "success" | "failure";
 
@@ -44,7 +45,7 @@ const SuccessView = ({
       <Text ta="center">{definition}</Text>
 
       <Button onClick={onContinue} variant="light" color="green">
-        Continue
+        Continue ({HOTKEYS.CONTINUE})
       </Button>
     </Stack>
   );

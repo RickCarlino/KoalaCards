@@ -1,6 +1,7 @@
 import { Stack, Text, Button } from "@mantine/core";
 import { CardImage } from "./CardImage";
 import { useAudioPlayback } from "../hooks/useAudioPlayback";
+import { HOTKEYS } from "../hotkeys";
 
 interface FailureViewProps {
   imageURL?: string;
@@ -54,7 +55,7 @@ export const FailureView: React.FC<FailureViewProps> = ({
       </Text>
 
       <Button onClick={onContinue} variant="light" color="blue">
-        Continue
+        Continue ({HOTKEYS.CONTINUE})
       </Button>
     </Stack>
   );
