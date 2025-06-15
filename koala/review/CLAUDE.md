@@ -1,23 +1,24 @@
-# TODO
+# TODO - Broke
 
-- Add playFX after finding a good free sound pack
+- Archive does not skip to next.
+- The "How would you say" UI gives away the answer by playing the term. (koala/review/lesson-steps/remedial-outro.tsx)
+- It's possible to record at strange times. Need a way of knowing when recording is even required maybe? Maybe the problem is that there is a "tri-state" step but we should be using queues.
+
+# TODO - Cleanup
+
 - Run ts-unused-exports
 - Remove or implement "// Unused ... ?" state tree branches
-- failing a quiz should show the answer
-- Need a "continue" hotkey.
-- Implement O3 based follow-up lessons. PROMPT: https://chatgpt.com/c/684de073-9bbc-8010-8dbb-607c8e367de1
-- lesson progress is 100% broke.
 - Re-write this doc after analysis.
-- Show AI feedback when you get it right (not just when you get it wrong)
 - Claude CLI custom notification hook??
-- bring back "H" hotkey to load more lessons.
 - UI on the "Not quite right" page sucks. Explanation should be more legible.
-- Archive needs to remove it from the lesson
+- When you get a speaking quiz correct, play quiz.term. (? Maybe not ?)
+
+# TODO - Features
+
+- Implement O3 based follow-up lessons. PROMPT: https://chatgpt.com/c/684de073-9bbc-8010-8dbb-607c8e367de1
+- Add playFX after finding a good free sound pack
 - Bring back the `take` param maybe hmm
-- When you get a speaking quiz correct, play quiz.term.
-- It's possible to record at strange times. Need a way of knowing when recording is even required maybe?
 - show tips and tricks while loading.
-- The "How would you say" UI gives away the answer by playing the term. (koala/review/lesson-steps/remedial-outro.tsx)
 
 Dead exports: koala/review/types.ts: QuizList, Quiz, RecordingCapturedAction, ClearRecordingAction, CompleteItemAction, GiveUpAction
 Dead exports: koala/review/components/index.ts: CardImage, FailureView, GradingSuccess

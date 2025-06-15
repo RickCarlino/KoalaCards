@@ -49,7 +49,7 @@ export const ControlBar: React.FC<ControlBarProps> = (props) => {
 
   return (
     <Group justify="center" wrap="wrap" gap="xs">
-      <Tooltip label={`${itemsComplete} of ${totalItems} cards complete`}>
+      <Tooltip label={`${itemsComplete} of ${totalItems} steps complete`}>
         <RingProgress
           size={44}
           thickness={4}

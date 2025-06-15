@@ -23,19 +23,36 @@ const queue = (): Queue => ({
   pending: [], // Unused ... ?
 });
 
-function skipCard(action: SkipCardAction, state: State): State {
-  const cardUUID = action.payload.uuid;
-  const newQueue = { ...state.queue };
+function removeCardFromQueues(
+  cardUUID: string,
+  queue: Queue,
+): { updatedQueue: Queue; itemsRemoved: number } {
+  const updatedQueue = { ...queue };
+  let itemsRemoved = 0;
+
   for (const type of EVERY_QUEUE_TYPE) {
-    newQueue[type] = newQueue[type].filter(
+    const originalLength = updatedQueue[type].length;
+    updatedQueue[type] = updatedQueue[type].filter(
       (item) => item.cardUUID !== cardUUID,
     );
+    itemsRemoved += originalLength - updatedQueue[type].length;
   }
+
+  return { updatedQueue, itemsRemoved };
+}
+
+function skipCard(action: SkipCardAction, state: State): State {
+  const cardUUID = action.payload.uuid;
+  const { updatedQueue, itemsRemoved } = removeCardFromQueues(
+    cardUUID,
+    state.queue,
+  );
+
   return {
     ...state,
-    queue: newQueue,
-    itemsComplete: state.itemsComplete + 1,
-    currentItem: nextQueueItem(newQueue),
+    queue: updatedQueue,
+    itemsComplete: state.itemsComplete + itemsRemoved,
+    currentItem: nextQueueItem(updatedQueue),
   };
 }
 
@@ -196,20 +213,16 @@ function reducer(state: State, action: Action): State {
       };
     case "GIVE_UP":
       const { cardUUID } = action.payload;
-      const giveUpQueue = { ...state.queue };
-
-      // Remove all items with matching cardUUID from all queue types
-      for (const queueType of EVERY_QUEUE_TYPE) {
-        giveUpQueue[queueType] = giveUpQueue[queueType].filter(
-          (item) => item.cardUUID !== cardUUID,
-        );
-      }
+      const {
+        updatedQueue: giveUpQueue,
+        itemsRemoved: giveUpItemsRemoved,
+      } = removeCardFromQueues(cardUUID, state.queue);
 
       return {
         ...state,
         queue: giveUpQueue,
         currentItem: nextQueueItem(giveUpQueue),
-        itemsComplete: state.itemsComplete + 1, // Increment complete count
+        itemsComplete: state.itemsComplete + giveUpItemsRemoved,
       };
     case "STORE_GRADE_RESULT":
       return {
