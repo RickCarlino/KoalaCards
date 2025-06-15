@@ -37,6 +37,7 @@ export const ControlBar: React.FC<ControlBarProps> = (props) => {
     isRecording,
     onRecordClick,
     onArchiveClick,
+    itemType,
   } = props;
   const progress = totalItems ? (itemsComplete / totalItems) * 100 : 0;
 
@@ -120,12 +121,19 @@ export const ControlBar: React.FC<ControlBarProps> = (props) => {
         </ActionIcon>
       </Tooltip>
 
-      <Tooltip label={`Play audio (${HOTKEYS.PLAY})`}>
+      <Tooltip
+        label={
+          itemType === "speaking"
+            ? "Audio disabled during speaking quiz"
+            : `Play audio (${HOTKEYS.PLAY})`
+        }
+      >
         <ActionIcon
           variant="outline"
           size="lg"
           onClick={handlePlayAudio}
           color="pink.7"
+          disabled={itemType === "speaking"}
         >
           <IconPlayerPlayFilled size={20} />
         </ActionIcon>

@@ -65,7 +65,7 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
     window.open(`/cards/${card.cardId}`, "_blank");
 
   const handlePlayAudio = () => {
-    if (card.termAudio) {
+    if (card.termAudio && itemType !== "speaking") {
       playAudio(card.termAudio);
     }
   };
