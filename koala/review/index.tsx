@@ -128,6 +128,7 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
           currentStepUuid={currentStepUuid}
           isRecording={voiceRecorder.isRecording}
           onRecordClick={handleRecordToggle}
+          onArchiveClick={handleArchive}
         />
       </Box>
     </Box>

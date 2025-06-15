@@ -1,6 +1,5 @@
 # TODO - Broke
 
-- Archive does not skip to next.
 - The "How would you say" UI gives away the answer by playing the term. (koala/review/lesson-steps/remedial-outro.tsx)
 - It's possible to record at strange times. Need a way of knowing when recording is even required maybe? Maybe the problem is that there is a "tri-state" step but we should be using queues.
 
@@ -66,7 +65,6 @@ The control bar includes:
 - Progress ring showing completion percentage
 - Exit button (links to home "/")
 - Edit button (opens card editor in new tab)
-- Archive button (placeholder - logs to console)
 - Give up button (removes card from lesson with "F" icon)
 - Skip button (removes card from current lesson)
 - Play audio button (plays term audio)

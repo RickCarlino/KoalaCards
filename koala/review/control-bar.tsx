@@ -24,6 +24,7 @@ interface ControlBarProps extends CardReviewProps {
   currentStepUuid: string;
   isRecording: boolean;
   onRecordClick: () => void;
+  onArchiveClick: () => void;
 }
 
 export const ControlBar: React.FC<ControlBarProps> = (props) => {
@@ -35,6 +36,7 @@ export const ControlBar: React.FC<ControlBarProps> = (props) => {
     onGiveUp,
     isRecording,
     onRecordClick,
+    onArchiveClick,
   } = props;
   const progress = totalItems ? (itemsComplete / totalItems) * 100 : 0;
 
@@ -89,7 +91,7 @@ export const ControlBar: React.FC<ControlBarProps> = (props) => {
         <ActionIcon
           variant="outline"
           size="lg"
-          onClick={() => console.log("Archive card:", card.uuid)}
+          onClick={onArchiveClick}
           color="pink.7"
         >
           <IconArchive size={20} />
