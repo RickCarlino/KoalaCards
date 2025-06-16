@@ -12,6 +12,7 @@ interface FailureViewProps {
   onContinue: () => void;
   failureText?: string;
   termAudio?: string;
+  autoPlayAudio?: boolean;
 }
 
 export const FailureView: React.FC<FailureViewProps> = ({
@@ -23,9 +24,10 @@ export const FailureView: React.FC<FailureViewProps> = ({
   onContinue,
   failureText = "Not quite right",
   termAudio,
+  autoPlayAudio = false,
 }) => {
   // Play term audio when failure view is displayed
-  useAudioPlayback({ termAudio, autoPlay: true });
+  useAudioPlayback({ termAudio, autoPlay: autoPlayAudio });
   return (
     <Stack align="center" gap="md">
       <CardImage imageURL={imageURL} term={term} />
