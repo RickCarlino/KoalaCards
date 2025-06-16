@@ -50,9 +50,16 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
   const CardComponent = cardUIs[itemType] ?? UnknownCard;
 
   async function handleRecordingResult(blob: Blob) {
-    const wav = await convertBlobToWav(blob);
-    const base64 = await blobToBase64(wav);
-    onRecordingComplete(base64);
+    try {
+      const wav = await convertBlobToWav(blob);
+      const base64 = await blobToBase64(wav);
+      onRecordingComplete(base64);
+    } catch (error) {
+      console.error("Audio conversion error:", error);
+      // Fallback: send the original blob as base64 without conversion
+      const base64 = await blobToBase64(blob);
+      onRecordingComplete(base64);
+    }
   }
 
   const voiceRecorder = useVoiceRecorder(handleRecordingResult);
