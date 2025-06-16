@@ -23,11 +23,9 @@ const montserrat = Montserrat({
 const TopBarWithNoSSR = dynamic(() => import("./_topbar"), { ssr: false });
 
 function App(props: AppProps) {
-  const POSTHOG_KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY;
   const init = () => {
-    if (POSTHOG_KEY) {
-      // Initialize PostHog
-      posthog.init(POSTHOG_KEY, {
+    if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+      posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY, {
         api_host: "/ingest",
         ui_host: "https://us.posthog.com",
         capture_pageview: "history_change",
@@ -43,7 +41,7 @@ function App(props: AppProps) {
       );
     }
   };
-  useEffect(init, [POSTHOG_KEY]);
+  useEffect(init, [process.env.NEXT_PUBLIC_POSTHOG_KEY]);
 
   // For the email authentication page, we don't want to show any UI components
   if (props.router.pathname === "/auth/email") {
