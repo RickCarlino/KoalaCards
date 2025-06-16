@@ -24,9 +24,9 @@ const TopBarWithNoSSR = dynamic(() => import("./_topbar"), { ssr: false });
 
 function App(props: AppProps) {
   const POSTHOG_KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY;
-  if (POSTHOG_KEY) {
-    // Initialize PostHog
-    useEffect(() => {
+  const init = () => {
+    if (POSTHOG_KEY) {
+      // Initialize PostHog
       posthog.init(POSTHOG_KEY, {
         api_host: "/ingest",
         ui_host: "https://us.posthog.com",
@@ -37,12 +37,13 @@ function App(props: AppProps) {
         },
         debug: process.env.NODE_ENV === "development",
       });
-    }, []);
-  } else {
-    console.debug(
-      "PostHog key is not set. Skipping PostHog initialization. This is expected in development mode.",
-    );
-  }
+    } else {
+      console.debug(
+        "PostHog key is not set. Skipping PostHog initialization. This is expected in development mode.",
+      );
+    }
+  };
+  useEffect(init, [POSTHOG_KEY]);
 
   // For the email authentication page, we don't want to show any UI components
   if (props.router.pathname === "/auth/email") {

@@ -49,6 +49,7 @@ The system uses a reducer pattern with priority-ordered queues:
 6. `remedialOutro` - Remedial card quiz
 
 **Key Actions:**
+
 - `REPLACE_CARDS`: Initialize cards into appropriate queues
 - `SKIP_CARD`: Remove all instances of a card from queues
 - `GIVE_UP`: Skip with completion count increment
@@ -63,6 +64,7 @@ The system uses a reducer pattern with priority-ordered queues:
 ### Control Bar
 
 Fixed bottom bar with:
+
 - **Progress ring**: Shows `itemsComplete / totalItems` percentage
 - **Exit button**: Returns to home (`/`)
 - **Edit button**: Opens card editor in new tab
@@ -81,9 +83,11 @@ Fixed bottom bar with:
 ## Card Types
 
 ### New Word Introduction ✓
+
 **File:** `lesson-steps/new-word-intro.tsx`
 
 First exposure to a new card:
+
 - Displays term, definition, and image
 - Auto-plays term audio on mount
 - User records pronunciation
@@ -92,26 +96,32 @@ First exposure to a new card:
 - Success triggers definition → term audio → advance
 
 ### Remedial Introduction ✓
+
 **File:** `lesson-steps/remedial-intro.tsx`
 
 Review of previously failed cards:
+
 - Shows "Reviewing Previous Mistake" header
 - Otherwise identical to new word introduction flow
 
 ### Listening Drill ⏳
+
 **File:** `lesson-steps/listening.tsx`
 
 **Status:** Not implemented (shows TODO placeholder)
 
 **Planned behavior:**
+
 - Play phrase in target language
 - User repeats what they hear
 - Validate and show grading options on success
 
 ### Speaking Drill ✓
+
 **File:** `lesson-steps/speaking.tsx`
 
 Translation from English to target language:
+
 - Prompts: "Say '[definition]' in [target language]"
 - Records user attempt
 - AI voice grading with feedback
@@ -119,15 +129,18 @@ Translation from English to target language:
 - Failure: Shows feedback, auto-grades as "Again"
 
 ### New Word Quiz ✓
+
 **File:** `lesson-steps/new-word-outro.tsx`
 
 Final assessment of newly learned cards:
+
 - Prompts: "How would you say '[definition]'?"
 - Tests recall without visual cues
 - Voice grading determines success
 - FSRS grading on success, auto "Again" on failure
 
 ### Remedial Quiz ✓
+
 **File:** `lesson-steps/remedial-outro.tsx`
 
 Currently identical to new word quiz.
@@ -137,6 +150,7 @@ Currently identical to new word quiz.
 **File:** `replace-cards.ts`
 
 Lesson types determine queue population:
+
 - **"new"**: Creates `newWordIntro` + `newWordOutro` (2 items)
 - **"remedial"**: Creates `remedialIntro` + `remedialOutro` (2 items)
 - **"listening"**: Creates single `listening` item
@@ -152,10 +166,12 @@ Lesson types determine queue population:
 ## Pending Tasks
 
 ### UI Improvements
+
 - [ ] Improve legibility of error explanations
 - [ ] Add loading tips and tricks display
 
 ### Features
+
 - [ ] Implement listening drill functionality
 - [ ] O3-based follow-up lessons ([spec](https://chatgpt.com/c/684de073-9bbc-8010-8dbb-607c8e367de1))
 - [ ] Sound effects integration (pending free sound pack)
@@ -164,6 +180,7 @@ Lesson types determine queue population:
 ### Future Ideas
 
 Two-phase grading for listening/speaking:
+
 1. User completes exercise and submits
 2. Async grading with later feedback
 3. Correct: Choose grade level
