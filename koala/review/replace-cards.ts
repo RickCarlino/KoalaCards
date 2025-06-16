@@ -10,6 +10,23 @@ export function replaceCards(
     return { ...acc, [item.uuid]: item };
   }, {} as QuizMap);
 
+  // Start with a fresh state to reset counts
+  const freshState: State = {
+    ...state,
+    totalItems: 0,
+    itemsComplete: 0,
+    queue: {
+      feedback: [],
+      newWordIntro: [],
+      remedialIntro: [],
+      listening: [],
+      speaking: [],
+      newWordOutro: [],
+      remedialOutro: [],
+      pending: [],
+    },
+  };
+
   const nextState = action.payload.reduce((acc, item): State => {
     switch (item.lessonType) {
       case "new":
@@ -95,7 +112,7 @@ export function replaceCards(
       default:
         throw new Error(`Unknown lesson type: ${item.lessonType}`);
     }
-  }, state);
+  }, freshState);
   return {
     ...nextState,
     cards,
