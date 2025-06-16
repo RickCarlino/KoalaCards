@@ -41,15 +41,32 @@ function removeCardFromQueues(
 
 function skipCard(action: SkipCardAction, state: State): State {
   const cardUUID = action.payload.uuid;
-  const { updatedQueue, itemsRemoved } = removeCardFromQueues(
-    cardUUID,
-    state.queue,
-  );
+  // Count only completed items (items that would have come before current item)
+  let completedBeforeSkip = 0;
+  let foundCurrent = false;
+  for (const type of EVERY_QUEUE_TYPE) {
+    for (const item of state.queue[type]) {
+      // If we find the current item, we're done counting completed items
+      if (
+        state.currentItem &&
+        item.stepUuid === state.currentItem.stepUuid
+      ) {
+        foundCurrent = true;
+        break;
+      }
+      // Count items from the same card that came before current item
+      if (item.cardUUID === cardUUID && !foundCurrent) {
+        completedBeforeSkip++;
+      }
+    }
+    if (foundCurrent) break;
+  }
+  const { updatedQueue } = removeCardFromQueues(cardUUID, state.queue);
 
   return {
     ...state,
     queue: updatedQueue,
-    itemsComplete: state.itemsComplete + itemsRemoved,
+    itemsComplete: state.itemsComplete + completedBeforeSkip,
     currentItem: nextQueueItem(updatedQueue),
   };
 }
@@ -211,16 +228,37 @@ function reducer(state: State, action: Action): State {
       };
     case "GIVE_UP":
       const { cardUUID } = action.payload;
-      const {
-        updatedQueue: giveUpQueue,
-        itemsRemoved: giveUpItemsRemoved,
-      } = removeCardFromQueues(cardUUID, state.queue);
+      // Count only completed items (items that would have come before current item)
+      let completedBeforeGiveUp = 0;
+      let foundCurrentForGiveUp = false;
+      for (const type of EVERY_QUEUE_TYPE) {
+        for (const item of state.queue[type]) {
+          // If we find the current item, we're done counting completed items
+          if (
+            state.currentItem &&
+            item.stepUuid === state.currentItem.stepUuid
+          ) {
+            foundCurrentForGiveUp = true;
+            break;
+          }
+          // Count items from the same card that came before current item
+          if (item.cardUUID === cardUUID && !foundCurrentForGiveUp) {
+            completedBeforeGiveUp++;
+          }
+        }
+        if (foundCurrentForGiveUp) break;
+      }
+
+      const { updatedQueue: giveUpQueue } = removeCardFromQueues(
+        cardUUID,
+        state.queue,
+      );
 
       return {
         ...state,
         queue: giveUpQueue,
         currentItem: nextQueueItem(giveUpQueue),
-        itemsComplete: state.itemsComplete + giveUpItemsRemoved,
+        itemsComplete: state.itemsComplete + completedBeforeGiveUp,
       };
     case "STORE_GRADE_RESULT":
       return {

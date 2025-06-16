@@ -21,6 +21,7 @@ export async function convertBlobToWav(
 ): Promise<Blob> {
   const arrayBuffer = await blob.arrayBuffer();
   const audioContext = new AudioContext();
+
   const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
   const numberOfChannels = 1; // Set to mono
 

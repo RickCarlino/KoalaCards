@@ -97,6 +97,7 @@ export const useVoiceRecorder = (
       }
     }
     dispatch({ type: "start" });
+
     const recorder = new MediaRecorder(persistentStream.current!);
     recorder.addEventListener("dataavailable", finishRecording);
     dispatch({ type: "startRecording", payload: { recorder } });
