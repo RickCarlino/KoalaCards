@@ -17,7 +17,7 @@ import { GetServerSideProps } from "next";
 import Link from "next/link";
 import React from "react";
 
-export type ReviewDeckPageProps = {
+type ReviewDeckPageProps = {
   deckId: number;
   playbackPercentage: number;
 };

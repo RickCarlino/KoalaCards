@@ -1,16 +1,8 @@
-# TODO - Broke
-
-- The "How would you say" UI gives away the answer by playing the term. (koala/review/lesson-steps/remedial-outro.tsx)
-- It's possible to record at strange times. Need a way of knowing when recording is even required maybe? Maybe the problem is that there is a "tri-state" step but we should be using queues.
 
 # TODO - Cleanup
 
-- Run ts-unused-exports
-- Remove or implement "// Unused ... ?" state tree branches
 - Re-write this doc after analysis.
-- Claude CLI custom notification hook??
 - UI on the "Not quite right" page sucks. Explanation should be more legible.
-- When you get a speaking quiz correct, play quiz.term. (? Maybe not ?)
 
 # TODO - Features
 
@@ -18,11 +10,6 @@
 - Add playFX after finding a good free sound pack
 - Bring back the `take` param maybe hmm
 - show tips and tricks while loading.
-
-Dead exports: koala/review/types.ts: QuizList, Quiz, RecordingCapturedAction, ClearRecordingAction, CompleteItemAction, GiveUpAction
-Dead exports: koala/review/components/index.ts: CardImage, FailureView, GradingSuccess
-Dead exports: koala/review/hooks/index.ts: usePhaseManager, useRecordingProcessor, useGradeHandler, useAudioPlayback
-Dead exports: koala/trpc-routes/grade-writing.ts: FeedbackItem, ApiResponse, EssayResponse
 
 ---
 

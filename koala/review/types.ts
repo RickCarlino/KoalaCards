@@ -2,7 +2,7 @@ import { z } from "zod";
 import { QuizList as ZodQuizList } from "../types/zod"; // Renamed to avoid conflict
 
 // Types from logic.ts
-export type QuizList = z.infer<typeof ZodQuizList>["quizzes"];
+type QuizList = z.infer<typeof ZodQuizList>["quizzes"];
 export type ItemType = keyof Queue;
 export type QueueItem = {
   cardUUID: string;
@@ -47,23 +47,23 @@ export type State = {
 
 export type ReplaceCardAction = { type: "REPLACE_CARDS"; payload: Quiz[] };
 export type SkipCardAction = { type: "SKIP_CARD"; payload: UUID };
-export type RecordingCapturedAction = {
+type RecordingCapturedAction = {
   type: "RECORDING_CAPTURED";
   payload: { uuid: string; audio: string };
 };
-export type ClearRecordingAction = {
+type ClearRecordingAction = {
   type: "CLEAR_RECORDING";
   payload: { uuid: string };
 };
-export type CompleteItemAction = {
+type CompleteItemAction = {
   type: "COMPLETE_ITEM";
   payload: { uuid: string };
 };
-export type GiveUpAction = {
+type GiveUpAction = {
   type: "GIVE_UP";
   payload: { cardUUID: string };
 };
-export type GradingResultCapturedAction = {
+type GradingResultCapturedAction = {
   type: "STORE_GRADE_RESULT";
   payload: { cardUUID: string; result: GradingResult };
 };
