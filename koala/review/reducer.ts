@@ -168,7 +168,7 @@ function reducer(state: State, action: Action): State {
   console.log({
     ...state,
     recordings: Object.keys(state.recordings).length,
-    gradingResults: Object.keys(state.gradingResults).length,
+    gradingResults: state.gradingResults,
     action: action.type,
   });
   switch (action.type) {
