@@ -11,11 +11,9 @@ export type QueueItem = {
 };
 
 type QueueType =
-  | "feedback"
   | "listening"
   | "newWordIntro"
   | "newWordOutro"
-  | "pending"
   | "remedialIntro"
   | "remedialOutro"
   | "speaking";
@@ -79,14 +77,12 @@ export type Action =
   | GiveUpAction
   | GradingResultCapturedAction;
 export const EVERY_QUEUE_TYPE: (keyof Queue)[] = [
-  "feedback",
   "newWordIntro",
   "remedialIntro",
   "listening",
   "speaking",
   "newWordOutro",
   "remedialOutro",
-  "pending",
 ];
 
 export type CardReviewProps = {

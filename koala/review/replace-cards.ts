@@ -16,14 +16,12 @@ export function replaceCards(
     totalItems: 0,
     itemsComplete: 0,
     queue: {
-      feedback: [],
       newWordIntro: [],
       remedialIntro: [],
       listening: [],
       speaking: [],
       newWordOutro: [],
       remedialOutro: [],
-      pending: [],
     },
   };
 

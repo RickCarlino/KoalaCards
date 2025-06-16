@@ -7,11 +7,9 @@ import { trpc } from "../trpc-config";
 import { useVoiceRecorder } from "../use-recorder";
 import { ControlBar } from "./control-bar";
 import { HOTKEYS } from "./hotkeys";
-import { Feedback } from "./lesson-steps/feedback";
 import { Listening } from "./lesson-steps/listening";
 import { NewWordIntro } from "./lesson-steps/new-word-intro";
 import { NewWordOutro } from "./lesson-steps/new-word-outro";
-import { Pending } from "./lesson-steps/pending";
 import { RemedialIntro } from "./lesson-steps/remedial-intro";
 import { RemedialOutro } from "./lesson-steps/remedial-outro";
 import { Speaking } from "./lesson-steps/speaking";
@@ -24,8 +22,6 @@ const cardUIs: Record<ItemType, CardUI> = {
   speaking: Speaking,
   remedialIntro: RemedialIntro,
   remedialOutro: RemedialOutro,
-  feedback: Feedback,
-  pending: Pending,
 };
 
 const UnknownCard: CardUI = ({ card }) => (

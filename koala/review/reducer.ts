@@ -13,14 +13,12 @@ import {
 import { playAudio } from "../play-audio";
 
 const queue = (): Queue => ({
-  feedback: [], // Unused ... ?
   newWordIntro: [], // DONE
   remedialIntro: [], // DONE
   listening: [],
   speaking: [], // Needs testing.
   newWordOutro: [], // DONE
   remedialOutro: [], // DONE
-  pending: [], // Unused ... ?
 });
 
 function removeCardFromQueues(
