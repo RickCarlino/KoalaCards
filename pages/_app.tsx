@@ -13,6 +13,10 @@ import Head from "next/head";
 import dynamic from "next/dynamic";
 import { Montserrat } from "next/font/google";
 
+// TODO: use ENVs - why does this not work in NorthFlank?
+const NEXT_PUBLIC_POSTHOG_KEY =
+  "phc_1P2p1T7Neq6KQ2brenIAWZFaSRnpzXpz4SQsDuVuuYS";
+
 // Initialize the Montserrat font
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -24,24 +28,18 @@ const TopBarWithNoSSR = dynamic(() => import("./_topbar"), { ssr: false });
 
 function App(props: AppProps) {
   const init = () => {
-    if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
-      posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY, {
-        api_host: "/ingest",
-        ui_host: "https://us.posthog.com",
-        capture_pageview: "history_change",
-        capture_exceptions: true,
-        loaded: (ph) => {
-          if (process.env.NODE_ENV === "development") ph.debug();
-        },
-        debug: process.env.NODE_ENV === "development",
-      });
-    } else {
-      console.debug(
-        "PostHog key is not set. Skipping PostHog initialization. This is expected in development mode.",
-      );
-    }
+    posthog.init(NEXT_PUBLIC_POSTHOG_KEY, {
+      api_host: "/ingest",
+      ui_host: "https://us.posthog.com",
+      capture_pageview: "history_change",
+      capture_exceptions: true,
+      loaded: (ph) => {
+        if (process.env.NODE_ENV === "development") ph.debug();
+      },
+      debug: process.env.NODE_ENV === "development",
+    });
   };
-  useEffect(init, [process.env.NEXT_PUBLIC_POSTHOG_KEY]);
+  useEffect(init, []);
 
   // For the email authentication page, we don't want to show any UI components
   if (props.router.pathname === "/auth/email") {
