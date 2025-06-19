@@ -169,13 +169,16 @@ Lesson types determine queue population:
 
 - [ ] Improve legibility of error explanations
 - [ ] Add loading tips and tricks display
+- [ ] Remedial outro should use grading instead of matching.
 
 ### Features
 
 - [ ] Implement listening drill functionality
-- [ ] O3-based follow-up lessons ([spec](https://chatgpt.com/c/684de073-9bbc-8010-8dbb-607c8e367de1))
+- [ ] O3-based follow-up lessons / dynamic grammar improvement ([spec](https://chatgpt.com/c/684de073-9bbc-8010-8dbb-607c8e367de1))
+- [ ] Situation/Guide/Player/Goals conversation.
 - [ ] Sound effects integration (pending free sound pack)
 - [ ] Consider restoring `take` parameter for lesson size
+- [ ] N second countdown for feedback.
 
 ### Future Ideas
 

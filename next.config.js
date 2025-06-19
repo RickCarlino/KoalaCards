@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  productionBrowserSourceMaps: true,
   typescript: {
     // Production server does not install devDependencies
     // including @types/*.

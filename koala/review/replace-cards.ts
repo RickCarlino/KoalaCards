@@ -1,7 +1,6 @@
 import { uid } from "radash";
 import { ReplaceCardAction, State, QuizMap } from "./types";
 import { nextQueueItem } from "./reducer";
-
 export function replaceCards(
   action: ReplaceCardAction,
   state: State,
