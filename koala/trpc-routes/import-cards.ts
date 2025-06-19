@@ -32,7 +32,7 @@ export async function setGrade(
   const { id, nextReview } = await prismaClient.quiz.update({
     where: { id: quiz.id },
     data: {
-      ...([Grade.AGAIN, Grade.HARD].includes(grade)
+      ...(grade === Grade.AGAIN
         ? { Card: { update: { lastFailure: now } } }
         : {}),
       // Stats:

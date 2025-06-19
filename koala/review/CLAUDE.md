@@ -170,6 +170,7 @@ Lesson types determine queue population:
 - [ ] Improve legibility of error explanations
 - [ ] Add loading tips and tricks display
 - [ ] Remedial outro should use grading instead of matching.
+- [ ] Disable recording after you get it right.
 
 ### Features
 
