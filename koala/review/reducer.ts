@@ -106,6 +106,7 @@ function initialState(): State {
 
 export function useReview(deckId: number, playbackPercentage = 0.125) {
   const mutation = trpc.getNextQuizzes.useMutation();
+  const repairCardMutation = trpc.editCard.useMutation();
   const [state, dispatch] = useReducer(reducer, initialState());
   const [isFetching, setIsFetching] = useState(true);
 
@@ -163,6 +164,17 @@ export function useReview(deckId: number, playbackPercentage = 0.125) {
     },
     completeItem: (uuid: string) => {
       dispatch({ type: "COMPLETE_ITEM", payload: { uuid } });
+    },
+    repairCard: async (cardId: number, stepUuid: string) => {
+      try {
+        await repairCardMutation.mutateAsync({
+          id: cardId,
+          lastFailure: 0,
+        });
+        dispatch({ type: "COMPLETE_ITEM", payload: { uuid: stepUuid } });
+      } catch (error) {
+        console.error("Failed to repair card:", error);
+      }
     },
     onGradingResultCaptured: (
       cardUUID: string,

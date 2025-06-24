@@ -41,12 +41,12 @@ export const useRepair = ({
 
       const isMatch = compare(result, removeParens(targetText));
 
-      if (isMatch) {
-        await repairCard.mutateAsync({
+      await repairCard
+        .mutateAsync({
           id: cardId,
           lastFailure: 0,
-        });
-      }
+        })
+        .then(() => console.log("Card repaired successfully"));
 
       return {
         transcription: result,

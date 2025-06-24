@@ -169,6 +169,9 @@ Lesson types determine queue population:
 
 - [ ] Improve legibility of error explanations
 - [ ] Disable recording after you get it right.
+- [ ] Sometimes it plays card.term at the start of a speaking and remedial exam!?!?
+- [ ] I don't think remedial is being "unremediated"
+- [ ] Need silence detection or something.
 
 ### Features
 

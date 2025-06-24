@@ -57,6 +57,7 @@ export const RemedialOutro: CardUI = ({
   onProceed,
   currentStepUuid,
   onGradingResultCaptured,
+  repairCard,
 }) => {
   const { term, definition } = card;
   const [gradingResult, setGradingResult] = useState<GradingResult | null>(
@@ -129,7 +130,9 @@ export const RemedialOutro: CardUI = ({
         imageURL={card.imageURL}
         term={term}
         definition={definition}
-        onContinue={onProceed}
+        onContinue={async () => {
+          await repairCard(card.cardId, currentStepUuid);
+        }}
       />
     );
   }
