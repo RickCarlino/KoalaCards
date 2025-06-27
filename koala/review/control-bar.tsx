@@ -1,8 +1,6 @@
 import {
   ActionIcon,
   Group,
-  RingProgress,
-  Text,
   Tooltip,
 } from "@mantine/core";
 import {
@@ -30,8 +28,6 @@ interface ControlBarProps extends CardReviewProps {
 export const ControlBar: React.FC<ControlBarProps> = (props) => {
   const {
     card,
-    itemsComplete,
-    totalItems,
     onSkip,
     onGiveUp,
     isRecording,
@@ -39,7 +35,6 @@ export const ControlBar: React.FC<ControlBarProps> = (props) => {
     onArchiveClick,
     itemType,
   } = props;
-  const progress = totalItems ? (itemsComplete / totalItems) * 100 : 0;
 
   const openCardEditor = () =>
     window.open(`/cards/${card.cardId}`, "_blank");
@@ -52,19 +47,6 @@ export const ControlBar: React.FC<ControlBarProps> = (props) => {
 
   return (
     <Group justify="center" wrap="wrap" gap="xs">
-      <Tooltip label={`${itemsComplete} of ${totalItems} steps complete`}>
-        <RingProgress
-          size={44}
-          thickness={4}
-          sections={[{ value: progress, color: "pink.6" }]}
-          label={
-            <Text size="xs" ta="center">
-              {Math.round(progress)}%
-            </Text>
-          }
-        />
-      </Tooltip>
-
       <Tooltip label={`Exit lesson`}>
         <ActionIcon
           component="a"

@@ -9,11 +9,9 @@ export function replaceCards(
     return { ...acc, [item.uuid]: item };
   }, {} as QuizMap);
 
-  // Start with a fresh state to reset counts
+  // Start with a fresh state
   const freshState: State = {
     ...state,
-    totalItems: 0,
-    itemsComplete: 0,
     queue: {
       newWordIntro: [],
       remedialIntro: [],
@@ -29,7 +27,6 @@ export function replaceCards(
       case "new":
         return {
           ...acc,
-          totalItems: acc.totalItems + 2,
           queue: {
             ...acc.queue,
             newWordIntro: [
@@ -53,7 +50,6 @@ export function replaceCards(
       case "listening":
         return {
           ...acc,
-          totalItems: acc.totalItems + 1,
           queue: {
             ...acc.queue,
             listening: [
@@ -69,7 +65,6 @@ export function replaceCards(
       case "speaking":
         return {
           ...acc,
-          totalItems: acc.totalItems + 1,
           queue: {
             ...acc.queue,
             speaking: [
@@ -85,7 +80,6 @@ export function replaceCards(
       case "remedial":
         return {
           ...acc,
-          totalItems: acc.totalItems + 2,
           queue: {
             ...acc.queue,
             remedialIntro: [

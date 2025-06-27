@@ -153,8 +153,6 @@ function InnerReviewPage({
         <CardReview
           card={card}
           itemType={currentItem.itemType}
-          itemsComplete={state.itemsComplete}
-          totalItems={state.totalItems}
           onSkip={skipCard}
           onGiveUp={giveUp}
           onProceed={() => {

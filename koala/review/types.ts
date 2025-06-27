@@ -36,8 +36,6 @@ export type GradingResult = {
 };
 
 export type State = {
-  totalItems: number;
-  itemsComplete: number;
   currentItem: QueueItem | undefined;
   queue: Queue;
   cards: QuizMap;
@@ -89,8 +87,6 @@ export type CardReviewProps = {
   onProceed: () => void;
   onSkip: (uuid: string) => void;
   onGiveUp: (cardUUID: string) => void;
-  itemsComplete: number;
-  totalItems: number;
   itemType: ItemType;
   card: Quiz;
   recordings: Record<string, Recording>;
