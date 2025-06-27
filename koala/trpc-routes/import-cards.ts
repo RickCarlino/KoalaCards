@@ -20,13 +20,15 @@ export async function setGrade(
   grade: Grade,
   now = Date.now(),
 ) {
+  const isFail = grade === Grade.AGAIN;
   const data = {
     ...quiz,
     ...calculateSchedulingData(quiz, grade, now),
     repetitions: (quiz.repetitions || 0) + 1,
     lastReview: now,
     firstReview: quiz.firstReview || now,
-    lapses: (quiz.lapses || 0) + (grade === Grade.AGAIN ? 1 : 0),
+    lastFailure: isFail ? now : 0,
+    lapses: (quiz.lapses || 0) + (isFail ? 1 : 0),
   };
 
   const { id, nextReview } = await prismaClient.quiz.update({
