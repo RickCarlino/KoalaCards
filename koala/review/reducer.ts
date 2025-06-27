@@ -75,6 +75,8 @@ function initialState(): State {
     currentItem: undefined,
     recordings: {},
     gradingResults: {},
+    initialCardCount: 0,
+    completedCards: new Set(),
   };
 }
 
@@ -108,6 +110,11 @@ export function useReview(deckId: number, playbackPercentage = 0.125) {
     }
   }, [deckId]);
 
+  const progress =
+    state.initialCardCount > 0
+      ? (state.completedCards.size / state.initialCardCount) * 100
+      : 0;
+
   return {
     error: mutation.isError ? mutation.error || "" : null,
     isFetching,
@@ -115,6 +122,8 @@ export function useReview(deckId: number, playbackPercentage = 0.125) {
     currentItem: state.currentItem,
     totalDue: getItemsDue(state.queue),
     gradingResults: state.gradingResults,
+    progress,
+    cardsRemaining: state.initialCardCount - state.completedCards.size,
     skipCard: (cardUUID: string) => {
       dispatch({ type: "SKIP_CARD", payload: { uuid: cardUUID } });
     },
@@ -178,9 +187,20 @@ function reducer(state: State, action: Action): State {
   });
   switch (action.type) {
     case "REPLACE_CARDS":
-      return replaceCards(action, state);
+      const newState = replaceCards(action, state);
+      return {
+        ...newState,
+        initialCardCount: Object.keys(newState.cards).length,
+        completedCards: new Set(),
+      };
     case "SKIP_CARD":
-      return skipCard(action, state);
+      return {
+        ...skipCard(action, state),
+        completedCards: new Set([
+          ...state.completedCards,
+          action.payload.uuid,
+        ]),
+      };
     case "RECORDING_CAPTURED":
       return {
         ...state,
@@ -203,6 +223,18 @@ function reducer(state: State, action: Action): State {
       const { uuid } = action.payload;
       const updatedQueue = { ...state.queue };
 
+      // Find which card this item belongs to
+      let cardUUID: string | undefined;
+      for (const queueType of EVERY_QUEUE_TYPE) {
+        const item = state.queue[queueType].find(
+          (item) => item.stepUuid === uuid,
+        );
+        if (item) {
+          cardUUID = item.cardUUID;
+          break;
+        }
+      }
+
       // Remove the item from all queue types by stepUuid
       for (const queueType of EVERY_QUEUE_TYPE) {
         updatedQueue[queueType] = updatedQueue[queueType].filter(
@@ -210,15 +242,24 @@ function reducer(state: State, action: Action): State {
         );
       }
 
+      // Check if this was the last item for this card
+      const hasMoreItems = Object.values(updatedQueue).some((queue) =>
+        queue.some((item) => item.cardUUID === cardUUID),
+      );
+
       return {
         ...state,
         queue: updatedQueue,
         currentItem: nextQueueItem(updatedQueue),
+        completedCards:
+          !hasMoreItems && cardUUID
+            ? new Set([...state.completedCards, cardUUID])
+            : state.completedCards,
       };
     case "GIVE_UP":
-      const { cardUUID } = action.payload;
+      const { cardUUID: giveUpCardUUID } = action.payload;
       const { updatedQueue: giveUpQueue } = removeCardFromQueues(
-        cardUUID,
+        giveUpCardUUID,
         state.queue,
       );
 
@@ -226,6 +267,7 @@ function reducer(state: State, action: Action): State {
         ...state,
         queue: giveUpQueue,
         currentItem: nextQueueItem(giveUpQueue),
+        completedCards: new Set([...state.completedCards, giveUpCardUUID]),
       };
     case "STORE_GRADE_RESULT":
       return {

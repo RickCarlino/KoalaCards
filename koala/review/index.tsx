@@ -32,6 +32,8 @@ interface CardReviewWithRecordingProps extends CardReviewProps {
   currentStepUuid: string;
   onRecordingComplete: (audio: string) => void;
   completeItem: (uuid: string) => void;
+  progress?: number;
+  cardsRemaining?: number;
 }
 
 export const CardReview: React.FC<CardReviewWithRecordingProps> = (
@@ -132,6 +134,8 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
           isRecording={voiceRecorder.isRecording}
           onRecordClick={handleRecordToggle}
           onArchiveClick={handleArchive}
+          progress={props.progress}
+          cardsRemaining={props.cardsRemaining}
         />
       </Box>
     </Box>

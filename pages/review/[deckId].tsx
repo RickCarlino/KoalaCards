@@ -132,6 +132,8 @@ function InnerReviewPage({
     refetchQuizzes,
     onGradingResultCaptured,
     repairCard,
+    progress,
+    cardsRemaining,
   } = useReview(deckId, playbackPercentage);
 
   if (error)
@@ -168,6 +170,8 @@ function InnerReviewPage({
           completeItem={completeItem}
           onGradingResultCaptured={onGradingResultCaptured}
           repairCard={repairCard}
+          progress={progress}
+          cardsRemaining={cardsRemaining}
         />
       </Box>
     </Container>

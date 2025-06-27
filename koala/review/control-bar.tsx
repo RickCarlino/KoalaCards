@@ -2,6 +2,9 @@ import {
   ActionIcon,
   Group,
   Tooltip,
+  RingProgress,
+  Center,
+  Text,
 } from "@mantine/core";
 import {
   IconArchive,
@@ -23,6 +26,8 @@ interface ControlBarProps extends CardReviewProps {
   isRecording: boolean;
   onRecordClick: () => void;
   onArchiveClick: () => void;
+  progress?: number;
+  cardsRemaining?: number;
 }
 
 export const ControlBar: React.FC<ControlBarProps> = (props) => {
@@ -47,6 +52,23 @@ export const ControlBar: React.FC<ControlBarProps> = (props) => {
 
   return (
     <Group justify="center" wrap="wrap" gap="xs">
+      {props.progress !== undefined && (
+        <Tooltip label={`${Math.round(props.progress)}% complete`}>
+          <RingProgress
+            size={48}
+            thickness={4}
+            sections={[{ value: props.progress, color: "pink.6" }]}
+            label={
+              <Center>
+                <Text size="xs" c="pink.7">
+                  {Math.round(props.progress)}%
+                </Text>
+              </Center>
+            }
+          />
+        </Tooltip>
+      )}
+
       <Tooltip label={`Exit lesson`}>
         <ActionIcon
           component="a"

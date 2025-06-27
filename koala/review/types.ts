@@ -41,6 +41,8 @@ export type State = {
   cards: QuizMap;
   recordings: Record<string, Recording>;
   gradingResults: Record<string, GradingResult>;
+  initialCardCount: number;
+  completedCards: Set<string>;
 };
 
 export type ReplaceCardAction = { type: "REPLACE_CARDS"; payload: Quiz[] };
