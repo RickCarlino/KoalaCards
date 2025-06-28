@@ -148,19 +148,7 @@ export function useReview(deckId: number, playbackPercentage = 0.125) {
     completeItem: (uuid: string) => {
       dispatch({ type: "COMPLETE_ITEM", payload: { uuid } });
     },
-    repairCard: async (cardId: number, stepUuid: string) => {
-      console.log("Repairing card...");
-      try {
-        await repairCardMutation.mutateAsync({
-          id: cardId,
-          lastFailure: 0,
-        });
-        dispatch({ type: "COMPLETE_ITEM", payload: { uuid: stepUuid } });
-      } catch (error) {
-        console.error("Failed to repair card:", error);
-      }
-    },
-    onGradingResultCaptured: (
+    onGradingResultCaptured: async (
       cardUUID: string,
       result: {
         transcription: string;
@@ -168,6 +156,13 @@ export function useReview(deckId: number, playbackPercentage = 0.125) {
         feedback: string;
       },
     ) => {
+      const card = state.cards[cardUUID];
+      if (result.isCorrect && card.lessonType === "remedial") {
+        await repairCardMutation.mutateAsync({
+          id: card.cardId,
+          lastFailure: 0,
+        });
+      }
       dispatch({
         type: "STORE_GRADE_RESULT",
         payload: { cardUUID, result },

@@ -45,7 +45,7 @@ export const ControlBar: React.FC<ControlBarProps> = (props) => {
     window.open(`/cards/${card.cardId}`, "_blank");
 
   const handlePlayAudio = () => {
-    if (card.termAudio) {
+    if (card.termAudio && itemType !== "speaking") {
       playAudio(card.termAudio);
     }
   };

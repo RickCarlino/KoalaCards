@@ -97,6 +97,5 @@ export type CardReviewProps = {
     cardUUID: string,
     result: GradingResult,
   ) => void;
-  repairCard: (cardId: number, stepUuid: string) => Promise<void>;
 };
 export type CardUI = React.FC<CardReviewProps>;

@@ -64,7 +64,6 @@ Unlike traditional SRS apps that often rely on self-grading, KoalaCards provides
 *   **User Experience:**
     *   User settings customization.
     *   Review history and progress tracking.
-    *   Handling of failed quizzes ("Repair" queue).
     *   Keyboard hotkeys for efficient review.
     *   Microphone permission handling.
 *   **Admin & Infrastructure:**

@@ -135,7 +135,7 @@ async function fetchRemedial(
         Card,
       };
     })
-    .slice(0, 1); // Debug temporarily to 1 card
+    .slice(0, 3); // Debug temporarily to 1 card
 }
 
 const FAUCET_CAPACITY = 60; // 60 cards due in next 24 hours
