@@ -149,6 +149,7 @@ export function useReview(deckId: number, playbackPercentage = 0.125) {
       dispatch({ type: "COMPLETE_ITEM", payload: { uuid } });
     },
     repairCard: async (cardId: number, stepUuid: string) => {
+      console.log("Repairing card...");
       try {
         await repairCardMutation.mutateAsync({
           id: cardId,
@@ -179,11 +180,11 @@ export function useReview(deckId: number, playbackPercentage = 0.125) {
 }
 
 function reducer(state: State, action: Action): State {
+  console.log(action.type);
   console.log({
     ...state,
     recordings: Object.keys(state.recordings).length,
     gradingResults: state.gradingResults,
-    action: action.type,
   });
   switch (action.type) {
     case "REPLACE_CARDS":

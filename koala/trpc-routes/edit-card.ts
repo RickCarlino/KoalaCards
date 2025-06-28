@@ -7,7 +7,7 @@ import { errorReport } from "@/koala/error-report";
 export const editCard = procedure
   .input(
     z.object({
-      id: z.optional(z.number()),
+      id: z.number(),
       definition: z.optional(z.string()),
       term: z.optional(z.string()),
       flagged: z.optional(z.boolean()),
@@ -19,27 +19,26 @@ export const editCard = procedure
     }),
   )
   .mutation(async ({ input, ctx }) => {
-    const userId = (await getUserSettings(ctx.user?.id)).user.id;
+    console.log("editCard mutation called with input:", input);
+    try {
+      const userId = (await getUserSettings(ctx.user?.id)).user.id;
 
-    const card = await prismaClient.card.findFirst({
-      where: {
-        id: input.id,
-        userId,
-      },
-    });
+      const card = await prismaClient.card.findFirstOrThrow({
+        where: {
+          id: input.id,
+          userId,
+        },
+      });
 
-    if (!card) {
-      return errorReport(
-        `Card not found: card: ${input.id}, user: ${userId}`,
-      );
-    }
-
-    await prismaClient.card.update({
-      where: { id: card.id },
-      data: {
+      const data = {
         ...card,
         ...input,
         flagged: input.flagged ?? false,
-      },
-    });
+      };
+      console.log("Updating card with data:", data);
+      await prismaClient.card.update({ where: { id: card.id }, data });
+    } catch (error) {
+      console.error("Error in editCard mutation:", error);
+      return errorReport(`Failed to edit card: ${error}`);
+    }
   });

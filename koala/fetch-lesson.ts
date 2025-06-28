@@ -126,14 +126,16 @@ async function fetchRemedial(
     orderBy: { lastFailure: "asc" },
     include: { Quiz: true },
   });
-  return cards.map((Card): LocalQuiz => {
-    const lastQuiz = Card.Quiz[0]!;
-    return {
-      ...lastQuiz,
-      quizType: "remedial",
-      Card,
-    };
-  });
+  return cards
+    .map((Card): LocalQuiz => {
+      const lastQuiz = Card.Quiz[0]!;
+      return {
+        ...lastQuiz,
+        quizType: "remedial",
+        Card,
+      };
+    })
+    .slice(0, 1); // Debug temporarily to 1 card
 }
 
 const FAUCET_CAPACITY = 60; // 60 cards due in next 24 hours
