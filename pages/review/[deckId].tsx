@@ -42,11 +42,39 @@ export const getServerSideProps: GetServerSideProps<
 
   if (!deck) return redirect("/review");
 
-  // Fetch user settings for audio playback percentage
   const userSettings = await prismaClient.userSettings.findUnique({
     where: { userId: user.id },
-    select: { playbackPercentage: true },
   });
+
+  if (!userSettings) {
+    return redirect("/settings");
+  }
+
+  if (userSettings.writingFirst) {
+    const now = new Date();
+    const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    // Get user's writing progress in the last 24 hours
+    const writingProgress = await prismaClient.writingSubmission.aggregate(
+      {
+        _sum: { correctionCharacterCount: true },
+        where: {
+          userId: user.id,
+          createdAt: { gte: last24Hours },
+        },
+      },
+    );
+
+    const progress = writingProgress._sum.correctionCharacterCount ?? 0;
+    const goal = userSettings.dailyWritingGoal ?? 100;
+    if (progress < goal) {
+      return {
+        redirect: {
+          destination: `/writing/${deckId}`,
+          permanent: false,
+        },
+      };
+    }
+  }
 
   return {
     props: {

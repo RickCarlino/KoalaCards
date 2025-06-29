@@ -174,7 +174,7 @@ Lesson types determine queue population:
 - [ ] Need silence detection or something.
 - [ ] Image alt text: Use "definition" not "term"
 - [ ] Always show feedback, even if correct (add feedback to grade select screen)
-- [ ] Add "do writing first" feature back.
+- [ ] Need to re-visit the Cloze/word Occlusion idea
 
 ### Features
 
