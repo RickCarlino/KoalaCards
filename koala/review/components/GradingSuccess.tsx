@@ -39,14 +39,21 @@ export function GradingSuccess({
     [HOTKEYS.GRADE_EASY, () => !isLoading && onGradeSelect(Grade.EASY)],
   ]);
 
+  let feedbackEl: JSX.Element | null = null;
+  if (feedback && !feedback.toLowerCase().includes("exact match")) {
+    feedbackEl = (
+      <Text ta="center" size="sm" mt="md">
+        {feedback}
+      </Text>
+    );
+  }
+
   return (
     <Stack gap="md" align="center">
       <Text ta="center" c="green" fw={500} size="lg">
         Correct!
       </Text>
-      <Text ta="center" size="sm" mt="md">
-        {feedback || "TODO: Add feedback here."}
-      </Text>
+      {feedbackEl}
       <Text ta="center" size="sm" c="dimmed" mt="md">
         How difficult was this for you?
       </Text>

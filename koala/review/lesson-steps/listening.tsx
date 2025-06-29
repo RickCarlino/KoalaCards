@@ -154,7 +154,7 @@ export const Listening: CardUI = ({
       <CardImage imageURL={card.imageURL} term={term} />
 
       <Text ta="center" c="blue" fw={500} size="sm">
-        Listening Quiz
+        Phrase Recognition Quiz
       </Text>
 
       {renderContent()}

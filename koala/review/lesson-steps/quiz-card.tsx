@@ -192,6 +192,11 @@ export const QuizCard: React.FC<QuizCardProps> = ({
     }
   };
 
+  const promptText = (
+    <Text size="xl" fw={700} ta="center">
+      {config.promptText(definition)}
+    </Text>
+  );
   return (
     <Stack align="center" gap="md">
       <CardImage imageURL={card.imageURL} term={term} />
@@ -202,9 +207,7 @@ export const QuizCard: React.FC<QuizCardProps> = ({
         </Text>
       )}
 
-      <Text size="xl" fw={700} ta="center">
-        {config.promptText(definition)}
-      </Text>
+      {!feedback && promptText}
 
       {renderContent()}
     </Stack>
