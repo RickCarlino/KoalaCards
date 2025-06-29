@@ -167,23 +167,19 @@ Lesson types determine queue population:
 
 ### UI Improvements
 
-- [ ] Improve legibility of error explanations
-- [ ] Disable recording after you get it right.
 - [ ] Sometimes it plays card.term at the start of a speaking and remedial exam!?!?
-- [ ] I don't think remedial is being "unremediated"
+- [ ] Disable recording after you get it right.
+- [ ] Improve legibility of error explanations
 - [ ] Need silence detection or something.
-- [ ] Image alt text: Use "definition" not "term"
-- [ ] Always show feedback, even if correct (add feedback to grade select screen)
-- [ ] Need to re-visit the Cloze/word Occlusion idea
 
 ### Features
 
+- [ ] Need to re-visit the Cloze/word Occlusion idea
 - [ ] Add loading tips and tricks display
-- [ ] Implement listening drill functionality
+- [ ] Implement listening drill (recal after speaking) functionality
 - [ ] O3-based follow-up lessons / dynamic grammar improvement ([spec](https://chatgpt.com/c/684de073-9bbc-8010-8dbb-607c8e367de1))
-- [ ] Situation/Guide/Player/Goals conversation.
+- [ ] Situation/Goal/Guide/Player conversation.
 - [ ] Sound effects integration (pending free sound pack)
-- [ ] Consider restoring `take` parameter for lesson size
 - [ ] N second countdown for feedback.
 
 ### Future Ideas

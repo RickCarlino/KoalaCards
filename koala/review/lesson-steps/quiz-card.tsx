@@ -199,7 +199,7 @@ export const QuizCard: React.FC<QuizCardProps> = ({
   );
   return (
     <Stack align="center" gap="md">
-      <CardImage imageURL={card.imageURL} term={term} />
+      <CardImage imageURL={card.imageURL} definition={definition} />
 
       {config.headerText && (
         <Text ta="center" c={config.headerColor} fw={500} size="sm">

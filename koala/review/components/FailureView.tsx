@@ -30,7 +30,7 @@ export const FailureView: React.FC<FailureViewProps> = ({
   useAudioPlayback({ termAudio, autoPlay: autoPlayAudio });
   return (
     <Stack align="center" gap="md">
-      <CardImage imageURL={imageURL} term={term} />
+      <CardImage imageURL={imageURL} definition={definition} />
 
       <Text ta="center" c="red" fw={500} size="lg">
         {failureText}

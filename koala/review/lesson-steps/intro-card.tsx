@@ -113,7 +113,7 @@ export const IntroCard: React.FC<IntroCardProps> = ({
 
   return (
     <Stack align="center" gap="md">
-      <CardImage imageURL={card.imageURL} term={term} />
+      <CardImage imageURL={card.imageURL} definition={definition} />
 
       <Text
         ta="center"

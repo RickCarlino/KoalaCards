@@ -151,7 +151,7 @@ export const Listening: CardUI = ({
 
   return (
     <Stack align="center" gap="md">
-      <CardImage imageURL={card.imageURL} term={term} />
+      <CardImage imageURL={card.imageURL} definition={definition} />
 
       <Text ta="center" c="blue" fw={500} size="sm">
         Phrase Recognition Quiz

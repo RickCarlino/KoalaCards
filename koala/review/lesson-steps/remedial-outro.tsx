@@ -29,7 +29,7 @@ const SuccessView = ({
       {imageURL && (
         <Image
           src={imageURL}
-          alt={`Image: ${term}`}
+          alt={`Image: ${definition}`}
           maw="100%"
           mah={240}
           fit="contain"
@@ -161,7 +161,7 @@ export const RemedialOutro: CardUI = ({
 
   return (
     <Stack align="center" gap="md">
-      <CardImage imageURL={card.imageURL} term={term} />
+      <CardImage imageURL={card.imageURL} definition={definition} />
 
       <Text ta="center" c="orange" fw={500} size="sm">
         Remedial Review
