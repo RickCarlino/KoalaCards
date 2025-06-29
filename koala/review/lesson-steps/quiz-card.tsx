@@ -183,6 +183,7 @@ export const QuizCard: React.FC<QuizCardProps> = ({
             }}
             onGradeSelect={handleGradeSelect}
             isLoading={isLoading}
+            feedback={feedback}
           />
         );
 

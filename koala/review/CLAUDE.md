@@ -172,6 +172,9 @@ Lesson types determine queue population:
 - [ ] Sometimes it plays card.term at the start of a speaking and remedial exam!?!?
 - [ ] I don't think remedial is being "unremediated"
 - [ ] Need silence detection or something.
+- [ ] Image alt text: Use "definition" not "term"
+- [ ] Always show feedback, even if correct (add feedback to grade select screen)
+- [ ] Add "do writing first" feature back.
 
 ### Features
 

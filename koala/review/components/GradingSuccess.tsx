@@ -14,6 +14,7 @@ interface GradingSuccessProps {
   };
   onGradeSelect: (grade: Grade) => void;
   isLoading?: boolean;
+  feedback?: string;
 }
 
 const gradeColors = {
@@ -27,6 +28,7 @@ export function GradingSuccess({
   quizData,
   onGradeSelect,
   isLoading,
+  feedback,
 }: GradingSuccessProps) {
   const gradeOptions = getGradeButtonText(quizData);
 
@@ -40,7 +42,10 @@ export function GradingSuccess({
   return (
     <Stack gap="md" align="center">
       <Text ta="center" c="green" fw={500} size="lg">
-        You got it right!
+        Correct!
+      </Text>
+      <Text ta="center" size="sm" mt="md">
+        {feedback || "TODO: Add feedback here."}
       </Text>
       <Text ta="center" size="sm" c="dimmed" mt="md">
         How difficult was this for you?

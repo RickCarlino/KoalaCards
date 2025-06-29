@@ -16,11 +16,13 @@ const SuccessView = ({
   term,
   definition,
   onContinue,
+  successText,
 }: {
   imageURL?: string;
   term: string;
   definition: string;
   onContinue: () => void;
+  successText?: string;
 }) => {
   return (
     <Stack align="center" gap="md">
@@ -35,7 +37,7 @@ const SuccessView = ({
       )}
 
       <Text ta="center" c="green" fw={500} size="lg">
-        Well done!
+        {successText || "Well done!"}
       </Text>
 
       <Text size="xl" fw={700} ta="center">
@@ -130,6 +132,7 @@ export const RemedialOutro: CardUI = ({
         term={term}
         definition={definition}
         onContinue={onProceed}
+        successText={gradingResult?.feedback || ""}
       />
     );
   }
