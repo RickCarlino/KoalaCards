@@ -182,13 +182,13 @@ export default function Edit({
           <Select
             label="Sort By"
             value={currentSortBy}
-            onChange={(value) => setCurrentSortBy(value!)}
+            onChange={(value) => value && setCurrentSortBy(value)}
             data={SORT_OPTIONS}
           />
           <Select
             label="Order"
             value={currentSortOrder}
-            onChange={(value) => setCurrentSortOrder(value!)}
+            onChange={(value) => value && setCurrentSortOrder(value)}
             data={ORDER_OPTIONS}
           />
           <Button type="submit">Search</Button>

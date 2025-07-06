@@ -186,7 +186,7 @@ export async function getServerSideProps(
 
     const dailyWritingData: Record<string, number> = {};
 
-    let initDate = new Date(threeMonthsAgo);
+    const initDate = new Date(threeMonthsAgo);
     while (initDate <= endDate) {
       dailyWritingData[formatDate(initDate)] = 0;
       initDate.setDate(initDate.getDate() + 1);
@@ -427,7 +427,7 @@ export default function UserSettingsPage(props: Props) {
                     <Text fw={500} mb={5}>
                       {label} {/* Display date */}
                     </Text>
-                    {payload?.map((item: any) => (
+                    {payload?.map((item) => (
                       <Text key={item.name} c={item.color} fz="sm">
                         {item.name}: {item.value} {/* Display count */}
                       </Text>
@@ -468,7 +468,7 @@ export default function UserSettingsPage(props: Props) {
                     <Text fw={500} mb={5}>
                       {label} {/* Display date */}
                     </Text>
-                    {payload?.map((item: any) => (
+                    {payload?.map((item) => (
                       <Text key={item.name} c={item.color} fz="sm">
                         {item.name}: {item.value} {/* Display count */}
                       </Text>

@@ -10,10 +10,6 @@ const nextConfig = {
   async rewrites() {
     return [
       {
-        source: "/metrics",
-        destination: "/api/prometheus",
-      },
-      {
         source: "/ingest/static/:path*",
         destination: "https://us-assets.i.posthog.com/static/:path*",
       },

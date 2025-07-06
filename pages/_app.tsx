@@ -34,7 +34,9 @@ function App(props: AppProps) {
       capture_pageview: "history_change",
       capture_exceptions: true,
       loaded: (ph) => {
-        if (process.env.NODE_ENV === "development") ph.debug();
+        if (process.env.NODE_ENV === "development") {
+          ph.debug();
+        }
       },
       debug: process.env.NODE_ENV === "development",
     });

@@ -30,17 +30,23 @@ export const getServerSideProps: GetServerSideProps<
   ReviewDeckPageProps
 > = async (ctx) => {
   const user = await getServersideUser(ctx);
-  if (!user) return redirect("/api/auth/signin");
+  if (!user) {
+    return redirect("/api/auth/signin");
+  }
 
   const deckId = Number(ctx.params?.deckId);
-  if (!deckId) return redirect("/review");
+  if (!deckId) {
+    return redirect("/review");
+  }
 
   const deck = await prismaClient.deck.findUnique({
     where: { userId: user.id, id: deckId },
     select: { id: true },
   });
 
-  if (!deck) return redirect("/review");
+  if (!deck) {
+    return redirect("/review");
+  }
 
   const userSettings = await prismaClient.userSettings.findUnique({
     where: { userId: user.id },
@@ -163,18 +169,22 @@ function InnerReviewPage({
     cardsRemaining,
   } = useReview(deckId, playbackPercentage);
 
-  if (error)
+  if (error) {
     return <MessageState title="Error">{error.message}</MessageState>;
-  if (isFetching)
+  }
+  if (isFetching) {
     return <MessageState title="Loading">Fetching quizzes…</MessageState>;
-  if (!currentItem)
+  }
+  if (!currentItem) {
     return (
       <NoMoreQuizzesState deckId={deckId} onReload={refetchQuizzes} />
     );
+  }
 
   const card = state.cards[currentItem.cardUUID];
-  if (!card)
+  if (!card) {
     return <MessageState title="Oops">No card data.</MessageState>;
+  }
 
   return (
     <Container size="xl" py="md">
@@ -185,9 +195,7 @@ function InnerReviewPage({
           onSkip={skipCard}
           onGiveUp={giveUp}
           onProceed={() => {
-            console.log("Trying to proceed...");
             completeItem(currentItem.stepUuid);
-            console.log("Proceeding to next item...");
           }}
           recordings={state.recordings}
           currentStepUuid={currentItem.stepUuid}

@@ -2,7 +2,6 @@ import { createReadStream, writeFile, unlink } from "fs";
 import path from "path";
 import { uid, unique } from "radash";
 import { promisify } from "util";
-import { SafeCounter } from "./counter";
 import { openai } from "./openai";
 import { LangCode } from "./shared-types";
 
@@ -10,15 +9,9 @@ type TranscriptionResult =
   | { kind: "OK"; text: string }
   | { kind: "error" };
 
-const transcriptionLength = SafeCounter({
-  name: "transcriptionLength",
-  help: "Number of characters transcribed.",
-  labelNames: ["userID"],
-});
-
 export async function transcribeB64(
   dataURI: string,
-  userID: string | number,
+  _userID: string | number,
   prompt: string,
   language: LangCode,
 ): Promise<TranscriptionResult> {
@@ -52,7 +45,6 @@ export async function transcribeB64(
           throw new Error("No text returned from transcription.");
         }
         console.log(`=== Transcription: ${text}`);
-        transcriptionLength.labels({ userID }).inc(y.text.length);
         const OPENAI_API_BUG = text.split("\n")[0];
         return resolve({
           kind: "OK",

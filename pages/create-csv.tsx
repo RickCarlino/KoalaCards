@@ -91,8 +91,8 @@ export default function CreateRawPage({ decks }: CreateRawPageProps) {
     setLoading(true);
     try {
       // Read deck info from reducer state
-      let finalDeckName = state.deckName.trim();
-      let finalDeckLang = state.deckLang;
+      const finalDeckName = state.deckName.trim();
+      const finalDeckLang = state.deckLang;
 
       // If using an existing deck, ensure the name/lang are from the selected deck
       // The DeckPicker's handleExistingDeckChange should already set state.deckName

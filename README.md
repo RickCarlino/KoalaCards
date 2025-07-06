@@ -68,11 +68,9 @@ Unlike traditional SRS apps that often rely on self-grading, KoalaCards provides
     *   Microphone permission handling.
 *   **Admin & Infrastructure:**
     *   Admin panel for user management (implied).
-    *   "Faucet" system (potentially for managing API credits/usage).
     *   Docker support for easy deployment.
     *   tRPC for type-safe API routes.
     *   Prisma for database interaction.
-    *   Monitoring via Prometheus endpoint.
 
 ## Supported Languages
 

@@ -5,21 +5,21 @@ type ReturnedSig = {
   start: () => Promise<void>;
   stop: () => void;
   isRecording: boolean;
-  error: Error | null;
+  error: unknown;
 };
 
 type State = {
   isRecording: boolean;
   recorder: MediaRecorder | null;
   data: Blob | null;
-  error: Error | null;
+  error: unknown;
 };
 
 type Actions =
   | { type: "start" }
   | { type: "startRecording"; payload: { recorder: MediaRecorder } }
   | { type: "stop" }
-  | { type: "hasError"; payload: { error: Error | null } };
+  | { type: "hasError"; payload: { error: unknown } };
 
 const initState: State = {
   isRecording: false,
@@ -91,7 +91,7 @@ export const useVoiceRecorder = (
           audio: true,
         });
         persistentStream.current = stream;
-      } catch (error: any) {
+      } catch (error: unknown) {
         dispatch({ type: "hasError", payload: { error } });
         return;
       }

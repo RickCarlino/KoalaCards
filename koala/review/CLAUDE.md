@@ -167,13 +167,18 @@ Lesson types determine queue population:
 
 ### UI Improvements
 
+- [ ] Incorrect speaking answers are not being graded?
 - [ ] Sometimes it plays card.term at the start of a speaking and remedial exam!?!?
 - [ ] Disable recording after you get it right.
 - [ ] Improve legibility of error explanations
 - [ ] Need silence detection or something.
+- [ ] Need to show card.term on correct explanation view so that "Yes" explanations make sense.
+- [ ] Try to translate the writing prompt generator to Korean to see if it improves prompt quality.
+- [ ] Change "In the target language" to "Korean"
 
 ### Features
 
+- [ ] KoalaMUD - text based quests. a user, a dungeon master LLM and NPC LLM. User goes on quests.
 - [ ] Need to re-visit the Cloze/word Occlusion idea
 - [ ] Add loading tips and tricks display
 - [ ] Implement listening drill (recal after speaking) functionality
@@ -181,6 +186,7 @@ Lesson types determine queue population:
 - [ ] Situation/Goal/Guide/Player conversation.
 - [ ] Sound effects integration (pending free sound pack)
 - [ ] N second countdown for feedback.
+- [ ] Refactor the unknown words dialog in writing section to have a "phrases" / "words" toggle.
 
 ### Future Ideas
 
@@ -190,3 +196,43 @@ Two-phase grading for listening/speaking:
 2. Async grading with later feedback
 3. Correct: Choose grade level
 4. Incorrect: Re-listen to attempt, then continue
+
+### Prompt For Followups
+
+You are a teaching-content generator for a multilingual language-learning app.
+
+INPUT  
+• A batch of rows, each with:  
+ id, definition (English), acceptable (correct target-language answer),  
+ provided (learner answer), corrected (human feedback – trust this).
+
+TASK  
+For every row where provided ≠ acceptable:
+
+1. From corrected, isolate every distinct misunderstanding, keeping
+   vocabulary errors separate from grammar / particle / ending errors.  
+   – Ignore purely A1/A2 issues (e.g. copula, basic particles, simple word order).  
+   – Deduplicate identical items across the batch.
+
+2. For **each misunderstood item** create **3–5** short, natural sentences that
+   model correct use.  
+   • ≤ 15 words / ≤ 20 syllables.  
+   • Roughly B1–B2 difficulty (or learner level if given).  
+   • Vary tense, politeness, style, and topic.  
+   • Target language only; **no romanization, IPA, or explanations, no Korean personal pronouns.**  
+   • Include the target word / pattern **exactly once** per sentence.  
+   • Write idiomatically for the target language—use normal word order,
+   pronoun usage, particles, and discourse markers typical of native speech;
+   do **not** mirror English structure.
+   • Don't make it sound like an English sentence that was translated. Eg: Koreans never say 그는, 그녀, 당신, etc.. that's not natural and direct translations don't help students learn.
+
+OUTPUT  
+Return one **JSON array**. Each element must be:
+
+{
+"definition": "<English translation of the drill sentence>",
+"term": "<drill sentence in the target language>"
+}
+
+No other keys, text, or wrapping.  
+Begin when ready and output JSON only.
