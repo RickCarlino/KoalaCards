@@ -1,17 +1,14 @@
 import { Box } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import React from "react";
-import { playAudio } from "../play-audio";
 import { blobToBase64, convertBlobToWav } from "../record-button";
 import { trpc } from "../trpc-config";
 import { useVoiceRecorder } from "../use-recorder";
 import { ControlBar } from "./control-bar";
 import { HOTKEYS } from "./hotkeys";
-import { Feedback } from "./lesson-steps/feedback";
 import { Listening } from "./lesson-steps/listening";
 import { NewWordIntro } from "./lesson-steps/new-word-intro";
 import { NewWordOutro } from "./lesson-steps/new-word-outro";
-import { Pending } from "./lesson-steps/pending";
 import { RemedialIntro } from "./lesson-steps/remedial-intro";
 import { RemedialOutro } from "./lesson-steps/remedial-outro";
 import { Speaking } from "./lesson-steps/speaking";
@@ -24,8 +21,6 @@ const cardUIs: Record<ItemType, CardUI> = {
   speaking: Speaking,
   remedialIntro: RemedialIntro,
   remedialOutro: RemedialOutro,
-  feedback: Feedback,
-  pending: Pending,
 };
 
 const UnknownCard: CardUI = ({ card }) => (
@@ -36,39 +31,44 @@ interface CardReviewWithRecordingProps extends CardReviewProps {
   currentStepUuid: string;
   onRecordingComplete: (audio: string) => void;
   completeItem: (uuid: string) => void;
+  onPlayAudio: () => void;
+  progress?: number;
+  cardsRemaining?: number;
 }
 
 export const CardReview: React.FC<CardReviewWithRecordingProps> = (
   props,
 ) => {
   const {
-    itemType,
-    currentStepUuid,
-    onRecordingComplete,
     card,
-    onSkip,
-    onGiveUp,
     completeItem,
+    currentStepUuid,
+    itemType,
+    onGiveUp,
+    onPlayAudio,
+    onRecordingComplete,
+    onSkip,
   } = props;
 
   const CardComponent = cardUIs[itemType] ?? UnknownCard;
 
   async function handleRecordingResult(blob: Blob) {
-    const wav = await convertBlobToWav(blob);
-    const base64 = await blobToBase64(wav);
-    onRecordingComplete(base64);
+    try {
+      const wav = await convertBlobToWav(blob);
+      const base64 = await blobToBase64(wav);
+      onRecordingComplete(base64);
+    } catch (error) {
+      console.error("Audio conversion error:", error);
+      // Fallback: send the original blob as base64 without conversion
+      const base64 = await blobToBase64(blob);
+      onRecordingComplete(base64);
+    }
   }
 
   const voiceRecorder = useVoiceRecorder(handleRecordingResult);
 
   const openCardEditor = () =>
     window.open(`/cards/${card.cardId}`, "_blank");
-
-  const handlePlayAudio = () => {
-    if (card.termAudio) {
-      playAudio(card.termAudio);
-    }
-  };
 
   const archiveCardMutation = trpc.archiveCard.useMutation();
 
@@ -91,7 +91,7 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
   };
 
   useHotkeys([
-    [HOTKEYS.PLAY, handlePlayAudio],
+    [HOTKEYS.PLAY, onPlayAudio],
     [HOTKEYS.EDIT, openCardEditor],
     [HOTKEYS.SKIP, () => onSkip(card.uuid)],
     [HOTKEYS.ARCHIVE, handleArchive],
@@ -128,6 +128,9 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
           currentStepUuid={currentStepUuid}
           isRecording={voiceRecorder.isRecording}
           onRecordClick={handleRecordToggle}
+          onArchiveClick={handleArchive}
+          progress={props.progress}
+          cardsRemaining={props.cardsRemaining}
         />
       </Box>
     </Box>

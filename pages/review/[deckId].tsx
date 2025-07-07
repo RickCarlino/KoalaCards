@@ -1,5 +1,6 @@
 import { getServersideUser } from "@/koala/get-serverside-user";
 import MicrophonePermissions from "@/koala/microphone-permissions";
+import { playAudio } from "@/koala/play-audio";
 import { prismaClient } from "@/koala/prisma-client";
 import { CardReview } from "@/koala/review";
 import { HOTKEYS } from "@/koala/review/hotkeys";
@@ -17,7 +18,7 @@ import { GetServerSideProps } from "next";
 import Link from "next/link";
 import React from "react";
 
-export type ReviewDeckPageProps = {
+type ReviewDeckPageProps = {
   deckId: number;
   playbackPercentage: number;
 };
@@ -30,23 +31,57 @@ export const getServerSideProps: GetServerSideProps<
   ReviewDeckPageProps
 > = async (ctx) => {
   const user = await getServersideUser(ctx);
-  if (!user) return redirect("/api/auth/signin");
+  if (!user) {
+    return redirect("/api/auth/signin");
+  }
 
   const deckId = Number(ctx.params?.deckId);
-  if (!deckId) return redirect("/review");
+  if (!deckId) {
+    return redirect("/review");
+  }
 
   const deck = await prismaClient.deck.findUnique({
     where: { userId: user.id, id: deckId },
     select: { id: true },
   });
 
-  if (!deck) return redirect("/review");
+  if (!deck) {
+    return redirect("/review");
+  }
 
-  // Fetch user settings for audio playback percentage
   const userSettings = await prismaClient.userSettings.findUnique({
     where: { userId: user.id },
-    select: { playbackPercentage: true },
   });
+
+  if (!userSettings) {
+    return redirect("/settings");
+  }
+
+  if (userSettings.writingFirst) {
+    const now = new Date();
+    const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    // Get user's writing progress in the last 24 hours
+    const writingProgress = await prismaClient.writingSubmission.aggregate(
+      {
+        _sum: { correctionCharacterCount: true },
+        where: {
+          userId: user.id,
+          createdAt: { gte: last24Hours },
+        },
+      },
+    );
+
+    const progress = writingProgress._sum.correctionCharacterCount ?? 0;
+    const goal = userSettings.dailyWritingGoal ?? 100;
+    if (progress < goal) {
+      return {
+        redirect: {
+          destination: `/writing/${deckId}`,
+          permanent: false,
+        },
+      };
+    }
+  }
 
   return {
     props: {
@@ -131,20 +166,47 @@ function InnerReviewPage({
     completeItem,
     refetchQuizzes,
     onGradingResultCaptured,
+    progress,
+    cardsRemaining,
   } = useReview(deckId, playbackPercentage);
 
-  if (error)
+  function playCard() {
+    switch (currentItem?.itemType) {
+      case "remedialIntro":
+      case "listening":
+      case "newWordIntro":
+        return playAudio(card.termAudio);
+      case "speaking":
+      case "newWordOutro":
+      case "remedialOutro":
+        return playAudio(card.definitionAudio);
+      default:
+        console.warn("No audio available for this card type.");
+    }
+  }
+
+  // useEffect, call playCard when the currentItem changes:
+  React.useEffect(() => {
+    if (currentItem) {
+      playCard();
+    }
+  }, [currentItem]);
+  if (error) {
     return <MessageState title="Error">{error.message}</MessageState>;
-  if (isFetching)
+  }
+  if (isFetching) {
     return <MessageState title="Loading">Fetching quizzes…</MessageState>;
-  if (!currentItem)
+  }
+  if (!currentItem) {
     return (
       <NoMoreQuizzesState deckId={deckId} onReload={refetchQuizzes} />
     );
+  }
 
   const card = state.cards[currentItem.cardUUID];
-  if (!card)
+  if (!card) {
     return <MessageState title="Oops">No card data.</MessageState>;
+  }
 
   return (
     <Container size="xl" py="md">
@@ -152,15 +214,12 @@ function InnerReviewPage({
         <CardReview
           card={card}
           itemType={currentItem.itemType}
-          itemsComplete={state.itemsComplete}
-          totalItems={state.totalItems}
           onSkip={skipCard}
           onGiveUp={giveUp}
           onProceed={() => {
-            console.log("Trying to proceed...");
             completeItem(currentItem.stepUuid);
-            console.log("Proceeding to next item...");
           }}
+          onPlayAudio={playCard}
           recordings={state.recordings}
           currentStepUuid={currentItem.stepUuid}
           onRecordingComplete={(audio: string) => {
@@ -168,6 +227,8 @@ function InnerReviewPage({
           }}
           completeItem={completeItem}
           onGradingResultCaptured={onGradingResultCaptured}
+          progress={progress}
+          cardsRemaining={cardsRemaining}
         />
       </Box>
     </Container>

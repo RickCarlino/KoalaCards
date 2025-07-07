@@ -92,7 +92,9 @@ async function fetchDueCards(userId: string, deckId: number, now: number) {
 async function fetchNewCards(userId: string, deckId: number) {
   const limit = await newCardsAllowed(userId);
   console.log(`New cards allowed: ${limit}`);
-  if (limit < 1) return [];
+  if (limit < 1) {
+    return [];
+  }
   const ids = shuffle(
     await prismaClient.quiz.findMany({
       where: {
@@ -126,14 +128,16 @@ async function fetchRemedial(
     orderBy: { lastFailure: "asc" },
     include: { Quiz: true },
   });
-  return cards.map((Card): LocalQuiz => {
-    const lastQuiz = Card.Quiz[0]!;
-    return {
-      ...lastQuiz,
-      quizType: "remedial",
-      Card,
-    };
-  });
+  return cards
+    .map((Card): LocalQuiz => {
+      const lastQuiz = Card.Quiz[0];
+      return {
+        ...lastQuiz,
+        quizType: "remedial",
+        Card,
+      };
+    })
+    .slice(0, 3); // Debug temporarily to 1 card
 }
 
 const FAUCET_CAPACITY = 60; // 60 cards due in next 24 hours
@@ -160,7 +164,9 @@ const maybeSlowLearningRate = async (userId: string): Promise<boolean> => {
 
 async function newCardsAllowed(userId: string) {
   const yes = await maybeSlowLearningRate(userId);
-  if (yes) return 0;
+  if (yes) {
+    return 0;
+  }
 
   const dailyTarget = await getCardsAllowedPerDay(userId);
   const maxWeekly = dailyTarget * 7;
@@ -186,7 +192,9 @@ async function newCardsAllowed(userId: string) {
 export async function getLessons(p: GetLessonInputParams) {
   const { userId, deckId, now, take } = p;
   await autoPromoteCards(userId);
-  if (take > 45) return errorReport("Too many cards requested.");
+  if (take > 45) {
+    return errorReport("Too many cards requested.");
+  }
   const speedPercent = Math.round((await getAudioSpeed(userId)) * 100);
   const unsorted = [
     ...(await fetchNewCards(userId, deckId)),

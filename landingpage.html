@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+    />
+    <title>KoalaCards - Language Learning That Actually Works</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Helvetica, Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f8f9fa;
+        color: #212529;
+        line-height: 1.6;
+      }
+      header {
+        background-color: #2d3748;
+        color: white;
+        padding: 30px 10px;
+        text-align: center;
+      }
+      header h1 {
+        margin: 0;
+        font-size: 3em;
+        font-weight: 700;
+      }
+      header p {
+        margin: 15px 0 0;
+        font-size: 1.2em;
+        opacity: 0.9;
+      }
+      main {
+        max-width: 900px;
+        margin: 40px auto;
+        padding: 0 20px;
+      }
+      section {
+        margin-bottom: 40px;
+        background: white;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      h2 {
+        color: #2d3748;
+        font-size: 1.8em;
+        margin-bottom: 15px;
+      }
+      .hero-section {
+        text-align: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 50px 30px;
+        margin-bottom: 40px;
+      }
+      .hero-section h2 {
+        color: white;
+        font-size: 2.2em;
+        margin-bottom: 20px;
+      }
+      .hero-section p {
+        font-size: 1.2em;
+        max-width: 600px;
+        margin: 0 auto 30px;
+      }
+      .button {
+        display: inline-block;
+        padding: 12px 30px;
+        margin: 10px 5px;
+        color: white;
+        background-color: #667eea;
+        text-decoration: none;
+        border-radius: 6px;
+        font-weight: 600;
+        transition: background-color 0.3s;
+      }
+      .button:hover {
+        background-color: #5a67d8;
+      }
+      .button-secondary {
+        background-color: #48bb78;
+      }
+      .button-secondary:hover {
+        background-color: #38a169;
+      }
+      .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+      }
+      .feature-card {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 6px;
+        border-left: 4px solid #667eea;
+      }
+      .feature-card h3 {
+        margin-top: 0;
+        color: #2d3748;
+      }
+      footer {
+        text-align: center;
+        padding: 30px 20px;
+        background: #2d3748;
+        color: white;
+        margin-top: 60px;
+      }
+      footer a {
+        color: #90cdf4;
+        text-decoration: none;
+      }
+      footer a:hover {
+        text-decoration: underline;
+      }
+      .youtube-container {
+        position: relative;
+        padding-bottom: 56.25%;
+        height: 0;
+        overflow: hidden;
+        max-width: 100%;
+        margin: 30px 0;
+      }
+      .youtube-container iframe {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+      }
+      .logo-container {
+        text-align: center;
+        margin: 30px 0;
+      }
+      .logo-container img {
+        max-width: 200px;
+        height: auto;
+      }
+      ul,
+      ol {
+        line-height: 1.8;
+      }
+      .language-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 10px;
+        margin-top: 15px;
+      }
+      .language-list span {
+        background: #edf2f7;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 0.9em;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>KoalaCards 🐨</h1>
+      <p>Learn languages the way your brain actually remembers them</p>
+    </header>
+
+    <main>
+      <section class="hero-section">
+        <div class="logo-container">
+        </div>
+        <h2>Language learning that sticks</h2>
+        <p>
+          Most language apps teach you to read. KoalaCards helps you
+          speak, listen and remember full sentences.
+        </p>
+        <a href="https://app.koala.cards/" class="button"
+          >Start Learning</a
+        >
+        <a
+          href="https://www.patreon.com/rickcarlino"
+          class="button button-secondary"
+          >Support Development</a
+        >
+      </section>
+
+      <section>
+        <h2>Watch KoalaCards in Action</h2>
+        <p>Watch a two-minute demo:</p>
+        <div class="youtube-container">
+          <iframe
+            src="https://www.youtube.com/embed/OWjfC7ia1c8"
+            title="KoalaCards Demo Video"
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            referrerpolicy="strict-origin-when-cross-origin"
+            allowfullscreen
+          ></iframe>
+        </div>
+      </section>
+
+      <section>
+        <h2>Why KoalaCards is Different</h2>
+        <p>
+          Traditional flashcard apps make you grade yourself. That's like
+          marking your own homework – you'll either be too easy or too hard
+          on yourself. KoalaCards uses AI to grade your speaking
+          objectively, just like a real tutor would.
+        </p>
+        <div class="features-grid">
+          <div class="feature-card">
+            <h3>🎯 Smart Grading</h3>
+            <p>
+              AI understands what you meant to say, even if you didn't say
+              it perfectly. Just like a human teacher.
+            </p>
+          </div>
+          <div class="feature-card">
+            <h3>🗣️ Real Speaking Practice</h3>
+            <p>
+              Actually speak the language out loud. Your phone listens and
+              helps you improve your pronunciation.
+            </p>
+          </div>
+          <div class="feature-card">
+            <h3>🎧 Natural Listening</h3>
+            <p>
+              Train your ears with native speaker audio. No more
+              deer-in-headlights moments in real conversations.
+            </p>
+          </div>
+          <div class="feature-card">
+            <h3>🧠 Science-Based Timing</h3>
+            <p>
+              Reviews are scheduled exactly when you're about to forget.
+              Less time studying, better retention.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>How It Works</h2>
+        <ol>
+          <li>
+            <strong>Add what you want to learn</strong> – Type in phrases
+            you actually need, import from lists, or use pre-made decks
+          </li>
+          <li>
+            <strong>Practice speaking and listening</strong> – The app
+            presents cards at the perfect time for your memory
+          </li>
+          <li>
+            <strong>Get instant feedback</strong> – AI checks if you got
+            the meaning right (even if your grammar wasn't perfect)
+          </li>
+          <li>
+            <strong>Watch your skills grow</strong> – Cards get easier as
+            you improve, harder ones come back more often
+          </li>
+        </ol>
+      </section>
+
+      <section>
+        <h2>Languages We Support</h2>
+        <p>
+          <strong>Fully tested and optimized:</strong> Korean, French,
+          Italian, Spanish
+        </p>
+        <p><strong>Also available:</strong></p>
+        <div class="language-list">
+          <span>Arabic</span>
+          <span>Catalan</span>
+          <span>Czech</span>
+          <span>Danish</span>
+          <span>Dutch</span>
+          <span>Finnish</span>
+          <span>German</span>
+          <span>Greek</span>
+          <span>Hebrew</span>
+          <span>Hindi</span>
+          <span>Hungarian</span>
+          <span>Indonesian</span>
+          <span>Norwegian</span>
+          <span>Polish</span>
+          <span>Portuguese</span>
+          <span>Russian</span>
+          <span>Swedish</span>
+          <span>Turkish</span>
+          <span>Vietnamese</span>
+          <span>+ 15 more</span>
+        </div>
+      </section>
+
+      <section>
+        <h2>For Developers</h2>
+        <p>
+          KoalaCards is open source! Built with Next.js, TypeScript, and
+          modern web tech. Want to contribute or run your own instance?
+        </p>
+        <a href="https://github.com/RickCarlino/KoalaCards" class="button"
+          >View on GitHub</a
+        >
+      </section>
+
+      <section>
+        <h2>Want to Help?</h2>
+        <p>This is a passion project that needs your support:</p>
+        <ul>
+          <li>Help build sentence libraries for different languages</li>
+          <li>Improve the user interface</li>
+          <li>Test new AI models for better grading</li>
+          <li>Spread the word to other language learners</li>
+        </ul>
+        <p>
+          Questions? Ideas?
+          <a href="https://www.reddit.com/user/RickCarlino"
+            >Message me on Reddit</a
+          >
+        </p>
+      </section>
+    </main>
+
+    <footer>
+      <p>Made with ❤️ by Rick Carlino</p>
+      <p>
+        <a href="https://www.patreon.com/rickcarlino"
+          >Support on Patreon</a
+        >
+        | <a href="https://github.com/RickCarlino/KoalaCards">GitHub</a> |
+        <a href="https://app.koala.cards/">Try the App</a>
+      </p>
+    </footer>
+  </body>
+</html>

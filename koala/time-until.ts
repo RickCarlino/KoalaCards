@@ -47,7 +47,9 @@ export function timeUntil(
 
   let result = "";
   Object.entries(times).forEach(([key, value]) => {
-    if (value > 0) result += `${value} ${key} `;
+    if (value > 0) {
+      result += `${value} ${key} `;
+    }
   });
 
   return isPast ? `${result.trim()} ago` : result.trim();

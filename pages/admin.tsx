@@ -11,7 +11,9 @@ import { Prisma } from "@prisma/client";
 const ONE_DAY = 24 * 60 * 60 * 1000;
 
 function daysSince(date: Date | null): number {
-  if (!date) return 0;
+  if (!date) {
+    return 0;
+  }
   return Math.floor((Date.now() - date.getTime()) / ONE_DAY);
 }
 

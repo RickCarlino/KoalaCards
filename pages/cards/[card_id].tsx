@@ -154,31 +154,27 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   const dbUser = await getServersideUser(context);
   const cardId = parseInt(card_id as string, 10);
 
-  try {
-    const card = await getCardOrFail(cardId, dbUser?.id);
-    const imageURL = await maybeGetCardImageUrl(card.imageBlobId);
+  const card = await getCardOrFail(cardId, dbUser?.id);
+  const imageURL = await maybeGetCardImageUrl(card.imageBlobId);
 
-    const quizzes = card.Quiz.map((quiz) => ({
-      quizId: quiz.id,
-      repetitions: quiz.repetitions,
-      lapses: quiz.lapses,
-      lessonType: quiz.quizType,
-      lastReview: quiz.lastReview,
-    }));
+  const quizzes = card.Quiz.map((quiz) => ({
+    quizId: quiz.id,
+    repetitions: quiz.repetitions,
+    lapses: quiz.lapses,
+    lessonType: quiz.quizType,
+    lastReview: quiz.lastReview,
+  }));
 
-    return {
-      props: {
-        cardData: {
-          id: card.id,
-          definition: card.definition,
-          term: card.term,
-          flagged: card.flagged,
-          imageURL: imageURL || null,
-          quizzes,
-        },
+  return {
+    props: {
+      cardData: {
+        id: card.id,
+        definition: card.definition,
+        term: card.term,
+        flagged: card.flagged,
+        imageURL: imageURL || null,
+        quizzes,
       },
-    };
-  } catch (error) {
-    return { notFound: true };
-  }
+    },
+  };
 };

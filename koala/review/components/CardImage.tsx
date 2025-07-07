@@ -2,19 +2,21 @@ import { Image } from "@mantine/core";
 
 interface CardImageProps {
   imageURL?: string;
-  term: string;
+  definition: string;
 }
 
 export const CardImage: React.FC<CardImageProps> = ({
   imageURL,
-  term,
+  definition,
 }) => {
-  if (!imageURL) return null;
+  if (!imageURL) {
+    return null;
+  }
 
   return (
     <Image
       src={imageURL}
-      alt={`Image: ${term}`}
+      alt={`Image: ${definition}`}
       maw="100%"
       mah={240}
       fit="contain"

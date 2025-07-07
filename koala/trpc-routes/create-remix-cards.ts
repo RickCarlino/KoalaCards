@@ -43,7 +43,7 @@ export const createRemixCards = procedure
       throw new Error("Card not found");
     }
 
-    let deck = await prismaClient.deck.findFirst({
+    const deck = await prismaClient.deck.findFirst({
       where: {
         userId,
         id: parent.deckId,

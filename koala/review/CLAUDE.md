@@ -1,210 +1,238 @@
-# TODO
+# KoalaCards Review System
 
-- Add playFX after finding a good free sound pack
-- Run ts-unused-exports
-- Remove or implement "// Unused ... ?" state tree branches
-- failing a quiz should show the answer
-- Need a "continue" hotkey.
-- Implement O3 based follow-up lessons. PROMPT: https://chatgpt.com/c/684de073-9bbc-8010-8dbb-607c8e367de1
-- lesson progress is 100% broke.
-- Re-write this doc after analysis.
-- Show AI feedback when you get it right (not just when you get it wrong)
-- Claude CLI custom notification hook??
-- bring back "H" hotkey to load more lessons.
-- UI on the "Not quite right" page sucks. Explanation should be more legible.
-- Archive needs to remove it from the lesson
-- Bring back the `take` param maybe hmm
-- When you get a speaking quiz correct, play quiz.term.
-- It's possible to record at strange times. Need a way of knowing when recording is even required maybe?
-- show tips and tricks while loading.
-- The "How would you say" UI gives away the answer by playing the term. (koala/review/lesson-steps/remedial-outro.tsx)
+A spaced repetition flashcard system that guides users through structured lessons with voice recognition and AI grading.
 
-Dead exports: koala/review/types.ts: QuizList, Quiz, RecordingCapturedAction, ClearRecordingAction, CompleteItemAction, GiveUpAction
-Dead exports: koala/review/components/index.ts: CardImage, FailureView, GradingSuccess
-Dead exports: koala/review/hooks/index.ts: usePhaseManager, useRecordingProcessor, useGradeHandler, useAudioPlayback
-Dead exports: koala/trpc-routes/grade-writing.ts: FeedbackItem, ApiResponse, EssayResponse
+## Overview
 
----
+The review system presents cards one at a time through different learning phases:
 
-This is a spaced repetition flash card app that guides the user through steps of a structrued review one "thing" at a time and works their way through the cards until the lesson is over.
+- **New cards**: First exposure with pronunciation practice
+- **Remedial cards**: Review of previously failed cards
+- **Listening drills**: Repeat-after-me exercises (pending implementation)
+- **Speaking drills**: Translation from English to target language
+- **Quizzes**: Final assessment with FSRS grading
 
-The thing varies on context. It might be:
+After completing a lesson, users can continue studying or return to the home page.
 
-- A new card they are learning for the first time (new card review).
-- An overview of a card they recently failed a quiz on (remedial review).
-- AI feedback for a card they finished testing on.
-- A "repeat after me" drill (a listening quiz)
-- A speaking drill (user is asked to say a phrase in the target language)
-- A quiz on a remedial or new card review that was presented at lesson start.
+## Architecture
 
-Once they finish the lesson, they can study more or exit to "/".
+### File Structure
 
-# Coding Conventions
+```
+pages/review-next/[deckId].tsx      # Next.js page entry point
+koala/review2/
+  ├── index.tsx                     # Main component with control bar
+  ├── reducer.ts                    # State management and useReview hook
+  ├── types.ts                      # TypeScript definitions
+  ├── control-bar.tsx               # Fixed bottom navigation and controls
+  ├── replace-cards.ts              # Card queue initialization logic
+  ├── lesson-steps/                 # Individual card type components
+  │   ├── new-word-intro.tsx
+  │   ├── remedial-intro.tsx
+  │   ├── listening.tsx
+  │   ├── speaking.tsx
+  │   ├── new-word-outro.tsx
+  │   └── remedial-outro.tsx
+  └── use-*.ts                      # Custom hooks for voice processing
+koala/review/**                     # Legacy version (being replaced)
+```
 
-Here are the relevant files:
+### State Management
 
-pages/review-next/[deckId].tsx - The actual page in Next.js
-koala/review2/index.tsx - Main component that renders card types with control bar
-koala/review2/reducer.ts - State management, reducer logic, and main useReview hook
-koala/review2/types.ts - TypeScript types and interfaces
-koala/review2/control-bar.tsx - Fixed bottom control bar with buttons and progress
-koala/review2/lesson-steps/_.tsx - Individual card type components
-koala/review2/replace-cards.ts - Logic for initializing cards into queues
-koala/review2/use-_.ts - Custom hooks for voice grading, transcription, etc.
-koala/review/\*\* - The legacy version we are replacing.
+The system uses a reducer pattern with priority-ordered queues:
 
-# The Overall UI
+1. `newWordIntro` - Initial card presentation
+2. `remedialIntro` - Review of failed cards
+3. `listening` - Audio comprehension
+4. `speaking` - Production practice
+5. `newWordOutro` - New card quiz
+6. `remedialOutro` - Remedial card quiz
 
-The main component (index.tsx) renders:
+**Key Actions:**
 
-- A card-specific component based on the current item type
-- A fixed bottom control bar with universal buttons and progress
+- `REPLACE_CARDS`: Initialize cards into appropriate queues
+- `SKIP_CARD`: Remove all instances of a card from queues
+- `GIVE_UP`: Skip with completion count increment
+- `RECORDING_CAPTURED`: Store user audio by stepUuid
+- `CLEAR_RECORDING`: Remove stored audio
+- `COMPLETE_ITEM`: Mark complete and advance to next
 
-The control bar includes:
+**Important:** The current item is explicitly tracked to prevent accidental switching during background queue operations.
 
-- Progress ring showing completion percentage
-- Exit button (links to home "/")
-- Edit button (opens card editor in new tab)
-- Archive button (placeholder - logs to console)
-- Give up button (removes card from lesson with "F" icon)
-- Skip button (removes card from current lesson)
-- Play audio button (plays term audio)
-- Record button (starts/stops voice recording)
+## UI Components
 
-# Common UI: Record button
+### Control Bar
 
-Recording is handled in the control bar:
+Fixed bottom bar with:
 
-- User presses the microphone button to start recording
-- Button changes to stop icon while recording
-- User can click again or wait for automatic timeout
-- Recording is processed as base64 audio and passed to the current card component
+- **Progress ring**: Shows `itemsComplete / totalItems` percentage
+- **Exit button**: Returns to home (`/`)
+- **Edit button**: Opens card editor in new tab
+- **Give up button**: Removes card with failure icon
+- **Skip button**: Removes card from current lesson
+- **Play audio**: Plays term pronunciation
+- **Record button**: Toggles voice recording
 
-# Common UI: Progress Bar
+### Recording Flow
 
-The progress ring in the control bar shows completion as a percentage:
+1. User clicks microphone button to start
+2. Button shows stop icon during recording
+3. Recording stops on click or timeout
+4. Audio processed as base64 and passed to card component
 
-- Based on itemsComplete / totalItems
-- Updates automatically as items are completed
+## Card Types
 
-# CARD TYPES
+### New Word Introduction ✓
 
-There are several card types, each implemented as a separate component in lesson-steps/:
+**File:** `lesson-steps/new-word-intro.tsx`
 
-# Card Type: newWordIntro (COMPLETE)
+First exposure to a new card:
 
-Located: lesson-steps/new-word-intro.tsx
-This is the first time a user has seen the card.
+- Displays term, definition, and image
+- Auto-plays term audio on mount
+- User records pronunciation
+- Voice transcription validates accuracy
+- Shows diff on error, allows retry
+- Success triggers definition → term audio → advance
 
-- Shows term, definition, and image (if present)
-- Plays term audio automatically on load
-- User records their pronunciation attempt
-- Uses voice transcription to check pronunciation
-- Shows visual diff if incorrect, allows retry
-- On success, plays definition audio then term audio, then proceeds
-- Handles recording via recordings prop from control bar
+### Remedial Introduction ✓
 
-# Card Type: remedialIntro (COMPLETE)
+**File:** `lesson-steps/remedial-intro.tsx`
 
-Located: lesson-steps/remedial-intro.tsx
-The user has seen this card before but failed a quiz previously.
+Review of previously failed cards:
 
-- Similar to newWordIntro but shows "Reviewing Previous Mistake" header
-- Same pronunciation checking flow as newWordIntro
-- Uses voice transcription for grading
+- Shows "Reviewing Previous Mistake" header
+- Otherwise identical to new word introduction flow
 
-# Card Type: listening (NOT COMPLETE)
+### Listening Drill ⏳
 
-Located: lesson-steps/listening.tsx
-Currently shows "TODO: Listening" placeholder.
-Intended to be a repeat-after-me drill:
+**File:** `lesson-steps/listening.tsx`
 
-- User hears phrase in target language
-- They repeat it back
-- If correct, plays English definition and shows grading buttons
+**Status:** Not implemented (shows TODO placeholder)
 
-# Card Type: speaking (COMPLETE)
+**Planned behavior:**
 
-Located: lesson-steps/speaking.tsx
-User is asked to translate from English to target language:
+- Play phrase in target language
+- User repeats what they hear
+- Validate and show grading options on success
 
-- Shows "Say '[definition]' in the target language"
-- User records their attempt
-- Uses voice grading (more sophisticated than transcription)
-- On success: shows grading success component with FSRS buttons (Again/Hard/Good/Easy)
-- On failure: shows feedback and "Continue" button, automatically grades as "Again"
+### Speaking Drill ✓
 
-# Card Type: newWordOutro (COMPLETE)
+**File:** `lesson-steps/speaking.tsx`
 
-Located: lesson-steps/new-word-outro.tsx
-Final quiz on new cards introduced at lesson start:
+Translation from English to target language:
 
-- Shows "How would you say '[definition]'?"
-- User must recall and speak the target language term
-- Uses voice grading like speaking quiz
-- Success shows FSRS grading buttons
-- Failure shows feedback and continues with "Again" grade
+- Prompts: "Say '[definition]' in [target language]"
+- Records user attempt
+- AI voice grading with feedback
+- Success: FSRS grading buttons (Again/Hard/Good/Easy)
+- Failure: Shows feedback, auto-grades as "Again"
 
-# Card Type: remedialOutro (COMPLETE)
+### New Word Quiz ✓
 
-Located: lesson-steps/remedial-outro.tsx
-Similar to newWordOutro but for cards that were previously failed.
-Currently implemented identically to newWordOutro.
+**File:** `lesson-steps/new-word-outro.tsx`
 
-# State Management
+Final assessment of newly learned cards:
 
-The app uses a reducer pattern with these key concepts:
+- Prompts: "How would you say '[definition]'?"
+- Tests recall without visual cues
+- Voice grading determines success
+- FSRS grading on success, auto "Again" on failure
 
-## Queue System
+### Remedial Quiz ✓
 
-Cards are organized into priority-ordered queues:
+**File:** `lesson-steps/remedial-outro.tsx`
 
-1. newWordIntro
-1. remedialIntro
-1. listening
-1. speaking
-1. newWordOutro
-1. remedialOutro
-
-Certain reducer actions, such as skipping an item, failing an item, etc.. cause the current item to change.
-
-It is important that the reducer can add and remove items from the review in the background without accidentally switching the current item (this is why we explicitly set the current item in the state tree).
+Currently identical to new word quiz.
 
 ## Card Initialization
 
-When cards are fetched (replace-cards.ts):
+**File:** `replace-cards.ts`
 
-- "new" lesson type → creates newWordIntro + newWordOutro items (2 total items)
-- "remedial" lesson type → creates remedialIntro + remedialOutro items (2 total items)
-- "listening" lesson type → creates listening item (1 total item)
-- "speaking" lesson type → creates speaking item (1 total item)
+Lesson types determine queue population:
 
-## Actions
-
-- REPLACE_CARDS: Initialize cards into queues
-- SKIP_CARD: Remove all items for a card from all queues
-- GIVE_UP: Same as skip but increments completion count
-- RECORDING_CAPTURED: Store audio recording by stepUuid
-- CLEAR_RECORDING: Remove stored recording
-- COMPLETE_ITEM: Remove item by stepUuid and proceed to next
+- **"new"**: Creates `newWordIntro` + `newWordOutro` (2 items)
+- **"remedial"**: Creates `remedialIntro` + `remedialOutro` (2 items)
+- **"listening"**: Creates single `listening` item
+- **"speaking"**: Creates single `speaking` item
 
 ## Custom Hooks
 
-- useVoiceTranscription: Simple pronunciation checking (used in intro cards)
-- useVoiceGrading: Advanced AI grading with feedback (used in quiz cards)
-- useQuizGrading: FSRS grading integration with server
-- useReview: Main hook that manages the entire lesson state
+- **`useVoiceTranscription`**: Simple pronunciation validation (intro cards)
+- **`useVoiceGrading`**: Advanced AI grading with feedback (quiz cards)
+- **`useQuizGrading`**: FSRS integration for spaced repetition
+- **`useReview`**: Main state management hook
 
-# Ideas For Later
+## Pending Tasks
 
-Make listening and speaking a two part process?
+### UI Improvements
 
-Listening 1: Repeat the phrase. Write what it means.
-Speaking 1: Say the phrase in Korean
+- [ ] Incorrect speaking answers are not being graded?
+- [ ] Sometimes it plays card.term at the start of a speaking and remedial exam!?!?
+- [ ] Disable recording after you get it right.
+- [ ] Improve legibility of error explanations
+- [ ] Need silence detection or something.
+- [ ] Need to show card.term on correct explanation view so that "Yes" explanations make sense.
+- [ ] Try to translate the writing prompt generator to Korean to see if it improves prompt quality.
+- [ ] Change "In the target language" to "Korean"
 
---- User presses "Submit for grading and Continue" ---
+### Features
 
-...User gets feedback later.
+- [ ] KoalaMUD - text based quests. a user, a dungeon master LLM and NPC LLM. User goes on quests.
+- [ ] Need to re-visit the Cloze/word Occlusion idea
+- [ ] Add loading tips and tricks display
+- [ ] Implement listening drill (recal after speaking) functionality
+- [ ] O3-based follow-up lessons / dynamic grammar improvement ([spec](https://chatgpt.com/c/684de073-9bbc-8010-8dbb-607c8e367de1))
+- [ ] Situation/Goal/Guide/Player conversation.
+- [ ] Sound effects integration (pending free sound pack)
+- [ ] N second countdown for feedback.
+- [ ] Refactor the unknown words dialog in writing section to have a "phrases" / "words" toggle.
 
-If they were correct, they can pick a grade.
-If they were wrong, they can re-grade (and wait), re-listen to their response then finally continue to the next card.
+### Future Ideas
+
+Two-phase grading for listening/speaking:
+
+1. User completes exercise and submits
+2. Async grading with later feedback
+3. Correct: Choose grade level
+4. Incorrect: Re-listen to attempt, then continue
+
+### Prompt For Followups
+
+You are a teaching-content generator for a multilingual language-learning app.
+
+INPUT  
+• A batch of rows, each with:  
+ id, definition (English), acceptable (correct target-language answer),  
+ provided (learner answer), corrected (human feedback – trust this).
+
+TASK  
+For every row where provided ≠ acceptable:
+
+1. From corrected, isolate every distinct misunderstanding, keeping
+   vocabulary errors separate from grammar / particle / ending errors.  
+   – Ignore purely A1/A2 issues (e.g. copula, basic particles, simple word order).  
+   – Deduplicate identical items across the batch.
+
+2. For **each misunderstood item** create **3–5** short, natural sentences that
+   model correct use.  
+   • ≤ 15 words / ≤ 20 syllables.  
+   • Roughly B1–B2 difficulty (or learner level if given).  
+   • Vary tense, politeness, style, and topic.  
+   • Target language only; **no romanization, IPA, or explanations, no Korean personal pronouns.**  
+   • Include the target word / pattern **exactly once** per sentence.  
+   • Write idiomatically for the target language—use normal word order,
+   pronoun usage, particles, and discourse markers typical of native speech;
+   do **not** mirror English structure.
+   • Don't make it sound like an English sentence that was translated. Eg: Koreans never say 그는, 그녀, 당신, etc.. that's not natural and direct translations don't help students learn.
+
+OUTPUT  
+Return one **JSON array**. Each element must be:
+
+{
+"definition": "<English translation of the drill sentence>",
+"term": "<drill sentence in the target language>"
+}
+
+No other keys, text, or wrapping.  
+Begin when ready and output JSON only.

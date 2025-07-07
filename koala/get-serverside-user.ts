@@ -3,7 +3,7 @@ import { GetServerSidePropsContext } from "next/types";
 import { prismaClient } from "./prisma-client";
 
 export const getServersideUser = async (
-  ctx: GetServerSidePropsContext<any, any>,
+  ctx: GetServerSidePropsContext,
 ) => {
   const session = await getSession(ctx);
   const dbUser = await prismaClient.user.findUnique({

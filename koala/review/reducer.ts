@@ -13,29 +13,37 @@ import {
 import { playAudio } from "../play-audio";
 
 const queue = (): Queue => ({
-  feedback: [], // Unused ... ?
   newWordIntro: [], // DONE
   remedialIntro: [], // DONE
   listening: [],
   speaking: [], // Needs testing.
   newWordOutro: [], // DONE
   remedialOutro: [], // DONE
-  pending: [], // Unused ... ?
 });
 
-function skipCard(action: SkipCardAction, state: State): State {
-  const cardUUID = action.payload.uuid;
-  const newQueue = { ...state.queue };
+function removeCardFromQueues(
+  cardUUID: string,
+  queue: Queue,
+): { updatedQueue: Queue } {
+  const updatedQueue = { ...queue };
+
   for (const type of EVERY_QUEUE_TYPE) {
-    newQueue[type] = newQueue[type].filter(
+    updatedQueue[type] = updatedQueue[type].filter(
       (item) => item.cardUUID !== cardUUID,
     );
   }
+
+  return { updatedQueue };
+}
+
+function skipCard(action: SkipCardAction, state: State): State {
+  const cardUUID = action.payload.uuid;
+  const { updatedQueue } = removeCardFromQueues(cardUUID, state.queue);
+
   return {
     ...state,
-    queue: newQueue,
-    itemsComplete: state.itemsComplete + 1,
-    currentItem: nextQueueItem(newQueue),
+    queue: updatedQueue,
+    currentItem: nextQueueItem(updatedQueue),
   };
 }
 
@@ -55,7 +63,9 @@ export function nextQueueItem(queue: Queue): QueueItem | undefined {
   // Get first item from the queue with the highest priority:
   for (const type of EVERY_QUEUE_TYPE) {
     const item = queue[type][0];
-    if (item) return item;
+    if (item) {
+      return item;
+    }
   }
   return;
 }
@@ -65,15 +75,16 @@ function initialState(): State {
     queue: queue(),
     cards: {},
     currentItem: undefined,
-    totalItems: 0,
-    itemsComplete: 0,
     recordings: {},
     gradingResults: {},
+    initialCardCount: 0,
+    completedCards: new Set(),
   };
 }
 
 export function useReview(deckId: number, playbackPercentage = 0.125) {
   const mutation = trpc.getNextQuizzes.useMutation();
+  const repairCardMutation = trpc.editCard.useMutation();
   const [state, dispatch] = useReducer(reducer, initialState());
   const [isFetching, setIsFetching] = useState(true);
 
@@ -101,6 +112,11 @@ export function useReview(deckId: number, playbackPercentage = 0.125) {
     }
   }, [deckId]);
 
+  const progress =
+    state.initialCardCount > 0
+      ? (state.completedCards.size / state.initialCardCount) * 100
+      : 0;
+
   return {
     error: mutation.isError ? mutation.error || "" : null,
     isFetching,
@@ -108,10 +124,16 @@ export function useReview(deckId: number, playbackPercentage = 0.125) {
     currentItem: state.currentItem,
     totalDue: getItemsDue(state.queue),
     gradingResults: state.gradingResults,
+    progress,
+    cardsRemaining: state.initialCardCount - state.completedCards.size,
     skipCard: (cardUUID: string) => {
       dispatch({ type: "SKIP_CARD", payload: { uuid: cardUUID } });
     },
-    giveUp: (cardUUID: string) => {
+    giveUp: async (cardUUID: string) => {
+      const card = state.cards[cardUUID];
+      if (card && card.termAudio) {
+        await playAudio(card.termAudio);
+      }
       dispatch({ type: "GIVE_UP", payload: { cardUUID } });
     },
     onRecordingCaptured: async (uuid: string, audio: string) => {
@@ -128,7 +150,7 @@ export function useReview(deckId: number, playbackPercentage = 0.125) {
     completeItem: (uuid: string) => {
       dispatch({ type: "COMPLETE_ITEM", payload: { uuid } });
     },
-    onGradingResultCaptured: (
+    onGradingResultCaptured: async (
       cardUUID: string,
       result: {
         transcription: string;
@@ -136,6 +158,13 @@ export function useReview(deckId: number, playbackPercentage = 0.125) {
         feedback: string;
       },
     ) => {
+      const card = state.cards[cardUUID];
+      if (result.isCorrect && card.lessonType === "remedial") {
+        await repairCardMutation.mutateAsync({
+          id: card.cardId,
+          lastFailure: 0,
+        });
+      }
       dispatch({
         type: "STORE_GRADE_RESULT",
         payload: { cardUUID, result },
@@ -148,17 +177,28 @@ export function useReview(deckId: number, playbackPercentage = 0.125) {
 }
 
 function reducer(state: State, action: Action): State {
+  console.log(action.type);
   console.log({
     ...state,
     recordings: Object.keys(state.recordings).length,
-    gradingResults: Object.keys(state.gradingResults).length,
-    action: action.type,
+    gradingResults: state.gradingResults,
   });
   switch (action.type) {
     case "REPLACE_CARDS":
-      return replaceCards(action, state);
+      const newState = replaceCards(action, state);
+      return {
+        ...newState,
+        initialCardCount: Object.keys(newState.cards).length,
+        completedCards: new Set(),
+      };
     case "SKIP_CARD":
-      return skipCard(action, state);
+      return {
+        ...skipCard(action, state),
+        completedCards: new Set([
+          ...state.completedCards,
+          action.payload.uuid,
+        ]),
+      };
     case "RECORDING_CAPTURED":
       return {
         ...state,
@@ -181,6 +221,18 @@ function reducer(state: State, action: Action): State {
       const { uuid } = action.payload;
       const updatedQueue = { ...state.queue };
 
+      // Find which card this item belongs to
+      let cardUUID: string | undefined;
+      for (const queueType of EVERY_QUEUE_TYPE) {
+        const item = state.queue[queueType].find(
+          (item) => item.stepUuid === uuid,
+        );
+        if (item) {
+          cardUUID = item.cardUUID;
+          break;
+        }
+      }
+
       // Remove the item from all queue types by stepUuid
       for (const queueType of EVERY_QUEUE_TYPE) {
         updatedQueue[queueType] = updatedQueue[queueType].filter(
@@ -188,28 +240,32 @@ function reducer(state: State, action: Action): State {
         );
       }
 
+      // Check if this was the last item for this card
+      const hasMoreItems = Object.values(updatedQueue).some((queue) =>
+        queue.some((item) => item.cardUUID === cardUUID),
+      );
+
       return {
         ...state,
         queue: updatedQueue,
         currentItem: nextQueueItem(updatedQueue),
-        itemsComplete: state.itemsComplete + 1,
+        completedCards:
+          !hasMoreItems && cardUUID
+            ? new Set([...state.completedCards, cardUUID])
+            : state.completedCards,
       };
     case "GIVE_UP":
-      const { cardUUID } = action.payload;
-      const giveUpQueue = { ...state.queue };
-
-      // Remove all items with matching cardUUID from all queue types
-      for (const queueType of EVERY_QUEUE_TYPE) {
-        giveUpQueue[queueType] = giveUpQueue[queueType].filter(
-          (item) => item.cardUUID !== cardUUID,
-        );
-      }
+      const { cardUUID: giveUpCardUUID } = action.payload;
+      const { updatedQueue: giveUpQueue } = removeCardFromQueues(
+        giveUpCardUUID,
+        state.queue,
+      );
 
       return {
         ...state,
         queue: giveUpQueue,
         currentItem: nextQueueItem(giveUpQueue),
-        itemsComplete: state.itemsComplete + 1, // Increment complete count
+        completedCards: new Set([...state.completedCards, giveUpCardUUID]),
       };
     case "STORE_GRADE_RESULT":
       return {

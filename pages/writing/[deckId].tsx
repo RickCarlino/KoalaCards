@@ -220,7 +220,9 @@ export default function WritingPage({
   };
 
   const handleReview = () => {
-    if (!selectedPrompt || !essay.trim()) return;
+    if (!selectedPrompt || !essay.trim()) {
+      return;
+    }
     setLoadingReview(true);
     setFeedback(null);
     setSelectedWords({});
@@ -246,7 +248,9 @@ export default function WritingPage({
   const toggleWord = useCallback((raw: string) => {
     // Remove trailing punctuation and convert to lowercase for consistent key
     const key = raw.replace(/[.,!?;:]$/, "").toLowerCase();
-    if (!key) return;
+    if (!key) {
+      return;
+    }
 
     // Toggle the word's selection status
     setSelectedWords((prev) => {
@@ -275,7 +279,9 @@ export default function WritingPage({
 
   // Render text with clickable words consistently across all sections
   const renderClickableText = (text: string) => {
-    if (!text) return null;
+    if (!text) {
+      return null;
+    }
 
     return (
       <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
@@ -375,15 +381,19 @@ export default function WritingPage({
     const shouldDisplayLemma = (def: { word: string; lemma?: string }) =>
       !!def.lemma && def.lemma.toLowerCase() !== def.word.toLowerCase();
 
-    if (!definitions || definitions.length === 0) return;
+    if (!definitions || definitions.length === 0) {
+      return;
+    }
 
     const wordsForCards = definitions.map((def) =>
-      shouldDisplayLemma(def) ? def.lemma! : def.word,
+      shouldDisplayLemma(def) && def.lemma ? def.lemma : def.word,
     );
 
     const uniqueWords = Array.from(new Set(wordsForCards));
 
-    if (uniqueWords.length === 0) return;
+    if (uniqueWords.length === 0) {
+      return;
+    }
 
     const wordsParam = encodeURIComponent(uniqueWords.join(","));
     const url = `/create-wordlist?lang=${langCode}&words=${wordsParam}`;

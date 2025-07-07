@@ -2,7 +2,7 @@ import { z } from "zod";
 import { QuizList as ZodQuizList } from "../types/zod"; // Renamed to avoid conflict
 
 // Types from logic.ts
-export type QuizList = z.infer<typeof ZodQuizList>["quizzes"];
+type QuizList = z.infer<typeof ZodQuizList>["quizzes"];
 export type ItemType = keyof Queue;
 export type QueueItem = {
   cardUUID: string;
@@ -11,11 +11,9 @@ export type QueueItem = {
 };
 
 type QueueType =
-  | "feedback"
   | "listening"
   | "newWordIntro"
   | "newWordOutro"
-  | "pending"
   | "remedialIntro"
   | "remedialOutro"
   | "speaking";
@@ -38,34 +36,34 @@ export type GradingResult = {
 };
 
 export type State = {
-  totalItems: number;
-  itemsComplete: number;
   currentItem: QueueItem | undefined;
   queue: Queue;
   cards: QuizMap;
   recordings: Record<string, Recording>;
   gradingResults: Record<string, GradingResult>;
+  initialCardCount: number;
+  completedCards: Set<string>;
 };
 
 export type ReplaceCardAction = { type: "REPLACE_CARDS"; payload: Quiz[] };
 export type SkipCardAction = { type: "SKIP_CARD"; payload: UUID };
-export type RecordingCapturedAction = {
+type RecordingCapturedAction = {
   type: "RECORDING_CAPTURED";
   payload: { uuid: string; audio: string };
 };
-export type ClearRecordingAction = {
+type ClearRecordingAction = {
   type: "CLEAR_RECORDING";
   payload: { uuid: string };
 };
-export type CompleteItemAction = {
+type CompleteItemAction = {
   type: "COMPLETE_ITEM";
   payload: { uuid: string };
 };
-export type GiveUpAction = {
+type GiveUpAction = {
   type: "GIVE_UP";
   payload: { cardUUID: string };
 };
-export type GradingResultCapturedAction = {
+type GradingResultCapturedAction = {
   type: "STORE_GRADE_RESULT";
   payload: { cardUUID: string; result: GradingResult };
 };
@@ -79,22 +77,18 @@ export type Action =
   | GiveUpAction
   | GradingResultCapturedAction;
 export const EVERY_QUEUE_TYPE: (keyof Queue)[] = [
-  "feedback",
   "newWordIntro",
   "remedialIntro",
   "listening",
   "speaking",
   "newWordOutro",
   "remedialOutro",
-  "pending",
 ];
 
 export type CardReviewProps = {
   onProceed: () => void;
   onSkip: (uuid: string) => void;
   onGiveUp: (cardUUID: string) => void;
-  itemsComplete: number;
-  totalItems: number;
   itemType: ItemType;
   card: Quiz;
   recordings: Record<string, Recording>;

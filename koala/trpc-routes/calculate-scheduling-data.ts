@@ -1,7 +1,7 @@
 import { createDeck, Grade } from "femto-fsrs";
 import { Quiz } from "@prisma/client";
 
-const FSRS = createDeck({ requestedRetentionRate: 0.7 });
+const FSRS = createDeck({ requestedRetentionRate: 0.71 });
 
 const DAYS = 24 * 60 * 60 * 1000;
 
@@ -21,8 +21,8 @@ type SchedulingData = {
 };
 
 function fuzzNumber(num: number) {
-  let pct = num * 0.3;
-  let fuzzFactor = (Math.random() * 2 - 1) * pct;
+  const pct = num * 0.3;
+  const fuzzFactor = (Math.random() * 2 - 1) * pct;
 
   return num + fuzzFactor;
 }

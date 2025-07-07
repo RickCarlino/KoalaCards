@@ -1,6 +1,5 @@
 import { Stack, Text, Button } from "@mantine/core";
 import { CardImage } from "./CardImage";
-import { useAudioPlayback } from "../hooks/useAudioPlayback";
 import { HOTKEYS } from "../hotkeys";
 
 interface FailureViewProps {
@@ -11,7 +10,6 @@ interface FailureViewProps {
   feedback?: string;
   onContinue: () => void;
   failureText?: string;
-  termAudio?: string;
 }
 
 export const FailureView: React.FC<FailureViewProps> = ({
@@ -22,13 +20,10 @@ export const FailureView: React.FC<FailureViewProps> = ({
   feedback,
   onContinue,
   failureText = "Not quite right",
-  termAudio,
 }) => {
-  // Play term audio when failure view is displayed
-  useAudioPlayback({ termAudio, autoPlay: true });
   return (
     <Stack align="center" gap="md">
-      <CardImage imageURL={imageURL} term={term} />
+      <CardImage imageURL={imageURL} definition={definition} />
 
       <Text ta="center" c="red" fw={500} size="lg">
         {failureText}

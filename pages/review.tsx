@@ -158,7 +158,9 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
     }, [deck.id, deck.name, deck.published, title, updateDeckMutation]);
 
     const handleDelete = useCallback(async () => {
-      if (!confirm("Are you sure you want to delete this deck?")) return;
+      if (!confirm("Are you sure you want to delete this deck?")) {
+        return;
+      }
       await deleteDeckMutation.mutateAsync({ deckId: deck.id });
       refreshData();
     }, [deck.id, deleteDeckMutation]);

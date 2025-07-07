@@ -72,7 +72,9 @@ export const decksWithReviewInfo = async (
   ) => {
     for (const quiz of quizzes) {
       const deckId = cardToDeck[quiz.cardId];
-      if (!deckId) continue;
+      if (!deckId) {
+        continue;
+      }
       if (!quizCounts[deckId]) {
         quizCounts[deckId] = { due: 0, new: 0 };
       }

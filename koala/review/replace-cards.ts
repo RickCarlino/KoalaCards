@@ -1,7 +1,6 @@
 import { uid } from "radash";
 import { ReplaceCardAction, State, QuizMap } from "./types";
 import { nextQueueItem } from "./reducer";
-
 export function replaceCards(
   action: ReplaceCardAction,
   state: State,
@@ -10,12 +9,24 @@ export function replaceCards(
     return { ...acc, [item.uuid]: item };
   }, {} as QuizMap);
 
+  // Start with a fresh state
+  const freshState: State = {
+    ...state,
+    queue: {
+      newWordIntro: [],
+      remedialIntro: [],
+      listening: [],
+      speaking: [],
+      newWordOutro: [],
+      remedialOutro: [],
+    },
+  };
+
   const nextState = action.payload.reduce((acc, item): State => {
     switch (item.lessonType) {
       case "new":
         return {
           ...acc,
-          totalItems: acc.totalItems + 2,
           queue: {
             ...acc.queue,
             newWordIntro: [
@@ -39,7 +50,6 @@ export function replaceCards(
       case "listening":
         return {
           ...acc,
-          totalItems: acc.totalItems + 1,
           queue: {
             ...acc.queue,
             listening: [
@@ -55,7 +65,6 @@ export function replaceCards(
       case "speaking":
         return {
           ...acc,
-          totalItems: acc.totalItems + 1,
           queue: {
             ...acc.queue,
             speaking: [
@@ -71,7 +80,6 @@ export function replaceCards(
       case "remedial":
         return {
           ...acc,
-          totalItems: acc.totalItems + 2,
           queue: {
             ...acc.queue,
             remedialIntro: [
@@ -95,7 +103,7 @@ export function replaceCards(
       default:
         throw new Error(`Unknown lesson type: ${item.lessonType}`);
     }
-  }, state);
+  }, freshState);
   return {
     ...nextState,
     cards,

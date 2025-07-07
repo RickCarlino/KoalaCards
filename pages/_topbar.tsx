@@ -49,8 +49,6 @@ const TopBar = ({ children }: TopBarProps) => {
       <AppShell.Main
         style={{
           backgroundColor: theme.colors.pink[0],
-          backgroundImage:
-            "radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.8) 0%, rgba(255, 222, 235, 0.3) 100%)",
         }}
       >
         {children}

@@ -10,7 +10,9 @@ export const playAudio = (urlOrDataURI: string) => {
     const audio = new Audio(urlOrDataURI);
 
     const ok = () => {
-      if (done) return;
+      if (done) {
+        return;
+      }
       done = true;
       // Stop audio from playing:
       audio.pause();

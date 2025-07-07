@@ -22,9 +22,7 @@ const EssayResponseSchema = z.object({
   feedback: z.array(z.string()),
 });
 
-export type FeedbackItem = string[];
-export type ApiResponse = z.infer<typeof ApiResponseSchema>;
-export type EssayResponse = z.infer<typeof EssayResponseSchema>;
+type EssayResponse = z.infer<typeof EssayResponseSchema>;
 
 /**
  * ----------------------------

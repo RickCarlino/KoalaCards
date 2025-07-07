@@ -145,7 +145,6 @@ export const QuizCard: React.FC<QuizCardProps> = ({
         feedback={feedback}
         onContinue={handleFailureContinue}
         failureText={config.failureText}
-        termAudio={card.termAudio}
       />
     );
   }
@@ -182,6 +181,7 @@ export const QuizCard: React.FC<QuizCardProps> = ({
             }}
             onGradeSelect={handleGradeSelect}
             isLoading={isLoading}
+            feedback={feedback}
           />
         );
 
@@ -190,9 +190,14 @@ export const QuizCard: React.FC<QuizCardProps> = ({
     }
   };
 
+  const promptText = (
+    <Text size="xl" fw={700} ta="center">
+      {config.promptText(definition)}
+    </Text>
+  );
   return (
     <Stack align="center" gap="md">
-      <CardImage imageURL={card.imageURL} term={term} />
+      <CardImage imageURL={card.imageURL} definition={definition} />
 
       {config.headerText && (
         <Text ta="center" c={config.headerColor} fw={500} size="sm">
@@ -200,9 +205,7 @@ export const QuizCard: React.FC<QuizCardProps> = ({
         </Text>
       )}
 
-      <Text size="xl" fw={700} ta="center">
-        {config.promptText(definition)}
-      </Text>
+      {!feedback && promptText}
 
       {renderContent()}
     </Stack>

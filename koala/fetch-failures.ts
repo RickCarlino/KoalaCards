@@ -30,7 +30,9 @@ async function buildQuizPayload(card: Card) {
 export async function getRepairCards(p: GetRepairInputParams) {
   const { userId, /*deckId,*/ take } = p;
   await autoPromoteCards(userId);
-  if (take > 45) return errorReport("Too many cards requested.");
+  if (take > 45) {
+    return errorReport("Too many cards requested.");
+  }
 
   const uniqueByCardId = await prismaClient.card.findMany({
     where: {

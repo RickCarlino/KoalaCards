@@ -1,7 +1,7 @@
 import { Stack, Text, Image, Button } from "@mantine/core";
-import { CardUI } from "../types";
+import { CardUI, GradingResult } from "../types";
 import { useState } from "react";
-import { useRepair } from "../use-repair";
+import { useVoiceGrading } from "../use-voice-grading";
 import { LangCode } from "@/koala/shared-types";
 import { FailureView } from "../components/FailureView";
 import { CardImage } from "../components/CardImage";
@@ -16,18 +16,20 @@ const SuccessView = ({
   term,
   definition,
   onContinue,
+  successText,
 }: {
   imageURL?: string;
   term: string;
   definition: string;
   onContinue: () => void;
+  successText?: string;
 }) => {
   return (
     <Stack align="center" gap="md">
       {imageURL && (
         <Image
           src={imageURL}
-          alt={`Image: ${term}`}
+          alt={`Image: ${definition}`}
           maw="100%"
           mah={240}
           fit="contain"
@@ -35,7 +37,7 @@ const SuccessView = ({
       )}
 
       <Text ta="center" c="green" fw={500} size="lg">
-        Well done!
+        {successText || "Well done!"}
       </Text>
 
       <Text size="xl" fw={700} ta="center">
@@ -56,38 +58,47 @@ export const RemedialOutro: CardUI = ({
   recordings,
   onProceed,
   currentStepUuid,
+  onGradingResultCaptured,
 }) => {
   const { term, definition } = card;
-  const [userTranscription, setUserTranscription] = useState<string>("");
+  const [gradingResult, setGradingResult] = useState<GradingResult | null>(
+    null,
+  );
 
-  const { processAudio } = useRepair({
-    cardId: card.cardId,
+  const { gradeAudio } = useVoiceGrading({
     targetText: card.term,
     langCode: card.langCode as LangCode,
+    quizId: card.quizId,
+    cardUUID: card.uuid,
+    onGradingResultCaptured,
   });
 
   const { phase, setPhase } = usePhaseManager<Phase>(
     "ready",
     currentStepUuid,
-    () => setUserTranscription(""),
+    () => setGradingResult(null),
   );
 
   const processRecording = async (base64Audio: string) => {
     setPhase("processing");
 
     try {
-      const result = await processAudio(base64Audio);
-      setUserTranscription(result.transcription);
+      const result = await gradeAudio(base64Audio);
+      setGradingResult(result);
 
-      if (result.isMatch) {
+      if (result.isCorrect) {
         setPhase("success");
       } else {
         setPhase("failure");
       }
     } catch (error) {
-      console.error("Repair error:", error);
+      console.error("Grading error:", error);
       setPhase("failure");
-      setUserTranscription("Error occurred during processing.");
+      setGradingResult({
+        transcription: "Error occurred during processing.",
+        isCorrect: false,
+        feedback: "An error occurred while processing your response.",
+      });
     }
   };
 
@@ -104,10 +115,9 @@ export const RemedialOutro: CardUI = ({
         imageURL={card.imageURL}
         term={term}
         definition={definition}
-        userTranscription={userTranscription}
+        userTranscription={gradingResult?.transcription || ""}
         onContinue={onProceed}
-        failureText="Not quite right"
-        termAudio={card.termAudio}
+        failureText={gradingResult?.feedback || "Not quite right"}
       />
     );
   }
@@ -120,6 +130,7 @@ export const RemedialOutro: CardUI = ({
         term={term}
         definition={definition}
         onContinue={onProceed}
+        successText={gradingResult?.feedback || ""}
       />
     );
   }
@@ -148,7 +159,7 @@ export const RemedialOutro: CardUI = ({
 
   return (
     <Stack align="center" gap="md">
-      <CardImage imageURL={card.imageURL} term={term} />
+      <CardImage imageURL={card.imageURL} definition={definition} />
 
       <Text ta="center" c="orange" fw={500} size="sm">
         Remedial Review

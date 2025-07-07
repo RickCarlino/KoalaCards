@@ -1,9 +1,10 @@
 import {
   ActionIcon,
   Group,
-  RingProgress,
-  Text,
   Tooltip,
+  RingProgress,
+  Center,
+  Text,
 } from "@mantine/core";
 import {
   IconArchive,
@@ -16,7 +17,6 @@ import {
   IconLetterF,
 } from "@tabler/icons-react";
 import React from "react";
-import { playAudio } from "../play-audio";
 import { CardReviewProps } from "./types";
 import { HOTKEYS } from "./hotkeys";
 
@@ -24,43 +24,45 @@ interface ControlBarProps extends CardReviewProps {
   currentStepUuid: string;
   isRecording: boolean;
   onRecordClick: () => void;
+  onArchiveClick: () => void;
+  onPlayAudio: () => void;
+  progress?: number;
+  cardsRemaining?: number;
 }
 
 export const ControlBar: React.FC<ControlBarProps> = (props) => {
   const {
     card,
-    itemsComplete,
-    totalItems,
     onSkip,
     onGiveUp,
     isRecording,
     onRecordClick,
+    onArchiveClick,
+    onPlayAudio,
+    itemType,
   } = props;
-  const progress = totalItems ? (itemsComplete / totalItems) * 100 : 0;
 
   const openCardEditor = () =>
     window.open(`/cards/${card.cardId}`, "_blank");
 
-  const handlePlayAudio = () => {
-    if (card.termAudio) {
-      playAudio(card.termAudio);
-    }
-  };
-
   return (
     <Group justify="center" wrap="wrap" gap="xs">
-      <Tooltip label={`${itemsComplete} of ${totalItems} cards complete`}>
-        <RingProgress
-          size={44}
-          thickness={4}
-          sections={[{ value: progress, color: "pink.6" }]}
-          label={
-            <Text size="xs" ta="center">
-              {Math.round(progress)}%
-            </Text>
-          }
-        />
-      </Tooltip>
+      {props.progress !== undefined && (
+        <Tooltip label={`${Math.round(props.progress)}% complete`}>
+          <RingProgress
+            size={48}
+            thickness={4}
+            sections={[{ value: props.progress, color: "pink.6" }]}
+            label={
+              <Center>
+                <Text size="xs" c="pink.7">
+                  {Math.round(props.progress)}%
+                </Text>
+              </Center>
+            }
+          />
+        </Tooltip>
+      )}
 
       <Tooltip label={`Exit lesson`}>
         <ActionIcon
@@ -89,7 +91,7 @@ export const ControlBar: React.FC<ControlBarProps> = (props) => {
         <ActionIcon
           variant="outline"
           size="lg"
-          onClick={() => console.log("Archive card:", card.uuid)}
+          onClick={onArchiveClick}
           color="pink.7"
         >
           <IconArchive size={20} />
@@ -118,12 +120,19 @@ export const ControlBar: React.FC<ControlBarProps> = (props) => {
         </ActionIcon>
       </Tooltip>
 
-      <Tooltip label={`Play audio (${HOTKEYS.PLAY})`}>
+      <Tooltip
+        label={
+          itemType === "speaking"
+            ? "Audio disabled during speaking quiz"
+            : `Play audio (${HOTKEYS.PLAY})`
+        }
+      >
         <ActionIcon
           variant="outline"
           size="lg"
-          onClick={handlePlayAudio}
+          onClick={onPlayAudio}
           color="pink.7"
+          disabled={itemType === "speaking"}
         >
           <IconPlayerPlayFilled size={20} />
         </ActionIcon>

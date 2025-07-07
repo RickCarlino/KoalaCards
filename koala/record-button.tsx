@@ -21,7 +21,32 @@ export async function convertBlobToWav(
 ): Promise<Blob> {
   const arrayBuffer = await blob.arrayBuffer();
   const audioContext = new AudioContext();
-  const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+  let audioBuffer: AudioBuffer;
+  try {
+    audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+  } catch (error) {
+    // Firefox iOS may produce audio that can't be decoded directly
+    // Try creating a new blob with explicit MIME type
+    console.error("Initial decode failed, attempting workaround:", error);
+
+    // Check if this is already WAV format
+    const uint8Array = new Uint8Array(arrayBuffer);
+    const isWav =
+      uint8Array.length > 4 &&
+      uint8Array[0] === 0x52 && // 'R'
+      uint8Array[1] === 0x49 && // 'I'
+      uint8Array[2] === 0x46 && // 'F'
+      uint8Array[3] === 0x46; // 'F'
+
+    if (isWav) {
+      // Already WAV, just return as-is
+      return blob;
+    }
+
+    // Re-throw if we can't handle it
+    throw error;
+  }
   const numberOfChannels = 1; // Set to mono
 
   // Create an offline audio context to resample the audio
