@@ -1,3 +1,6 @@
+const rulesDirPlugin = require("eslint-plugin-rulesdir");
+rulesDirPlugin.RULES_DIR = "eslint-rules";
+
 module.exports = {
   root: true,
   parser: "@typescript-eslint/parser",
@@ -11,9 +14,10 @@ module.exports = {
     "plugin:@typescript-eslint/recommended",
     "next",
   ],
-  plugins: ["@typescript-eslint"],
+  plugins: ["@typescript-eslint", "rulesdir"],
   ignorePatterns: ["node_modules/**", "dist/**", "*.config.js"],
   rules: {
+    "rulesdir/no-else-if": "error",
     "@typescript-eslint/no-unused-vars": [
       "error",
       {
