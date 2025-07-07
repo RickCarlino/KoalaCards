@@ -35,7 +35,9 @@ export default function RemixButton(props: RemixButtonProps) {
   const saveRemixCards = trpc.createRemixCards.useMutation();
 
   const handleRemix = async () => {
-    if (!card?.id) return;
+    if (!card?.id) {
+      return;
+    }
 
     const result = await createRemix.mutateAsync({
       cardID: card.id,

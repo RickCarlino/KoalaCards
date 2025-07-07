@@ -44,6 +44,8 @@ module.exports = {
     "no-empty": "error",
     "no-var": "error",
     "no-alert": "off",
+    "no-case-declarations": "off",
+    "react-hooks/exhaustive-deps": "off",
   },
 
   globals: {

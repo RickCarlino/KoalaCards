@@ -5,6 +5,7 @@ set -e
 trap 'exit 2' ERR
 
 npx next lint --fix
+npx eslint koala/ --fix
 npx tsc --noEmit
 prettier pages/ --write
 prettier koala/ --write

@@ -4,17 +4,20 @@ import type { AppRouter } from "./trpc-routes/main";
 import superjson from "superjson";
 
 function getBaseUrl() {
-  if (typeof window !== "undefined")
+  if (typeof window !== "undefined") {
     // browser should use relative path
     return "";
+  }
 
-  if (process.env.NEXTAUTH_URL) return process.env.NEXTAUTH_URL;
+  if (process.env.NEXTAUTH_URL) {
+    return process.env.NEXTAUTH_URL;
+  }
 
   return `http://localhost:${process.env.PORT ?? 3000}`;
 }
 
 export const trpc = createTRPCNext<AppRouter>({
-  config({}) {
+  config(_) {
     return {
       transformer: superjson,
       links: [

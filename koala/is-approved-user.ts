@@ -5,7 +5,7 @@ const superUsers = (process.env.AUTHORIZED_EMAILS || "")
   .filter((x: string) => x.includes("@"))
   .map((x: string) => x.trim().toLowerCase());
 
-let approvedUserIDs: Set<string> = new Set();
+const approvedUserIDs: Set<string> = new Set();
 
 export const isApprovedUser = (id: string) => {
   return approvedUserIDs.has(id);

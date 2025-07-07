@@ -5,6 +5,7 @@ import { openai } from "../openai";
 import { prismaClient } from "../prisma-client";
 import { RemixTypePrompts, RemixTypes } from "../remix-types";
 import { procedure } from "../trpc-procedure";
+import { ChatCompletionMessageParam } from "openai/resources";
 
 interface RemixParams {
   type: RemixTypes;
@@ -56,7 +57,7 @@ const buildRemixPrompt = (
 
 const fetchOpenAIResponse = async (
   model: string,
-  messages: any[],
+  messages: ChatCompletionMessageParam[],
 ): Promise<{
   result: { exampleSentence: string; englishTranslation: string }[];
 }> => {

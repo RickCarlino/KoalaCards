@@ -67,7 +67,7 @@ Please generate clusters for the following target words:
 Double check your output when you are done.
 `;
 
-function tpl(x: any, y: any) {
+function tpl(x: string, y: {}) {
   return template(x, y);
 }
 

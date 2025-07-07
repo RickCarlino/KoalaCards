@@ -39,7 +39,7 @@ function levenshtein(a: string, b: string): number {
   }
   const matrix = new Array<number[]>(bn + 1);
   for (let i = 0; i <= bn; ++i) {
-    let row = (matrix[i] = new Array<number>(an + 1));
+    const row = (matrix[i] = new Array<number>(an + 1));
     row[0] = i;
   }
   const firstRow = matrix[0];

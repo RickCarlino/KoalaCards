@@ -9,7 +9,9 @@ export const CardImage: React.FC<CardImageProps> = ({
   imageURL,
   definition,
 }) => {
-  if (!imageURL) return null;
+  if (!imageURL) {
+    return null;
+  }
 
   return (
     <Image

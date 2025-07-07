@@ -47,20 +47,25 @@ export const generateWritingPrompts = procedure
   .output(outputSchema)
   .mutation(async ({ input, ctx }) => {
     const userId = ctx.user?.id;
-    if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
+    if (!userId) {
+      throw new TRPCError({ code: "UNAUTHORIZED" });
+    }
 
     const deck = await prismaClient.deck.findUnique({
       where: { id: input.deckId, userId },
     });
-    if (!deck) throw new TRPCError({ code: "NOT_FOUND" });
+    if (!deck) {
+      throw new TRPCError({ code: "NOT_FOUND" });
+    }
 
     const cards = await prismaClient.card.findMany({
       where: { userId, deckId: input.deckId },
       select: { term: true },
       take: 1000,
     });
-    if (cards.length < MIN_CARDS)
+    if (cards.length < MIN_CARDS) {
       throw new TRPCError({ code: "BAD_REQUEST" });
+    }
 
     const pickSeeds = () =>
       shuffle(cards.map(({ term }) => term)).slice(0, MIN_CARDS);

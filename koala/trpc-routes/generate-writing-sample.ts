@@ -33,7 +33,9 @@ export const generateWritingSample = procedure
   .output(outputSchema)
   .mutation(async ({ input, ctx }) => {
     const userId = ctx.user?.id;
-    if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
+    if (!userId) {
+      throw new TRPCError({ code: "UNAUTHORIZED" });
+    }
 
     const deck = await prismaClient.deck.findUnique({
       where: { id: input.deckId, userId },
@@ -41,7 +43,9 @@ export const generateWritingSample = procedure
         langCode: true,
       },
     });
-    if (!deck) throw new TRPCError({ code: "NOT_FOUND" });
+    if (!deck) {
+      throw new TRPCError({ code: "NOT_FOUND" });
+    }
     const language = getLangName(deck.langCode as LangCode);
     return await chat(
       `Provide a sample response to the question. Respond in ${language}.`,

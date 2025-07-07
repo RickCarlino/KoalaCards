@@ -30,28 +30,30 @@ export async function transcribeB64(
     .filter(Boolean)
     .sort();
   const transcribePromise = new Promise<TranscriptionResult>(
-    async (resolve) => {
+    (resolve, reject) => {
       try {
-        const y = await openai.audio.transcriptions.create({
-          file: createReadStream(fpath) as any,
-          model: "gpt-4o-transcribe",
-          prompt:
-            "Might contains these words or related words: " +
-            unique(words).join(" "),
-          language,
-        });
-        const text = y.text;
-        if (!text) {
-          throw new Error("No text returned from transcription.");
-        }
-        console.log(`=== Transcription: ${text}`);
-        const OPENAI_API_BUG = text.split("\n")[0];
-        return resolve({
-          kind: "OK",
-          text: OPENAI_API_BUG,
-        });
-      } catch (error) {
-        throw error;
+        openai.audio.transcriptions
+          .create({
+            file: createReadStream(fpath),
+            model: "gpt-4o-transcribe",
+            prompt:
+              "Might contains these words or related words: " +
+              unique(words).join(" "),
+            language,
+          })
+          .then((y) => {
+            const text = y.text;
+            if (!text) {
+              throw new Error("No text returned from transcription.");
+            }
+            console.log(`=== Transcription: ${text}`);
+            const OPENAI_API_BUG = text.split("\n")[0];
+            return resolve({
+              kind: "OK",
+              text: OPENAI_API_BUG,
+            });
+          })
+          .catch(reject);
       } finally {
         // Delete the file now that we are done:
         unlink(

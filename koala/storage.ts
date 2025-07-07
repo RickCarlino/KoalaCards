@@ -39,28 +39,25 @@ export async function storeURLGoogleCloud(
   url: string,
   destination: string,
 ): Promise<string> {
-  try {
-    const response = await fetch(url);
-    if (!response.ok)
-      return errorReport(`Failed to fetch ${url}: ${response.statusText}`);
-
-    const blob = bucket.file(destination);
-    blob.cloudStorageURI;
-    const blobStream = blob.createWriteStream();
-
-    response.body.pipe(blobStream);
-
-    return new Promise((resolve, reject) => {
-      blobStream.on("finish", async () => {
-        resolve(await expiringUrl(blob));
-      });
-      blobStream.on("error", (error) => {
-        reject(error);
-      });
-    });
-  } catch (error) {
-    throw error;
+  const response = await fetch(url);
+  if (!response.ok) {
+    return errorReport(`Failed to fetch ${url}: ${response.statusText}`);
   }
+
+  const blob = bucket.file(destination);
+  blob.cloudStorageURI;
+  const blobStream = blob.createWriteStream();
+
+  response.body.pipe(blobStream);
+
+  return new Promise((resolve, reject) => {
+    blobStream.on("finish", async () => {
+      resolve(await expiringUrl(blob));
+    });
+    blobStream.on("error", (error) => {
+      reject(error);
+    });
+  });
 }
 
 /** Creates a hex MD5 checksum with file extension

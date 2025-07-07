@@ -63,7 +63,9 @@ export function nextQueueItem(queue: Queue): QueueItem | undefined {
   // Get first item from the queue with the highest priority:
   for (const type of EVERY_QUEUE_TYPE) {
     const item = queue[type][0];
-    if (item) return item;
+    if (item) {
+      return item;
+    }
   }
   return;
 }
