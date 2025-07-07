@@ -145,8 +145,6 @@ export const QuizCard: React.FC<QuizCardProps> = ({
         feedback={feedback}
         onContinue={handleFailureContinue}
         failureText={config.failureText}
-        termAudio={card.termAudio}
-        autoPlayAudio={true}
       />
     );
   }

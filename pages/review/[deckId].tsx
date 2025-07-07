@@ -1,5 +1,6 @@
 import { getServersideUser } from "@/koala/get-serverside-user";
 import MicrophonePermissions from "@/koala/microphone-permissions";
+import { playAudio } from "@/koala/play-audio";
 import { prismaClient } from "@/koala/prisma-client";
 import { CardReview } from "@/koala/review";
 import { HOTKEYS } from "@/koala/review/hotkeys";
@@ -169,6 +170,27 @@ function InnerReviewPage({
     cardsRemaining,
   } = useReview(deckId, playbackPercentage);
 
+  function playCard() {
+    switch (currentItem?.itemType) {
+      case "remedialIntro":
+      case "listening":
+      case "newWordIntro":
+        return playAudio(card.termAudio);
+      case "speaking":
+      case "newWordOutro":
+      case "remedialOutro":
+        return playAudio(card.definitionAudio);
+      default:
+        console.warn("No audio available for this card type.");
+    }
+  }
+
+  // useEffect, call playCard when the currentItem changes:
+  React.useEffect(() => {
+    if (currentItem) {
+      playCard();
+    }
+  }, [currentItem]);
   if (error) {
     return <MessageState title="Error">{error.message}</MessageState>;
   }
@@ -197,6 +219,7 @@ function InnerReviewPage({
           onProceed={() => {
             completeItem(currentItem.stepUuid);
           }}
+          onPlayAudio={playCard}
           recordings={state.recordings}
           currentStepUuid={currentItem.stepUuid}
           onRecordingComplete={(audio: string) => {

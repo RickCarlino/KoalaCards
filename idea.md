@@ -81,3 +81,27 @@ By incorporating these elements, the product will deliver the narrative depth of
 - AI Dungeon Wiki – _“Do” (action) vs “Say” (speech) input modes in AI-driven text adventures_
 - DaCosta (2025) – _Generative AI in text games for language learning (contextual hints, engagement)_
 - InfinityMUD – _Web client with map, cross-device play, and client recommendations_
+
+**Complete citation list**
+
+1. Mudlet – A cross-platform, open-source MUD client (UI is “entirely modifiable”). ([mudlet.org][1])
+2. InfinityMUD – Web client works on any device, including mobile and tablets. ([infinitymud.com][2])
+3. Mudlet Aardwolf GUI (AardWiki) – Shows graphical HP/mana bars and status area. ([aardwolf.com][3])
+4. The _Do_ Mode – AI Dungeon Guidebook (explains “Do” vs “Say” inputs). ([help.aidungeon.com][4])
+5. “To hyperlink or not” – TextAdventures.co.uk forum thread (hyperlinks reduce typing burden). ([textadventures.co.uk][5])
+6. _Generative AI Meets Adventure_ – Study on AI-enhanced text games for language learning. ([scirp.org][6])
+7. InfinityMUD home page – Built-in map, customizable aliases, mobile friendly. ([infinitymud.com][7])
+8. MAG – Mudlet Aardwolf GUI forum post (chat log, quest info, GUI package). ([forums.mudlet.org][8])
+9. “Say, Do or Story?” – Reddit /r/AIDungeon discussion of input modes. ([reddit.com][9])
+10. Inform 7 forum thread on hyperlink actions (“clicking fills in input line”). ([intfiction.org][10])
+
+[1]: https://www.mudlet.org/?utm_source=chatgpt.com "Mudlet – A cross-platform, open source, and super fast MUD client ..."
+[2]: https://www.infinitymud.com/clients/?utm_source=chatgpt.com "Clients - InfinityMUD.com"
+[3]: https://www.aardwolf.com/wiki/index.php/Clients/MudletAardwolfGUI?utm_source=chatgpt.com "Mudlet Aardwolf GUI — AardWiki"
+[4]: https://help.aidungeon.com/the-do-mode?utm_source=chatgpt.com "The Do Mode - AI Dungeon Guidebook"
+[5]: https://textadventures.co.uk/forum/design/topic/3824/to-hyperlink-or-not?utm_source=chatgpt.com "To hyperlink or not - Text Adventures"
+[6]: https://www.scirp.org/journal/paperinformation?paperid=142450&utm_source=chatgpt.com "Generative AI Meets Adventure: Elevating Text-Based Games for ..."
+[7]: https://www.infinitymud.com/?utm_source=chatgpt.com "Infinity LPMud: Prepare For Adventure"
+[8]: https://forums.mudlet.org/viewtopic.php?t=1471&utm_source=chatgpt.com "MAG - Mudlet Aardwolf GUI"
+[9]: https://www.reddit.com/r/AIDungeon/comments/1cnailz/say_do_or_story/?utm_source=chatgpt.com "Say, Do or Story? : r/AIDungeon - Reddit"
+[10]: https://intfiction.org/t/what-would-you-like-to-do-with-hyperlinks/69878?utm_source=chatgpt.com "What would you like to do with hyperlinks? - Inform 7"

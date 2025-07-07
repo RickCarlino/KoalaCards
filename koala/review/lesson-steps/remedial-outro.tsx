@@ -118,8 +118,6 @@ export const RemedialOutro: CardUI = ({
         userTranscription={gradingResult?.transcription || ""}
         onContinue={onProceed}
         failureText={gradingResult?.feedback || "Not quite right"}
-        termAudio={card.termAudio}
-        autoPlayAudio={true}
       />
     );
   }

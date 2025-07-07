@@ -17,7 +17,6 @@ import {
   IconLetterF,
 } from "@tabler/icons-react";
 import React from "react";
-import { playAudio } from "../play-audio";
 import { CardReviewProps } from "./types";
 import { HOTKEYS } from "./hotkeys";
 
@@ -26,6 +25,7 @@ interface ControlBarProps extends CardReviewProps {
   isRecording: boolean;
   onRecordClick: () => void;
   onArchiveClick: () => void;
+  onPlayAudio: () => void;
   progress?: number;
   cardsRemaining?: number;
 }
@@ -38,17 +38,12 @@ export const ControlBar: React.FC<ControlBarProps> = (props) => {
     isRecording,
     onRecordClick,
     onArchiveClick,
+    onPlayAudio,
     itemType,
   } = props;
 
   const openCardEditor = () =>
     window.open(`/cards/${card.cardId}`, "_blank");
-
-  const handlePlayAudio = () => {
-    if (card.termAudio && itemType !== "speaking") {
-      playAudio(card.termAudio);
-    }
-  };
 
   return (
     <Group justify="center" wrap="wrap" gap="xs">
@@ -135,7 +130,7 @@ export const ControlBar: React.FC<ControlBarProps> = (props) => {
         <ActionIcon
           variant="outline"
           size="lg"
-          onClick={handlePlayAudio}
+          onClick={onPlayAudio}
           color="pink.7"
           disabled={itemType === "speaking"}
         >

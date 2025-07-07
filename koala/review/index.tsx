@@ -1,7 +1,6 @@
 import { Box } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import React from "react";
-import { playAudio } from "../play-audio";
 import { blobToBase64, convertBlobToWav } from "../record-button";
 import { trpc } from "../trpc-config";
 import { useVoiceRecorder } from "../use-recorder";
@@ -32,6 +31,7 @@ interface CardReviewWithRecordingProps extends CardReviewProps {
   currentStepUuid: string;
   onRecordingComplete: (audio: string) => void;
   completeItem: (uuid: string) => void;
+  onPlayAudio: () => void;
   progress?: number;
   cardsRemaining?: number;
 }
@@ -40,13 +40,14 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
   props,
 ) => {
   const {
-    itemType,
-    currentStepUuid,
-    onRecordingComplete,
     card,
-    onSkip,
-    onGiveUp,
     completeItem,
+    currentStepUuid,
+    itemType,
+    onGiveUp,
+    onPlayAudio,
+    onRecordingComplete,
+    onSkip,
   } = props;
 
   const CardComponent = cardUIs[itemType] ?? UnknownCard;
@@ -69,12 +70,6 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
   const openCardEditor = () =>
     window.open(`/cards/${card.cardId}`, "_blank");
 
-  const handlePlayAudio = () => {
-    if (card.termAudio && itemType !== "speaking") {
-      playAudio(card.termAudio);
-    }
-  };
-
   const archiveCardMutation = trpc.archiveCard.useMutation();
 
   const handleArchive = async () => {
@@ -96,7 +91,7 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
   };
 
   useHotkeys([
-    [HOTKEYS.PLAY, handlePlayAudio],
+    [HOTKEYS.PLAY, onPlayAudio],
     [HOTKEYS.EDIT, openCardEditor],
     [HOTKEYS.SKIP, () => onSkip(card.uuid)],
     [HOTKEYS.ARCHIVE, handleArchive],

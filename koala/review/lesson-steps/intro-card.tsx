@@ -6,7 +6,6 @@ import { VisualDiff } from "@/koala/review/lesson-steps/visual-diff";
 import { LangCode } from "@/koala/shared-types";
 import { usePhaseManager } from "../hooks/usePhaseManager";
 import { useRecordingProcessor } from "../hooks/useRecordingProcessor";
-import { useAudioPlayback } from "../hooks/useAudioPlayback";
 import { CardImage } from "../components/CardImage";
 
 type Phase = "ready" | "processing" | "retry" | "success";
@@ -36,11 +35,6 @@ export const IntroCard: React.FC<IntroCardProps> = ({
     () => setUserTranscription(""),
   );
 
-  const { playSuccessSequence } = useAudioPlayback({
-    termAudio: card.termAudio,
-    autoPlay: true,
-  });
-
   const processRecording = async (base64Audio: string) => {
     setPhase("processing");
 
@@ -52,13 +46,11 @@ export const IntroCard: React.FC<IntroCardProps> = ({
         // Success - show success state, play audio, then proceed
         setPhase("success");
         console.log("PlaySuccessSequence - start");
-        await playSuccessSequence(card.definitionAudio);
         console.log("PlaySuccessSequence - end");
         onProceed();
       } else {
         // Failed - show retry state and replay term
         setPhase("retry");
-        await playSuccessSequence(); // Just plays term audio
       }
     } catch (error) {
       console.error("Transcription error:", error);
