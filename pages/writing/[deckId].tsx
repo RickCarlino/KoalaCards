@@ -21,6 +21,7 @@ import {
 import { notifications } from "@mantine/notifications";
 import { IconCheck } from "@tabler/icons-react";
 import { GetServerSideProps } from "next";
+import { useRouter } from "next/router";
 import { alphabetical } from "radash";
 import { useCallback, useMemo, useState } from "react";
 
@@ -73,6 +74,7 @@ export default function WritingPage({
   langCode,
 }: WritingPageProps) {
   const theme = useMantineTheme();
+  const router = useRouter();
 
   // State for tracking the current step in the writing flow
   const [currentStep, setCurrentStep] = useState<Step>("prompt-selection");
@@ -729,6 +731,12 @@ export default function WritingPage({
           )}
           <Button onClick={handleWriteMore} variant="outline">
             Write More
+          </Button>
+          <Button
+            onClick={() => router.push(`/review/${deckId}`)}
+            variant="filled"
+          >
+            Study Cards
           </Button>
         </Group>
 
