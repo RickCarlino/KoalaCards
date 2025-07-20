@@ -1,11 +1,6 @@
 import { createDallEPrompt, createDallEImage } from "./openai";
 import { prismaClient } from "./prisma-client";
-import {
-  bucket,
-  createBlobID,
-  expiringUrl,
-  storeURLGoogleCloud,
-} from "./storage";
+import { storageProvider } from "./storage";
 
 // fetcher will just show images if present.
 type Card = {
@@ -23,7 +18,7 @@ export async function maybeGetCardImageUrl(
     return;
   }
 
-  return await expiringUrl(bucket.file(blobID));
+  return await storageProvider.getExpiringURL(blobID);
 }
 
 const CHEAPNESS = 1; // % of cards that will get an image.
@@ -49,8 +44,12 @@ export async function maybeAddImageToCard(card: Card) {
 
   const prompt = await createDallEPrompt(card.definition, card.term);
   const url = await createDallEImage(prompt);
-  const filePath = createBlobID("card-images", card.term, "jpg");
-  await storeURLGoogleCloud(url, filePath);
+  const filePath = storageProvider.createBlobID(
+    "card-images",
+    card.term,
+    "jpg",
+  );
+  await storageProvider.uploadFromURL(url, filePath);
   await prismaClient.card.update({
     where: { id: card.id },
     data: { imageBlobId: filePath },
