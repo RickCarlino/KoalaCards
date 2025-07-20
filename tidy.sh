@@ -7,5 +7,5 @@ trap 'exit 2' ERR
 npx next lint --fix
 npx eslint koala/ --fix
 npx tsc --noEmit
-prettier pages/ --write
-prettier koala/ --write
+npx prettier pages/ --write
+npx prettier koala/ --write
