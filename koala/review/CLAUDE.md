@@ -175,6 +175,10 @@ Lesson types determine queue population:
 - [ ] Need to show card.term on correct explanation view so that "Yes" explanations make sense.
 - [ ] Try to translate the writing prompt generator to Korean to see if it improves prompt quality.
 - [ ] Change "In the target language" to "Korean"
+- [ ] Play audio term on speakign test failure
+- [ ] handle accidental hotkey accidents [holding down j key craziness]
+- [ ] "How would you say" audio play button is not grayed out
+- [ ] CONTINUE: "h" breaks reviews if pressed while using app.
 
 ### Features
 
