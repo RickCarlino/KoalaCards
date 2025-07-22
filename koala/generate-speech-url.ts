@@ -5,7 +5,7 @@ import textToSpeech, {
 import { createHash } from "crypto";
 import { draw } from "radash";
 import { Gender, LangCode } from "./shared-types";
-import { bucket } from "./storage";
+import { storageProvider } from "./storage";
 
 type AudioLessonParams = {
   text: string;
@@ -353,30 +353,23 @@ export async function generateSpeechURL(
     params.gender,
   );
   const fileName = `lesson-audio/${base64UrlHash}.mp3`;
-  const file = bucket.file(fileName);
-  const [exists] = await file.exists();
+  const [exists] = await storageProvider.fileExists(fileName);
 
   if (exists) {
-    const [signedUrl] = await file.getSignedUrl({
-      action: "read",
-      expires: Date.now() + 1000 * 60 * 60,
-    });
-    return signedUrl;
+    return await storageProvider.getExpiringURL(fileName);
   }
 
   const lang = params.langCode.slice(0, 2).toLocaleLowerCase();
   const voice = randomVoice(lang, params.gender);
   const response = await callTTS(voice, params);
 
-  await file.save(response.audioContent as Buffer, {
-    metadata: { contentType: "audio/mpeg" },
-  });
+  await storageProvider.saveBuffer(
+    fileName,
+    response.audioContent as Buffer,
+    {
+      metadata: { contentType: "audio/mpeg" },
+    },
+  );
 
-  const [signedUrl] = await file.getSignedUrl({
-    version: "v4",
-    action: "read",
-    expires: Date.now() + 1000 * 60 * 60,
-  });
-
-  return signedUrl;
+  return await storageProvider.getExpiringURL(fileName);
 }
