@@ -1,3 +1,4 @@
+import { getLessonsDue } from "@/koala/fetch-lesson";
 import { getServersideUser } from "@/koala/get-serverside-user";
 import MicrophonePermissions from "@/koala/microphone-permissions";
 import { playAudio } from "@/koala/play-audio";
@@ -55,6 +56,10 @@ export const getServerSideProps: GetServerSideProps<
 
   if (!userSettings) {
     return redirect("/settings");
+  }
+
+  if ((await getLessonsDue(deck.id)) < 1) {
+    return redirect("/review");
   }
 
   if (userSettings.writingFirst) {
