@@ -1,12 +1,9 @@
 import { prismaClient } from "@/koala/prisma-client";
-import { map, shuffle, unique } from "radash";
+import { shuffle } from "radash";
 import { getUserSettings } from "./auth-helpers";
-import { autoPromoteCards } from "./autopromote";
-import { errorReport } from "./error-report";
-import { maybeGetCardImageUrl } from "./image";
 import { LessonType } from "./shared-types";
 import { generateLessonAudio } from "./speech";
-import { Card, Quiz } from "@prisma/client";
+import { maybeGetCardImageUrl } from "./image";
 
 type GetLessonInputParams = {
   userId: string;
@@ -14,208 +11,171 @@ type GetLessonInputParams = {
   now: number;
   take: number;
 };
-type CardKeys =
-  | "imageBlobId"
-  | "definition"
-  | "langCode"
-  | "gender"
-  | "term";
-type LocalCard = Pick<Card, CardKeys>;
-type QuizKeys =
-  | "id"
-  | "repetitions"
-  | "lastReview"
-  | "difficulty"
-  | "stability"
-  | "quizType"
-  | "cardId"
-  | "lapses";
-type LocalQuiz = Pick<Quiz, QuizKeys> & { Card: LocalCard };
 
-async function buildQuizPayload(
-  quiz: LocalQuiz,
-  playbackPercentage: number,
-) {
-  const r = quiz.repetitions || 0;
-  return {
-    quizId: quiz.id,
-    cardId: quiz.cardId,
-    definition: quiz.Card.definition,
-    term: quiz.Card.term,
-    repetitions: r,
-    lapses: quiz.lapses,
-    lessonType: quiz.quizType as LessonType,
-    definitionAudio: await generateLessonAudio({
-      card: quiz.Card,
-      lessonType: "speaking",
-      speed: 125,
-    }),
-    termAudio: await generateLessonAudio({
-      card: quiz.Card,
-      lessonType: "listening",
-      speed: r > 1 ? playbackPercentage : 100,
-    }),
-    langCode: quiz.Card.langCode,
-    lastReview: quiz.lastReview || 0,
-    imageURL: await maybeGetCardImageUrl(quiz.Card.imageBlobId),
-    stability: quiz.stability,
-    difficulty: quiz.difficulty,
-  };
+interface LessonPayload {
+  quizId: number;
+  cardId: number;
+  definition: string;
+  term: string;
+  repetitions: number;
+  lapses: number;
+  lessonType: LessonType;
+  definitionAudio: string;
+  termAudio: string;
+  langCode: string;
+  lastReview: number;
+  imageURL?: string;
+  stability: number;
+  difficulty: number;
 }
 
-async function getAudioSpeed(userId: string) {
-  const s = await getUserSettings(userId);
-  return s.playbackSpeed || 1.0;
-}
-
-async function getCardsAllowedPerDay(userId: string) {
-  const s = await getUserSettings(userId);
-  return s.cardsPerDayMax || 24;
-}
-
-async function fetchDueCards(userId: string, deckId: number, now: number) {
-  return prismaClient.quiz.findMany({
-    where: {
-      Card: { userId, deckId, flagged: { not: true } },
-      nextReview: { lt: now },
-      lastReview: { gt: 0 },
-    },
-    include: { Card: true },
-    orderBy: [
-      // "speaking" before "listening"
-      { quizType: "asc" },
-      { nextReview: "asc" },
-    ],
-  });
-}
-
-async function fetchNewCards(userId: string, deckId: number) {
-  const limit = await newCardsAllowed(userId);
-  console.log(`New cards allowed: ${limit}`);
-  if (limit < 1) {
-    return [];
-  }
-  const ids = shuffle(
-    await prismaClient.quiz.findMany({
+export async function getLessons({
+  userId,
+  deckId,
+  now,
+  take,
+}: GetLessonInputParams): Promise<LessonPayload[]> {
+  const { cardsPerDayMax = 0 } = await getUserSettings(userId);
+  const reviewsPerDayMax = cardsPerDayMax * 3;
+  const THRESHOLD_24H = now - 24 * 60 * 60 * 1_000;
+  let newThis24h = await prismaClient.quiz
+    .findMany({
       where: {
-        Card: { userId, deckId, flagged: { not: true } },
-        lastReview: { equals: 0 },
-      },
-      select: { id: true },
-    }),
-  )
-    .slice(0, limit)
-    .map((q) => q.id);
-  return prismaClient.quiz.findMany({
-    where: {
-      id: { in: ids },
-    },
-    include: { Card: true },
-  });
-}
-
-async function fetchRemedial(
-  userId: string,
-  deckId: number,
-): Promise<LocalQuiz[]> {
-  const cards = await prismaClient.card.findMany({
-    where: {
-      deckId,
-      userId: userId,
-      lastFailure: { not: 0 },
-      flagged: { not: true },
-    },
-    orderBy: { lastFailure: "asc" },
-    include: { Quiz: true },
-  });
-  return cards
-    .map((Card): LocalQuiz => {
-      const lastQuiz = Card.Quiz[0];
-      return {
-        ...lastQuiz,
-        quizType: "remedial",
-        Card,
-      };
-    })
-    .slice(0, 3); // Debug temporarily to 1 card
-}
-
-const FAUCET_CAPACITY = 60; // 60 cards due in next 24 hours
-const maybeSlowLearningRate = async (userId: string): Promise<boolean> => {
-  // Return 0 if > 100 cards due in next 24 hours:
-  const dueCards = await prismaClient.quiz.count({
-    where: {
-      Card: {
-        userId,
-        flagged: { not: true },
-      },
-      nextReview: { lt: Date.now() + 24 * 60 * 60 * 1000 },
-      lastReview: { gt: 0 },
-    },
-  });
-  if (dueCards > FAUCET_CAPACITY) {
-    console.log(
-      `User ${userId} has ${dueCards} due cards. Slowing down learning rate.`,
-    );
-    return true;
-  }
-  return false;
-};
-
-async function newCardsAllowed(userId: string) {
-  const yes = await maybeSlowLearningRate(userId);
-  if (yes) {
-    return 0;
-  }
-
-  const dailyTarget = await getCardsAllowedPerDay(userId);
-  const maxWeekly = dailyTarget * 7;
-  const dailyMax = Math.min(dailyTarget * 2, 45);
-  const thisWeek = (
-    await prismaClient.quiz.findMany({
-      select: { id: true },
-      where: {
-        Card: { userId },
-        firstReview: {
-          gte: Date.now() - 7 * 24 * 60 * 60 * 1000,
-        },
+        Card: { userId, deckId, flagged: false },
+        firstReview: { gte: THRESHOLD_24H },
       },
       distinct: ["cardId"],
     })
-  ).length;
-  const result =
-    thisWeek >= maxWeekly ? 0 : Math.min(maxWeekly - thisWeek, dailyMax);
-
-  return result;
-}
-
-export async function getLessons(p: GetLessonInputParams) {
-  const { userId, deckId, now, take } = p;
-  await autoPromoteCards(userId);
-  if (take > 45) {
-    return errorReport("Too many cards requested.");
-  }
-  const speedPercent = Math.round((await getAudioSpeed(userId)) * 100);
-  const unsorted = [
-    ...(await fetchNewCards(userId, deckId)),
-    ...(await fetchRemedial(userId, deckId)),
-    ...(await fetchDueCards(userId, deckId, now)),
-  ];
-  const allCards = unique(unsorted, (q) => q.cardId);
-  const repsByCard = await prismaClient.quiz.groupBy({
-    by: ["cardId"],
+    .then((qs) => qs.length);
+  let reviewsThis24h = await prismaClient.quiz.count({
     where: {
-      cardId: { in: allCards.map((q) => q.cardId) },
+      Card: { userId, deckId, flagged: false },
+      lastReview: { gte: THRESHOLD_24H },
     },
-    _sum: { repetitions: true },
   });
-
-  const repsMap: Record<number, number> = Object.fromEntries(
-    repsByCard.map((item) => [item.cardId, item._sum.repetitions || 0]),
+  const [newQs, ongoingQs, remedialQs, upcomingQs] = await Promise.all([
+    prismaClient.quiz
+      .findMany({
+        where: {
+          Card: { userId, deckId, flagged: false },
+          lastReview: 0,
+        },
+        include: { Card: true },
+      })
+      .then(shuffle),
+    prismaClient.quiz
+      .findMany({
+        where: {
+          Card: { userId, deckId, flagged: false },
+          lastReview: { gt: 0 },
+          nextReview: { lte: now },
+        },
+        include: { Card: true },
+      })
+      .then(shuffle),
+    prismaClient.card
+      .findMany({
+        where: {
+          userId,
+          deckId,
+          lastFailure: { gt: 0 },
+          flagged: false,
+        },
+        include: { Quiz: true },
+      })
+      .then((cards) =>
+        shuffle(
+          cards
+            .map((c) => {
+              const q = c.Quiz.sort(
+                (a, b) => b.lastReview - a.lastReview,
+              )[0];
+              return { ...q, quizType: "remedial" as LessonType, Card: c };
+            })
+            .filter(Boolean),
+        ),
+      ),
+    prismaClient.quiz
+      .findMany({
+        where: {
+          Card: { userId, deckId, flagged: false },
+          repetitions: { gte: 2 },
+          nextReview: { gt: now, lte: now + 7 * 24 * 60 * 60 * 1_000 },
+        },
+        include: { Card: true },
+      })
+      .then(shuffle),
+  ]);
+  const hand: typeof newQs = [];
+  const queues = [newQs, ongoingQs, remedialQs];
+  let idx = 0;
+  while (hand.length < take && queues.some((q) => q.length > 0)) {
+    const q = queues[idx % 3];
+    idx++;
+    if (!q.length) {
+      continue;
+    }
+    const peek = q[0];
+    const isNew = peek.lastReview === 0;
+    if (isNew && newThis24h >= cardsPerDayMax) {
+      continue;
+    }
+    if (reviewsThis24h >= reviewsPerDayMax) {
+      break;
+    }
+    const val = q.shift();
+    val && hand.push(val);
+    if (isNew) {
+      newThis24h++;
+    }
+    reviewsThis24h++;
+  }
+  while (hand.length < take && upcomingQs.length) {
+    if (reviewsThis24h >= reviewsPerDayMax) {
+      break;
+    }
+    const val2 = upcomingQs.shift();
+    val2 && hand.push(val2);
+    reviewsThis24h++;
+  }
+  const seen = new Set<number>();
+  const deduped = shuffle(hand).filter((q) => {
+    if (seen.has(q.cardId)) {
+      return false;
+    }
+    seen.add(q.cardId);
+    return true;
+  });
+  const speed = (await getUserSettings(userId)).playbackSpeed || 1;
+  const speedPercent = Math.round(speed * 100);
+  const payloads = await Promise.all(
+    deduped.map(async (quiz) => {
+      const r = quiz.repetitions || 0;
+      return {
+        quizId: quiz.id,
+        cardId: quiz.cardId,
+        definition: quiz.Card.definition,
+        term: quiz.Card.term,
+        repetitions: r,
+        lapses: quiz.lapses,
+        lessonType: quiz.quizType as LessonType,
+        definitionAudio: await generateLessonAudio({
+          card: quiz.Card,
+          lessonType: "speaking",
+          speed: 125,
+        }),
+        termAudio: await generateLessonAudio({
+          card: quiz.Card,
+          lessonType: "listening",
+          speed: r > 1 ? speedPercent : 100,
+        }),
+        langCode: quiz.Card.langCode,
+        lastReview: quiz.lastReview || 0,
+        imageURL: await maybeGetCardImageUrl(quiz.Card.imageBlobId),
+        stability: quiz.stability,
+        difficulty: quiz.difficulty,
+      };
+    }),
   );
-
-  return map(shuffle(allCards).slice(0, take), async (quiz) => {
-    const quizType = !repsMap[quiz.cardId] ? "new" : quiz.quizType;
-    return await buildQuizPayload({ ...quiz, quizType }, speedPercent);
-  });
+  return payloads;
 }
