@@ -1,5 +1,5 @@
 import { prismaClient } from "@/koala/prisma-client";
-import { shuffle, unique } from "radash";
+import { map, shuffle, unique } from "radash";
 import { getUserSettings } from "./auth-helpers";
 import { autoPromoteCards } from "./autopromote";
 import { errorReport } from "./error-report";
@@ -214,10 +214,8 @@ export async function getLessons(p: GetLessonInputParams) {
     repsByCard.map((item) => [item.cardId, item._sum.repetitions || 0]),
   );
 
-  return shuffle(allCards)
-    .slice(0, take)
-    .map((quiz) => {
-      const quizType = !repsMap[quiz.cardId] ? "new" : quiz.quizType;
-      return buildQuizPayload({ ...quiz, quizType }, speedPercent);
-    });
+  return map(shuffle(allCards).slice(0, take), async (quiz) => {
+    const quizType = !repsMap[quiz.cardId] ? "new" : quiz.quizType;
+    return await buildQuizPayload({ ...quiz, quizType }, speedPercent);
+  });
 }
