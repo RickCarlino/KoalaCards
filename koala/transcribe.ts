@@ -1,8 +1,8 @@
-import { createReadStream } from "fs";
+import { readFile } from "fs/promises";
 import { writeFile, unlink } from "fs/promises";
 import path from "path";
-import { uid, unique } from "radash";
-import { openai } from "./openai";
+import { uid } from "radash";
+import { transcribeAudio } from "./ai";
 import { LangCode } from "./shared-types";
 
 type TranscriptionResult =
@@ -12,7 +12,7 @@ type TranscriptionResult =
 export async function transcribeB64(
   dataURI: string,
   _userID: string | number,
-  prompt: string,
+  _prompt: string,
   language: LangCode,
 ): Promise<TranscriptionResult> {
   const buffer = Buffer.from(
@@ -22,19 +22,10 @@ export async function transcribeB64(
   const fpath = path.join("/tmp", `${uid(8)}.wav`);
   await writeFile(fpath, buffer);
 
-  const promptWords = unique(
-    prompt
-      .split(/\s+|[.,!?;:()]/)
-      .filter(Boolean)
-      .sort(),
-  ).join(" ");
-
   try {
-    const file = createReadStream(fpath);
-    const { text = "" } = await openai.audio.transcriptions.create({
-      file,
+    const audioBuffer = await readFile(fpath);
+    const text = await transcribeAudio(audioBuffer, {
       model: "gpt-4o-transcribe",
-      prompt: `Might contains these words or related words: ${promptWords}`,
       language,
     });
     return { kind: "OK", text: text.split("\n")[0] };

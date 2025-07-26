@@ -1,10 +1,9 @@
-import { openai } from "@/koala/openai";
-import { zodResponseFormat } from "openai/helpers/zod";
+import { generateAIText, generateStructuredOutput } from "@/koala/ai";
 import { z } from "zod";
 import { clean } from "./util";
 import { alphabetical, cluster, template, unique } from "radash";
-import { ChatCompletionMessageParam } from "openai/resources";
 import { supportedLanguages } from "@/koala/shared-types";
+import type { CoreMessage } from "ai";
 
 const TRANSLATION = z.array(
   z.object({
@@ -72,7 +71,7 @@ function tpl(x: string, y: {}) {
 }
 
 async function run(language: string, words: string[]) {
-  const part1: ChatCompletionMessageParam[] = [
+  const part1: CoreMessage[] = [
     {
       role: "system",
       content: tpl(SYSTEM_PROMPT, { LANGUAGE: language }),
@@ -83,12 +82,11 @@ async function run(language: string, words: string[]) {
     },
   ];
 
-  const response1 = await openai.beta.chat.completions.parse({
-    messages: part1,
-    model: "chatgpt-4o-latest",
-  });
-
-  const content = response1.choices[0]?.message?.content ?? "";
+  const content =
+    (await generateAIText({
+      model: "openai:smart",
+      messages: part1,
+    })) ?? "";
   console.log(content);
   const KOREAN_EDIT = `
   You are a Korean language content editor.
@@ -102,7 +100,8 @@ async function run(language: string, words: string[]) {
 
   Double check your work against these rules when you are done.
   `;
-  const response2 = await openai.beta.chat.completions.parse({
+  const parsedResponse = await generateStructuredOutput({
+    model: "openai:smart",
     messages: [
       ...part1,
       {
@@ -117,15 +116,12 @@ async function run(language: string, words: string[]) {
             : "Double check your output when you are done.",
       },
     ],
-    model: "gpt-4.1",
     temperature: 0.1,
-    response_format: zodResponseFormat(ClusterSchema, "translations"),
+    schema: ClusterSchema,
   });
 
-  const parsedResponse = response2.choices[0]?.message?.parsed;
-
   if (!parsedResponse) {
-    throw new Error("Invalid response format from OpenAI.");
+    throw new Error("Invalid response format from AI model.");
   }
 
   return parsedResponse.clusters;
