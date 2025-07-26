@@ -165,7 +165,7 @@ Lesson types determine queue population:
 
 ## Pending Tasks
 
-### UI Improvements
+### Improvements
 
 - [ ] Incorrect speaking answers are not being graded?
 - [ ] Sometimes it plays card.term at the start of a speaking and remedial exam!?!?
