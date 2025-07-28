@@ -51,7 +51,7 @@ const ONE_DAY_MS = 86_400_000;
 const MIN_REVIEWS_TO_STUDY_AHEAD = 2;
 const NEW_CARD_DEFAULT_TARGET = 7;
 const UPCOMING_WINDOW_MS = ONE_DAY_MS * 7;
-const REVIEWS_PER_DAY_MULTIPLIER = 5;
+const REVIEWS_PER_DAY_MULTIPLIER = 6;
 const DECK_HAND_HARD_CAP = 45;
 const ROUND_ROBIN_ORDER: Bucket[] = [NEW_CARD, ORDINARY, REMEDIAL];
 const ENGLISH_SPEED = 125;
@@ -266,6 +266,19 @@ async function buildHand(
       reviewLeft -= 1;
     }
   }
+
+  // Get count of all quizzes due where userId = ? and archived != true:
+  const count = await prismaClient.quiz.count({
+    where: {
+      Card: { userId, deckId, flagged: { not: true } },
+      nextReview: { lte: now },
+      lastReview: { gt: 0 },
+    },
+  });
+
+  console.log(
+    `=== TOTAL QUIZZES DUE: Raw: ${count} / Filtered: ${hand.length} ===`,
+  );
 
   return hand;
 }
