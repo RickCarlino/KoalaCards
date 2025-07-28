@@ -53,7 +53,7 @@ const NEW_CARD_DEFAULT_TARGET = 7;
 const UPCOMING_WINDOW_MS = ONE_DAY_MS * 7;
 const REVIEWS_PER_DAY_MULTIPLIER = 6;
 const DECK_HAND_HARD_CAP = 45;
-const ROUND_ROBIN_ORDER: Bucket[] = [NEW_CARD, ORDINARY, REMEDIAL];
+const ROUND_ROBIN_ORDER: Bucket[] = [REMEDIAL, NEW_CARD, ORDINARY];
 const ENGLISH_SPEED = 125;
 
 function pickOnePerCard<T extends { cardId: number }>(rows: T[]): T[] {
@@ -224,8 +224,7 @@ async function buildHand(
 
   while (hand.length < take && reviewLeft > 0) {
     let progressed = false;
-    const buckets = shuffle(ROUND_ROBIN_ORDER);
-    for (const b of buckets) {
+    for (const b of ROUND_ROBIN_ORDER) {
       const idx = bucketIndexes[b];
       const q = queues[b][idx];
       if (!q) {
