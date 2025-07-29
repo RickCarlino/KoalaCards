@@ -182,6 +182,7 @@ Lesson types determine queue population:
 
 ### Features
 
+- [ ] Really need to add a chat bot with Q/A and card generation ability.
 - [ ] KoalaMUD - text based quests. a user, a dungeon master LLM and NPC LLM. User goes on quests.
 - [ ] Need to re-visit the Cloze/word Occlusion idea
 - [ ] Add loading tips and tricks display

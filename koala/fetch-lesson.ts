@@ -1,11 +1,11 @@
 import { prismaClient } from "@/koala/prisma-client";
-import { shuffle } from "radash";
+import type { Card, Prisma, Quiz } from "@prisma/client";
+import { group, shuffle } from "radash";
 import { getUserSettings } from "./auth-helpers";
 import { autoPromoteCards } from "./autopromote";
 import { maybeGetCardImageUrl } from "./image";
-import { generateLessonAudio } from "./speech";
 import { LessonType } from "./shared-types";
-import type { Card, Prisma, Quiz } from "@prisma/client";
+import { generateLessonAudio } from "./speech";
 
 type Bucket =
   | typeof NEW_CARD
@@ -51,26 +51,47 @@ const ONE_DAY_MS = 86_400_000;
 const MIN_REVIEWS_TO_STUDY_AHEAD = 2;
 const NEW_CARD_DEFAULT_TARGET = 7;
 const UPCOMING_WINDOW_MS = ONE_DAY_MS * 7;
-const REVIEWS_PER_DAY_MULTIPLIER = 5;
+const REVIEWS_PER_DAY_MULTIPLIER = 6;
 const DECK_HAND_HARD_CAP = 45;
-const ROUND_ROBIN_ORDER: Bucket[] = [NEW_CARD, ORDINARY, REMEDIAL];
+const ROUND_ROBIN_ORDER: Bucket[] = [REMEDIAL, NEW_CARD, ORDINARY];
 const ENGLISH_SPEED = 125;
 
+/* helper ─ pick exactly one quiz per cardId */
+function pickOnePerCard<T extends { cardId: number }>(rows: T[]): T[] {
+  return Object.values(group(rows, (r) => r.cardId)).map(
+    (bucket) => shuffle(bucket as T[])[0],
+  );
+}
+
+/**
+ * Rolling‑24 h quotas.
+ * – newRemaining     → how many brand‑new cards the user may still learn
+ * – reviewRemaining  → how many total quizzes remain before hitting today’s cap
+ */
 async function getDailyLimits(userId: string, now: number) {
   const { cardsPerDayMax = NEW_CARD_DEFAULT_TARGET } =
     await getUserSettings(userId);
+
   const reviewsPerDayMax = cardsPerDayMax * REVIEWS_PER_DAY_MULTIPLIER;
   const since = now - ONE_DAY_MS;
 
+  /* 1️⃣  “New cards learned in the last 24 h” = cards whose **earliest**
+         firstReview timestamp is within that window. */
   const newLearned = (
     await prismaClient.quiz.groupBy({
       by: ["cardId"],
-      where: { Card: { userId }, firstReview: { gte: since } },
+      where: { Card: { userId, flagged: { not: true } } },
+      _min: { firstReview: true },
+      having: { firstReview: { _min: { gte: since } } }, // earliest ≥ since
     })
   ).length;
 
+  /* 2️⃣  Total quizzes reviewed (any modality) in the last 24 h */
   const reviewsDone = await prismaClient.quiz.count({
-    where: { Card: { userId }, lastReview: { gte: since } },
+    where: {
+      Card: { userId, flagged: { not: true } },
+      lastReview: { gte: since },
+    },
   });
 
   return {
@@ -79,61 +100,100 @@ async function getDailyLimits(userId: string, now: number) {
   };
 }
 
-/** Pull a shuffled, deduped queue for a given bucket. */
+/** Pull a shuffled, de‑duped queue for a given bucket. */
 async function fetchBucket(
   bucket: Bucket,
   userId: string,
   deckId: number,
   now: number,
 ): Promise<LocalQuiz[]> {
-  const base = {
-    Card: { userId, deckId, flagged: { not: true } },
+  /* ───────────── remedial bucket has its own query ───────────── */
+  if (bucket === REMEDIAL) {
+    const cards = await prismaClient.card.findMany({
+      where: {
+        deckId,
+        userId,
+        lastFailure: { gt: 0 },
+        flagged: { not: true },
+      },
+      orderBy: { lastFailure: "asc" },
+      include: { Quiz: true },
+      take: DECK_HAND_HARD_CAP,
+    });
+
+    return pickOnePerCard(
+      cards.map(
+        (Card): LocalQuiz => ({
+          ...Card.Quiz[0],
+          Card,
+          quizType: "remedial",
+        }),
+      ),
+    );
+  }
+
+  /* base filter reused by all other buckets */
+  const baseCard: Prisma.CardWhereInput = {
+    userId,
+    deckId,
+    flagged: { not: true },
   };
 
-  let where: Prisma.QuizWhereInput = {};
+  let where: Prisma.QuizWhereInput;
+
   switch (bucket) {
+    /* ───────────── NEW (brand‑new cards only) ───────────── */
     case NEW_CARD:
-      where = { ...base, lastReview: 0 };
+      where = {
+        lastReview: 0,
+        Card: {
+          ...baseCard,
+          Quiz: { none: { lastReview: { gt: 0 } } }, // no reviewed sibling
+        },
+      };
       break;
+
+    /* ───────────── ORDINARY (due now + orphan rows) ───────────── */
     case ORDINARY:
-      where = { ...base, lastReview: { gt: 0 }, nextReview: { lte: now } };
-      break;
-    case REMEDIAL:
-      return (
-        await prismaClient.card.findMany({
-          where: {
-            userId,
-            deckId,
-            flagged: { not: true },
-            lastFailure: { gt: 0 },
+      where = {
+        OR: [
+          /* regular “due now” */
+          {
+            lastReview: { gt: 0 },
+            nextReview: { lte: now },
+            Card: { ...baseCard, lastFailure: 0 },
           },
-          include: { Quiz: true },
-        })
-      )
-        .map(
-          (Card): LocalQuiz => ({
-            ...Card.Quiz[0],
-            Card,
-            quizType: "remedial",
-          }),
-        )
-        .sort(() => Math.random() - 0.5);
+          /* orphan: never reviewed but sibling seen */
+          {
+            lastReview: 0,
+            Card: {
+              ...baseCard,
+              lastFailure: 0,
+              Quiz: { some: { lastReview: { gt: 0 } } },
+            },
+          },
+        ],
+      };
+      break;
+
+    /* ───────────── UPCOMING (≤ 7 days, repetitions ≥ 2) ───────────── */
     case UPCOMING:
       where = {
-        ...base,
         repetitions: { gte: MIN_REVIEWS_TO_STUDY_AHEAD },
         nextReview: { gt: now, lte: now + UPCOMING_WINDOW_MS },
+        Card: { ...baseCard, lastFailure: 0 },
       };
       break;
   }
 
-  return shuffle(
-    await prismaClient.quiz.findMany({
-      where,
-      include: { Card: true },
-      take: DECK_HAND_HARD_CAP,
-    }),
-  );
+  /* fetch, dedupe, shuffle */
+  const rows = await prismaClient.quiz.findMany({
+    where,
+    include: { Card: true },
+    take: DECK_HAND_HARD_CAP,
+  });
+
+  return shuffle(pickOnePerCard(rows));
 }
 
 /** Decide lessonType override for special buckets. */
@@ -215,8 +275,7 @@ async function buildHand(
 
   while (hand.length < take && reviewLeft > 0) {
     let progressed = false;
-    const buckets = shuffle(ROUND_ROBIN_ORDER);
-    for (const b of buckets) {
+    for (const b of ROUND_ROBIN_ORDER) {
       const idx = bucketIndexes[b];
       const q = queues[b][idx];
       if (!q) {
@@ -266,6 +325,19 @@ async function buildHand(
       reviewLeft -= 1;
     }
   }
+
+  // Get count of all quizzes due where userId = ? and archived != true:
+  const count = await prismaClient.quiz.count({
+    where: {
+      Card: { userId, deckId, flagged: { not: true } },
+      nextReview: { lte: now },
+      lastReview: { gt: 0 },
+    },
+  });
+
+  console.log(
+    `=== TOTAL QUIZZES DUE: Raw: ${count} / Filtered: ${hand.length} ===`,
+  );
 
   return hand;
 }
