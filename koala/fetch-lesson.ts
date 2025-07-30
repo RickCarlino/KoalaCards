@@ -81,9 +81,12 @@ async function getDailyLimits(userId: string, now: number) {
   const newLearned = (
     await prismaClient.quiz.groupBy({
       by: ["cardId"],
-      where: { Card: { userId, flagged: { not: true } } },
+      where: {
+        firstReview: { gt: 0 }, // ← skip zero rows
+        Card: { userId, flagged: { not: true } },
+      },
       _min: { firstReview: true },
-      having: { firstReview: { _min: { gte: since } } }, // earliest ≥ since
+      having: { firstReview: { _min: { gte: since } } },
     })
   ).length;
 
@@ -146,10 +149,9 @@ async function fetchBucket(
     /* ───────────── NEW (brand‑new cards only) ───────────── */
     case NEW_CARD:
       where = {
-        lastReview: 0,
         Card: {
           ...baseCard,
-          Quiz: { none: { lastReview: { gt: 0 } } }, // no reviewed sibling
+          Quiz: { every: { lastReview: 0 } },
         },
       };
       break;
