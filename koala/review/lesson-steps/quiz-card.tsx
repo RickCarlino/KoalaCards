@@ -1,6 +1,6 @@
 import { Stack, Text } from "@mantine/core";
 import { CardReviewProps } from "../types";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useVoiceGrading } from "../use-voice-grading";
 import { useQuizGrading } from "../use-quiz-grading";
 import { LangCode } from "@/koala/shared-types";
@@ -10,6 +10,7 @@ import { CardImage } from "../components/CardImage";
 import { usePhaseManager } from "../hooks/usePhaseManager";
 import { useRecordingProcessor } from "../hooks/useRecordingProcessor";
 import { useGradeHandler } from "../hooks/useGradeHandler";
+import { playAudio } from "@/koala/play-audio";
 
 type Phase = "ready" | "processing" | "success" | "failure";
 type QuizType = "speaking" | "newWordOutro" | "remedialOutro";
@@ -101,6 +102,17 @@ export const QuizCard: React.FC<QuizCardProps> = ({
     gradeWithGood,
     gradeWithEasy,
   });
+  // Play audio when phase == "success" or "failure"
+  const play = async () => {
+    await playAudio(term);
+    await playAudio(definition);
+  };
+
+  useEffect(() => {
+    if (phase === "success" || phase === "failure") {
+      play();
+    }
+  }, [phase]);
 
   const processRecording = async (base64Audio: string) => {
     setPhase("processing");
