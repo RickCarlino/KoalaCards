@@ -55,6 +55,7 @@ const REVIEWS_PER_DAY_MULTIPLIER = 6;
 const DECK_HAND_HARD_CAP = 45;
 const ROUND_ROBIN_ORDER: Bucket[] = [REMEDIAL, NEW_CARD, ORDINARY];
 const ENGLISH_SPEED = 125;
+const MIN_HAND_SIZE = 8; // Say 0 cards are due if we can't build a hand of at least this size.
 
 /* helper ─ pick exactly one quiz per cardId */
 function pickOnePerCard<T extends { cardId: number }>(rows: T[]): T[] {
@@ -118,7 +119,7 @@ async function fetchBucket(
       },
       orderBy: { lastFailure: "asc" },
       include: { Quiz: true },
-      take: DECK_HAND_HARD_CAP,
+      take: DECK_HAND_HARD_CAP * 2,
     });
 
     return pickOnePerCard(
@@ -254,17 +255,14 @@ async function buildHand(
     return [];
   }
 
+  const tag = (tag: Bucket) => (q: LocalQuiz) => tagLessonType(q, tag);
+  const fetch = (tag: Bucket) => fetchBucket(tag, userId, deckId, now);
+  const shuffleQuizzes = (quiz: LocalQuiz[]) => shuffle(quiz);
   const queues: Record<Bucket, LocalQuiz[]> = {
-    N: (await fetchBucket(NEW_CARD, userId, deckId, now)).map((q) =>
-      tagLessonType(q, NEW_CARD),
-    ),
-    O: (await fetchBucket(ORDINARY, userId, deckId, now)).map((q) =>
-      tagLessonType(q, ORDINARY),
-    ),
-    R: await fetchBucket(REMEDIAL, userId, deckId, now),
-    U: (await fetchBucket(UPCOMING, userId, deckId, now)).map((q) =>
-      tagLessonType(q, UPCOMING),
-    ),
+    N: shuffleQuizzes((await fetch(NEW_CARD)).map(tag(NEW_CARD))),
+    O: shuffleQuizzes((await fetch(ORDINARY)).map(tag(ORDINARY))),
+    R: shuffleQuizzes(await fetch(REMEDIAL)),
+    U: shuffleQuizzes((await fetch(UPCOMING)).map(tag(UPCOMING))),
   };
 
   const hand: LocalQuiz[] = [];
@@ -307,6 +305,10 @@ async function buildHand(
     if (!progressed) {
       break;
     }
+  }
+
+  if (hand.length < MIN_HAND_SIZE) {
+    return [];
   }
 
   if (hand.length < take && reviewLeft > 0) {
