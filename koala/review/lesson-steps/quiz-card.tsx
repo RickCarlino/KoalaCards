@@ -104,8 +104,10 @@ export const QuizCard: React.FC<QuizCardProps> = ({
   });
   // Play audio when phase == "success" or "failure"
   const play = async () => {
-    await playAudio(card.definitionAudio);
     await playAudio(card.termAudio);
+    if (["speaking"].includes(quizType)) {
+      await playAudio(card.definitionAudio);
+    }
   };
 
   useEffect(() => {
