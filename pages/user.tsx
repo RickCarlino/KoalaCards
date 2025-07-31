@@ -46,6 +46,9 @@ export async function getServerSideProps(
   const userId = userSettings.userId;
 
   async function getUserCardStatistics(userId: string) {
+    const cardFilter = {
+      Card: { userId, flagged: { not: true } },
+    } as const;
     const baseCard = { Card: { userId, flagged: { not: true } } } as const;
     const today = new Date();
     const oneWeekAgo = new Date(today.getTime() - ONE_WEEK);
@@ -82,7 +85,6 @@ export async function getServerSideProps(
         },
       })
     ).length;
-    /* how many in the last 7 days */
     const newCardsLastWeek = (
       await prismaClient.quiz.groupBy({
         by: ["cardId"],
@@ -93,22 +95,26 @@ export async function getServerSideProps(
         },
       })
     ).length;
-    const uniqueCardsLast24Hours = await prismaClient.quiz.count({
-      where: {
-        ...BASE_QUERY,
-        lastReview: {
-          gte: yesterday.getTime(),
+    const uniqueCardsLast24Hours = (
+      await prismaClient.quiz.groupBy({
+        by: ["cardId"],
+        where: {
+          ...cardFilter,
+          lastReview: { gte: yesterday.getTime() },
         },
-      },
-    });
-    const uniqueCardsLastWeek = await prismaClient.quiz.count({
-      where: {
-        ...BASE_QUERY,
-        lastReview: {
-          gte: oneWeekAgo.getTime(),
+        _min: { lastReview: true },
+      })
+    ).length;
+    const uniqueCardsLastWeek = (
+      await prismaClient.quiz.groupBy({
+        by: ["cardId"],
+        where: {
+          ...cardFilter,
+          lastReview: { gte: oneWeekAgo.getTime() },
         },
-      },
-    });
+        _min: { lastReview: true },
+      })
+    ).length;
 
     const recentLearnedQuizzes = await prismaClient.quiz.findMany({
       where: {
