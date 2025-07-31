@@ -1,0 +1,152 @@
+import {
+  generateText,
+  generateObject,
+  experimental_generateImage as generateImage,
+  experimental_transcribe as transcribe,
+} from "ai";
+import {
+  registry,
+  getDefaultTextModel,
+  getDefaultImageModel,
+  getDefaultTranscriptionModel,
+} from "./provider-registry";
+import { errorReport } from "./error-report";
+import { z } from "zod";
+import type { CoreMessage } from "ai";
+
+// Type for provider:model identifier string format
+type LanguageModelIdentifier = `openai:${string}` | `anthropic:${string}`;
+type ImageModelIdentifier = `openai:${string}`;
+
+export async function generateAIText(options: {
+  model?: string;
+  messages: CoreMessage[];
+  temperature?: number;
+  maxTokens?: number;
+}) {
+  const modelId = options.model?.includes(":") 
+    ? options.model 
+    : options.model ? `openai:${options.model}` : undefined;
+    
+  const { text } = await generateText({
+    model: modelId ? registry.languageModel(modelId as LanguageModelIdentifier) : getDefaultTextModel(),
+    messages: options.messages,
+    temperature: options.temperature,
+    maxTokens: options.maxTokens,
+  });
+
+  return text;
+}
+
+export async function generateStructuredOutput<T>(options: {
+  model?: string;
+  messages: CoreMessage[];
+  schema: z.ZodSchema<T>;
+  temperature?: number;
+  maxTokens?: number;
+}) {
+  const modelId = options.model?.includes(":") 
+    ? options.model 
+    : options.model ? `openai:${options.model}` : undefined;
+    
+  const { object } = await generateObject({
+    model: modelId ? registry.languageModel(modelId as LanguageModelIdentifier) : getDefaultTextModel(),
+    messages: options.messages,
+    schema: options.schema,
+    temperature: options.temperature,
+    maxTokens: options.maxTokens,
+  });
+
+  return object;
+}
+
+export async function generateAIImage(
+  prompt: string,
+  size?: "1024x1024" | "1792x1024" | "1024x1792",
+  model?: string,
+) {
+  const modelId = model?.includes(":") 
+    ? model 
+    : model ? `openai:${model}` : undefined;
+  
+  const { image } = await generateImage({
+    model: modelId ? registry.imageModel(modelId as ImageModelIdentifier) : getDefaultImageModel(),
+    prompt,
+    size: size || "1024x1024",
+  });
+
+  return (
+    (image as { url?: string; data?: string; base64?: string }).url ||
+    (image as { url?: string; data?: string; base64?: string }).data ||
+    (image as { url?: string; data?: string; base64?: string }).base64 ||
+    (typeof image === "string" ? image : "")
+  );
+}
+
+export async function transcribeAudio(
+  audioFile: Buffer | ArrayBuffer,
+  options?: {
+    model?: string;
+    language?: string;
+  },
+) {
+  const { text } = await transcribe({
+    model: getDefaultTranscriptionModel(options?.model),
+    audio: audioFile,
+  });
+
+  return text;
+}
+
+export const createDallEPrompt = async (
+  term: string,
+  definition: string,
+  model?: string,
+) => {
+  const shortCard = term.split(" ").length < 2;
+  const prompt = shortCard ? SINGLE_WORD_PROMPT : SENTENCE_PROMPT;
+
+  const text = await generateAIText({
+    model: model || "openai:smart",
+    messages: [
+      {
+        role: "user",
+        content: [`TERM: ${term}`, `DEFINITION: ${definition}`].join("\n"),
+      },
+      {
+        role: "system",
+        content: prompt,
+      },
+    ],
+    temperature: 1.0,
+    maxTokens: 128,
+  });
+
+  if (!text) {
+    return errorReport("No comic response from AI model.");
+  }
+  return text;
+};
+
+export const createDallEImage = async (
+  prompt: string,
+  size?: "1024x1024" | "1792x1024" | "1024x1792",
+  model?: string,
+) => {
+  return await generateAIImage(prompt, size, model);
+};
+
+// Prompts
+const SENTENCE_PROMPT = `You are a language learning flash card app.
+You are creating a comic to help users remember the flashcard above.
+It is a fun, single-frame comic that illustrates the sentence.
+Create a DALL-e prompt to create this comic for the card above.
+Do not add speech bubbles or text. It will give away the answer!
+All characters must be Koalas.`;
+
+const SINGLE_WORD_PROMPT = `You are a language learning flash card app.
+Create a DALL-e prompt to generate an image of the foreign language word above.
+Make it as realistic and accurate to the words meaning as possible.
+The illustration must convey the word's meaning to the student.
+humans must be shown as anthropomorphized animals.
+Do not add text. It will give away the answer!`;

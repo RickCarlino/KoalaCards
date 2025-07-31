@@ -1,11 +1,10 @@
-import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
 import { getUserSettings } from "../auth-helpers";
-import { openai } from "../openai";
+import { generateStructuredOutput } from "../ai";
 import { prismaClient } from "../prisma-client";
 import { RemixTypePrompts, RemixTypes } from "../remix-types";
 import { procedure } from "../trpc-procedure";
-import { ChatCompletionMessageParam } from "openai/resources";
+import type { CoreMessage } from "ai";
 
 interface RemixParams {
   type: RemixTypes;
@@ -25,17 +24,14 @@ const LANG_SPECIFIC_PROMPT: Record<string, string> = {
 
 const MAX_REMIXES = 7;
 
-const REMIX_SCHEMA = zodResponseFormat(
-  z.object({
-    result: z.array(
-      z.object({
-        exampleSentence: z.string(),
-        englishTranslation: z.string(),
-      }),
-    ),
-  }),
-  "remix_resp",
-);
+const REMIX_SCHEMA = z.object({
+  result: z.array(
+    z.object({
+      exampleSentence: z.string(),
+      englishTranslation: z.string(),
+    }),
+  ),
+});
 
 const buildRemixPrompt = (
   type: RemixTypes,
@@ -55,20 +51,21 @@ const buildRemixPrompt = (
   return out;
 };
 
-const fetchOpenAIResponse = async (
+const fetchAIResponse = async (
   model: string,
-  messages: ChatCompletionMessageParam[],
+  messages: CoreMessage[],
 ): Promise<{
   result: { exampleSentence: string; englishTranslation: string }[];
 }> => {
-  const response = await openai.beta.chat.completions.parse({
+  const response = await generateStructuredOutput({
     model,
     messages,
-    reasoning_effort: "low",
-    response_format: REMIX_SCHEMA,
+    schema: REMIX_SCHEMA,
   });
 
-  return response.choices[0]?.message?.parsed || { result: [] };
+  return response as {
+    result: { exampleSentence: string; englishTranslation: string }[];
+  };
 };
 
 const processRemixes = (parsedData: {
@@ -88,7 +85,7 @@ const generateRemixes = async (input: RemixParams): Promise<Remix[]> => {
   const { type, langCode, term } = input;
   const prompt = buildRemixPrompt(type, langCode, term);
 
-  const parsedData = await fetchOpenAIResponse("o4-mini", [
+  const parsedData = await fetchAIResponse("openai:fast", [
     { role: "user", content: prompt },
   ]);
 

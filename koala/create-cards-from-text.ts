@@ -1,5 +1,6 @@
-import { gptCall } from "./openai";
+import { generateStructuredOutput } from "./ai";
 import { Gender } from "./shared-types";
+import { z } from "zod";
 
 interface Card {
   definition: string;
@@ -42,24 +43,32 @@ const SYSTEM_PROMPT = `
 
   The target language for this upload is: `;
 
+// Schema for card structure
+const CardSchema = z.object({
+  cards: z.array(
+    z.object({
+      term: z.string(),
+      definition: z.string(),
+      gender: z.enum(["M", "F", "N"]),
+    }),
+  ),
+});
+
 /** Ingests a body of text containing card data and asynchronously returns
  * structured term/definition pairs. */
 export async function createCardsFromText(
   langCode: string,
   input: string,
 ): Promise<Card[]> {
-  const x = await gptCall({
+  const response = await generateStructuredOutput({
+    model: "openai:smart",
     messages: [
       { role: "system", content: SYSTEM_PROMPT + langCode },
       { role: "user", content: input.slice(0, 3000) },
     ],
-    model: "gpt-4.1",
-    n: 1,
+    schema: CardSchema,
     temperature: 0.75,
-    response_format: { type: "json_object" },
   });
-  const cards: Card[] = JSON.parse(
-    x.choices[0].message.content || "null",
-  )?.cards;
-  return cards;
+
+  return response.cards;
 }

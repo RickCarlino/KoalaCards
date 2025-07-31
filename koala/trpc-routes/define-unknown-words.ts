@@ -1,6 +1,5 @@
 import { z } from "zod";
-import { openai } from "../openai";
-import { zodResponseFormat } from "openai/helpers/zod";
+import { generateStructuredOutput } from "../ai";
 import { LANG_CODES } from "../shared-types"; // Import LangCode type
 import { procedure } from "../trpc-procedure";
 import { getLangName } from "../get-lang-name";
@@ -74,31 +73,15 @@ For each "Word to Define" listed above:
 `;
 
     try {
-      const completion = await openai.beta.chat.completions.parse({
-        model: "gpt-4.1", // Or a model suitable for definitions
+      const response = await generateStructuredOutput({
+        model: "openai:smart",
         messages: [{ role: "user", content: prompt }],
-        n: 1,
-        response_format: zodResponseFormat(
-          DefinitionSchema,
-          "word_definitions",
-        ),
+        schema: DefinitionSchema,
         temperature: 0.3, // Lower temperature for more factual definitions
       });
 
-      const parsedResponse = completion.choices[0]?.message?.parsed;
-
-      if (!parsedResponse) {
-        console.error(
-          "Invalid or missing parsed response from OpenAI for definitions:",
-          completion.choices[0]?.message,
-        );
-        throw new Error(
-          "Failed to get structured definitions from OpenAI",
-        );
-      }
-
       // Return the structured definitions
-      return parsedResponse;
+      return response;
     } catch (error) {
       console.error("Error generating definitions:", error);
       throw new Error("Failed to generate definitions for unknown words");

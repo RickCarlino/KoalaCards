@@ -1,7 +1,7 @@
 import { shuffle } from "radash";
 import { z } from "zod";
 import { getLangName } from "../get-lang-name";
-import { openai } from "../openai";
+import { generateAIText } from "../ai";
 import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc-procedure";
 import { TRPCError } from "@trpc/server";
@@ -32,8 +32,8 @@ const promptTemplates = [
 const MIN_CARDS = 7;
 
 const chat = async (system: string, user?: string) =>
-  openai.beta.chat.completions.parse({
-    model: "gpt-4o",
+  generateAIText({
+    model: "openai:smart",
     messages: user
       ? [
           { role: "system", content: system },
@@ -108,7 +108,7 @@ async function draftPrompts(
 
   console.log(systemPrompt);
   const response = await chat(systemPrompt);
-  return response.choices[0].message.content ?? "";
+  return response ?? "";
 }
 
 async function refinePrompts(raw: string) {
@@ -123,8 +123,7 @@ async function refinePrompts(raw: string) {
     `Below is a rough list of writing prompts. Please rewrite **each** prompt so it is clear, natural, and engaging **for the target language learner**.\n` +
     `Return **only** the final prompts - one per line - with **no numbering, bullets, or commentary**.`;
 
-  const refined =
-    (await chat(systemPrompt, firstPass)).choices[0].message.content ?? "";
+  const refined = (await chat(systemPrompt, firstPass)) ?? "";
   return refined;
 }
 
