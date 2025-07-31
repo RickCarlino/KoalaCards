@@ -1,6 +1,6 @@
 import { Stack, Text } from "@mantine/core";
 import { CardUI } from "../types";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useVoiceTranscription } from "../use-voice-transcription";
 import { useQuizGrading } from "../use-quiz-grading";
 import { VisualDiff } from "@/koala/review/lesson-steps/visual-diff";
@@ -10,6 +10,7 @@ import { CardImage } from "../components/CardImage";
 import { usePhaseManager } from "../hooks/usePhaseManager";
 import { useRecordingProcessor } from "../hooks/useRecordingProcessor";
 import { useGradeHandler } from "../hooks/useGradeHandler";
+import { playAudio } from "@/koala/play-audio";
 
 type Phase = "ready" | "processing" | "retry" | "success";
 
@@ -77,6 +78,16 @@ export const Listening: CardUI = ({
     currentStepUuid,
     onAudioReceived: processRecording,
   });
+  const play = async () => {
+    // await playAudio(card.termAudio);
+    await playAudio(card.definitionAudio);
+  };
+
+  useEffect(() => {
+    if (phase === "success") {
+      play();
+    }
+  }, [phase]);
 
   const renderContent = () => {
     switch (phase) {
