@@ -4,7 +4,6 @@ FROM node:21-alpine AS builder
 ENV NODE_ENV production
 # Be sure to keep these up to date from time to time. RC.
 ARG AUTHORIZED_EMAILS
-ARG DATA_DIR
 ARG EMAIL_FROM
 ARG EMAIL_SERVER_HOST
 ARG EMAIL_SERVER_PASSWORD
