@@ -66,7 +66,6 @@ Unlike traditional SRS apps that often rely on self-grading, KoalaCards provides
   - Grammar correction and explanation.
   - Auto-define of unknown words.
   - Generation of writing prompts for writing practice exercises.
-  - "Remix" existing cards to create variations.
 - **User Experience:**
   - User settings customization.
   - Review history and progress tracking.

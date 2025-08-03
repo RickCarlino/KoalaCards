@@ -1,6 +1,5 @@
 import { router } from "../trpc-procedure";
 import { bulkCreateCards } from "./bulk-create-cards";
-import { createRemixCards } from "./create-remix-cards";
 import { deleteCard } from "./delete-card";
 import { deletePausedCards } from "./delete-paused-card";
 import { editCard } from "./edit-card";
@@ -12,7 +11,6 @@ import { getUserSettings } from "./get-user-settings";
 import { gradeQuiz } from "./grade-quiz";
 import { gradeSpeakingQuiz } from "./grade-speaking-quiz";
 import { parseCards } from "./parse-cards";
-import { remix } from "./remix";
 import { transcribeAudio } from "./transcribe-audio";
 import { turbine } from "./turbine";
 import { deleteDeck } from "./delete-deck";
@@ -30,7 +28,6 @@ import { generateWritingSample } from "./generate-writing-sample";
 export const appRouter = router({
   bulkCreateCards,
   copyDeck,
-  createRemixCards,
   defineUnknownWords,
   deleteCard,
   deleteDeck,
@@ -49,7 +46,6 @@ export const appRouter = router({
   mergeDecks,
   parseCards,
   archiveCard,
-  remix,
   reportDeck,
   transcribeAudio,
   translate,

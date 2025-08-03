@@ -3,13 +3,11 @@ import { generateAIText } from "../ai";
 import { procedure } from "../trpc-procedure";
 import { TRPCError } from "@trpc/server";
 
-// Input can be a single string or an array of strings
 const inputSchema = z.object({
   text: z.union([z.string(), z.array(z.string())]),
-  targetLangCode: z.literal("en"), // Currently only supporting English translation
+  targetLangCode: z.literal("en"),
 });
 
-// Output will match the input type (string or array of strings)
 const outputSchema = z.union([z.string(), z.array(z.string())]);
 
 export const translate = procedure
@@ -26,13 +24,12 @@ export const translate = procedure
 
     const { text } = input;
 
-    // Handle both single string and array input
     const textsToTranslate = Array.isArray(text) ? text : [text];
     if (
       textsToTranslate.length === 0 ||
       textsToTranslate.every((t) => !t.trim())
     ) {
-      return Array.isArray(text) ? [] : ""; // Return empty based on input type
+      return Array.isArray(text) ? [] : "";
     }
 
     const systemPrompt = `Translate the following text accurately to English. Preserve the original meaning and tone. If multiple texts are provided (separated by '---'), translate each one individually and return them separated by '---'. Do not add any extra commentary or explanation.
@@ -45,7 +42,7 @@ ${textsToTranslate.join("\n---\n")}
     try {
       const rawTranslation =
         (await generateAIText({
-          model: "openai:fast", // Use a cost-effective model for translation
+          model: "openai:default",
           messages: [{ role: "system", content: systemPrompt }],
         })) || "";
       const translatedTexts = rawTranslation
@@ -53,21 +50,17 @@ ${textsToTranslate.join("\n---\n")}
         .map((t) => t.trim())
         .filter((t) => t);
 
-      // Return result matching the input format
       if (Array.isArray(text)) {
-        // Ensure the output array length matches the input array length if possible
         if (translatedTexts.length === textsToTranslate.length) {
           return translatedTexts;
         } else {
-          // Fallback if splitting doesn't match perfectly (e.g., AI added extra '---')
-          // Return the raw joined string in this case, or handle more gracefully
           console.warn(
             "Translation output split mismatch, returning joined string.",
           );
-          return [rawTranslation]; // Or potentially throw an error
+          return [rawTranslation];
         }
       } else {
-        return translatedTexts[0] || ""; // Return the first element or empty string
+        return translatedTexts[0] || "";
       }
     } catch (error) {
       console.error("Error during translation:", error);

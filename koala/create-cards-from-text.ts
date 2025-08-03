@@ -61,7 +61,7 @@ export async function createCardsFromText(
   input: string,
 ): Promise<Card[]> {
   const response = await generateStructuredOutput({
-    model: "openai:smart",
+    model: "openai:grammar",
     messages: [
       { role: "system", content: SYSTEM_PROMPT + langCode },
       { role: "user", content: input.slice(0, 3000) },

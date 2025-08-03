@@ -74,7 +74,7 @@ For each "Word to Define" listed above:
 
     try {
       const response = await generateStructuredOutput({
-        model: "openai:smart",
+        model: "openai:grammar",
         messages: [{ role: "user", content: prompt }],
         schema: DefinitionSchema,
         temperature: 0.3, // Lower temperature for more factual definitions

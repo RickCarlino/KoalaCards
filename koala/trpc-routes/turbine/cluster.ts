@@ -3,7 +3,7 @@ import { z } from "zod";
 import { clean } from "./util";
 import { alphabetical, cluster, template, unique } from "radash";
 import { supportedLanguages } from "@/koala/shared-types";
-import type { CoreMessage } from "ai";
+import type { CoreMessage } from "@/koala/ai";
 
 const TRANSLATION = z.array(
   z.object({
@@ -82,12 +82,13 @@ async function run(language: string, words: string[]) {
     },
   ];
 
-  const content =
-    (await generateAIText({
-      model: "openai:smart",
-      messages: part1,
-    })) ?? "";
+  const content = await generateAIText({
+    model: "openai:default",
+    messages: part1,
+  });
+
   console.log(content);
+
   const KOREAN_EDIT = `
   You are a Korean language content editor.
   You edit flashcards for a language learning app.
@@ -101,7 +102,7 @@ async function run(language: string, words: string[]) {
   Double check your work against these rules when you are done.
   `;
   const parsedResponse = await generateStructuredOutput({
-    model: "openai:smart",
+    model: "openai:default",
     messages: [
       ...part1,
       {

@@ -65,7 +65,7 @@ function pickOnePerCard<T extends { cardId: number }>(rows: T[]): T[] {
 }
 
 /**
- * Rolling‑24 h quotas.
+ * Rolling‑24h quotas.
  * – newRemaining     → how many brand‑new cards the user may still learn
  * – reviewRemaining  → how many total quizzes remain before hitting today’s cap
  */
@@ -76,7 +76,7 @@ async function getDailyLimits(userId: string, now: number) {
   const reviewsPerDayMax = cardsPerDayMax * REVIEWS_PER_DAY_MULTIPLIER;
   const since = now - ONE_DAY_MS;
 
-  /* 1️⃣  “New cards learned in the last 24 h” = cards whose **earliest**
+  /* 1️⃣  “New cards learned in the last 24h” = cards whose **earliest**
          firstReview timestamp is within that window. */
   const newLearned = (
     await prismaClient.quiz.groupBy({
@@ -90,7 +90,7 @@ async function getDailyLimits(userId: string, now: number) {
     })
   ).length;
 
-  /* 2️⃣  Total quizzes reviewed (any modality) in the last 24 h */
+  /* 2️⃣  Total quizzes reviewed (any modality) in the last 24h */
   const reviewsDone = await prismaClient.quiz.count({
     where: {
       Card: { userId, flagged: { not: true } },
@@ -156,7 +156,7 @@ async function fetchBucket(
       };
       break;
 
-    /* ───────────── ORDINARY (due now + orphan rows) ───────────── */
+    /* ───────────── ORDINARY (due now + orphan rows) ───────────── */
     case ORDINARY:
       where = {
         OR: [
@@ -179,7 +179,7 @@ async function fetchBucket(
       };
       break;
 
-    /* ───────────── UPCOMING (≤ 7 days, repetitions ≥ 2) ───────────── */
+    /* ───────────── UPCOMING (≤7days, repetitions≥2) ───────────── */
     case UPCOMING:
       where = {
         repetitions: { gte: MIN_REVIEWS_TO_STUDY_AHEAD },
