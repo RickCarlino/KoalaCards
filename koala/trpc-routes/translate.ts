@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { openai } from "../openai";
+import { generateAIText } from "../ai";
 import { procedure } from "../trpc-procedure";
 import { TRPCError } from "@trpc/server";
 
@@ -43,13 +43,11 @@ ${textsToTranslate.join("\n---\n")}
 ---`;
 
     try {
-      const aiResponse = await openai.beta.chat.completions.parse({
-        model: "o4-mini", // Use a cost-effective model for translation
-        reasoning_effort: "low",
-        messages: [{ role: "system", content: systemPrompt }],
-      });
-
-      const rawTranslation = aiResponse.choices[0].message.content || "";
+      const rawTranslation =
+        (await generateAIText({
+          model: "openai:fast", // Use a cost-effective model for translation
+          messages: [{ role: "system", content: systemPrompt }],
+        })) || "";
       const translatedTexts = rawTranslation
         .split("---")
         .map((t) => t.trim())

@@ -1,4 +1,4 @@
-import { createDallEPrompt, createDallEImage } from "./openai";
+import { createDallEPrompt, createDallEImage } from "./ai";
 import { prismaClient } from "./prisma-client";
 import { storageProvider } from "./storage";
 
