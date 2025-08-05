@@ -88,11 +88,15 @@ export function useReview(deckId: number, playbackPercentage = 0.125) {
   const [state, dispatch] = useReducer(reducer, initialState());
   const [isFetching, setIsFetching] = useState(true);
 
+  // Use URL "take" param if available, otherwise default to 5.
+  const urlParams = new URLSearchParams(window.location.search);
+  const takeParam = urlParams.get("take");
+  const take = takeParam ? Math.min(Math.max(parseInt(takeParam, 10), 1), 25) : 5;
   const fetchQuizzes = (currentDeckId: number) => {
     setIsFetching(true);
     mutation
       .mutateAsync(
-        { take: 7, deckId: currentDeckId },
+        { take, deckId: currentDeckId },
         {
           onSuccess: (fetchedData) => {
             const withUUID = fetchedData.quizzes.map((q) => ({

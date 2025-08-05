@@ -30,10 +30,8 @@ export async function transcribeB64(
         .filter(Boolean)
         .sort(),
     ),
-  )
-    .slice(0, 2)
-    .join(", ");
-  const prompt = `It's ${languageName} audio containing words like ${randomHint}`;
+  )[0] || "common words";
+  const prompt = `It's ${languageName} audio containing ${randomHint}`;
   console.log(`=== Transcribing with prompt: ${prompt}`);
   try {
     const audioBuffer = await readFile(fpath);
