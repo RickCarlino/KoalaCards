@@ -55,7 +55,7 @@ const REVIEWS_PER_DAY_MULTIPLIER = 6;
 const DECK_HAND_HARD_CAP = 45;
 const ROUND_ROBIN_ORDER: Bucket[] = [REMEDIAL, NEW_CARD, ORDINARY];
 const ENGLISH_SPEED = 125;
-const MIN_HAND_SIZE = 8; // Say 0 cards are due if we can't build a hand of at least this size.
+const MIN_HAND_SIZE = 4; // Say 0 cards are due if we can't build a hand of at least this size.
 
 /* helper ─ pick exactly one quiz per cardId */
 function pickOnePerCard<T extends { cardId: number }>(rows: T[]): T[] {

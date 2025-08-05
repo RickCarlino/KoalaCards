@@ -1,18 +1,18 @@
+import type { CoreMessage } from "@/koala/ai";
 import {
-  generateText,
-  generateObject,
   experimental_generateImage as generateImage,
+  generateObject,
+  generateText,
   experimental_transcribe as transcribe,
 } from "ai";
-import {
-  registry,
-  getDefaultTextModel,
-  getDefaultImageModel,
-  getDefaultTranscriptionModel,
-} from "./provider-registry";
-import { errorReport } from "./error-report";
 import { z } from "zod";
-import type { CoreMessage } from "@/koala/ai";
+import { errorReport } from "./error-report";
+import {
+  getDefaultImageModel,
+  getDefaultTextModel,
+  getDefaultTranscriptionModel,
+  registry,
+} from "./provider-registry";
 
 type TextModel = "fast" | "grammar" | "reasoning" | "default";
 type ImageModel = "default" | "fast";
@@ -96,12 +96,14 @@ export async function transcribeAudio(
   audioFile: Buffer | ArrayBuffer,
   options?: {
     model?: string;
-    language?: string;
+    prompt?: string;
   },
 ) {
+  const prompt = options?.prompt || "";
   const { text } = await transcribe({
     model: getDefaultTranscriptionModel(options?.model),
     audio: audioFile,
+    providerOptions: { openai: { prompt } },
   });
 
   return text;

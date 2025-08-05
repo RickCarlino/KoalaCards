@@ -1,9 +1,9 @@
 import { readFile } from "fs/promises";
 import { writeFile, unlink } from "fs/promises";
 import path from "path";
-import { uid } from "radash";
+import { shuffle, uid, unique } from "radash";
 import { transcribeAudio } from "./ai";
-import { LangCode } from "./shared-types";
+import { LangCode, supportedLanguages } from "./shared-types";
 
 type TranscriptionResult =
   | { kind: "OK"; text: string }
@@ -12,7 +12,7 @@ type TranscriptionResult =
 export async function transcribeB64(
   dataURI: string,
   _userID: string | number,
-  _prompt: string,
+  targetSentence: string,
   language: LangCode,
 ): Promise<TranscriptionResult> {
   const buffer = Buffer.from(
@@ -22,11 +22,25 @@ export async function transcribeB64(
   const fpath = path.join("/tmp", `${uid(8)}.wav`);
   await writeFile(fpath, buffer);
 
+  const languageName = supportedLanguages[language] || language;
+  const randomHint = shuffle(
+    unique(
+      targetSentence
+        .split(/\s+|[.,!?;:()]/)
+        .filter(Boolean)
+        .sort(),
+    ),
+  )
+    .slice(0, 2)
+    .join(", ");
+  const prompt = `It's ${languageName} audio containing words like ${randomHint}`;
+  console.log(`=== Transcribing with prompt: ${prompt}`);
   try {
     const audioBuffer = await readFile(fpath);
     const text = await transcribeAudio(audioBuffer, {
+      // Language is off
       model: "gpt-4o-transcribe",
-      language,
+      prompt,
     });
     return { kind: "OK", text: text.split("\n")[0] };
   } catch (e) {
