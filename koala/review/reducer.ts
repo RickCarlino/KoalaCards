@@ -92,7 +92,7 @@ export function useReview(deckId: number, playbackPercentage = 0.125) {
     setIsFetching(true);
     mutation
       .mutateAsync(
-        { take: 16, deckId: currentDeckId },
+        { take: 6, deckId: currentDeckId },
         {
           onSuccess: (fetchedData) => {
             const withUUID = fetchedData.quizzes.map((q) => ({
