@@ -91,7 +91,9 @@ export function useReview(deckId: number, playbackPercentage = 0.125) {
   // Use URL "take" param if available, otherwise default to 5.
   const urlParams = new URLSearchParams(window.location.search);
   const takeParam = urlParams.get("take");
-  const take = takeParam ? Math.min(Math.max(parseInt(takeParam, 10), 1), 25) : 5;
+  const take = takeParam
+    ? Math.min(Math.max(parseInt(takeParam, 10), 1), 25)
+    : 5;
   const fetchQuizzes = (currentDeckId: number) => {
     setIsFetching(true);
     mutation

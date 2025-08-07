@@ -23,14 +23,15 @@ export async function transcribeB64(
   await writeFile(fpath, buffer);
 
   const languageName = supportedLanguages[language] || language;
-  const randomHint = shuffle(
-    unique(
-      targetSentence
-        .split(/\s+|[.,!?;:()]/)
-        .filter(Boolean)
-        .sort(),
-    ),
-  )[0] || "common words";
+  const randomHint =
+    shuffle(
+      unique(
+        targetSentence
+          .split(/\s+|[.,!?;:()]/)
+          .filter(Boolean)
+          .sort(),
+      ),
+    )[0] || "common words";
   const prompt = `It's ${languageName} audio containing ${randomHint}`;
   console.log(`=== Transcribing with prompt: ${prompt}`);
   try {
