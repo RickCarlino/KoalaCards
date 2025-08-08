@@ -77,7 +77,7 @@ async function runAndStore(
   props: GrammarCorrectionProps,
 ): Promise<Explanation> {
   const result = await run(props);
-  storeTrainingData(props, result);
+  await storeTrainingData(props, result);
   return result;
 }
 

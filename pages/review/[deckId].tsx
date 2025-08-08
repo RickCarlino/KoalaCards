@@ -18,6 +18,7 @@ import { useHotkeys } from "@mantine/hooks";
 import { GetServerSideProps } from "next";
 import Link from "next/link";
 import React from "react";
+import ReviewAssistantPane from "@/koala/components/ReviewAssistantPane";
 
 type ReviewDeckPageProps = {
   deckId: number;
@@ -236,6 +237,15 @@ function InnerReviewPage({
           cardsRemaining={cardsRemaining}
         />
       </Box>
+      <ReviewAssistantPane
+        deckId={deckId}
+        current={{
+          term: card.term,
+          definition: card.definition,
+          langCode: card.langCode,
+          lessonType: card.lessonType,
+        }}
+      />
     </Container>
   );
 }
