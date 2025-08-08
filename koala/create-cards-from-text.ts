@@ -67,7 +67,6 @@ export async function createCardsFromText(
       { role: "user", content: input.slice(0, 3000) },
     ],
     schema: CardSchema,
-    temperature: 0.75,
   });
 
   return response.cards;

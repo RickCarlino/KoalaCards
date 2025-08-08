@@ -122,7 +122,6 @@ async function run(
             : "Double check your output when you are done.",
       },
     ],
-    temperature: 0.1,
     schema: ClusterSchema,
   });
 

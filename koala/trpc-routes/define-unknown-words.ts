@@ -77,7 +77,6 @@ For each "Word to Define" listed above:
         model: "openai:reasoning",
         messages: [{ role: "user", content: prompt }],
         schema: DefinitionSchema,
-        temperature: 0.3, // Lower temperature for more factual definitions
       });
 
       // Return the structured definitions
