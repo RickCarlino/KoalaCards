@@ -63,7 +63,7 @@ async function run(props: GrammarCorrectionProps): Promise<Explanation> {
     },
   ];
   const gradeResponse = await generateStructuredOutput({
-    model: "openai:grammar",
+    model: "openai:reasoning",
     messages,
     temperature: 0.1,
     maxTokens: 250,

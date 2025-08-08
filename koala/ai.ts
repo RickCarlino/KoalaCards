@@ -30,15 +30,15 @@ export async function generateAIText(options: {
   const modelId = options.model?.includes(":")
     ? options.model
     : options.model
-      ? `openai:${options.model}`
-      : undefined;
+    ? `openai:${options.model}`
+    : undefined;
 
   const { text } = await generateText({
     model: modelId
       ? registry.languageModel(modelId as LanguageModelIdentifier)
       : getDefaultTextModel(),
     messages: options.messages,
-    temperature: options.temperature,
+    temperature: 1, // options.temperature, // NOT GPT-5 COMPATIBLE TODO: Conditional temperature
     maxTokens: options.maxTokens,
   });
 
@@ -61,7 +61,7 @@ export async function generateStructuredOutput<T>(options: {
       : getDefaultTextModel(),
     messages: options.messages,
     schema: options.schema,
-    temperature: options.temperature,
+    temperature: 1, // options.temperature, // NOT GPT-5 COMPATIBLE TODO: Conditional temperature
     maxTokens: options.maxTokens,
   });
 
