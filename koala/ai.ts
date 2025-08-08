@@ -30,8 +30,8 @@ export async function generateAIText(options: {
   const modelId = options.model?.includes(":")
     ? options.model
     : options.model
-    ? `openai:${options.model}`
-    : undefined;
+      ? `openai:${options.model}`
+      : undefined;
 
   const { text } = await generateText({
     model: modelId
@@ -39,30 +39,39 @@ export async function generateAIText(options: {
       : getDefaultTextModel(),
     messages: options.messages,
     temperature: 1, // options.temperature, // NOT GPT-5 COMPATIBLE TODO: Conditional temperature
-    maxTokens: options.maxTokens,
+    // AI SDK v5 renamed `maxTokens` to `maxOutputTokens`.
+    maxOutputTokens: options.maxTokens,
   });
 
   return text;
 }
 
-export async function generateStructuredOutput<T>(options: {
+export function generateStructuredOutput<S extends z.ZodTypeAny>(options: {
   model?: string;
   messages: CoreMessage[];
-  schema: z.ZodSchema<T>;
+  schema: S;
+  temperature?: number;
+  maxTokens?: number;
+}): Promise<z.infer<S>>;
+export async function generateStructuredOutput(options: {
+  model?: string;
+  messages: CoreMessage[];
+  schema: z.ZodTypeAny;
   temperature?: number;
   maxTokens?: number;
 }) {
   const other = options.model ? `openai:${options.model}` : undefined;
   const modelId = options.model?.includes(":") ? options.model : other;
 
-  const { object } = await generateObject({
+  const { object } = await (generateObject as any)({
     model: modelId
       ? registry.languageModel(modelId as LanguageModelIdentifier)
       : getDefaultTextModel(),
     messages: options.messages,
     schema: options.schema,
     temperature: 1, // options.temperature, // NOT GPT-5 COMPATIBLE TODO: Conditional temperature
-    maxTokens: options.maxTokens,
+    // AI SDK v5 renamed `maxTokens` to `maxOutputTokens`.
+    maxOutputTokens: options.maxTokens,
   });
 
   return object;

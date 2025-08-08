@@ -70,7 +70,12 @@ function tpl(x: string, y: {}) {
   return template(x, y);
 }
 
-async function run(language: string, words: string[]) {
+type Translation = z.infer<typeof TRANSLATION>[number];
+
+async function run(
+  language: string,
+  words: string[],
+): Promise<Translation[]> {
   const part1: CoreMessage[] = [
     {
       role: "system",
@@ -128,14 +133,17 @@ async function run(language: string, words: string[]) {
   return parsedResponse.clusters;
 }
 
-export async function clusters(words: string[], language: string) {
+export async function clusters(
+  words: string[],
+  language: string,
+): Promise<Translation[]> {
   if (words.length < 1) {
     return [];
   }
 
-  const results = await Promise.all(
+  const results: Translation[][] = await Promise.all(
     cluster(words.slice(0, 120), 10).map((chunk) => run(language, chunk)),
   );
-  const c = alphabetical(results.flat(), (x) => x.term);
-  return unique(c, (x) => x.term);
+  const c = alphabetical(results.flat(), (x: Translation) => x.term);
+  return unique(c, (x: Translation) => x.term);
 }

@@ -196,7 +196,8 @@ export function buildKoalaTheme(fontFamily: string) {
           root: {
             color: theme.colors.pink[6],
             textDecoration: "none",
-            transition: "color 120ms ease, text-decoration-color 120ms ease",
+            transition:
+              "color 120ms ease, text-decoration-color 120ms ease",
             "&:hover": {
               textDecoration: "underline",
             },
