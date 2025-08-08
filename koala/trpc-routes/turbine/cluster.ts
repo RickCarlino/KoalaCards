@@ -1,10 +1,9 @@
-import { openai } from "@/koala/openai";
-import { zodResponseFormat } from "openai/helpers/zod";
+import { generateAIText, generateStructuredOutput } from "@/koala/ai";
 import { z } from "zod";
 import { clean } from "./util";
 import { alphabetical, cluster, template, unique } from "radash";
-import { ChatCompletionMessageParam } from "openai/resources";
 import { supportedLanguages } from "@/koala/shared-types";
+import type { CoreMessage } from "@/koala/ai";
 
 const TRANSLATION = z.array(
   z.object({
@@ -71,8 +70,13 @@ function tpl(x: string, y: {}) {
   return template(x, y);
 }
 
-async function run(language: string, words: string[]) {
-  const part1: ChatCompletionMessageParam[] = [
+type Translation = z.infer<typeof TRANSLATION>[number];
+
+async function run(
+  language: string,
+  words: string[],
+): Promise<Translation[]> {
+  const part1: CoreMessage[] = [
     {
       role: "system",
       content: tpl(SYSTEM_PROMPT, { LANGUAGE: language }),
@@ -83,13 +87,13 @@ async function run(language: string, words: string[]) {
     },
   ];
 
-  const response1 = await openai.beta.chat.completions.parse({
+  const content = await generateAIText({
+    model: "openai:default",
     messages: part1,
-    model: "chatgpt-4o-latest",
   });
 
-  const content = response1.choices[0]?.message?.content ?? "";
   console.log(content);
+
   const KOREAN_EDIT = `
   You are a Korean language content editor.
   You edit flashcards for a language learning app.
@@ -102,7 +106,8 @@ async function run(language: string, words: string[]) {
 
   Double check your work against these rules when you are done.
   `;
-  const response2 = await openai.beta.chat.completions.parse({
+  const parsedResponse = await generateStructuredOutput({
+    model: "openai:default",
     messages: [
       ...part1,
       {
@@ -117,28 +122,28 @@ async function run(language: string, words: string[]) {
             : "Double check your output when you are done.",
       },
     ],
-    model: "gpt-4.1",
     temperature: 0.1,
-    response_format: zodResponseFormat(ClusterSchema, "translations"),
+    schema: ClusterSchema,
   });
 
-  const parsedResponse = response2.choices[0]?.message?.parsed;
-
   if (!parsedResponse) {
-    throw new Error("Invalid response format from OpenAI.");
+    throw new Error("Invalid response format from AI model.");
   }
 
   return parsedResponse.clusters;
 }
 
-export async function clusters(words: string[], language: string) {
+export async function clusters(
+  words: string[],
+  language: string,
+): Promise<Translation[]> {
   if (words.length < 1) {
     return [];
   }
 
-  const results = await Promise.all(
+  const results: Translation[][] = await Promise.all(
     cluster(words.slice(0, 120), 10).map((chunk) => run(language, chunk)),
   );
-  const c = alphabetical(results.flat(), (x) => x.term);
-  return unique(c, (x) => x.term);
+  const c = alphabetical(results.flat(), (x: Translation) => x.term);
+  return unique(c, (x: Translation) => x.term);
 }

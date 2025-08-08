@@ -1,9 +1,9 @@
-import { createReadStream } from "fs";
+import { readFile } from "fs/promises";
 import { writeFile, unlink } from "fs/promises";
 import path from "path";
-import { uid, unique } from "radash";
-import { openai } from "./openai";
-import { LangCode } from "./shared-types";
+import { shuffle, uid, unique } from "radash";
+import { transcribeAudio } from "./ai";
+import { LangCode, supportedLanguages } from "./shared-types";
 
 type TranscriptionResult =
   | { kind: "OK"; text: string }
@@ -12,7 +12,7 @@ type TranscriptionResult =
 export async function transcribeB64(
   dataURI: string,
   _userID: string | number,
-  prompt: string,
+  targetSentence: string,
   language: LangCode,
 ): Promise<TranscriptionResult> {
   const buffer = Buffer.from(
@@ -22,20 +22,24 @@ export async function transcribeB64(
   const fpath = path.join("/tmp", `${uid(8)}.wav`);
   await writeFile(fpath, buffer);
 
-  const promptWords = unique(
-    prompt
-      .split(/\s+|[.,!?;:()]/)
-      .filter(Boolean)
-      .sort(),
-  ).join(" ");
-
+  const languageName = supportedLanguages[language] || language;
+  const randomHint =
+    shuffle(
+      unique(
+        targetSentence
+          .split(/\s+|[.,!?;:()]/)
+          .filter(Boolean)
+          .sort(),
+      ),
+    )[0] || "common words";
+  const prompt = `It's ${languageName} audio containing ${randomHint}`;
+  console.log(`=== Transcribing with prompt: ${prompt}`);
   try {
-    const file = createReadStream(fpath);
-    const { text = "" } = await openai.audio.transcriptions.create({
-      file,
+    const audioBuffer = await readFile(fpath);
+    const text = await transcribeAudio(audioBuffer, {
+      // Language is off
       model: "gpt-4o-transcribe",
-      prompt: `Might contains these words or related words: ${promptWords}`,
-      language,
+      prompt,
     });
     return { kind: "OK", text: text.split("\n")[0] };
   } catch (e) {

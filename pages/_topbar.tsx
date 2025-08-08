@@ -31,12 +31,6 @@ const TopBar = ({ children }: TopBarProps) => {
     <AppShell
       header={{ height: { base: 60, md: 70, lg: 80 } }}
       padding="md"
-      styles={{
-        header: {
-          backgroundColor: theme.colors.pink[0],
-          borderBottom: `1px solid ${theme.colors.pink[2]}`,
-        },
-      }}
     >
       <AppShell.Header>
         <Group h="100%" px="md" justify="center">
@@ -48,7 +42,8 @@ const TopBar = ({ children }: TopBarProps) => {
 
       <AppShell.Main
         style={{
-          backgroundColor: theme.colors.pink[0],
+          background: `linear-gradient(180deg, ${theme.colors.pink[0]} 0%, #FFFFFF 38%)`,
+          minHeight: "100vh",
         }}
       >
         {children}

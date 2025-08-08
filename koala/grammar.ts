@@ -1,6 +1,5 @@
-import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
-import { openai } from "./openai";
+import { generateStructuredOutput } from "./ai";
 import { prismaClient } from "./prisma-client";
 import { QuizEvaluator } from "./quiz-evaluators/types";
 import { getLangName } from "./get-lang-name";
@@ -63,19 +62,13 @@ async function run(props: GrammarCorrectionProps): Promise<Explanation> {
       ].join(" "),
     },
   ];
-  const response = await openai.beta.chat.completions.parse({
+  const gradeResponse = await generateStructuredOutput({
+    model: "openai:reasoning",
     messages,
-    model: "gpt-4.1",
     temperature: 0.1,
-    max_tokens: 250,
-    response_format: zodResponseFormat(zodGradeResponse, "grade_response"),
+    maxTokens: 250,
+    schema: zodGradeResponse,
   });
-
-  const gradeResponse = response.choices[0]?.message?.parsed;
-
-  if (!gradeResponse) {
-    throw new Error("Invalid response format from OpenAI.");
-  }
 
   return gradeResponse;
 }

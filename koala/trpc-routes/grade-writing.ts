@@ -1,8 +1,7 @@
 import { TRPCError } from "@trpc/server";
-import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
 import { getLangName } from "../get-lang-name";
-import { openai } from "../openai";
+import { generateAIText, generateStructuredOutput } from "../ai";
 import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc-procedure";
 
@@ -99,17 +98,15 @@ export const gradeWriting = procedure
     /**
      * 2️⃣ Basic cleanup - purely mechanical fixes
      */
-    const cleanup = await openai.beta.chat.completions.parse({
-      model: "gpt-4o-mini",
-      temperature: 0,
+    const cleanedText = await generateAIText({
+      model: "openai:default",
       messages: [
         { role: "system", content: BASIC_CLEANUP_PROMPT },
         { role: "user", content: text },
       ],
     });
 
-    const cleanedText = cleanup.choices[0]?.message?.content?.trim();
-    if (!cleanedText) {
+    if (!cleanedText?.trim()) {
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
         message: "Cleanup step produced no output.",
@@ -119,26 +116,24 @@ export const gradeWriting = procedure
     /**
      * 3️⃣ Substantive grading - grammar + collocation checks
      */
-    const grading = await openai.beta.chat.completions.parse({
-      model: "o4-mini",
-      reasoning_effort: "high",
-      response_format: zodResponseFormat(ApiResponseSchema, "essay"),
+    const feedback = await generateStructuredOutput({
+      model: "openai:reasoning",
+      schema: ApiResponseSchema,
       messages: [
         { role: "system", content: ESSAY_GRADING_PROMPT },
         {
           role: "user",
           content: `Language: ${getLangName(
             deck.langCode,
-          )}\n\nText to analyze:\n${cleanedText}`,
+          )}\n\nText to analyze:\n${cleanedText.trim()}`,
         },
       ],
     });
 
-    const apiResponse = grading.choices[0]?.message?.parsed;
-    if (!apiResponse) {
+    if (!feedback) {
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
-        message: "Invalid response format from OpenAI.",
+        message: "Invalid response format from AI model.",
       });
     }
 
@@ -150,14 +145,14 @@ export const gradeWriting = procedure
         prompt,
         submission: text,
         submissionCharacterCount: text.length,
-        correction: apiResponse.fullCorrection,
-        correctionCharacterCount: apiResponse.fullCorrection.length,
+        correction: feedback.fullCorrection,
+        correctionCharacterCount: feedback.fullCorrection.length,
       },
     });
 
     return {
       fullText: text,
-      fullCorrection: apiResponse.fullCorrection,
-      feedback: apiResponse.feedback,
+      fullCorrection: feedback.fullCorrection,
+      feedback: feedback.feedback,
     };
   });
