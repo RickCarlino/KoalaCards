@@ -12,7 +12,12 @@ import {
   Textarea,
   Title,
 } from "@mantine/core";
-import { IconMessage, IconPlus, IconSend, IconX } from "@tabler/icons-react";
+import {
+  IconMessage,
+  IconPlus,
+  IconSend,
+  IconX,
+} from "@tabler/icons-react";
 import { trpc } from "@/koala/trpc-config";
 
 type Suggestion = {
@@ -76,7 +81,10 @@ export function ReviewAssistantPane({
     setMessages((m) => [...m, { role: "user", content: text }]);
     try {
       // Include a short chat history for follow-ups (last 6 incl. pending message)
-      const historyPayload = [...messages, { role: "user" as const, content: text }]
+      const historyPayload = [
+        ...messages,
+        { role: "user" as const, content: text },
+      ]
         .slice(-6)
         .map((m) => ({ role: m.role, content: m.content }));
 
@@ -100,7 +108,8 @@ export function ReviewAssistantPane({
         {
           role: "assistant",
           content:
-            "Sorry — I couldn’t reply just now. Please try again in a moment. " + JSON.stringify(e),
+            "Sorry — I couldn’t reply just now. Please try again in a moment. " +
+            JSON.stringify(e),
         },
       ]);
     }
@@ -121,7 +130,9 @@ export function ReviewAssistantPane({
   return (
     <>
       {/* Floating toggle button */}
-      <Box style={{ position: "fixed", right: 16, bottom: 16, zIndex: 400 }}>
+      <Box
+        style={{ position: "fixed", right: 16, bottom: 16, zIndex: 400 }}
+      >
         <Button
           leftSection={<IconMessage size={18} />}
           onClick={() => setOpened(true)}
@@ -150,10 +161,17 @@ export function ReviewAssistantPane({
           </ActionIcon>
         </Group>
 
-        <ScrollArea.Autosize mah="calc(100vh - 220px)" viewportRef={viewportRef}>
+        <ScrollArea.Autosize
+          mah="calc(100vh - 220px)"
+          viewportRef={viewportRef}
+        >
           <Stack gap="sm" pr="sm">
             {messages.map((m, i) => (
-              <Box key={i} p="sm" bg={m.role === "user" ? "gray.1" : "blue.0"}>
+              <Box
+                key={i}
+                p="sm"
+                bg={m.role === "user" ? "gray.1" : "blue.0"}
+              >
                 <Text size="sm" c="dimmed" mb={4}>
                   {m.role === "user" ? "You" : "Assistant"}
                 </Text>
@@ -161,7 +179,11 @@ export function ReviewAssistantPane({
                 {m.suggestions && m.suggestions.length > 0 && (
                   <Stack gap={6} mt="sm">
                     {m.suggestions.map((s, idx) => (
-                      <Group key={idx} justify="space-between" wrap="nowrap">
+                      <Group
+                        key={idx}
+                        justify="space-between"
+                        wrap="nowrap"
+                      >
                         <Box>
                           <Text fw={600}>{s.term}</Text>
                           <Text size="sm" c="dimmed">

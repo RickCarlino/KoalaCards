@@ -107,7 +107,9 @@ export const reviewAssistant = procedure
       input.current.lessonType
         ? `Lesson type: ${input.current.lessonType}`
         : undefined,
-      recentPairs ? `Recent cards (may be stale):\n${recentPairs}` : undefined,
+      recentPairs
+        ? `Recent cards (may be stale):\n${recentPairs}`
+        : undefined,
     ]
       .filter(Boolean)
       .join("\n\n");

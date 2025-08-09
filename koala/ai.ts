@@ -21,6 +21,12 @@ type LanguageModelIdentifier =
   | `anthropic:${TextModel}`;
 type ImageModelIdentifier = `openai:${ImageModel}`;
 
+const GPT_5_OPTIONS = {
+  reasoning_effort: "minimal",
+  effort: "minimal",
+  verbosity: "low",
+};
+
 export async function generateAIText(options: {
   model?: LanguageModelIdentifier;
   messages: CoreMessage[];
@@ -30,12 +36,16 @@ export async function generateAIText(options: {
     : options.model
       ? `openai:${options.model}`
       : undefined;
+  const model = modelId
+    ? registry.languageModel(modelId as LanguageModelIdentifier)
+    : getDefaultTextModel();
+  const providerOptions =
+    model.modelId == "gpt-5-nano" ? GPT_5_OPTIONS : {};
 
   const { text } = await generateText({
-    model: modelId
-      ? registry.languageModel(modelId as LanguageModelIdentifier)
-      : getDefaultTextModel(),
+    model,
     messages: options.messages,
+    providerOptions,
   });
 
   return text;
@@ -53,13 +63,17 @@ export async function generateStructuredOutput(options: {
 }) {
   const other = options.model ? `openai:${options.model}` : undefined;
   const modelId = options.model?.includes(":") ? options.model : other;
+  const model = modelId
+    ? registry.languageModel(modelId as LanguageModelIdentifier)
+    : getDefaultTextModel();
+  const providerOptions =
+    model.modelId == "gpt-5-nano" ? GPT_5_OPTIONS : {};
 
   const { object } = await (generateObject as any)({
-    model: modelId
-      ? registry.languageModel(modelId as LanguageModelIdentifier)
-      : getDefaultTextModel(),
+    model,
     messages: options.messages,
     schema: options.schema,
+    providerOptions,
   });
 
   return object;
