@@ -98,6 +98,8 @@ export const reviewAssistant = procedure
       `Use the recent cards as context, but do not reveal or dump them back verbatim unless relevant.`,
       `Keep responses concise and actionable. When appropriate, propose up to 3 fresh flashcard suggestions (term/definition).`,
       `Only propose high-quality, non-duplicate pairs closely related to the user's topic or the recent cards.`,
+      `ALWAYS respond in the language of the question.`,
+      `Avoid single word card suggestions (lexical clusters, colocations, sentences, phrases are better)`,
     ].join(" \n");
 
     const contextBlock = [

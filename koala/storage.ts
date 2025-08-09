@@ -111,6 +111,8 @@ class GCSStorageProvider implements StorageProvider {
   }
 
   async uploadFromURL(url: string, destination: string): Promise<string> {
+    // SUSPECT.
+    console.log(`Downloading from ${url} to ${destination}`);
     const response = await fetch(url);
     if (!response.ok) {
       return errorReport(`Failed to fetch ${url}: ${response.statusText}`);
