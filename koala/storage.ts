@@ -1,6 +1,5 @@
 import { File, Storage } from "@google-cloud/storage";
 import { createHash } from "crypto";
-import fetch from "node-fetch";
 import { errorReport } from "./error-report";
 
 // Storage interface for future implementations
@@ -11,7 +10,7 @@ export interface StorageProvider {
    * @param destination The destination path in storage.
    * @returns Promise resolving to the expiring URL of the uploaded file.
    */
-  uploadFromURL(url: string, destination: string): Promise<string>;
+  uploadFromBase64(url: string, destination: string): Promise<string>;
 
   /**
    * Generates an expiring URL for accessing a stored file.
@@ -110,19 +109,14 @@ class GCSStorageProvider implements StorageProvider {
     return url;
   }
 
-  async uploadFromURL(url: string, destination: string): Promise<string> {
-    // SUSPECT.
-    console.log(`Downloading from ${url} to ${destination}`);
-    const response = await fetch(url);
-    if (!response.ok) {
-      return errorReport(`Failed to fetch ${url}: ${response.statusText}`);
-    }
-
+  async uploadFromBase64(
+    base64: string,
+    destination: string,
+  ): Promise<string> {
     const blob = this.bucket.file(destination);
     const blobStream = blob.createWriteStream();
-
-    response.body.pipe(blobStream);
-
+    const buffer = Buffer.from(base64, "base64");
+    blobStream.end(buffer);
     return new Promise((resolve, reject) => {
       blobStream.on("finish", async () => {
         resolve(await this.getExpiringURL(destination));

@@ -95,12 +95,7 @@ export async function generateAIImage(
     size: size || "1024x1024",
   });
 
-  return (
-    (image as { url?: string; data?: string; base64?: string }).url ||
-    (image as { url?: string; data?: string; base64?: string }).data ||
-    (image as { url?: string; data?: string; base64?: string }).base64 ||
-    (typeof image === "string" ? image : "")
-  );
+  return image.base64;
 }
 
 export async function transcribeAudio(

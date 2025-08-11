@@ -5,7 +5,7 @@
 - **koala/**: Business logic, utilities, and React components.
 - **prisma/**: Database schema, migrations, and client configuration.
 - **public/**: Static assets (images, fonts, icons).
-- **__tests__/**: Test suites located under `koala/` or adjacent to modules.
+- **__tests__/**: Test suite is undergoing a re-write. Don't do testing for now.
 
 ## Build, Test, and Development Commands
 - `npm run dev`: Launch development server with hot reload.
@@ -13,8 +13,8 @@
 - `npm start`: Apply migrations and start production server.
 - `npm run lint`: Run ESLint checks.
 - `npm run format`: Format code with Prettier.
-- `npm test`: Execute Jest test suite.
-- `npm run test:coverage`: Generate coverage report in `coverage/`.
+- `npm test`: Execute Jest test suite. (Dont use right now)
+- `npm run test:coverage`: Generate coverage report in `coverage/`. (don't use right now)
 - `npm run reset`: Clean, reinstall deps, apply migrations, and seed DB.
 
 ## Coding Style & Naming Conventions

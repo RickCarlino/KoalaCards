@@ -8,7 +8,7 @@ export const registry = createProviderRegistry(
   {
     openai: customProvider({
       languageModels: {
-        default: originalOpenAI("gpt-5-nano"),
+        default: originalOpenAI("gpt-4o"),
         // fast: originalOpenAI("gpt-5-nano"),
         // grammar: originalOpenAI("gpt-5"),
         reasoning: originalOpenAI("gpt-5"),

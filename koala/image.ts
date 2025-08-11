@@ -43,13 +43,13 @@ export async function maybeAddImageToCard(card: Card) {
   }
 
   const prompt = await createDallEPrompt(card.definition, card.term);
-  const url = await createDallEImage(prompt);
+  const base64 = await createDallEImage(prompt);
   const filePath = storageProvider.createBlobID(
     "card-images",
     card.term,
     "jpg",
   );
-  await storageProvider.uploadFromURL(url, filePath);
+  await storageProvider.uploadFromBase64(base64, filePath);
   await prismaClient.card.update({
     where: { id: card.id },
     data: { imageBlobId: filePath },
