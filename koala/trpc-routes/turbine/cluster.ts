@@ -88,7 +88,7 @@ async function run(
   ];
 
   const content = await generateAIText({
-    model: "openai:default",
+    model: ["openai", "default"] as const,
     messages: part1,
   });
 
@@ -107,7 +107,7 @@ async function run(
   Double check your work against these rules when you are done.
   `;
   const parsedResponse = await generateStructuredOutput({
-    model: "openai:default",
+    model: ["openai", "default"] as const,
     messages: [
       ...part1,
       {

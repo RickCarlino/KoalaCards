@@ -99,7 +99,7 @@ export const gradeWriting = procedure
      * 2️⃣ Basic cleanup - purely mechanical fixes
      */
     const cleanedText = await generateAIText({
-      model: "openai:default",
+      model: ["openai", "default"] as const,
       messages: [
         { role: "system", content: BASIC_CLEANUP_PROMPT },
         { role: "user", content: text },
@@ -117,7 +117,7 @@ export const gradeWriting = procedure
      * 3️⃣ Substantive grading - grammar + collocation checks
      */
     const feedback = await generateStructuredOutput({
-      model: "openai:reasoning",
+      model: ["openai", "reasoning"],
       schema: ApiResponseSchema,
       messages: [
         { role: "system", content: ESSAY_GRADING_PROMPT },

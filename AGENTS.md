@@ -18,6 +18,7 @@
 - `npm run reset`: Clean, reinstall deps, apply migrations, and seed DB.
 
 ## Coding Style & Naming Conventions
+- **Types**: Never add `any` types. Be explicit about data types.
 - **Indentation**: 2 spaces per level.
 - **Components** (`*.tsx`): PascalCase file names (e.g., `DeckPicker.tsx`).
 - **Utilities** (`*.ts`): kebab-case file names (e.g., `time-until.ts`).

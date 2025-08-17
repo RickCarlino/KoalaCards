@@ -137,7 +137,7 @@ export const reviewAssistant = procedure
     try {
       const result = await generateStructuredOutput({
         // Use a stronger model for structured output to reduce truncation
-        model: "openai:default",
+        model: ["openai", "default"] as const,
         messages: modelMessages,
         schema,
       });

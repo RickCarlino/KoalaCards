@@ -42,7 +42,7 @@ ${textsToTranslate.join("\n---\n")}
     try {
       const rawTranslation =
         (await generateAIText({
-          model: "openai:default",
+          model: ["openai", "default"] as const,
           messages: [{ role: "system", content: systemPrompt }],
         })) || "";
       const translatedTexts = rawTranslation

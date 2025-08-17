@@ -1,4 +1,4 @@
-import { createDallEPrompt, createDallEImage } from "./ai";
+import { createDallEImage, createDallEPrompt } from "./dall-e";
 import { prismaClient } from "./prisma-client";
 import { storageProvider } from "./storage";
 
