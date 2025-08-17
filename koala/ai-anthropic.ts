@@ -1,8 +1,5 @@
 import z from "zod";
-import {
-  CoreMessage,
-  LanguageModelIdentifier,
-} from "./ai";
+import { CoreMessage, LanguageModelIdentifier } from "./ai";
 
 export async function anthropicGenerateText(_options: {
   model: LanguageModelIdentifier;
