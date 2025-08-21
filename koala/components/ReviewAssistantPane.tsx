@@ -21,8 +21,8 @@ import {
 import { trpc } from "@/koala/trpc-config";
 
 type Suggestion = {
-  term: string;
-  definition: string;
+  phrase: string;
+  translation: string;
   gender: "M" | "F" | "N";
 };
 
@@ -61,7 +61,7 @@ export function ReviewAssistantPane({
   const bulkCreateCards = trpc.bulkCreateCards.useMutation();
   const [added, setAdded] = React.useState<Record<string, boolean>>({});
 
-  const keyFor = (s: Suggestion) => `${s.term}|||${s.definition}`;
+  const keyFor = (s: Suggestion) => `${s.phrase}|||${s.translation}`;
 
   const scrollToBottom = React.useCallback(() => {
     const el = viewportRef.current;
@@ -119,7 +119,13 @@ export function ReviewAssistantPane({
     try {
       await bulkCreateCards.mutateAsync({
         deckId,
-        input: [s],
+        input: [
+          {
+            term: s.phrase,
+            definition: s.translation,
+            gender: s.gender,
+          },
+        ],
       });
       setAdded((prev) => ({ ...prev, [keyFor(s)]: true }));
     } catch (e) {
@@ -185,9 +191,9 @@ export function ReviewAssistantPane({
                         wrap="nowrap"
                       >
                         <Box>
-                          <Text fw={600}>{s.term}</Text>
+                          <Text fw={600}>{s.phrase}</Text>
                           <Text size="sm" c="dimmed">
-                            {s.definition}
+                            {s.translation}
                           </Text>
                         </Box>
                         <Group gap="xs">

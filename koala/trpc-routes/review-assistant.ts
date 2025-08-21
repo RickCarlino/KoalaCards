@@ -37,8 +37,8 @@ const inputSchema = z.object({
 });
 
 const suggestionSchema = z.object({
-  term: z.string().min(1).max(200),
-  definition: z.string().min(1).max(200),
+  phrase: z.string().min(1).max(200),
+  translation: z.string().min(1).max(200),
   gender: z
     .union([z.literal("M"), z.literal("F"), z.literal("N")])
     .default("N"),
@@ -68,7 +68,7 @@ export const reviewAssistant = procedure
         code: "NOT_FOUND",
         message: "Deck not found",
       });
-    }
+    } 
 
     // Fetch the most recently reviewed cards in this deck for context
     const recent = await prismaClient.quiz.findMany({
@@ -96,9 +96,10 @@ export const reviewAssistant = procedure
       `You are a helpful language-learning assistant embedded in a flashcard trainer.`,
       `The learner is studying deck "${deck.name}" (${deck.langCode}).`,
       `Use the recent cards as context, but do not reveal or dump them back verbatim unless relevant.`,
-      `Keep responses concise and actionable. When appropriate, propose up to 3 fresh flashcard suggestions (term/definition).`,
+      `Keep responses concise and actionable. When appropriate, propose up to 3 fresh flashcard suggestions (phrase/translation).`,
+      `Do not add notes or parenthesized information to the translations.`,
       `Only propose high-quality, non-duplicate pairs closely related to the user's topic or the recent cards.`,
-      `ALWAYS respond in the language of the question.`,
+      `ALWAYS respond in English.`,
       `Avoid single word card suggestions (lexical clusters, colocations, sentences, phrases are better)`,
     ].join(" \n");
 
@@ -134,25 +135,16 @@ export const reviewAssistant = procedure
           "Up to 5 term/definition pairs to add as new cards. Omit if none.",
         ),
     });
-    try {
-      const result = await generateStructuredOutput({
-        // Use a stronger model for structured output to reduce truncation
-        model: ["openai", "default"] as const,
-        messages: modelMessages,
-        schema,
-      });
+    const result = await generateStructuredOutput({
+      // Use a stronger model for structured output to reduce truncation
+      model: ["openai", "default"] as const,
+      messages: modelMessages,
+      schema,
+    });
 
-      const reply = result.reply?.trim() || "";
-      const suggestions = (result.suggestions || []).slice(0, 5);
+    const reply = result.reply?.trim() || "";
+    const suggestions = (result.suggestions || []).slice(0, 5);
 
-      if (!reply) throw new Error("Empty reply");
-      return { reply, suggestions };
-    } catch (err) {
-      console.error("reviewAssistant: structured output failed", err);
-      return {
-        reply:
-          "Sorry — I couldn’t generate a response just now. Please try again in a moment.",
-        suggestions: [],
-      };
-    }
+    if (!reply) throw new Error("Empty reply");
+    return { reply, suggestions };
   });
