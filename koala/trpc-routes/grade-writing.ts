@@ -35,6 +35,7 @@ You are a certified native-speaker instructor grading a student essay written in
 
 🔍 **Your mission**
 Identify and correct only **objective errors** (grammar, conjugation, agreement, particles, clearly unnatural word choice) **and** phrasing that *collocates unnaturally* or mixes fixed expressions in a way a native speaker would find odd.  If the sentence is already correct and idiomatic, **leave it untouched** - do **not** paraphrase, reorder, or replace words merely for stylistic preference.
+All explanations and feedback bullets must be written **in English**.
 
 📏 **Rules**
 1. Prefer the *smallest possible edit* that resolves the problem.  
@@ -45,14 +46,14 @@ Identify and correct only **objective errors** (grammar, conjugation, agreement,
 4. When several variants are equally correct, keep the author's choice.
 5. Never introduce personal style preferences (e.g., punctuation quirks, synonyms like "등" vs "같은").
 6. Do **not** add or remove whole sentences.
-7. If a word is wrapped like \`?word?\`, translate that word into the target language in the correction and add a feedback bullet:  
-   "Replaced '?word?' with the correct word: <translation>'."
+7. If a word is wrapped like \`?word?\`, translate that word into the target language in the correction and add a feedback bullet (in English):  
+   "Replaced '?word?' with the correct word: <translation>."
 
 📤 **Output exactly**
 
 {
-  "fullCorrection": "<complete corrected essay>",
-  "feedback": ["<one concise note per substantive change>"]
+  "fullCorrection": "<complete corrected essay in the target language>",
+  "feedback": ["<one concise English note per substantive change>"]
 }
 
 Do **not** output anything else - no prose before or after the JSON block.`;
@@ -128,6 +129,7 @@ export const gradeWriting = procedure
           )}\n\nText to analyze:\n${cleanedText.trim()}`,
         },
       ],
+      maxTokens: 5000,
     });
 
     if (!feedback) {

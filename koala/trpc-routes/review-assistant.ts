@@ -68,7 +68,7 @@ export const reviewAssistant = procedure
         code: "NOT_FOUND",
         message: "Deck not found",
       });
-    } 
+    }
 
     // Fetch the most recently reviewed cards in this deck for context
     const recent = await prismaClient.quiz.findMany({

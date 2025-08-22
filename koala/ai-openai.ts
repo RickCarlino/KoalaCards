@@ -1,9 +1,15 @@
 import OpenAI, { toFile } from "openai";
 import { zodResponseFormat } from "openai/helpers/zod";
 import type { ChatCompletion } from "openai/resources/chat/completions";
-import { z } from "zod";
-import type { ImageModelIdentifier, LanguageModelIdentifier } from "./ai";
-import type { CoreMessage, ModelKind } from "./ai-types";
+import type {
+  ImageModelIdentifier,
+  LanguageModelIdentifier,
+  ImageGenFn,
+  TranscribeAudioFn,
+  LanguageGenFn,
+  StructuredGenFn,
+} from "./ai";
+import type { ModelKind } from "./ai-types";
 
 const DEFAULT_MODEL: LanguageModelIdentifier = ["openai", "default"];
 const DEFAULT_IMAGE_MODEL: ImageModelIdentifier = [
@@ -40,34 +46,22 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const contentOf = (r: ChatCompletion): string =>
   r.choices?.[0]?.message?.content?.toString() ?? "";
 
-export async function openaiGenerateText(options: {
-  model: LanguageModelIdentifier;
-  messages: CoreMessage[];
-}) {
+export const openaiGenerateText: LanguageGenFn = async (options) => {
   const result = await openai.chat.completions.create({
     model: getModelString(options.model ?? DEFAULT_MODEL),
     messages: options.messages,
   });
   return contentOf(result);
-}
+};
 
-export function openaiGenerateStructuredOutput<
-  S extends z.ZodTypeAny,
->(options: {
-  model: LanguageModelIdentifier;
-  messages: CoreMessage[];
-  schema: S;
-}): Promise<z.infer<S>>;
-export async function openaiGenerateStructuredOutput(options: {
-  model: LanguageModelIdentifier;
-  messages: CoreMessage[];
-  schema: z.ZodTypeAny;
-}) {
+export const openaiGenerateStructuredOutput: StructuredGenFn = async (
+  options,
+) => {
   const modelName = getModelString(options.model ?? DEFAULT_MODEL);
   const gpt5opts = {
     verbosity: "low",
-    reasoning_effort: "low",
-    max_completion_tokens: 1000,
+    reasoning_effort: "minimal",
+    max_completion_tokens: options.maxTokens ?? 1000,
   } as const;
   const res = await openai.chat.completions.parse({
     model: modelName,
@@ -76,12 +70,9 @@ export async function openaiGenerateStructuredOutput(options: {
     ...(modelName.startsWith("gpt-5") ? gpt5opts : {}),
   });
   return res.choices?.[0]?.message?.parsed;
-}
+};
 
-export async function openaiGenerateImage(options: {
-  model: ImageModelIdentifier;
-  prompt: string;
-}) {
+export const openaiGenerateImage: ImageGenFn = async (options) => {
   const result = await openai.images.generate({
     model: getModelString(options.model ?? DEFAULT_IMAGE_MODEL),
     prompt: options.prompt,
@@ -89,12 +80,12 @@ export async function openaiGenerateImage(options: {
     response_format: "b64_json",
   });
   return result.data?.[0]?.b64_json ?? "";
-}
+};
 
-export async function openaiTranscribeAudio(
-  audioFile: Buffer | ArrayBuffer,
-  options: { model: string; prompt?: string; filename?: string },
-) {
+export const openaiTranscribeAudio: TranscribeAudioFn = async (
+  audioFile,
+  options,
+) => {
   const filename = options?.filename ?? "input.wav";
   const prompt = options?.prompt ?? "";
   const model = options?.model ?? DEFAULT_TRANSCRIBE_MODEL;
@@ -110,4 +101,4 @@ export async function openaiTranscribeAudio(
     prompt,
     response_format: "text",
   });
-}
+};

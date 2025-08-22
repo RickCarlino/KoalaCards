@@ -17,10 +17,40 @@ export type ImageModel = "imageDefault";
 export type LanguageModelIdentifier = [LLMVendor, TextModel];
 export type ImageModelIdentifier = [LLMVendor, ImageModel];
 
-export async function generateAIText(options: {
+// Shared option types for language model requests
+export type LanguageGenOptions = {
   model: LanguageModelIdentifier;
   messages: CoreMessage[];
-}) {
+  maxTokens?: number;
+};
+export type StructuredGenOptions<S extends z.ZodTypeAny> =
+  LanguageGenOptions & {
+    schema: S;
+  };
+
+// Function type definitions
+export type LanguageGenFn = (
+  options: LanguageGenOptions,
+) => Promise<string>;
+export type StructuredGenFn = <S extends z.ZodTypeAny>(
+  options: StructuredGenOptions<S>,
+) => Promise<z.infer<S>>;
+export type ImageGenOptions = {
+  model: ImageModelIdentifier;
+  prompt: string;
+};
+export type ImageGenFn = (options: ImageGenOptions) => Promise<string>;
+export type TranscribeOptions = {
+  model: string;
+  prompt?: string;
+  filename?: string;
+};
+export type TranscribeAudioFn = (
+  audioFile: Buffer | ArrayBuffer,
+  options: TranscribeOptions,
+) => Promise<string>;
+
+export const generateAIText: LanguageGenFn = async (options) => {
   switch (options.model[0]) {
     case "openai":
       return await openaiGenerateText(options);
@@ -29,40 +59,36 @@ export async function generateAIText(options: {
     default:
       throw new Error("Not implemented");
   }
-}
+};
 
-export async function generateStructuredOutput<
-  S extends z.ZodTypeAny,
->(options: {
-  model: LanguageModelIdentifier;
-  messages: CoreMessage[];
-  schema: S;
-}): Promise<z.infer<S>> {
+export const generateStructuredOutput: StructuredGenFn = async (
+  options,
+) => {
   switch (options.model[0]) {
     case "openai":
-      return await openaiGenerateStructuredOutput<S>(options);
+      return await openaiGenerateStructuredOutput(options);
     case "anthropic":
-      return await anthropicGenerateStructuredOutput<S>(options);
+      return await anthropicGenerateStructuredOutput(options);
     default:
       throw new Error("Not implemented");
   }
-}
+};
 
-export async function generateAIImage(
+export const generateAIImage: (
   prompt: string,
   model: ImageModelIdentifier,
-) {
+) => Promise<string> = async (prompt, model) => {
   switch (model[0]) {
     case "openai":
       return await openaiGenerateImage({ model, prompt });
     default:
       throw new Error("Not implemented");
   }
-}
+};
 
-export async function transcribeAudio(
-  audioFile: Buffer | ArrayBuffer,
-  options: { model: string; prompt?: string; filename?: string },
-) {
+export const transcribeAudio: TranscribeAudioFn = async (
+  audioFile,
+  options,
+) => {
   return await openaiTranscribeAudio(audioFile, options);
-}
+};

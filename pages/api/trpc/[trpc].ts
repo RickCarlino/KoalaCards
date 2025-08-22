@@ -6,6 +6,9 @@ import { prismaClient } from "@/koala/prisma-client";
 
 export default trpcNext.createNextApiHandler({
   router: appRouter,
+  batching: {
+    enabled: false,
+  },
   createContext: async (_opts) => {
     const session = await getServerSession(
       _opts.req,
