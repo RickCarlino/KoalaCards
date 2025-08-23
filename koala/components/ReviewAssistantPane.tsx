@@ -36,7 +36,7 @@ type CurrentCard = {
   term: string;
   definition: string;
   langCode: string;
-  lessonType?: "listening" | "speaking" | "new" | "remedial";
+  lessonType?: "speaking" | "new" | "remedial";
 };
 
 export function ReviewAssistantPane({

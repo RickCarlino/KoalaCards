@@ -179,7 +179,6 @@ function InnerReviewPage({
   function playCard() {
     switch (currentItem?.itemType) {
       case "remedialIntro":
-      case "listening":
       case "newWordIntro":
         return playAudio(card.termAudio);
       case "speaking":

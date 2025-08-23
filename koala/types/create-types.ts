@@ -23,7 +23,6 @@ export interface State {
   // Card creation
   rawInput: string;
   processedCards: ProcessedCard[];
-  cardType: string; // listening, speaking, both
 }
 
 export type Action =
@@ -32,7 +31,6 @@ export type Action =
   | { type: "REMOVE_CARD"; index: number }
   | { type: "SET_PROCESSED_CARDS"; processedCards: ProcessedCard[] }
   | { type: "SET_RAW_INPUT"; rawInput: string }
-  | { type: "SET_CARD_TYPE"; cardType: string }
   | { type: "SET_DECK_SELECTION"; deckSelection: "existing" | "new" }
   | { type: "SET_DECK_ID"; deckId: number | undefined }
   | { type: "SET_DECK_NAME"; deckName: string }
@@ -45,9 +43,7 @@ type DeckAction =
   | { type: "SET_DECK_NAME"; deckName: string }
   | { type: "SET_DECK_LANG"; deckLang: LangCode };
 
-type InputAction =
-  | { type: "SET_RAW_INPUT"; rawInput: string }
-  | { type: "SET_CARD_TYPE"; cardType: string };
+type InputAction = { type: "SET_RAW_INPUT"; rawInput: string };
 
 type ReviewAction =
   | { type: "EDIT_CARD"; card: ProcessedCard; index: number }
@@ -62,7 +58,7 @@ export interface DeckStepProps {
 }
 
 export interface InputStepProps {
-  state: Pick<State, "deckLang" | "rawInput" | "cardType">;
+  state: Pick<State, "deckLang" | "rawInput">;
   dispatch: React.Dispatch<InputAction>;
   onSubmit: () => void;
   loading: boolean;

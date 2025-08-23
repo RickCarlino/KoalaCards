@@ -47,7 +47,6 @@ Unlike traditional SRS apps that often rely on self-grading, KoalaCards provides
 
 - **Spaced Repetition:** Utilizes the [FSRS scheduling algorithm](https://github.com/open-spaced-repetition/fsrs4anki) for efficient review scheduling.
 - **Quiz Types:**
-  - **Listening Quiz:** Listen to a target language phrase and translate it into English.
   - **Speaking Quiz:** Read an English prompt and speak the translation in the target language. Responses are transcribed and graded by an LLM (e.g., GPT). 🎤
 - **Card Management:**
   - Create cards manually, from text input, CSV files, or word lists.

@@ -11,7 +11,6 @@ export type QueueItem = {
 };
 
 type QueueType =
-  | "listening"
   | "newWordIntro"
   | "newWordOutro"
   | "remedialIntro"
@@ -79,7 +78,6 @@ export type Action =
 export const EVERY_QUEUE_TYPE: (keyof Queue)[] = [
   "newWordIntro",
   "remedialIntro",
-  "listening",
   "speaking",
   "newWordOutro",
   "remedialOutro",

@@ -8,7 +8,6 @@ const Quiz = z.object({
   repetitions: z.number(),
   lapses: z.number(),
   lessonType: z.union([
-    z.literal("listening"),
     z.literal("speaking"),
     z.literal("new"),
     z.literal("remedial"),

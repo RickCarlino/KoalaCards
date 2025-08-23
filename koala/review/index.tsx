@@ -6,7 +6,6 @@ import { trpc } from "../trpc-config";
 import { useVoiceRecorder } from "../use-recorder";
 import { ControlBar } from "./control-bar";
 import { HOTKEYS } from "./hotkeys";
-import { Listening } from "./lesson-steps/listening";
 import { NewWordIntro } from "./lesson-steps/new-word-intro";
 import { NewWordOutro } from "./lesson-steps/new-word-outro";
 import { RemedialIntro } from "./lesson-steps/remedial-intro";
@@ -17,7 +16,6 @@ import { CardReviewProps, CardUI, ItemType } from "./types";
 const cardUIs: Record<ItemType, CardUI> = {
   newWordIntro: NewWordIntro,
   newWordOutro: NewWordOutro,
-  listening: Listening,
   speaking: Speaking,
   remedialIntro: RemedialIntro,
   remedialOutro: RemedialOutro,

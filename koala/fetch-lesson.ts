@@ -2,7 +2,6 @@ import { prismaClient } from "@/koala/prisma-client";
 import type { Card, Prisma, Quiz } from "@prisma/client";
 import { group, shuffle } from "radash";
 import { getUserSettings } from "./auth-helpers";
-import { autoPromoteCards } from "./autopromote";
 import { maybeGetCardImageUrl } from "./image";
 import { LessonType } from "./shared-types";
 import { generateLessonAudio } from "./speech";
@@ -207,7 +206,6 @@ function tagLessonType(q: LocalQuiz, bucket: Bucket): LocalQuiz {
   if (bucket === REMEDIAL) {
     return { ...q, quizType: "remedial" };
   }
-  /* O or U keep existing listening/speaking type */
   return q;
 }
 
@@ -229,7 +227,7 @@ async function buildQuizPayload(q: LocalQuiz, speedPct: number) {
     }),
     termAudio: await generateLessonAudio({
       card: q.Card,
-      lessonType: "listening",
+      lessonType: "new",
       speed: r > 1 ? speedPct : 100,
     }),
     langCode: q.Card.langCode,
@@ -356,7 +354,12 @@ export async function getLessons({
     throw new Error("Too many cards requested.");
   }
 
-  await autoPromoteCards(userId);
+  // Delete all "listening" quizType quizzes:
+  await prismaClient.quiz.deleteMany({
+    where: {
+      quizType: "listening",
+    },
+  });
 
   const rawHand = await buildHand(userId, deckId, now, take);
   const speedPct = Math.round(

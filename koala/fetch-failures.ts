@@ -1,6 +1,5 @@
 import { prismaClient } from "@/koala/prisma-client";
 import { Card } from "@prisma/client";
-import { autoPromoteCards } from "./autopromote";
 import { errorReport } from "./error-report";
 import { maybeGetCardImageUrl } from "./image";
 import { generateLessonAudio } from "./speech";
@@ -19,7 +18,7 @@ async function buildQuizPayload(card: Card) {
     }),
     termAudio: await generateLessonAudio({
       card: card,
-      lessonType: "listening",
+      lessonType: "new",
       speed: 100,
     }),
     langCode: card.langCode,
@@ -29,7 +28,6 @@ async function buildQuizPayload(card: Card) {
 
 export async function getRepairCards(p: GetRepairInputParams) {
   const { userId, /*deckId,*/ take } = p;
-  await autoPromoteCards(userId);
   if (take > 45) {
     return errorReport("Too many cards requested.");
   }

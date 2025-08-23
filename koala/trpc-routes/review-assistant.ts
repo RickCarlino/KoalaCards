@@ -15,7 +15,6 @@ const inputSchema = z.object({
     langCode: z.string().min(1),
     lessonType: z
       .union([
-        z.literal("listening"),
         z.literal("speaking"),
         z.literal("new"),
         z.literal("remedial"),

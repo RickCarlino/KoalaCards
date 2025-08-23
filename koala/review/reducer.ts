@@ -15,7 +15,6 @@ import { playAudio } from "../play-audio";
 const queue = (): Queue => ({
   newWordIntro: [], // DONE
   remedialIntro: [], // DONE
-  listening: [],
   speaking: [], // Needs testing.
   newWordOutro: [], // DONE
   remedialOutro: [], // DONE
@@ -51,7 +50,6 @@ function getItemsDue(queue: Queue): number {
   const relevant: (keyof Queue)[] = [
     "newWordIntro",
     "remedialIntro",
-    "listening",
     "speaking",
     "newWordOutro",
     "remedialOutro",

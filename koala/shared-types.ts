@@ -38,7 +38,7 @@ export type LangCode =
   | "tr" // Turkish
   | "uk" // Ukrainian
   | "vi"; // Vietnamese
-export type LessonType = "listening" | "speaking" | "new" | "remedial";
+export type LessonType = "speaking" | "new" | "remedial";
 export type QuizResult = "error" | "fail" | "pass";
 
 export const LANG_CODES = z.union([
