@@ -63,7 +63,7 @@ async function run(props: GrammarCorrectionProps): Promise<Explanation> {
     },
   ];
   const gradeResponse = await generateStructuredOutput({
-    model: ["openai", "reasoning"],
+    model: ["openai", "good"],
     messages,
     schema: zodGradeResponse,
   });

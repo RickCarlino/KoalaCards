@@ -33,7 +33,7 @@ const MIN_CARDS = 7;
 
 const chat = async (system: string, user?: string) =>
   generateAIText({
-    model: ["openai", "default"] as const,
+    model: ["openai", "fast"] as const,
     messages: user
       ? [
           { role: "system", content: system },

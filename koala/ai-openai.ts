@@ -11,7 +11,7 @@ import type {
 } from "./ai";
 import type { ModelKind } from "./ai-types";
 
-const DEFAULT_MODEL: LanguageModelIdentifier = ["openai", "default"];
+const DEFAULT_MODEL: LanguageModelIdentifier = ["openai", "fast"];
 const DEFAULT_IMAGE_MODEL: ImageModelIdentifier = [
   "openai",
   "imageDefault",
@@ -20,8 +20,9 @@ const DEFAULT_IMAGE_SIZE = "1024x1024" as const;
 const DEFAULT_TRANSCRIBE_MODEL = "gpt-4o-mini-transcribe";
 
 const registry: Record<ModelKind, string> = {
-  default: "gpt-5-nano",
-  reasoning: "gpt-5",
+  fast: "gpt-5-nano",
+  cheap: "gpt-5-mini",
+  good: "gpt-5",
   imageDefault: "dall-e-3",
 };
 
@@ -60,7 +61,7 @@ export const openaiGenerateStructuredOutput: StructuredGenFn = async (
   const modelName = getModelString(options.model ?? DEFAULT_MODEL);
   const gpt5opts = {
     verbosity: "low",
-    reasoning_effort: "minimal",
+    reasoning_effort: options.model[1] === "fast" ? "minimal" : "low",
     max_completion_tokens: options.maxTokens ?? 1000,
   } as const;
   const res = await openai.chat.completions.parse({

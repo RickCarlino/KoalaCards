@@ -12,7 +12,7 @@ import {
 import type { CoreMessage } from "./ai-types";
 export type { CoreMessage } from "./ai-types";
 export type LLMVendor = "openai" | "anthropic";
-export type TextModel = "reasoning" | "default";
+export type TextModel = "good" | "fast" | "cheap";
 export type ImageModel = "imageDefault";
 export type LanguageModelIdentifier = [LLMVendor, TextModel];
 export type ImageModelIdentifier = [LLMVendor, ImageModel];

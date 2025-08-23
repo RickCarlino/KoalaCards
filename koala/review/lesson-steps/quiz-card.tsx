@@ -102,7 +102,7 @@ export const QuizCard: React.FC<QuizCardProps> = ({
     gradeWithGood,
     gradeWithEasy,
   });
-  
+
   const play = async () => {
     await playAudio(card.termAndDefinitionAudio);
   };

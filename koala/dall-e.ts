@@ -30,7 +30,7 @@ export const createDallEPrompt = async (
   parts.push({ type: "text", text: "Return only the image prompt." });
 
   const text = await generateAIText({
-    model: ["openai", "default"],
+    model: ["openai", "fast"],
     messages: [
       { role: "system", content: instruction },
       { role: "user", content: parts },

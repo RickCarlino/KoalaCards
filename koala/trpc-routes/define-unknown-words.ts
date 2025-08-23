@@ -74,7 +74,7 @@ For each "Word to Define" listed above:
 
     try {
       const response = await generateStructuredOutput({
-        model: ["openai", "reasoning"],
+        model: ["openai", "good"],
         messages: [{ role: "user", content: prompt }],
         schema: DefinitionSchema,
       });
