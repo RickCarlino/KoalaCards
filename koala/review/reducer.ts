@@ -135,9 +135,7 @@ export function useReview(deckId: number, playbackPercentage = 0.125) {
     },
     giveUp: async (cardUUID: string) => {
       const card = state.cards[cardUUID];
-      if (card && card.termAudio) {
-        await playAudio(card.termAudio);
-      }
+      card && await playAudio(card.termAndDefinitionAudio);
       dispatch({ type: "GIVE_UP", payload: { cardUUID } });
     },
     onRecordingCaptured: async (uuid: string, audio: string) => {

@@ -225,7 +225,7 @@ async function buildQuizPayload(q: LocalQuiz, speedPct: number) {
       lessonType: "speaking",
       speed: ENGLISH_SPEED,
     }),
-    termAudio: await generateLessonAudio({
+    termAndDefinitionAudio: await generateLessonAudio({
       card: q.Card,
       lessonType: "new",
       speed: r > 1 ? speedPct : 100,

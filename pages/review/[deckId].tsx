@@ -180,7 +180,7 @@ function InnerReviewPage({
     switch (currentItem?.itemType) {
       case "remedialIntro":
       case "newWordIntro":
-        return playAudio(card.termAudio);
+        return playAudio(card.termAndDefinitionAudio);
       case "speaking":
       case "newWordOutro":
       case "remedialOutro":

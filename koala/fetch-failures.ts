@@ -16,7 +16,7 @@ async function buildQuizPayload(card: Card) {
       lessonType: "speaking",
       speed: 100,
     }),
-    termAudio: await generateLessonAudio({
+    termAndDefinitionAudio: await generateLessonAudio({
       card: card,
       lessonType: "new",
       speed: 100,
