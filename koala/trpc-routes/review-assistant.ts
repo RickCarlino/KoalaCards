@@ -4,6 +4,7 @@ import { procedure } from "@/koala/trpc-procedure";
 import { TRPCError } from "@trpc/server";
 import { generateStructuredOutput } from "@/koala/ai";
 import type { CoreMessage } from "@/koala/ai";
+import { LangCode } from "../shared-types";
 
 const inputSchema = z.object({
   deckId: z.number(),
@@ -47,6 +48,10 @@ const outputSchema = z.object({
   reply: z.string().min(1),
   suggestions: z.array(suggestionSchema).max(10).default([]),
 });
+
+const LANG_OVERRIDES: Partial<Record<LangCode, string>> = {
+  ko: "Avoid 'dictionary form' / 'plain form' verb conjugation (하다, 가다, 먹다) unless specifically asked to provide it in that form.",
+};
 
 export const reviewAssistant = procedure
   .input(inputSchema)
@@ -94,8 +99,6 @@ export const reviewAssistant = procedure
     const system = [
       `You are an embedded language-learning assistant in a flashcard trainer.`,
       `The learner is currently studying the deck "${deck.name}" (${deck.langCode}).`,
-      `Begin with a concise checklist (3-7 bullets) of intended actions or sub-tasks for the learner's request,`,
-      `without implementation-level detail.`,
       `Use recent cards only as contextual background; do not repeat them verbatim unless directly relevant to the learner's request.`,
       `Keep all responses concise and actionable.`,
       `When it is useful, suggest up to four new flashcards, each with a phrase and translation.`,
@@ -105,8 +108,9 @@ export const reviewAssistant = procedure
       `Propose only high-quality, non-duplicate flashcard pairs closely tied to the learner's current topic or recent cards.`,
       `All explanations must be in English. Avoid suggesting single-word cards; focus on phrases, lexical clusters,`,
       `collocations, or full sentences that are contextually useful.`,
+      LANG_OVERRIDES[deck.langCode as LangCode] || "",
     ].join(" \n");
-
+    console.log("System prompt:", system);
     const contextBlock = [
       `Current card:\n• ${input.current.term} — ${input.current.definition}`,
       input.current.lessonType
@@ -144,6 +148,7 @@ export const reviewAssistant = procedure
       model: ["openai", "good"] as const,
       messages: modelMessages,
       schema,
+      maxTokens: 5000,
     });
 
     const reply = result.reply?.trim() || "";
