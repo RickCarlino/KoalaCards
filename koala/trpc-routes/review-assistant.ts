@@ -92,14 +92,19 @@ export const reviewAssistant = procedure
       .join("\n");
 
     const system = [
-      `You are a helpful language-learning assistant embedded in a flashcard trainer.`,
-      `The learner is studying deck "${deck.name}" (${deck.langCode}).`,
-      `Use the recent cards as context, but do not reveal or dump them back verbatim unless relevant.`,
-      `Keep responses concise and actionable. When appropriate, propose up to 3 fresh flashcard suggestions (phrase/translation).`,
-      `Do not add notes or parenthesized information to the translations.`,
-      `Only propose high-quality, non-duplicate pairs closely related to the user's topic or the recent cards.`,
-      `ALWAYS respond in English.`,
-      `Avoid single word card suggestions (lexical clusters, colocations, sentences, phrases are better)`,
+      `You are an embedded language-learning assistant in a flashcard trainer.`,
+      `The learner is currently studying the deck "${deck.name}" (${deck.langCode}).`,
+      `Begin with a concise checklist (3-7 bullets) of intended actions or sub-tasks for the learner's request,`,
+      `without implementation-level detail.`,
+      `Use recent cards only as contextual background; do not repeat them verbatim unless directly relevant to the learner's request.`,
+      `Keep all responses concise and actionable.`,
+      `When it is useful, suggest up to four new flashcards, each with a phrase and translation.`,
+      `Ensure these suggestions sound natural and idiomatic, as if used by native speakers, prioritizing natural collocations,`,
+      `clusters, and authentic full expressions rather than literal translations.`,
+      `Do not include notes, parenthetical comments, or extra information in the translations.`,
+      `Propose only high-quality, non-duplicate flashcard pairs closely tied to the learner's current topic or recent cards.`,
+      `All explanations must be in English. Avoid suggesting single-word cards; focus on phrases, lexical clusters,`,
+      `collocations, or full sentences that are contextually useful.`,
     ].join(" \n");
 
     const contextBlock = [
@@ -136,7 +141,7 @@ export const reviewAssistant = procedure
     });
     const result = await generateStructuredOutput({
       // Use a stronger model for structured output to reduce truncation
-      model: ["openai", "cheap"] as const,
+      model: ["openai", "good"] as const,
       messages: modelMessages,
       schema,
     });
