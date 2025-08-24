@@ -47,22 +47,19 @@ export const faucet = procedure
       });
     }
 
-    const listeningQuiz = cards.find((q) => q.quizType === "listening");
     const speakingQuiz = cards.find((q) => q.quizType === "speaking");
 
-    if (!listeningQuiz || !speakingQuiz) {
-      throw new Error("Need both listening and speaking quizzes");
+    if (!speakingQuiz) {
+      throw new Error("Need speaking quizzes");
     }
 
-    for (const q of [listeningQuiz, speakingQuiz]) {
-      await prismaClient.quiz.update({
-        where: { id: q.id },
-        data: {
-          nextReview: now - 24 * 60 * 60 * 1000,
-          repetitions: 1,
-        },
-      });
-    }
+    await prismaClient.quiz.update({
+      where: { id: speakingQuiz.id },
+      data: {
+        nextReview: now - 24 * 60 * 60 * 1000,
+        repetitions: 1,
+      },
+    });
 
     return [{ id: 0 }];
   });

@@ -10,7 +10,6 @@ export const INITIAL_STATE: State = {
   deckLang: DEFAULT_LANG, // default to Korean if user selects "new deck" but hasn't changed
   rawInput: "",
   processedCards: [],
-  cardType: "listening",
 };
 
 export function reducer(state: State, action: Action): State {
@@ -36,9 +35,6 @@ export function reducer(state: State, action: Action): State {
       return { ...state, processedCards: action.processedCards };
     case "SET_RAW_INPUT":
       return { ...state, rawInput: action.rawInput };
-    case "SET_CARD_TYPE":
-      return { ...state, cardType: action.cardType };
-    // New deck-related actions
     case "SET_DECK_SELECTION":
       return { ...state, deckSelection: action.deckSelection };
     case "SET_DECK_ID":

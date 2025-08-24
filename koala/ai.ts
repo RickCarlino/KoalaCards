@@ -1,174 +1,94 @@
-import type { CoreMessage } from "@/koala/ai";
-import {
-  experimental_generateImage as generateImage,
-  generateObject,
-  generateText,
-  experimental_transcribe as transcribe,
-} from "ai";
 import { z } from "zod";
-import { errorReport } from "./error-report";
 import {
-  getDefaultImageModel,
-  getDefaultTextModel,
-  getDefaultTranscriptionModel,
-  registry,
-} from "./provider-registry";
+  openaiGenerateImage,
+  openaiGenerateStructuredOutput,
+  openaiGenerateText,
+  openaiTranscribeAudio,
+} from "./ai-openai";
+import {
+  anthropicGenerateStructuredOutput,
+  anthropicGenerateText,
+} from "./ai-anthropic";
+import type { CoreMessage } from "./ai-types";
+export type { CoreMessage } from "./ai-types";
+export type LLMVendor = "openai" | "anthropic";
+export type TextModel = "good" | "fast" | "cheap";
+export type ImageModel = "imageDefault";
+export type LanguageModelIdentifier = [LLMVendor, TextModel];
+export type ImageModelIdentifier = [LLMVendor, ImageModel];
 
-type TextModel = "fast" | "grammar" | "reasoning" | "default";
-type ImageModel = "default" | "fast";
-type LanguageModelIdentifier =
-  | `openai:${TextModel}`
-  | `anthropic:${TextModel}`;
-type ImageModelIdentifier = `openai:${ImageModel}`;
-
-export async function generateAIText(options: {
-  model?: LanguageModelIdentifier;
+// Shared option types for language model requests
+export type LanguageGenOptions = {
+  model: LanguageModelIdentifier;
   messages: CoreMessage[];
-  temperature?: number;
   maxTokens?: number;
-}) {
-  const modelId = options.model?.includes(":")
-    ? options.model
-    : options.model
-      ? `openai:${options.model}`
-      : undefined;
+};
+export type StructuredGenOptions<S extends z.ZodTypeAny> =
+  LanguageGenOptions & {
+    schema: S;
+  };
 
-  const { text } = await generateText({
-    model: modelId
-      ? registry.languageModel(modelId as LanguageModelIdentifier)
-      : getDefaultTextModel(),
-    messages: options.messages,
-    temperature: 1, // options.temperature, // NOT GPT-5 COMPATIBLE TODO: Conditional temperature
-    // AI SDK v5 renamed `maxTokens` to `maxOutputTokens`.
-    maxOutputTokens: options.maxTokens,
-  });
-
-  return text;
-}
-
-export function generateStructuredOutput<S extends z.ZodTypeAny>(options: {
-  model?: string;
-  messages: CoreMessage[];
-  schema: S;
-  temperature?: number;
-  maxTokens?: number;
-}): Promise<z.infer<S>>;
-export async function generateStructuredOutput(options: {
-  model?: string;
-  messages: CoreMessage[];
-  schema: z.ZodTypeAny;
-  temperature?: number;
-  maxTokens?: number;
-}) {
-  const other = options.model ? `openai:${options.model}` : undefined;
-  const modelId = options.model?.includes(":") ? options.model : other;
-
-  const { object } = await (generateObject as any)({
-    model: modelId
-      ? registry.languageModel(modelId as LanguageModelIdentifier)
-      : getDefaultTextModel(),
-    messages: options.messages,
-    schema: options.schema,
-    temperature: 1, // options.temperature, // NOT GPT-5 COMPATIBLE TODO: Conditional temperature
-    // AI SDK v5 renamed `maxTokens` to `maxOutputTokens`.
-    maxOutputTokens: options.maxTokens,
-  });
-
-  return object;
-}
-
-export async function generateAIImage(
-  prompt: string,
-  size?: "1024x1024" | "1792x1024" | "1024x1792",
-  model?: string,
-) {
-  const other = model ? `openai:${model}` : undefined;
-  const modelId = model?.includes(":") ? model : other;
-
-  const { image } = await generateImage({
-    model: modelId
-      ? registry.imageModel(modelId as ImageModelIdentifier)
-      : getDefaultImageModel(),
-    prompt,
-    size: size || "1024x1024",
-  });
-
-  return (
-    (image as { url?: string; data?: string; base64?: string }).url ||
-    (image as { url?: string; data?: string; base64?: string }).data ||
-    (image as { url?: string; data?: string; base64?: string }).base64 ||
-    (typeof image === "string" ? image : "")
-  );
-}
-
-export async function transcribeAudio(
+// Function type definitions
+export type LanguageGenFn = (
+  options: LanguageGenOptions,
+) => Promise<string>;
+export type StructuredGenFn = <S extends z.ZodTypeAny>(
+  options: StructuredGenOptions<S>,
+) => Promise<z.infer<S>>;
+export type ImageGenOptions = {
+  model: ImageModelIdentifier;
+  prompt: string;
+};
+export type ImageGenFn = (options: ImageGenOptions) => Promise<string>;
+export type TranscribeOptions = {
+  model: string;
+  prompt?: string;
+  filename?: string;
+};
+export type TranscribeAudioFn = (
   audioFile: Buffer | ArrayBuffer,
-  options?: {
-    model?: string;
-    prompt?: string;
-  },
-) {
-  const prompt = options?.prompt || "";
-  const { text } = await transcribe({
-    model: getDefaultTranscriptionModel(options?.model),
-    audio: audioFile,
-    providerOptions: { openai: { prompt } },
-  });
+  options: TranscribeOptions,
+) => Promise<string>;
 
-  return text;
-}
-
-export const createDallEPrompt = async (
-  term: string,
-  definition: string,
-  model?: LanguageModelIdentifier,
-) => {
-  const shortCard = term.split(" ").length < 2;
-  const prompt = shortCard ? SINGLE_WORD_PROMPT : SENTENCE_PROMPT;
-
-  const text = await generateAIText({
-    model: model || "openai:default",
-    messages: [
-      {
-        role: "user",
-        content: [`TERM: ${term}`, `DEFINITION: ${definition}`].join("\n"),
-      },
-      {
-        role: "system",
-        content: prompt,
-      },
-    ],
-    temperature: 1.0,
-    maxTokens: 128,
-  });
-
-  if (!text) {
-    return errorReport("No comic response from AI model.");
+export const generateAIText: LanguageGenFn = async (options) => {
+  switch (options.model[0]) {
+    case "openai":
+      return await openaiGenerateText(options);
+    case "anthropic":
+      return await anthropicGenerateText(options);
+    default:
+      throw new Error("Not implemented");
   }
-  return text;
 };
 
-export const createDallEImage = async (
-  prompt: string,
-  size?: "1024x1024" | "1792x1024" | "1024x1792",
-  model?: LanguageModelIdentifier,
+export const generateStructuredOutput: StructuredGenFn = async (
+  options,
 ) => {
-  return await generateAIImage(prompt, size, model);
+  switch (options.model[0]) {
+    case "openai":
+      return await openaiGenerateStructuredOutput(options);
+    case "anthropic":
+      return await anthropicGenerateStructuredOutput(options);
+    default:
+      throw new Error("Not implemented");
+  }
 };
 
-// Prompts
-const SENTENCE_PROMPT = `You are a language learning flash card app.
-You are creating a comic to help users remember the flashcard above.
-It is a fun, single-frame comic that illustrates the sentence.
-Create a DALL-e prompt to create this comic for the card above.
-Do not add speech bubbles or text. It will give away the answer!
-All characters must be Koalas.`;
+export const generateAIImage: (
+  prompt: string,
+  model: ImageModelIdentifier,
+) => Promise<string> = async (prompt, model) => {
+  switch (model[0]) {
+    case "openai":
+      return await openaiGenerateImage({ model, prompt });
+    default:
+      throw new Error("Not implemented");
+  }
+};
 
-const SINGLE_WORD_PROMPT = `You are a language learning flash card app.
-Create a DALL-e prompt to generate an image of the foreign language word above.
-Make it as realistic and accurate to the words meaning as possible.
-The illustration must convey the word's meaning to the student.
-humans must be shown as anthropomorphized animals.
-Do not add text. It will give away the answer!`;
-
-export type { CoreMessage } from "ai";
+export const transcribeAudio: TranscribeAudioFn = async (
+  audioFile,
+  options,
+) => {
+  return await openaiTranscribeAudio(audioFile, options);
+};

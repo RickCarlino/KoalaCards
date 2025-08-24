@@ -88,7 +88,7 @@ async function run(
   ];
 
   const content = await generateAIText({
-    model: "openai:default",
+    model: ["openai", "fast"] as const,
     messages: part1,
   });
 
@@ -107,7 +107,7 @@ async function run(
   Double check your work against these rules when you are done.
   `;
   const parsedResponse = await generateStructuredOutput({
-    model: "openai:default",
+    model: ["openai", "fast"] as const,
     messages: [
       ...part1,
       {
@@ -122,7 +122,6 @@ async function run(
             : "Double check your output when you are done.",
       },
     ],
-    temperature: 0.1,
     schema: ClusterSchema,
   });
 

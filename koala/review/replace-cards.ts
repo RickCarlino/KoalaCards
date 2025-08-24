@@ -15,7 +15,6 @@ export function replaceCards(
     queue: {
       newWordIntro: [],
       remedialIntro: [],
-      listening: [],
       speaking: [],
       newWordOutro: [],
       remedialOutro: [],
@@ -42,21 +41,6 @@ export function replaceCards(
               {
                 cardUUID: item.uuid,
                 itemType: "newWordOutro" as const,
-                stepUuid: uid(8),
-              },
-            ],
-          },
-        };
-      case "listening":
-        return {
-          ...acc,
-          queue: {
-            ...acc.queue,
-            listening: [
-              ...acc.queue.listening,
-              {
-                cardUUID: item.uuid,
-                itemType: "listening" as const,
                 stepUuid: uid(8),
               },
             ],

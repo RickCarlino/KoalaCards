@@ -102,11 +102,9 @@ export const QuizCard: React.FC<QuizCardProps> = ({
     gradeWithGood,
     gradeWithEasy,
   });
+
   const play = async () => {
-    await playAudio(card.termAudio);
-    if (["speaking"].includes(quizType)) {
-      await playAudio(card.definitionAudio);
-    }
+    await playAudio(card.termAndDefinitionAudio);
   };
 
   useEffect(() => {

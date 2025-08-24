@@ -8,7 +8,6 @@ The review system presents cards one at a time through different learning phases
 
 - **New cards**: First exposure with pronunciation practice
 - **Remedial cards**: Review of previously failed cards
-- **Listening drills**: Repeat-after-me exercises (pending implementation)
 - **Speaking drills**: Translation from English to target language
 - **Quizzes**: Final assessment with FSRS grading
 
@@ -29,7 +28,6 @@ koala/review2/
   ├── lesson-steps/                 # Individual card type components
   │   ├── new-word-intro.tsx
   │   ├── remedial-intro.tsx
-  │   ├── listening.tsx
   │   ├── speaking.tsx
   │   ├── new-word-outro.tsx
   │   └── remedial-outro.tsx
@@ -42,11 +40,10 @@ koala/review/**                     # Legacy version (being replaced)
 The system uses a reducer pattern with priority-ordered queues:
 
 1. `newWordIntro` - Initial card presentation
-2. `remedialIntro` - Review of failed cards
-3. `listening` - Audio comprehension
-4. `speaking` - Production practice
-5. `newWordOutro` - New card quiz
-6. `remedialOutro` - Remedial card quiz
+1. `remedialIntro` - Review of failed cards
+1. `speaking` - Production practice
+1. `newWordOutro` - New card quiz
+1. `remedialOutro` - Remedial card quiz
 
 **Key Actions:**
 
@@ -104,18 +101,6 @@ Review of previously failed cards:
 - Shows "Reviewing Previous Mistake" header
 - Otherwise identical to new word introduction flow
 
-### Listening Drill ⏳
-
-**File:** `lesson-steps/listening.tsx`
-
-**Status:** Not implemented (shows TODO placeholder)
-
-**Planned behavior:**
-
-- Play phrase in target language
-- User repeats what they hear
-- Validate and show grading options on success
-
 ### Speaking Drill ✓
 
 **File:** `lesson-steps/speaking.tsx`
@@ -153,7 +138,6 @@ Lesson types determine queue population:
 
 - **"new"**: Creates `newWordIntro` + `newWordOutro` (2 items)
 - **"remedial"**: Creates `remedialIntro` + `remedialOutro` (2 items)
-- **"listening"**: Creates single `listening` item
 - **"speaking"**: Creates single `speaking` item
 
 ## Custom Hooks
@@ -186,7 +170,6 @@ Lesson types determine queue population:
 - [ ] KoalaMUD - text based quests. a user, a dungeon master LLM and NPC LLM. User goes on quests.
 - [ ] Need to re-visit the Cloze/word Occlusion idea
 - [ ] Add loading tips and tricks display
-- [ ] Implement listening drill (recal after speaking) functionality
 - [ ] O3-based follow-up lessons / dynamic grammar improvement ([spec](https://chatgpt.com/c/684de073-9bbc-8010-8dbb-607c8e367de1))
 - [ ] Situation/Goal/Guide/Player conversation.
 - [ ] Sound effects integration (pending free sound pack)

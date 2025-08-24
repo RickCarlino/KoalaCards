@@ -63,10 +63,8 @@ async function run(props: GrammarCorrectionProps): Promise<Explanation> {
     },
   ];
   const gradeResponse = await generateStructuredOutput({
-    model: "openai:reasoning",
+    model: ["openai", "good"],
     messages,
-    temperature: 0.1,
-    maxTokens: 250,
     schema: zodGradeResponse,
   });
 
@@ -77,7 +75,7 @@ async function runAndStore(
   props: GrammarCorrectionProps,
 ): Promise<Explanation> {
   const result = await run(props);
-  storeTrainingData(props, result);
+  await storeTrainingData(props, result);
   return result;
 }
 
@@ -85,8 +83,12 @@ export const grammarCorrectionNext: QuizEvaluator = async ({
   userInput,
   card,
 }) => {
+  const now = Date.now();
+  console.log({ userInput, card });
   const chosen = await runAndStore({ ...card, userInput });
   console.log(JSON.stringify(chosen));
+  const duration = Date.now() - now;
+  console.log(`grammarCorrectionNext took ${duration}ms`);
   if (chosen.yesNo === "yes") {
     return { result: "pass", userMessage: chosen.why };
   } else {

@@ -18,6 +18,7 @@ import { useHotkeys } from "@mantine/hooks";
 import { GetServerSideProps } from "next";
 import Link from "next/link";
 import React from "react";
+import ReviewAssistantPane from "@/koala/components/ReviewAssistantPane";
 
 type ReviewDeckPageProps = {
   deckId: number;
@@ -175,16 +176,15 @@ function InnerReviewPage({
     cardsRemaining,
   } = useReview(deckId, playbackPercentage);
 
-  function playCard() {
+  async function playCard() {
     switch (currentItem?.itemType) {
       case "remedialIntro":
-      case "listening":
       case "newWordIntro":
-        return playAudio(card.termAudio);
+        return await playAudio(card.termAndDefinitionAudio);
       case "speaking":
       case "newWordOutro":
       case "remedialOutro":
-        return playAudio(card.definitionAudio);
+        return await playAudio(card.definitionAudio);
       default:
         console.warn("No audio available for this card type.");
     }
@@ -236,6 +236,15 @@ function InnerReviewPage({
           cardsRemaining={cardsRemaining}
         />
       </Box>
+      <ReviewAssistantPane
+        deckId={deckId}
+        current={{
+          term: card.term,
+          definition: card.definition,
+          langCode: card.langCode,
+          lessonType: card.lessonType,
+        }}
+      />
     </Container>
   );
 }

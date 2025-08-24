@@ -15,7 +15,6 @@ import { playAudio } from "../play-audio";
 const queue = (): Queue => ({
   newWordIntro: [], // DONE
   remedialIntro: [], // DONE
-  listening: [],
   speaking: [], // Needs testing.
   newWordOutro: [], // DONE
   remedialOutro: [], // DONE
@@ -51,7 +50,6 @@ function getItemsDue(queue: Queue): number {
   const relevant: (keyof Queue)[] = [
     "newWordIntro",
     "remedialIntro",
-    "listening",
     "speaking",
     "newWordOutro",
     "remedialOutro",
@@ -137,9 +135,7 @@ export function useReview(deckId: number, playbackPercentage = 0.125) {
     },
     giveUp: async (cardUUID: string) => {
       const card = state.cards[cardUUID];
-      if (card && card.termAudio) {
-        await playAudio(card.termAudio);
-      }
+      card && (await playAudio(card.termAndDefinitionAudio));
       dispatch({ type: "GIVE_UP", payload: { cardUUID } });
     },
     onRecordingCaptured: async (uuid: string, audio: string) => {

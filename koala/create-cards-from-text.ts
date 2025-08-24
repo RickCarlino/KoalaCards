@@ -61,13 +61,12 @@ export async function createCardsFromText(
   input: string,
 ): Promise<Card[]> {
   const response = await generateStructuredOutput({
-    model: "openai:reasoning",
+    model: ["openai", "good"],
     messages: [
       { role: "system", content: SYSTEM_PROMPT + langCode },
       { role: "user", content: input.slice(0, 3000) },
     ],
     schema: CardSchema,
-    temperature: 0.75,
   });
 
   return response.cards;
