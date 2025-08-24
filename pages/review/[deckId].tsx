@@ -176,15 +176,15 @@ function InnerReviewPage({
     cardsRemaining,
   } = useReview(deckId, playbackPercentage);
 
-  function playCard() {
+  async function playCard() {
     switch (currentItem?.itemType) {
       case "remedialIntro":
       case "newWordIntro":
-        return playAudio(card.termAndDefinitionAudio);
+        return await playAudio(card.termAndDefinitionAudio);
       case "speaking":
       case "newWordOutro":
       case "remedialOutro":
-        return playAudio(card.definitionAudio);
+        return await playAudio(card.definitionAudio);
       default:
         console.warn("No audio available for this card type.");
     }
