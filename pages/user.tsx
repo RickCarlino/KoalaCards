@@ -402,7 +402,7 @@ export default function UserSettingsPage(props: Props) {
         {/* Cards Chart Section */}
         <Stack gap="md">
           <Title order={2}>
-            Total Cards Learned (Cumulative, Last 3 Months)
+            Total Cards Learned (90 Days)
           </Title>
           <Card withBorder shadow="xs" p="md" radius="md">
             <AreaChart
@@ -443,7 +443,7 @@ export default function UserSettingsPage(props: Props) {
         {/* Writing Progress Chart Section */}
         <Stack gap="md">
           <Title order={2}>
-            Total Writing Progress (Cumulative, Last 3 Months)
+            Total Writing Progress (90 Days)
           </Title>
           <Card withBorder shadow="xs" p="md" radius="md">
             <AreaChart
