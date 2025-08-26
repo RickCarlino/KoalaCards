@@ -1,7 +1,17 @@
 import { GetServerSideProps } from "next";
 import { CardTable } from "@/koala/card-table";
 import { trpc } from "@/koala/trpc-config";
-import { Button, Container, Select, Group, Text } from "@mantine/core";
+import {
+  Button,
+  Container,
+  Select,
+  Group,
+  Text,
+  TextInput,
+  Checkbox,
+  Title,
+  Paper,
+} from "@mantine/core";
 import { prismaClient } from "@/koala/prisma-client";
 import { useRouter } from "next/router";
 import { useState, useEffect, FormEvent } from "react";
@@ -12,7 +22,13 @@ type CardRecord = {
   flagged: boolean;
   term: string;
   definition: string;
-  createdAt: string;
+  createdAt: string; // ISO
+  langCode: string;
+  gender: string;
+  repetitions: number;
+  lapses: number;
+  lastReview: number;
+  nextReview: number;
 };
 
 type EditProps = {
@@ -21,6 +37,8 @@ type EditProps = {
   sortOrder: string;
   page: number;
   totalPages: number;
+  q: string;
+  paused: boolean;
 };
 
 const SORT_OPTIONS = [
@@ -30,6 +48,9 @@ const SORT_OPTIONS = [
   { label: "Paused", value: "flagged" },
   { label: "Language", value: "langCode" },
   { label: "Term", value: "term" },
+  { label: "Next Review", value: "nextReview" },
+  { label: "Repetitions", value: "repetitions" },
+  { label: "Lapses", value: "lapses" },
 ];
 
 const ORDER_OPTIONS = [
@@ -49,16 +70,20 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
     };
   }
 
-  const { sortBy, sortOrder, page } = parseQueryParams(ctx.query);
+  const { sortBy, sortOrder, page, q, paused } = parseQueryParams(
+    ctx.query,
+  );
   const { cards, totalPages } = await fetchCards(
     userId,
     sortBy,
     sortOrder,
     page,
+    q,
+    paused,
   );
 
   return {
-    props: { cards, sortBy, sortOrder, page, totalPages },
+    props: { cards, sortBy, sortOrder, page, totalPages, q, paused },
   };
 };
 
@@ -69,17 +94,22 @@ function parseQueryParams(query: Record<string, unknown>) {
   const rawSortBy = toStr(query.sortBy) ?? "createdAt";
   const rawSortOrder = toStr(query.sortOrder) ?? "desc";
   const rawPage = parseInt(toStr(query.page) ?? "", 10);
+  const rawQ = toStr(query.q) ?? "";
+  const rawPaused = toStr(query.paused) ?? "false";
 
   const validSortBy = SORT_OPTIONS.map((o) => o.value).includes(rawSortBy)
     ? rawSortBy
     : "createdAt";
   const finalSortOrder = rawSortOrder === "asc" ? "asc" : "desc";
   const finalPage = !isNaN(rawPage) && rawPage > 0 ? rawPage : 1;
+  const finalPaused = rawPaused === "true";
 
   return {
     sortBy: validSortBy,
     sortOrder: finalSortOrder,
     page: finalPage,
+    q: rawQ,
+    paused: finalPaused,
   };
 }
 
@@ -88,21 +118,45 @@ async function fetchCards(
   sortBy: string,
   sortOrder: string,
   page: number,
+  q: string,
+  paused: boolean,
 ) {
-  const totalCount = await prismaClient.card.count({ where: { userId } });
+  const where = {
+    userId,
+    ...(paused ? { flagged: true } : {}),
+    ...(q
+      ? {
+          OR: [
+            { term: { contains: q, mode: "insensitive" as const } },
+            { definition: { contains: q, mode: "insensitive" as const } },
+          ],
+        }
+      : {}),
+  };
+
+  const totalCount = await prismaClient.card.count({ where });
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE) || 1;
   const finalPage = Math.min(Math.max(page, 1), totalPages);
 
   const cardsData = await prismaClient.card.findMany({
-    where: { userId },
+    where,
     orderBy: [{ [sortBy]: sortOrder }],
     skip: (finalPage - 1) * ITEMS_PER_PAGE,
     take: ITEMS_PER_PAGE,
   });
 
   const cards = cardsData.map((c) => ({
-    ...c,
+    id: c.id,
+    flagged: c.flagged,
+    term: c.term,
+    definition: c.definition,
     createdAt: c.createdAt.toISOString(),
+    langCode: c.langCode,
+    gender: c.gender,
+    repetitions: c.repetitions ?? 0,
+    lapses: c.lapses ?? 0,
+    lastReview: c.lastReview ?? 0,
+    nextReview: c.nextReview ?? 0,
   }));
 
   return { cards, totalPages };
@@ -114,17 +168,23 @@ export default function Edit({
   sortOrder,
   page,
   totalPages,
+  q,
+  paused,
 }: EditProps) {
   const deleteFlagged = trpc.deletePausedCards.useMutation();
   const router = useRouter();
 
   const [currentSortBy, setCurrentSortBy] = useState(sortBy);
   const [currentSortOrder, setCurrentSortOrder] = useState(sortOrder);
+  const [query, setQuery] = useState(q);
+  const [showPaused, setShowPaused] = useState(paused);
 
   useEffect(() => {
     setCurrentSortBy(sortBy);
     setCurrentSortOrder(sortOrder);
-  }, [sortBy, sortOrder]);
+    setQuery(q);
+    setShowPaused(paused);
+  }, [sortBy, sortOrder, q, paused]);
 
   const handleDeletePaused = async () => {
     if (confirm("Are you sure you want to delete all paused cards?")) {
@@ -141,6 +201,8 @@ export default function Edit({
         sortBy: currentSortBy,
         sortOrder: currentSortOrder,
         page: "1",
+        q: query,
+        paused: String(showPaused),
       },
     });
   };
@@ -152,6 +214,8 @@ export default function Edit({
         sortBy: currentSortBy,
         sortOrder: currentSortOrder,
         page: String(newPage),
+        q: query,
+        paused: String(showPaused),
       },
     });
   };
@@ -174,31 +238,57 @@ export default function Edit({
   );
 
   return (
-    <Container size="s">
-      <h1>Manage Cards</h1>
+    <Container size="lg" py="lg">
+      <Title order={2} mb="sm">
+        Your Cards
+      </Title>
+      <Text c="dimmed" mb="md">
+        Browse, search, and manage your cards. Quick-edit or open details.
+      </Text>
 
-      <form onSubmit={handleSearch}>
-        <Group align="flex-end">
-          <Select
-            label="Sort By"
-            value={currentSortBy}
-            onChange={(value) => value && setCurrentSortBy(value)}
-            data={SORT_OPTIONS}
-          />
-          <Select
-            label="Order"
-            value={currentSortOrder}
-            onChange={(value) => value && setCurrentSortOrder(value)}
-            data={ORDER_OPTIONS}
-          />
-          <Button type="submit">Search</Button>
-          {Pagination}
-          <Button color="red" onClick={handleDeletePaused}>
-            Delete Paused Cards
-          </Button>
-        </Group>
-      </form>
-      <hr />
+      <Paper withBorder p="md" radius="md" mb="md">
+        <form onSubmit={handleSearch}>
+          <Group align="flex-end" wrap="wrap">
+            <TextInput
+              label="Search"
+              placeholder="Find by term or definition"
+              value={query}
+              onChange={(e) => setQuery(e.currentTarget.value)}
+              style={{ minWidth: 260 }}
+            />
+            <Select
+              label="Sort By"
+              value={currentSortBy}
+              onChange={(value) => value && setCurrentSortBy(value)}
+              data={SORT_OPTIONS}
+            />
+            <Select
+              label="Order"
+              value={currentSortOrder}
+              onChange={(value) => value && setCurrentSortOrder(value)}
+              data={ORDER_OPTIONS}
+              style={{ width: 140 }}
+            />
+            <Checkbox
+              label="Show paused only"
+              checked={showPaused}
+              onChange={(e) => setShowPaused(e.currentTarget.checked)}
+            />
+            <Group gap="sm">
+              <Button type="submit">Apply</Button>
+              <Button
+                variant="outline"
+                color="red"
+                onClick={handleDeletePaused}
+              >
+                Delete Paused Cards
+              </Button>
+            </Group>
+            <Group ml="auto">{Pagination}</Group>
+          </Group>
+        </form>
+      </Paper>
+
       <CardTable onDelete={() => {}} cards={cards} />
       {Pagination}
     </Container>

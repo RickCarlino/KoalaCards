@@ -4,13 +4,18 @@ import { trpc } from "@/koala/trpc-config";
 import { getLessonMeta } from "@/koala/trpc-routes/get-next-quizzes";
 import { AreaChart } from "@mantine/charts";
 import {
+  Avatar,
+  Badge,
   Button,
   Card,
   Container,
+  Divider,
+  Grid,
   Group,
   NumberInput,
   Paper,
-  Radio,
+  SegmentedControl,
+  Slider,
   Stack,
   Switch,
   Text,
@@ -279,200 +284,257 @@ export default function UserSettingsPage(props: Props) {
   ];
 
   return (
-    <Container size="sm" mt="xl">
-      <Stack gap="xl">
-        <Title order={1}>User Settings</Title>
-        <Paper withBorder p="md" radius="md">
-          <form onSubmit={handleSubmit}>
-            <Stack gap="md">
-              <NumberInput
-                label="Audio playback speed percentage"
-                description="Adjust how quickly audio is played back (50% - 200%)"
-                id="playbackSpeed"
-                name="playbackSpeed"
-                value={settings.playbackSpeed}
-                onChange={(value) => handleChange(value, "playbackSpeed")}
-                min={0.5}
-                max={2}
-                step={0.02}
-                required
-              />
-
-              <NumberInput
-                label="New cards per day target"
-                description="Most users should pick a value between 7 and 21. Your weekly target is 7 times this value. Daily new cards will shrink or grow to meet this weekly target based on upcoming cards due."
-                id="cardsPerDayMax"
-                name="cardsPerDayMax"
-                value={settings.cardsPerDayMax}
-                onChange={(value) => handleChange(value, "cardsPerDayMax")}
-                min={1}
-                max={30}
-                required
-              />
-
-              <NumberInput
-                label="Daily writing goal (characters)"
-                description="Set your daily writing practice target in characters."
-                id="dailyWritingGoal"
-                name="dailyWritingGoal"
-                value={settings.dailyWritingGoal || 300}
-                onChange={(value) =>
-                  handleChange(value, "dailyWritingGoal")
-                }
-                min={0}
-                step={50}
-                required
-              />
-
-              <Radio.Group
-                label="Playback your voice after recording?"
-                description="Listening to your own voice is a good way to improve pronunciation"
-                id="playbackPercentage"
-                name="playbackPercentage"
-                value={String(settings.playbackPercentage)}
-                onChange={(value) =>
-                  handleChange(value, "playbackPercentage")
-                }
-                required
-              >
-                <Radio value="1" label="Always" />
-                <Radio value="0.125" label="Sometimes" />
-                <Radio value="0" label="Never" />
-              </Radio.Group>
-
-              <Switch
-                checked={settings.writingFirst || false}
-                onChange={(event) =>
-                  setSettings({
-                    ...settings,
-                    writingFirst: event.currentTarget.checked,
-                  })
-                }
-                label="Do not allow review of cards if daily writing goal is not met"
-                description="Prioritize writing practice by requiring it before card review"
-                size="md"
-                color="blue"
-              />
-
-              <Group justify="flex-end" mt="md">
-                <Button type="submit">Save Settings</Button>
+    <Container size="lg" mt="xl">
+      <Stack gap="lg">
+        <Group justify="space-between" align="center">
+          <Group>
+            <Avatar
+              src={settings.user?.image || undefined}
+              radius="xl"
+              size={56}
+            >
+              {settings.user?.name?.[0] ||
+                settings.user?.email?.[0] ||
+                "U"}
+            </Avatar>
+            <Stack gap={2}>
+              <Title order={2}>Account & Settings</Title>
+              <Group gap="xs">
+                {settings.user?.name && (
+                  <Badge variant="light">{settings.user.name}</Badge>
+                )}
+                {settings.user?.email && (
+                  <Badge color="gray" variant="outline">
+                    {settings.user.email}
+                  </Badge>
+                )}
+                {settings.user?.createdAt && (
+                  <Badge color="pink" variant="light">
+                    Joined {formatDate(new Date(settings.user.createdAt))}
+                  </Badge>
+                )}
               </Group>
             </Stack>
-          </form>
-        </Paper>
+          </Group>
+          <Button
+            variant="outline"
+            onClick={(event) => {
+              event.preventDefault();
+              signOut();
+              location.assign("/");
+            }}
+          >
+            Log Out
+          </Button>
+        </Group>
 
-        <Stack gap="md">
-          <Title order={2}>Statistics</Title>
-          <Text size="sm">
-            Here are some insights into your learning progress and the user
-            base.
-          </Text>
-          <Card withBorder shadow="xs" p="md" radius="md">
-            <Stack gap="xs">
-              {statLabels.map(
-                ([key, label]) =>
-                  stats[key] !== undefined && (
-                    <Group key={key} gap="xs">
-                      <Text fw={500}>{label}:</Text>
-                      <Text>{stats[key]}</Text>
-                    </Group>
-                  ),
-              )}
+        <Grid gutter="lg">
+          <Grid.Col span={{ base: 12, md: 7 }}>
+            <Paper withBorder p="md" radius="md">
+              <Title order={4} mb="sm">
+                Preferences
+              </Title>
+              <form onSubmit={handleSubmit}>
+                <Stack gap="md">
+                  <Stack gap={6}>
+                    <Text size="sm" fw={600}>
+                      Audio playback speed
+                    </Text>
+                    <Slider
+                      min={0.5}
+                      max={2}
+                      step={0.05}
+                      value={settings.playbackSpeed}
+                      onChange={(val) =>
+                        handleChange(val, "playbackSpeed")
+                      }
+                      marks={[
+                        { value: 0.5, label: "0.5x" },
+                        { value: 1, label: "1x" },
+                        { value: 1.5, label: "1.5x" },
+                        { value: 2, label: "2x" },
+                      ]}
+                    />
+                  </Stack>
+
+                  <NumberInput
+                    label="New cards per day target"
+                    description="Weekly target is 7× this value; daily new adjusts to meet it."
+                    id="cardsPerDayMax"
+                    name="cardsPerDayMax"
+                    value={settings.cardsPerDayMax}
+                    onChange={(value) =>
+                      handleChange(value, "cardsPerDayMax")
+                    }
+                    min={1}
+                    max={50}
+                    required
+                  />
+
+                  <NumberInput
+                    label="Daily writing goal (characters)"
+                    description="Set your daily writing practice target."
+                    id="dailyWritingGoal"
+                    name="dailyWritingGoal"
+                    value={settings.dailyWritingGoal || 300}
+                    onChange={(value) =>
+                      handleChange(value, "dailyWritingGoal")
+                    }
+                    min={0}
+                    step={50}
+                    required
+                  />
+
+                  <SegmentedControl
+                    fullWidth
+                    value={String(settings.playbackPercentage)}
+                    onChange={(value) =>
+                      handleChange(value, "playbackPercentage")
+                    }
+                    data={[
+                      { label: "Always (100%)", value: "1" },
+                      { label: "Usually (66%)", value: "0.66" },
+                      { label: "Sometimes (33%)", value: "0.33" },
+                      { label: "Never (0%)", value: "0" },
+                    ]}
+                  />
+                  <Text size="xs" c="dimmed">
+                    Controls how often your recording is replayed right
+                    after you speak, to reinforce pronunciation.
+                  </Text>
+
+                  <Switch
+                    checked={settings.writingFirst || false}
+                    onChange={(event) =>
+                      setSettings({
+                        ...settings,
+                        writingFirst: event.currentTarget.checked,
+                      })
+                    }
+                    label="Require daily writing before card review"
+                    description="Prioritize writing practice by requiring it before card review"
+                    size="md"
+                    color="blue"
+                  />
+
+                  <Group justify="flex-end" mt="sm">
+                    <Button
+                      type="submit"
+                      loading={editUserSettings.isLoading}
+                    >
+                      Save Settings
+                    </Button>
+                  </Group>
+                </Stack>
+              </form>
+            </Paper>
+          </Grid.Col>
+
+          <Grid.Col span={{ base: 12, md: 5 }}>
+            <Stack gap="md">
+              <Card withBorder shadow="xs" p="md" radius="md">
+                <Title order={5} mb="xs">
+                  Quick Stats
+                </Title>
+                <Stack gap={6}>
+                  {statLabels.map(
+                    ([key, label]) =>
+                      stats[key] !== undefined && (
+                        <Group key={key} gap="xs" justify="space-between">
+                          <Text c="dimmed" size="sm">
+                            {label}
+                          </Text>
+                          <Text fw={600}>{stats[key]}</Text>
+                        </Group>
+                      ),
+                  )}
+                </Stack>
+              </Card>
             </Stack>
-          </Card>
-        </Stack>
+          </Grid.Col>
+        </Grid>
 
-        {/* Cards Chart Section */}
-        <Stack gap="md">
-          <Title order={2}>Total Cards Learned (90 Days)</Title>
-          <Card withBorder shadow="xs" p="md" radius="md">
-            <AreaChart
-              h={300}
-              data={cardChartData}
-              dataKey="date"
-              series={[
-                { name: "count", color: "blue", label: "Total Learned" },
-              ]}
-              curveType="natural"
-              yAxisLabel="Cards Learned"
-              xAxisLabel="Date"
-              tooltipProps={{
-                content: ({ label, payload }) => (
-                  <Paper
-                    px="md"
-                    py="sm"
-                    withBorder
-                    shadow="md"
-                    radius="md"
-                  >
-                    <Text fw={500} mb={5}>
-                      {label} {/* Display date */}
-                    </Text>
-                    {payload?.map((item) => (
-                      <Text key={item.name} c={item.color} fz="sm">
-                        {item.name}: {item.value} {/* Display count */}
+        <Divider label="Progress" labelPosition="center" my="sm" />
+
+        <Grid gutter="lg">
+          <Grid.Col span={{ base: 12, md: 6 }}>
+            <Title order={4} mb="xs">
+              Total Cards Learned (90 Days)
+            </Title>
+            <Card withBorder shadow="xs" p="md" radius="md">
+              <AreaChart
+                h={300}
+                data={cardChartData}
+                dataKey="date"
+                series={[
+                  { name: "count", color: "blue", label: "Total Learned" },
+                ]}
+                curveType="natural"
+                yAxisLabel="Cards Learned"
+                xAxisLabel="Date"
+                tooltipProps={{
+                  content: ({ label, payload }) => (
+                    <Paper
+                      px="md"
+                      py="sm"
+                      withBorder
+                      shadow="md"
+                      radius="md"
+                    >
+                      <Text fw={500} mb={5}>
+                        {label}
                       </Text>
-                    ))}
-                  </Paper>
-                ),
-              }}
-              gridProps={{ strokeDasharray: "3 3" }}
-            />
-          </Card>
-        </Stack>
+                      {payload?.map((item) => (
+                        <Text key={item.name} c={item.color} fz="sm">
+                          {item.name}: {item.value}
+                        </Text>
+                      ))}
+                    </Paper>
+                  ),
+                }}
+                gridProps={{ strokeDasharray: "3 3" }}
+              />
+            </Card>
+          </Grid.Col>
 
-        {/* Writing Progress Chart Section */}
-        <Stack gap="md">
-          <Title order={2}>Total Writing Progress (90 Days)</Title>
-          <Card withBorder shadow="xs" p="md" radius="md">
-            <AreaChart
-              h={300}
-              data={writingChartData}
-              dataKey="date"
-              series={[
-                { name: "count", color: "blue", label: "Total Learned" },
-              ]}
-              curveType="natural"
-              yAxisLabel="Characters Written"
-              xAxisLabel="Date"
-              tooltipProps={{
-                content: ({ label, payload }) => (
-                  <Paper
-                    px="md"
-                    py="sm"
-                    withBorder
-                    shadow="md"
-                    radius="md"
-                  >
-                    <Text fw={500} mb={5}>
-                      {label} {/* Display date */}
-                    </Text>
-                    {payload?.map((item) => (
-                      <Text key={item.name} c={item.color} fz="sm">
-                        {item.name}: {item.value} {/* Display count */}
+          <Grid.Col span={{ base: 12, md: 6 }}>
+            <Title order={4} mb="xs">
+              Total Writing Progress (90 Days)
+            </Title>
+            <Card withBorder shadow="xs" p="md" radius="md">
+              <AreaChart
+                h={300}
+                data={writingChartData}
+                dataKey="date"
+                series={[{ name: "count", color: "blue", label: "Total" }]}
+                curveType="natural"
+                yAxisLabel="Characters Written"
+                xAxisLabel="Date"
+                tooltipProps={{
+                  content: ({ label, payload }) => (
+                    <Paper
+                      px="md"
+                      py="sm"
+                      withBorder
+                      shadow="md"
+                      radius="md"
+                    >
+                      <Text fw={500} mb={5}>
+                        {label}
                       </Text>
-                    ))}
-                  </Paper>
-                ),
-              }}
-              gridProps={{ strokeDasharray: "3 3" }}
-            />
-          </Card>
-        </Stack>
-
-        <Stack gap="md">
-          <Card withBorder shadow="xs" p="md" radius="md">
-            <Button
-              onClick={(event) => {
-                event.preventDefault();
-                signOut();
-                location.assign("/");
-              }}
-            >
-              Log Out
-            </Button>
-          </Card>
-        </Stack>
+                      {payload?.map((item) => (
+                        <Text key={item.name} c={item.color} fz="sm">
+                          {item.name}: {item.value}
+                        </Text>
+                      ))}
+                    </Paper>
+                  ),
+                }}
+                gridProps={{ strokeDasharray: "3 3" }}
+              />
+            </Card>
+          </Grid.Col>
+        </Grid>
       </Stack>
     </Container>
   );
