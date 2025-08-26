@@ -79,7 +79,6 @@ For each "Word to Define" listed above:
         schema: DefinitionSchema,
       });
 
-      // Return the structured definitions
       return response;
     } catch (error) {
       console.error("Error generating definitions:", error);
