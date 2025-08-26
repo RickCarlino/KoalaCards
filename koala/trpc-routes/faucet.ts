@@ -12,9 +12,8 @@ export const faucet = procedure
     if (!userdId) {
       return [];
     }
-    const cards = await prismaClient.quiz.findMany({
-      where: { Card: { userId: userdId } },
-      include: { Card: true },
+    const cards = await prismaClient.card.findMany({
+      where: { userId: userdId },
       take: 10,
     });
     if (cards.length < 10) {
@@ -22,19 +21,19 @@ export const faucet = procedure
     }
     const now = Date.now();
     const remedial = cards.pop();
-    if (remedial?.Card) {
-      console.log("=== Remedial card: " + remedial.Card.term);
+    if (remedial) {
+      console.log("=== Remedial card: " + remedial.term);
       await prismaClient.card.update({
-        where: { id: remedial.Card.id },
+        where: { id: remedial.id },
         data: { lastFailure: now },
       });
     }
 
-    const newQuiz = cards.pop();
-    if (newQuiz) {
-      console.log("=== New quiz: " + newQuiz.Card.term);
-      await prismaClient.quiz.update({
-        where: { id: newQuiz.id },
+    const newCard = cards.pop();
+    if (newCard) {
+      console.log("=== New quiz: " + newCard.term);
+      await prismaClient.card.update({
+        where: { id: newCard.id },
         data: {
           stability: 0,
           difficulty: 0,
@@ -47,14 +46,13 @@ export const faucet = procedure
       });
     }
 
-    const speakingQuiz = cards.find((q) => q.quizType === "speaking");
-
-    if (!speakingQuiz) {
-      throw new Error("Need speaking quizzes");
+    const speakingCard = cards[0];
+    if (!speakingCard) {
+      throw new Error("Need speaking cards");
     }
 
-    await prismaClient.quiz.update({
-      where: { id: speakingQuiz.id },
+    await prismaClient.card.update({
+      where: { id: speakingCard.id },
       data: {
         nextReview: now - 24 * 60 * 60 * 1000,
         repetitions: 1,

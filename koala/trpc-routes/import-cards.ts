@@ -1,10 +1,10 @@
 import { Grade } from "femto-fsrs";
 import { prismaClient } from "../prisma-client";
-import { Quiz } from "@prisma/client";
+import { Card } from "@prisma/client";
 import { timeUntil } from "@/koala/time-until";
 import { calculateSchedulingData } from "./calculate-scheduling-data";
 
-type QuizGradingFields =
+type CardGradingFields =
   | "difficulty"
   | "firstReview"
   | "id"
@@ -13,30 +13,28 @@ type QuizGradingFields =
   | "repetitions"
   | "stability";
 
-type GradedQuiz = Pick<Quiz, QuizGradingFields>;
+type GradedCard = Pick<Card, CardGradingFields>;
 
 export async function setGrade(
-  quiz: GradedQuiz,
+  card: GradedCard,
   grade: Grade,
   now = Date.now(),
 ) {
   const isFail = grade === Grade.AGAIN;
   const data = {
-    ...quiz,
-    ...calculateSchedulingData(quiz, grade, now),
-    repetitions: (quiz.repetitions || 0) + 1,
+    ...card,
+    ...calculateSchedulingData(card, grade, now),
+    repetitions: (card.repetitions || 0) + 1,
     lastReview: now,
-    firstReview: quiz.firstReview || now,
+    firstReview: card.firstReview || now,
     lastFailure: isFail ? now : 0,
-    lapses: (quiz.lapses || 0) + (isFail ? 1 : 0),
+    lapses: (card.lapses || 0) + (isFail ? 1 : 0),
   };
 
-  const { id, nextReview } = await prismaClient.quiz.update({
-    where: { id: quiz.id },
+  const { id, nextReview } = await prismaClient.card.update({
+    where: { id: card.id },
     data: {
-      ...(grade === Grade.AGAIN
-        ? { Card: { update: { lastFailure: now } } }
-        : {}),
+      ...(grade === Grade.AGAIN ? { lastFailure: now } : {}),
       // Stats:
       difficulty: data.difficulty,
       lapses: data.lapses,
@@ -48,5 +46,5 @@ export async function setGrade(
       nextReview: data.nextReview,
     },
   });
-  console.log(`Quiz ${id} next review: ${timeUntil(nextReview)}`);
+  console.log(`Card ${id} next review: ${timeUntil(nextReview)}`);
 }

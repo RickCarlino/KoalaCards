@@ -75,25 +75,15 @@ export const reviewAssistant = procedure
     }
 
     // Fetch the most recently reviewed cards in this deck for context
-    const recent = await prismaClient.quiz.findMany({
-      where: { Card: { deckId: deck.id, userId } },
+    const recent = await prismaClient.card.findMany({
+      where: { deckId: deck.id, userId },
       orderBy: [{ lastReview: "desc" }],
       take: input.recentCount ?? 10,
-      select: {
-        Card: {
-          select: {
-            term: true,
-            definition: true,
-            gender: true,
-          },
-        },
-      },
+      select: { term: true, definition: true, gender: true },
     });
 
     const recentPairs = recent
-      .map((r) => r.Card)
-      .filter(Boolean)
-      .map((c) => `• ${c!.term} — ${c!.definition}`)
+      .map((c) => `• ${c.term} — ${c.definition}`)
       .join("\n");
 
     const system = [

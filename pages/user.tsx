@@ -54,74 +54,57 @@ export async function getServerSideProps(
     threeMonthsAgo.setMonth(today.getMonth() - 3);
 
     const BASE_QUERY = {
-      Card: {
-        userId: userId,
-        flagged: { not: true },
-      },
-    };
+      userId: userId,
+      flagged: { not: true },
+    } as const;
 
-    const cardsDueNext24Hours = await prismaClient.quiz.count({
+    const cardsDueNext24Hours = await prismaClient.card.count({
       where: {
         ...BASE_QUERY,
-        nextReview: {
-          lt: tomorrow.getTime(),
-        },
-        firstReview: {
-          gt: 0,
-        },
+        nextReview: { lt: tomorrow.getTime() },
+        firstReview: { gt: 0 },
       },
     });
     const newCardsLast24Hours = (
-      await prismaClient.quiz.findMany({
+      await prismaClient.card.findMany({
         select: { id: true },
         where: {
-          Card: { userId },
-          firstReview: {
-            gte: yesterday.getTime(),
-          },
+          userId,
+          firstReview: { gte: yesterday.getTime() },
         },
-        distinct: ["cardId"],
+        distinct: ["id"],
       })
     ).length;
     const newCardsLastWeek = (
-      await prismaClient.quiz.findMany({
+      await prismaClient.card.findMany({
         select: { id: true },
         where: {
-          Card: { userId },
-          firstReview: {
-            gte: oneWeekAgo.getTime(),
-          },
+          userId,
+          firstReview: { gte: oneWeekAgo.getTime() },
         },
-        distinct: ["cardId"],
+        distinct: ["id"],
       })
     ).length;
-    const uniqueCardsLast24Hours = await prismaClient.quiz.count({
+    const uniqueCardsLast24Hours = await prismaClient.card.count({
       where: {
         ...BASE_QUERY,
-        lastReview: {
-          gte: yesterday.getTime(),
-        },
+        lastReview: { gte: yesterday.getTime() },
       },
     });
-    const uniqueCardsLastWeek = await prismaClient.quiz.count({
+    const uniqueCardsLastWeek = await prismaClient.card.count({
       where: {
         ...BASE_QUERY,
-        lastReview: {
-          gte: oneWeekAgo.getTime(),
-        },
+        lastReview: { gte: oneWeekAgo.getTime() },
       },
     });
 
-    const recentLearnedQuizzes = await prismaClient.quiz.findMany({
+    const recentLearnedQuizzes = await prismaClient.card.findMany({
       where: {
-        Card: { userId },
-        firstReview: {
-          gt: 0,
-          gte: threeMonthsAgo.getTime(),
-        },
+        userId,
+        firstReview: { gte: threeMonthsAgo.getTime() },
       },
       select: {
-        cardId: true,
+        id: true,
         firstReview: true,
       },
       orderBy: {
@@ -130,9 +113,9 @@ export async function getServerSideProps(
     });
 
     const firstLearnedDates: Record<string, Date> = {};
-    for (const quiz of recentLearnedQuizzes) {
-      if (quiz.firstReview && !firstLearnedDates[quiz.cardId]) {
-        firstLearnedDates[quiz.cardId] = new Date(quiz.firstReview);
+    for (const card of recentLearnedQuizzes) {
+      if (card.firstReview && !firstLearnedDates[card.id]) {
+        firstLearnedDates[card.id] = new Date(card.firstReview);
       }
     }
 
@@ -401,9 +384,7 @@ export default function UserSettingsPage(props: Props) {
 
         {/* Cards Chart Section */}
         <Stack gap="md">
-          <Title order={2}>
-            Total Cards Learned (90 Days)
-          </Title>
+          <Title order={2}>Total Cards Learned (90 Days)</Title>
           <Card withBorder shadow="xs" p="md" radius="md">
             <AreaChart
               h={300}
@@ -442,9 +423,7 @@ export default function UserSettingsPage(props: Props) {
 
         {/* Writing Progress Chart Section */}
         <Stack gap="md">
-          <Title order={2}>
-            Total Writing Progress (90 Days)
-          </Title>
+          <Title order={2}>Total Writing Progress (90 Days)</Title>
           <Card withBorder shadow="xs" p="md" radius="md">
             <AreaChart
               h={300}

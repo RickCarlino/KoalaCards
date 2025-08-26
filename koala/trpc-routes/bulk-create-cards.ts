@@ -86,12 +86,13 @@ export const bulkCreateCards = procedure
       }
 
       const card = await prismaClient.card.create({
-        data: { userId, langCode, term, definition, deckId, gender },
-      });
-      await prismaClient.quiz.create({
         data: {
-          cardId: card.id,
-          quizType: "speaking",
+          userId,
+          langCode,
+          term,
+          definition,
+          deckId,
+          gender,
           stability: 0,
           difficulty: 0,
           firstReview: 0,
@@ -100,8 +101,8 @@ export const bulkCreateCards = procedure
           lapses: 0,
           repetitions: 0,
         },
-      }),
-        results.push({ term, definition });
+      });
+      results.push({ term, definition });
       processed += 1;
       if (processed < 50) {
         maybeAddImageToCard(card);

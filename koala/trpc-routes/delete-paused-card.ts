@@ -13,11 +13,6 @@ export const deletePausedCards = procedure
         userId,
       },
     });
-    await prismaClient.quiz.deleteMany({
-      where: {
-        cardId: { in: cards.map((c) => c.id) },
-      },
-    });
     await prismaClient.card.deleteMany({
       where: {
         id: { in: cards.map((c) => c.id) },

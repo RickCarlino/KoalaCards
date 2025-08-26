@@ -7,19 +7,13 @@ import { QuizInput, QuizList } from "../types/zod";
 export async function getLessonMeta(userId: string, deckId?: number) {
   const currentDate = new Date().getTime(); // Current time in milliseconds
 
-  let quizzesDue = await prismaClient.quiz.count({
+  let quizzesDue = await prismaClient.card.count({
     where: {
-      Card: {
-        userId: userId,
-        flagged: { not: true },
-        ...(deckId ? { deckId: deckId } : {}),
-      },
-      nextReview: {
-        lt: currentDate,
-      },
-      firstReview: {
-        gt: 0,
-      },
+      userId,
+      flagged: { not: true },
+      ...(deckId ? { deckId } : {}),
+      nextReview: { lt: currentDate },
+      firstReview: { gt: 0 },
     },
   });
 
@@ -31,13 +25,8 @@ export async function getLessonMeta(userId: string, deckId?: number) {
     },
   });
 
-  const totalCards = await prismaClient.quiz.count({
-    where: {
-      Card: {
-        userId: userId,
-        flagged: false,
-      },
-    },
+  const totalCards = await prismaClient.card.count({
+    where: { userId, flagged: false, ...(deckId ? { deckId } : {}) },
   });
 
   quizzesDue += reviewsDue;
@@ -45,12 +34,11 @@ export async function getLessonMeta(userId: string, deckId?: number) {
   // Cards that have no quiz yet:
   // Count of Quizzes where repetitions and lapses are 0
   // by distinct cardID
-  const newCards = await prismaClient.quiz.count({
+  const newCards = await prismaClient.card.count({
     where: {
-      Card: {
-        userId: userId,
-        flagged: false,
-      },
+      userId,
+      flagged: false,
+      ...(deckId ? { deckId } : {}),
       repetitions: 0,
       lapses: 0,
     },

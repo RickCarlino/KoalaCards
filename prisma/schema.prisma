@@ -106,33 +106,22 @@ model Card {
   // Gender can be "M"ale, "F"emale, or "N"eutral
   gender      String   @default("N")
   createdAt   DateTime @default(now())
-  Quiz        Quiz[]
   imageBlobId String?
   deckId      Int? // Nullable for gradual migration
   Deck        Deck?    @relation(fields: [deckId], references: [id])
   lastFailure Float    @default(0)
+  // Scheduling/stat fields migrated from Quiz (speaking)
+  stability   Float    @default(0)
+  difficulty  Float    @default(0)
+  firstReview Float    @default(0)
+  lastReview  Float    @default(0)
+  nextReview  Float    @default(0)
+  lapses      Float    @default(0)
+  repetitions Float    @default(0)
 
   @@unique([userId, term])
   @@index([deckId])
   @@index([userId])
-}
-
-model Quiz {
-  id          Int    @id @default(autoincrement())
-  cardId      Int
-  Card        Card   @relation(fields: [cardId], references: [id], onDelete: Cascade)
-  quizType    String
-  stability   Float  @default(0)
-  difficulty  Float  @default(0)
-  firstReview Float  @default(0)
-  lastReview  Float  @default(0)
-  nextReview  Float  @default(0)
-  lapses      Float  @default(0)
-  repetitions Float  @default(0)
-
-  @@unique([cardId, quizType])
-  @@index([cardId])
-  @@index([nextReview])
 }
 
 model TrainingData {

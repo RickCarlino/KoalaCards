@@ -9,7 +9,7 @@ export const gradeQuiz = procedure
   .input(
     z.object({
       perceivedDifficulty: z.number().min(1).max(4).int(),
-      quizID: z.number(),
+      cardID: z.number(),
     }),
   )
   .output(z.object({}))
@@ -23,28 +23,20 @@ export const gradeQuiz = procedure
     }
 
     const grade = x.input.perceivedDifficulty as Grade;
-    const quiz = await prismaClient.quiz.findUnique({
-      where: {
-        id: x.input.quizID,
-        Card: {
-          userId: user.id,
-        },
-      },
-      include: {
-        Card: true,
-      },
+    const card = await prismaClient.card.findFirst({
+      where: { id: x.input.cardID, userId: user.id },
     });
 
-    if (!quiz) {
+    if (!card) {
       return {
         result: "error",
-        rejectionText: "No quiz found",
+        rejectionText: "No card found",
       };
     }
 
     if ([Grade.AGAIN, Grade.HARD].includes(grade)) {
-      maybeAddImageToCard(quiz.Card);
+      maybeAddImageToCard(card);
     }
-    await setGrade(quiz, grade);
+    await setGrade(card, grade);
     return {};
   });

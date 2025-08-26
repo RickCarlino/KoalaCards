@@ -22,12 +22,6 @@ async function deleteInactiveUser(id: string, email: string | null) {
     },
   });
 
-  await prismaClient.quiz.deleteMany({
-    where: {
-      cardId: { in: cards.map((c) => c.id) },
-    },
-  });
-
   await prismaClient.card.deleteMany({
     where: {
       id: { in: cards.map((c) => c.id) },

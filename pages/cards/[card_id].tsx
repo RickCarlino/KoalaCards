@@ -26,7 +26,7 @@ type CardData = {
     flagged: boolean;
     imageURL: string | null;
     quizzes: {
-      quizId: number;
+      cardId: number;
       repetitions: number;
       lapses: number;
       lessonType: string;
@@ -93,7 +93,7 @@ function Card({ cardData }: CardData) {
             </Flex>
             {cardData.quizzes.length > 0 && (
               <Stack gap="md" mt="xl">
-                <Title order={3}>Quiz History</Title>
+                <Title order={3}>Review Stats</Title>
                 <Table
                   withTableBorder
                   withRowBorders
@@ -111,7 +111,7 @@ function Card({ cardData }: CardData) {
                   </thead>
                   <tbody>
                     {cardData.quizzes.map((quiz) => (
-                      <tr key={quiz.quizId}>
+                      <tr key={quiz.cardId}>
                         <td>{quiz.lessonType.toUpperCase()}</td>
                         <td>{quiz.repetitions}</td>
                         <td>{quiz.lapses}</td>
@@ -155,13 +155,16 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   const card = await getCardOrFail(cardId, dbUser?.id);
   const imageURL = await maybeGetCardImageUrl(card.imageBlobId);
 
-  const quizzes = card.Quiz.map((quiz) => ({
-    quizId: quiz.id,
-    repetitions: quiz.repetitions,
-    lapses: quiz.lapses,
-    lessonType: quiz.quizType,
-    lastReview: quiz.lastReview,
-  }));
+  // With Quiz removed, surface the speaking stats from Card directly as a single row
+  const quizzes = [
+    {
+      cardId: card.id,
+      repetitions: card.repetitions ?? 0,
+      lapses: card.lapses ?? 0,
+      lessonType: "speaking",
+      lastReview: card.lastReview ?? 0,
+    },
+  ];
 
   return {
     props: {

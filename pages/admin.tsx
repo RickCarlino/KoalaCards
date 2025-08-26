@@ -58,39 +58,16 @@ export async function getServerSideProps(
     },
   });
 
-  // Get studied card counts for all users
-  const studiedCounts = await prismaClient.quiz.groupBy({
-    by: ["cardId"],
-    where: {
-      repetitions: {
-        gt: 0,
-      },
-    },
-    _count: {
-      cardId: true,
-    },
+  // Get studied card counts for all users (cards with repetitions > 0)
+  const studiedByUserRows = await prismaClient.card.groupBy({
+    by: ["userId"],
+    where: { repetitions: { gt: 0 } },
+    _count: { _all: true },
   });
 
-  // Get cards with their userIds
-  const cardIds = studiedCounts.map((s) => s.cardId);
-  const cards = await prismaClient.card.findMany({
-    where: {
-      id: {
-        in: cardIds,
-      },
-    },
-    select: {
-      id: true,
-      userId: true,
-    },
-  });
-
-  // Create a map of userId to studied card count
-  const studiedByUser = new Map<string, number>();
-  cards.forEach((card) => {
-    const count = studiedByUser.get(card.userId) || 0;
-    studiedByUser.set(card.userId, count + 1);
-  });
+  const studiedByUser = new Map<string, number>(
+    studiedByUserRows.map((r) => [r.userId, r._count._all] as const),
+  );
 
   const userData = users.map((u) => {
     return {

@@ -7,7 +7,7 @@ import { GradingResult } from "../types";
 interface RemedialOutroValidatorProps {
   targetText: string;
   langCode: LangCode;
-  quizId: number;
+  cardId: number;
   cardUUID: string;
   userTranscription: string;
   onValidationComplete: (isValid: boolean, result: GradingResult) => void;
@@ -23,7 +23,7 @@ export const RemedialOutroValidator: React.FC<
 > = ({
   targetText,
   langCode,
-  quizId,
+  cardId,
   cardUUID,
   userTranscription,
   onValidationComplete,
@@ -35,7 +35,7 @@ export const RemedialOutroValidator: React.FC<
     useRemedialOutroValidation({
       targetText,
       langCode,
-      quizId,
+      cardId,
       cardUUID,
       onValidationComplete: (isValid, result) => {
         setHasValidated(true);

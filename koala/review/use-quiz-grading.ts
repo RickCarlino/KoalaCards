@@ -2,13 +2,13 @@ import { trpc } from "@/koala/trpc-config";
 import { Grade } from "femto-fsrs";
 
 interface UseQuizGradingOptions {
-  quizId: number;
+  cardId: number;
   onSuccess?: () => void;
   onError?: (error: unknown) => void;
 }
 
 export function useQuizGrading({
-  quizId,
+  cardId,
   onSuccess,
   onError,
 }: UseQuizGradingOptions) {
@@ -22,7 +22,7 @@ export function useQuizGrading({
       await gradeQuiz
         .mutateAsync({
           perceivedDifficulty,
-          quizID: quizId,
+          cardID: cardId,
         })
         .then(onSuccess, onError);
     };

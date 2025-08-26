@@ -71,7 +71,7 @@ export const QuizCard: React.FC<QuizCardProps> = ({
   const { gradeAudio } = useVoiceGrading({
     targetText: card.term,
     langCode: card.langCode as LangCode,
-    quizId: card.quizId,
+    cardId: card.cardId,
     cardUUID: card.uuid,
     onGradingResultCaptured,
   });
@@ -83,7 +83,7 @@ export const QuizCard: React.FC<QuizCardProps> = ({
     gradeWithEasy,
     isLoading,
   } = useQuizGrading({
-    quizId: card.quizId,
+    cardId: card.cardId,
     onSuccess: onProceed,
   });
 
