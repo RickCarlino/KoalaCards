@@ -71,7 +71,7 @@ const navItems: NavItem[] = [
     icon: IconStar,
   },
   {
-    path: (p) => (p.hasCards ? "/create" : "/create-vibe"),
+    path: () => "/create",
     name: "Create Cards",
     show: (_props) => true,
     blink: (props) => !props.hasCards,

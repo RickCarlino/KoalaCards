@@ -77,6 +77,7 @@ For each "Word to Define" listed above:
         model: ["openai", "good"],
         messages: [{ role: "user", content: prompt }],
         schema: DefinitionSchema,
+        maxTokens: 5000,
       });
 
       return response;

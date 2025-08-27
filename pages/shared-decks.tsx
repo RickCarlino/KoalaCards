@@ -132,7 +132,7 @@ const SharedDecks = ({
       {decks.length === 0 ? (
         <Text color="dimmed" style={{ textAlign: "center" }}>
           No community decks available. Want to try an{" "}
-          <Link href="/create-vibe">AI generated deck</Link> instead?
+          <Link href="/create">AI generated deck</Link> instead?
         </Text>
       ) : (
         <>
