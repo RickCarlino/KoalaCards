@@ -11,6 +11,7 @@ import {
   Text,
   Textarea,
   Title,
+  useMantineTheme,
 } from "@mantine/core";
 import {
   IconMessage,
@@ -19,6 +20,7 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import { trpc } from "@/koala/trpc-config";
+import { useMediaQuery } from "@mantine/hooks";
 
 type Suggestion = {
   phrase: string;
@@ -42,11 +44,23 @@ type CurrentCard = {
 export function ReviewAssistantPane({
   deckId,
   current,
+  opened: controlledOpened,
+  onOpen,
+  onClose,
+  showFloatingButton = true,
 }: {
   deckId: number;
   current: CurrentCard;
+  opened?: boolean;
+  onOpen?: () => void;
+  onClose?: () => void;
+  showFloatingButton?: boolean;
 }) {
-  const [opened, setOpened] = React.useState(false);
+  const [uncontrolledOpened, setUncontrolledOpened] =
+    React.useState(false);
+  const opened = controlledOpened ?? uncontrolledOpened;
+  const open = () => (onOpen ? onOpen() : setUncontrolledOpened(true));
+  const close = () => (onClose ? onClose() : setUncontrolledOpened(false));
   const [messages, setMessages] = React.useState<ChatMessage[]>([
     {
       role: "assistant",
@@ -133,27 +147,32 @@ export function ReviewAssistantPane({
     }
   };
 
+  const theme = useMantineTheme();
+  const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints.sm})`);
+
   return (
     <>
-      {/* Floating toggle button */}
-      <Box
-        style={{ position: "fixed", right: 16, bottom: 16, zIndex: 400 }}
-      >
-        <Button
-          leftSection={<IconMessage size={18} />}
-          onClick={() => setOpened(true)}
-          variant="filled"
-          color="indigo"
+      {/* Optional floating toggle button (desktop only by default) */}
+      {showFloatingButton && (
+        <Box
+          style={{ position: "fixed", right: 16, bottom: 16, zIndex: 300 }}
         >
-          Study Assistant
-        </Button>
-      </Box>
+          <Button
+            leftSection={<IconMessage size={18} />}
+            onClick={open}
+            variant="filled"
+            color="indigo"
+          >
+            Study Assistant
+          </Button>
+        </Box>
+      )}
 
       <Drawer
         opened={opened}
-        onClose={() => setOpened(false)}
-        position="right"
-        size={420}
+        onClose={close}
+        position={isMobile ? "bottom" : "right"}
+        size={isMobile ? "100%" : 420}
         overlayProps={{ opacity: 0.3, blur: 1 }}
         withCloseButton={false}
         styles={{
@@ -162,13 +181,17 @@ export function ReviewAssistantPane({
       >
         <Group justify="space-between" mb="xs">
           <Title order={4}>Study Assistant</Title>
-          <ActionIcon variant="subtle" onClick={() => setOpened(false)}>
+          <ActionIcon
+            variant="subtle"
+            onClick={close}
+            aria-label="Close assistant"
+          >
             <IconX size={18} />
           </ActionIcon>
         </Group>
 
         <ScrollArea.Autosize
-          mah="calc(100vh - 220px)"
+          mah={isMobile ? "55vh" : "calc(100vh - 220px)"}
           viewportRef={viewportRef}
         >
           <Stack gap="sm" pr="sm">

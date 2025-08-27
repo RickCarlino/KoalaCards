@@ -21,7 +21,7 @@ export async function maybeGetCardImageUrl(
   return await storageProvider.getExpiringURL(blobID);
 }
 
-const CHEAPNESS = 1; // % of cards that will get an image.
+const CHEAPNESS = 0.25; // % of cards that will get an image.
 
 export async function maybeAddImageToCard(card: Card) {
   if (card.imageBlobId) {

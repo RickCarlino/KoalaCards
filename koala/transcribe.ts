@@ -15,11 +15,29 @@ export async function transcribeB64(
   targetSentence: string,
   language: LangCode,
 ): Promise<TranscriptionResult> {
-  const buffer = Buffer.from(
-    dataURI.split(";base64,").pop() ?? "",
-    "base64",
-  );
-  const fpath = path.join("/tmp", `${uid(8)}.wav`);
+  const commaIdx = dataURI.indexOf(",");
+  const header = commaIdx > -1 ? dataURI.slice(0, commaIdx) : "";
+  const base64 = commaIdx > -1 ? dataURI.slice(commaIdx + 1) : dataURI;
+  const mimeMatch = header.match(/^data:([^;]+(?:;[^,]+)?)?;base64$/);
+  const fullMime = mimeMatch ? (mimeMatch[1] ?? "audio/wav") : "audio/wav";
+  // Strip parameters like ";codecs=opus"
+  const mime = fullMime.split(";")[0];
+
+  const extMap: Record<string, string> = {
+    "audio/wav": "wav",
+    "audio/x-wav": "wav",
+    "audio/webm": "webm",
+    "audio/mp4": "m4a",
+    "audio/m4a": "m4a",
+    // Avoid raw AAC; prefer mp4/m4a container
+    "audio/mpeg": "mp3",
+    "audio/ogg": "ogg",
+  };
+  const ext = extMap[mime] ?? "wav";
+
+  const buffer = Buffer.from(base64, "base64");
+  const filename = `input.${ext}`;
+  const fpath = path.join("/tmp", `${uid(8)}.${ext}`);
   await writeFile(fpath, buffer);
 
   const languageName = supportedLanguages[language] || language;
@@ -37,14 +55,11 @@ export async function transcribeB64(
   try {
     const audioBuffer = await readFile(fpath);
     const text = await transcribeAudio(audioBuffer, {
-      // Language is off
       model: "gpt-4o-transcribe",
       prompt,
+      filename,
     });
     return { kind: "OK", text: text.split("\n")[0] };
-  } catch (e) {
-    console.error(`Transcription Error: ${JSON.stringify(e)}`);
-    return { kind: "error" };
   } finally {
     unlink(fpath).catch((e) =>
       console.error(`Delete Err: ${JSON.stringify(e)}`),

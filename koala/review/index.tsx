@@ -1,7 +1,8 @@
 import { Box } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
 import { useHotkeys } from "@mantine/hooks";
 import React from "react";
-import { blobToBase64, convertBlobToWav } from "../record-button";
+import { blobToBase64 } from "../record-button";
 import { trpc } from "../trpc-config";
 import { useVoiceRecorder } from "../use-recorder";
 import { ControlBar } from "./control-bar";
@@ -32,6 +33,8 @@ interface CardReviewWithRecordingProps extends CardReviewProps {
   onPlayAudio: () => void;
   progress?: number;
   cardsRemaining?: number;
+  onOpenAssistant?: () => void;
+  disableRecord?: boolean;
 }
 
 export const CardReview: React.FC<CardReviewWithRecordingProps> = (
@@ -51,19 +54,26 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
   const CardComponent = cardUIs[itemType] ?? UnknownCard;
 
   async function handleRecordingResult(blob: Blob) {
-    try {
-      const wav = await convertBlobToWav(blob);
-      const base64 = await blobToBase64(wav);
-      onRecordingComplete(base64);
-    } catch (error) {
-      console.error("Audio conversion error:", error);
-      // Fallback: send the original blob as base64 without conversion
-      const base64 = await blobToBase64(blob);
-      onRecordingComplete(base64);
-    }
+    // Send the recorded blob as-is with the correct MIME header.
+    // Server supports mp4/m4a, webm, wav and others.
+    const base64 = await blobToBase64(blob);
+    onRecordingComplete(base64);
   }
 
   const voiceRecorder = useVoiceRecorder(handleRecordingResult);
+
+  // Show a helpful notification if mic access fails (with iOS Safari guidance)
+  React.useEffect(() => {
+    if (voiceRecorder.error) {
+      const message =
+        "Microphone access failed. On iOS: Settings > Safari > Microphone > Allow. If added to Home Screen, enable Microphone under Settings > Koala Cards.";
+      notifications.show({
+        title: "Microphone error",
+        message,
+        color: "red",
+      });
+    }
+  }, [voiceRecorder.error]);
 
   const openCardEditor = () =>
     window.open(`/cards/${card.cardId}`, "_blank");
@@ -81,6 +91,9 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
   };
 
   const handleRecordToggle = () => {
+    if (props.disableRecord) {
+      return;
+    }
     if (voiceRecorder.isRecording) {
       voiceRecorder.stop();
     } else {
@@ -117,7 +130,8 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
           right: 0,
           backgroundColor: "var(--mantine-color-pink-0)",
           borderTop: "1px solid var(--mantine-color-pink-2)",
-          padding: "var(--mantine-spacing-sm)",
+          padding:
+            "calc(var(--mantine-spacing-sm) + env(safe-area-inset-bottom) / 2) var(--mantine-spacing-sm)",
           zIndex: 100,
         }}
       >
@@ -129,6 +143,8 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
           onArchiveClick={handleArchive}
           progress={props.progress}
           cardsRemaining={props.cardsRemaining}
+          onOpenAssistant={props.onOpenAssistant}
+          disableRecord={props.disableRecord}
         />
       </Box>
     </Box>

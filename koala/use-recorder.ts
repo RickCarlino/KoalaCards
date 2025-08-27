@@ -1,4 +1,28 @@
-import { useEffect, useReducer, useRef } from "react";
+import { useReducer, useRef } from "react";
+
+// Cross-browser preferred MIME selection for MediaRecorder
+function getPreferredAudioMime(): string | undefined {
+  const candidates = [
+    // Chrome/Edge modern
+    "audio/webm;codecs=opus",
+    "audio/webm",
+    // Safari iOS/macOS
+    "audio/mp4",
+    // Fallbacks
+    "audio/mpeg",
+  ];
+  const isTypeSupported = (type: string) =>
+    typeof (window as any).MediaRecorder !== "undefined" &&
+    (window as any).MediaRecorder.isTypeSupported?.(type);
+  for (const type of candidates) {
+    try {
+      if (isTypeSupported(type)) return type;
+    } catch (_) {
+      // ignore
+    }
+  }
+  return undefined;
+}
 
 type ReturnedSig = {
   recorder: MediaRecorder | null;
@@ -52,59 +76,67 @@ export const useVoiceRecorder = (
 ): ReturnedSig => {
   const [state, dispatch] = useReducer(reducer, initState);
 
-  // Ref for our persistent microphone stream.
+  // Ref for our persistent microphone stream (created on user gesture).
   const persistentStream = useRef<MediaStream | null>(null);
   // Ref to keep track of the auto-stop timeout.
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // On mount, request access to the microphone and keep the stream open.
-  useEffect(() => {
-    navigator.mediaDevices
-      .getUserMedia({ audio: true })
-      .then((stream) => {
-        persistentStream.current = stream;
-      })
-      .catch((error) => {
-        dispatch({ type: "hasError", payload: { error } });
-      });
-    // On unmount, stop all audio tracks from the persistent stream.
-    return () => {
-      if (persistentStream.current) {
-        persistentStream.current
-          .getAudioTracks()
-          .forEach((track) => track.stop());
-      }
-    };
-  }, []);
+  // Record the mime we chose so we can stamp the resulting Blob correctly.
+  const chosenMimeRef = useRef<string | undefined>(undefined);
+  // Guard to avoid double-callbacks from browsers that emit multiple dataavailable events.
+  const deliveredRef = useRef<boolean>(false);
 
   // Called when recording is finished; passes the resulting Blob to the callback.
   const finishRecording = ({ data }: { data: Blob }) => {
-    cb(data);
+    if (deliveredRef.current) return; // only deliver once
+    deliveredRef.current = true;
+    // Normalize blob type for data URI. Strip codec params to a container mime OpenAI accepts.
+    const raw = (
+      chosenMimeRef.current ||
+      data.type ||
+      "audio/mp4"
+    ).toString();
+    const container = raw.split(";")[0];
+    const normalized =
+      container === "audio/webm" ||
+      container === "audio/mp4" ||
+      container === "audio/mpeg"
+        ? container
+        : "audio/mp4";
+    const stamped = new Blob([data], { type: normalized });
+    cb(stamped);
   };
 
   const start = async () => {
     if (state.isRecording) {
       return;
     }
-    // If the persistent stream is not available yet, request it.
-    if (!persistentStream.current) {
-      try {
+    // Request microphone stream on-demand (user gesture context).
+    try {
+      if (!persistentStream.current) {
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: true,
         });
         persistentStream.current = stream;
-      } catch (error: unknown) {
-        dispatch({ type: "hasError", payload: { error } });
-        return;
       }
+    } catch (error: unknown) {
+      dispatch({ type: "hasError", payload: { error } });
+      return;
     }
     dispatch({ type: "start" });
 
-    const recorder = new MediaRecorder(persistentStream.current);
+    // Pick a stable MIME for the current browser (important for iOS Safari)
+    const preferredMime = getPreferredAudioMime();
+    chosenMimeRef.current = preferredMime;
+
+    const recorder = preferredMime
+      ? new MediaRecorder(persistentStream.current!, {
+          mimeType: preferredMime,
+        })
+      : new MediaRecorder(persistentStream.current!);
     recorder.addEventListener("dataavailable", finishRecording);
     dispatch({ type: "startRecording", payload: { recorder } });
     recorder.start();
-
+    deliveredRef.current = false;
     // Set an auto-stop timer to stop recording after 20 seconds.
     timeoutRef.current = setTimeout(() => {
       stop();
@@ -125,6 +157,10 @@ export const useVoiceRecorder = (
       timeoutRef.current = null;
     }
     if (recorder) {
+      try {
+        // Ask for final data chunk before stopping (Safari reliability)
+        recorder.requestData?.();
+      } catch (_) {}
       recorder.stop();
       recorder.removeEventListener("dataavailable", finishRecording);
       // NOTE: We do not stop the stream’s audio tracks here so that the mic remains active.
