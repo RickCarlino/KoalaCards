@@ -275,7 +275,7 @@ export default function Edit({
               onChange={(e) => setShowPaused(e.currentTarget.checked)}
             />
             <Group gap="sm">
-              <Button type="submit">Apply</Button>
+              <Button type="submit">Search</Button>
               <Button
                 variant="outline"
                 color="red"
