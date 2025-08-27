@@ -54,9 +54,18 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
   const CardComponent = cardUIs[itemType] ?? UnknownCard;
 
   async function handleRecordingResult(blob: Blob) {
+    // Debug: log mime and size to help diagnose empty blobs
+    try {
+      console.debug("[client] recording blob", {
+        type: blob.type,
+        size: blob.size,
+      });
+    } catch (_) {}
     // Send the recorded blob as-is with the correct MIME header.
-    // Server supports mp4/m4a, webm, wav and others.
     const base64 = await blobToBase64(blob);
+    try {
+      console.debug("[client] dataURI header", base64.slice(0, 40));
+    } catch (_) {}
     onRecordingComplete(base64);
   }
 

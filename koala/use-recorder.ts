@@ -3,11 +3,11 @@ import { useReducer, useRef } from "react";
 // Cross-browser preferred MIME selection for MediaRecorder
 function getPreferredAudioMime(): string | undefined {
   const candidates = [
+    // Prefer MP4 so Safari selects it
+    "audio/mp4",
     // Chrome/Edge modern
     "audio/webm;codecs=opus",
     "audio/webm",
-    // Safari iOS/macOS
-    "audio/mp4",
     // Fallbacks
     "audio/mpeg",
   ];
@@ -85,16 +85,15 @@ export const useVoiceRecorder = (
   // Guard to avoid double-callbacks from browsers that emit multiple dataavailable events.
   const deliveredRef = useRef<boolean>(false);
 
-  // Called when recording is finished; passes the resulting Blob to the callback.
-  const finishRecording = ({ data }: { data: Blob }) => {
-    if (deliveredRef.current) return; // only deliver once
-    deliveredRef.current = true;
-    // Normalize blob type for data URI. Strip codec params to a container mime OpenAI accepts.
-    const raw = (
-      chosenMimeRef.current ||
-      data.type ||
-      "audio/mp4"
-    ).toString();
+  // Accumulate chunks and deliver final blob on stop
+  const chunksRef = useRef<BlobPart[]>([]);
+  const onDataAvailable = ({ data }: { data: Blob }) => {
+    if (data && data.size > 0) {
+      chunksRef.current.push(data);
+    }
+  };
+  const onStop = () => {
+    const raw = (chosenMimeRef.current || "audio/mp4").toString();
     const container = raw.split(";")[0];
     const normalized =
       container === "audio/webm" ||
@@ -102,8 +101,9 @@ export const useVoiceRecorder = (
       container === "audio/mpeg"
         ? container
         : "audio/mp4";
-    const stamped = new Blob([data], { type: normalized });
-    cb(stamped);
+    const finalBlob = new Blob(chunksRef.current, { type: normalized });
+    chunksRef.current = [];
+    cb(finalBlob);
   };
 
   const start = async () => {
@@ -133,7 +133,9 @@ export const useVoiceRecorder = (
           mimeType: preferredMime,
         })
       : new MediaRecorder(persistentStream.current!);
-    recorder.addEventListener("dataavailable", finishRecording);
+    chunksRef.current = [];
+    recorder.addEventListener("dataavailable", onDataAvailable);
+    recorder.addEventListener("stop", onStop);
     dispatch({ type: "startRecording", payload: { recorder } });
     recorder.start();
     deliveredRef.current = false;
@@ -162,7 +164,8 @@ export const useVoiceRecorder = (
         recorder.requestData?.();
       } catch (_) {}
       recorder.stop();
-      recorder.removeEventListener("dataavailable", finishRecording);
+      recorder.removeEventListener("dataavailable", onDataAvailable);
+      recorder.removeEventListener("stop", onStop);
       // NOTE: We do not stop the stream’s audio tracks here so that the mic remains active.
     }
   };
