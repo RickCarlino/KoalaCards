@@ -5,12 +5,7 @@ import { speaking } from "../quiz-evaluators/speaking-evaluator";
 import { prismaClient } from "../prisma-client";
 
 export const gradeSpeakingQuiz = procedure
-  .input(
-    z.object({
-      userInput: z.string(),
-      quizID: z.number(),
-    }),
-  )
+  .input(z.object({ userInput: z.string(), cardID: z.number() }))
   .output(
     z.object({
       isCorrect: z.boolean(),
@@ -20,25 +15,20 @@ export const gradeSpeakingQuiz = procedure
   .mutation(async ({ ctx, input }) => {
     const userID = (await getUserSettings(ctx.user?.id)).user.id;
 
-    const quiz = await prismaClient.quiz.findFirst({
-      where: {
-        id: input.quizID,
-      },
-      include: {
-        Card: true,
-      },
+    const card = await prismaClient.card.findUnique({
+      where: { id: input.cardID },
     });
 
-    if (!quiz) {
-      throw new Error("Quiz not found");
+    if (!card) {
+      throw new Error("Card not found");
     }
 
-    if (quiz.Card.userId !== userID) {
+    if (card.userId !== userID) {
       throw new Error("Not your card");
     }
 
     const result = await speaking({
-      card: quiz.Card,
+      card,
       userID,
       userInput: input.userInput,
     });

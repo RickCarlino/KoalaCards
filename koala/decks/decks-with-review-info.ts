@@ -16,14 +16,8 @@ const fetchUserDecks = (userId: string) =>
   });
 
 const newCardCount = async (deckId: number) => {
-  return prismaClient.quiz.count({
-    where: {
-      lastReview: 0,
-      Card: {
-        deckId,
-        flagged: { not: true },
-      },
-    },
+  return prismaClient.card.count({
+    where: { deckId, flagged: { not: true }, lastReview: 0 },
   });
 };
 

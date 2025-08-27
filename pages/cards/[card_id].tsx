@@ -4,174 +4,322 @@ import { maybeGetCardImageUrl } from "@/koala/image";
 import { timeUntil } from "@/koala/time-until";
 import { trpc } from "@/koala/trpc-config";
 import {
+  Badge,
   Button,
   Checkbox,
   Container,
-  Flex,
+  Divider,
+  Grid,
+  Group,
+  Image,
   Paper,
   Stack,
-  Table,
+  Text,
   TextInput,
   Title,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
+import {
+  IconClock,
+  IconFlag,
+  IconFlame,
+  IconRepeat,
+  IconTrendingUp,
+} from "@tabler/icons-react";
 import { GetServerSideProps } from "next";
 import { useRouter } from "next/router";
 
-type CardData = {
-  cardData: {
-    id: number;
-    definition: string;
-    term: string;
-    flagged: boolean;
-    imageURL: string | null;
-    quizzes: {
-      quizId: number;
-      repetitions: number;
-      lapses: number;
-      lessonType: string;
-      lastReview: number;
-    }[];
-  };
+type CardView = {
+  id: number;
+  term: string;
+  definition: string;
+  flagged: boolean;
+  langCode: string;
+  gender: string;
+  imageURL: string | null;
+  repetitions: number;
+  lapses: number;
+  lastReview: number;
+  nextReview: number;
+  stability: number;
+  difficulty: number;
 };
 
-function Card({ cardData }: CardData) {
+type CardPageProps = {
+  card: CardView;
+};
+
+function Stat({
+  label,
+  value,
+  icon,
+}: {
+  label: string;
+  value: string | number;
+  icon?: React.ReactNode;
+}) {
+  return (
+    <Paper withBorder radius="md" p="md">
+      <Group wrap="nowrap" gap="sm" align="center">
+        {icon}
+        <Stack gap={2} style={{ flex: 1 }}>
+          <Text size="xs" c="dimmed">
+            {label}
+          </Text>
+          <Text fw={600}>{value}</Text>
+        </Stack>
+      </Group>
+    </Paper>
+  );
+}
+
+function CardEditor({ card }: CardPageProps) {
   const router = useRouter();
-  const form = useForm({
+  const form = useForm<{
+    term: string;
+    definition: string;
+    flagged: boolean;
+  }>({
     initialValues: {
-      definition: cardData.definition,
-      term: cardData.term,
-      flagged: cardData.flagged,
+      term: card.term,
+      definition: card.definition,
+      flagged: card.flagged,
     },
   });
+
   const updateMutation = trpc.editCard.useMutation();
   const deleteMutation = trpc.deleteCard.useMutation();
-  const id = cardData.id;
 
-  const updateForm = (values: {
-    definition: string;
+  const handleSave = async (values: {
     term: string;
+    definition: string;
     flagged: boolean;
   }) => {
-    updateMutation
-      .mutateAsync({ id, ...values })
-      .then(() => router.back());
+    await updateMutation.mutateAsync({ id: card.id, ...values });
+    router.back();
   };
 
-  const deleteCard = () => {
-    deleteMutation.mutate({ id });
+  const handleDelete = async () => {
+    if (!confirm("Delete this card? This cannot be undone.")) {
+      return;
+    }
+    await deleteMutation.mutateAsync({ id: card.id });
     router.back();
   };
 
   return (
-    <Container size="sm" py="xl">
-      <Paper withBorder p="xl" radius="md" shadow="xs">
-        <Title order={2} mb="md">
-          Edit Card #{cardData.id}
-        </Title>
-        <form onSubmit={form.onSubmit(updateForm)}>
-          <Stack gap="md">
-            <TextInput
-              label="Term"
-              placeholder="Enter the term"
-              {...form.getInputProps("term")}
-            />
-            <TextInput
-              label="Definition"
-              placeholder="Enter the definition"
-              {...form.getInputProps("definition")}
-            />
-            <Checkbox
-              label="Pause reviews of this card"
-              {...form.getInputProps("flagged", { type: "checkbox" })}
-            />
-            <Flex justify="space-between" mt="md" gap="md">
-              <Button type="submit">Save Changes</Button>
-              <Button variant="outline" color="red" onClick={deleteCard}>
-                Delete Card
-              </Button>
-            </Flex>
-            {cardData.quizzes.length > 0 && (
-              <Stack gap="md" mt="xl">
-                <Title order={3}>Quiz History</Title>
-                <Table
-                  withTableBorder
-                  withRowBorders
-                  withColumnBorders
-                  highlightOnHover
-                  verticalSpacing="sm"
-                >
-                  <thead>
-                    <tr>
-                      <th>Lesson Type</th>
-                      <th>Repetitions</th>
-                      <th>Lapses</th>
-                      <th>Last Review</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {cardData.quizzes.map((quiz) => (
-                      <tr key={quiz.quizId}>
-                        <td>{quiz.lessonType.toUpperCase()}</td>
-                        <td>{quiz.repetitions}</td>
-                        <td>{quiz.lapses}</td>
-                        <td>
-                          {quiz.lastReview
-                            ? timeUntil(quiz.lastReview)
-                            : "never"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </Table>
-              </Stack>
+    <Container size="md" py="xl">
+      <Stack gap="lg">
+        <Group justify="space-between" align="center">
+          <Title order={2}>{card.term}</Title>
+          <Group>
+            <Badge color="pink" variant="light">
+              {card.langCode.toUpperCase()}
+            </Badge>
+            <Badge variant="outline">Gender: {card.gender}</Badge>
+            {card.flagged && (
+              <Badge color="red" leftSection={<IconFlag size={14} />}>
+                Paused
+              </Badge>
             )}
-            {cardData.imageURL && (
-              <Paper withBorder p="sm" radius="md">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  width="100%"
-                  src={cardData.imageURL}
+          </Group>
+        </Group>
+
+        <Grid gutter="md">
+          <Grid.Col span={{ base: 12, md: 7 }}>
+            <Paper withBorder p="lg" radius="md" shadow="xs">
+              <Title order={4} mb="sm">
+                Edit Card
+              </Title>
+              <form onSubmit={form.onSubmit(handleSave)}>
+                <Stack gap="md">
+                  <TextInput
+                    label="Term"
+                    placeholder="Enter the term"
+                    {...form.getInputProps("term")}
+                  />
+                  <TextInput
+                    label="Definition"
+                    placeholder="Enter the definition"
+                    {...form.getInputProps("definition")}
+                  />
+                  <Checkbox
+                    label="Pause reviews of this card"
+                    {...form.getInputProps("flagged", {
+                      type: "checkbox",
+                    })}
+                  />
+
+                  <Group justify="space-between" mt="sm">
+                    <Button type="submit">Save Changes</Button>
+                    <Group gap="sm">
+                      <Button
+                        variant="default"
+                        onClick={() => router.back()}
+                      >
+                        Back
+                      </Button>
+                      <Button
+                        variant="outline"
+                        color="red"
+                        onClick={handleDelete}
+                      >
+                        Delete Card
+                      </Button>
+                    </Group>
+                  </Group>
+                </Stack>
+              </form>
+            </Paper>
+
+            <Paper withBorder p="lg" radius="md" mt="md">
+              <Title order={5} mb="sm">
+                Scheduling
+              </Title>
+              <Grid gutter="sm">
+                <Grid.Col span={{ base: 12, sm: 6 }}>
+                  <Stat
+                    label="Repetitions"
+                    value={card.repetitions}
+                    icon={<IconRepeat size={18} />}
+                  />
+                </Grid.Col>
+                <Grid.Col span={{ base: 12, sm: 6 }}>
+                  <Stat
+                    label="Lapses"
+                    value={card.lapses}
+                    icon={<IconFlame size={18} />}
+                  />
+                </Grid.Col>
+                <Grid.Col span={{ base: 12, sm: 6 }}>
+                  <Stat
+                    label="Last Review"
+                    value={
+                      card.lastReview
+                        ? timeUntil(card.lastReview)
+                        : "never"
+                    }
+                    icon={<IconClock size={18} />}
+                  />
+                </Grid.Col>
+                <Grid.Col span={{ base: 12, sm: 6 }}>
+                  <Stat
+                    label="Next Review"
+                    value={
+                      card.nextReview
+                        ? timeUntil(card.nextReview)
+                        : "not scheduled"
+                    }
+                    icon={<IconClock size={18} />}
+                  />
+                </Grid.Col>
+                <Grid.Col span={{ base: 12, sm: 6 }}>
+                  <Stat
+                    label="Stability"
+                    value={card.stability.toFixed(2)}
+                    icon={<IconTrendingUp size={18} />}
+                  />
+                </Grid.Col>
+                <Grid.Col span={{ base: 12, sm: 6 }}>
+                  <Stat
+                    label="Difficulty"
+                    value={card.difficulty.toFixed(2)}
+                    icon={<IconTrendingUp size={18} />}
+                  />
+                </Grid.Col>
+              </Grid>
+              <Divider my="md" />
+              <Text size="sm" c="dimmed">
+                Scheduling data uses FSRS-based fields migrated onto the
+                card. Edits are read-only here.
+              </Text>
+            </Paper>
+          </Grid.Col>
+
+          <Grid.Col span={{ base: 12, md: 5 }}>
+            <Paper withBorder p="lg" radius="md" shadow="xs">
+              <Title order={4} mb="sm">
+                Illustration
+              </Title>
+              {card.imageURL ? (
+                <Image
+                  src={card.imageURL}
                   alt="Card illustration"
+                  radius="md"
                 />
-              </Paper>
-            )}
-          </Stack>
-        </form>
-      </Paper>
+              ) : (
+                <Text size="sm" c="dimmed">
+                  No image available for this card.
+                </Text>
+              )}
+            </Paper>
+
+            <Paper withBorder p="lg" radius="md" mt="md">
+              <Title order={5} mb="sm">
+                Metadata
+              </Title>
+              <Stack gap={6}>
+                <Group gap="xs">
+                  <Text c="dimmed" size="sm">
+                    Language:
+                  </Text>
+                  <Text size="sm" fw={500}>
+                    {card.langCode.toUpperCase()}
+                  </Text>
+                </Group>
+                <Group gap="xs">
+                  <Text c="dimmed" size="sm">
+                    Gender:
+                  </Text>
+                  <Text size="sm" fw={500}>
+                    {card.gender}
+                  </Text>
+                </Group>
+              </Stack>
+            </Paper>
+          </Grid.Col>
+        </Grid>
+      </Stack>
     </Container>
   );
 }
 
-export default function CardPage({ cardData }: CardData) {
-  return <Card cardData={cardData} />;
+export default function CardPage({ card }: CardPageProps) {
+  return <CardEditor card={card} />;
 }
 
-export const getServerSideProps: GetServerSideProps = async (context) => {
+export const getServerSideProps: GetServerSideProps<
+  CardPageProps
+> = async (context) => {
   const { card_id } = context.query;
   const dbUser = await getServersideUser(context);
+
+  if (!dbUser) {
+    return {
+      redirect: { destination: "/api/auth/signin", permanent: false },
+    } as const;
+  }
+
   const cardId = parseInt(card_id as string, 10);
-
-  const card = await getCardOrFail(cardId, dbUser?.id);
-  const imageURL = await maybeGetCardImageUrl(card.imageBlobId);
-
-  const quizzes = card.Quiz.map((quiz) => ({
-    quizId: quiz.id,
-    repetitions: quiz.repetitions,
-    lapses: quiz.lapses,
-    lessonType: quiz.quizType,
-    lastReview: quiz.lastReview,
-  }));
+  const card = await getCardOrFail(cardId, dbUser.id);
+  const imageURL = (await maybeGetCardImageUrl(card.imageBlobId)) || null;
 
   return {
     props: {
-      cardData: {
+      card: {
         id: card.id,
-        definition: card.definition,
         term: card.term,
+        definition: card.definition,
         flagged: card.flagged,
-        imageURL: imageURL || null,
-        quizzes,
+        langCode: card.langCode,
+        gender: card.gender,
+        imageURL,
+        repetitions: card.repetitions ?? 0,
+        lapses: card.lapses ?? 0,
+        lastReview: card.lastReview ?? 0,
+        nextReview: card.nextReview ?? 0,
+        stability: card.stability ?? 0,
+        difficulty: card.difficulty ?? 0,
       },
     },
   };

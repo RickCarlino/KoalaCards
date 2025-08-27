@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 const Quiz = z.object({
-  quizId: z.number(),
   cardId: z.number(),
   definition: z.string(),
   term: z.string(),

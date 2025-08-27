@@ -4,7 +4,7 @@ import { LangCode } from "@/koala/shared-types";
 interface UseVoiceGradingOptions {
   targetText: string; // For transcription accuracy (e.g., card.term)
   langCode: LangCode; // Language for transcription
-  quizId: number; // Quiz ID for server grading
+  cardId: number; // Card ID for server grading
   cardUUID: string; // Card UUID for storing results
   onGradingResultCaptured?: (
     cardUUID: string,
@@ -21,7 +21,7 @@ interface GradingResult {
 export function useVoiceGrading({
   targetText,
   langCode,
-  quizId,
+  cardId,
   cardUUID,
   onGradingResultCaptured,
 }: UseVoiceGradingOptions) {
@@ -41,7 +41,7 @@ export function useVoiceGrading({
     // Step 2: Grade the transcription
     const { isCorrect, feedback } = await gradeSpeakingQuiz.mutateAsync({
       userInput: transcription,
-      quizID: quizId,
+      cardID: cardId,
     });
 
     const result = {

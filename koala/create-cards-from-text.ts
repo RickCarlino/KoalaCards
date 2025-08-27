@@ -67,6 +67,7 @@ export async function createCardsFromText(
       { role: "user", content: input.slice(0, 3000) },
     ],
     schema: CardSchema,
+    maxTokens: 10000,
   });
 
   return response.cards;

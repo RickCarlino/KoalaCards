@@ -1,6 +1,6 @@
 import { prismaClient } from "@/koala/prisma-client";
-import type { Card, Prisma, Quiz } from "@prisma/client";
-import { group, shuffle } from "radash";
+import type { Card, Prisma } from "@prisma/client";
+import { shuffle } from "radash";
 import { getUserSettings } from "./auth-helpers";
 import { maybeGetCardImageUrl } from "./image";
 import { LessonType } from "./shared-types";
@@ -19,28 +19,23 @@ type GetLessonInputParams = {
   take: number;
 };
 
-type CardKeys =
-  | "imageBlobId"
-  | "definition"
-  | "langCode"
-  | "gender"
-  | "term";
-
-type QuizKeys =
+type LocalCard = Pick<
+  Card,
   | "id"
   | "repetitions"
   | "lastReview"
   | "difficulty"
   | "stability"
-  | "quizType"
-  | "cardId"
   | "lapses"
   | "firstReview"
-  | "nextReview";
-
-type LocalQuiz = Pick<Quiz, QuizKeys> & {
-  Card: Pick<Card, CardKeys | "lastFailure" | "flagged">;
-};
+  | "nextReview"
+  | "term"
+  | "definition"
+  | "langCode"
+  | "imageBlobId"
+  | "lastFailure"
+  | "flagged"
+>;
 
 const NEW_CARD = "N" as const;
 const ORDINARY = "O" as const;
@@ -56,11 +51,9 @@ const ROUND_ROBIN_ORDER: Bucket[] = [REMEDIAL, NEW_CARD, ORDINARY];
 const ENGLISH_SPEED = 125;
 const MIN_HAND_SIZE = 3; // Say 0 cards are due if we can't build a hand of at least this size.
 
-/* helper ─ pick exactly one quiz per cardId */
-function pickOnePerCard<T extends { cardId: number }>(rows: T[]): T[] {
-  return Object.values(group(rows, (r) => r.cardId)).map(
-    (bucket) => shuffle(bucket as T[])[0],
-  );
+/* helper ─ identity; previously de-duped per cardId (no longer needed) */
+function pickOnePerCard<T>(rows: T[]): T[] {
+  return rows;
 }
 
 /**
@@ -77,24 +70,17 @@ async function getDailyLimits(userId: string, now: number) {
 
   /* 1️⃣  “New cards learned in the last 24h” = cards whose **earliest**
          firstReview timestamp is within that window. */
-  const newLearned = (
-    await prismaClient.quiz.groupBy({
-      by: ["cardId"],
-      where: {
-        firstReview: { gt: 0 }, // ← skip zero rows
-        Card: { userId, flagged: { not: true } },
-      },
-      _min: { firstReview: true },
-      having: { firstReview: { _min: { gte: since } } },
-    })
-  ).length;
+  const newLearned = await prismaClient.card.count({
+    where: {
+      userId,
+      flagged: { not: true },
+      firstReview: { gte: since },
+    },
+  });
 
   /* 2️⃣  Total quizzes reviewed (any modality) in the last 24h */
-  const reviewsDone = await prismaClient.quiz.count({
-    where: {
-      Card: { userId, flagged: { not: true } },
-      lastReview: { gte: since },
-    },
+  const reviewsDone = await prismaClient.card.count({
+    where: { userId, flagged: { not: true }, lastReview: { gte: since } },
   });
 
   return {
@@ -109,7 +95,7 @@ async function fetchBucket(
   userId: string,
   deckId: number,
   now: number,
-): Promise<LocalQuiz[]> {
+): Promise<LocalCard[]> {
   /* ───────────── remedial bucket has its own query ───────────── */
   if (bucket === REMEDIAL) {
     const cards = await prismaClient.card.findMany({
@@ -120,19 +106,10 @@ async function fetchBucket(
         flagged: { not: true },
       },
       orderBy: { lastFailure: "asc" },
-      include: { Quiz: true },
       take: DECK_HAND_HARD_CAP * 2,
     });
 
-    return pickOnePerCard(
-      cards.map(
-        (Card): LocalQuiz => ({
-          ...Card.Quiz[0],
-          Card,
-          quizType: "remedial",
-        }),
-      ),
-    );
+    return pickOnePerCard(cards);
   }
 
   /* base filter reused by all other buckets */
@@ -142,56 +119,38 @@ async function fetchBucket(
     flagged: { not: true },
   };
 
-  let where: Prisma.QuizWhereInput;
+  let where: Prisma.CardWhereInput;
 
   switch (bucket) {
     /* ───────────── NEW (brand‑new cards only) ───────────── */
     case NEW_CARD:
-      where = {
-        Card: {
-          ...baseCard,
-          Quiz: { every: { lastReview: 0 } },
-        },
-      };
+      where = { ...baseCard, lastReview: 0 };
       break;
 
     /* ───────────── ORDINARY (due now + orphan rows) ───────────── */
     case ORDINARY:
       where = {
-        OR: [
-          /* regular “due now” */
-          {
-            lastReview: { gt: 0 },
-            nextReview: { lte: now },
-            Card: { ...baseCard, lastFailure: 0 },
-          },
-          /* orphan: never reviewed but sibling seen */
-          {
-            lastReview: 0,
-            Card: {
-              ...baseCard,
-              lastFailure: 0,
-              Quiz: { some: { lastReview: { gt: 0 } } },
-            },
-          },
-        ],
+        ...baseCard,
+        lastFailure: 0,
+        lastReview: { gt: 0 },
+        nextReview: { lte: now },
       };
       break;
 
     /* ───────────── UPCOMING (≤7days, repetitions≥2) ───────────── */
     case UPCOMING:
       where = {
+        ...baseCard,
+        lastFailure: 0,
         repetitions: { gte: MIN_REVIEWS_TO_STUDY_AHEAD },
         nextReview: { gt: now, lte: now + UPCOMING_WINDOW_MS },
-        Card: { ...baseCard, lastFailure: 0 },
       };
       break;
   }
 
   /* fetch, dedupe, shuffle */
-  const rows = await prismaClient.quiz.findMany({
+  const rows = await prismaClient.card.findMany({
     where,
-    include: { Card: true },
     take: DECK_HAND_HARD_CAP,
   });
 
@@ -199,40 +158,41 @@ async function fetchBucket(
 }
 
 /** Decide lessonType override for special buckets. */
-function tagLessonType(q: LocalQuiz, bucket: Bucket): LocalQuiz {
-  if (bucket === NEW_CARD) {
-    return { ...q, quizType: "new" };
-  }
-  if (bucket === REMEDIAL) {
-    return { ...q, quizType: "remedial" };
-  }
+function tagLessonType(
+  q: LocalCard,
+  bucket: Bucket,
+): LocalCard & { quizType?: string } {
+  if (bucket === NEW_CARD) return { ...q, quizType: "new" };
+  if (bucket === REMEDIAL) return { ...q, quizType: "remedial" };
   return q;
 }
 
 /** Build user‑visible payload, including TTS URLs. */
-async function buildQuizPayload(q: LocalQuiz, speedPct: number) {
+async function buildQuizPayload(
+  q: LocalCard & { quizType?: string },
+  speedPct: number,
+) {
   const r = q.repetitions ?? 0;
   return {
-    quizId: q.id,
-    cardId: q.cardId,
-    definition: q.Card.definition,
-    term: q.Card.term,
+    cardId: q.id,
+    definition: q.definition,
+    term: q.term,
     repetitions: r,
     lapses: q.lapses,
-    lessonType: q.quizType as LessonType,
+    lessonType: (q.quizType as LessonType) ?? ("speaking" as LessonType),
     definitionAudio: await generateLessonAudio({
-      card: q.Card,
+      card: q as Card,
       lessonType: "speaking",
       speed: ENGLISH_SPEED,
     }),
     termAndDefinitionAudio: await generateLessonAudio({
-      card: q.Card,
+      card: q as Card,
       lessonType: "new",
       speed: r > 1 ? speedPct : 100,
     }),
-    langCode: q.Card.langCode,
+    langCode: q.langCode,
     lastReview: q.lastReview ?? 0,
-    imageURL: await maybeGetCardImageUrl(q.Card.imageBlobId),
+    imageURL: await maybeGetCardImageUrl(q.imageBlobId),
     stability: q.stability,
     difficulty: q.difficulty,
   };
@@ -240,7 +200,7 @@ async function buildQuizPayload(q: LocalQuiz, speedPct: number) {
 
 /* ─────────────────── CORE HAND BUILDER ─────────────────── */
 
-/** Core selector ‑ returns LocalQuiz[] (no audio). */
+/** Core selector ‑ returns LocalCard[] (no audio). */
 async function buildHand(
   userId: string,
   deckId: number,
@@ -255,17 +215,17 @@ async function buildHand(
     return [];
   }
 
-  const tag = (tag: Bucket) => (q: LocalQuiz) => tagLessonType(q, tag);
+  const tag = (tag: Bucket) => (q: LocalCard) => tagLessonType(q, tag);
   const fetch = (tag: Bucket) => fetchBucket(tag, userId, deckId, now);
-  const shuffleQuizzes = (quiz: LocalQuiz[]) => shuffle(quiz);
-  const queues: Record<Bucket, LocalQuiz[]> = {
+  const shuffleQuizzes = (quiz: LocalCard[]) => shuffle(quiz);
+  const queues: Record<Bucket, LocalCard[]> = {
     N: shuffleQuizzes((await fetch(NEW_CARD)).map(tag(NEW_CARD))),
     O: shuffleQuizzes((await fetch(ORDINARY)).map(tag(ORDINARY))),
     R: shuffleQuizzes(await fetch(REMEDIAL)),
     U: shuffleQuizzes((await fetch(UPCOMING)).map(tag(UPCOMING))),
   };
 
-  const hand: LocalQuiz[] = [];
+  const hand: LocalCard[] = [];
   const seenCards = new Set<number>();
   const bucketIndexes: Record<Bucket, number> = { N: 0, O: 0, R: 0, U: 0 };
   let newLeft = newRemaining;
@@ -282,7 +242,7 @@ async function buildHand(
 
       bucketIndexes[b] += 1;
       progressed = true;
-      if (seenCards.has(q.cardId)) {
+      if (seenCards.has(q.id)) {
         continue;
       }
       if (b === NEW_CARD && newLeft === 0) {
@@ -293,7 +253,7 @@ async function buildHand(
       }
 
       hand.push(q);
-      seenCards.add(q.cardId);
+      seenCards.add(q.id);
       reviewLeft -= 1;
       if (b === NEW_CARD) {
         newLeft -= 1;
@@ -319,19 +279,21 @@ async function buildHand(
       if (reviewLeft === 0) {
         break;
       }
-      if (seenCards.has(q.cardId)) {
+      if (seenCards.has(q.id)) {
         continue;
       }
       hand.push(q);
-      seenCards.add(q.cardId);
+      seenCards.add(q.id);
       reviewLeft -= 1;
     }
   }
 
   // Get count of all quizzes due where userId = ? and archived != true:
-  const count = await prismaClient.quiz.count({
+  const count = await prismaClient.card.count({
     where: {
-      Card: { userId, deckId, flagged: { not: true } },
+      userId,
+      deckId,
+      flagged: { not: true },
       nextReview: { lte: now },
       lastReview: { gt: 0 },
     },
@@ -354,12 +316,7 @@ export async function getLessons({
     throw new Error("Too many cards requested.");
   }
 
-  // Delete all "listening" quizType quizzes:
-  await prismaClient.quiz.deleteMany({
-    where: {
-      quizType: "listening",
-    },
-  });
+  // No-op: previously removed non-speaking quizzes.
 
   const rawHand = await buildHand(userId, deckId, now, take);
   const speedPct = Math.round(

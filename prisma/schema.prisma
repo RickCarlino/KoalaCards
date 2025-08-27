@@ -39,19 +39,20 @@ model Session {
 }
 
 model User {
-  id            String        @id @default(cuid())
-  name          String?
-  email         String?       @unique
-  emailVerified DateTime?
-  lastSeen      DateTime?
-  image         String?
-  createdAt     DateTime      @default(now())
-  accounts      Account[]
-  sessions      Session[]
+  id                 String              @id @default(cuid())
+  name               String?
+  email              String?             @unique
+  emailVerified      DateTime?
+  lastSeen           DateTime?
+  image              String?
+  createdAt          DateTime            @default(now())
+  accounts           Account[]
+  sessions           Session[]
   userSettings       UserSettings?
   Card               Card[]
   Deck               Deck[]
   writingSubmissions WritingSubmission[] // Added relation to WritingSubmission
+  quizResults        QuizResult[]
 }
 
 model UserSettings {
@@ -80,15 +81,15 @@ model VerificationToken {
 }
 
 model Deck {
-  id           Int     @id @default(autoincrement())
-  langCode     String
-  name         String
-  userId       String
-  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  Card         Card[]
-  published    Boolean @default(false)
+  id                 Int                 @id @default(autoincrement())
+  langCode           String
+  name               String
+  userId             String
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Card               Card[]
+  published          Boolean             @default(false)
   parentDeckId       Int?
-  createdAt          DateTime @default(now())
+  createdAt          DateTime            @default(now())
   writingSubmissions WritingSubmission[] // Added relation to WritingSubmission
 
   @@unique([name, userId])
@@ -106,46 +107,44 @@ model Card {
   // Gender can be "M"ale, "F"emale, or "N"eutral
   gender      String   @default("N")
   createdAt   DateTime @default(now())
-  Quiz        Quiz[]
   imageBlobId String?
   deckId      Int? // Nullable for gradual migration
   Deck        Deck?    @relation(fields: [deckId], references: [id])
   lastFailure Float    @default(0)
+  // Scheduling/stat fields migrated from Quiz (speaking)
+  stability   Float    @default(0)
+  difficulty  Float    @default(0)
+  firstReview Float    @default(0)
+  lastReview  Float    @default(0)
+  nextReview  Float    @default(0)
+  lapses      Float    @default(0)
+  repetitions Float    @default(0)
 
   @@unique([userId, term])
   @@index([deckId])
   @@index([userId])
+  @@index([userId, createdAt])
+  @@index([userId, flagged])
+  @@index([userId, nextReview])
 }
 
-model Quiz {
-  id          Int    @id @default(autoincrement())
-  cardId      Int
-  Card        Card   @relation(fields: [cardId], references: [id], onDelete: Cascade)
-  quizType    String
-  stability   Float  @default(0)
-  difficulty  Float  @default(0)
-  firstReview Float  @default(0)
-  lastReview  Float  @default(0)
-  nextReview  Float  @default(0)
-  lapses      Float  @default(0)
-  repetitions Float  @default(0)
+model QuizResult {
+  id             Int      @id @default(autoincrement())
+  createdAt      DateTime @default(now())
+  user           User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String?
+  langCode       String
+  definition     String
+  acceptableTerm String
+  userInput      String
+  isAcceptable   Boolean  @default(false)
+  reason         String
+  eventType      String   @default("speaking-judgement")
 
-  @@unique([cardId, quizType])
-  @@index([cardId])
-  @@index([nextReview])
-}
-
-model TrainingData {
-  id                 Int      @id @default(autoincrement())
-  createdAt          DateTime @default(now())
-  quizType           String
-  yesNo              String
-  explanation        String
-  term               String
-  definition         String
-  langCode           String
-  userInput          String
-  englishTranslation String
+  @@index([createdAt])
+  @@index([langCode, createdAt])
+  @@index([userId, createdAt])
+  @@index([userId, langCode, createdAt])
 }
 
 model WritingSubmission {
@@ -164,4 +163,5 @@ model WritingSubmission {
   @@index([userId])
   @@index([deckId])
   @@index([userId, createdAt]) // For querying daily progress
+  @@index([userId, deckId, createdAt])
 }

@@ -77,9 +77,9 @@ For each "Word to Define" listed above:
         model: ["openai", "good"],
         messages: [{ role: "user", content: prompt }],
         schema: DefinitionSchema,
+        maxTokens: 5000,
       });
 
-      // Return the structured definitions
       return response;
     } catch (error) {
       console.error("Error generating definitions:", error);

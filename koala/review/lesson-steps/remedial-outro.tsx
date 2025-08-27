@@ -68,7 +68,7 @@ export const RemedialOutro: CardUI = ({
   const { gradeAudio } = useVoiceGrading({
     targetText: card.term,
     langCode: card.langCode as LangCode,
-    quizId: card.quizId,
+    cardId: card.cardId,
     cardUUID: card.uuid,
     onGradingResultCaptured,
   });

@@ -1,18 +1,18 @@
 import { createDeck, Grade } from "femto-fsrs";
-import { Quiz } from "@prisma/client";
+import type { Card } from "@prisma/client";
 
-const FSRS = createDeck({ requestedRetentionRate: 0.71 });
+const FSRS = createDeck({ requestedRetentionRate: 0.72 });
 
 const DAYS = 24 * 60 * 60 * 1000;
 
-type PartialQuizKeys =
+type PartialCardKeys =
   | "difficulty"
   | "stability"
   | "lastReview"
   | "lapses"
   | "repetitions";
 
-type PartialQuiz = Pick<Quiz, PartialQuizKeys>;
+type PartialCard = Pick<Card, PartialCardKeys>;
 
 type SchedulingData = {
   difficulty: number;
@@ -38,7 +38,7 @@ function scheduleNewCard(grade: Grade, now = Date.now()): SchedulingData {
 }
 
 export function calculateSchedulingData(
-  quiz: PartialQuiz,
+  quiz: PartialCard,
   grade: Grade,
   now = Date.now(),
 ): SchedulingData {
@@ -60,7 +60,7 @@ export function calculateSchedulingData(
 
 // Gives a human-readable representation of the next quiz due date.
 // Uses the nearest time unit, all the way up to months.
-export function getGradeButtonText(quiz: PartialQuiz): [Grade, string][] {
+export function getGradeButtonText(quiz: PartialCard): [Grade, string][] {
   const now = Date.now();
   const SCALE: Record<Grade, string> = {
     [Grade.AGAIN]: "😵",

@@ -6,7 +6,7 @@ import { GradingResult } from "../types";
 interface UseRemedialOutroValidationOptions {
   targetText: string;
   langCode: LangCode;
-  quizId: number;
+  cardId: number;
   cardUUID: string;
   onValidationComplete?: (isValid: boolean, result: GradingResult) => void;
 }
@@ -16,7 +16,7 @@ interface UseRemedialOutroValidationOptions {
  * This provides a simpler interface specifically for validation without audio transcription
  */
 export function useRemedialOutroValidation({
-  quizId,
+  cardId,
   onValidationComplete,
 }: UseRemedialOutroValidationOptions) {
   const [isValidating, setIsValidating] = useState(false);
@@ -34,7 +34,7 @@ export function useRemedialOutroValidation({
       // Validate the transcription using the existing grading logic
       const { isCorrect, feedback } = await gradeSpeakingQuiz.mutateAsync({
         userInput: userTranscription,
-        quizID: quizId,
+        cardID: cardId,
       });
 
       const result: GradingResult = {

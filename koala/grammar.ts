@@ -12,6 +12,8 @@ type GrammarCorrectionProps = {
   definition: string; // Example correct answer
   langCode: string;
   userInput: string;
+  userId: string;
+  eventType?: string;
 };
 
 type StoreTrainingData = (
@@ -25,19 +27,21 @@ const zodGradeResponse = z.object({
 });
 
 const storeTrainingData: StoreTrainingData = async (props, exp) => {
-  const { term, definition, langCode, userInput } = props;
+  const { term, definition, langCode, userInput, userId, eventType } =
+    props;
   const { yesNo, why } = exp;
 
-  await prismaClient.trainingData.create({
+  await prismaClient.quizResult.create({
     data: {
-      term,
+      userId,
+      acceptableTerm: term,
       definition,
       langCode,
       userInput,
-      yesNo,
-      explanation: why,
-      quizType: "speaking-v2-prompt-4.1",
-      englishTranslation: "NA",
+      isAcceptable: yesNo === "yes",
+      // reason field mapped from the model; store under reason
+      reason: why,
+      eventType: eventType || "speaking-judgement",
     },
   });
 };
@@ -82,10 +86,16 @@ async function runAndStore(
 export const grammarCorrectionNext: QuizEvaluator = async ({
   userInput,
   card,
+  userID,
 }) => {
   const now = Date.now();
   console.log({ userInput, card });
-  const chosen = await runAndStore({ ...card, userInput });
+  const chosen = await runAndStore({
+    ...card,
+    userInput,
+    userId: userID,
+    eventType: "speaking-judgement",
+  });
   console.log(JSON.stringify(chosen));
   const duration = Date.now() - now;
   console.log(`grammarCorrectionNext took ${duration}ms`);

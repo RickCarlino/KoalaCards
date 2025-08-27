@@ -123,6 +123,7 @@ async function run(
       },
     ],
     schema: ClusterSchema,
+    maxTokens: 10000,
   });
 
   if (!parsedResponse) {

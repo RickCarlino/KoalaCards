@@ -25,6 +25,7 @@ import { getDailyWritingProgress } from "./get-daily-writing-progress"; // Added
 import { mergeDecks } from "./merge-decks";
 import { generateWritingSample } from "./generate-writing-sample";
 import { reviewAssistant } from "./review-assistant";
+import { createDeck } from "./create-deck";
 
 export const appRouter = router({
   bulkCreateCards,
@@ -45,6 +46,7 @@ export const appRouter = router({
   gradeSpeakingQuiz,
   gradeWriting,
   reviewAssistant,
+  createDeck,
   mergeDecks,
   parseCards,
   archiveCard,

@@ -45,11 +45,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     where: { userId: dbUser.id },
   });
 
-  const reviewCount = await prismaClient.quiz.count({
-    where: {
-      Card: { userId: dbUser.id },
-      repetitions: { gt: 0 },
-    },
+  const reviewCount = await prismaClient.card.count({
+    where: { userId: dbUser.id, repetitions: { gt: 0 } },
   });
 
   const writingCount = await prismaClient.writingSubmission.count({
@@ -74,7 +71,7 @@ const navItems: NavItem[] = [
     icon: IconStar,
   },
   {
-    path: (p) => (p.hasCards ? "/create" : "/create-vibe"),
+    path: () => "/create",
     name: "Create Cards",
     show: (_props) => true,
     blink: (props) => !props.hasCards,
