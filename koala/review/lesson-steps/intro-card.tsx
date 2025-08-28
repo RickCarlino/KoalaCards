@@ -43,17 +43,12 @@ export const IntroCard: React.FC<IntroCardProps> = ({
       setUserTranscription(transcription);
 
       if (isMatch) {
-        // Success - show success state, play audio, then proceed
         setPhase("success");
-        console.log("PlaySuccessSequence - start");
-        console.log("PlaySuccessSequence - end");
         onProceed();
       } else {
-        // Failed - show retry state and replay term
         setPhase("retry");
       }
     } catch (error) {
-      console.error("Transcription error:", error);
       setPhase("retry");
       setUserTranscription("Error occurred during transcription.");
     }

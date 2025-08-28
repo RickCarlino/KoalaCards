@@ -21,17 +21,10 @@ export default trpcNext.createNextApiHandler({
       ? await prismaClient.user.findFirst(query)
       : undefined;
     if (user) {
-      prismaClient.user
-        .update({
-          where: { id: user.id },
-          data: { lastSeen: new Date() },
-        })
-        .catch((err) => {
-          console.error("[trpc ctx] Failed to update lastSeen", {
-            userId: user.id,
-            err,
-          });
-        });
+      prismaClient.user.update({
+        where: { id: user.id },
+        data: { lastSeen: new Date() },
+      });
     }
     return { session, user };
   },

@@ -4,7 +4,7 @@ import { deleteCard } from "./delete-card";
 import { deletePausedCards } from "./delete-paused-card";
 import { editCard } from "./edit-card";
 import { editUserSettings } from "./edit-user-settings";
-import { faucet } from "./faucet";
+import { testZone } from "./test-zone";
 import { archiveCard } from "./archive-card";
 import { getNextQuizzes } from "./get-next-quizzes";
 import { getUserSettings } from "./get-user-settings";
@@ -36,7 +36,7 @@ export const appRouter = router({
   deletePausedCards,
   editCard,
   editUserSettings,
-  faucet,
+  testZone,
   generateWritingPrompts,
   generateWritingSample,
   getDailyWritingProgress,

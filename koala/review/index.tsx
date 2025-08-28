@@ -54,14 +54,8 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
   const CardComponent = cardUIs[itemType] ?? UnknownCard;
 
   async function handleRecordingResult(blob: Blob) {
-    // Debug: log mime and size to help diagnose empty blobs
-    console.debug("[client] recording blob", {
-      type: blob.type,
-      size: blob.size,
-    });
     // Send the recorded blob as-is with the correct MIME header.
     const base64 = await blobToBase64(blob);
-    console.debug("[client] dataURI header", base64.slice(0, 40));
     onRecordingComplete(base64);
   }
 

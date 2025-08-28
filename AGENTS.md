@@ -97,7 +97,7 @@
 - **deletePausedCards**: Bulk-deletes all flagged/archived cards for the current user.
 - **editCard**: Updates editable fields on a card (term, definition, flags, and review stats) for the owner.
 - **editUserSettings**: Updates user settings with conflict detection via updatedAt.
-- **faucet**: Test utility that tweaks a few cards to seed different review states for experiments.
+- **testZone**: A scratch pad that can be blown away any time for test purposes or to avoid writing new TRPCs that are not important.
 - **generateWritingPrompts**: Produces several target-language writing prompts based on deck terms via LLM.
 - **generateWritingSample**: Generates a sample answer in the deck’s language for a given prompt via LLM.
 - **getDailyWritingProgress**: Returns last-24h writing progress vs goal for the current user.

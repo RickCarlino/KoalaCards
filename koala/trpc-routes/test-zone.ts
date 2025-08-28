@@ -3,7 +3,7 @@ import { getUserSettings } from "../auth-helpers";
 import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc-procedure";
 
-export const faucet = procedure
+export const testZone = procedure
   .input(z.object({}))
   .output(z.array(z.object({ id: z.number() })))
   .mutation(async ({ ctx }) => {
@@ -22,7 +22,6 @@ export const faucet = procedure
     const now = Date.now();
     const remedial = cards.pop();
     if (remedial) {
-      console.log("=== Remedial card: " + remedial.term);
       await prismaClient.card.update({
         where: { id: remedial.id },
         data: { lastFailure: now },
@@ -31,7 +30,6 @@ export const faucet = procedure
 
     const newCard = cards.pop();
     if (newCard) {
-      console.log("=== New quiz: " + newCard.term);
       await prismaClient.card.update({
         where: { id: newCard.id },
         data: {

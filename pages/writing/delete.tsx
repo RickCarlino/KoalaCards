@@ -21,25 +21,17 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     };
   }
 
-  try {
-    // Delete the submission if it belongs to this user
-    await prismaClient.writingSubmission.deleteMany({
-      where: {
-        id,
-        userId: dbUser.id,
-      },
-    });
+  await prismaClient.writingSubmission.deleteMany({
+    where: {
+      id,
+      userId: dbUser.id,
+    },
+  });
 
-    // Redirect back to the writing page
-    return {
-      redirect: { destination: `/writing?page=${page}`, permanent: false },
-    };
-  } catch (error) {
-    console.error("Error deleting submission:", error);
-    return {
-      redirect: { destination: `/writing?page=${page}`, permanent: false },
-    };
-  }
+  // Redirect back to the writing page
+  return {
+    redirect: { destination: `/writing?page=${page}`, permanent: false },
+  };
 };
 
 // This component will never be rendered since we always redirect

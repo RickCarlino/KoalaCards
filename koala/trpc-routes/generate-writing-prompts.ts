@@ -106,7 +106,6 @@ async function draftPrompts(
     )} (not English). **No numbering, bullets, or labels** - one per line, no extra text.`,
   ].join("\n\n");
 
-  console.log(systemPrompt);
   const response = await chat(systemPrompt);
   return response ?? "";
 }

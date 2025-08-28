@@ -76,19 +76,13 @@ export const useVoiceRecorder = (
     if (state.isRecording) return;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: false,
-        } as MediaTrackConstraints,
+        audio: {},
       });
       const Ctx: typeof AudioContext =
         (window as any).AudioContext || (window as any).webkitAudioContext;
       const ctx = new Ctx();
       if (ctx.state === "suspended") {
-        await ctx.resume().catch((err: unknown) => {
-          console.error("[recorder] AudioContext.resume failed", err);
-        });
+        await ctx.resume();
       }
       const source = ctx.createMediaStreamSource(stream);
       const processor =
@@ -136,9 +130,7 @@ export const useVoiceRecorder = (
 
     state.stream?.getTracks().forEach((t) => t.stop());
 
-    state.ctx?.close().catch((err: unknown) => {
-      console.error("[recorder] AudioContext.close failed", err);
-    });
+    state.ctx?.close();
 
     const sampleRate = state.ctx?.sampleRate ?? 44100;
     const wav = buildWavFromPcm(

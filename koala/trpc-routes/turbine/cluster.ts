@@ -92,8 +92,6 @@ async function run(
     messages: part1,
   });
 
-  console.log(content);
-
   const KOREAN_EDIT = `
   You are a Korean language content editor.
   You edit flashcards for a language learning app.

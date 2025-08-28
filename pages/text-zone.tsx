@@ -5,9 +5,9 @@ export async function getServerSideProps() {
   return { props: {} };
 }
 
-export default function Faucet() {
+export default function TestZone() {
   // Define the expected schema for the RPC response items.
-  const runRPC = trpc.faucet.useMutation();
+  const runRPC = trpc.testZone.useMutation();
 
   // Call the RPC method on button click and update results.
   const onClick = async () => {
