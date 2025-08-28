@@ -17,7 +17,7 @@ export function useVoiceTranscription(
 ) {
   const { targetText, langCode } = options;
   const transcribe = async (blob: Blob): Promise<TranscriptionResult> => {
-    const transcription = await transcribeBlob(blob, langCode);
+    const transcription = await transcribeBlob(blob, langCode, targetText);
 
     const result: TranscriptionResult = { transcription };
 

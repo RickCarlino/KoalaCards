@@ -3,9 +3,11 @@ import { LangCode } from "@/koala/shared-types";
 export async function transcribeBlob(
   blob: Blob,
   language: LangCode,
+  hint?: string,
 ): Promise<string> {
+  const hintParam = hint ? `&hint=${encodeURIComponent(hint)}` : "";
   const res = await fetch(
-    `/api/transcribe?language=${encodeURIComponent(language)}`,
+    `/api/transcribe?language=${encodeURIComponent(language)}${hintParam}`,
     {
       method: "POST",
       headers: { "Content-Type": blob.type || "application/octet-stream" },

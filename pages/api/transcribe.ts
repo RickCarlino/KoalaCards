@@ -5,6 +5,7 @@ import { LANG_CODES } from "@/koala/shared-types";
 import { getServerSession } from "next-auth";
 import { authOptions } from "./auth/[...nextauth]";
 import { prismaClient } from "@/koala/prisma-client";
+import { draw, shuffle } from "radash";
 
 export const config = {
   api: { bodyParser: false },
@@ -15,12 +16,16 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 async function readRawBody(req: NextApiRequest): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
-    req.on("data", (chunk: Buffer | string) => {
-      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-    });
+    req.on("data", (chunk: Buffer | string) =>
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)),
+    );
     req.on("end", () => resolve(Buffer.concat(chunks)));
     req.on("error", reject);
   });
+}
+
+function firstParam(v: string | string[] | undefined): string | undefined {
+  return Array.isArray(v) ? v[0] : v;
 }
 
 export default async function handler(
@@ -31,36 +36,30 @@ export default async function handler(
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "Method Not Allowed" });
   }
-
-  // Require authenticated user session (NextAuth)
   const session = await getServerSession(req, res, authOptions);
   const email = session?.user?.email;
   if (!email) {
     return res.status(401).json({ error: "Unauthorized" });
   }
-
-  // Ensure the user exists in our database
   const dbUser = await prismaClient.user.findUnique({ where: { email } });
   if (!dbUser) {
     return res.status(401).json({ error: "Unauthorized" });
   }
-
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
+  if (!process.env.OPENAI_API_KEY) {
     return res.status(500).json({ error: "Missing OPENAI_API_KEY" });
   }
 
-  const languageParamRaw = req.query.language;
-  const languageParam = Array.isArray(languageParamRaw)
-    ? languageParamRaw[0]
-    : languageParamRaw;
-  const parsedLanguage = LANG_CODES.safeParse(languageParam);
+  const languageRaw = firstParam(req.query.language);
+  const parsedLanguage = LANG_CODES.safeParse(languageRaw);
   if (!parsedLanguage.success) {
     return res
       .status(400)
       .json({ error: "Missing or invalid 'language'" });
   }
   const language = parsedLanguage.data;
+
+  const tokens = (firstParam(req.query.hint) || "").split(/[ ,]+/);
+  const hint = shuffle(tokens).slice(0, 3).join(", ").trim();
 
   const contentType =
     (req.headers["content-type"] as string | undefined) ??
@@ -71,9 +70,9 @@ export default async function handler(
     return res.status(400).json({ error: "Empty audio payload" });
   }
 
-  const isMp4 =
-    contentType.includes("mp4") || contentType.includes("mpeg");
-  const filename = isMp4 ? "recording.mp4" : "recording.webm";
+  const filename = /mp4|mpeg/.test(contentType)
+    ? "recording.mp4"
+    : "recording.webm";
 
   const uploadFile = await toFile(raw, filename, { type: contentType });
 
@@ -81,9 +80,14 @@ export default async function handler(
     file: uploadFile,
     model: "gpt-4o-mini-transcribe",
     language,
+    ...(hint ? { prompt: `Might contain words like ${hint}` } : {}),
   });
 
   const text = result.text ?? "There was a transcription error.";
-
+  console.log({
+    language,
+    hint,
+    text,
+  });
   return res.status(200).json({ text });
 }

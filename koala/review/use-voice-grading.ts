@@ -20,12 +20,18 @@ interface GradingResult {
 }
 
 export function useVoiceGrading(options: UseVoiceGradingOptions) {
-  const { cardId, cardUUID, onGradingResultCaptured, langCode } = options;
+  const {
+    cardId,
+    cardUUID,
+    onGradingResultCaptured,
+    langCode,
+    targetText,
+  } = options;
   const gradeSpeakingQuiz = trpc.gradeSpeakingQuiz.useMutation();
 
   const gradeAudio = async (blob: Blob): Promise<GradingResult> => {
     // Step 1: Transcribe audio via Next API (no base64)
-    const transcription = await transcribeBlob(blob, langCode);
+    const transcription = await transcribeBlob(blob, langCode, targetText);
 
     // Step 2: Grade the transcription
     const { isCorrect, feedback } = await gradeSpeakingQuiz.mutateAsync({
