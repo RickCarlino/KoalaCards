@@ -34,6 +34,11 @@
 - **Linting**: ESLint with `eslint-config-next` and custom rules in `eslint-rules/`.
 - **Formatting**: Prettier; run `npm run format` before commit.
 
+### Error Handling Policy
+
+- You need a good reason to use try/catch. Logging is not a good reason. Delete try/catch if you have the chance. Let it fail normally unless there is a good reason to catch().
+- Do not swallow errors. Never use empty catch blocks like `catch (_) {}` or `catch (e) {}` without handling.
+
 ### Mobile UI Spacing
 
 - Labels and controls must not appear cramped on small screens. Use Mantine spacing props and ensure comfortable touch targets (around 44px) with adequate margins and padding.

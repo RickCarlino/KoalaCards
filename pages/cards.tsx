@@ -289,7 +289,7 @@ export default function Edit({
         </form>
       </Paper>
 
-      <CardTable onDelete={() => {}} cards={cards} />
+      <CardTable onDelete={() => undefined} cards={cards} />
       {Pagination}
     </Container>
   );

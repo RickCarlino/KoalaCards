@@ -41,7 +41,14 @@ module.exports = {
     curly: ["error", "all"],
     "no-debugger": "error",
     "no-alert": "error",
-    "no-empty": "error",
+    // Disallow empty blocks and empty functions (no silent catches or no-op handlers)
+    "no-empty": ["error", { allowEmptyCatch: false }],
+    "@typescript-eslint/no-empty-function": [
+      "error",
+      {
+        allow: [],
+      },
+    ],
     "no-var": "error",
     "no-alert": "off",
     "no-case-declarations": "off",
