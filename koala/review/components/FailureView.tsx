@@ -35,6 +35,10 @@ export const FailureView: React.FC<FailureViewProps> = ({
 
       <Text ta="center">{definition}</Text>
 
+      <Button onClick={onContinue} variant="light" color="blue">
+        Continue ({HOTKEYS.CONTINUE})
+      </Button>
+
       <Text ta="center" size="sm" c="dimmed">
         You said: "{userTranscription}"
       </Text>
@@ -48,10 +52,6 @@ export const FailureView: React.FC<FailureViewProps> = ({
       <Text ta="center" c="dimmed" mt="md">
         We'll review this again later.
       </Text>
-
-      <Button onClick={onContinue} variant="light" color="blue">
-        Continue ({HOTKEYS.CONTINUE})
-      </Button>
     </Stack>
   );
 };

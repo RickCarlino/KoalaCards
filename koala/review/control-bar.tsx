@@ -92,7 +92,7 @@ export const ControlBar: React.FC<ControlBarProps> = (props) => {
         }}
       >
         <Group gap="xs" justify="flex-start" wrap="nowrap">
-          <Menu shadow="md" width={220}>
+          <Menu shadow="md" width={240}>
             <Menu.Target>
               <ActionIcon
                 variant="outline"
@@ -125,6 +125,12 @@ export const ControlBar: React.FC<ControlBarProps> = (props) => {
                 Archive card ({HOTKEYS.ARCHIVE})
               </Menu.Item>
               <Menu.Item
+                onClick={() => onSkip(card.uuid)}
+                leftSection={<IconPlayerSkipForwardFilled size={16} />}
+              >
+                Next card ({HOTKEYS.SKIP})
+              </Menu.Item>
+              <Menu.Item
                 onClick={() => onGiveUp(card.uuid)}
                 leftSection={<IconLetterF size={16} />}
               >
@@ -133,20 +139,6 @@ export const ControlBar: React.FC<ControlBarProps> = (props) => {
               {false}
             </Menu.Dropdown>
           </Menu>
-          {props.onOpenAssistant && (
-            <Tooltip label="Open assistant">
-              <ActionIcon
-                variant="outline"
-                size={44}
-                radius="xl"
-                onClick={props.onOpenAssistant}
-                color="pink.7"
-                aria-label="Open assistant"
-              >
-                <IconMessage size={20} />
-              </ActionIcon>
-            </Tooltip>
-          )}
         </Group>
 
         <Box style={{ justifySelf: "center" }}>
@@ -173,18 +165,20 @@ export const ControlBar: React.FC<ControlBarProps> = (props) => {
         </Box>
 
         <Group gap="xs" justify="flex-end" wrap="nowrap">
-          <Tooltip label={`Skip card (${HOTKEYS.SKIP})`}>
-            <ActionIcon
-              variant="outline"
-              size={44}
-              radius="xl"
-              onClick={() => onSkip(card.uuid)}
-              color="pink.7"
-              aria-label="Skip card"
-            >
-              <IconPlayerSkipForwardFilled size={20} />
-            </ActionIcon>
-          </Tooltip>
+          {props.onOpenAssistant && (
+            <Tooltip label="Open assistant">
+              <ActionIcon
+                variant="outline"
+                size={44}
+                radius="xl"
+                onClick={props.onOpenAssistant}
+                color="pink.7"
+                aria-label="Open assistant"
+              >
+                <IconMessage size={20} />
+              </ActionIcon>
+            </Tooltip>
+          )}
 
           <Tooltip label={playLabel}>
             <ActionIcon

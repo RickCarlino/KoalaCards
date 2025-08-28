@@ -39,15 +39,15 @@ const SuccessView = ({
         {successText || "Well done!"}
       </Text>
 
+      <Button onClick={onContinue} variant="light" color="green">
+        Continue ({HOTKEYS.CONTINUE})
+      </Button>
+
       <Text size="xl" fw={700} ta="center">
         {term}
       </Text>
 
       <Text ta="center">{definition}</Text>
-
-      <Button onClick={onContinue} variant="light" color="green">
-        Continue ({HOTKEYS.CONTINUE})
-      </Button>
     </Stack>
   );
 };
