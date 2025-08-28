@@ -20,16 +20,12 @@ export default trpcNext.createNextApiHandler({
     const user = email
       ? await prismaClient.user.findFirst(query)
       : undefined;
-    user &&
-      prismaClient.user
-        .update({
-          where: { id: user.id },
-          data: { lastSeen: new Date() },
-        })
-        .then(
-          () => {},
-          () => {},
-        );
+    if (user) {
+      prismaClient.user.update({
+        where: { id: user.id },
+        data: { lastSeen: new Date() },
+      });
+    }
     return { session, user };
   },
 });

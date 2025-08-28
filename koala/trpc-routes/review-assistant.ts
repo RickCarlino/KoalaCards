@@ -100,7 +100,7 @@ export const reviewAssistant = procedure
       `collocations, or full sentences that are contextually useful.`,
       LANG_OVERRIDES[deck.langCode as LangCode] || "",
     ].join(" \n");
-    console.log("System prompt:", system);
+
     const contextBlock = [
       `Current card:\n• ${input.current.term} — ${input.current.definition}`,
       input.current.lessonType

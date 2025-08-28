@@ -32,7 +32,6 @@ export const UserSettingsProvider = ({
 
   useEffect(() => {
     const err = (error: unknown) => {
-      console.error("Failed to fetch user settings:", error);
       notifications.show({
         title: "Failed to fetch user settings",
         message: JSON.stringify(error),

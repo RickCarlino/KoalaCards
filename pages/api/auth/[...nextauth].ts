@@ -38,8 +38,7 @@ const EMAIL_SERVER_OPTIONS: Partial<EmailUserConfig> = {
   // SOLUTION TO iOS EMAIL PREIVIEW ISSUE:
   // https://github.com/nextauthjs/next-auth/issues/4965#issuecomment-1189094806
   async sendVerificationRequest(params) {
-    const { identifier, provider, token } = params;
-    console.log(`=== Log in ${token}`);
+    const { identifier, provider } = params;
     const url = new URL(params.url);
     const signInURL = new URL(
       `/auth/email?${url.searchParams}`,

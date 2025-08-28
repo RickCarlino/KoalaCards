@@ -161,6 +161,7 @@ function InnerReviewPage({
   deckId,
   playbackPercentage,
 }: ReviewDeckPageProps) {
+  const [assistantOpen, setAssistantOpen] = React.useState(false);
   const {
     state,
     isFetching,
@@ -234,6 +235,10 @@ function InnerReviewPage({
           onGradingResultCaptured={onGradingResultCaptured}
           progress={progress}
           cardsRemaining={cardsRemaining}
+          onOpenAssistant={() => setAssistantOpen(true)}
+          disableRecord={Boolean(
+            state.gradingResults[currentItem.cardUUID]?.isCorrect,
+          )}
         />
       </Box>
       <ReviewAssistantPane
@@ -244,6 +249,10 @@ function InnerReviewPage({
           langCode: card.langCode,
           lessonType: card.lessonType,
         }}
+        opened={assistantOpen}
+        onOpen={() => setAssistantOpen(true)}
+        onClose={() => setAssistantOpen(false)}
+        showFloatingButton={false}
       />
     </Container>
   );

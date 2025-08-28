@@ -288,21 +288,6 @@ async function buildHand(
     }
   }
 
-  // Get count of all quizzes due where userId = ? and archived != true:
-  const count = await prismaClient.card.count({
-    where: {
-      userId,
-      deckId,
-      flagged: { not: true },
-      nextReview: { lte: now },
-      lastReview: { gt: 0 },
-    },
-  });
-
-  console.log(
-    `=== TOTAL QUIZZES DUE: Raw: ${count} / Filtered: ${hand.length} ===`,
-  );
-
   return hand;
 }
 

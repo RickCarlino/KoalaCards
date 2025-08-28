@@ -99,7 +99,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
 
   // Parse the page param, default to 1
   const page = parseInt(ctx.query.page as string, 10) || 1;
-  const rowsPerPage = 20;
+  const rowsPerPage = 200;
 
   // Count total records (adjust filter for your 30-days condition, etc.)
   const totalCount = await prismaClient.quizResult.count({

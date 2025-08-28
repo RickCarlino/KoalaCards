@@ -2,7 +2,6 @@ import { z } from "zod";
 import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc-procedure";
 import { getUserSettings } from "../auth-helpers";
-import { errorReport } from "@/koala/error-report";
 
 export const editCard = procedure
   .input(
@@ -19,26 +18,19 @@ export const editCard = procedure
     }),
   )
   .mutation(async ({ input, ctx }) => {
-    console.log("editCard mutation called with input:", input);
-    try {
-      const userId = (await getUserSettings(ctx.user?.id)).user.id;
+    const userId = (await getUserSettings(ctx.user?.id)).user.id;
 
-      const card = await prismaClient.card.findFirstOrThrow({
-        where: {
-          id: input.id,
-          userId,
-        },
-      });
+    const card = await prismaClient.card.findFirstOrThrow({
+      where: {
+        id: input.id,
+        userId,
+      },
+    });
 
-      const data = {
-        ...card,
-        ...input,
-        flagged: input.flagged ?? false,
-      };
-      console.log("Updating card with data:", data);
-      await prismaClient.card.update({ where: { id: card.id }, data });
-    } catch (error) {
-      console.error("Error in editCard mutation:", error);
-      return errorReport(`Failed to edit card: ${error}`);
-    }
+    const data = {
+      ...card,
+      ...input,
+      flagged: input.flagged ?? false,
+    };
+    await prismaClient.card.update({ where: { id: card.id }, data });
   });

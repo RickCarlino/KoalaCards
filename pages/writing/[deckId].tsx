@@ -122,7 +122,6 @@ export default function WritingPage({
 
   const gradeWriting = trpc.gradeWriting.useMutation({
     onSuccess: (data) => {
-      console.log(`=== Writing feedback:`, data);
       setFeedback(data);
       setLoadingReview(false);
       setCurrentStep("feedback");

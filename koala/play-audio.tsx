@@ -6,7 +6,7 @@ export const playAudio = (urlOrDataURI: string) => {
       return;
     }
     let done = false;
-    console.log("Playing audio: ", urlOrDataURI.slice(0, 65));
+
     const audio = new Audio(urlOrDataURI);
 
     const ok = () => {
@@ -26,12 +26,10 @@ export const playAudio = (urlOrDataURI: string) => {
     audio.onended = ok;
 
     audio.onerror = (e) => {
-      console.error("Audio playback failed:", e);
       reject(e);
     };
 
     audio.play().catch((e) => {
-      console.error("Audio playback failed:", e);
       reject(e);
     });
   });

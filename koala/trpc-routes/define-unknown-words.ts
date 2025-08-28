@@ -72,17 +72,12 @@ For each "Word to Define" listed above:
 2. Provide a concise, simple English definition suitable for a language learner, considering its usage in the provided "Context". Focus on the most likely meaning in this context.
 `;
 
-    try {
-      const response = await generateStructuredOutput({
-        model: ["openai", "good"],
-        messages: [{ role: "user", content: prompt }],
-        schema: DefinitionSchema,
-        maxTokens: 5000,
-      });
+    const response = await generateStructuredOutput({
+      model: ["openai", "good"],
+      messages: [{ role: "user", content: prompt }],
+      schema: DefinitionSchema,
+      maxTokens: 5000,
+    });
 
-      return response;
-    } catch (error) {
-      console.error("Error generating definitions:", error);
-      throw new Error("Failed to generate definitions for unknown words");
-    }
+    return response;
   });

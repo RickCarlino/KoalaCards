@@ -1,7 +1,6 @@
 import { createCardsFromText } from "@/koala/create-cards-from-text";
 import { z } from "zod";
 import { procedure } from "../trpc-procedure";
-import { errorReport } from "../error-report";
 import { LANG_CODES } from "../shared-types";
 
 export const parseCards = procedure
@@ -23,11 +22,6 @@ export const parseCards = procedure
     }),
   )
   .mutation(async ({ input }) => {
-    try {
-      const cards = await createCardsFromText(input.langCode, input.text);
-      return { cards };
-    } catch (error) {
-      console.error(error);
-      return errorReport("Failed to parse cards");
-    }
+    const cards = await createCardsFromText(input.langCode, input.text);
+    return { cards };
   });

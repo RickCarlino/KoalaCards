@@ -2,9 +2,11 @@ import {
   ActionIcon,
   Group,
   Tooltip,
-  RingProgress,
-  Center,
   Text,
+  Box,
+  Progress,
+  Menu,
+  useMantineTheme,
 } from "@mantine/core";
 import {
   IconArchive,
@@ -15,10 +17,13 @@ import {
   IconPlayerSkipForwardFilled,
   IconPlayerStopFilled,
   IconLetterF,
+  IconMessage,
+  IconDots,
 } from "@tabler/icons-react";
 import React from "react";
 import { CardReviewProps } from "./types";
 import { HOTKEYS } from "./hotkeys";
+import { useMediaQuery } from "@mantine/hooks";
 
 interface ControlBarProps extends CardReviewProps {
   currentStepUuid: string;
@@ -28,6 +33,8 @@ interface ControlBarProps extends CardReviewProps {
   onPlayAudio: () => void;
   progress?: number;
   cardsRemaining?: number;
+  onOpenAssistant?: () => void;
+  disableRecord?: boolean;
 }
 
 export const ControlBar: React.FC<ControlBarProps> = (props) => {
@@ -45,119 +52,155 @@ export const ControlBar: React.FC<ControlBarProps> = (props) => {
   const openCardEditor = () =>
     window.open(`/cards/${card.cardId}`, "_blank");
 
+  const theme = useMantineTheme();
+  const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints.sm})`);
+
+  const recordDisabled = props.disableRecord === true;
+  const recordLabel = recordDisabled
+    ? "Recording disabled after success"
+    : isRecording
+      ? `Stop recording (${HOTKEYS.RECORD})`
+      : `Record a response (${HOTKEYS.RECORD})`;
+  const playDisabled = itemType === "speaking";
+  const playLabel = playDisabled
+    ? "Audio disabled during speaking quiz"
+    : `Play audio (${HOTKEYS.PLAY})`;
+
+  const pct = props.progress ?? undefined;
+
   return (
-    <Group justify="center" wrap="wrap" gap="xs">
-      {props.progress !== undefined && (
-        <Tooltip label={`${Math.round(props.progress)}% complete`}>
-          <RingProgress
-            size={48}
-            thickness={4}
-            sections={[{ value: props.progress, color: "pink.6" }]}
-            label={
-              <Center>
-                <Text size="xs" c="pink.7">
-                  {Math.round(props.progress)}%
-                </Text>
-              </Center>
-            }
-          />
-        </Tooltip>
+    <Box>
+      {pct !== undefined && (
+        <Box mb="xs">
+          <Group gap="xs" align="center" justify="space-between">
+            <Text size="xs" c="pink.7">
+              {Math.round(pct)}%
+            </Text>
+            <Box style={{ flex: 1 }}>
+              <Progress value={pct} color="pink.6" radius="xl" size="md" />
+            </Box>
+          </Group>
+        </Box>
       )}
 
-      <Tooltip label={`Exit lesson`}>
-        <ActionIcon
-          component="a"
-          href="/"
-          variant="outline"
-          size="lg"
-          color="pink.7"
-        >
-          <IconDoorExit size={20} />
-        </ActionIcon>
-      </Tooltip>
-
-      <Tooltip label={`Edit card (${HOTKEYS.EDIT})`}>
-        <ActionIcon
-          variant="outline"
-          size="lg"
-          onClick={openCardEditor}
-          color="pink.7"
-        >
-          <IconEdit size={20} />
-        </ActionIcon>
-      </Tooltip>
-
-      <Tooltip label={`Archive card (${HOTKEYS.ARCHIVE})`}>
-        <ActionIcon
-          variant="outline"
-          size="lg"
-          onClick={onArchiveClick}
-          color="pink.7"
-        >
-          <IconArchive size={20} />
-        </ActionIcon>
-      </Tooltip>
-
-      <Tooltip label={`Fail card (${HOTKEYS.FAIL})`}>
-        <ActionIcon
-          variant="outline"
-          size="lg"
-          onClick={() => onGiveUp(card.uuid)}
-          color="pink.7"
-        >
-          <IconLetterF size={20} />
-        </ActionIcon>
-      </Tooltip>
-
-      <Tooltip label={`Skip card (${HOTKEYS.SKIP})`}>
-        <ActionIcon
-          variant="outline"
-          size="lg"
-          onClick={() => onSkip(card.uuid)}
-          color="pink.7"
-        >
-          <IconPlayerSkipForwardFilled size={20} />
-        </ActionIcon>
-      </Tooltip>
-
-      <Tooltip
-        label={
-          itemType === "speaking"
-            ? "Audio disabled during speaking quiz"
-            : `Play audio (${HOTKEYS.PLAY})`
-        }
+      <Box
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr auto 1fr",
+          alignItems: "center",
+          gap: "10px",
+        }}
       >
-        <ActionIcon
-          variant="outline"
-          size="lg"
-          onClick={onPlayAudio}
-          color="pink.7"
-          disabled={itemType === "speaking"}
-        >
-          <IconPlayerPlayFilled size={20} />
-        </ActionIcon>
-      </Tooltip>
-
-      <Tooltip
-        label={
-          isRecording
-            ? `Stop recording (${HOTKEYS.RECORD})`
-            : `Record a response (${HOTKEYS.RECORD})`
-        }
-      >
-        <ActionIcon
-          variant={isRecording ? "filled" : "outline"}
-          size="lg"
-          onClick={onRecordClick}
-          color="pink.7"
-        >
-          {isRecording ? (
-            <IconPlayerStopFilled size={20} />
-          ) : (
-            <IconMicrophone size={20} />
+        <Group gap="xs" justify="flex-start" wrap="nowrap">
+          <Menu shadow="md" width={220}>
+            <Menu.Target>
+              <ActionIcon
+                variant="outline"
+                size={44}
+                radius="xl"
+                color="pink.7"
+                aria-label="More"
+              >
+                <IconDots size={20} />
+              </ActionIcon>
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Item
+                component="a"
+                href="/"
+                leftSection={<IconDoorExit size={16} />}
+              >
+                Exit lesson
+              </Menu.Item>
+              <Menu.Item
+                onClick={openCardEditor}
+                leftSection={<IconEdit size={16} />}
+              >
+                Edit card ({HOTKEYS.EDIT})
+              </Menu.Item>
+              <Menu.Item
+                onClick={onArchiveClick}
+                leftSection={<IconArchive size={16} />}
+              >
+                Archive card ({HOTKEYS.ARCHIVE})
+              </Menu.Item>
+              <Menu.Item
+                onClick={() => onGiveUp(card.uuid)}
+                leftSection={<IconLetterF size={16} />}
+              >
+                Fail card ({HOTKEYS.FAIL})
+              </Menu.Item>
+              {false}
+            </Menu.Dropdown>
+          </Menu>
+          {props.onOpenAssistant && (
+            <Tooltip label="Open assistant">
+              <ActionIcon
+                variant="outline"
+                size={44}
+                radius="xl"
+                onClick={props.onOpenAssistant}
+                color="pink.7"
+                aria-label="Open assistant"
+              >
+                <IconMessage size={20} />
+              </ActionIcon>
+            </Tooltip>
           )}
-        </ActionIcon>
-      </Tooltip>
-    </Group>
+        </Group>
+
+        <Box style={{ justifySelf: "center" }}>
+          <Tooltip label={recordLabel}>
+            <ActionIcon
+              variant={isRecording ? "filled" : "outline"}
+              size={isMobile ? 64 : 72}
+              radius="xl"
+              onClick={recordDisabled ? undefined : onRecordClick}
+              color="pink.7"
+              style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}
+              disabled={recordDisabled}
+              aria-label={
+                isRecording ? "Stop recording" : "Start recording"
+              }
+            >
+              {isRecording ? (
+                <IconPlayerStopFilled size={28} />
+              ) : (
+                <IconMicrophone size={28} />
+              )}
+            </ActionIcon>
+          </Tooltip>
+        </Box>
+
+        <Group gap="xs" justify="flex-end" wrap="nowrap">
+          <Tooltip label={`Skip card (${HOTKEYS.SKIP})`}>
+            <ActionIcon
+              variant="outline"
+              size={44}
+              radius="xl"
+              onClick={() => onSkip(card.uuid)}
+              color="pink.7"
+              aria-label="Skip card"
+            >
+              <IconPlayerSkipForwardFilled size={20} />
+            </ActionIcon>
+          </Tooltip>
+
+          <Tooltip label={playLabel}>
+            <ActionIcon
+              variant="outline"
+              size={44}
+              radius="xl"
+              onClick={onPlayAudio}
+              color="pink.7"
+              disabled={playDisabled}
+              aria-label="Play audio"
+            >
+              <IconPlayerPlayFilled size={20} />
+            </ActionIcon>
+          </Tooltip>
+        </Group>
+      </Box>
+    </Box>
   );
 };

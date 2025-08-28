@@ -54,9 +54,6 @@ ${textsToTranslate.join("\n---\n")}
         if (translatedTexts.length === textsToTranslate.length) {
           return translatedTexts;
         } else {
-          console.warn(
-            "Translation output split mismatch, returning joined string.",
-          );
           return [rawTranslation];
         }
       } else {

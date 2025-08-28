@@ -125,8 +125,6 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
       });
 
       setMergeError(null);
-    } catch (error) {
-      console.error("Error merging decks:", error);
     } finally {
       setIsMerging(false);
     }

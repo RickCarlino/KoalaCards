@@ -129,17 +129,13 @@ export default function CreateUnified(props: LanguageInputPageProps) {
     }
     const words = router.query.words;
     if (typeof words === "string") {
-      try {
-        const decoded = decodeURIComponent(words);
-        const arr = decoded
-          .split(",")
-          .map((w) => w.trim())
-          .filter(Boolean);
-        if (arr.length) {
-          dispatch({ type: "SET_RAW_INPUT", rawInput: arr.join("\n") });
-        }
-      } catch (e) {
-        console.error("Failed to parse words from URL", e);
+      const decoded = decodeURIComponent(words);
+      const arr = decoded
+        .split(",")
+        .map((w) => w.trim())
+        .filter(Boolean);
+      if (arr.length) {
+        dispatch({ type: "SET_RAW_INPUT", rawInput: arr.join("\n") });
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

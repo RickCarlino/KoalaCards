@@ -19,15 +19,29 @@
 - `npm run test:coverage`: Generate coverage report in `coverage/`. (don't use right now)
 - `npm run reset`: Clean, reinstall deps, apply migrations, and seed DB.
 
+## Agent/Automation Policy
+
+- Never run the server from the agent. Do not execute `npm run dev`, `npm start`, or any long-running server processes. Rely on static analysis, linting, and formatting.
+- Do not introduce or use barrel modules (no `index.ts`/`index.tsx` re-export aggregators). Import from concrete file paths using root aliases or relative paths.
+
 ## Coding Style & Naming Conventions
 
 - **Types**: Never add `any` types. Be explicit about data types.
 - **Indentation**: 2 spaces per level.
 - **Components** (`*.tsx`): PascalCase file names (e.g., `DeckPicker.tsx`).
 - **Utilities** (`*.ts`): kebab-case file names (e.g., `time-until.ts`).
-- **Imports**: Use root aliases (`@/path/to/module`) or relative paths.
+- **Imports**: Use root aliases (`@/path/to/module`) or relative paths; never import via barrel modules. Always import from the concrete file that defines the symbol.
 - **Linting**: ESLint with `eslint-config-next` and custom rules in `eslint-rules/`.
 - **Formatting**: Prettier; run `npm run format` before commit.
+
+### Error Handling Policy
+
+- You need a good reason to use try/catch. Logging is not a good reason. Delete try/catch if you have the chance. Let it fail normally unless there is a good reason to catch().
+- Do not swallow errors. Never use empty catch blocks like `catch (_) {}` or `catch (e) {}` without handling.
+
+### Mobile UI Spacing
+
+- Labels and controls must not appear cramped on small screens. Use Mantine spacing props and ensure comfortable touch targets (around 44px) with adequate margins and padding.
 
 ## Testing Guidelines
 
@@ -69,3 +83,35 @@
 - Prefer pure functions for parsing/transforming data. Keep side effects (I/O, mutations, notifications) at edges.
 - Styling: use Mantine props (`c="dimmed"`, `mb`, etc.) over passing theme objects around.
 - URL parsing: handle each query param in its own `useEffect` with guard clauses; avoid nested branches.
+
+## TRPC Routes Overview
+
+- **archiveCard**: Flags a card as archived (paused) for the current user.
+- **bulkCreateCards**: Creates many cards (and optionally a deck) from term/definition/gender input; dedupes and backfills deck metadata.
+- **calculate-scheduling-data**: Internal helper (not a route) for FSRS scheduling; used by grading logic.
+- **copyDeck**: Placeholder; accepts a deck ID but currently no-op.
+- **createDeck**: Creates a new deck for the user if one with the same name/lang doesn’t already exist.
+- **defineUnknownWords**: Given context and target words, returns concise English definitions (and optional lemmas) via LLM.
+- **deleteCard**: Deletes a specific card owned by the current user.
+- **deleteDeck**: Deletes a deck and all its cards for the current user in a transaction.
+- **deletePausedCards**: Bulk-deletes all flagged/archived cards for the current user.
+- **editCard**: Updates editable fields on a card (term, definition, flags, and review stats) for the owner.
+- **editUserSettings**: Updates user settings with conflict detection via updatedAt.
+- **testZone**: A scratch pad that can be blown away any time for test purposes or to avoid writing new TRPCs that are not important.
+- **generateWritingPrompts**: Produces several target-language writing prompts based on deck terms via LLM.
+- **generateWritingSample**: Generates a sample answer in the deck’s language for a given prompt via LLM.
+- **getDailyWritingProgress**: Returns last-24h writing progress vs goal for the current user.
+- **getNextQuizzes**: Selects the next set of quizzes/steps due for a deck (or all), including session meta counts.
+- **getUserSettings**: Returns the current user’s settings or null if unauthenticated.
+- **gradeQuiz**: Applies an FSRS grade to a card, updates scheduling, and may attach an image on lower grades.
+- **gradeSpeakingQuiz**: Grades a spoken response against a card using evaluator/LLM and returns pass/fail feedback.
+- **gradeWriting**: Cleans up and deeply corrects an essay in the deck’s language, stores submission and correction.
+- **import-cards.setGrade**: Internal helper to compute and persist FSRS state after grading.
+- **mergeDecks**: Merges multiple same-language decks into a new deck and reassigns related cards and submissions.
+- **parseCards**: Parses plain text into candidate cards (term/definition/gender) for a given language.
+- **reportDeck**: Placeholder; accepts a deck ID but currently no-op.
+- **reviewAssistant**: Chat assistant for review context that can also suggest new card pairs.
+- **transcribeAudio**: Transcribes user-provided base64 audio for a target sentence and language.
+- **translate**: Translates a string or list of strings to English via LLM.
+- **turbine**: Experimental utilities (not elaborated here) for pipeline-related tasks.
+- **updateDeck**: Updates deck metadata (publish toggle and optionally name) for the owner.

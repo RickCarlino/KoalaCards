@@ -26,8 +26,7 @@ export const transcribeAudio = procedure
       input.lang,
     );
     if (result.kind === "error") {
-      throw new Error("Transcription failed: " + result);
+      throw new Error("Transcription failed: " + JSON.stringify(result));
     }
-
     return { result: result.text };
   });

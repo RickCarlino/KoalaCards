@@ -88,8 +88,6 @@ export const grammarCorrectionNext: QuizEvaluator = async ({
   card,
   userID,
 }) => {
-  const now = Date.now();
-  console.log({ userInput, card });
   const chosen = await runAndStore({
     ...card,
     userInput,
@@ -97,8 +95,6 @@ export const grammarCorrectionNext: QuizEvaluator = async ({
     eventType: "speaking-judgement",
   });
   console.log(JSON.stringify(chosen));
-  const duration = Date.now() - now;
-  console.log(`grammarCorrectionNext took ${duration}ms`);
   if (chosen.yesNo === "yes") {
     return { result: "pass", userMessage: chosen.why };
   } else {
