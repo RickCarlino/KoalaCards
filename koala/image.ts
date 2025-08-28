@@ -35,7 +35,7 @@ export async function maybeAddImageToCard(card: Card) {
     },
   });
 
-  const cheap = Math.random() < CHEAPNESS / 100;
+  const cheap = Math.random() < CHEAPNESS;
   const skip = cardCount < 50 ? false : cheap;
 
   if (skip) {
