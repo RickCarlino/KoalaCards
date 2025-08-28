@@ -2,6 +2,9 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import OpenAI from "openai";
 import { toFile } from "openai/uploads";
 import { LANG_CODES } from "@/koala/shared-types";
+import { getServerSession } from "next-auth";
+import { authOptions } from "./auth/[...nextauth]";
+import { prismaClient } from "@/koala/prisma-client";
 
 export const config = {
   api: { bodyParser: false },
@@ -27,6 +30,19 @@ export default async function handler(
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "Method Not Allowed" });
+  }
+
+  // Require authenticated user session (NextAuth)
+  const session = await getServerSession(req, res, authOptions);
+  const email = session?.user?.email;
+  if (!email) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  // Ensure the user exists in our database
+  const dbUser = await prismaClient.user.findUnique({ where: { email } });
+  if (!dbUser) {
+    return res.status(401).json({ error: "Unauthorized" });
   }
 
   const apiKey = process.env.OPENAI_API_KEY;
