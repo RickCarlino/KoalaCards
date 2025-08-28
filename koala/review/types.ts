@@ -23,11 +23,6 @@ type UUID = { uuid: string };
 
 export type Quiz = QuizList[number] & UUID;
 
-export type Recording = {
-  stepUuid: string;
-  audio: string;
-};
-
 export type GradingResult = {
   transcription: string;
   isCorrect: boolean;
@@ -38,7 +33,6 @@ export type State = {
   currentItem: QueueItem | undefined;
   queue: Queue;
   cards: QuizMap;
-  recordings: Record<string, Recording>;
   gradingResults: Record<string, GradingResult>;
   initialCardCount: number;
   completedCards: Set<string>;
@@ -46,14 +40,6 @@ export type State = {
 
 export type ReplaceCardAction = { type: "REPLACE_CARDS"; payload: Quiz[] };
 export type SkipCardAction = { type: "SKIP_CARD"; payload: UUID };
-type RecordingCapturedAction = {
-  type: "RECORDING_CAPTURED";
-  payload: { uuid: string; audio: string };
-};
-type ClearRecordingAction = {
-  type: "CLEAR_RECORDING";
-  payload: { uuid: string };
-};
 type CompleteItemAction = {
   type: "COMPLETE_ITEM";
   payload: { uuid: string };
@@ -70,8 +56,6 @@ type GradingResultCapturedAction = {
 export type Action =
   | ReplaceCardAction
   | SkipCardAction
-  | RecordingCapturedAction
-  | ClearRecordingAction
   | CompleteItemAction
   | GiveUpAction
   | GradingResultCapturedAction;
@@ -89,11 +73,11 @@ export type CardReviewProps = {
   onGiveUp: (cardUUID: string) => void;
   itemType: ItemType;
   card: Quiz;
-  recordings: Record<string, Recording>;
   currentStepUuid: string;
   onGradingResultCaptured: (
     cardUUID: string,
     result: GradingResult,
   ) => void;
+  onProvideAudioHandler?: (handler: (blob: Blob) => Promise<void>) => void;
 };
 export type CardUI = React.FC<CardReviewProps>;

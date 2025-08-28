@@ -3,7 +3,6 @@ import {
   openaiGenerateImage,
   openaiGenerateStructuredOutput,
   openaiGenerateText,
-  openaiTranscribeAudio,
 } from "./ai-openai";
 import {
   anthropicGenerateStructuredOutput,
@@ -40,15 +39,6 @@ export type ImageGenOptions = {
   prompt: string;
 };
 export type ImageGenFn = (options: ImageGenOptions) => Promise<string>;
-export type TranscribeOptions = {
-  model: string;
-  prompt?: string;
-  filename?: string;
-};
-export type TranscribeAudioFn = (
-  audioFile: Buffer | ArrayBuffer,
-  options: TranscribeOptions,
-) => Promise<string>;
 
 export const generateAIText: LanguageGenFn = async (options) => {
   switch (options.model[0]) {
@@ -84,11 +74,4 @@ export const generateAIImage: (
     default:
       throw new Error("Not implemented");
   }
-};
-
-export const transcribeAudio: TranscribeAudioFn = async (
-  audioFile,
-  options,
-) => {
-  return await openaiTranscribeAudio(audioFile, options);
 };

@@ -1,11 +1,10 @@
 import { Stack, Text } from "@mantine/core";
 import { CardReviewProps } from "../types";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useVoiceTranscription } from "../use-voice-transcription";
 import { VisualDiff } from "@/koala/review/lesson-steps/visual-diff";
 import { LangCode } from "@/koala/shared-types";
 import { usePhaseManager } from "../hooks/usePhaseManager";
-import { useRecordingProcessor } from "../hooks/useRecordingProcessor";
 import { CardImage } from "../components/CardImage";
 
 type Phase = "ready" | "processing" | "retry" | "success";
@@ -16,10 +15,10 @@ interface IntroCardProps extends CardReviewProps {
 
 export const IntroCard: React.FC<IntroCardProps> = ({
   card,
-  recordings,
   onProceed,
   currentStepUuid,
   isRemedial = false,
+  onProvideAudioHandler,
 }) => {
   const { term, definition } = card;
   const [userTranscription, setUserTranscription] = useState<string>("");
@@ -35,11 +34,11 @@ export const IntroCard: React.FC<IntroCardProps> = ({
     () => setUserTranscription(""),
   );
 
-  const processRecording = async (base64Audio: string) => {
+  const processRecording = async (blob: Blob) => {
     setPhase("processing");
 
     try {
-      const { transcription, isMatch } = await transcribe(base64Audio);
+      const { transcription, isMatch } = await transcribe(blob);
       setUserTranscription(transcription);
 
       if (isMatch) {
@@ -54,11 +53,11 @@ export const IntroCard: React.FC<IntroCardProps> = ({
     }
   };
 
-  useRecordingProcessor({
-    recordings,
-    currentStepUuid,
-    onAudioReceived: processRecording,
-  });
+  // Register handler for parent to trigger when recording stops
+  useEffect(() => {
+    onProvideAudioHandler?.(processRecording);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStepUuid]);
 
   const renderContent = () => {
     switch (phase) {

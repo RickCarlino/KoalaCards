@@ -16,7 +16,10 @@ export function useMediaRecorder(): RecorderControls {
   const preferredMime = useMemo(() => {
     const webm = "audio/webm;codecs=opus";
     const mp4 = "audio/mp4";
-    if (typeof window === "undefined" || typeof MediaRecorder === "undefined") {
+    if (
+      typeof window === "undefined" ||
+      typeof MediaRecorder === "undefined"
+    ) {
       return null;
     }
     if (MediaRecorder.isTypeSupported(webm)) return webm;
@@ -33,7 +36,9 @@ export function useMediaRecorder(): RecorderControls {
   }, [recorder]);
 
   async function start(): Promise<void> {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+    });
     const rec = new MediaRecorder(
       stream,
       preferredMime ? { mimeType: preferredMime } : undefined,
@@ -57,7 +62,9 @@ export function useMediaRecorder(): RecorderControls {
         return resolve(new Blob());
       }
       current.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: current.mimeType });
+        const blob = new Blob(chunksRef.current, {
+          type: current.mimeType,
+        });
         chunksRef.current = [];
         current.stream.getTracks().forEach((t) => t.stop());
         setIsRecording(false);
@@ -69,4 +76,3 @@ export function useMediaRecorder(): RecorderControls {
 
   return { start, stop, isRecording, mimeType };
 }
-

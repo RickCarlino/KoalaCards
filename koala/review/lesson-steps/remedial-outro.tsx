@@ -1,12 +1,11 @@
 import { Stack, Text, Image, Button } from "@mantine/core";
 import { CardUI, GradingResult } from "../types";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useVoiceGrading } from "../use-voice-grading";
 import { LangCode } from "@/koala/shared-types";
 import { FailureView } from "../components/FailureView";
 import { CardImage } from "../components/CardImage";
 import { usePhaseManager } from "../hooks/usePhaseManager";
-import { useRecordingProcessor } from "../hooks/useRecordingProcessor";
 import { HOTKEYS } from "../hotkeys";
 
 type Phase = "ready" | "processing" | "success" | "failure";
@@ -55,10 +54,10 @@ const SuccessView = ({
 
 export const RemedialOutro: CardUI = ({
   card,
-  recordings,
   onProceed,
   currentStepUuid,
   onGradingResultCaptured,
+  onProvideAudioHandler,
 }) => {
   const { term, definition } = card;
   const [gradingResult, setGradingResult] = useState<GradingResult | null>(
@@ -79,11 +78,11 @@ export const RemedialOutro: CardUI = ({
     () => setGradingResult(null),
   );
 
-  const processRecording = async (base64Audio: string) => {
+  const processRecording = async (blob: Blob) => {
     setPhase("processing");
 
     try {
-      const result = await gradeAudio(base64Audio);
+      const result = await gradeAudio(blob);
       setGradingResult(result);
 
       if (result.isCorrect) {
@@ -102,11 +101,11 @@ export const RemedialOutro: CardUI = ({
     }
   };
 
-  useRecordingProcessor({
-    recordings,
-    currentStepUuid,
-    onAudioReceived: processRecording,
-  });
+  // Register handler for parent to trigger on recording stop
+  useEffect(() => {
+    onProvideAudioHandler?.(processRecording);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStepUuid]);
 
   // Early return for failure case
   if (phase === "failure") {

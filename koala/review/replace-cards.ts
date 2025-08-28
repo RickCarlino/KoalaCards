@@ -92,7 +92,6 @@ export function replaceCards(
     ...nextState,
     cards,
     currentItem: nextQueueItem(nextState.queue),
-    recordings: {}, // Clear recordings to prevent memory leak
     gradingResults: {}, // Clear grading results to prevent memory leak
   };
 }

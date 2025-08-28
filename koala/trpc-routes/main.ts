@@ -11,7 +11,6 @@ import { getUserSettings } from "./get-user-settings";
 import { gradeQuiz } from "./grade-quiz";
 import { gradeSpeakingQuiz } from "./grade-speaking-quiz";
 import { parseCards } from "./parse-cards";
-import { transcribeAudio } from "./transcribe-audio";
 import { turbine } from "./turbine";
 import { deleteDeck } from "./delete-deck";
 import { gradeWriting } from "./grade-writing";
@@ -51,7 +50,6 @@ export const appRouter = router({
   parseCards,
   archiveCard,
   reportDeck,
-  transcribeAudio,
   translate,
   turbine,
   updateDeck,

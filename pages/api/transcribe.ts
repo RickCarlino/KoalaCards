@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import OpenAI from "openai";
 import { toFile } from "openai/uploads";
+import { LANG_CODES } from "@/koala/shared-types";
 
 export const config = {
   api: { bodyParser: false },
@@ -33,6 +34,18 @@ export default async function handler(
     return res.status(500).json({ error: "Missing OPENAI_API_KEY" });
   }
 
+  const languageParamRaw = req.query.language;
+  const languageParam = Array.isArray(languageParamRaw)
+    ? languageParamRaw[0]
+    : languageParamRaw;
+  const parsedLanguage = LANG_CODES.safeParse(languageParam);
+  if (!parsedLanguage.success) {
+    return res
+      .status(400)
+      .json({ error: "Missing or invalid 'language'" });
+  }
+  const language = parsedLanguage.data;
+
   const contentType =
     (req.headers["content-type"] as string | undefined) ??
     "application/octet-stream";
@@ -51,7 +64,10 @@ export default async function handler(
   const result = await openai.audio.transcriptions.create({
     file: uploadFile,
     model: "gpt-4o-mini-transcribe",
+    language,
   });
 
-  return res.status(200).json({ text: result.text ?? "" });
+  const text = result.text ?? "There was a transcription error.";
+
+  return res.status(200).json({ text });
 }
