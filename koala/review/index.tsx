@@ -36,6 +36,8 @@ interface CardReviewWithRecordingProps extends CardReviewProps {
 
 import { useRef } from "react";
 import { useMediaRecorder } from "@/koala/hooks/use-media-recorder";
+import { useUserSettings } from "@/koala/settings-provider";
+import { playBlob } from "@/koala/utils/play-blob-audio";
 
 export const CardReview: React.FC<CardReviewWithRecordingProps> = (
   props,
@@ -56,6 +58,7 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
     null,
   );
   const { start, stop, isRecording } = useMediaRecorder();
+  const userSettings = useUserSettings();
 
   // Show a helpful notification if mic access fails (with iOS Safari guidance)
   // Error handling moved into consumer callbacks as needed.
@@ -91,6 +94,10 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
       return;
     }
     const blob = await stop();
+    // Probabilistic self-playback of user's own recording (await to avoid overlap)
+    if (userSettings && Math.random() < userSettings.playbackPercentage) {
+      await playBlob(blob, userSettings.playbackSpeed);
+    }
     if (onAudioHandlerRef.current) {
       try {
         await onAudioHandlerRef.current(blob);

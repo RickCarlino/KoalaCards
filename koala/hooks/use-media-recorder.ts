@@ -39,10 +39,12 @@ export function useMediaRecorder(): RecorderControls {
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: true,
     });
-    const rec = new MediaRecorder(
-      stream,
-      preferredMime ? { mimeType: preferredMime } : undefined,
-    );
+
+    const options: MediaRecorderOptions = {};
+    if (preferredMime) options.mimeType = preferredMime;
+    options.audioBitsPerSecond = 16_000;
+
+    const rec = new MediaRecorder(stream, options);
     setMimeType(rec.mimeType);
     chunksRef.current = [];
     rec.ondataavailable = (e: BlobEvent) => {
@@ -50,7 +52,8 @@ export function useMediaRecorder(): RecorderControls {
         chunksRef.current.push(e.data);
       }
     };
-    rec.start();
+    // Use a timeslice so iOS/WebKit emits chunks during recording
+    rec.start(1000);
     setRecorder(rec);
     setIsRecording(true);
   }
@@ -70,6 +73,10 @@ export function useMediaRecorder(): RecorderControls {
         setIsRecording(false);
         resolve(blob);
       };
+      // Request any buffered data before stopping (helps on some iOS versions)
+      if (typeof current.requestData === "function") {
+        current.requestData();
+      }
       current.stop();
     });
   }
