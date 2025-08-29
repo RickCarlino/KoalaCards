@@ -1,4 +1,7 @@
-export const playBlob = (blob: Blob, playbackRate?: number): Promise<void> => {
+export const playBlob = (
+  blob: Blob,
+  playbackRate?: number,
+): Promise<void> => {
   const url = URL.createObjectURL(blob);
   const audio = new Audio(url);
   if (typeof playbackRate === "number" && Number.isFinite(playbackRate)) {
