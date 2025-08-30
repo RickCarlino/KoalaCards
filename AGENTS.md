@@ -47,6 +47,28 @@ Don't run other commands!
 - Avoid barrel modules; import from concrete file paths.
 - Prefer minimal, targeted changes; follow repository styles and conventions above.
 
+## TRPC
+
+- Server router: `pages/api/trpc/[trpc].ts` wires `appRouter` from `koala/trpc-routes/main.ts` and builds context with `getServerSession` and `prismaClient`.
+- Router composition: add new procedures as files in `koala/trpc-routes/` and import them into `koala/trpc-routes/main.ts` inside `router({ ... })`.
+- Auth: use `procedure` from `koala/trpc-procedure.ts` which enforces an authenticated session via middleware and returns `TRPCError('UNAUTHORIZED')` when missing.
+- Client: use `trpc` from `koala/trpc-config.ts` in React (`useQuery`/`useMutation`). SSR is disabled; calls hit `/api/trpc` via `httpLink`.
+- Patterns:
+  - Keep inputs small and zod-validated inside the procedure.
+  - Prefer returning minimal data needed by the UI; no over-fetching.
+  - Do not modify existing production routes for prototypes—add new route files instead (e.g., `koala/trpc-routes/input-flood.ts`) and leave existing behavior unchanged.
+
+## AI (`koala/ai.ts`)
+
+- Prefer the unified wrappers in `koala/ai.ts` over ad-hoc SDK calls when feasible:
+  - `generateAIText({ model, messages })` for plain text.
+  - `generateStructuredOutput({ model, messages, schema })` for Zod-typed JSON.
+  - `generateAIImage(prompt, model)` for images.
+- Models: pass a tuple identifier `[vendor, key]` where vendor is `"openai"` and key is one of `"fast" | "good" | "cheap"` (mapped in `koala/ai-openai.ts` to concrete models like `gpt-5`, `gpt-5-mini`, etc.).
+- Structured output uses `zodResponseFormat` under the hood; always validate with Zod types colocated near usage.
+- Env: requires `OPENAI_API_KEY`. Avoid catching-and-logging errors unless there’s a user-facing fallback; let failures surface.
+- Anthropic: placeholder functions exist in `koala/ai-anthropic.ts` but are not implemented—don’t select `"anthropic"` unless adding support.
+
 ## Code Quality & Complexity Rules
 
 - Avoid Boolean soups. Replace complex predicates with well-named helpers.

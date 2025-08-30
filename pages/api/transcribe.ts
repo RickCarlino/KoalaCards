@@ -5,7 +5,7 @@ import { LANG_CODES } from "@/koala/shared-types";
 import { getServerSession } from "next-auth";
 import { authOptions } from "./auth/[...nextauth]";
 import { prismaClient } from "@/koala/prisma-client";
-import { draw, shuffle } from "radash";
+import { shuffle } from "radash";
 
 export const config = {
   api: { bodyParser: false },

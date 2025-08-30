@@ -4,7 +4,6 @@ import { deleteCard } from "./delete-card";
 import { deletePausedCards } from "./delete-paused-card";
 import { editCard } from "./edit-card";
 import { editUserSettings } from "./edit-user-settings";
-import { testZone } from "./test-zone";
 import { archiveCard } from "./archive-card";
 import { getNextQuizzes } from "./get-next-quizzes";
 import { getUserSettings } from "./get-user-settings";
@@ -25,6 +24,7 @@ import { mergeDecks } from "./merge-decks";
 import { generateWritingSample } from "./generate-writing-sample";
 import { reviewAssistant } from "./review-assistant";
 import { createDeck } from "./create-deck";
+import { inputFloodGenerate, inputFloodGrade } from "./input-flood";
 
 export const appRouter = router({
   bulkCreateCards,
@@ -35,7 +35,6 @@ export const appRouter = router({
   deletePausedCards,
   editCard,
   editUserSettings,
-  testZone,
   generateWritingPrompts,
   generateWritingSample,
   getDailyWritingProgress,
@@ -44,6 +43,8 @@ export const appRouter = router({
   gradeQuiz,
   gradeSpeakingQuiz,
   gradeWriting,
+  inputFloodGenerate,
+  inputFloodGrade,
   reviewAssistant,
   createDeck,
   mergeDecks,

@@ -6,9 +6,6 @@ import {
   rem,
 } from "@mantine/core";
 
-// Centralized Mantine theme for Koala Cards
-// Keep branding (pink palette) but add modern polish (radius, shadows, focus)
-
 const colors: Record<string, MantineColorsTuple> = {
   pink: [
     "#FFF0F6",
@@ -165,7 +162,6 @@ export function buildKoalaTheme(fontFamily: string) {
               boxShadow: `0 0 0 3px ${theme.colors.pink[0]}`,
               backgroundColor: "rgba(255, 240, 246, 0.5)",
             },
-            "&:focus-within": { borderColor: theme.colors.pink[4] },
           },
         }),
       },
@@ -184,7 +180,6 @@ export function buildKoalaTheme(fontFamily: string) {
               boxShadow: `0 0 0 3px ${theme.colors.pink[0]}`,
               backgroundColor: "rgba(255, 240, 246, 0.5)",
             },
-            "&:focus-within": { borderColor: theme.colors.pink[4] },
           },
         }),
       },
@@ -232,7 +227,7 @@ export function buildKoalaTheme(fontFamily: string) {
       AppShell: {
         styles: (theme: MantineTheme) => ({
           header: {
-            backgroundColor: "rgba(255, 240, 246, 0.9)", // pink[0] with alpha
+            backgroundColor: "rgba(255, 240, 246, 0.9)",
             backdropFilter: "saturate(180%) blur(8px)",
             borderBottom: `1px solid ${theme.colors.pink[2]}`,
             boxShadow: theme.shadows.xs,
