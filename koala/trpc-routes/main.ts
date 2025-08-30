@@ -25,6 +25,7 @@ import { generateWritingSample } from "./generate-writing-sample";
 import { reviewAssistant } from "./review-assistant";
 import { createDeck } from "./create-deck";
 import { inputFloodGenerate, inputFloodGrade } from "./input-flood";
+import { markQuizResultReviewed } from "./mark-quiz-result-reviewed";
 
 export const appRouter = router({
   bulkCreateCards,
@@ -45,6 +46,7 @@ export const appRouter = router({
   gradeWriting,
   inputFloodGenerate,
   inputFloodGrade,
+  markQuizResultReviewed,
   reviewAssistant,
   createDeck,
   mergeDecks,

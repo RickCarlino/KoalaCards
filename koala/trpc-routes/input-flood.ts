@@ -82,14 +82,19 @@ export const inputFloodGenerate = procedure
 
     const pickOne = async () => {
       if (typeof resultIdInput === "number") {
-        const r = await prismaClient.quizResult.findUnique({
-          where: { id: resultIdInput },
+        return await prismaClient.quizResult.findUnique({
+          where: {
+            id: resultIdInput,
+            userId,
+          },
         });
-        if (!r || r.userId !== userId) return null;
-        return r;
       }
       const results = await prismaClient.quizResult.findMany({
-        where: { userId, isAcceptable: false },
+        where: {
+          userId,
+          isAcceptable: false,
+          reviewedAt: null,
+        },
         orderBy: { createdAt: "desc" },
         take: 100,
       });

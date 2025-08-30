@@ -53,6 +53,7 @@ export default function TestZone({ picks }: TestZoneProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const gen = trpc.inputFloodGenerate.useMutation();
+  const markReviewed = trpc.markQuizResultReviewed.useMutation();
 
   const startFromPick = async (resultId: number) => {
     setLoading(true);
@@ -137,7 +138,11 @@ export default function TestZone({ picks }: TestZoneProps) {
             lesson={data.lesson}
             langCode={data.source.langCode}
             onComplete={() => {
-              router.reload();
+              const id = data?.source.quizResultId;
+              const p = id
+                ? markReviewed.mutateAsync({ resultId: id })
+                : Promise.resolve();
+              p.finally(() => router.reload());
             }}
           />
         ) : null}
@@ -157,7 +162,7 @@ export const getServerSideProps: GetServerSideProps<
   }
 
   const results = await prismaClient.quizResult.findMany({
-    where: { userId: dbUser.id, isAcceptable: false },
+    where: { userId: dbUser.id, isAcceptable: false, reviewedAt: null },
     orderBy: { createdAt: "desc" },
     take: 12,
   });
