@@ -26,6 +26,7 @@ type InputFlood = {
   fix: { original: string; corrected: string };
 };
 import { trpc } from "@/koala/trpc-config";
+import { playBlob } from "@/koala/utils/play-blob-audio";
 
 type LessonProps = {
   lesson: InputFlood;
@@ -142,6 +143,17 @@ type StepKind =
 
 export function InputFloodLesson({ lesson, langCode }: LessonProps) {
   const equals = (a: string, b: string) => a.trim() === b.trim();
+  const requestSpeech = async (tl: string, en?: string) => {
+    if (!tl.trim()) return;
+    const res = await fetch("/api/speech", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tl, en, format: "mp3" }),
+    });
+    if (!res.ok) return;
+    const blob = await res.blob();
+    await playBlob(blob);
+  };
   const steps = useMemo<StepKind[]>(() => {
     const s: StepKind[] = [{ t: "diagnosis" }];
     for (let i = 0; i < lesson.flood.A.length; i++)
@@ -188,6 +200,13 @@ export function InputFloodLesson({ lesson, langCode }: LessonProps) {
       ns.add(k);
       return ns;
     });
+    if (step.t === "floodA") {
+      const it = lesson.flood.A[step.i];
+      void requestSpeech(it.text, it.en).catch(() => undefined);
+    } else if (step.t === "floodB") {
+      const it = lesson.flood.B?.[step.i];
+      if (it) void requestSpeech(it.text, it.en).catch(() => undefined);
+    }
     next();
   };
 
@@ -297,17 +316,14 @@ export function InputFloodLesson({ lesson, langCode }: LessonProps) {
             <Text c="dimmed" size="sm">
               {step.i + 1} / {lesson.flood.A.length}
             </Text>
-            <CopyIndicator
-              expected={lesson.flood.A[step.i].text}
-              attempt={attempt}
-            />
-            <Text size="sm" c="dimmed">
-              {lesson.flood.A[step.i].en}
-            </Text>
+            {/* Target sentence shown only once below with the input */}
             {!passed.has(keyFor(step)) ? (
               <>
                 <Text c="dimmed" size="sm">
                   Type the sentence to continue
+                </Text>
+                <Text size="sm" c="dimmed">
+                  {lesson.flood.A[step.i].en}
                 </Text>
                 <CopyIndicator
                   expected={lesson.flood.A[step.i].text}
@@ -334,10 +350,7 @@ export function InputFloodLesson({ lesson, langCode }: LessonProps) {
             <Text c="dimmed" size="sm">
               {step.i + 1} / {lesson.flood.B?.length || 0}
             </Text>
-            <CopyIndicator
-              expected={lesson.flood.B?.[step.i].text || ""}
-              attempt={attempt}
-            />
+            {/* Target sentence shown only once below with the input */}
             {lesson.flood.B?.[step.i].en ? (
               <Text size="sm" c="dimmed">
                 {lesson.flood.B?.[step.i].en}
