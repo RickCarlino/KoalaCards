@@ -141,6 +141,7 @@ model QuizResult {
   reason         String
   eventType      String   @default("speaking-judgement")
   reviewedAt     DateTime?
+  helpfulness    Int      @default(0)
 
   @@index([createdAt])
   @@index([langCode, createdAt])

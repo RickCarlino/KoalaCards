@@ -9,8 +9,8 @@ import {
 import { shuffle, draw } from "radash";
 import { generateStructuredOutput } from "@/koala/ai";
 
-const MIN_FLOOD_COUNT = 3;
-const MAX_FLOOD_COUNT = 5;
+const MIN_FLOOD_COUNT = 2;
+const MAX_FLOOD_COUNT = 4;
 
 const SentenceSchema = z.object({ text: z.string(), en: z.string() });
 const InputFloodSchema = z.object({

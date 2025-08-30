@@ -53,7 +53,7 @@ export default function TestZone({ picks }: TestZoneProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const gen = trpc.inputFloodGenerate.useMutation();
-  const markReviewed = trpc.markQuizResultReviewed.useMutation();
+  const editResult = trpc.editQuizResult.useMutation();
 
   const startFromPick = async (resultId: number) => {
     setLoading(true);
@@ -140,7 +140,10 @@ export default function TestZone({ picks }: TestZoneProps) {
             onComplete={() => {
               const id = data?.source.quizResultId;
               const p = id
-                ? markReviewed.mutateAsync({ resultId: id })
+                ? editResult.mutateAsync({
+                    resultId: id,
+                    data: { reviewedAt: new Date() },
+                  })
                 : Promise.resolve();
               p.finally(() => router.reload());
             }}
