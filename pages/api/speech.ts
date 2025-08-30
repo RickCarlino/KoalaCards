@@ -45,7 +45,7 @@ export default async function handler(
   const input = enText.trim() ? `${tlText}\n${enText}` : tlText;
 
   const model = "gpt-4o-mini-tts"; // OpenAI Speech (TTS)
-  const chosenVoice = draw([
+  const VOICES = [
     "alloy",
     "ash",
     "ballad",
@@ -56,12 +56,12 @@ export default async function handler(
     "onyx",
     "sage",
     "shimmer",
-  ]);
+  ] as const;
   const chosenFormat: NonNullable<SpeechBody["format"]> = format || "mp3";
 
   const speech = await openai.audio.speech.create({
     model,
-    voice: chosenVoice,
+    voice: draw(VOICES) || VOICES[0],
     input,
     response_format: chosenFormat,
   });

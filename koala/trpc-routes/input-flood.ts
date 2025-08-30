@@ -9,7 +9,9 @@ import {
 import { shuffle, draw } from "radash";
 import { generateStructuredOutput } from "@/koala/ai";
 
-// Local Zod schemas for prototype
+const MIN_FLOOD_COUNT = 5;
+const MAX_FLOOD_COUNT = 8;
+
 const SentenceSchema = z.object({ text: z.string(), en: z.string() });
 const InputFloodSchema = z.object({
   language: z.string(),
@@ -20,10 +22,14 @@ const InputFloodSchema = z.object({
     rules: z.array(z.string()).min(2).max(5),
   }),
   flood: z.object({
-    A: z.array(SentenceSchema).min(10).max(12),
-    B: z.array(SentenceSchema).nullable().optional(),
+    A: z.array(SentenceSchema).min(MIN_FLOOD_COUNT).max(MAX_FLOOD_COUNT),
+    B: z
+      .array(SentenceSchema)
+      .min(MIN_FLOOD_COUNT)
+      .max(MAX_FLOOD_COUNT)
+      .nullable()
+      .optional(),
   }),
-  paragraph: z.string(),
   production: z
     .array(
       z.object({
@@ -114,7 +120,6 @@ export const inputFloodGenerate = procedure
     return { lesson, source: { quizResultId: result.id, langCode } };
   });
 
-// Local prompt builder to keep prototype self-contained
 type PromptParams = {
   langCode: LangCode;
   definition: string;
@@ -171,9 +176,7 @@ postposition”).
 form (“Input Flood A”) and, when appropriate, also model the 
 contrasting-but-valid form (“Input Flood B”) so the learner 
 learns when to use each.
-3) Add one short, narrow paragraph (~3-5 sentences) naturally 
-containing the target form.
-4) Add 5 quick production prompts (English prompts; target-language 
+3) Add 5 quick production prompts (English prompts; target-language 
 answers).
 
 Constraints:
@@ -217,8 +220,8 @@ STRICT BEHAVIOR RULES (Meta-Prompting):
 4) Always keep tone concise and corrective; avoid meta commentary.
 
 Counts (strict):
-- flood.A: 10-12 sentences (never fewer than 10).
-- flood.B: if used, 8-12 sentences (or null).
+- flood.A: ${MIN_FLOOD_COUNT}-${MAX_FLOOD_COUNT} sentences (never fewer than ${MIN_FLOOD_COUNT}).
+- flood.B: if used, ${MIN_FLOOD_COUNT}-${MAX_FLOOD_COUNT} sentences (or null).
 - production: 5-6 items.
 
 Variety & diversity (strict):
@@ -245,14 +248,11 @@ Output JSON must match this schema:
     "A": [{ "text": string; "en": string }];
     "B": [{ "text": string; "en": string }] | null;
   };
-  "paragraph": string;
   "production": [{ "prompt_en": string; "answer": string }];
   "takeaways": string[];
   "fix": { "original": string; "corrected": string };
 }`;
 }
-
-// Intentionally no regex-based give-up detector; behavior is enforced via the meta-prompt.
 
 export const inputFloodGrade = procedure
   .input(GradeRequestSchema)
@@ -261,7 +261,6 @@ export const inputFloodGrade = procedure
     const userId = ctx.user?.id;
     if (!userId) throw new Error("Unauthorized");
 
-    // Guardrails (mirror API behavior)
     const languageName =
       supportedLanguages[
         input.language as keyof typeof supportedLanguages

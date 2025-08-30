@@ -16,8 +16,6 @@ import type { GetServerSideProps } from "next";
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { prismaClient } from "@/koala/prisma-client";
 import { shuffle } from "radash";
-
-// Minimal local types to avoid spreading prototype types
 type Sentence = { text: string; en: string };
 type InputFloodLite = {
   language: string;
@@ -28,7 +26,6 @@ type InputFloodLite = {
     rules: string[];
   };
   flood: { A: Sentence[]; B?: Sentence[] | null };
-  paragraph: string;
   production: { prompt_en: string; answer: string }[];
   takeaways: string[];
   fix: { original: string; corrected: string };
@@ -138,7 +135,6 @@ export default function TestZone({ picks }: TestZoneProps) {
             lesson={data.lesson}
             langCode={data.source.langCode}
             onComplete={() => {
-              // Full reload to re-run getServerSideProps and refresh picks
               router.reload();
             }}
           />
