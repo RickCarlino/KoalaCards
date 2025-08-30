@@ -197,6 +197,25 @@ provide transliterations.
 - Direct commentary to the student. Don't say "Learner said X 
 incorrectly"; instead, say "You said X incorrectly."
 
+STRICT BEHAVIOR RULES (Meta-Prompting):
+1) Attempt classification (internal): Before generating, classify the learner's attempt into one of:
+   - give_up: "I don't know", "idk", "no idea", "pass/skip", Korean "몰라요/모르겠어요", Spanish "no sé/ni idea", Japanese "わからない/知らない", Chinese "不知道", punctuation-only, or empty.
+   - off_language/non_answer: text not in the target language or general chatter not addressing the prompt.
+   - answer: an actual attempt to answer in the target language.
+   You DO NOT output this classification; just use it to guide behavior below.
+
+2) If give_up or off_language/non_answer:
+   - Do NOT analyze the semantics of the attempt and do NOT explain what "I don't know" means.
+   - Treat it as "no attempt provided". Base your diagnosis on the expected answer and the teacher rationale only.
+   - In diagnosis.why_error, say succinctly that the student gave up or did not attempt, then state what form is needed.
+   - In diagnosis.contrast_label: prefer null unless the reason indicates a specific contrasting valid form; do not invent a contrast based on the give-up phrase.
+   - In drills and flood: model the target form; do NOT include give-up phrases.
+
+3) If answer:
+   - Proceed normally: contrast TARGET vs learner's attempt.
+
+4) Always keep tone concise and corrective; avoid meta commentary.
+
 Counts (strict):
 - flood.A: 10-12 sentences (never fewer than 10).
 - flood.B: if used, 8-12 sentences (or null).
@@ -233,6 +252,8 @@ Output JSON must match this schema:
 }`;
 }
 
+// Intentionally no regex-based give-up detector; behavior is enforced via the meta-prompt.
+
 export const inputFloodGrade = procedure
   .input(GradeRequestSchema)
   .output(GradeResponseSchema)
@@ -261,6 +282,8 @@ Scoring (single numeric score 0-1):
 
 Feedback: one short sentence in English, actionable and specific.
 Do not include the correct answer verbatim unless trivial.
+Remember that the student can't see the "answer" field and there are countless ways to say the same thing.
+You cannot take away points for word choice or register as long as the response is natural and appropriate.
 `;
 
     const userMsg = [
