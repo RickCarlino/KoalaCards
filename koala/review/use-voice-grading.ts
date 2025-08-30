@@ -1,5 +1,6 @@
 import { trpc } from "@/koala/trpc-config";
 import { LangCode } from "@/koala/shared-types";
+import { transcribeBlob } from "@/koala/utils/transcribe-blob";
 
 interface UseVoiceGradingOptions {
   targetText: string; // For transcription accuracy (e.g., card.term)
@@ -18,25 +19,19 @@ interface GradingResult {
   feedback: string; // Server feedback
 }
 
-export function useVoiceGrading({
-  targetText,
-  langCode,
-  cardId,
-  cardUUID,
-  onGradingResultCaptured,
-}: UseVoiceGradingOptions) {
-  const transcribeAudio = trpc.transcribeAudio.useMutation();
+export function useVoiceGrading(options: UseVoiceGradingOptions) {
+  const {
+    cardId,
+    cardUUID,
+    onGradingResultCaptured,
+    langCode,
+    targetText,
+  } = options;
   const gradeSpeakingQuiz = trpc.gradeSpeakingQuiz.useMutation();
 
-  const gradeAudio = async (
-    base64Audio: string,
-  ): Promise<GradingResult> => {
-    // Step 1: Transcribe audio
-    const { result: transcription } = await transcribeAudio.mutateAsync({
-      audio: base64Audio,
-      targetText, // Helps with transcription accuracy
-      lang: langCode,
-    });
+  const gradeAudio = async (blob: Blob): Promise<GradingResult> => {
+    // Step 1: Transcribe audio via Next API (no base64)
+    const transcription = await transcribeBlob(blob, langCode, targetText);
 
     // Step 2: Grade the transcription
     const { isCorrect, feedback } = await gradeSpeakingQuiz.mutateAsync({
@@ -60,7 +55,7 @@ export function useVoiceGrading({
 
   return {
     gradeAudio,
-    isLoading: transcribeAudio.isLoading || gradeSpeakingQuiz.isLoading,
-    error: transcribeAudio.error || gradeSpeakingQuiz.error,
+    isLoading: gradeSpeakingQuiz.isLoading,
+    error: gradeSpeakingQuiz.error,
   };
 }

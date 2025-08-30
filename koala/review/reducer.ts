@@ -73,14 +73,13 @@ function initialState(): State {
     queue: queue(),
     cards: {},
     currentItem: undefined,
-    recordings: {},
     gradingResults: {},
     initialCardCount: 0,
     completedCards: new Set(),
   };
 }
 
-export function useReview(deckId: number, playbackPercentage = 0.125) {
+export function useReview(deckId: number) {
   const mutation = trpc.getNextQuizzes.useMutation();
   const repairCardMutation = trpc.editCard.useMutation();
   const [state, dispatch] = useReducer(reducer, initialState());
@@ -138,17 +137,6 @@ export function useReview(deckId: number, playbackPercentage = 0.125) {
       card && (await playAudio(card.termAndDefinitionAudio));
       dispatch({ type: "GIVE_UP", payload: { cardUUID } });
     },
-    onRecordingCaptured: async (uuid: string, audio: string) => {
-      // Playback based on user setting prefs.
-      const shouldPlayback = Math.random() < playbackPercentage;
-      if (shouldPlayback) {
-        await playAudio(audio);
-      }
-      dispatch({ type: "RECORDING_CAPTURED", payload: { uuid, audio } });
-    },
-    clearRecording: (uuid: string) => {
-      dispatch({ type: "CLEAR_RECORDING", payload: { uuid } });
-    },
     completeItem: (uuid: string) => {
       dispatch({ type: "COMPLETE_ITEM", payload: { uuid } });
     },
@@ -180,11 +168,7 @@ export function useReview(deckId: number, playbackPercentage = 0.125) {
 
 function reducer(state: State, action: Action): State {
   console.log(action.type);
-  console.log({
-    ...state,
-    recordings: Object.keys(state.recordings).length,
-    gradingResults: state.gradingResults,
-  });
+  console.log({ ...state, gradingResults: state.gradingResults });
   switch (action.type) {
     case "REPLACE_CARDS":
       const newState = replaceCards(action, state);
@@ -200,24 +184,6 @@ function reducer(state: State, action: Action): State {
           ...state.completedCards,
           action.payload.uuid,
         ]),
-      };
-    case "RECORDING_CAPTURED":
-      return {
-        ...state,
-        recordings: {
-          ...state.recordings,
-          [action.payload.uuid]: {
-            stepUuid: action.payload.uuid,
-            audio: action.payload.audio,
-          },
-        },
-      };
-    case "CLEAR_RECORDING":
-      const { [action.payload.uuid]: _, ...remainingRecordings } =
-        state.recordings;
-      return {
-        ...state,
-        recordings: remainingRecordings,
       };
     case "COMPLETE_ITEM":
       const { uuid } = action.payload;

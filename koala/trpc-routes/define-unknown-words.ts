@@ -73,7 +73,7 @@ For each "Word to Define" listed above:
 `;
 
     const response = await generateStructuredOutput({
-      model: ["openai", "good"],
+      model: ["openai", "cheap"],
       messages: [{ role: "user", content: prompt }],
       schema: DefinitionSchema,
       maxTokens: 5000,

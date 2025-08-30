@@ -8,7 +8,6 @@ import { GradingSuccess } from "../components/GradingSuccess";
 import { FailureView } from "../components/FailureView";
 import { CardImage } from "../components/CardImage";
 import { usePhaseManager } from "../hooks/usePhaseManager";
-import { useRecordingProcessor } from "../hooks/useRecordingProcessor";
 import { useGradeHandler } from "../hooks/useGradeHandler";
 import { playAudio } from "@/koala/play-audio";
 
@@ -56,11 +55,11 @@ const getQuizConfig = (quizType: QuizType) => {
 
 export const QuizCard: React.FC<QuizCardProps> = ({
   card,
-  recordings,
   onProceed,
   currentStepUuid,
   quizType,
   onGradingResultCaptured,
+  onProvideAudioHandler,
 }) => {
   const { term, definition } = card;
   const [userTranscription, setUserTranscription] = useState<string>("");
@@ -113,11 +112,11 @@ export const QuizCard: React.FC<QuizCardProps> = ({
     }
   }, [phase]);
 
-  const processRecording = async (base64Audio: string) => {
+  const processRecording = async (blob: Blob) => {
     setPhase("processing");
 
     try {
-      const result = await gradeAudio(base64Audio);
+      const result = await gradeAudio(blob);
       setUserTranscription(result.transcription);
       setFeedback(result.feedback);
 
@@ -133,11 +132,11 @@ export const QuizCard: React.FC<QuizCardProps> = ({
     }
   };
 
-  useRecordingProcessor({
-    recordings,
-    currentStepUuid,
-    onAudioReceived: processRecording,
-  });
+  // Register handler with parent so it can invoke processing on stop
+  useEffect(() => {
+    onProvideAudioHandler?.(processRecording);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStepUuid]);
 
   const handleFailureContinue = async () => {
     // Grade the quiz as AGAIN (failed) and proceed

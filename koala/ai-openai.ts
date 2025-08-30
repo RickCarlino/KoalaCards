@@ -1,11 +1,10 @@
-import OpenAI, { toFile } from "openai";
+import OpenAI from "openai";
 import { zodResponseFormat } from "openai/helpers/zod";
 import type { ChatCompletion } from "openai/resources/chat/completions";
 import type {
   ImageModelIdentifier,
   LanguageModelIdentifier,
   ImageGenFn,
-  TranscribeAudioFn,
   LanguageGenFn,
   StructuredGenFn,
 } from "./ai";
@@ -17,7 +16,6 @@ const DEFAULT_IMAGE_MODEL: ImageModelIdentifier = [
   "imageDefault",
 ];
 const DEFAULT_IMAGE_SIZE = "1024x1024" as const;
-const DEFAULT_TRANSCRIBE_MODEL = "gpt-4o-mini-transcribe";
 
 const registry: Record<ModelKind, string> = {
   fast: "gpt-5-nano",
@@ -81,25 +79,4 @@ export const openaiGenerateImage: ImageGenFn = async (options) => {
     response_format: "b64_json",
   });
   return result.data?.[0]?.b64_json ?? "";
-};
-
-export const openaiTranscribeAudio: TranscribeAudioFn = async (
-  audioFile,
-  options,
-) => {
-  const filename = options?.filename ?? "input.wav";
-  const prompt = options?.prompt ?? "";
-  const model = options?.model ?? DEFAULT_TRANSCRIBE_MODEL;
-
-  const data =
-    audioFile instanceof ArrayBuffer
-      ? new Uint8Array(audioFile)
-      : audioFile;
-  const file = await toFile(data, filename);
-  return await openai.audio.transcriptions.create({
-    model,
-    file,
-    prompt,
-    response_format: "text",
-  });
 };

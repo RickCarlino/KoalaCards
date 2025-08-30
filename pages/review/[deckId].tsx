@@ -1,6 +1,5 @@
 import { getLessonsDue } from "@/koala/fetch-lesson";
 import { getServersideUser } from "@/koala/get-serverside-user";
-import MicrophonePermissions from "@/koala/microphone-permissions";
 import { playAudio } from "@/koala/play-audio";
 import { prismaClient } from "@/koala/prisma-client";
 import { CardReview } from "@/koala/review";
@@ -22,7 +21,6 @@ import ReviewAssistantPane from "@/koala/components/ReviewAssistantPane";
 
 type ReviewDeckPageProps = {
   deckId: number;
-  playbackPercentage: number;
 };
 
 const redirect = (destination: string) => ({
@@ -92,7 +90,6 @@ export const getServerSideProps: GetServerSideProps<
   return {
     props: {
       deckId,
-      playbackPercentage: userSettings?.playbackPercentage ?? 0.125,
     },
   };
 };
@@ -157,10 +154,7 @@ const NoMoreQuizzesState = ({
   );
 };
 
-function InnerReviewPage({
-  deckId,
-  playbackPercentage,
-}: ReviewDeckPageProps) {
+function InnerReviewPage({ deckId }: ReviewDeckPageProps) {
   const [assistantOpen, setAssistantOpen] = React.useState(false);
   const {
     state,
@@ -169,13 +163,12 @@ function InnerReviewPage({
     currentItem,
     skipCard,
     giveUp,
-    onRecordingCaptured,
     completeItem,
     refetchQuizzes,
     onGradingResultCaptured,
     progress,
     cardsRemaining,
-  } = useReview(deckId, playbackPercentage);
+  } = useReview(deckId);
 
   async function playCard() {
     switch (currentItem?.itemType) {
@@ -226,11 +219,7 @@ function InnerReviewPage({
             completeItem(currentItem.stepUuid);
           }}
           onPlayAudio={playCard}
-          recordings={state.recordings}
           currentStepUuid={currentItem.stepUuid}
-          onRecordingComplete={(audio: string) => {
-            onRecordingCaptured(currentItem.stepUuid, audio);
-          }}
           completeItem={completeItem}
           onGradingResultCaptured={onGradingResultCaptured}
           progress={progress}
@@ -259,5 +248,5 @@ function InnerReviewPage({
 }
 
 export default function ReviewDeckPageWrapper(props: ReviewDeckPageProps) {
-  return MicrophonePermissions(<InnerReviewPage {...props} />);
+  return <InnerReviewPage {...props} />;
 }
