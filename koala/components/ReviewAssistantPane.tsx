@@ -90,7 +90,7 @@ export function ReviewAssistantPane({
 
   const onSend = async () => {
     const text = input.trim();
-    if (!text || reviewAssistant.isLoading) return;
+    if (!text || reviewAssistant.isLoading) {return;}
     setInput("");
     setMessages((m) => [...m, { role: "user", content: text }]);
     try {

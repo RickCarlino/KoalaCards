@@ -16,6 +16,7 @@ import { trpc } from "@/koala/trpc-config";
 import type { GetServerSideProps } from "next";
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { prismaClient } from "@/koala/prisma-client";
+import { IconThumbUp, IconThumbDown } from "@tabler/icons-react";
 type Sentence = { text: string; en: string };
 type InputFloodLite = {
   language: string;
@@ -41,6 +42,7 @@ type PickedMistake = {
   definition: string;
   userInput: string;
   reason: string;
+  helpfulness: number;
 };
 
 type TestZoneProps = {
@@ -54,6 +56,10 @@ export default function TestZone({ picks }: TestZoneProps) {
   const [error, setError] = useState<string | null>(null);
   const gen = trpc.inputFloodGenerate.useMutation();
   const editResult = trpc.editQuizResult.useMutation();
+  const [hidden, setHidden] = useState<Set<number>>(new Set());
+  const [helpfulIds, setHelpfulIds] = useState<Set<number>>(
+    () => new Set(picks.filter((p) => p.helpfulness > 0).map((p) => p.id))
+  );
 
   const startFromPick = async (resultId: number) => {
     setLoading(true);
@@ -101,34 +107,86 @@ export default function TestZone({ picks }: TestZoneProps) {
             <Stack>
               <Text c="dimmed">Pick something to work on</Text>
               <Grid gutter="md">
-                {picks.map((p) => (
-                  <Grid.Col key={p.id} span={{ base: 12, sm: 6, md: 4 }}>
-                    <Card withBorder padding="sm">
-                      <Stack gap={6}>
-                        <Text size="xs" c="dimmed">
-                          Expected
-                        </Text>
-                        <Text fw={600} size="sm" lineClamp={2}>
-                          {p.definition}
-                        </Text>
-                        <Text size="xs" c="dimmed">
-                          Your attempt
-                        </Text>
-                        <Text c="red" size="sm" lineClamp={2}>
-                          {p.userInput}
-                        </Text>
-                        <Button
-                          onClick={() => startFromPick(p.id)}
-                          loading={loading}
-                          variant="light"
-                          size="xs"
-                        >
-                          Start lesson
-                        </Button>
-                      </Stack>
-                    </Card>
-                  </Grid.Col>
-                ))}
+                {picks
+                  .filter((p) => !hidden.has(p.id))
+                  .map((p) => (
+                    <Grid.Col key={p.id} span={{ base: 12, sm: 6, md: 4 }}>
+                      <Card withBorder padding="sm">
+                        <Stack gap={6}>
+                          <Text size="xs" c="dimmed">
+                            Expected
+                          </Text>
+                          <Text fw={600} size="sm" lineClamp={2}>
+                            {p.definition}
+                          </Text>
+                          <Text size="xs" c="dimmed">
+                            Your attempt
+                          </Text>
+                          <Text c="red" size="sm" lineClamp={2}>
+                            {p.userInput}
+                          </Text>
+                          <Stack gap="xs">
+                            <Button
+                              onClick={() => startFromPick(p.id)}
+                              loading={loading}
+                              variant="light"
+                              size="sm"
+                            >
+                              Start lesson
+                            </Button>
+                            <Group gap="xs">
+                              <Button
+                                variant={helpfulIds.has(p.id) ? "filled" : "subtle"}
+                                color="green"
+                                size="sm"
+                                aria-pressed={helpfulIds.has(p.id)}
+                                onClick={() => {
+                                  setHelpfulIds((prev) => {
+                                    const next = new Set(prev);
+                                    const isHelpful = next.has(p.id);
+                                    if (isHelpful) {
+                                      next.delete(p.id);
+                                    } else {
+                                      next.add(p.id);
+                                    }
+                                    // Persist toggle: 1 -> 0, 0 -> 1
+                                    editResult.mutate({
+                                      resultId: p.id,
+                                      data: { helpfulness: isHelpful ? 0 : 1 },
+                                    });
+                                    return next;
+                                  });
+                                }}
+                                leftSection={<IconThumbUp size={16} />}
+                              >
+                                Helpful
+                              </Button>
+                              <Button
+                                variant="subtle"
+                                size="sm"
+                                color="red"
+                                onClick={() => {
+                                  setHelpfulIds((prev) => {
+                                    const next = new Set(prev);
+                                    next.delete(p.id);
+                                    return next;
+                                  });
+                                  setHidden((prev) => new Set(prev).add(p.id));
+                                  editResult.mutate({
+                                    resultId: p.id,
+                                    data: { helpfulness: -1 },
+                                  });
+                                }}
+                                leftSection={<IconThumbDown size={16} />}
+                              >
+                                Not helpful
+                              </Button>
+                            </Group>
+                          </Stack>
+                        </Stack>
+                      </Card>
+                    </Grid.Col>
+                  ))}
               </Grid>
             </Stack>
           )
@@ -165,7 +223,12 @@ export const getServerSideProps: GetServerSideProps<
   }
 
   const results = await prismaClient.quizResult.findMany({
-    where: { userId: dbUser.id, isAcceptable: false, reviewedAt: null },
+    where: {
+      userId: dbUser.id,
+      isAcceptable: false,
+      reviewedAt: null,
+      helpfulness: { gte: 0 },
+    },
     orderBy: { createdAt: "desc" },
     take: 12,
   });
@@ -175,6 +238,7 @@ export const getServerSideProps: GetServerSideProps<
     definition: r.definition,
     userInput: r.userInput,
     reason: r.reason,
+    helpfulness: r.helpfulness,
   }));
 
   return { props: { picks } };

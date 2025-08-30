@@ -31,12 +31,12 @@ function getModelString(
 ): string {
   const [vendor, modelKey] = identifier;
   if (vendor !== "openai")
-    throw new Error(`Unsupported vendor: ${vendor}`);
+    {throw new Error(`Unsupported vendor: ${vendor}`);}
   const modelString = registry[modelKey as ModelKind];
   if (!modelString)
-    throw new Error(
+    {throw new Error(
       `Unknown model key "${modelKey}" for vendor "${vendor}"`,
-    );
+    );}
   return modelString;
 }
 

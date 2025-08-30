@@ -144,6 +144,6 @@ export const reviewAssistant = procedure
     const reply = result.reply?.trim() || "";
     const suggestions = (result.suggestions || []).slice(0, 5);
 
-    if (!reply) throw new Error("Empty reply");
+    if (!reply) {throw new Error("Empty reply");}
     return { reply, suggestions };
   });

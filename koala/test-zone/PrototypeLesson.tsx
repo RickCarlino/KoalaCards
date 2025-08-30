@@ -120,13 +120,13 @@ export function InputFloodLesson({
   const steps = useMemo<StepKind[]>(() => {
     const s: StepKind[] = [{ t: "diagnosis" }];
     for (let i = 0; i < lesson.flood.A.length; i++)
-      s.push({ t: "floodA", i });
+      {s.push({ t: "floodA", i });}
     if (lesson.flood.B && lesson.flood.B.length) {
       for (let i = 0; i < lesson.flood.B.length; i++)
-        s.push({ t: "floodB", i });
+        {s.push({ t: "floodB", i });}
     }
     for (let i = 0; i < lesson.production.length; i++)
-      s.push({ t: "production", i });
+      {s.push({ t: "production", i });}
     return s;
   }, [lesson]);
 
@@ -146,9 +146,9 @@ export function InputFloodLesson({
   const step = steps[idx];
 
   const keyFor = (s: StepKind): string => {
-    if (s.t === "floodA") return `A-${s.i}`;
-    if (s.t === "floodB") return `B-${s.i}`;
-    if (s.t === "production") return `P-${s.i}`;
+    if (s.t === "floodA") {return `A-${s.i}`;}
+    if (s.t === "floodB") {return `B-${s.i}`;}
+    if (s.t === "production") {return `P-${s.i}`;}
     return s.t;
   };
 
@@ -167,14 +167,14 @@ export function InputFloodLesson({
     });
     const isLast = idx >= steps.length - 1;
     if (isLast) {
-      if (onComplete) onComplete();
+      if (onComplete) {onComplete();}
       return;
     }
     next();
   };
 
   const requestSpeech = async (tl: string, en?: string) => {
-    if (!tl.trim()) return;
+    if (!tl.trim()) {return;}
     setIsAudioPlaying(true);
     try {
       const res = await fetch("/api/speech", {
@@ -182,7 +182,7 @@ export function InputFloodLesson({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tl, en, format: "mp3" }),
       });
-      if (!res.ok) return;
+      if (!res.ok) {return;}
       const blob = await res.blob();
       await playBlob(blob);
     } finally {
@@ -192,21 +192,21 @@ export function InputFloodLesson({
 
   useEffect(() => {
     const k = keyFor(step);
-    if (passed.has(k)) return;
+    if (passed.has(k)) {return;}
     if (step.t === "floodA") {
       const it = lesson.flood.A[step.i];
       void requestSpeech(it.text, it.en);
     } else if (step.t === "floodB") {
       const it = lesson.flood.B?.[step.i];
-      if (it) void requestSpeech(it.text, it.en);
+      if (it) {void requestSpeech(it.text, it.en);}
     }
   }, [step, passed, lesson]);
 
   const expectedForStep = (s: StepKind): string => {
-    if (s.t === "diagnosis") return lesson.fix.corrected;
-    if (s.t === "floodA") return lesson.flood.A[s.i].text;
-    if (s.t === "floodB") return lesson.flood.B?.[s.i].text || "";
-    if (s.t === "production") return lesson.production[s.i].answer;
+    if (s.t === "diagnosis") {return lesson.fix.corrected;}
+    if (s.t === "floodA") {return lesson.flood.A[s.i].text;}
+    if (s.t === "floodB") {return lesson.flood.B?.[s.i].text || "";}
+    if (s.t === "production") {return lesson.production[s.i].answer;}
     return "";
   };
 
@@ -224,7 +224,7 @@ export function InputFloodLesson({
     }
     const blob = await stop();
     const k = keyFor(step);
-    if (passed.has(k)) return;
+    if (passed.has(k)) {return;}
     const expected = expectedForStep(step);
     const { transcription, isMatch } = await transcribe(blob);
     setHeard(transcription);
@@ -278,7 +278,7 @@ export function InputFloodLesson({
       "space",
       (e) => {
         e.preventDefault();
-        if (isAudioPlaying || step.t === "diagnosis") return;
+        if (isAudioPlaying || step.t === "diagnosis") {return;}
         void handleRecordToggle();
       },
     ],

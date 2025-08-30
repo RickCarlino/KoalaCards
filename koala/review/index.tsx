@@ -79,7 +79,7 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
   };
 
   const handleRecordToggle = async () => {
-    if (props.disableRecord) return;
+    if (props.disableRecord) {return;}
     if (!isRecording) {
       try {
         await start();

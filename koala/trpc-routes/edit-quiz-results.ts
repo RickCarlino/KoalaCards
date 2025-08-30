@@ -25,7 +25,7 @@ export const editQuizResult = procedure
   .output(z.object({ success: z.literal(true) }))
   .mutation(async ({ input, ctx }) => {
     const userId = ctx.user?.id;
-    if (!userId) throw new Error("Unauthorized");
+    if (!userId) {throw new Error("Unauthorized");}
 
     const { resultId, data } = input;
 

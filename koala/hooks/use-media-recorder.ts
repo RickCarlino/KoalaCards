@@ -22,8 +22,8 @@ export function useMediaRecorder(): RecorderControls {
     ) {
       return null;
     }
-    if (MediaRecorder.isTypeSupported(webm)) return webm;
-    if (MediaRecorder.isTypeSupported(mp4)) return mp4;
+    if (MediaRecorder.isTypeSupported(webm)) {return webm;}
+    if (MediaRecorder.isTypeSupported(mp4)) {return mp4;}
     return "";
   }, []);
 
@@ -41,7 +41,7 @@ export function useMediaRecorder(): RecorderControls {
     });
 
     const options: MediaRecorderOptions = {};
-    if (preferredMime) options.mimeType = preferredMime;
+    if (preferredMime) {options.mimeType = preferredMime;}
     options.audioBitsPerSecond = 16_000;
 
     const rec = new MediaRecorder(stream, options);

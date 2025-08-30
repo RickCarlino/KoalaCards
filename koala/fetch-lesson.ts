@@ -162,8 +162,8 @@ function tagLessonType(
   q: LocalCard,
   bucket: Bucket,
 ): LocalCard & { quizType?: string } {
-  if (bucket === NEW_CARD) return { ...q, quizType: "new" };
-  if (bucket === REMEDIAL) return { ...q, quizType: "remedial" };
+  if (bucket === NEW_CARD) {return { ...q, quizType: "new" };}
+  if (bucket === REMEDIAL) {return { ...q, quizType: "remedial" };}
   return q;
 }
 
