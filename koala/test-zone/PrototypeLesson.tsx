@@ -248,8 +248,9 @@ export function InputFloodLesson({
         const g = (
           res as { grades: { score: number; feedback: string }[] }
         ).grades[0];
-        setGradeText(`${g.feedback}`);
-        if (g.score >= 0.5) {
+        const ok = g.score >= 0.5;
+        setGradeText(`${ok ? "OK" : "Try again"}: ${g.feedback}`);
+        if (ok) {
           markPassedAndNext();
         }
       } catch (e) {
