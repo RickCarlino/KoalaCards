@@ -8,7 +8,7 @@ import { getLangName } from "../get-lang-name";
 
 const chat = async (system: string, user?: string): Promise<string> => {
   return await generateAIText({
-    model: ["openai", "fast"] as const,
+    model: ["openai", "cheap"] as const,
     messages: user
       ? [
           { role: "system", content: system },

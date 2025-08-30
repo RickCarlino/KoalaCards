@@ -111,7 +111,7 @@ export default function WritingPage({
   const [definitions, setDefinitions] = useState<
     {
       word: string;
-      lemma?: string;
+      lemma: string | null;
       definition: string;
     }[]
   >([]);
@@ -379,7 +379,7 @@ export default function WritingPage({
   };
 
   const handleCreateCards = () => {
-    const shouldDisplayLemma = (def: { word: string; lemma?: string }) =>
+    const shouldDisplayLemma = (def: { word: string; lemma: string | null }) =>
       !!def.lemma && def.lemma.toLowerCase() !== def.word.toLowerCase();
 
     if (!definitions || definitions.length === 0) {

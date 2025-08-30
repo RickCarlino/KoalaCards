@@ -434,8 +434,6 @@ export function InputFloodLesson({
           </Stack>
         </Card>
       ) : null}
-
-      
     </Stack>
   );
 }

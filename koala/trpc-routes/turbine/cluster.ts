@@ -105,7 +105,7 @@ async function run(
   Double check your work against these rules when you are done.
   `;
   const parsedResponse = await generateStructuredOutput({
-    model: ["openai", "fast"] as const,
+    model: ["openai", "cheap"] as const,
     messages: [
       ...part1,
       {

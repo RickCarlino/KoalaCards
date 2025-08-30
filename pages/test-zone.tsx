@@ -6,6 +6,7 @@ import {
   Center,
   Group,
   Loader,
+  Grid,
   Stack,
   Text,
   Title,
@@ -15,7 +16,6 @@ import { trpc } from "@/koala/trpc-config";
 import type { GetServerSideProps } from "next";
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { prismaClient } from "@/koala/prisma-client";
-import { shuffle } from "radash";
 type Sentence = { text: string; en: string };
 type InputFloodLite = {
   language: string;
@@ -99,34 +99,36 @@ export default function TestZone({ picks }: TestZoneProps) {
           ) : (
             <Stack>
               <Text c="dimmed">Pick something to work on</Text>
-              <Group>
+              <Grid gutter="md">
                 {picks.map((p) => (
-                  <Card
-                    key={p.id}
-                    withBorder
-                    padding="md"
-                    style={{ width: 260 }}
-                  >
-                    <Stack gap={6}>
-                      <Text size="sm" c="dimmed">
-                        Expected
-                      </Text>
-                      <Text fw={600}>{p.definition}</Text>
-                      <Text size="sm" c="dimmed">
-                        Your attempt
-                      </Text>
-                      <Text c="red">{p.userInput}</Text>
-                      <Button
-                        onClick={() => startFromPick(p.id)}
-                        loading={loading}
-                        variant="light"
-                      >
-                        Start lesson
-                      </Button>
-                    </Stack>
-                  </Card>
+                  <Grid.Col key={p.id} span={{ base: 12, sm: 6, md: 4 }}>
+                    <Card withBorder padding="sm">
+                      <Stack gap={6}>
+                        <Text size="xs" c="dimmed">
+                          Expected
+                        </Text>
+                        <Text fw={600} size="sm" lineClamp={2}>
+                          {p.definition}
+                        </Text>
+                        <Text size="xs" c="dimmed">
+                          Your attempt
+                        </Text>
+                        <Text c="red" size="sm" lineClamp={2}>
+                          {p.userInput}
+                        </Text>
+                        <Button
+                          onClick={() => startFromPick(p.id)}
+                          loading={loading}
+                          variant="light"
+                          size="xs"
+                        >
+                          Start lesson
+                        </Button>
+                      </Stack>
+                    </Card>
+                  </Grid.Col>
                 ))}
-              </Group>
+              </Grid>
             </Stack>
           )
         ) : null}
@@ -157,17 +159,15 @@ export const getServerSideProps: GetServerSideProps<
   const results = await prismaClient.quizResult.findMany({
     where: { userId: dbUser.id, isAcceptable: false },
     orderBy: { createdAt: "desc" },
-    take: 100,
+    take: 12,
   });
-  const picks = shuffle(results)
-    .slice(0, 4)
-    .map((r) => ({
-      id: r.id,
-      langCode: r.langCode,
-      definition: r.definition,
-      userInput: r.userInput,
-      reason: r.reason,
-    }));
+  const picks = results.map((r) => ({
+    id: r.id,
+    langCode: r.langCode,
+    definition: r.definition,
+    userInput: r.userInput,
+    reason: r.reason,
+  }));
 
   return { props: { picks } };
 };
