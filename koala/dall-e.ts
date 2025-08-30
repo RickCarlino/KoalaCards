@@ -25,8 +25,9 @@ export const createDallEPrompt = async (
   const parts: { type: "text"; text: string }[] = [
     { type: "text", text: `Term: ${term}` },
   ];
-  if (definition)
-    {parts.push({ type: "text", text: `Definition: ${definition}` });}
+  if (definition) {
+    parts.push({ type: "text", text: `Definition: ${definition}` });
+  }
   parts.push({ type: "text", text: "Return only the image prompt." });
 
   const text = await generateAIText({

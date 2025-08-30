@@ -47,7 +47,7 @@ export const IntroCard: React.FC<IntroCardProps> = ({
       } else {
         setPhase("retry");
       }
-    } catch (error) {
+    } catch {
       setPhase("retry");
       setUserTranscription("Error occurred during transcription.");
     }

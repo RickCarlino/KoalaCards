@@ -58,7 +58,7 @@ export default function TestZone({ picks }: TestZoneProps) {
   const editResult = trpc.editQuizResult.useMutation();
   const [hidden, setHidden] = useState<Set<number>>(new Set());
   const [helpfulIds, setHelpfulIds] = useState<Set<number>>(
-    () => new Set(picks.filter((p) => p.helpfulness > 0).map((p) => p.id))
+    () => new Set(picks.filter((p) => p.helpfulness > 0).map((p) => p.id)),
   );
 
   const startFromPick = async (resultId: number) => {
@@ -136,7 +136,11 @@ export default function TestZone({ picks }: TestZoneProps) {
                             </Button>
                             <Group gap="xs">
                               <Button
-                                variant={helpfulIds.has(p.id) ? "filled" : "subtle"}
+                                variant={
+                                  helpfulIds.has(p.id)
+                                    ? "filled"
+                                    : "subtle"
+                                }
                                 color="green"
                                 size="sm"
                                 aria-pressed={helpfulIds.has(p.id)}
@@ -152,7 +156,9 @@ export default function TestZone({ picks }: TestZoneProps) {
                                     // Persist toggle: 1 -> 0, 0 -> 1
                                     editResult.mutate({
                                       resultId: p.id,
-                                      data: { helpfulness: isHelpful ? 0 : 1 },
+                                      data: {
+                                        helpfulness: isHelpful ? 0 : 1,
+                                      },
                                     });
                                     return next;
                                   });
@@ -171,7 +177,9 @@ export default function TestZone({ picks }: TestZoneProps) {
                                     next.delete(p.id);
                                     return next;
                                   });
-                                  setHidden((prev) => new Set(prev).add(p.id));
+                                  setHidden((prev) =>
+                                    new Set(prev).add(p.id),
+                                  );
                                   editResult.mutate({
                                     resultId: p.id,
                                     data: { helpfulness: -1 },

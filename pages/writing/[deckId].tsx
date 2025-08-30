@@ -379,7 +379,10 @@ export default function WritingPage({
   };
 
   const handleCreateCards = () => {
-    const shouldDisplayLemma = (def: { word: string; lemma: string | null }) =>
+    const shouldDisplayLemma = (def: {
+      word: string;
+      lemma: string | null;
+    }) =>
       !!def.lemma && def.lemma.toLowerCase() !== def.word.toLowerCase();
 
     if (!definitions || definitions.length === 0) {

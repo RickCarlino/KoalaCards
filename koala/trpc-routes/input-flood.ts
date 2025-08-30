@@ -76,7 +76,9 @@ export const inputFloodGenerate = procedure
   )
   .mutation(async ({ input, ctx }) => {
     const userId = ctx.user?.id;
-    if (!userId) {throw new Error("Unauthorized");}
+    if (!userId) {
+      throw new Error("Unauthorized");
+    }
 
     const resultIdInput = input?.resultId;
 
@@ -102,10 +104,14 @@ export const inputFloodGenerate = procedure
     };
 
     const result = await pickOne();
-    if (!result) {throw new Error("No wrong results found");}
+    if (!result) {
+      throw new Error("No wrong results found");
+    }
 
     const parsedLang = LANG_CODES.safeParse(result.langCode);
-    if (!parsedLang.success) {throw new Error("Unsupported language code");}
+    if (!parsedLang.success) {
+      throw new Error("Unsupported language code");
+    }
     const langCode = parsedLang.data as LangCode;
 
     const prompt = buildInputFloodPrompt({
@@ -230,7 +236,9 @@ export const inputFloodGrade = procedure
   .output(GradeResponseSchema)
   .mutation(async ({ input, ctx }) => {
     const userId = ctx.user?.id;
-    if (!userId) {throw new Error("Unauthorized");}
+    if (!userId) {
+      throw new Error("Unauthorized");
+    }
 
     const languageName =
       supportedLanguages[

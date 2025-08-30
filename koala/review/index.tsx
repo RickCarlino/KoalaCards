@@ -79,18 +79,18 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
   };
 
   const handleRecordToggle = async () => {
-    if (props.disableRecord) {return;}
+    if (props.disableRecord) {
+      return;
+    }
     if (!isRecording) {
-      try {
-        await start();
-      } catch (err) {
+      await start().catch(() => {
         notifications.show({
           title: "Microphone error",
           message:
             "Microphone access failed. On iOS: enable Microphone for Safari or the PWA in Settings.",
           color: "red",
         });
-      }
+      });
       return;
     }
     const blob = await stop();
@@ -99,12 +99,7 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
       await playBlob(blob, userSettings.playbackSpeed);
     }
     if (onAudioHandlerRef.current) {
-      try {
-        await onAudioHandlerRef.current(blob);
-      } catch (e) {
-        // Let consuming component surface any UI errors
-        // no-op
-      }
+      void onAudioHandlerRef.current(blob).catch(() => undefined);
     }
   };
 
