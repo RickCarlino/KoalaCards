@@ -59,7 +59,7 @@ export default async function handler(
   const language = parsedLanguage.data;
 
   const tokens = (firstParam(req.query.hint) || "").split(/[ ,]+/);
-  const hint = shuffle(tokens).slice(0, 3).join(", ").trim();
+  const hint = shuffle(tokens).slice(0, 5).join(", ").trim();
 
   const contentType =
     (req.headers["content-type"] as string | undefined) ??

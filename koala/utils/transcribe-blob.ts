@@ -3,7 +3,7 @@ import { LangCode } from "@/koala/shared-types";
 export async function transcribeBlob(
   blob: Blob,
   language: LangCode,
-  hint?: string,
+  hint: string,
 ): Promise<string> {
   const hintParam = hint ? `&hint=${encodeURIComponent(hint)}` : "";
   const res = await fetch(

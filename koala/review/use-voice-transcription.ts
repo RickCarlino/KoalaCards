@@ -3,7 +3,7 @@ import { LangCode } from "@/koala/shared-types";
 import { transcribeBlob } from "@/koala/utils/transcribe-blob";
 
 interface UseVoiceTranscriptionOptions {
-  targetText?: string;
+  targetText: string;
   langCode: LangCode;
 }
 
