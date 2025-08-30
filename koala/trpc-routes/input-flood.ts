@@ -9,8 +9,8 @@ import {
 import { shuffle, draw } from "radash";
 import { generateStructuredOutput } from "@/koala/ai";
 
-const MIN_FLOOD_COUNT = 5;
-const MAX_FLOOD_COUNT = 8;
+const MIN_FLOOD_COUNT = 3;
+const MAX_FLOOD_COUNT = 5;
 
 const SentenceSchema = z.object({ text: z.string(), en: z.string() });
 const InputFloodSchema = z.object({
@@ -134,123 +134,89 @@ function buildInputFloodPrompt({
   reason,
 }: PromptParams): string {
   const language = supportedLanguages[langCode];
-  return `Input flood is an SLA technique that saturates comprehensible input 
-with many natural occurrences of a target form so learners 
-internalize it through repeated, meaningful exposure and later 
-produce it accurately. It aligns with Krashen's Input Hypothesis 
-(i+1) and usage-based accounts (Ellis; Tomasello), where frequency 
-and distribution drive entrenchment and implicit grammar; 
-frequency-based exposure can outperform metalinguistic explanation 
-(Ellis, 2005). Studies report gains across structures and 
-settings—adverb placement (Trahey & White, 1993), past tense with 
-interaction/feedback (Doughty & Varela, 1998), Spanish subjunctive 
-via reading/listening (Hernández, 2008), and relative clauses/tense 
-(Han, Park & Combs, 2008)—with immediate and delayed effects. 
-Benefits include support for implicit learning (Hulstijn), lower 
-cognitive load (Sweller), durable retention, higher engagement via 
-authentic texts, broad level accessibility, and better noticing. 
-Input flood synergizes with input enhancement, narrow 
-reading/listening, processing instruction, and structural priming. In 
-EPI (Extensive Processing Instruction), it is sequenced through 
-sentence builders, L.A.M. (listening-as-modelling), narrow texts, and 
-retrieval-based repetition to lay multiple memory traces before 
-output; paired with purposeful output, it serves as a backbone for 
-building fluency, accuracy, and long-term retention.
+  return `You are a language-teaching generator. Create an INPUT FLOOD exercise 
+in ${language}.
 
-You are a language-teaching generator. Create a concise, 
-mistake-driven INPUT FLOOD exercise in ${language} using the four 
-fields below:
+Background:
 
-- Expected answer (ground truth): ${definition}
+Input flood = saturating comprehensible input with many 
+natural examples of a target form so learners internalize it through 
+frequency and use it correctly. Support: Krashen's Input Hypothesis 
+(i+1), Ellis/Tomasello usage-based accounts, studies (Trahey & White 
+1993; Doughty & Varela 1998; Hernández 2008; Han et al. 2008). 
+Benefits: implicit learning, lower cognitive load, durable retention, 
+engagement, broad accessibility, supports noticing. Often paired with 
+input enhancement, narrow reading, processing instruction, structural 
+priming.
+
+Task: Based on the data:
+- Expected (ground truth): ${definition}
 - Learner's attempt: ${provided}
-- Why it's wrong (teacher rationale): ${reason}
+- Why wrong: ${reason}
 - Language: ${language}
 
-Your job:
-1) Diagnose the core FORM difference between ${definition} and 
-${provided}. Boil it down to a short target label (e.g., “every-X 
-adverbial (no postposition)”) and, if applicable, a nearby 
-contrasting frame that learners confuse (e.g., “per-X pattern with 
-postposition”).
-2) Write simple, natural sentences that repeatedly model the target 
-form (“Input Flood A”) and, when appropriate, also model the 
-contrasting-but-valid form (“Input Flood B”) so the learner 
-learns when to use each.
-3) Add 5 quick production prompts (English prompts; target-language 
-answers).
+Output JSON ONLY, strictly matching schema below. All visible text 
+must be ${language} except rules/diagnosis/takeaways (English). No 
+transliteration. Sentences: short (≤12 words), high-frequency, 
+everyday, idiomatic. Provide English translations in "en" fields. 
+No duplicates; vary verbs and nouns (>=${MIN_FLOOD_COUNT} distinct verbs and nouns per section).
 
-Constraints:
-- All learner-visible strings must be in ${language}, but provide an 
-English translation for each sentence as an "en" field alongside the 
-target-language "text".
-- These must be real, native-quality example sentences in 
-${language}, not literal translations of English prompts or phrases.
-- All instructions/explanations (diagnosis text, labels, rules, and 
-takeaways) must be in English.
-- Keep sentences short, high-frequency, and everyday; aim for ≤ 12 
-words.
-- Vary verbs, nouns, and numbers; avoid near-duplicates.
- - Use natural, idiomatic style appropriate for the target language; 
-do not include romanization.
- - If the target language normally uses a non-Latin script, DO NOT 
-provide transliterations.
-- Reflect the semantic domain hinted by ${definition}/${provided} 
-(e.g., exercise) but keep content general and appropriate.
-- No meta commentary; output JSON ONLY matching the schema below.
-- Direct commentary to the student. Don't say "Learner said X 
-incorrectly"; instead, say "You said X incorrectly."
+Tone:
+corrective, concise.
+Always speak directly to the learner as "you".
+Do not say "The student" or similar.
+Always explain in English.
 
-STRICT BEHAVIOR RULES (Meta-Prompting):
-1) Attempt classification (internal): Before generating, classify the learner's attempt into one of:
-   - give_up: "I don't know", "idk", "no idea", "pass/skip", Korean "몰라요/모르겠어요", Spanish "no sé/ni idea", Japanese "わからない/知らない", Chinese "不知道", punctuation-only, or empty.
-   - off_language/non_answer: text not in the target language or general chatter not addressing the prompt.
-   - answer: an actual attempt to answer in the target language.
-   You DO NOT output this classification; just use it to guide behavior below.
+Steps:
+1. Diagnosis:  
+   - target_label: short description of the needed form.  
+   - contrast_label: valid but contrasting form (or null).  
+   - why_error: brief rationale (≤240 chars).  
+   - rules: 2-5 English bullet rules.  
+2. Flood:  
+   - A: ${MIN_FLOOD_COUNT}-${MAX_FLOOD_COUNT} example sentences with target form.  
+   - B: ${MIN_FLOOD_COUNT}-${MAX_FLOOD_COUNT} contrasting examples OR null.  
+3. Production: ${MIN_FLOOD_COUNT}-6 items. Each: English prompt + ${language} 
+answer.  
+4. Takeaways: 1-3 short English reminders.  
+5. Fix: { original: ${provided}, corrected: ${definition} }.
 
-2) If give_up or off_language/non_answer:
-   - Do NOT analyze the semantics of the attempt and do NOT explain what "I don't know" means.
-   - Treat it as "no attempt provided". Base your diagnosis on the expected answer and the teacher rationale only.
-   - In diagnosis.why_error, say succinctly that the student gave up or did not attempt, then state what form is needed.
-   - In diagnosis.contrast_label: prefer null unless the reason indicates a specific contrasting valid form; do not invent a contrast based on the give-up phrase.
-   - In drills and flood: model the target form; do NOT include give-up phrases.
+Classification rule (internal, don't output):  
+- give_up (“idk”, “몰라요”, etc.) => treat as no attempt. 
+why_error = “You gave up. Correct form is X.” contrast_label = 
+null unless explicit in reason. Model only target form.  
+- off_language (not in ${language} / unrelated text) => Use give_up.
+- totally_wrong (wrong meaning/form) => same as give_up.
+- vocabulary => Misunderstanding of a specifc word or words.
+  IF IT IS A VOCABULARY MISTAKE, MAKE SURE FLOOD.A and FLOOD.B
+  CONTAIN THE VOCABULARY WORD(S) IN VARIOUS CONTEXTS.
+- usage => Misunderstanding of a common collocation or usage pattern.
+- form => Incorrect morphological form (tense, agreement, etc.).
+- grammar => Nongrammatical speech or grammar pattern misunderstanding.
+- answer => normal compare & contrast.  
 
-3) If answer:
-   - Proceed normally: contrast TARGET vs learner's attempt.
+STRICT COUNTS:
+  flood.A = ${MIN_FLOOD_COUNT}-${MAX_FLOOD_COUNT};
+  flood.B = ${MIN_FLOOD_COUNT}-${MAX_FLOOD_COUNT} or null;
+  production = ${MIN_FLOOD_COUNT}-6.
 
-4) Always keep tone concise and corrective; avoid meta commentary.
-
-Counts (strict):
-- flood.A: ${MIN_FLOOD_COUNT}-${MAX_FLOOD_COUNT} sentences (never fewer than ${MIN_FLOOD_COUNT}).
-- flood.B: if used, ${MIN_FLOOD_COUNT}-${MAX_FLOOD_COUNT} sentences (or null).
-- production: 5-6 items.
-
-Variety & diversity (strict):
-- Avoid repetition of the same core noun or verb across items. Use 
-different everyday nouns (people, places, objects) and a range of 
-high-frequency verbs.
-- Ensure at least 6 distinct verbs and 8 distinct nouns across 
-flood.A (and do not reuse the same noun/verb lemma more than once 
-within flood.A).
-- If flood.B is used, it must also have varied nouns and verbs; do 
-not mirror flood.A with the same lexical items.
-
-Output JSON must match this schema:
-
+Schema:
 {
-  "language": string;
+  "language": string,
   "diagnosis": {
-    "target_label": string;
-    "contrast_label": string | null;
-    "why_error": string;
-    "rules": string[];
-  };
+    "target_label": string,
+    "contrast_label": string | null,
+    "why_error": string,
+    "rules": string[]
+  },
+  // Don't add parenthesized notes - Just sentences with translations
   "flood": {
-    "A": [{ "text": string; "en": string }];
-    "B": [{ "text": string; "en": string }] | null;
-  };
-  "production": [{ "prompt_en": string; "answer": string }];
-  "takeaways": string[];
-  "fix": { "original": string; "corrected": string };
+    "A": [{ "text": string, "en": string }],
+    "B": [{ "text": string, "en": string }] | null
+  },
+  "production": [{ "prompt_en": string, "answer": string }],
+  "takeaways": string[],
+  "fix": { "original": string, "corrected": string }
 }`;
 }
 
