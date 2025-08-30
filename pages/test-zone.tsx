@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useRouter } from "next/router";
 import {
   Button,
   Card,
@@ -50,6 +51,7 @@ type TestZoneProps = {
 };
 
 export default function TestZone({ picks }: TestZoneProps) {
+  const router = useRouter();
   const [data, setData] = useState<GenerateResponseLite | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -135,6 +137,10 @@ export default function TestZone({ picks }: TestZoneProps) {
           <InputFloodLesson
             lesson={data.lesson}
             langCode={data.source.langCode}
+            onComplete={() => {
+              // Full reload to re-run getServerSideProps and refresh picks
+              router.reload();
+            }}
           />
         ) : null}
       </Stack>

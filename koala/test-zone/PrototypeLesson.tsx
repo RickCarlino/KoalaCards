@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useHotkeys } from "@mantine/hooks";
 import {
   Button,
   Card,
@@ -25,14 +26,21 @@ type InputFlood = {
   fix: { original: string; corrected: string };
 };
 import { playBlob } from "@/koala/utils/play-blob-audio";
+import { trpc } from "@/koala/trpc-config";
 import { useMediaRecorder } from "@/koala/hooks/use-media-recorder";
 import { useVoiceTranscription } from "@/koala/review/use-voice-transcription";
 import { LangCode } from "@/koala/shared-types";
-import { IconMicrophone, IconPlayerStopFilled } from "@tabler/icons-react";
+import {
+  IconMicrophone,
+  IconPlayerStopFilled,
+  IconPlayerPlayFilled,
+} from "@tabler/icons-react";
+import { compare } from "@/koala/quiz-evaluators/evaluator-utils";
 
 type LessonProps = {
   lesson: InputFlood;
   langCode: string;
+  onComplete?: () => void;
 };
 
 // Microphone-driven attempt UI
@@ -108,19 +116,12 @@ type StepKind =
   | { t: "paragraph" }
   | { t: "production"; i: number };
 
-export function InputFloodLesson({ lesson, langCode }: LessonProps) {
+export function InputFloodLesson({
+  lesson,
+  langCode,
+  onComplete,
+}: LessonProps) {
   const equals = (a: string, b: string) => a.trim() === b.trim();
-  const requestSpeech = async (tl: string, en?: string) => {
-    if (!tl.trim()) return;
-    const res = await fetch("/api/speech", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tl, en, format: "mp3" }),
-    });
-    if (!res.ok) return;
-    const blob = await res.blob();
-    await playBlob(blob);
-  };
   const steps = useMemo<StepKind[]>(() => {
     const s: StepKind[] = [{ t: "diagnosis" }];
     for (let i = 0; i < lesson.flood.A.length; i++)
@@ -137,11 +138,15 @@ export function InputFloodLesson({ lesson, langCode }: LessonProps) {
 
   const [idx, setIdx] = useState(0);
   const [passed, setPassed] = useState<Set<string>>(new Set());
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
 
   // Microphone + transcription
   const { start, stop, isRecording } = useMediaRecorder();
   const [heard, setHeard] = useState<string>("");
   const [lastMatch, setLastMatch] = useState<boolean | null>(null);
+  const gradeMutation = trpc.inputFloodGrade.useMutation();
+  const [grading, setGrading] = useState(false);
+  const [gradeText, setGradeText] = useState<string | null>(null);
 
   const pct = Math.round(((idx + 1) / steps.length) * 100);
   const step = steps[idx];
@@ -153,7 +158,7 @@ export function InputFloodLesson({ lesson, langCode }: LessonProps) {
     return s.t;
   };
 
-  const prev = () => setIdx((i) => Math.max(0, i - 1));
+  // no back navigation in prototype
   const next = () => {
     setHeard("");
     setLastMatch(null);
@@ -167,16 +172,42 @@ export function InputFloodLesson({ lesson, langCode }: LessonProps) {
       ns.add(k);
       return ns;
     });
+    const isLast = idx >= steps.length - 1;
+    if (isLast) {
+      if (onComplete) onComplete();
+      return;
+    }
     next();
   };
 
-  // Auto-play TTS at the start of Step A to support listen-and-repeat
+  // Play TTS and block interactions until finished
+  const requestSpeech = async (tl: string, en?: string) => {
+    if (!tl.trim()) return;
+    setIsAudioPlaying(true);
+    try {
+      const res = await fetch("/api/speech", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tl, en, format: "mp3" }),
+      });
+      if (!res.ok) return;
+      const blob = await res.blob();
+      await playBlob(blob);
+    } finally {
+      setIsAudioPlaying(false);
+    }
+  };
+
+  // Auto-play TTS at the start of listen-and-repeat steps (A and B)
   useEffect(() => {
     const k = keyFor(step);
     if (passed.has(k)) return;
     if (step.t === "floodA") {
       const it = lesson.flood.A[step.i];
-      void requestSpeech(it.text, it.en).catch(() => undefined);
+      void requestSpeech(it.text, it.en);
+    } else if (step.t === "floodB") {
+      const it = lesson.flood.B?.[step.i];
+      if (it) void requestSpeech(it.text, it.en);
     }
   }, [step, passed, lesson]);
 
@@ -210,11 +241,62 @@ export function InputFloodLesson({ lesson, langCode }: LessonProps) {
     const expected = expectedForStep(step);
     const { transcription, isMatch } = await transcribe(blob);
     setHeard(transcription);
-    setLastMatch(Boolean(isMatch ?? equals(expected, transcription)));
-    if (Boolean(isMatch ?? equals(expected, transcription))) {
+    setGradeText(null);
+
+    if (step.t === "production") {
+      // Grade the spoken production attempt on the server
+      setGrading(true);
+      try {
+        const item = lesson.production[step.i];
+        const res = await gradeMutation.mutateAsync({
+          language: langCode,
+          items: [
+            {
+              prompt_en: item.prompt_en,
+              answer: item.answer,
+              attempt: transcription,
+            },
+          ],
+        });
+        const g = (
+          res as { grades: { score: number; feedback: string }[] }
+        ).grades[0];
+        setGradeText(`${g.feedback}`);
+        if (g.score >= 0.5) {
+          markPassedAndNext();
+        }
+      } catch (e) {
+        const m = e instanceof Error ? e.message : "Failed to grade";
+        setGradeText(m);
+      } finally {
+        setGrading(false);
+      }
+      return;
+    }
+
+    // Flood/diagnosis: fuzzy listen-and-repeat
+    const baseMatch = Boolean(isMatch ?? compare(expected, transcription));
+    const relaxedMatch =
+      step.t === "floodA"
+        ? compare(expected, transcription, 3) || baseMatch
+        : baseMatch;
+    setLastMatch(relaxedMatch);
+    if (relaxedMatch) {
       markPassedAndNext();
     }
   };
+
+  // Spacebar toggles recording (except during paragraph step)
+  useHotkeys([
+    [
+      "space",
+      (e) => {
+        e.preventDefault();
+        if (step.t === "paragraph" || isAudioPlaying) return;
+        void handleRecordToggle();
+      },
+    ],
+  ]);
 
   // Reset heard/match when step changes
   useEffect(() => {
@@ -240,6 +322,7 @@ export function InputFloodLesson({ lesson, langCode }: LessonProps) {
                   <MicButton
                     isRecording={isRecording}
                     onClick={handleRecordToggle}
+                    disabled={isAudioPlaying}
                   />
                   {heard ? (
                     <Text size="sm" c={lastMatch ? "green" : "red"}>
@@ -270,9 +353,23 @@ export function InputFloodLesson({ lesson, langCode }: LessonProps) {
                 </Text>
                 <Text fw={600}>{lesson.flood.A[step.i].text}</Text>
                 <Group justify="space-between" align="center">
+                  <Button
+                    leftSection={<IconPlayerPlayFilled size={16} />}
+                    variant="default"
+                    onClick={() =>
+                      requestSpeech(
+                        lesson.flood.A[step.i].text,
+                        lesson.flood.A[step.i].en,
+                      )
+                    }
+                    disabled={isAudioPlaying}
+                  >
+                    Listen
+                  </Button>
                   <MicButton
                     isRecording={isRecording}
                     onClick={handleRecordToggle}
+                    disabled={isAudioPlaying}
                   />
                   {heard ? (
                     <Text size="sm" c={lastMatch ? "green" : "red"}>
@@ -303,10 +400,27 @@ export function InputFloodLesson({ lesson, langCode }: LessonProps) {
                 <Text c="dimmed" size="sm">
                   Speak the sentence to continue
                 </Text>
+                <Text fw={600}>{lesson.flood.B?.[step.i].text}</Text>
                 <Group justify="space-between" align="center">
+                  <Button
+                    leftSection={<IconPlayerPlayFilled size={16} />}
+                    variant="default"
+                    onClick={() =>
+                      lesson.flood.B?.[step.i]
+                        ? requestSpeech(
+                            lesson.flood.B[step.i].text,
+                            lesson.flood.B[step.i].en,
+                          )
+                        : undefined
+                    }
+                    disabled={isAudioPlaying}
+                  >
+                    Listen
+                  </Button>
                   <MicButton
                     isRecording={isRecording}
                     onClick={handleRecordToggle}
+                    disabled={isAudioPlaying}
                   />
                   {heard ? (
                     <Text size="sm" c={lastMatch ? "green" : "red"}>
@@ -330,22 +444,11 @@ export function InputFloodLesson({ lesson, langCode }: LessonProps) {
               {lesson.paragraph}
             </Text>
             {!passed.has("paragraph") ? (
-              <>
-                <Text c="dimmed" size="sm">
-                  Speak the paragraph to continue
-                </Text>
-                <Group justify="space-between" align="center">
-                  <MicButton
-                    isRecording={isRecording}
-                    onClick={handleRecordToggle}
-                  />
-                  {heard ? (
-                    <Text size="sm" c={lastMatch ? "green" : "red"}>
-                      Heard: {heard}
-                    </Text>
-                  ) : null}
-                </Group>
-              </>
+              <Group justify="flex-end">
+                <Button onClick={markPassedAndNext} variant="light">
+                  Next
+                </Button>
+              </Group>
             ) : null}
           </Stack>
         </Card>
@@ -354,11 +457,11 @@ export function InputFloodLesson({ lesson, langCode }: LessonProps) {
       {step.t === "production" ? (
         <Card withBorder padding="lg">
           <Stack gap="sm">
-            <Title order={3}>Production</Title>
+            <Title order={3}>How Would You Say This?</Title>
             <Text c="dimmed" size="sm">
               {step.i + 1} / {lesson.production.length}
             </Text>
-            <Text size="sm" c="dimmed">
+            <Text fw={700} style={{ fontSize: 20 }}>
               {lesson.production[step.i].prompt_en}
             </Text>
             <Text c="dimmed" size="sm">
@@ -368,22 +471,20 @@ export function InputFloodLesson({ lesson, langCode }: LessonProps) {
               <MicButton
                 isRecording={isRecording}
                 onClick={handleRecordToggle}
+                disabled={isAudioPlaying}
               />
-              {heard ? (
-                <Text size="sm" c={lastMatch ? "green" : "red"}>
-                  Heard: {heard}
-                </Text>
-              ) : null}
             </Group>
+            {grading ? (
+              <Text size="sm" c="dimmed">
+                Grading...
+              </Text>
+            ) : null}
+            {gradeText ? <Text size="sm">{gradeText}</Text> : null}
           </Stack>
         </Card>
       ) : null}
 
-      <Group justify="flex-start">
-        <Button onClick={prev} variant="subtle" disabled={idx === 0}>
-          Back
-        </Button>
-      </Group>
+      {/* Back button removed */}
     </Stack>
   );
 }

@@ -272,7 +272,7 @@ export const inputFloodGrade = procedure
       attempt: it.attempt.slice(0, 200),
     }));
 
-    const rubric = `You are grading short production attempts in ${languageName}.
+    const rubric = `You are grading short language speaking drills in ${languageName}.
 Score each item on two criteria and output JSON only as { "grades": [{ "score": number, "feedback": string }, ...] } with the same order and length as the input.
 
 Scoring (single numeric score 0-1):
@@ -281,8 +281,11 @@ Scoring (single numeric score 0-1):
 - 0 = Incorrect meaning, ungrammatical, or wrong form.
 
 Feedback: one short sentence in English, actionable and specific.
-Do not include the correct answer verbatim unless trivial.
-Remember that the student can't see the "answer" field and there are countless ways to say the same thing.
+Never give feedback that is not 100% needed.
+Any feedback that can be omitted should be omitted.
+This is not an attempt at creating perfect translations to the target language either.
+The focus is on correctly responding to the prompt, not nitpicking minor grammar/spacing/punctuation issues.
+The student can't see the "answer" field and there are countless ways to say the same thing.
 You cannot take away points for word choice or register as long as the response is natural and appropriate.
 `;
 
