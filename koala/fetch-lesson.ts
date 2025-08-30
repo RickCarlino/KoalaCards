@@ -36,6 +36,7 @@ const NEW_CARD = "N" as const;
 const ROUTINE = "O" as const;
 const REMEDIAL = "R" as const;
 const ONE_DAY_MS = 86_400_000;
+const TWO_DAYS_MS = ONE_DAY_MS * 2;
 const NEW_CARD_DEFAULT_TARGET = 7;
 const DECK_HAND_HARD_CAP = 50;
 const ROUND_ROBIN_ORDER: Bucket[] = [REMEDIAL, NEW_CARD, ROUTINE];
@@ -50,11 +51,14 @@ async function getDailyLimits(userId: string, now: number) {
     where: {
       userId,
       flagged: { not: true },
-      firstReview: { gte: now - ONE_DAY_MS },
+      // Count new cards learned in the last 48 hours
+      firstReview: { gte: now - TWO_DAYS_MS },
     },
   });
 
-  return { newRemaining: Math.max(cardsPerDayMax - newLearned, 0) };
+  // Allow up to 2 days worth of new cards within the 48h window
+  const windowAllowance = cardsPerDayMax * 2;
+  return { newRemaining: Math.max(windowAllowance - newLearned, 0) };
 }
 
 async function fetchBucket(

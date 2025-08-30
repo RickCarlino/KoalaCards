@@ -19,7 +19,7 @@ const InputFloodSchema = z.object({
     target_label: z.string(),
     contrast_label: z.string().nullable().optional(),
     why_error: z.string().max(240),
-    rules: z.array(z.string()).min(2).max(5),
+    rules: z.array(z.string()).min(1).max(3),
   }),
   flood: z.object({
     A: z.array(SentenceSchema).min(MIN_FLOOD_COUNT).max(MAX_FLOOD_COUNT),
@@ -145,8 +145,7 @@ function buildInputFloodPrompt({
   reason,
 }: PromptParams): string {
   const language = supportedLanguages[langCode];
-  return `You are a language-teaching generator. Create an INPUT FLOOD exercise 
-in ${language}.
+  return `You are a language-teaching generator. Create an INPUT FLOOD exercise in ${language}.
 
 Background:
 
@@ -166,11 +165,22 @@ Task: Based on the data:
 - Why wrong: ${reason}
 - Language: ${language}
 
-Output JSON ONLY, strictly matching schema below. All visible text 
-must be ${language} except rules/diagnosis/takeaways (English). No 
-transliteration. Sentences: short (≤12 words), high-frequency, 
-everyday, idiomatic. Provide English translations in "en" fields. 
+Output JSON ONLY, strictly matching the schema. All learner-facing text must be ${language} except rules/diagnosis/takeaways (English). No transliteration.
+Sentences must be short (≤12 words), high-frequency, everyday, and idiomatic. Provide English translations in "en" fields.
 No duplicates; vary verbs and nouns (>=${MIN_FLOOD_COUNT} distinct verbs and nouns per section).
+
+How it is used (important):
+- flood.A and flood.B sentences are shown directly to learners and used verbatim in flashcards. Speech to text (TTS) voices will read them aloud.
+- Therefore, flood entries must be ONLY the sentence (field "text") and its English translation (field "en").
+- Do NOT add parenthetical explanations, labels, grammar tags, notes, romanization, or bracketed content in either field.
+- Do NOT wrap sentences in quotes. Do NOT include emojis or placeholders.
+- The learner's incorrect sentence must NOT appear unless corrected; only include correct sentences.
+
+Validity rules:
+- flood.A: every sentence must exemplify target_label and be grammatical.
+- flood.B: if contrast_label is provided, every sentence must exemplify the contrasting form and must NOT use the target form.
+  If contrast_label is null, set flood.B = null.
+- If the issue is vocabulary or usage, include the relevant word(s) in varied, grammatical contexts within flood.A (and flood.B if included).
 
 Tone:
 corrective, concise.
@@ -184,9 +194,9 @@ Steps:
    - contrast_label: valid but contrasting form (or null).  
    - why_error: brief rationale (≤240 chars).  
    - rules: 2-5 English bullet rules.  
-2. Flood:  
+2. Flood:
    - A: ${MIN_FLOOD_COUNT}-${MAX_FLOOD_COUNT} example sentences with target form.  
-   - B: ${MIN_FLOOD_COUNT}-${MAX_FLOOD_COUNT} contrasting examples OR null.  
+   - B: ${MIN_FLOOD_COUNT}-${MAX_FLOOD_COUNT} contrasting examples OR null.
 3. Production: ${MIN_FLOOD_COUNT}-6 items. Each: English prompt + ${language} 
 answer.  
 4. Takeaways: 1-3 short English reminders.  
@@ -201,6 +211,7 @@ null unless explicit in reason. Model only target form.
 - vocabulary => Misunderstanding of a specifc word or words.
   IF IT IS A VOCABULARY MISTAKE, MAKE SURE FLOOD.A and FLOOD.B
   CONTAIN THE VOCABULARY WORD(S) IN VARIOUS CONTEXTS.
+  GRAMMATICALLY CORRECT SENTENCES ONLY!
 - usage => Misunderstanding of a common collocation or usage pattern.
 - form => Incorrect morphological form (tense, agreement, etc.).
 - grammar => Nongrammatical speech or grammar pattern misunderstanding.
@@ -220,7 +231,7 @@ Schema:
     "why_error": string,
     "rules": string[]
   },
-  // Don't add parenthesized notes - Just sentences with translations
+  // flood entries are used verbatim in study cards — DO NOT add parenthesized/bracketed notes, quotes, emojis, or explanations
   "flood": {
     "A": [{ "text": string, "en": string }],
     "B": [{ "text": string, "en": string }] | null
