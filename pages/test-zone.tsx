@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Button,
   Card,
@@ -11,6 +11,10 @@ import {
 } from "@mantine/core";
 import { InputFloodLesson } from "@/koala/test-zone/PrototypeLesson";
 import { trpc } from "@/koala/trpc-config";
+import type { GetServerSideProps } from "next";
+import { getServersideUser } from "@/koala/get-serverside-user";
+import { prismaClient } from "@/koala/prisma-client";
+import { shuffle } from "radash";
 
 // Minimal local types to avoid spreading prototype types
 type Sentence = { text: string; en: string };
@@ -33,18 +37,29 @@ type GenerateResponseLite = {
   source: { quizResultId: number; langCode: string };
 };
 
-export default function TestZone() {
+type PickedMistake = {
+  id: number;
+  langCode: string;
+  definition: string;
+  userInput: string;
+  reason: string;
+};
+
+type TestZoneProps = {
+  picks: PickedMistake[];
+};
+
+export default function TestZone({ picks }: TestZoneProps) {
   const [data, setData] = useState<GenerateResponseLite | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Step-by-step grading is handled inside the lesson component
-
   const gen = trpc.inputFloodGenerate.useMutation();
-  const run = async () => {
+
+  const startFromPick = async (resultId: number) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await gen.mutateAsync({});
+      const res = await gen.mutateAsync({ resultId });
       setData(res as GenerateResponseLite);
     } catch (e) {
       const m = e instanceof Error ? e.message : "Failed to load";
@@ -55,19 +70,11 @@ export default function TestZone() {
     }
   };
 
-  useEffect(() => {
-    run();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   return (
     <Center style={{ width: "100%", padding: "1.5rem" }}>
       <Stack style={{ width: "min(1000px, 92%)" }} gap="lg">
         <Group justify="space-between">
-          <Title order={2}>Test Zone: Input Flood</Title>
-          <Button onClick={run} variant="light" size="md">
-            New random mistake
-          </Button>
+          <Title order={2}>Practice</Title>
         </Group>
         {loading ? (
           <Center py="xl">
@@ -80,14 +87,49 @@ export default function TestZone() {
           </Card>
         ) : null}
         {!loading && !error && !data ? (
-          <Card withBorder padding="md">
+          picks.length === 0 ? (
+            <Card withBorder padding="md">
+              <Stack>
+                <Text>No recent items found.</Text>
+                <Text c="dimmed" size="sm">
+                  Try practicing first, then come back to generate a
+                  lesson.
+                </Text>
+              </Stack>
+            </Card>
+          ) : (
             <Stack>
-              <Text>No recent wrong answers found.</Text>
-              <Text c="dimmed" size="sm">
-                Try practicing first, then come back to generate a lesson.
-              </Text>
+              <Text c="dimmed">Pick something to work on</Text>
+              <Group>
+                {picks.map((p) => (
+                  <Card
+                    key={p.id}
+                    withBorder
+                    padding="md"
+                    style={{ width: 260 }}
+                  >
+                    <Stack gap={6}>
+                      <Text size="sm" c="dimmed">
+                        Expected
+                      </Text>
+                      <Text fw={600}>{p.definition}</Text>
+                      <Text size="sm" c="dimmed">
+                        Your attempt
+                      </Text>
+                      <Text c="red">{p.userInput}</Text>
+                      <Button
+                        onClick={() => startFromPick(p.id)}
+                        loading={loading}
+                        variant="light"
+                      >
+                        Start lesson
+                      </Button>
+                    </Stack>
+                  </Card>
+                ))}
+              </Group>
             </Stack>
-          </Card>
+          )
         ) : null}
         {data ? (
           <InputFloodLesson
@@ -99,3 +141,31 @@ export default function TestZone() {
     </Center>
   );
 }
+
+export const getServerSideProps: GetServerSideProps<
+  TestZoneProps
+> = async (context) => {
+  const dbUser = await getServersideUser(context);
+  if (!dbUser) {
+    return {
+      redirect: { destination: "/api/auth/signin", permanent: false },
+    };
+  }
+
+  const results = await prismaClient.quizResult.findMany({
+    where: { userId: dbUser.id, isAcceptable: false },
+    orderBy: { createdAt: "desc" },
+    take: 100,
+  });
+  const picks = shuffle(results)
+    .slice(0, 4)
+    .map((r) => ({
+      id: r.id,
+      langCode: r.langCode,
+      definition: r.definition,
+      userInput: r.userInput,
+      reason: r.reason,
+    }));
+
+  return { props: { picks } };
+};

@@ -312,7 +312,7 @@ export function InputFloodLesson({ lesson, langCode }: LessonProps) {
       {step.t === "floodA" ? (
         <Card withBorder padding="lg">
           <Stack gap="sm">
-            <Title order={3}>Input Flood A</Title>
+            <Title order={3}>Step A</Title>
             <Text c="dimmed" size="sm">
               {step.i + 1} / {lesson.flood.A.length}
             </Text>
@@ -346,7 +346,7 @@ export function InputFloodLesson({ lesson, langCode }: LessonProps) {
       {step.t === "floodB" ? (
         <Card withBorder padding="lg">
           <Stack gap="sm">
-            <Title order={3}>Input Flood B</Title>
+            <Title order={3}>Step B</Title>
             <Text c="dimmed" size="sm">
               {step.i + 1} / {lesson.flood.B?.length || 0}
             </Text>
