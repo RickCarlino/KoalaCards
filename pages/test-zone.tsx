@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
 import {
+  ActionIcon,
   Button,
   Card,
   Center,
@@ -16,7 +17,7 @@ import { trpc } from "@/koala/trpc-config";
 import type { GetServerSideProps } from "next";
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { prismaClient } from "@/koala/prisma-client";
-import { IconThumbUp, IconThumbDown } from "@tabler/icons-react";
+import { IconChevronDown, IconChevronUp } from "@tabler/icons-react";
 type Sentence = { text: string; en: string };
 type InputFloodLite = {
   language: string;
@@ -48,6 +49,94 @@ type PickedMistake = {
 type TestZoneProps = {
   picks: PickedMistake[];
 };
+
+function PickCard({
+  p,
+  helpful,
+  onToggleHelpful,
+  onNotHelpful,
+  onStart,
+  loading,
+}: {
+  p: PickedMistake;
+  helpful: boolean;
+  onToggleHelpful: () => void;
+  onNotHelpful: () => void;
+  onStart: () => void;
+  loading: boolean;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <Card withBorder padding="sm">
+      <Stack gap={6}>
+        <Group
+          gap={6}
+          align="center"
+          role="button"
+          tabIndex={0}
+          aria-expanded={expanded}
+          onClick={() => setExpanded((v) => !v)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setExpanded((v) => !v);
+            }
+          }}
+          style={{ cursor: "pointer" }}
+        >
+          <ActionIcon
+            variant="subtle"
+            aria-label={
+              expanded ? "Collapse explanation" : "Expand explanation"
+            }
+          >
+            {expanded ? (
+              <IconChevronUp size={14} />
+            ) : (
+              <IconChevronDown size={14} />
+            )}
+          </ActionIcon>
+          <Text fw={600} size="sm" lineClamp={2}>
+            {p.definition}
+          </Text>
+        </Group>
+        <Text size="sm" c="dimmed" lineClamp={expanded ? 999 : 3}>
+          {p.reason}
+        </Text>
+        <Group gap="xs">
+          <Button
+            variant={helpful ? "filled" : "subtle"}
+            color="green"
+            size="sm"
+            aria-pressed={helpful}
+            aria-label="Mark helpful"
+            onClick={onToggleHelpful}
+          >
+            👍
+          </Button>
+          <Button
+            variant="subtle"
+            size="sm"
+            color="red"
+            aria-label="Mark not helpful and hide"
+            onClick={onNotHelpful}
+          >
+            👎
+          </Button>
+          <Button
+            onClick={onStart}
+            loading={loading}
+            variant="light"
+            size="sm"
+            aria-label="Start lesson"
+          >
+            Go
+          </Button>
+        </Group>
+      </Stack>
+    </Card>
+  );
+}
 
 export default function TestZone({ picks }: TestZoneProps) {
   const router = useRouter();
@@ -107,94 +196,56 @@ export default function TestZone({ picks }: TestZoneProps) {
             <Stack>
               <Text c="dimmed">Pick something to work on</Text>
               <Grid gutter="md">
-                {picks
-                  .filter((p) => !hidden.has(p.id))
-                  .map((p) => (
+                {
+                  // Keep newest-first ordering from SSR, but bubble +1 to top
+                  (() => {
+                    const visible = picks.filter((p) => !hidden.has(p.id));
+                    const helpful = visible.filter((p) =>
+                      helpfulIds.has(p.id),
+                    );
+                    const neutral = visible.filter(
+                      (p) => !helpfulIds.has(p.id),
+                    );
+                    return [...helpful, ...neutral];
+                  })().map((p) => (
                     <Grid.Col key={p.id} span={{ base: 12, sm: 6, md: 4 }}>
-                      <Card withBorder padding="sm">
-                        <Stack gap={6}>
-                          <Text size="xs" c="dimmed">
-                            Expected
-                          </Text>
-                          <Text fw={600} size="sm" lineClamp={2}>
-                            {p.definition}
-                          </Text>
-                          <Text size="xs" c="dimmed">
-                            Your attempt
-                          </Text>
-                          <Text c="red" size="sm" lineClamp={2}>
-                            {p.userInput}
-                          </Text>
-                          <Stack gap="xs">
-                            <Button
-                              onClick={() => startFromPick(p.id)}
-                              loading={loading}
-                              variant="light"
-                              size="sm"
-                            >
-                              Start lesson
-                            </Button>
-                            <Group gap="xs">
-                              <Button
-                                variant={
-                                  helpfulIds.has(p.id)
-                                    ? "filled"
-                                    : "subtle"
-                                }
-                                color="green"
-                                size="sm"
-                                aria-pressed={helpfulIds.has(p.id)}
-                                onClick={() => {
-                                  setHelpfulIds((prev) => {
-                                    const next = new Set(prev);
-                                    const isHelpful = next.has(p.id);
-                                    if (isHelpful) {
-                                      next.delete(p.id);
-                                    } else {
-                                      next.add(p.id);
-                                    }
-                                    // Persist toggle: 1 -> 0, 0 -> 1
-                                    editResult.mutate({
-                                      resultId: p.id,
-                                      data: {
-                                        helpfulness: isHelpful ? 0 : 1,
-                                      },
-                                    });
-                                    return next;
-                                  });
-                                }}
-                                leftSection={<IconThumbUp size={16} />}
-                              >
-                                Helpful
-                              </Button>
-                              <Button
-                                variant="subtle"
-                                size="sm"
-                                color="red"
-                                onClick={() => {
-                                  setHelpfulIds((prev) => {
-                                    const next = new Set(prev);
-                                    next.delete(p.id);
-                                    return next;
-                                  });
-                                  setHidden((prev) =>
-                                    new Set(prev).add(p.id),
-                                  );
-                                  editResult.mutate({
-                                    resultId: p.id,
-                                    data: { helpfulness: -1 },
-                                  });
-                                }}
-                                leftSection={<IconThumbDown size={16} />}
-                              >
-                                Not helpful
-                              </Button>
-                            </Group>
-                          </Stack>
-                        </Stack>
-                      </Card>
+                      <PickCard
+                        p={p}
+                        helpful={helpfulIds.has(p.id)}
+                        onToggleHelpful={() => {
+                          setHelpfulIds((prev) => {
+                            const next = new Set(prev);
+                            const isHelpful = next.has(p.id);
+                            if (isHelpful) {
+                              next.delete(p.id);
+                            } else {
+                              next.add(p.id);
+                            }
+                            editResult.mutate({
+                              resultId: p.id,
+                              data: { helpfulness: isHelpful ? 0 : 1 },
+                            });
+                            return next;
+                          });
+                        }}
+                        onNotHelpful={() => {
+                          setHelpfulIds((prev) => {
+                            const next = new Set(prev);
+                            next.delete(p.id);
+                            return next;
+                          });
+                          setHidden((prev) => new Set(prev).add(p.id));
+                          editResult.mutate({
+                            resultId: p.id,
+                            data: { helpfulness: -1 },
+                          });
+                        }}
+                        onStart={() => startFromPick(p.id)}
+                        loading={loading}
+                      />
                     </Grid.Col>
-                  ))}
+                  ))
+                }
               </Grid>
             </Stack>
           )
@@ -237,7 +288,7 @@ export const getServerSideProps: GetServerSideProps<
       reviewedAt: null,
       helpfulness: { gte: 0 },
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ helpfulness: "desc" }, { createdAt: "desc" }],
     take: 12,
   });
   const picks = results.map((r) => ({
