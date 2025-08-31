@@ -15,6 +15,8 @@ Don't run other commands!
 - `npm run format`: Format with Prettier.
 - `tsc --noEmit`: Run type checks.
 
+You can run `./tidy.sh` to do it all in one go.
+
 ## Coding Style & Naming Conventions
 - Indentation: 2 spaces. No `any` types.
 - Components (`*.tsx`): PascalCase (e.g., `DeckPicker.tsx`).

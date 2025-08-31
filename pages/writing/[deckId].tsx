@@ -400,7 +400,7 @@ export default function WritingPage({
     }
 
     const wordsParam = encodeURIComponent(uniqueWords.join(","));
-    const url = `/create-wordlist?lang=${langCode}&words=${wordsParam}`;
+    const url = `/create?mode=wordlist&deckId=${deckId}&words=${wordsParam}`;
 
     window.open(url, "_blank");
   };
