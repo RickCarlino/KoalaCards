@@ -42,30 +42,9 @@ export function GradingSuccess({
     [HOTKEYS.GRADE_EASY, () => !isLoading && onGradeSelect(Grade.EASY)],
   ]);
 
-  const hasFeedback =
-    feedback && !feedback.toLowerCase().includes("exact match");
-
-  let header: React.ReactNode;
-  if (hasFeedback) {
-    header = (
-      <Stack gap={4} align="center">
-        <Text ta="center" c="green" fw={500} size="lg">
-          {feedback}
-        </Text>
-        {quizResultId && <FeedbackVote resultId={quizResultId} />}
-      </Stack>
-    );
-  } else {
-    header = (
-      <Text ta="center" c="green" fw={500} size="lg">
-        Correct!
-      </Text>
-    );
-  }
-
   return (
     <Stack gap="md" align="center">
-      {header}
+      {renderSuccessHeader(feedback, quizResultId)}
       <Text ta="center" size="sm" c="dimmed" mt="md">
         How difficult was this for you?
       </Text>
@@ -122,5 +101,28 @@ export function GradingSuccess({
         })}
       </Stack>
     </Stack>
+  );
+}
+
+function renderSuccessHeader(
+  feedback?: string,
+  quizResultId?: number | null,
+) {
+  const hasFeedback =
+    feedback && !feedback.toLowerCase().includes("exact match");
+  if (hasFeedback) {
+    return (
+      <Stack gap={4} align="center">
+        <Text ta="center" c="green" fw={500} size="lg">
+          {feedback}
+        </Text>
+        {quizResultId && <FeedbackVote resultId={quizResultId} />}
+      </Stack>
+    );
+  }
+  return (
+    <Text ta="center" c="green" fw={500} size="lg">
+      Correct!
+    </Text>
   );
 }

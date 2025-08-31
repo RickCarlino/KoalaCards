@@ -24,17 +24,6 @@ export const FailureView: React.FC<FailureViewProps> = ({
   onContinue,
   failureText = "Not quite right",
 }) => {
-  let feedbackSection: React.ReactNode = null;
-  if (feedback) {
-    feedbackSection = (
-      <Stack gap={4} align="center">
-        <Text ta="center" c="dimmed">
-          {feedback}
-        </Text>
-        {quizResultId && <FeedbackVote resultId={quizResultId} />}
-      </Stack>
-    );
-  }
   return (
     <Stack align="center" gap="md">
       <CardImage imageURL={imageURL} definition={definition} />
@@ -57,7 +46,7 @@ export const FailureView: React.FC<FailureViewProps> = ({
         You said: "{userTranscription}"
       </Text>
 
-      {feedbackSection}
+      {renderFeedbackSection(feedback, quizResultId)}
 
       <Text ta="center" c="dimmed" mt="md">
         We'll review this again later.
@@ -65,3 +54,20 @@ export const FailureView: React.FC<FailureViewProps> = ({
     </Stack>
   );
 };
+
+function renderFeedbackSection(
+  feedback?: string,
+  quizResultId?: number | null,
+) {
+  if (!feedback) {
+    return null;
+  }
+  return (
+    <Stack gap={4} align="center">
+      <Text ta="center" c="dimmed">
+        {feedback}
+      </Text>
+      {quizResultId && <FeedbackVote resultId={quizResultId} />}
+    </Stack>
+  );
+}

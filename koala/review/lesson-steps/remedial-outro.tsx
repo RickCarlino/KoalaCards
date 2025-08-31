@@ -26,23 +26,6 @@ const SuccessView = ({
   successText?: string;
   quizResultId?: number | null;
 }) => {
-  let successSection: React.ReactNode;
-  if (successText) {
-    successSection = (
-      <Stack gap={4} align="center">
-        <Text ta="center" c="green" fw={500} size="lg">
-          {successText}
-        </Text>
-        {quizResultId && <FeedbackVote resultId={quizResultId} />}
-      </Stack>
-    );
-  } else {
-    successSection = (
-      <Text ta="center" c="green" fw={500} size="lg">
-        Well done!
-      </Text>
-    );
-  }
   return (
     <Stack align="center" gap="md">
       {imageURL && (
@@ -55,7 +38,7 @@ const SuccessView = ({
         />
       )}
 
-      {successSection}
+      {renderSuccessSection(successText, quizResultId)}
 
       <Button onClick={onContinue} variant="light" color="green">
         Continue ({HOTKEYS.CONTINUE})
@@ -69,6 +52,27 @@ const SuccessView = ({
     </Stack>
   );
 };
+
+function renderSuccessSection(
+  successText?: string,
+  quizResultId?: number | null,
+) {
+  if (successText) {
+    return (
+      <Stack gap={4} align="center">
+        <Text ta="center" c="green" fw={500} size="lg">
+          {successText}
+        </Text>
+        {quizResultId && <FeedbackVote resultId={quizResultId} />}
+      </Stack>
+    );
+  }
+  return (
+    <Text ta="center" c="green" fw={500} size="lg">
+      Well done!
+    </Text>
+  );
+}
 
 export const RemedialOutro: CardUI = ({
   card,
