@@ -19,7 +19,7 @@ type GrammarCorrectionProps = {
 type StoreTrainingData = (
   props: GrammarCorrectionProps,
   exp: Explanation,
-) => Promise<void>;
+) => Promise<number>;
 
 const zodGradeResponse = z.object({
   yesNo: z.enum(["yes", "no"]),
@@ -31,7 +31,7 @@ const storeTrainingData: StoreTrainingData = async (props, exp) => {
     props;
   const { yesNo, why } = exp;
 
-  await prismaClient.quizResult.create({
+  const created = await prismaClient.quizResult.create({
     data: {
       userId,
       acceptableTerm: term,
@@ -44,6 +44,8 @@ const storeTrainingData: StoreTrainingData = async (props, exp) => {
       eventType: eventType || "speaking-judgement",
     },
   });
+
+  return created.id;
 };
 
 const LANG_OVERRIDES: Partial<Record<LangCode, string>> = {
@@ -77,10 +79,10 @@ async function run(props: GrammarCorrectionProps): Promise<Explanation> {
 
 async function runAndStore(
   props: GrammarCorrectionProps,
-): Promise<Explanation> {
+): Promise<{ explanation: Explanation; quizResultId: number }> {
   const result = await run(props);
-  await storeTrainingData(props, result);
-  return result;
+  const id = await storeTrainingData(props, result);
+  return { explanation: result, quizResultId: id };
 }
 
 export const grammarCorrectionNext: QuizEvaluator = async ({
@@ -88,19 +90,20 @@ export const grammarCorrectionNext: QuizEvaluator = async ({
   card,
   userID,
 }) => {
-  const chosen = await runAndStore({
+  const { explanation, quizResultId } = await runAndStore({
     ...card,
     userInput,
     userId: userID,
     eventType: "speaking-judgement",
   });
-  console.log(JSON.stringify(chosen));
-  if (chosen.yesNo === "yes") {
-    return { result: "pass", userMessage: chosen.why };
+  console.log(JSON.stringify(explanation));
+  if (explanation.yesNo === "yes") {
+    return { result: "pass", userMessage: explanation.why, quizResultId };
   } else {
     return {
       result: "fail",
-      userMessage: chosen.why,
+      userMessage: explanation.why,
+      quizResultId,
     };
   }
 };

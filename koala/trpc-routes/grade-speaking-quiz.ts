@@ -10,6 +10,8 @@ export const gradeSpeakingQuiz = procedure
     z.object({
       isCorrect: z.boolean(),
       feedback: z.string(),
+      // Present when grammar feedback is generated; null for exact matches
+      quizResultId: z.number().nullable(),
     }),
   )
   .mutation(async ({ ctx, input }) => {
@@ -36,5 +38,6 @@ export const gradeSpeakingQuiz = procedure
     return {
       isCorrect: result.result === "pass",
       feedback: result.userMessage,
+      quizResultId: result.quizResultId ?? null,
     };
   });
