@@ -7,6 +7,7 @@ import { FailureView } from "../components/FailureView";
 import { CardImage } from "../components/CardImage";
 import { usePhaseManager } from "../hooks/usePhaseManager";
 import { HOTKEYS } from "../hotkeys";
+import { FeedbackVote } from "../components/FeedbackVote";
 
 type Phase = "ready" | "processing" | "success" | "failure";
 
@@ -16,13 +17,32 @@ const SuccessView = ({
   definition,
   onContinue,
   successText,
+  quizResultId,
 }: {
   imageURL?: string;
   term: string;
   definition: string;
   onContinue: () => void;
   successText?: string;
+  quizResultId?: number | null;
 }) => {
+  let successSection: React.ReactNode;
+  if (successText) {
+    successSection = (
+      <Stack gap={4} align="center">
+        <Text ta="center" c="green" fw={500} size="lg">
+          {successText}
+        </Text>
+        {quizResultId && <FeedbackVote resultId={quizResultId} />}
+      </Stack>
+    );
+  } else {
+    successSection = (
+      <Text ta="center" c="green" fw={500} size="lg">
+        Well done!
+      </Text>
+    );
+  }
   return (
     <Stack align="center" gap="md">
       {imageURL && (
@@ -35,9 +55,7 @@ const SuccessView = ({
         />
       )}
 
-      <Text ta="center" c="green" fw={500} size="lg">
-        {successText || "Well done!"}
-      </Text>
+      {successSection}
 
       <Button onClick={onContinue} variant="light" color="green">
         Continue ({HOTKEYS.CONTINUE})
@@ -97,6 +115,7 @@ export const RemedialOutro: CardUI = ({
         transcription: "Error occurred during processing.",
         isCorrect: false,
         feedback: "An error occurred while processing your response.",
+        quizResultId: null,
       });
     }
   };
@@ -115,6 +134,7 @@ export const RemedialOutro: CardUI = ({
         term={term}
         definition={definition}
         userTranscription={gradingResult?.transcription || ""}
+        quizResultId={gradingResult?.quizResultId ?? null}
         onContinue={onProceed}
         failureText={gradingResult?.feedback || "Not quite right"}
       />
@@ -130,6 +150,7 @@ export const RemedialOutro: CardUI = ({
         definition={definition}
         onContinue={onProceed}
         successText={gradingResult?.feedback || ""}
+        quizResultId={gradingResult?.quizResultId ?? null}
       />
     );
   }

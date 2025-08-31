@@ -9,6 +9,7 @@ import {
   QueueItem,
   SkipCardAction,
   State,
+  GradingResult,
 } from "./types";
 import { playAudio } from "../play-audio";
 
@@ -142,11 +143,7 @@ export function useReview(deckId: number) {
     },
     onGradingResultCaptured: async (
       cardUUID: string,
-      result: {
-        transcription: string;
-        isCorrect: boolean;
-        feedback: string;
-      },
+      result: GradingResult,
     ) => {
       const card = state.cards[cardUUID];
       if (result.isCorrect && card.lessonType === "remedial") {

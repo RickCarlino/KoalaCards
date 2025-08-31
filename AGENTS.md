@@ -1,6 +1,7 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
+
 - `pages/`: Next.js pages and API routes.
 - `koala/`: Business logic, utilities, and React components.
 - `prisma/`: Schema, migrations, Prisma client config.
@@ -18,6 +19,7 @@ Don't run other commands!
 You can run `./tidy.sh` to do it all in one go.
 
 ## Coding Style & Naming Conventions
+
 - Indentation: 2 spaces. No `any` types.
 - Components (`*.tsx`): PascalCase (e.g., `DeckPicker.tsx`).
 - Utilities (`*.ts`): kebab-case (e.g., `time-until.ts`).
@@ -26,6 +28,7 @@ You can run `./tidy.sh` to do it all in one go.
 - Error handling: avoid unnecessary try/catch; never swallow errors.
 - UI: ensure comfortable touch targets, use Mantine spacing props.
 - Code quality: avoid nested ternaries, keep components small (<150 lines), prefer pure functions, tight props, stable list keys.
+- JSX literals are banned in terneries. It is a sign your code needs to be refactored. If you spot violations while working, fix them!
 
 ### Error Handling Policy
 
@@ -41,11 +44,13 @@ You can run `./tidy.sh` to do it all in one go.
 - Never do anything with git other than `git diff` or `git status`.
 
 ## Security & Configuration Tips
+
 - Copy `example.env` to `.env`, update secrets, and keep out of VCS.
 - Manage secrets via env vars or a secret manager.
 - Update `docker-compose.yml` when adding/modifying services.
 
 ## Agent-Specific Instructions
+
 - Do not run servers (`npm run dev`/`npm start`). Rely on static analysis, linting, and formatting.
 - Avoid barrel modules; import from concrete file paths.
 - Prefer minimal, targeted changes; follow repository styles and conventions above.

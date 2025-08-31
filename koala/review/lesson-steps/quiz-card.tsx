@@ -64,6 +64,7 @@ export const QuizCard: React.FC<QuizCardProps> = ({
   const { term, definition } = card;
   const [userTranscription, setUserTranscription] = useState<string>("");
   const [feedback, setFeedback] = useState<string>("");
+  const [quizResultId, setQuizResultId] = useState<number | null>(null);
 
   const config = getQuizConfig(quizType);
 
@@ -119,6 +120,7 @@ export const QuizCard: React.FC<QuizCardProps> = ({
       const result = await gradeAudio(blob);
       setUserTranscription(result.transcription);
       setFeedback(result.feedback);
+      setQuizResultId(result.quizResultId ?? null);
 
       if (result.isCorrect) {
         setPhase("success");
@@ -153,6 +155,7 @@ export const QuizCard: React.FC<QuizCardProps> = ({
         definition={definition}
         userTranscription={userTranscription}
         feedback={feedback}
+        quizResultId={quizResultId}
         onContinue={handleFailureContinue}
         failureText={config.failureText}
       />
@@ -192,6 +195,7 @@ export const QuizCard: React.FC<QuizCardProps> = ({
             onGradeSelect={handleGradeSelect}
             isLoading={isLoading}
             feedback={feedback}
+            quizResultId={quizResultId}
           />
         );
 

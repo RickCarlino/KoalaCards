@@ -1,6 +1,7 @@
 import { Stack, Text, Button } from "@mantine/core";
 import { CardImage } from "./CardImage";
 import { HOTKEYS } from "../hotkeys";
+import { FeedbackVote } from "./FeedbackVote";
 
 interface FailureViewProps {
   imageURL?: string;
@@ -8,6 +9,7 @@ interface FailureViewProps {
   definition: string;
   userTranscription: string;
   feedback?: string;
+  quizResultId?: number | null;
   onContinue: () => void;
   failureText?: string;
 }
@@ -18,9 +20,21 @@ export const FailureView: React.FC<FailureViewProps> = ({
   definition,
   userTranscription,
   feedback,
+  quizResultId,
   onContinue,
   failureText = "Not quite right",
 }) => {
+  let feedbackSection: React.ReactNode = null;
+  if (feedback) {
+    feedbackSection = (
+      <Stack gap={4} align="center">
+        <Text ta="center" c="dimmed">
+          {feedback}
+        </Text>
+        {quizResultId && <FeedbackVote resultId={quizResultId} />}
+      </Stack>
+    );
+  }
   return (
     <Stack align="center" gap="md">
       <CardImage imageURL={imageURL} definition={definition} />
@@ -43,11 +57,7 @@ export const FailureView: React.FC<FailureViewProps> = ({
         You said: "{userTranscription}"
       </Text>
 
-      {feedback && (
-        <Text ta="center" c="dimmed">
-          {feedback}
-        </Text>
-      )}
+      {feedbackSection}
 
       <Text ta="center" c="dimmed" mt="md">
         We'll review this again later.
