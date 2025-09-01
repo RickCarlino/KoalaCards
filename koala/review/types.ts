@@ -27,6 +27,7 @@ export type GradingResult = {
   transcription: string;
   isCorrect: boolean;
   feedback: string;
+  quizResultId: number | null;
 };
 
 export type State = {

@@ -1,6 +1,7 @@
 import { trpc } from "@/koala/trpc-config";
 import { LangCode } from "@/koala/shared-types";
 import { transcribeBlob } from "@/koala/utils/transcribe-blob";
+import type { GradingResult } from "./types";
 
 interface UseVoiceGradingOptions {
   targetText: string; // For transcription accuracy (e.g., card.term)
@@ -11,12 +12,6 @@ interface UseVoiceGradingOptions {
     cardUUID: string,
     result: GradingResult,
   ) => void; // Callback to store results
-}
-
-interface GradingResult {
-  transcription: string; // What the user said
-  isCorrect: boolean; // Whether it passed grading
-  feedback: string; // Server feedback
 }
 
 export function useVoiceGrading(options: UseVoiceGradingOptions) {
@@ -34,15 +29,17 @@ export function useVoiceGrading(options: UseVoiceGradingOptions) {
     const transcription = await transcribeBlob(blob, langCode, targetText);
 
     // Step 2: Grade the transcription
-    const { isCorrect, feedback } = await gradeSpeakingQuiz.mutateAsync({
-      userInput: transcription,
-      cardID: cardId,
-    });
+    const { isCorrect, feedback, quizResultId } =
+      await gradeSpeakingQuiz.mutateAsync({
+        userInput: transcription,
+        cardID: cardId,
+      });
 
     const result = {
       transcription,
       isCorrect,
       feedback,
+      quizResultId: quizResultId ?? null,
     };
 
     // Store the grading result in state

@@ -30,13 +30,15 @@ function getModelString(
     | ImageModelIdentifier = DEFAULT_MODEL,
 ): string {
   const [vendor, modelKey] = identifier;
-  if (vendor !== "openai")
+  if (vendor !== "openai") {
     throw new Error(`Unsupported vendor: ${vendor}`);
+  }
   const modelString = registry[modelKey as ModelKind];
-  if (!modelString)
+  if (!modelString) {
     throw new Error(
       `Unknown model key "${modelKey}" for vendor "${vendor}"`,
     );
+  }
   return modelString;
 }
 

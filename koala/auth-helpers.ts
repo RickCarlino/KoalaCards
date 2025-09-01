@@ -23,9 +23,9 @@ export const getUserSettings = async (userId?: UserID) => {
       data: { lastSeen: new Date() },
     })
     .then(
-      () => {},
-      () => {},
-    ); // swallow errors
+      () => undefined,
+      () => undefined,
+    ); // intentionally ignore failures for best-effort lastSeen update
   return await prismaClient.userSettings.upsert({
     where: params,
     update: {},

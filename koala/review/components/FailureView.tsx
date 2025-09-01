@@ -1,6 +1,7 @@
 import { Stack, Text, Button } from "@mantine/core";
 import { CardImage } from "./CardImage";
 import { HOTKEYS } from "../hotkeys";
+import { FeedbackVote } from "./FeedbackVote";
 
 interface FailureViewProps {
   imageURL?: string;
@@ -8,6 +9,7 @@ interface FailureViewProps {
   definition: string;
   userTranscription: string;
   feedback?: string;
+  quizResultId?: number | null;
   onContinue: () => void;
   failureText?: string;
 }
@@ -18,6 +20,7 @@ export const FailureView: React.FC<FailureViewProps> = ({
   definition,
   userTranscription,
   feedback,
+  quizResultId,
   onContinue,
   failureText = "Not quite right",
 }) => {
@@ -43,11 +46,7 @@ export const FailureView: React.FC<FailureViewProps> = ({
         You said: "{userTranscription}"
       </Text>
 
-      {feedback && (
-        <Text ta="center" c="dimmed">
-          {feedback}
-        </Text>
-      )}
+      {renderFeedbackSection(feedback, quizResultId, onContinue)}
 
       <Text ta="center" c="dimmed" mt="md">
         We'll review this again later.
@@ -55,3 +54,23 @@ export const FailureView: React.FC<FailureViewProps> = ({
     </Stack>
   );
 };
+
+function renderFeedbackSection(
+  feedback?: string,
+  quizResultId?: number | null,
+  onContinue?: () => void,
+) {
+  if (!feedback) {
+    return null;
+  }
+  return (
+    <Stack gap={4} align="center">
+      <Text ta="center" c="dimmed">
+        {feedback}
+      </Text>
+      {quizResultId && (
+        <FeedbackVote resultId={quizResultId} onClick={onContinue} />
+      )}
+    </Stack>
+  );
+}

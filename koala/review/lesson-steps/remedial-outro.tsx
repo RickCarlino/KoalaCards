@@ -7,6 +7,7 @@ import { FailureView } from "../components/FailureView";
 import { CardImage } from "../components/CardImage";
 import { usePhaseManager } from "../hooks/usePhaseManager";
 import { HOTKEYS } from "../hotkeys";
+import { FeedbackVote } from "../components/FeedbackVote";
 
 type Phase = "ready" | "processing" | "success" | "failure";
 
@@ -16,12 +17,14 @@ const SuccessView = ({
   definition,
   onContinue,
   successText,
+  quizResultId,
 }: {
   imageURL?: string;
   term: string;
   definition: string;
   onContinue: () => void;
   successText?: string;
+  quizResultId?: number | null;
 }) => {
   return (
     <Stack align="center" gap="md">
@@ -35,9 +38,7 @@ const SuccessView = ({
         />
       )}
 
-      <Text ta="center" c="green" fw={500} size="lg">
-        {successText || "Well done!"}
-      </Text>
+      {renderSuccessSection(successText, quizResultId, onContinue)}
 
       <Button onClick={onContinue} variant="light" color="green">
         Continue ({HOTKEYS.CONTINUE})
@@ -51,6 +52,30 @@ const SuccessView = ({
     </Stack>
   );
 };
+
+function renderSuccessSection(
+  successText?: string,
+  quizResultId?: number | null,
+  onContinue?: () => void,
+) {
+  if (successText) {
+    return (
+      <Stack gap={4} align="center">
+        <Text ta="center" c="green" fw={500} size="lg">
+          {successText}
+        </Text>
+        {quizResultId && (
+          <FeedbackVote resultId={quizResultId} onClick={onContinue} />
+        )}
+      </Stack>
+    );
+  }
+  return (
+    <Text ta="center" c="green" fw={500} size="lg">
+      Well done!
+    </Text>
+  );
+}
 
 export const RemedialOutro: CardUI = ({
   card,
@@ -97,6 +122,7 @@ export const RemedialOutro: CardUI = ({
         transcription: "Error occurred during processing.",
         isCorrect: false,
         feedback: "An error occurred while processing your response.",
+        quizResultId: null,
       });
     }
   };
@@ -115,6 +141,7 @@ export const RemedialOutro: CardUI = ({
         term={term}
         definition={definition}
         userTranscription={gradingResult?.transcription || ""}
+        quizResultId={gradingResult?.quizResultId ?? null}
         onContinue={onProceed}
         failureText={gradingResult?.feedback || "Not quite right"}
       />
@@ -130,6 +157,7 @@ export const RemedialOutro: CardUI = ({
         definition={definition}
         onContinue={onProceed}
         successText={gradingResult?.feedback || ""}
+        quizResultId={gradingResult?.quizResultId ?? null}
       />
     );
   }

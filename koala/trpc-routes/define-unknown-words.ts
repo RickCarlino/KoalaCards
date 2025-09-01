@@ -24,9 +24,9 @@ const DefinitionSchema = z.object({
         word: z.string().describe("The unknown word that was provided."),
         lemma: z
           .string()
-          .optional()
+          .nullable()
           .describe(
-            "The dictionary form (lemma) of the word, if applicable.",
+            "The dictionary form (lemma) of the word, or null if not applicable.",
           ),
         definition: z
           .string()
@@ -68,7 +68,7 @@ ${wordsToDefine.join("\n")}
 ---
 
 For each "Word to Define" listed above:
-1. Provide its dictionary form (lemma) in ${languageName}. If the word is already in dictionary form or doesn't have one (like proper nouns), you can omit the lemma or repeat the word.
+1. Provide its dictionary form (lemma) in ${languageName}. If the word is already in dictionary form or doesn't have one (like proper nouns), set lemma to null.
 2. Provide a concise, simple English definition suitable for a language learner, considering its usage in the provided "Context". Focus on the most likely meaning in this context.
 `;
 

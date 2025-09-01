@@ -1,0 +1,7 @@
+services:
+  app:
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    command: npm run dev

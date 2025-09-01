@@ -9,22 +9,7 @@ import {
   Text,
   Title,
 } from "@mantine/core";
-// Local, minimal types for the prototype
-type Sentence = { text: string; en: string };
-type InputFlood = {
-  language: string;
-  diagnosis: {
-    target_label: string;
-    contrast_label?: string | null;
-    why_error: string;
-    rules: string[];
-  };
-  flood: { A: Sentence[]; B?: Sentence[] | null };
-  paragraph: string;
-  production: { prompt_en: string; answer: string }[];
-  takeaways: string[];
-  fix: { original: string; corrected: string };
-};
+import type { InputFloodLesson as InputFloodLessonType } from "@/koala/types/input-flood";
 import { playBlob } from "@/koala/utils/play-blob-audio";
 import { trpc } from "@/koala/trpc-config";
 import { useMediaRecorder } from "@/koala/hooks/use-media-recorder";
@@ -38,12 +23,11 @@ import {
 import { compare } from "@/koala/quiz-evaluators/evaluator-utils";
 
 type LessonProps = {
-  lesson: InputFlood;
+  lesson: InputFloodLessonType;
   langCode: string;
   onComplete?: () => void;
 };
 
-// Microphone-driven attempt UI
 function MicButton({
   isRecording,
   onClick,
@@ -76,8 +60,8 @@ export function DiagnosisCard({
   diagnosis,
   fix,
 }: {
-  diagnosis: InputFlood["diagnosis"];
-  fix: InputFlood["fix"];
+  diagnosis: InputFloodLessonType["diagnosis"];
+  fix: InputFloodLessonType["fix"];
 }) {
   return (
     <Card withBorder radius="md" padding="md">
@@ -113,7 +97,6 @@ type StepKind =
   | { t: "diagnosis" }
   | { t: "floodA"; i: number }
   | { t: "floodB"; i: number }
-  | { t: "paragraph" }
   | { t: "production"; i: number };
 
 export function InputFloodLesson({
@@ -121,18 +104,19 @@ export function InputFloodLesson({
   langCode,
   onComplete,
 }: LessonProps) {
-  const equals = (a: string, b: string) => a.trim() === b.trim();
   const steps = useMemo<StepKind[]>(() => {
     const s: StepKind[] = [{ t: "diagnosis" }];
-    for (let i = 0; i < lesson.flood.A.length; i++)
+    for (let i = 0; i < lesson.flood.target.length; i++) {
       s.push({ t: "floodA", i });
-    if (lesson.flood.B && lesson.flood.B.length) {
-      for (let i = 0; i < lesson.flood.B.length; i++)
-        s.push({ t: "floodB", i });
     }
-    s.push({ t: "paragraph" });
-    for (let i = 0; i < lesson.production.length; i++)
+    if (lesson.flood.contrast && lesson.flood.contrast.length) {
+      for (let i = 0; i < lesson.flood.contrast.length; i++) {
+        s.push({ t: "floodB", i });
+      }
+    }
+    for (let i = 0; i < lesson.production.length; i++) {
       s.push({ t: "production", i });
+    }
     return s;
   }, [lesson]);
 
@@ -140,11 +124,10 @@ export function InputFloodLesson({
   const [passed, setPassed] = useState<Set<string>>(new Set());
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
 
-  // Microphone + transcription
   const { start, stop, isRecording } = useMediaRecorder();
   const [heard, setHeard] = useState<string>("");
   const [lastMatch, setLastMatch] = useState<boolean | null>(null);
-  const gradeMutation = trpc.inputFloodGrade.useMutation();
+  const gradeMutation = trpc.gradeUtterance.useMutation();
   const [grading, setGrading] = useState(false);
   const [gradeText, setGradeText] = useState<string | null>(null);
 
@@ -152,13 +135,18 @@ export function InputFloodLesson({
   const step = steps[idx];
 
   const keyFor = (s: StepKind): string => {
-    if (s.t === "floodA") return `A-${s.i}`;
-    if (s.t === "floodB") return `B-${s.i}`;
-    if (s.t === "production") return `P-${s.i}`;
+    if (s.t === "floodA") {
+      return `A-${s.i}`;
+    }
+    if (s.t === "floodB") {
+      return `B-${s.i}`;
+    }
+    if (s.t === "production") {
+      return `P-${s.i}`;
+    }
     return s.t;
   };
 
-  // no back navigation in prototype
   const next = () => {
     setHeard("");
     setLastMatch(null);
@@ -174,15 +162,16 @@ export function InputFloodLesson({
     });
     const isLast = idx >= steps.length - 1;
     if (isLast) {
-      if (onComplete) onComplete();
+      onComplete?.();
       return;
     }
     next();
   };
 
-  // Play TTS and block interactions until finished
   const requestSpeech = async (tl: string, en?: string) => {
-    if (!tl.trim()) return;
+    if (!tl.trim()) {
+      return;
+    }
     setIsAudioPlaying(true);
     try {
       const res = await fetch("/api/speech", {
@@ -190,7 +179,9 @@ export function InputFloodLesson({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tl, en, format: "mp3" }),
       });
-      if (!res.ok) return;
+      if (!res.ok) {
+        return;
+      }
       const blob = await res.blob();
       await playBlob(blob);
     } finally {
@@ -198,26 +189,37 @@ export function InputFloodLesson({
     }
   };
 
-  // Auto-play TTS at the start of listen-and-repeat steps (A and B)
   useEffect(() => {
     const k = keyFor(step);
-    if (passed.has(k)) return;
+    if (passed.has(k)) {
+      return;
+    }
     if (step.t === "floodA") {
-      const it = lesson.flood.A[step.i];
+      const it = lesson.flood.target[step.i];
       void requestSpeech(it.text, it.en);
-    } else if (step.t === "floodB") {
-      const it = lesson.flood.B?.[step.i];
-      if (it) void requestSpeech(it.text, it.en);
+      return;
+    }
+    if (step.t === "floodB") {
+      const it = lesson.flood.contrast?.[step.i];
+      if (it) {
+        void requestSpeech(it.text, it.en);
+      }
     }
   }, [step, passed, lesson]);
 
-  // Voice flow: press mic, speak, stop -> transcribe -> compare -> advance
   const expectedForStep = (s: StepKind): string => {
-    if (s.t === "diagnosis") return lesson.fix.corrected;
-    if (s.t === "floodA") return lesson.flood.A[s.i].text;
-    if (s.t === "floodB") return lesson.flood.B?.[s.i].text || "";
-    if (s.t === "paragraph") return lesson.paragraph;
-    if (s.t === "production") return lesson.production[s.i].answer;
+    if (s.t === "diagnosis") {
+      return lesson.fix.corrected;
+    }
+    if (s.t === "floodA") {
+      return lesson.flood.target[s.i].text;
+    }
+    if (s.t === "floodB") {
+      return lesson.flood.contrast?.[s.i].text || "";
+    }
+    if (s.t === "production") {
+      return lesson.production[s.i].answer;
+    }
     return "";
   };
 
@@ -228,41 +230,32 @@ export function InputFloodLesson({
 
   const handleRecordToggle = async () => {
     if (!isRecording) {
-      try {
-        await start();
-      } catch {
-        // surface via UI if needed later
-      }
+      await start().catch(() => undefined);
       return;
     }
     const blob = await stop();
     const k = keyFor(step);
-    if (passed.has(k)) return;
+    if (passed.has(k)) {
+      return;
+    }
     const expected = expectedForStep(step);
     const { transcription, isMatch } = await transcribe(blob);
     setHeard(transcription);
     setGradeText(null);
 
     if (step.t === "production") {
-      // Grade the spoken production attempt on the server
       setGrading(true);
       try {
         const item = lesson.production[step.i];
         const res = await gradeMutation.mutateAsync({
-          language: langCode,
-          items: [
-            {
-              prompt_en: item.prompt_en,
-              answer: item.answer,
-              attempt: transcription,
-            },
-          ],
+          langCode: langCode as LangCode,
+          prompt_en: item.prompt_en,
+          answer: item.answer,
+          attempt: transcription,
         });
-        const g = (
-          res as { grades: { score: number; feedback: string }[] }
-        ).grades[0];
-        setGradeText(`${g.feedback}`);
-        if (g.score >= 0.5) {
+        const ok = res.isCorrect;
+        setGradeText(`${ok ? "OK" : "Try again"}: ${res.feedback}`);
+        if (ok) {
           markPassedAndNext();
         }
       } catch (e) {
@@ -274,7 +267,6 @@ export function InputFloodLesson({
       return;
     }
 
-    // Flood/diagnosis: fuzzy listen-and-repeat
     const baseMatch = Boolean(isMatch ?? compare(expected, transcription));
     const relaxedMatch =
       step.t === "floodA"
@@ -286,25 +278,23 @@ export function InputFloodLesson({
     }
   };
 
-  // Spacebar toggles recording (except during paragraph step)
   useHotkeys([
     [
       "space",
       (e) => {
         e.preventDefault();
-        if (step.t === "paragraph" || isAudioPlaying) return;
+        if (isAudioPlaying || step.t === "diagnosis") {
+          return;
+        }
         void handleRecordToggle();
       },
     ],
   ]);
 
-  // Reset heard/match when step changes
   useEffect(() => {
     setHeard("");
     setLastMatch(null);
   }, [idx]);
-
-  // no manual check; production also uses listen-and-repeat speaking gate
 
   return (
     <Stack gap="md">
@@ -314,23 +304,11 @@ export function InputFloodLesson({
           <Stack gap="sm">
             <DiagnosisCard diagnosis={lesson.diagnosis} fix={lesson.fix} />
             {!passed.has("diagnosis") ? (
-              <>
-                <Text c="dimmed" size="sm">
-                  Speak the corrected answer to continue
-                </Text>
-                <Group justify="space-between" align="center">
-                  <MicButton
-                    isRecording={isRecording}
-                    onClick={handleRecordToggle}
-                    disabled={isAudioPlaying}
-                  />
-                  {heard ? (
-                    <Text size="sm" c={lastMatch ? "green" : "red"}>
-                      Heard: {heard}
-                    </Text>
-                  ) : null}
-                </Group>
-              </>
+              <Group justify="flex-end">
+                <Button onClick={markPassedAndNext} variant="light">
+                  Next
+                </Button>
+              </Group>
             ) : null}
           </Stack>
         </Card>
@@ -341,7 +319,7 @@ export function InputFloodLesson({
           <Stack gap="sm">
             <Title order={3}>Step A</Title>
             <Text c="dimmed" size="sm">
-              {step.i + 1} / {lesson.flood.A.length}
+              {step.i + 1} / {lesson.flood.target.length}
             </Text>
             {!passed.has(keyFor(step)) ? (
               <>
@@ -349,17 +327,17 @@ export function InputFloodLesson({
                   Speak the sentence to continue
                 </Text>
                 <Text size="sm" c="dimmed">
-                  {lesson.flood.A[step.i].en}
+                  {lesson.flood.target[step.i].en}
                 </Text>
-                <Text fw={600}>{lesson.flood.A[step.i].text}</Text>
+                <Text fw={600}>{lesson.flood.target[step.i].text}</Text>
                 <Group justify="space-between" align="center">
                   <Button
                     leftSection={<IconPlayerPlayFilled size={16} />}
                     variant="default"
                     onClick={() =>
                       requestSpeech(
-                        lesson.flood.A[step.i].text,
-                        lesson.flood.A[step.i].en,
+                        lesson.flood.target[step.i].text,
+                        lesson.flood.target[step.i].en,
                       )
                     }
                     disabled={isAudioPlaying}
@@ -388,11 +366,11 @@ export function InputFloodLesson({
           <Stack gap="sm">
             <Title order={3}>Step B</Title>
             <Text c="dimmed" size="sm">
-              {step.i + 1} / {lesson.flood.B?.length || 0}
+              {step.i + 1} / {lesson.flood.contrast?.length || 0}
             </Text>
-            {lesson.flood.B?.[step.i].en ? (
+            {lesson.flood.contrast?.[step.i].en ? (
               <Text size="sm" c="dimmed">
-                {lesson.flood.B?.[step.i].en}
+                {lesson.flood.contrast?.[step.i].en}
               </Text>
             ) : null}
             {!passed.has(keyFor(step)) ? (
@@ -400,16 +378,18 @@ export function InputFloodLesson({
                 <Text c="dimmed" size="sm">
                   Speak the sentence to continue
                 </Text>
-                <Text fw={600}>{lesson.flood.B?.[step.i].text}</Text>
+                <Text fw={600}>
+                  {lesson.flood.contrast?.[step.i].text}
+                </Text>
                 <Group justify="space-between" align="center">
                   <Button
                     leftSection={<IconPlayerPlayFilled size={16} />}
                     variant="default"
                     onClick={() =>
-                      lesson.flood.B?.[step.i]
+                      lesson.flood.contrast?.[step.i]
                         ? requestSpeech(
-                            lesson.flood.B[step.i].text,
-                            lesson.flood.B[step.i].en,
+                            lesson.flood.contrast[step.i].text,
+                            lesson.flood.contrast[step.i].en,
                           )
                         : undefined
                     }
@@ -434,30 +414,10 @@ export function InputFloodLesson({
         </Card>
       ) : null}
 
-      {/* Minimal pairs removed */}
-
-      {step.t === "paragraph" ? (
-        <Card withBorder padding="lg">
-          <Stack gap="sm">
-            <Title order={3}>Paragraph</Title>
-            <Text style={{ maxWidth: 700, lineHeight: 1.6 }}>
-              {lesson.paragraph}
-            </Text>
-            {!passed.has("paragraph") ? (
-              <Group justify="flex-end">
-                <Button onClick={markPassedAndNext} variant="light">
-                  Next
-                </Button>
-              </Group>
-            ) : null}
-          </Stack>
-        </Card>
-      ) : null}
-
       {step.t === "production" ? (
         <Card withBorder padding="lg">
           <Stack gap="sm">
-            <Title order={3}>How Would You Say This?</Title>
+            <Title order={3}>Respond to the Prompt</Title>
             <Text c="dimmed" size="sm">
               {step.i + 1} / {lesson.production.length}
             </Text>
@@ -465,7 +425,7 @@ export function InputFloodLesson({
               {lesson.production[step.i].prompt_en}
             </Text>
             <Text c="dimmed" size="sm">
-              Speak the target-language answer to continue
+              Speak your answer to continue
             </Text>
             <Group justify="space-between" align="center">
               <MicButton
@@ -483,8 +443,6 @@ export function InputFloodLesson({
           </Stack>
         </Card>
       ) : null}
-
-      {/* Back button removed */}
     </Stack>
   );
 }

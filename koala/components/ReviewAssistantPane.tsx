@@ -90,7 +90,9 @@ export function ReviewAssistantPane({
 
   const onSend = async () => {
     const text = input.trim();
-    if (!text || reviewAssistant.isLoading) return;
+    if (!text || reviewAssistant.isLoading) {
+      return;
+    }
     setInput("");
     setMessages((m) => [...m, { role: "user", content: text }]);
     try {
@@ -116,22 +118,23 @@ export function ReviewAssistantPane({
           suggestions: result.suggestions,
         },
       ]);
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
       setMessages((m) => [
         ...m,
         {
           role: "assistant",
           content:
             "Sorry — I couldn’t reply just now. Please try again in a moment. " +
-            JSON.stringify(e),
+            message,
         },
       ]);
     }
   };
 
   const addSuggestion = async (s: Suggestion) => {
-    try {
-      await bulkCreateCards.mutateAsync({
+    const didAdd = await bulkCreateCards
+      .mutateAsync({
         deckId,
         input: [
           {
@@ -140,10 +143,13 @@ export function ReviewAssistantPane({
             gender: s.gender,
           },
         ],
-      });
+      })
+      .then(
+        () => true,
+        () => false,
+      );
+    if (didAdd) {
       setAdded((prev) => ({ ...prev, [keyFor(s)]: true }));
-    } catch (e) {
-      // No-op; page toasts might exist elsewhere
     }
   };
 

@@ -16,9 +16,6 @@ services:
         - NEXTAUTH_URL=${NEXTAUTH_URL}
         - PORT=${PORT}
         - POSTGRES_URI=${POSTGRES_URI}
-    volumes:
-      - .:/app
-      - ./node_modules:/app/node_modules
     ports:
       - "3000:3000"
       - "5555:5555" # Prisma Studio, optional

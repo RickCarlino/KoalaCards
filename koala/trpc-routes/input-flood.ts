@@ -8,34 +8,23 @@ import {
 } from "../shared-types";
 import { shuffle, draw } from "radash";
 import { generateStructuredOutput } from "@/koala/ai";
-
-// Local Zod schemas for prototype
-const SentenceSchema = z.object({ text: z.string(), en: z.string() });
-const InputFloodSchema = z.object({
-  language: z.string(),
-  diagnosis: z.object({
-    target_label: z.string(),
-    contrast_label: z.string().nullable().optional(),
-    why_error: z.string().max(240),
-    rules: z.array(z.string()).min(2).max(5),
-  }),
-  flood: z.object({
-    A: z.array(SentenceSchema).min(10).max(12),
-    B: z.array(SentenceSchema).nullable().optional(),
-  }),
-  paragraph: z.string(),
-  production: z
-    .array(
-      z.object({
-        prompt_en: z.string(),
-        answer: z.string(),
-      }),
-    )
-    .min(5)
-    .max(6),
-  takeaways: z.array(z.string()).min(2).max(5),
-  fix: z.object({ original: z.string(), corrected: z.string() }),
-});
+import {
+  InputFloodLessonSchema,
+  FLOOD_ITEM_COUNT_MAX,
+  FLOOD_ITEM_COUNT_MIN,
+  INPUT_FLOOD_SENTENCE_MAX_WORDS,
+  INPUT_FLOOD_WHY_ERROR_MAX_CHARS,
+  INPUT_FLOOD_PROMPT_RULES_MIN,
+  INPUT_FLOOD_PROMPT_RULES_MAX,
+  INPUT_FLOOD_PRODUCTION_MIN,
+  INPUT_FLOOD_PRODUCTION_MAX,
+  INPUT_FLOOD_RECENT_RESULTS_TAKE,
+  INPUT_FLOOD_GENERATE_MAX_TOKENS,
+  INPUT_FLOOD_GRADE_MAX_TOKENS,
+  INPUT_FLOOD_GRADE_ITEMS_MIN,
+  INPUT_FLOOD_GRADE_ITEMS_MAX,
+  INPUT_FLOOD_GRADE_TEXT_LIMIT,
+} from "@/koala/types/input-flood";
 
 const GradeRequestSchema = z.object({
   language: z.string(),
@@ -47,8 +36,8 @@ const GradeRequestSchema = z.object({
         attempt: z.string().default(""),
       }),
     )
-    .min(1)
-    .max(6),
+    .min(INPUT_FLOOD_GRADE_ITEMS_MIN)
+    .max(INPUT_FLOOD_GRADE_ITEMS_MAX),
 });
 
 const GradeResponseSchema = z.object({
@@ -64,37 +53,48 @@ export const inputFloodGenerate = procedure
   .input(z.object({ resultId: z.number().optional() }).optional())
   .output(
     z.object({
-      lesson: InputFloodSchema,
+      lesson: InputFloodLessonSchema,
       source: z.object({ quizResultId: z.number(), langCode: LANG_CODES }),
     }),
   )
   .mutation(async ({ input, ctx }) => {
     const userId = ctx.user?.id;
-    if (!userId) throw new Error("Unauthorized");
+    if (!userId) {
+      throw new Error("Unauthorized");
+    }
 
     const resultIdInput = input?.resultId;
 
     const pickOne = async () => {
       if (typeof resultIdInput === "number") {
-        const r = await prismaClient.quizResult.findUnique({
-          where: { id: resultIdInput },
+        return await prismaClient.quizResult.findUnique({
+          where: {
+            id: resultIdInput,
+            userId,
+          },
         });
-        if (!r || r.userId !== userId) return null;
-        return r;
       }
       const results = await prismaClient.quizResult.findMany({
-        where: { userId, isAcceptable: false },
+        where: {
+          userId,
+          isAcceptable: false,
+          reviewedAt: null,
+        },
         orderBy: { createdAt: "desc" },
-        take: 100,
+        take: INPUT_FLOOD_RECENT_RESULTS_TAKE,
       });
       return draw(shuffle(results)) ?? null;
     };
 
     const result = await pickOne();
-    if (!result) throw new Error("No wrong results found");
+    if (!result) {
+      throw new Error("No wrong results found");
+    }
 
     const parsedLang = LANG_CODES.safeParse(result.langCode);
-    if (!parsedLang.success) throw new Error("Unsupported language code");
+    if (!parsedLang.success) {
+      throw new Error("Unsupported language code");
+    }
     const langCode = parsedLang.data as LangCode;
 
     const prompt = buildInputFloodPrompt({
@@ -107,14 +107,13 @@ export const inputFloodGenerate = procedure
     const lesson = await generateStructuredOutput({
       model: ["openai", "cheap"],
       messages: [{ role: "user", content: prompt }],
-      schema: InputFloodSchema,
-      maxTokens: 12000,
+      schema: InputFloodLessonSchema,
+      maxTokens: INPUT_FLOOD_GENERATE_MAX_TOKENS,
     });
 
     return { lesson, source: { quizResultId: result.id, langCode } };
   });
 
-// Local prompt builder to keep prototype self-contained
 type PromptParams = {
   langCode: LangCode;
   definition: string;
@@ -129,148 +128,118 @@ function buildInputFloodPrompt({
   reason,
 }: PromptParams): string {
   const language = supportedLanguages[langCode];
-  return `Input flood is an SLA technique that saturates comprehensible input 
-with many natural occurrences of a target form so learners 
-internalize it through repeated, meaningful exposure and later 
-produce it accurately. It aligns with Krashen's Input Hypothesis 
-(i+1) and usage-based accounts (Ellis; Tomasello), where frequency 
-and distribution drive entrenchment and implicit grammar; 
-frequency-based exposure can outperform metalinguistic explanation 
-(Ellis, 2005). Studies report gains across structures and 
-settings—adverb placement (Trahey & White, 1993), past tense with 
-interaction/feedback (Doughty & Varela, 1998), Spanish subjunctive 
-via reading/listening (Hernández, 2008), and relative clauses/tense 
-(Han, Park & Combs, 2008)—with immediate and delayed effects. 
-Benefits include support for implicit learning (Hulstijn), lower 
-cognitive load (Sweller), durable retention, higher engagement via 
-authentic texts, broad level accessibility, and better noticing. 
-Input flood synergizes with input enhancement, narrow 
-reading/listening, processing instruction, and structural priming. In 
-EPI (Extensive Processing Instruction), it is sequenced through 
-sentence builders, L.A.M. (listening-as-modelling), narrow texts, and 
-retrieval-based repetition to lay multiple memory traces before 
-output; paired with purposeful output, it serves as a backbone for 
-building fluency, accuracy, and long-term retention.
+  return `You are a language-teaching generator. Create an INPUT FLOOD exercise in ${language}.
 
-You are a language-teaching generator. Create a concise, 
-mistake-driven INPUT FLOOD exercise in ${language} using the four 
-fields below:
+Background:
 
-- Expected answer (ground truth): ${definition}
-- Learner's attempt: ${provided}
-- Why it's wrong (teacher rationale): ${reason}
-- Language: ${language}
+Input flood = saturating comprehensible input with many 
+natural examples of a target form so learners internalize it through 
+frequency and use it correctly. Support: Krashen's Input Hypothesis 
+(i+1), Ellis/Tomasello usage-based accounts, studies (Trahey & White 
+1993; Doughty & Varela 1998; Hernández 2008; Han et al. 2008). 
+Benefits: implicit learning, lower cognitive load, durable retention, 
+engagement, broad accessibility, supports noticing. Often paired with 
+input enhancement, narrow reading, processing instruction, structural 
+priming.
 
-Your job:
-1) Diagnose the core FORM difference between ${definition} and 
-${provided}. Boil it down to a short target label (e.g., “every-X 
-adverbial (no postposition)”) and, if applicable, a nearby 
-contrasting frame that learners confuse (e.g., “per-X pattern with 
-postposition”).
-2) Write simple, natural sentences that repeatedly model the target 
-form (“Input Flood A”) and, when appropriate, also model the 
-contrasting-but-valid form (“Input Flood B”) so the learner 
-learns when to use each.
-3) Add one short, narrow paragraph (~3-5 sentences) naturally 
-containing the target form.
-4) Add 5 quick production prompts (English prompts; target-language 
-answers).
+Task: Based on the data:
+- Expected meaning in English: ${definition}
+- Learner's attempt in ${language}: ${provided}
+- Why they are wrong: ${reason}
 
-Constraints:
-- All learner-visible strings must be in ${language}, but provide an 
-English translation for each sentence as an "en" field alongside the 
-target-language "text".
-- These must be real, native-quality example sentences in 
-${language}, not literal translations of English prompts or phrases.
-- All instructions/explanations (diagnosis text, labels, rules, and 
-takeaways) must be in English.
-- Keep sentences short, high-frequency, and everyday; aim for ≤ 12 
-words.
-- Vary verbs, nouns, and numbers; avoid near-duplicates.
- - Use natural, idiomatic style appropriate for the target language; 
-do not include romanization.
- - If the target language normally uses a non-Latin script, DO NOT 
-provide transliterations.
-- Reflect the semantic domain hinted by ${definition}/${provided} 
-(e.g., exercise) but keep content general and appropriate.
-- No meta commentary; output JSON ONLY matching the schema below.
-- Direct commentary to the student. Don't say "Learner said X 
-incorrectly"; instead, say "You said X incorrectly."
+Output JSON ONLY, strictly matching the schema. All learner-facing text must be ${language} except rules/diagnosis (English). No transliteration.
+Sentences must be short (≤${INPUT_FLOOD_SENTENCE_MAX_WORDS} words), high-frequency, everyday, and idiomatic. Provide English translations in "en" fields.
+No duplicates; vary verbs and nouns (>=${FLOOD_ITEM_COUNT_MIN} distinct verbs and nouns per section).
 
-STRICT BEHAVIOR RULES (Meta-Prompting):
-1) Attempt classification (internal): Before generating, classify the learner's attempt into one of:
-   - give_up: "I don't know", "idk", "no idea", "pass/skip", Korean "몰라요/모르겠어요", Spanish "no sé/ni idea", Japanese "わからない/知らない", Chinese "不知道", punctuation-only, or empty.
-   - off_language/non_answer: text not in the target language or general chatter not addressing the prompt.
-   - answer: an actual attempt to answer in the target language.
-   You DO NOT output this classification; just use it to guide behavior below.
+How it is used (important):
+- flood.target and flood.contrast sentences are shown directly to learners and used verbatim in flashcards. Speech to text (TTS) voices will read them aloud.
+- Therefore, flood entries must be ONLY the sentence (field "text") and its English translation (field "en").
+- Do NOT add parenthetical explanations, labels, grammar tags, notes, romanization, or bracketed content in either field.
+- Do NOT wrap sentences in quotes. Do NOT include emojis or placeholders.
+- The learner's incorrect sentence must NOT appear unless corrected; only include correct sentences.
 
-2) If give_up or off_language/non_answer:
-   - Do NOT analyze the semantics of the attempt and do NOT explain what "I don't know" means.
-   - Treat it as "no attempt provided". Base your diagnosis on the expected answer and the teacher rationale only.
-   - In diagnosis.why_error, say succinctly that the student gave up or did not attempt, then state what form is needed.
-   - In diagnosis.contrast_label: prefer null unless the reason indicates a specific contrasting valid form; do not invent a contrast based on the give-up phrase.
-   - In drills and flood: model the target form; do NOT include give-up phrases.
+Validity rules:
+- flood.target: every sentence must exemplify target_label and be grammatical.
+- flood.contrast: if contrast_label is provided, every sentence must exemplify the contrasting form and must NOT use the target form.
+  If contrast_label is null, set flood.contrast = null.
+- If the issue is vocabulary or usage, include the relevant word(s) in varied, grammatical contexts within flood.target (and flood.contrast if included).
 
-3) If answer:
-   - Proceed normally: contrast TARGET vs learner's attempt.
+Tone:
+corrective, concise.
+Always speak directly to the learner as "you".
+Do not say "The student" or similar.
+Always explain in English.
 
-4) Always keep tone concise and corrective; avoid meta commentary.
+Steps:
+1. Diagnosis:  
+   - target_label: short description of the needed form.  
+   - contrast_label: valid but contrasting form (or null).  
+   - why_error: brief rationale (≤${INPUT_FLOOD_WHY_ERROR_MAX_CHARS} chars).  
+   - rules: ${INPUT_FLOOD_PROMPT_RULES_MIN}-${INPUT_FLOOD_PROMPT_RULES_MAX} English bullet rules.  
+2. Flood:
+   - target: ${FLOOD_ITEM_COUNT_MIN}-${FLOOD_ITEM_COUNT_MAX} example sentences with target form.  
+   - contrast: ${FLOOD_ITEM_COUNT_MIN}-${FLOOD_ITEM_COUNT_MAX} contrasting examples OR null.
+3. Production: ${INPUT_FLOOD_PRODUCTION_MIN}-${INPUT_FLOOD_PRODUCTION_MAX} items. Each: English prompt + ${language} answer.  
+4. Fix: { original: ${provided}, corrected: one natural sentence in ${language} that correctly expresses the expected meaning }. Do NOT put English here.
 
-Counts (strict):
-- flood.A: 10-12 sentences (never fewer than 10).
-- flood.B: if used, 8-12 sentences (or null).
-- production: 5-6 items.
+Classification rule (internal, don't output):  
+- give_up (“idk”, “몰라요”, etc.) => treat as no attempt. 
+why_error = “You gave up. Correct form is X.” contrast_label = 
+null unless explicit in reason. Model only target form.  
+- off_language (not in ${language} / unrelated text) => Use give_up.
+- totally_wrong (wrong meaning/form) => same as give_up.
+- vocabulary => Misunderstanding of a specifc word or words.
+  IF IT IS A VOCABULARY MISTAKE, MAKE SURE FLOOD.TARGET and FLOOD.CONTRAST
+  CONTAIN THE VOCABULARY WORD(S) IN VARIOUS CONTEXTS.
+  GRAMMATICALLY CORRECT SENTENCES ONLY!
+- usage => Misunderstanding of a common collocation or usage pattern.
+- form => Incorrect morphological form (tense, agreement, etc.).
+- grammar => Nongrammatical speech or grammar pattern misunderstanding.
+- answer => normal compare & contrast.  
 
-Variety & diversity (strict):
-- Avoid repetition of the same core noun or verb across items. Use 
-different everyday nouns (people, places, objects) and a range of 
-high-frequency verbs.
-- Ensure at least 6 distinct verbs and 8 distinct nouns across 
-flood.A (and do not reuse the same noun/verb lemma more than once 
-within flood.A).
-- If flood.B is used, it must also have varied nouns and verbs; do 
-not mirror flood.A with the same lexical items.
+STRICT COUNTS:
+  flood.target = ${FLOOD_ITEM_COUNT_MIN}-${FLOOD_ITEM_COUNT_MAX};
+  flood.contrast = ${FLOOD_ITEM_COUNT_MIN}-${FLOOD_ITEM_COUNT_MAX} or null;
+  production = ${INPUT_FLOOD_PRODUCTION_MIN}-${INPUT_FLOOD_PRODUCTION_MAX}.
 
-Output JSON must match this schema:
-
+Schema:
 {
-  "language": string;
   "diagnosis": {
-    "target_label": string;
-    "contrast_label": string | null;
-    "why_error": string;
-    "rules": string[];
-  };
+    "target_label": string,
+    "contrast_label": string | null,
+    "why_error": string,
+    "rules": string[]
+  },
+  // flood entries are used verbatim in study cards — DO NOT add parenthesized/bracketed notes, quotes, emojis, or explanations
   "flood": {
-    "A": [{ "text": string; "en": string }];
-    "B": [{ "text": string; "en": string }] | null;
-  };
-  "paragraph": string;
-  "production": [{ "prompt_en": string; "answer": string }];
-  "takeaways": string[];
-  "fix": { "original": string; "corrected": string };
+    "target": [{ "text": string, "en": string }],
+    "contrast": [{ "text": string, "en": string }] | null
+  },
+  "production": [{ "prompt_en": string, "answer": string }],
+  "fix": { "original": string, "corrected": string }
 }`;
 }
-
-// Intentionally no regex-based give-up detector; behavior is enforced via the meta-prompt.
 
 export const inputFloodGrade = procedure
   .input(GradeRequestSchema)
   .output(GradeResponseSchema)
   .mutation(async ({ input, ctx }) => {
     const userId = ctx.user?.id;
-    if (!userId) throw new Error("Unauthorized");
+    if (!userId) {
+      throw new Error("Unauthorized");
+    }
 
-    // Guardrails (mirror API behavior)
     const languageName =
       supportedLanguages[
         input.language as keyof typeof supportedLanguages
       ] || input.language;
-    const items = input.items.slice(0, 6).map((it) => ({
-      prompt_en: it.prompt_en.slice(0, 200),
-      answer: it.answer.slice(0, 200),
-      attempt: it.attempt.slice(0, 200),
-    }));
+    const items = input.items
+      .slice(0, INPUT_FLOOD_GRADE_ITEMS_MAX)
+      .map((it) => ({
+        prompt_en: it.prompt_en.slice(0, INPUT_FLOOD_GRADE_TEXT_LIMIT),
+        answer: it.answer.slice(0, INPUT_FLOOD_GRADE_TEXT_LIMIT),
+        attempt: it.attempt.slice(0, INPUT_FLOOD_GRADE_TEXT_LIMIT),
+      }));
 
     const rubric = `You are grading short language speaking drills in ${languageName}.
 Score each item on two criteria and output JSON only as { "grades": [{ "score": number, "feedback": string }, ...] } with the same order and length as the input.
@@ -302,7 +271,7 @@ You cannot take away points for word choice or register as long as the response 
       model: ["openai", "cheap"],
       messages: [{ role: "user", content: userMsg }],
       schema: GradeResponseSchema,
-      maxTokens: 1500,
+      maxTokens: INPUT_FLOOD_GRADE_MAX_TOKENS,
     });
 
     return graded;

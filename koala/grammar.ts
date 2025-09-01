@@ -19,7 +19,7 @@ type GrammarCorrectionProps = {
 type StoreTrainingData = (
   props: GrammarCorrectionProps,
   exp: Explanation,
-) => Promise<void>;
+) => Promise<number>;
 
 const zodGradeResponse = z.object({
   yesNo: z.enum(["yes", "no"]),
@@ -31,7 +31,7 @@ const storeTrainingData: StoreTrainingData = async (props, exp) => {
     props;
   const { yesNo, why } = exp;
 
-  await prismaClient.quizResult.create({
+  const created = await prismaClient.quizResult.create({
     data: {
       userId,
       acceptableTerm: term,
@@ -44,6 +44,8 @@ const storeTrainingData: StoreTrainingData = async (props, exp) => {
       eventType: eventType || "speaking-judgement",
     },
   });
+
+  return created.id;
 };
 
 const LANG_OVERRIDES: Partial<Record<LangCode, string>> = {
@@ -57,10 +59,11 @@ async function run(props: GrammarCorrectionProps): Promise<Explanation> {
       role: "user" as const,
       content: [
         `I am learning ${getLangName(props.langCode)}.`,
-        `We know "${props.term}" means "${props.definition}" in English.`,
-        `Let's say I am in a situation that warrants the sentence above.`,
-        `Could I say "${props.userInput}" instead (note: I entered it via speech-to-text)?`,
+        `My prompt was: ${props.definition} (${props.term})`,
+        `Let's say I am in a situation that warrants the sentence or prompt above.`,
+        `Could one say "${props.userInput}"?`,
         `Would that be OK?`,
+        `(entered via speech-to-text, I have no control over spacing or punctuation so please focus on the content.)`,
         override,
         `Explain in one tweet or less.`,
       ].join(" "),
@@ -77,10 +80,10 @@ async function run(props: GrammarCorrectionProps): Promise<Explanation> {
 
 async function runAndStore(
   props: GrammarCorrectionProps,
-): Promise<Explanation> {
+): Promise<{ explanation: Explanation; quizResultId: number }> {
   const result = await run(props);
-  await storeTrainingData(props, result);
-  return result;
+  const id = await storeTrainingData(props, result);
+  return { explanation: result, quizResultId: id };
 }
 
 export const grammarCorrectionNext: QuizEvaluator = async ({
@@ -88,19 +91,47 @@ export const grammarCorrectionNext: QuizEvaluator = async ({
   card,
   userID,
 }) => {
-  const chosen = await runAndStore({
+  const { explanation, quizResultId } = await runAndStore({
     ...card,
     userInput,
     userId: userID,
     eventType: "speaking-judgement",
   });
-  console.log(JSON.stringify(chosen));
-  if (chosen.yesNo === "yes") {
-    return { result: "pass", userMessage: chosen.why };
+  console.log(JSON.stringify(explanation));
+  if (explanation.yesNo === "yes") {
+    return { result: "pass", userMessage: explanation.why, quizResultId };
   } else {
     return {
       result: "fail",
-      userMessage: chosen.why,
+      userMessage: explanation.why,
+      quizResultId,
     };
   }
 };
+
+export async function gradeUtterance(params: {
+  term: string;
+  definition: string;
+  langCode: LangCode | string;
+  userInput: string;
+  userId: string;
+  eventType?: string;
+}): Promise<{
+  isCorrect: boolean;
+  feedback: string;
+  quizResultId: number;
+}> {
+  const { explanation, quizResultId } = await runAndStore({
+    term: params.term,
+    definition: params.definition,
+    langCode: String(params.langCode),
+    userInput: params.userInput,
+    userId: params.userId,
+    eventType: params.eventType || "speaking-judgement",
+  });
+  return {
+    isCorrect: explanation.yesNo === "yes",
+    feedback: explanation.why,
+    quizResultId,
+  };
+}
