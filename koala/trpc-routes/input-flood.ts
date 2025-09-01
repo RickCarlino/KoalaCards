@@ -132,10 +132,9 @@ input enhancement, narrow reading, processing instruction, structural
 priming.
 
 Task: Based on the data:
-- Expected (ground truth): ${definition}
-- Learner's attempt: ${provided}
-- Why wrong: ${reason}
-- Language: ${language}
+- Expected meaning in English: ${definition}
+- Learner's attempt in ${language}: ${provided}
+- Why they are wrong: ${reason}
 
 Output JSON ONLY, strictly matching the schema. All learner-facing text must be ${language} except rules/diagnosis (English). No transliteration.
 Sentences must be short (≤12 words), high-frequency, everyday, and idiomatic. Provide English translations in "en" fields.
@@ -170,7 +169,7 @@ Steps:
    - A: ${MIN_FLOOD_COUNT}-${MAX_FLOOD_COUNT} example sentences with target form.  
    - B: ${MIN_FLOOD_COUNT}-${MAX_FLOOD_COUNT} contrasting examples OR null.
 3. Production: ${MIN_FLOOD_COUNT}-6 items. Each: English prompt + ${language} answer.  
-4. Fix: { original: ${provided}, corrected: ${definition} }.
+4. Fix: { original: ${provided}, corrected: one natural sentence in ${language} that correctly expresses the expected meaning }. Do NOT put English here.
 
 Classification rule (internal, don't output):  
 - give_up (“idk”, “몰라요”, etc.) => treat as no attempt. 
