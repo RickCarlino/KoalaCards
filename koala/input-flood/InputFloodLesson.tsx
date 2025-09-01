@@ -9,20 +9,7 @@ import {
   Text,
   Title,
 } from "@mantine/core";
-type Sentence = { text: string; en: string };
-type InputFlood = {
-  language: string;
-  diagnosis: {
-    target_label: string;
-    contrast_label?: string | null;
-    why_error: string;
-    rules: string[];
-  };
-  flood: { A: Sentence[]; B?: Sentence[] | null };
-  production: { prompt_en: string; answer: string }[];
-  takeaways: string[];
-  fix: { original: string; corrected: string };
-};
+import type { InputFloodLesson as InputFloodLessonType } from "@/koala/types/input-flood";
 import { playBlob } from "@/koala/utils/play-blob-audio";
 import { trpc } from "@/koala/trpc-config";
 import { useMediaRecorder } from "@/koala/hooks/use-media-recorder";
@@ -36,7 +23,7 @@ import {
 import { compare } from "@/koala/quiz-evaluators/evaluator-utils";
 
 type LessonProps = {
-  lesson: InputFlood;
+  lesson: InputFloodLessonType;
   langCode: string;
   onComplete?: () => void;
 };
@@ -73,8 +60,8 @@ export function DiagnosisCard({
   diagnosis,
   fix,
 }: {
-  diagnosis: InputFlood["diagnosis"];
-  fix: InputFlood["fix"];
+  diagnosis: InputFloodLessonType["diagnosis"];
+  fix: InputFloodLessonType["fix"];
 }) {
   return (
     <Card withBorder radius="md" padding="md">
@@ -137,11 +124,10 @@ export function InputFloodLesson({
   const [passed, setPassed] = useState<Set<string>>(new Set());
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
 
-  // Microphone + transcription
   const { start, stop, isRecording } = useMediaRecorder();
   const [heard, setHeard] = useState<string>("");
   const [lastMatch, setLastMatch] = useState<boolean | null>(null);
-  const gradeMutation = trpc.inputFloodGrade.useMutation();
+  const gradeMutation = trpc.gradeUtterance.useMutation();
   const [grading, setGrading] = useState(false);
   const [gradeText, setGradeText] = useState<string | null>(null);
 
@@ -176,9 +162,7 @@ export function InputFloodLesson({
     });
     const isLast = idx >= steps.length - 1;
     if (isLast) {
-      if (onComplete) {
-        onComplete();
-      }
+      onComplete?.();
       return;
     }
     next();
@@ -260,25 +244,17 @@ export function InputFloodLesson({
     setGradeText(null);
 
     if (step.t === "production") {
-      // Grade the spoken production attempt on the server
       setGrading(true);
       try {
         const item = lesson.production[step.i];
         const res = await gradeMutation.mutateAsync({
-          language: langCode,
-          items: [
-            {
-              prompt_en: item.prompt_en,
-              answer: item.answer,
-              attempt: transcription,
-            },
-          ],
+          langCode: langCode as LangCode,
+          prompt_en: item.prompt_en,
+          answer: item.answer,
+          attempt: transcription,
         });
-        const g = (
-          res as { grades: { score: number; feedback: string }[] }
-        ).grades[0];
-        const ok = g.score >= 0.5;
-        setGradeText(`${ok ? "OK" : "Try again"}: ${g.feedback}`);
+        const ok = res.isCorrect;
+        setGradeText(`${ok ? "OK" : "Try again"}: ${res.feedback}`);
         if (ok) {
           markPassedAndNext();
         }
@@ -439,7 +415,7 @@ export function InputFloodLesson({
       {step.t === "production" ? (
         <Card withBorder padding="lg">
           <Stack gap="sm">
-            <Title order={3}>How Would You Say This?</Title>
+            <Title order={3}>Respond to the Prompt</Title>
             <Text c="dimmed" size="sm">
               {step.i + 1} / {lesson.production.length}
             </Text>
@@ -447,7 +423,7 @@ export function InputFloodLesson({
               {lesson.production[step.i].prompt_en}
             </Text>
             <Text c="dimmed" size="sm">
-              Speak the target-language answer to continue
+              Speak your answer to continue
             </Text>
             <Group justify="space-between" align="center">
               <MicButton

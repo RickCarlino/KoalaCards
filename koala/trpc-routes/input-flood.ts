@@ -8,40 +8,12 @@ import {
 } from "../shared-types";
 import { shuffle, draw } from "radash";
 import { generateStructuredOutput } from "@/koala/ai";
+import { InputFloodLessonSchema } from "@/koala/types/input-flood";
 
 const MIN_FLOOD_COUNT = 2;
 const MAX_FLOOD_COUNT = 4;
 
-const SentenceSchema = z.object({ text: z.string(), en: z.string() });
-const InputFloodSchema = z.object({
-  language: z.string(),
-  diagnosis: z.object({
-    target_label: z.string(),
-    contrast_label: z.string().nullable().optional(),
-    why_error: z.string().max(240),
-    rules: z.array(z.string()).min(1).max(3),
-  }),
-  flood: z.object({
-    A: z.array(SentenceSchema).min(MIN_FLOOD_COUNT).max(MAX_FLOOD_COUNT),
-    B: z
-      .array(SentenceSchema)
-      .min(MIN_FLOOD_COUNT)
-      .max(MAX_FLOOD_COUNT)
-      .nullable()
-      .optional(),
-  }),
-  production: z
-    .array(
-      z.object({
-        prompt_en: z.string(),
-        answer: z.string(),
-      }),
-    )
-    .min(5)
-    .max(6),
-  takeaways: z.array(z.string()).min(2).max(5),
-  fix: z.object({ original: z.string(), corrected: z.string() }),
-});
+// Use shared lesson schema without unused fields like language/takeaways
 
 const GradeRequestSchema = z.object({
   language: z.string(),
@@ -70,7 +42,7 @@ export const inputFloodGenerate = procedure
   .input(z.object({ resultId: z.number().optional() }).optional())
   .output(
     z.object({
-      lesson: InputFloodSchema,
+      lesson: InputFloodLessonSchema,
       source: z.object({ quizResultId: z.number(), langCode: LANG_CODES }),
     }),
   )
@@ -124,7 +96,7 @@ export const inputFloodGenerate = procedure
     const lesson = await generateStructuredOutput({
       model: ["openai", "cheap"],
       messages: [{ role: "user", content: prompt }],
-      schema: InputFloodSchema,
+      schema: InputFloodLessonSchema,
       maxTokens: 12000,
     });
 
@@ -165,7 +137,7 @@ Task: Based on the data:
 - Why wrong: ${reason}
 - Language: ${language}
 
-Output JSON ONLY, strictly matching the schema. All learner-facing text must be ${language} except rules/diagnosis/takeaways (English). No transliteration.
+Output JSON ONLY, strictly matching the schema. All learner-facing text must be ${language} except rules/diagnosis (English). No transliteration.
 Sentences must be short (≤12 words), high-frequency, everyday, and idiomatic. Provide English translations in "en" fields.
 No duplicates; vary verbs and nouns (>=${MIN_FLOOD_COUNT} distinct verbs and nouns per section).
 
@@ -197,10 +169,8 @@ Steps:
 2. Flood:
    - A: ${MIN_FLOOD_COUNT}-${MAX_FLOOD_COUNT} example sentences with target form.  
    - B: ${MIN_FLOOD_COUNT}-${MAX_FLOOD_COUNT} contrasting examples OR null.
-3. Production: ${MIN_FLOOD_COUNT}-6 items. Each: English prompt + ${language} 
-answer.  
-4. Takeaways: 1-3 short English reminders.  
-5. Fix: { original: ${provided}, corrected: ${definition} }.
+3. Production: ${MIN_FLOOD_COUNT}-6 items. Each: English prompt + ${language} answer.  
+4. Fix: { original: ${provided}, corrected: ${definition} }.
 
 Classification rule (internal, don't output):  
 - give_up (“idk”, “몰라요”, etc.) => treat as no attempt. 
@@ -224,7 +194,6 @@ STRICT COUNTS:
 
 Schema:
 {
-  "language": string,
   "diagnosis": {
     "target_label": string,
     "contrast_label": string | null,
@@ -237,7 +206,6 @@ Schema:
     "B": [{ "text": string, "en": string }] | null
   },
   "production": [{ "prompt_en": string, "answer": string }],
-  "takeaways": string[],
   "fix": { "original": string, "corrected": string }
 }`;
 }

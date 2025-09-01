@@ -79,7 +79,7 @@ const navItems: NavItem[] = [
     icon: IconStar,
   },
   {
-    path: () => "/test-zone",
+    path: () => "/input-flood",
     name: "Input Flood (Beta)",
     show: (props) => props.showInputFlood,
     blink: () => false,

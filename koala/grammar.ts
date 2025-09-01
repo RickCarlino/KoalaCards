@@ -59,10 +59,11 @@ async function run(props: GrammarCorrectionProps): Promise<Explanation> {
       role: "user" as const,
       content: [
         `I am learning ${getLangName(props.langCode)}.`,
-        `We know "${props.term}" means "${props.definition}" in English.`,
-        `Let's say I am in a situation that warrants the sentence above.`,
-        `Could I say "${props.userInput}" instead (note: I entered it via speech-to-text)?`,
+        `My prompt was: ${props.definition} (${props.term})`,
+        `Let's say I am in a situation that warrants the sentence or prompt above.`,
+        `Could one say "${props.userInput}"?`,
         `Would that be OK?`,
+        `(entered via speech-to-text, I have no control over spacing or punctuation so please focus on the content.)`,
         override,
         `Explain in one tweet or less.`,
       ].join(" "),
@@ -107,3 +108,30 @@ export const grammarCorrectionNext: QuizEvaluator = async ({
     };
   }
 };
+
+export async function gradeUtterance(params: {
+  term: string;
+  definition: string;
+  langCode: LangCode | string;
+  userInput: string;
+  userId: string;
+  eventType?: string;
+}): Promise<{
+  isCorrect: boolean;
+  feedback: string;
+  quizResultId: number;
+}> {
+  const { explanation, quizResultId } = await runAndStore({
+    term: params.term,
+    definition: params.definition,
+    langCode: String(params.langCode),
+    userInput: params.userInput,
+    userId: params.userId,
+    eventType: params.eventType || "speaking-judgement",
+  });
+  return {
+    isCorrect: explanation.yesNo === "yes",
+    feedback: explanation.why,
+    quizResultId,
+  };
+}

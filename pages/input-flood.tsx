@@ -12,28 +12,16 @@ import {
   Text,
   Title,
 } from "@mantine/core";
-import { InputFloodLesson } from "@/koala/test-zone/PrototypeLesson";
+import { InputFloodLesson as InputFloodLessonComponent } from "@/koala/input-flood/InputFloodLesson";
+import type { InputFloodLesson as InputFloodLessonType } from "@/koala/types/input-flood";
 import { trpc } from "@/koala/trpc-config";
 import type { GetServerSideProps } from "next";
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { prismaClient } from "@/koala/prisma-client";
 import { IconChevronDown, IconChevronUp } from "@tabler/icons-react";
-type Sentence = { text: string; en: string };
-type InputFloodLite = {
-  language: string;
-  diagnosis: {
-    target_label: string;
-    contrast_label?: string | null;
-    why_error: string;
-    rules: string[];
-  };
-  flood: { A: Sentence[]; B?: Sentence[] | null };
-  production: { prompt_en: string; answer: string }[];
-  takeaways: string[];
-  fix: { original: string; corrected: string };
-};
-type GenerateResponseLite = {
-  lesson: InputFloodLite;
+
+type GenerateResponse = {
+  lesson: InputFloodLessonType;
   source: { quizResultId: number; langCode: string };
 };
 
@@ -46,9 +34,7 @@ type PickedMistake = {
   helpfulness: number;
 };
 
-type TestZoneProps = {
-  picks: PickedMistake[];
-};
+type BetaProps = { picks: PickedMistake[] };
 
 function PickCard({
   p,
@@ -130,7 +116,7 @@ function PickCard({
             size="sm"
             aria-label="Start lesson"
           >
-            Go
+            Study This
           </Button>
         </Group>
       </Stack>
@@ -138,9 +124,9 @@ function PickCard({
   );
 }
 
-export default function TestZone({ picks }: TestZoneProps) {
+export default function Beta({ picks }: BetaProps) {
   const router = useRouter();
-  const [data, setData] = useState<GenerateResponseLite | null>(null);
+  const [data, setData] = useState<GenerateResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const gen = trpc.inputFloodGenerate.useMutation();
@@ -155,7 +141,7 @@ export default function TestZone({ picks }: TestZoneProps) {
     setError(null);
     try {
       const res = await gen.mutateAsync({ resultId });
-      setData(res as GenerateResponseLite);
+      setData(res as GenerateResponse);
     } catch (e) {
       const m = e instanceof Error ? e.message : "Failed to load";
       setError(m);
@@ -196,62 +182,59 @@ export default function TestZone({ picks }: TestZoneProps) {
             <Stack>
               <Text c="dimmed">Pick something to work on</Text>
               <Grid gutter="md">
-                {
-                  // Keep newest-first ordering from SSR, but bubble +1 to top
-                  (() => {
-                    const visible = picks.filter((p) => !hidden.has(p.id));
-                    const helpful = visible.filter((p) =>
-                      helpfulIds.has(p.id),
-                    );
-                    const neutral = visible.filter(
-                      (p) => !helpfulIds.has(p.id),
-                    );
-                    return [...helpful, ...neutral];
-                  })().map((p) => (
-                    <Grid.Col key={p.id} span={{ base: 12, sm: 6, md: 4 }}>
-                      <PickCard
-                        p={p}
-                        helpful={helpfulIds.has(p.id)}
-                        onToggleHelpful={() => {
-                          setHelpfulIds((prev) => {
-                            const next = new Set(prev);
-                            const isHelpful = next.has(p.id);
-                            if (isHelpful) {
-                              next.delete(p.id);
-                            } else {
-                              next.add(p.id);
-                            }
-                            editResult.mutate({
-                              resultId: p.id,
-                              data: { helpfulness: isHelpful ? 0 : 1 },
-                            });
-                            return next;
-                          });
-                        }}
-                        onNotHelpful={() => {
-                          setHelpfulIds((prev) => {
-                            const next = new Set(prev);
+                {(() => {
+                  const visible = picks.filter((p) => !hidden.has(p.id));
+                  const helpful = visible.filter((p) =>
+                    helpfulIds.has(p.id),
+                  );
+                  const neutral = visible.filter(
+                    (p) => !helpfulIds.has(p.id),
+                  );
+                  return [...helpful, ...neutral];
+                })().map((p) => (
+                  <Grid.Col key={p.id} span={{ base: 12, sm: 6, md: 4 }}>
+                    <PickCard
+                      p={p}
+                      helpful={helpfulIds.has(p.id)}
+                      onToggleHelpful={() => {
+                        setHelpfulIds((prev) => {
+                          const next = new Set(prev);
+                          const isHelpful = next.has(p.id);
+                          if (isHelpful) {
                             next.delete(p.id);
-                            return next;
-                          });
-                          setHidden((prev) => new Set(prev).add(p.id));
+                          } else {
+                            next.add(p.id);
+                          }
                           editResult.mutate({
                             resultId: p.id,
-                            data: { helpfulness: -1 },
+                            data: { helpfulness: isHelpful ? 0 : 1 },
                           });
-                        }}
-                        onStart={() => startFromPick(p.id)}
-                        loading={loading}
-                      />
-                    </Grid.Col>
-                  ))
-                }
+                          return next;
+                        });
+                      }}
+                      onNotHelpful={() => {
+                        setHelpfulIds((prev) => {
+                          const next = new Set(prev);
+                          next.delete(p.id);
+                          return next;
+                        });
+                        setHidden((prev) => new Set(prev).add(p.id));
+                        editResult.mutate({
+                          resultId: p.id,
+                          data: { helpfulness: -1 },
+                        });
+                      }}
+                      onStart={() => startFromPick(p.id)}
+                      loading={loading}
+                    />
+                  </Grid.Col>
+                ))}
               </Grid>
             </Stack>
           )
         ) : null}
         {data ? (
-          <InputFloodLesson
+          <InputFloodLessonComponent
             lesson={data.lesson}
             langCode={data.source.langCode}
             onComplete={() => {
@@ -271,9 +254,9 @@ export default function TestZone({ picks }: TestZoneProps) {
   );
 }
 
-export const getServerSideProps: GetServerSideProps<
-  TestZoneProps
-> = async (context) => {
+export const getServerSideProps: GetServerSideProps<BetaProps> = async (
+  context,
+) => {
   const dbUser = await getServersideUser(context);
   if (!dbUser) {
     return {
