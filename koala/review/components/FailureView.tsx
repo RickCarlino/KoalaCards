@@ -46,7 +46,7 @@ export const FailureView: React.FC<FailureViewProps> = ({
         You said: "{userTranscription}"
       </Text>
 
-      {renderFeedbackSection(feedback, quizResultId)}
+      {renderFeedbackSection(feedback, quizResultId, onContinue)}
 
       <Text ta="center" c="dimmed" mt="md">
         We'll review this again later.
@@ -58,6 +58,7 @@ export const FailureView: React.FC<FailureViewProps> = ({
 function renderFeedbackSection(
   feedback?: string,
   quizResultId?: number | null,
+  onContinue?: () => void,
 ) {
   if (!feedback) {
     return null;
@@ -67,7 +68,9 @@ function renderFeedbackSection(
       <Text ta="center" c="dimmed">
         {feedback}
       </Text>
-      {quizResultId && <FeedbackVote resultId={quizResultId} />}
+      {quizResultId && (
+        <FeedbackVote resultId={quizResultId} onClick={onContinue} />
+      )}
     </Stack>
   );
 }

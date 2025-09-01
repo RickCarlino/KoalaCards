@@ -38,7 +38,7 @@ const SuccessView = ({
         />
       )}
 
-      {renderSuccessSection(successText, quizResultId)}
+      {renderSuccessSection(successText, quizResultId, onContinue)}
 
       <Button onClick={onContinue} variant="light" color="green">
         Continue ({HOTKEYS.CONTINUE})
@@ -56,6 +56,7 @@ const SuccessView = ({
 function renderSuccessSection(
   successText?: string,
   quizResultId?: number | null,
+  onContinue?: () => void,
 ) {
   if (successText) {
     return (
@@ -63,7 +64,9 @@ function renderSuccessSection(
         <Text ta="center" c="green" fw={500} size="lg">
           {successText}
         </Text>
-        {quizResultId && <FeedbackVote resultId={quizResultId} />}
+        {quizResultId && (
+          <FeedbackVote resultId={quizResultId} onClick={onContinue} />
+        )}
       </Stack>
     );
   }

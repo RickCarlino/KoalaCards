@@ -5,18 +5,22 @@ import { useState } from "react";
 
 type Props = {
   resultId: number;
+  onClick?: () => void;
 };
 
-export function FeedbackVote({ resultId }: Props) {
+export function FeedbackVote({ resultId, onClick }: Props) {
   const mutation = trpc.editQuizResult.useMutation();
   const [selected, setSelected] = useState<1 | -1 | null>(null);
 
-  const vote = async (value: 1 | -1) => {
+  const vote = (value: 1 | -1) => {
     if (selected !== null) {
       return;
     } // one-off
     setSelected(value);
-    await mutation.mutateAsync({
+    // Trigger optional callback immediately so parent can continue UI flow
+    onClick?.();
+    // Persist vote in background; ignore resolution here
+    void mutation.mutateAsync({
       resultId,
       data: { helpfulness: value },
     });
