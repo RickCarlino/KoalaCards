@@ -58,10 +58,12 @@ function MicButton({
 
 export function DiagnosisCard({
   diagnosis,
-  fix,
+  targetLabel,
+  contrastLabel,
 }: {
   diagnosis: InputFloodLessonType["diagnosis"];
-  fix: InputFloodLessonType["fix"];
+  targetLabel?: string;
+  contrastLabel?: string | null;
 }) {
   return (
     <Card withBorder radius="md" padding="md">
@@ -71,16 +73,16 @@ export function DiagnosisCard({
           <Text size="sm" c="dimmed">
             Mistake
           </Text>
-          <Text c="red">❌ {fix.original}</Text>
-          <Text c="green">✅ {fix.corrected}</Text>
+          <Text c="red">❌ {diagnosis.original}</Text>
+          <Text c="green">✅ {diagnosis.corrected}</Text>
         </Stack>
-        <Text fw={600}>{diagnosis.target_label}</Text>
-        {diagnosis.contrast_label ? (
+        {targetLabel ? <Text fw={600}>{targetLabel}</Text> : null}
+        {contrastLabel ? (
           <Text c="dimmed" size="sm">
-            Contrast: {diagnosis.contrast_label}
+            Contrast: {contrastLabel}
           </Text>
         ) : null}
-        <Text size="sm">{diagnosis.why_error}</Text>
+        <Text size="sm">{diagnosis.error_explanation}</Text>
         <Stack gap={4}>
           {diagnosis.rules.map((r, idx) => (
             <Text key={idx} size="sm">
@@ -95,8 +97,8 @@ export function DiagnosisCard({
 
 type StepKind =
   | { t: "diagnosis" }
-  | { t: "floodA"; i: number }
-  | { t: "floodB"; i: number }
+  | { t: "floodTarget"; i: number }
+  | { t: "floodContrast"; i: number }
   | { t: "production"; i: number };
 
 export function InputFloodLesson({
@@ -106,12 +108,12 @@ export function InputFloodLesson({
 }: LessonProps) {
   const steps = useMemo<StepKind[]>(() => {
     const s: StepKind[] = [{ t: "diagnosis" }];
-    for (let i = 0; i < lesson.flood.target.length; i++) {
-      s.push({ t: "floodA", i });
+    for (let i = 0; i < lesson.flood.target.items.length; i++) {
+      s.push({ t: "floodTarget", i });
     }
-    if (lesson.flood.contrast && lesson.flood.contrast.length) {
-      for (let i = 0; i < lesson.flood.contrast.length; i++) {
-        s.push({ t: "floodB", i });
+    if (lesson.flood.contrast && lesson.flood.contrast.items.length) {
+      for (let i = 0; i < lesson.flood.contrast.items.length; i++) {
+        s.push({ t: "floodContrast", i });
       }
     }
     for (let i = 0; i < lesson.production.length; i++) {
@@ -135,10 +137,10 @@ export function InputFloodLesson({
   const step = steps[idx];
 
   const keyFor = (s: StepKind): string => {
-    if (s.t === "floodA") {
+    if (s.t === "floodTarget") {
       return `A-${s.i}`;
     }
-    if (s.t === "floodB") {
+    if (s.t === "floodContrast") {
       return `B-${s.i}`;
     }
     if (s.t === "production") {
@@ -194,13 +196,13 @@ export function InputFloodLesson({
     if (passed.has(k)) {
       return;
     }
-    if (step.t === "floodA") {
-      const it = lesson.flood.target[step.i];
+    if (step.t === "floodTarget") {
+      const it = lesson.flood.target.items[step.i];
       void requestSpeech(it.text, it.en);
       return;
     }
-    if (step.t === "floodB") {
-      const it = lesson.flood.contrast?.[step.i];
+    if (step.t === "floodContrast") {
+      const it = lesson.flood.contrast?.items[step.i];
       if (it) {
         void requestSpeech(it.text, it.en);
       }
@@ -209,13 +211,13 @@ export function InputFloodLesson({
 
   const expectedForStep = (s: StepKind): string => {
     if (s.t === "diagnosis") {
-      return lesson.fix.corrected;
+      return lesson.diagnosis.corrected;
     }
-    if (s.t === "floodA") {
-      return lesson.flood.target[s.i].text;
+    if (s.t === "floodTarget") {
+      return lesson.flood.target.items[s.i].text;
     }
-    if (s.t === "floodB") {
-      return lesson.flood.contrast?.[s.i].text || "";
+    if (s.t === "floodContrast") {
+      return lesson.flood.contrast?.items[s.i].text || "";
     }
     if (s.t === "production") {
       return lesson.production[s.i].answer;
@@ -269,7 +271,7 @@ export function InputFloodLesson({
 
     const baseMatch = Boolean(isMatch ?? compare(expected, transcription));
     const relaxedMatch =
-      step.t === "floodA"
+      step.t === "floodTarget"
         ? compare(expected, transcription, 3) || baseMatch
         : baseMatch;
     setLastMatch(relaxedMatch);
@@ -302,7 +304,11 @@ export function InputFloodLesson({
       {step.t === "diagnosis" ? (
         <Card withBorder padding="lg">
           <Stack gap="sm">
-            <DiagnosisCard diagnosis={lesson.diagnosis} fix={lesson.fix} />
+            <DiagnosisCard
+              diagnosis={lesson.diagnosis}
+              targetLabel={lesson.flood.target.label}
+              contrastLabel={lesson.flood.contrast?.label || null}
+            />
             {!passed.has("diagnosis") ? (
               <Group justify="flex-end">
                 <Button onClick={markPassedAndNext} variant="light">
@@ -314,12 +320,12 @@ export function InputFloodLesson({
         </Card>
       ) : null}
 
-      {step.t === "floodA" ? (
+      {step.t === "floodTarget" ? (
         <Card withBorder padding="lg">
           <Stack gap="sm">
             <Title order={3}>Step A</Title>
             <Text c="dimmed" size="sm">
-              {step.i + 1} / {lesson.flood.target.length}
+              {step.i + 1} / {lesson.flood.target.items.length}
             </Text>
             {!passed.has(keyFor(step)) ? (
               <>
@@ -327,17 +333,19 @@ export function InputFloodLesson({
                   Speak the sentence to continue
                 </Text>
                 <Text size="sm" c="dimmed">
-                  {lesson.flood.target[step.i].en}
+                  {lesson.flood.target.items[step.i].en}
                 </Text>
-                <Text fw={600}>{lesson.flood.target[step.i].text}</Text>
+                <Text fw={600}>
+                  {lesson.flood.target.items[step.i].text}
+                </Text>
                 <Group justify="space-between" align="center">
                   <Button
                     leftSection={<IconPlayerPlayFilled size={16} />}
                     variant="default"
                     onClick={() =>
                       requestSpeech(
-                        lesson.flood.target[step.i].text,
-                        lesson.flood.target[step.i].en,
+                        lesson.flood.target.items[step.i].text,
+                        lesson.flood.target.items[step.i].en,
                       )
                     }
                     disabled={isAudioPlaying}
@@ -361,16 +369,16 @@ export function InputFloodLesson({
         </Card>
       ) : null}
 
-      {step.t === "floodB" ? (
+      {step.t === "floodContrast" ? (
         <Card withBorder padding="lg">
           <Stack gap="sm">
             <Title order={3}>Step B</Title>
             <Text c="dimmed" size="sm">
-              {step.i + 1} / {lesson.flood.contrast?.length || 0}
+              {step.i + 1} / {lesson.flood.contrast?.items.length || 0}
             </Text>
-            {lesson.flood.contrast?.[step.i].en ? (
+            {lesson.flood.contrast?.items[step.i].en ? (
               <Text size="sm" c="dimmed">
-                {lesson.flood.contrast?.[step.i].en}
+                {lesson.flood.contrast?.items[step.i].en}
               </Text>
             ) : null}
             {!passed.has(keyFor(step)) ? (
@@ -379,17 +387,17 @@ export function InputFloodLesson({
                   Speak the sentence to continue
                 </Text>
                 <Text fw={600}>
-                  {lesson.flood.contrast?.[step.i].text}
+                  {lesson.flood.contrast?.items[step.i].text}
                 </Text>
                 <Group justify="space-between" align="center">
                   <Button
                     leftSection={<IconPlayerPlayFilled size={16} />}
                     variant="default"
                     onClick={() =>
-                      lesson.flood.contrast?.[step.i]
+                      lesson.flood.contrast?.items[step.i]
                         ? requestSpeech(
-                            lesson.flood.contrast[step.i].text,
-                            lesson.flood.contrast[step.i].en,
+                            lesson.flood.contrast.items[step.i].text,
+                            lesson.flood.contrast.items[step.i].en,
                           )
                         : undefined
                     }
