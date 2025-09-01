@@ -106,11 +106,11 @@ export function InputFloodLesson({
 }: LessonProps) {
   const steps = useMemo<StepKind[]>(() => {
     const s: StepKind[] = [{ t: "diagnosis" }];
-    for (let i = 0; i < lesson.flood.A.length; i++) {
+    for (let i = 0; i < lesson.flood.target.length; i++) {
       s.push({ t: "floodA", i });
     }
-    if (lesson.flood.B && lesson.flood.B.length) {
-      for (let i = 0; i < lesson.flood.B.length; i++) {
+    if (lesson.flood.contrast && lesson.flood.contrast.length) {
+      for (let i = 0; i < lesson.flood.contrast.length; i++) {
         s.push({ t: "floodB", i });
       }
     }
@@ -195,12 +195,12 @@ export function InputFloodLesson({
       return;
     }
     if (step.t === "floodA") {
-      const it = lesson.flood.A[step.i];
+      const it = lesson.flood.target[step.i];
       void requestSpeech(it.text, it.en);
       return;
     }
     if (step.t === "floodB") {
-      const it = lesson.flood.B?.[step.i];
+      const it = lesson.flood.contrast?.[step.i];
       if (it) {
         void requestSpeech(it.text, it.en);
       }
@@ -212,10 +212,10 @@ export function InputFloodLesson({
       return lesson.fix.corrected;
     }
     if (s.t === "floodA") {
-      return lesson.flood.A[s.i].text;
+      return lesson.flood.target[s.i].text;
     }
     if (s.t === "floodB") {
-      return lesson.flood.B?.[s.i].text || "";
+      return lesson.flood.contrast?.[s.i].text || "";
     }
     if (s.t === "production") {
       return lesson.production[s.i].answer;
@@ -319,7 +319,7 @@ export function InputFloodLesson({
           <Stack gap="sm">
             <Title order={3}>Step A</Title>
             <Text c="dimmed" size="sm">
-              {step.i + 1} / {lesson.flood.A.length}
+              {step.i + 1} / {lesson.flood.target.length}
             </Text>
             {!passed.has(keyFor(step)) ? (
               <>
@@ -327,17 +327,17 @@ export function InputFloodLesson({
                   Speak the sentence to continue
                 </Text>
                 <Text size="sm" c="dimmed">
-                  {lesson.flood.A[step.i].en}
+                  {lesson.flood.target[step.i].en}
                 </Text>
-                <Text fw={600}>{lesson.flood.A[step.i].text}</Text>
+                <Text fw={600}>{lesson.flood.target[step.i].text}</Text>
                 <Group justify="space-between" align="center">
                   <Button
                     leftSection={<IconPlayerPlayFilled size={16} />}
                     variant="default"
                     onClick={() =>
                       requestSpeech(
-                        lesson.flood.A[step.i].text,
-                        lesson.flood.A[step.i].en,
+                        lesson.flood.target[step.i].text,
+                        lesson.flood.target[step.i].en,
                       )
                     }
                     disabled={isAudioPlaying}
@@ -366,11 +366,11 @@ export function InputFloodLesson({
           <Stack gap="sm">
             <Title order={3}>Step B</Title>
             <Text c="dimmed" size="sm">
-              {step.i + 1} / {lesson.flood.B?.length || 0}
+              {step.i + 1} / {lesson.flood.contrast?.length || 0}
             </Text>
-            {lesson.flood.B?.[step.i].en ? (
+            {lesson.flood.contrast?.[step.i].en ? (
               <Text size="sm" c="dimmed">
-                {lesson.flood.B?.[step.i].en}
+                {lesson.flood.contrast?.[step.i].en}
               </Text>
             ) : null}
             {!passed.has(keyFor(step)) ? (
@@ -378,16 +378,18 @@ export function InputFloodLesson({
                 <Text c="dimmed" size="sm">
                   Speak the sentence to continue
                 </Text>
-                <Text fw={600}>{lesson.flood.B?.[step.i].text}</Text>
+                <Text fw={600}>
+                  {lesson.flood.contrast?.[step.i].text}
+                </Text>
                 <Group justify="space-between" align="center">
                   <Button
                     leftSection={<IconPlayerPlayFilled size={16} />}
                     variant="default"
                     onClick={() =>
-                      lesson.flood.B?.[step.i]
+                      lesson.flood.contrast?.[step.i]
                         ? requestSpeech(
-                            lesson.flood.B[step.i].text,
-                            lesson.flood.B[step.i].en,
+                            lesson.flood.contrast[step.i].text,
+                            lesson.flood.contrast[step.i].en,
                           )
                         : undefined
                     }

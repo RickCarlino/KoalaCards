@@ -141,17 +141,17 @@ Sentences must be short (≤12 words), high-frequency, everyday, and idiomatic. 
 No duplicates; vary verbs and nouns (>=${MIN_FLOOD_COUNT} distinct verbs and nouns per section).
 
 How it is used (important):
-- flood.A and flood.B sentences are shown directly to learners and used verbatim in flashcards. Speech to text (TTS) voices will read them aloud.
+- flood.target and flood.contrast sentences are shown directly to learners and used verbatim in flashcards. Speech to text (TTS) voices will read them aloud.
 - Therefore, flood entries must be ONLY the sentence (field "text") and its English translation (field "en").
 - Do NOT add parenthetical explanations, labels, grammar tags, notes, romanization, or bracketed content in either field.
 - Do NOT wrap sentences in quotes. Do NOT include emojis or placeholders.
 - The learner's incorrect sentence must NOT appear unless corrected; only include correct sentences.
 
 Validity rules:
-- flood.A: every sentence must exemplify target_label and be grammatical.
-- flood.B: if contrast_label is provided, every sentence must exemplify the contrasting form and must NOT use the target form.
-  If contrast_label is null, set flood.B = null.
-- If the issue is vocabulary or usage, include the relevant word(s) in varied, grammatical contexts within flood.A (and flood.B if included).
+- flood.target: every sentence must exemplify target_label and be grammatical.
+- flood.contrast: if contrast_label is provided, every sentence must exemplify the contrasting form and must NOT use the target form.
+  If contrast_label is null, set flood.contrast = null.
+- If the issue is vocabulary or usage, include the relevant word(s) in varied, grammatical contexts within flood.target (and flood.contrast if included).
 
 Tone:
 corrective, concise.
@@ -163,22 +163,22 @@ Steps:
 1. Diagnosis:  
    - target_label: short description of the needed form.  
    - contrast_label: valid but contrasting form (or null).  
-   - why_error: brief rationale (≤240 chars).  
+   - error_explanation: brief rationale (≤240 chars).  
    - rules: 2-5 English bullet rules.  
 2. Flood:
-   - A: ${MIN_FLOOD_COUNT}-${MAX_FLOOD_COUNT} example sentences with target form.  
-   - B: ${MIN_FLOOD_COUNT}-${MAX_FLOOD_COUNT} contrasting examples OR null.
+   - target: ${MIN_FLOOD_COUNT}-${MAX_FLOOD_COUNT} example sentences with target form.  
+   - contrast: ${MIN_FLOOD_COUNT}-${MAX_FLOOD_COUNT} contrasting examples OR null.
 3. Production: ${MIN_FLOOD_COUNT}-6 items. Each: English prompt + ${language} answer.  
 4. Fix: { original: ${provided}, corrected: one natural sentence in ${language} that correctly expresses the expected meaning }. Do NOT put English here.
 
 Classification rule (internal, don't output):  
 - give_up (“idk”, “몰라요”, etc.) => treat as no attempt. 
-why_error = “You gave up. Correct form is X.” contrast_label = 
+error_explanation = “You gave up. Correct form is X.” contrast_label = 
 null unless explicit in reason. Model only target form.  
 - off_language (not in ${language} / unrelated text) => Use give_up.
 - totally_wrong (wrong meaning/form) => same as give_up.
 - vocabulary => Misunderstanding of a specifc word or words.
-  IF IT IS A VOCABULARY MISTAKE, MAKE SURE FLOOD.A and FLOOD.B
+  IF IT IS A VOCABULARY MISTAKE, MAKE SURE FLOOD.TARGET and FLOOD.CONTRAST
   CONTAIN THE VOCABULARY WORD(S) IN VARIOUS CONTEXTS.
   GRAMMATICALLY CORRECT SENTENCES ONLY!
 - usage => Misunderstanding of a common collocation or usage pattern.
@@ -187,8 +187,8 @@ null unless explicit in reason. Model only target form.
 - answer => normal compare & contrast.  
 
 STRICT COUNTS:
-  flood.A = ${MIN_FLOOD_COUNT}-${MAX_FLOOD_COUNT};
-  flood.B = ${MIN_FLOOD_COUNT}-${MAX_FLOOD_COUNT} or null;
+  flood.target = ${MIN_FLOOD_COUNT}-${MAX_FLOOD_COUNT};
+  flood.contrast = ${MIN_FLOOD_COUNT}-${MAX_FLOOD_COUNT} or null;
   production = ${MIN_FLOOD_COUNT}-6.
 
 Schema:
@@ -196,13 +196,13 @@ Schema:
   "diagnosis": {
     "target_label": string,
     "contrast_label": string | null,
-    "why_error": string,
+    "error_explanation": string,
     "rules": string[]
   },
   // flood entries are used verbatim in study cards — DO NOT add parenthesized/bracketed notes, quotes, emojis, or explanations
   "flood": {
-    "A": [{ "text": string, "en": string }],
-    "B": [{ "text": string, "en": string }] | null
+    "target": [{ "text": string, "en": string }],
+    "contrast": [{ "text": string, "en": string }] | null
   },
   "production": [{ "prompt_en": string, "answer": string }],
   "fix": { "original": string, "corrected": string }

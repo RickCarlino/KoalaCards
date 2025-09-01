@@ -14,8 +14,8 @@ export const InputFloodLessonSchema = z.object({
     rules: z.array(z.string()).min(1).max(3),
   }),
   flood: z.object({
-    A: z.array(SentenceSchema).min(2).max(4),
-    B: z.array(SentenceSchema).min(2).max(4).nullable().optional(),
+    target: z.array(SentenceSchema).min(2).max(4),
+    contrast: z.array(SentenceSchema).min(2).max(4).nullable().optional(),
   }),
   production: z
     .array(
