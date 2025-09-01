@@ -8,12 +8,23 @@ import {
 } from "../shared-types";
 import { shuffle, draw } from "radash";
 import { generateStructuredOutput } from "@/koala/ai";
-import { InputFloodLessonSchema } from "@/koala/types/input-flood";
-
-const MIN_FLOOD_COUNT = 2;
-const MAX_FLOOD_COUNT = 4;
-
-// Use shared lesson schema without unused fields like language/takeaways
+import {
+  InputFloodLessonSchema,
+  FLOOD_ITEM_COUNT_MAX,
+  FLOOD_ITEM_COUNT_MIN,
+  INPUT_FLOOD_SENTENCE_MAX_WORDS,
+  INPUT_FLOOD_WHY_ERROR_MAX_CHARS,
+  INPUT_FLOOD_PROMPT_RULES_MIN,
+  INPUT_FLOOD_PROMPT_RULES_MAX,
+  INPUT_FLOOD_PRODUCTION_MIN,
+  INPUT_FLOOD_PRODUCTION_MAX,
+  INPUT_FLOOD_RECENT_RESULTS_TAKE,
+  INPUT_FLOOD_GENERATE_MAX_TOKENS,
+  INPUT_FLOOD_GRADE_MAX_TOKENS,
+  INPUT_FLOOD_GRADE_ITEMS_MIN,
+  INPUT_FLOOD_GRADE_ITEMS_MAX,
+  INPUT_FLOOD_GRADE_TEXT_LIMIT,
+} from "@/koala/types/input-flood";
 
 const GradeRequestSchema = z.object({
   language: z.string(),
@@ -25,8 +36,8 @@ const GradeRequestSchema = z.object({
         attempt: z.string().default(""),
       }),
     )
-    .min(1)
-    .max(6),
+    .min(INPUT_FLOOD_GRADE_ITEMS_MIN)
+    .max(INPUT_FLOOD_GRADE_ITEMS_MAX),
 });
 
 const GradeResponseSchema = z.object({
@@ -70,7 +81,7 @@ export const inputFloodGenerate = procedure
           reviewedAt: null,
         },
         orderBy: { createdAt: "desc" },
-        take: 100,
+        take: INPUT_FLOOD_RECENT_RESULTS_TAKE,
       });
       return draw(shuffle(results)) ?? null;
     };
@@ -97,7 +108,7 @@ export const inputFloodGenerate = procedure
       model: ["openai", "cheap"],
       messages: [{ role: "user", content: prompt }],
       schema: InputFloodLessonSchema,
-      maxTokens: 12000,
+      maxTokens: INPUT_FLOOD_GENERATE_MAX_TOKENS,
     });
 
     return { lesson, source: { quizResultId: result.id, langCode } };
@@ -137,8 +148,8 @@ Task: Based on the data:
 - Why they are wrong: ${reason}
 
 Output JSON ONLY, strictly matching the schema. All learner-facing text must be ${language} except rules/diagnosis (English). No transliteration.
-Sentences must be short (≤12 words), high-frequency, everyday, and idiomatic. Provide English translations in "en" fields.
-No duplicates; vary verbs and nouns (>=${MIN_FLOOD_COUNT} distinct verbs and nouns per section).
+Sentences must be short (≤${INPUT_FLOOD_SENTENCE_MAX_WORDS} words), high-frequency, everyday, and idiomatic. Provide English translations in "en" fields.
+No duplicates; vary verbs and nouns (>=${FLOOD_ITEM_COUNT_MIN} distinct verbs and nouns per section).
 
 How it is used (important):
 - flood.target and flood.contrast sentences are shown directly to learners and used verbatim in flashcards. Speech to text (TTS) voices will read them aloud.
@@ -163,17 +174,17 @@ Steps:
 1. Diagnosis:  
    - target_label: short description of the needed form.  
    - contrast_label: valid but contrasting form (or null).  
-   - error_explanation: brief rationale (≤240 chars).  
-   - rules: 2-5 English bullet rules.  
+   - why_error: brief rationale (≤${INPUT_FLOOD_WHY_ERROR_MAX_CHARS} chars).  
+   - rules: ${INPUT_FLOOD_PROMPT_RULES_MIN}-${INPUT_FLOOD_PROMPT_RULES_MAX} English bullet rules.  
 2. Flood:
-   - target: ${MIN_FLOOD_COUNT}-${MAX_FLOOD_COUNT} example sentences with target form.  
-   - contrast: ${MIN_FLOOD_COUNT}-${MAX_FLOOD_COUNT} contrasting examples OR null.
-3. Production: ${MIN_FLOOD_COUNT}-6 items. Each: English prompt + ${language} answer.  
+   - target: ${FLOOD_ITEM_COUNT_MIN}-${FLOOD_ITEM_COUNT_MAX} example sentences with target form.  
+   - contrast: ${FLOOD_ITEM_COUNT_MIN}-${FLOOD_ITEM_COUNT_MAX} contrasting examples OR null.
+3. Production: ${INPUT_FLOOD_PRODUCTION_MIN}-${INPUT_FLOOD_PRODUCTION_MAX} items. Each: English prompt + ${language} answer.  
 4. Fix: { original: ${provided}, corrected: one natural sentence in ${language} that correctly expresses the expected meaning }. Do NOT put English here.
 
 Classification rule (internal, don't output):  
 - give_up (“idk”, “몰라요”, etc.) => treat as no attempt. 
-error_explanation = “You gave up. Correct form is X.” contrast_label = 
+why_error = “You gave up. Correct form is X.” contrast_label = 
 null unless explicit in reason. Model only target form.  
 - off_language (not in ${language} / unrelated text) => Use give_up.
 - totally_wrong (wrong meaning/form) => same as give_up.
@@ -187,16 +198,16 @@ null unless explicit in reason. Model only target form.
 - answer => normal compare & contrast.  
 
 STRICT COUNTS:
-  flood.target = ${MIN_FLOOD_COUNT}-${MAX_FLOOD_COUNT};
-  flood.contrast = ${MIN_FLOOD_COUNT}-${MAX_FLOOD_COUNT} or null;
-  production = ${MIN_FLOOD_COUNT}-6.
+  flood.target = ${FLOOD_ITEM_COUNT_MIN}-${FLOOD_ITEM_COUNT_MAX};
+  flood.contrast = ${FLOOD_ITEM_COUNT_MIN}-${FLOOD_ITEM_COUNT_MAX} or null;
+  production = ${INPUT_FLOOD_PRODUCTION_MIN}-${INPUT_FLOOD_PRODUCTION_MAX}.
 
 Schema:
 {
   "diagnosis": {
     "target_label": string,
     "contrast_label": string | null,
-    "error_explanation": string,
+    "why_error": string,
     "rules": string[]
   },
   // flood entries are used verbatim in study cards — DO NOT add parenthesized/bracketed notes, quotes, emojis, or explanations
@@ -222,11 +233,13 @@ export const inputFloodGrade = procedure
       supportedLanguages[
         input.language as keyof typeof supportedLanguages
       ] || input.language;
-    const items = input.items.slice(0, 6).map((it) => ({
-      prompt_en: it.prompt_en.slice(0, 200),
-      answer: it.answer.slice(0, 200),
-      attempt: it.attempt.slice(0, 200),
-    }));
+    const items = input.items
+      .slice(0, INPUT_FLOOD_GRADE_ITEMS_MAX)
+      .map((it) => ({
+        prompt_en: it.prompt_en.slice(0, INPUT_FLOOD_GRADE_TEXT_LIMIT),
+        answer: it.answer.slice(0, INPUT_FLOOD_GRADE_TEXT_LIMIT),
+        attempt: it.attempt.slice(0, INPUT_FLOOD_GRADE_TEXT_LIMIT),
+      }));
 
     const rubric = `You are grading short language speaking drills in ${languageName}.
 Score each item on two criteria and output JSON only as { "grades": [{ "score": number, "feedback": string }, ...] } with the same order and length as the input.
@@ -258,7 +271,7 @@ You cannot take away points for word choice or register as long as the response 
       model: ["openai", "cheap"],
       messages: [{ role: "user", content: userMsg }],
       schema: GradeResponseSchema,
-      maxTokens: 1500,
+      maxTokens: INPUT_FLOOD_GRADE_MAX_TOKENS,
     });
 
     return graded;
