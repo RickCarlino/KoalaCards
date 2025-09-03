@@ -20,7 +20,7 @@ const DEFAULT_IMAGE_SIZE = "1024x1024" as const;
 const registry: Record<ModelKind, string> = {
   fast: "gpt-5-nano",
   cheap: "gpt-5-mini",
-  good: "gpt-5",
+  good: "gpt-5-mini", // GPT 5 too expensive for general use. Testing a mini everywhere approach.
   imageDefault: "dall-e-3",
 };
 

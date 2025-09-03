@@ -13,6 +13,7 @@ export const editUserSettings = procedure
       playbackPercentage: z.number().min(0).max(1),
       dailyWritingGoal: z.number().int().min(1).optional(), // Added dailyWritingGoal (optional)
       writingFirst: z.boolean().optional(), // Added writingFirst (optional)
+      performCorrectiveReviews: z.boolean().optional(),
       updatedAt: z.date(), // Assuming you pass this from the frontend
     }),
   )
@@ -46,6 +47,9 @@ export const editUserSettings = procedure
         }),
         ...(input.writingFirst !== undefined && {
           writingFirst: input.writingFirst,
+        }),
+        ...(input.performCorrectiveReviews !== undefined && {
+          performCorrectiveReviews: input.performCorrectiveReviews,
         }),
         updatedAt: new Date(), // Always update the updatedAt field to current time
       },

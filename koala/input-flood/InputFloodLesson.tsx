@@ -246,6 +246,12 @@ export function InputFloodLesson({
     setGradeText(null);
 
     if (step.t === "production") {
+      // Fuzzy pre-check: if close enough, accept without AI grading
+      if (compare(expected, transcription)) {
+        setGradeText("Good match");
+        markPassedAndNext();
+        return;
+      }
       setGrading(true);
       try {
         const item = lesson.production[step.i];
