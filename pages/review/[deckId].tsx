@@ -277,14 +277,12 @@ function InterstitialPrompt({
 function CorrectiveBanner({
   picks,
   onStart,
-  loading,
   onHelpful,
   onNotHelpful,
   onDismiss,
 }: {
   picks: PickedMistake[];
   onStart: (id: number) => void;
-  loading: boolean;
   onHelpful: (id: number, helpful: boolean) => void;
   onNotHelpful: (id: number) => void;
   onDismiss: () => void;
@@ -378,7 +376,6 @@ function CorrectiveBanner({
                 variant="light"
                 aria-label="Prepare corrective drill"
                 onClick={() => onStart(p.id)}
-                loading={loading}
               >
                 Add to Current Review
               </Button>
@@ -517,8 +514,10 @@ function InnerReviewPage({
         {showBanner && picks.length > 0 && !gen && (
           <CorrectiveBanner
             picks={picks}
-            loading={genMutation.isLoading}
-            onStart={(id) => startDrill(id)}
+            onStart={(id) => {
+              setShowBanner(false);
+              void startDrill(id);
+            }}
             onDismiss={() => setShowBanner(false)}
             onHelpful={(id, helpful) => {
               setPicks((prev) =>
