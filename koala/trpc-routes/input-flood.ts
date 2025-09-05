@@ -14,8 +14,8 @@ import {
   FLOOD_ITEM_COUNT_MIN,
   INPUT_FLOOD_SENTENCE_MAX_WORDS,
   INPUT_FLOOD_WHY_ERROR_MAX_CHARS,
-  INPUT_FLOOD_PROMPT_RULES_MIN,
-  INPUT_FLOOD_PROMPT_RULES_MAX,
+  RULES_COUNT_MIN,
+  RULES_COUNT_MAX,
   INPUT_FLOOD_PRODUCTION_MIN,
   INPUT_FLOOD_PRODUCTION_MAX,
   INPUT_FLOOD_RECENT_RESULTS_TAKE,
@@ -174,8 +174,8 @@ Steps:
 1. Diagnosis:  
    - original: the learner's attempt (${provided}).  
    - corrected: one natural sentence in ${language} that correctly expresses the expected meaning (no English).  
-   - error_explanation: brief rationale (≤${INPUT_FLOOD_WHY_ERROR_MAX_CHARS} chars).  
-   - rules: ${INPUT_FLOOD_PROMPT_RULES_MIN}-${INPUT_FLOOD_PROMPT_RULES_MAX} English bullet rules.  
+  - error_explanation: brief rationale (≤${INPUT_FLOOD_WHY_ERROR_MAX_CHARS} chars).  
+  - rules: ${RULES_COUNT_MIN}-${RULES_COUNT_MAX} English bullet rules.  
 2. Flood:
    - target: label of the target form and ${FLOOD_ITEM_COUNT_MIN}-${FLOOD_ITEM_COUNT_MAX} example sentences in items[].  
    - contrast: label of the contrasting form and ${FLOOD_ITEM_COUNT_MIN}-${FLOOD_ITEM_COUNT_MAX} example sentences in items[] OR null.
