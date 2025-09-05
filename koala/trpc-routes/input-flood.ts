@@ -266,7 +266,7 @@ You cannot take away points for word choice or register as long as the response 
       .join("\n\n");
 
     const graded = await generateStructuredOutput({
-      model: ["openai", "cheap"],
+      model: ["openai", "good"],
       messages: [{ role: "user", content: userMsg }],
       schema: GradeResponseSchema,
       maxTokens: INPUT_FLOOD_GRADE_MAX_TOKENS,

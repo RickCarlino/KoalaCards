@@ -8,7 +8,7 @@ import type {
   LanguageGenFn,
   StructuredGenFn,
 } from "./ai";
-import type { ModelKind } from "./ai-types";
+import type { ModelKind, TextModel } from "./ai-types";
 
 const DEFAULT_MODEL: LanguageModelIdentifier = ["openai", "fast"];
 const DEFAULT_IMAGE_MODEL: ImageModelIdentifier = [
@@ -22,6 +22,17 @@ const registry: Record<ModelKind, string> = {
   cheap: "gpt-5-mini",
   good: "gpt-5-mini", // GPT 5 too expensive for general use. Testing a mini everywhere approach.
   imageDefault: "dall-e-3",
+};
+
+type ReasoningMap = Record<
+  TextModel,
+  "minimal" | "low" | "medium" | "high"
+>;
+
+const REASONING_EFFORT: ReasoningMap = {
+  fast: "minimal",
+  cheap: "low",
+  good: "medium",
 };
 
 function getModelString(
@@ -61,7 +72,7 @@ export const openaiGenerateStructuredOutput: StructuredGenFn = async (
   const modelName = getModelString(options.model ?? DEFAULT_MODEL);
   const gpt5opts = {
     verbosity: "low",
-    reasoning_effort: options.model[1] === "fast" ? "minimal" : "low",
+    reasoning_effort: REASONING_EFFORT[options.model?.[1]],
     max_completion_tokens: options.maxTokens ?? 1000,
   } as const;
   const res = await openai.chat.completions.parse({
