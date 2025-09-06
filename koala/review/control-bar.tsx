@@ -35,6 +35,7 @@ interface ControlBarProps extends CardReviewProps {
   cardsRemaining?: number;
   onOpenAssistant?: () => void;
   disableRecord?: boolean;
+  onFail?: () => void;
 }
 
 export const ControlBar: React.FC<ControlBarProps> = (props) => {
@@ -131,7 +132,9 @@ export const ControlBar: React.FC<ControlBarProps> = (props) => {
                 Next card ({HOTKEYS.SKIP})
               </Menu.Item>
               <Menu.Item
-                onClick={() => onGiveUp(card.uuid)}
+                onClick={() =>
+                  props.onFail ? props.onFail() : onGiveUp(card.uuid)
+                }
                 leftSection={<IconLetterF size={16} />}
               >
                 Fail card ({HOTKEYS.FAIL})

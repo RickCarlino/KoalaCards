@@ -11,6 +11,7 @@ import { RemedialIntro } from "./lesson-steps/remedial-intro";
 import { RemedialOutro } from "./lesson-steps/remedial-outro";
 import { Speaking } from "./lesson-steps/speaking";
 import { CardReviewProps, CardUI, ItemType } from "./types";
+import { Grade } from "femto-fsrs";
 
 const cardUIs: Record<ItemType, CardUI> = {
   newWordIntro: NewWordIntro,
@@ -32,6 +33,7 @@ interface CardReviewWithRecordingProps extends CardReviewProps {
   cardsRemaining?: number;
   onOpenAssistant?: () => void;
   disableRecord?: boolean;
+  onFail?: () => void;
 }
 
 import { useRef } from "react";
@@ -67,6 +69,9 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
     window.open(`/cards/${card.cardId}`, "_blank");
 
   const archiveCardMutation = trpc.archiveCard.useMutation();
+  const gradeQuiz = trpc.gradeQuiz.useMutation({
+    onSuccess: () => completeItem(currentStepUuid),
+  });
 
   const handleArchive = async () => {
     try {
@@ -103,12 +108,30 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
     }
   };
 
+  const isQuizStep =
+    itemType === "speaking" ||
+    itemType === "newWordOutro" ||
+    itemType === "remedialOutro";
+
+  const handleFail = async () => {
+    if (isQuizStep) {
+      // Proper "fail": grade AGAIN and advance
+      await gradeQuiz.mutateAsync({
+        perceivedDifficulty: Grade.AGAIN,
+        cardID: card.cardId,
+      });
+      return;
+    }
+    // Non-quiz steps: behave like skip/give up for now
+    onGiveUp(card.uuid);
+  };
+
   useHotkeys([
     [HOTKEYS.PLAY, onPlayAudio],
     [HOTKEYS.EDIT, openCardEditor],
     [HOTKEYS.SKIP, () => onSkip(card.uuid)],
     [HOTKEYS.ARCHIVE, handleArchive],
-    [HOTKEYS.FAIL, () => onGiveUp(card.uuid)],
+    [HOTKEYS.FAIL, handleFail],
     [HOTKEYS.RECORD, handleRecordToggle],
     [HOTKEYS.CONTINUE, () => completeItem(currentStepUuid)],
   ] as [string, () => void][]);
@@ -152,6 +175,7 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
           cardsRemaining={props.cardsRemaining}
           onOpenAssistant={props.onOpenAssistant}
           disableRecord={props.disableRecord}
+          onFail={handleFail}
         />
       </Box>
     </Box>
