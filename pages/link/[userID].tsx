@@ -66,6 +66,17 @@ export async function getServerSideProps(
   }
 
   if (context.req.method === "POST" && context.query.intent === "delete") {
+    const currentUser = email
+      ? await prismaClient.user.findUnique({ where: { email } })
+      : null;
+    if (currentUser?.id === userId) {
+      return {
+        redirect: {
+          destination: `/link/${userId}?error=self-delete`,
+          permanent: false,
+        },
+      };
+    }
     await prismaClient.user.delete({ where: { id: userId } });
     return {
       redirect: { destination: "/admin", permanent: false },
@@ -161,6 +172,10 @@ export async function getServerSideProps(
         createdAt: user.createdAt.toISOString(),
         lastSeen: user.lastSeen ? user.lastSeen.toISOString() : null,
       },
+      error:
+        context.query.error === "self-delete"
+          ? "Admins cannot delete themselves."
+          : null,
       counts,
       recentWriting,
       recentQuiz,
@@ -201,6 +216,7 @@ function fmtShort(iso: string | null): string {
 
 export default function UserOverviewPage({
   user,
+  error,
   counts,
   recentWriting,
   recentQuiz,
@@ -224,6 +240,11 @@ export default function UserOverviewPage({
             <Text size="sm" c="dimmed">
               {user.email} {user.name ? `• ${user.name}` : ""}
             </Text>
+            {error ? (
+              <Text size="sm" c="red" mt="xs">
+                {error}
+              </Text>
+            ) : null}
           </div>
           <form
             method="POST"
