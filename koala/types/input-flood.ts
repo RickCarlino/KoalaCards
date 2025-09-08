@@ -5,13 +5,13 @@ import { z } from "zod";
  * Maximum number of example sentences allowed in a single flood section
  * (applies to both target and contrast items).
  */
-export const FLOOD_ITEM_COUNT_MAX = 6;
+export const FLOOD_ITEM_COUNT_MAX = 4;
 
 /**
  * Minimum number of example sentences required in a flood section
  * (applies to both target and contrast items).
  */
-export const FLOOD_ITEM_COUNT_MIN = 4;
+export const FLOOD_ITEM_COUNT_MIN = 2;
 
 /**
  * Max tokens for the lesson generation structured output request
