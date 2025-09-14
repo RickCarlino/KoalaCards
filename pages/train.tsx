@@ -141,6 +141,7 @@ function table(data: QuizResult[]): React.ReactNode {
           <Table.Th>Acceptable</Table.Th>
           <Table.Th>Provided</Table.Th>
           <Table.Th>Reason</Table.Th>
+          <Table.Th>Tag</Table.Th>
         </Table.Tr>
       </Table.Thead>
       <Table.Tbody>
@@ -152,6 +153,7 @@ function table(data: QuizResult[]): React.ReactNode {
             userInput,
             reason,
             isAcceptable,
+            errorTag,
           } = row;
           return (
             <Table.Tr
@@ -165,6 +167,7 @@ function table(data: QuizResult[]): React.ReactNode {
               <Table.Td>{acceptableTerm}</Table.Td>
               <Table.Td>{userInput}</Table.Td>
               <Table.Td>{reason}</Table.Td>
+              <Table.Td>{errorTag ?? ""}</Table.Td>
             </Table.Tr>
           );
         })}

@@ -143,6 +143,7 @@ model QuizResult {
   eventType      String   @default("speaking-judgement")
   reviewedAt     DateTime?
   helpfulness    Int      @default(0)
+  errorTag       String?  @db.VarChar(20)
 
   @@index([createdAt])
   @@index([langCode, createdAt])
