@@ -54,7 +54,8 @@ async function addTagsToList() {
 
   const candidates = await prismaClient.quizResult.findMany({
     where: untaggedWhere,
-    orderBy: { createdAt: "asc" },
+    // Newest first to prioritize recent data
+    orderBy: { createdAt: "desc" },
     take: 10,
   });
 
@@ -67,7 +68,18 @@ async function addTagsToList() {
   const toTag = candidates;
   const system = {
     role: "system" as const,
-    content: `????`,
+    content: `
+  You are a language-learning error classifier.
+
+  Task:
+  - For each entry, assign exactly one error tag from the allowed list.
+  - Tags: ${ERROR_TAGS.join(", ")}.
+  - Use the tag that best explains why the userInput is wrong compared to the acceptableTerm.
+  - If the userInput is already natural and acceptable, use "ok".
+  - Return only valid JSON matching the schema provided (no extra text).
+
+  Be concise, consistent, and deterministic.
+  `.trim(),
   };
   const TAG_DESCRIPTIONS: Record<(typeof ERROR_TAGS)[number], string> = {
     ok: "No issues; a native speaker would accept this",
