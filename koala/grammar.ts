@@ -129,7 +129,7 @@ async function addTagsToList() {
     model: ["openai", "cheap"],
     messages: [system, user],
     schema: ZOut,
-    maxTokens: 300,
+    maxTokens: 3000,
   });
 
   if (!structured.items.length) return;
