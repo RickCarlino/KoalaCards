@@ -44,7 +44,7 @@ async function addTagsToList() {
 
   // Error tags are constrained by the enum above via Zod.
 
-  // 1) Pull a small batch of candidates (limit 10) that failed.
+  // 1) Pull a small batch of candidates (limit 12) that failed.
   // Note: We deliberately do not filter by errorTag here to avoid type drift issues
   // if the Prisma client hasn't been regenerated yet. We gate updates below instead.
   const untaggedWhere: Prisma.QuizResultWhereInput = {
@@ -56,14 +56,14 @@ async function addTagsToList() {
     where: untaggedWhere,
     // Newest first to prioritize recent data
     orderBy: { createdAt: "desc" },
-    take: 10,
+    take: 12,
   });
 
   if (candidates.length === 0) return;
 
   // 2) Ask the model to assign a tag per id, using structured output constrained to ERROR_TAGS
   const ZItem = z.object({ id: z.number().int(), tag: z.enum(ERROR_TAGS) });
-  const ZOut = z.object({ items: z.array(ZItem).max(10) });
+  const ZOut = z.object({ items: z.array(ZItem).max(12) });
 
   const toTag = candidates;
   const system = {
@@ -89,7 +89,7 @@ async function addTagsToList() {
     orthography: "Spelling, spacing, capitalization, diacritics, or punctuation issue",
     form: "Morphology/inflection/agreement/derivation is incorrect",
     syntax: "Word order or construction/valency is incorrect",
-    lexis: "Wrong word choice, collocation, or false friend",
+    lexis: "Wrong word choice, irrelevant word choice, bad collocation, or false friend",
     semantics: "Meaning is inaccurate, ambiguous, or misleading",
     unnatural: "Grammatically fine but not idiomatic or natural",
   };
@@ -126,7 +126,7 @@ async function addTagsToList() {
   };
 
   const structured = await generateStructuredOutput({
-    model: ["openai", "fast"],
+    model: ["openai", "cheap"],
     messages: [system, user],
     schema: ZOut,
     maxTokens: 300,
