@@ -118,7 +118,7 @@ export const gradeWriting = procedure
      * 3️⃣ Substantive grading - grammar + collocation checks
      */
     const feedback = await generateStructuredOutput({
-      model: ["openai", "cheap"],
+      model: ["openai", "good"],
       schema: ApiResponseSchema,
       messages: [
         { role: "system", content: ESSAY_GRADING_PROMPT },

@@ -14,8 +14,8 @@ import {
   FLOOD_ITEM_COUNT_MIN,
   INPUT_FLOOD_SENTENCE_MAX_WORDS,
   INPUT_FLOOD_WHY_ERROR_MAX_CHARS,
-  INPUT_FLOOD_PROMPT_RULES_MIN,
-  INPUT_FLOOD_PROMPT_RULES_MAX,
+  RULES_COUNT_MIN,
+  RULES_COUNT_MAX,
   INPUT_FLOOD_PRODUCTION_MIN,
   INPUT_FLOOD_PRODUCTION_MAX,
   INPUT_FLOOD_RECENT_RESULTS_TAKE,
@@ -159,9 +159,9 @@ How it is used (important):
 - The learner's incorrect sentence must NOT appear unless corrected; only include correct sentences.
 
 Validity rules:
-- flood.target: every sentence must exemplify target_label and be grammatical.
-- flood.contrast: if contrast_label is provided, every sentence must exemplify the contrasting form and must NOT use the target form.
-  If contrast_label is null, set flood.contrast = null.
+- flood.target: every sentence must exemplify the target form indicated by flood.target.label and be grammatical.
+- flood.contrast: if included, every sentence must exemplify the contrasting form indicated by flood.contrast.label and must NOT use the target form.
+  If there is no clear contrasting form, set flood.contrast = null.
 - If the issue is vocabulary or usage, include the relevant word(s) in varied, grammatical contexts within flood.target (and flood.contrast if included).
 
 Tone:
@@ -172,20 +172,19 @@ Always explain in English.
 
 Steps:
 1. Diagnosis:  
-   - target_label: short description of the needed form.  
-   - contrast_label: valid but contrasting form (or null).  
-   - why_error: brief rationale (≤${INPUT_FLOOD_WHY_ERROR_MAX_CHARS} chars).  
-   - rules: ${INPUT_FLOOD_PROMPT_RULES_MIN}-${INPUT_FLOOD_PROMPT_RULES_MAX} English bullet rules.  
+   - original: the learner's attempt (${provided}).  
+   - corrected: one natural sentence in ${language} that correctly expresses the expected meaning (no English).  
+  - error_explanation: brief rationale (≤${INPUT_FLOOD_WHY_ERROR_MAX_CHARS} chars).  
+  - rules: ${RULES_COUNT_MIN}-${RULES_COUNT_MAX} English bullet rules.  
 2. Flood:
-   - target: ${FLOOD_ITEM_COUNT_MIN}-${FLOOD_ITEM_COUNT_MAX} example sentences with target form.  
-   - contrast: ${FLOOD_ITEM_COUNT_MIN}-${FLOOD_ITEM_COUNT_MAX} contrasting examples OR null.
-3. Production: ${INPUT_FLOOD_PRODUCTION_MIN}-${INPUT_FLOOD_PRODUCTION_MAX} items. Each: English prompt + ${language} answer.  
-4. Fix: { original: ${provided}, corrected: one natural sentence in ${language} that correctly expresses the expected meaning }. Do NOT put English here.
+   - target: label of the target form and ${FLOOD_ITEM_COUNT_MIN}-${FLOOD_ITEM_COUNT_MAX} example sentences in items[].  
+   - contrast: label of the contrasting form and ${FLOOD_ITEM_COUNT_MIN}-${FLOOD_ITEM_COUNT_MAX} example sentences in items[] OR null.
+3. Production: ${INPUT_FLOOD_PRODUCTION_MIN}-${INPUT_FLOOD_PRODUCTION_MAX} items. Each: English prompt + ${language} answer.
 
 Classification rule (internal, don't output):  
 - give_up (“idk”, “몰라요”, etc.) => treat as no attempt. 
-why_error = “You gave up. Correct form is X.” contrast_label = 
-null unless explicit in reason. Model only target form.  
+error_explanation = “You gave up. Correct form is X.”
+If a clear contrasting form is explicit in the reason, include flood.contrast with an appropriate label; otherwise set flood.contrast = null. Model only the target form in flood.target.
 - off_language (not in ${language} / unrelated text) => Use give_up.
 - totally_wrong (wrong meaning/form) => same as give_up.
 - vocabulary => Misunderstanding of a specifc word or words.
@@ -198,25 +197,24 @@ null unless explicit in reason. Model only target form.
 - answer => normal compare & contrast.  
 
 STRICT COUNTS:
-  flood.target = ${FLOOD_ITEM_COUNT_MIN}-${FLOOD_ITEM_COUNT_MAX};
-  flood.contrast = ${FLOOD_ITEM_COUNT_MIN}-${FLOOD_ITEM_COUNT_MAX} or null;
+  flood.target.items = ${FLOOD_ITEM_COUNT_MIN}-${FLOOD_ITEM_COUNT_MAX};
+  flood.contrast.items = ${FLOOD_ITEM_COUNT_MIN}-${FLOOD_ITEM_COUNT_MAX} or null;
   production = ${INPUT_FLOOD_PRODUCTION_MIN}-${INPUT_FLOOD_PRODUCTION_MAX}.
 
 Schema:
 {
   "diagnosis": {
-    "target_label": string,
-    "contrast_label": string | null,
-    "why_error": string,
+    "original": string,
+    "corrected": string,
+    "error_explanation": string,
     "rules": string[]
   },
   // flood entries are used verbatim in study cards — DO NOT add parenthesized/bracketed notes, quotes, emojis, or explanations
   "flood": {
-    "target": [{ "text": string, "en": string }],
-    "contrast": [{ "text": string, "en": string }] | null
+    "target": { "label": string, "items": [{ "text": string, "en": string }] },
+    "contrast": { "label": string, "items": [{ "text": string, "en": string }] } | null
   },
-  "production": [{ "prompt_en": string, "answer": string }],
-  "fix": { "original": string, "corrected": string }
+  "production": [{ "prompt_en": string, "answer": string }]
 }`;
 }
 
@@ -268,7 +266,7 @@ You cannot take away points for word choice or register as long as the response 
       .join("\n\n");
 
     const graded = await generateStructuredOutput({
-      model: ["openai", "cheap"],
+      model: ["openai", "good"],
       messages: [{ role: "user", content: userMsg }],
       schema: GradeResponseSchema,
       maxTokens: INPUT_FLOOD_GRADE_MAX_TOKENS,

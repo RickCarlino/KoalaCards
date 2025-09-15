@@ -27,6 +27,7 @@ import {
   IconTrendingUp,
 } from "@tabler/icons-react";
 import { GetServerSideProps } from "next";
+import { prismaClient } from "@/koala/prisma-client";
 import { useRouter } from "next/router";
 
 type CardView = {
@@ -43,6 +44,7 @@ type CardView = {
   nextReview: number;
   stability: number;
   difficulty: number;
+  deckName: string | null;
 };
 
 type CardPageProps = {
@@ -261,6 +263,14 @@ function CardEditor({ card }: CardPageProps) {
               <Stack gap={6}>
                 <Group gap="xs">
                   <Text c="dimmed" size="sm">
+                    Deck:
+                  </Text>
+                  <Text size="sm" fw={500}>
+                    {card.deckName || "—"}
+                  </Text>
+                </Group>
+                <Group gap="xs">
+                  <Text c="dimmed" size="sm">
                     Language:
                   </Text>
                   <Text size="sm" fw={500}>
@@ -303,6 +313,12 @@ export const getServerSideProps: GetServerSideProps<
   const cardId = parseInt(card_id as string, 10);
   const card = await getCardOrFail(cardId, dbUser.id);
   const imageURL = (await maybeGetCardImageUrl(card.imageBlobId)) || null;
+  const deck = card.deckId
+    ? await prismaClient.deck.findFirst({
+        where: { id: card.deckId, userId: dbUser.id },
+        select: { name: true },
+      })
+    : null;
 
   return {
     props: {
@@ -320,6 +336,7 @@ export const getServerSideProps: GetServerSideProps<
         nextReview: card.nextReview ?? 0,
         stability: card.stability ?? 0,
         difficulty: card.difficulty ?? 0,
+        deckName: deck?.name || null,
       },
     },
   };

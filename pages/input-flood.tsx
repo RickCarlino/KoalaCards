@@ -18,6 +18,7 @@ import { trpc } from "@/koala/trpc-config";
 import type { GetServerSideProps } from "next";
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { prismaClient } from "@/koala/prisma-client";
+import { INPUT_FLOOD_UI_PICKS_TAKE } from "@/koala/types/input-flood";
 import { IconChevronDown, IconChevronUp } from "@tabler/icons-react";
 
 type GenerateResponse = {
@@ -272,7 +273,7 @@ export const getServerSideProps: GetServerSideProps<BetaProps> = async (
       helpfulness: { gte: 0 },
     },
     orderBy: [{ helpfulness: "desc" }, { createdAt: "desc" }],
-    take: 12,
+    take: INPUT_FLOOD_UI_PICKS_TAKE,
   });
   const picks = results.map((r) => ({
     id: r.id,

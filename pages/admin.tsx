@@ -6,6 +6,7 @@ import {
 import { getSession } from "next-auth/react";
 import { prismaClient } from "@/koala/prisma-client";
 import { Container, Table, Title } from "@mantine/core";
+import { useRouter } from "next/router";
 import { Prisma } from "@prisma/client";
 
 const ONE_DAY = 24 * 60 * 60 * 1000;
@@ -91,7 +92,37 @@ export async function getServerSideProps(
 
 type Props = InferGetServerSidePropsType<typeof getServerSideProps>;
 
+function yesNo(value: boolean): string {
+  return value ? "Yes" : "No";
+}
+
+function fmtDate(iso: string | null): string {
+  if (!iso) {
+    return "No";
+  }
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const MONTHS = [
+    "JAN",
+    "FEB",
+    "MAR",
+    "APR",
+    "MAY",
+    "JUN",
+    "JUL",
+    "AUG",
+    "SEP",
+    "OCT",
+    "NOV",
+    "DEC",
+  ];
+  return `${MONTHS[d.getMonth()]} ${pad(d.getDate())} ${pad(d.getHours())}:${pad(
+    d.getMinutes(),
+  )}`;
+}
+
 export default function AdminPage({ userData }: Props) {
+  const router = useRouter();
   return (
     <Container size="md" mt="xl">
       <Title order={1} mb="sm">
@@ -110,17 +141,17 @@ export default function AdminPage({ userData }: Props) {
         </thead>
         <tbody>
           {userData.map((u) => (
-            <tr key={u.id}>
+            <tr
+              key={u.id}
+              style={{ cursor: "pointer" }}
+              onClick={() => router.push(`/link/${u.id}`)}
+            >
               <td>{u.email}</td>
               <td>{u.daysSinceLastSeen}</td>
               <td>{u.cardCount}</td>
               <td>{u.studiedCount}</td>
-              <td>{u.isAdmin ? "Yes" : "No"}</td>
-              <td>
-                {u.createdAt
-                  ? new Date(u.createdAt).toLocaleDateString()
-                  : "No"}
-              </td>
+              <td>{yesNo(u.isAdmin)}</td>
+              <td>{fmtDate(u.createdAt)}</td>
             </tr>
           ))}
         </tbody>

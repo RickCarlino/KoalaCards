@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { generateStructuredOutput } from "./ai";
 import { prismaClient } from "./prisma-client";
+import type { Prisma } from "@prisma/client";
 import { QuizEvaluator } from "./quiz-evaluators/types";
 import { getLangName } from "./get-lang-name";
 import { LangCode } from "./shared-types";
@@ -26,11 +27,136 @@ const zodGradeResponse = z.object({
   why: z.string(),
 });
 
+async function addTagsToList() {
+  console.log("tagging untagged quiz results");
+  const ERROR_TAGS = [
+    "ok",            // no issues, a native speaker would say this
+    "form",          // morphology, inflection, agreement, derivation
+    "input-error",   // speech-to-text glitch, typo, spacing, accent usage, transcription slip
+    "syntax",        // word order, constructions, valency, sentence structure
+    "lexis",         // wrong word, collocation, false friend, sense mismatch
+    "semantics",     // meaning inaccurate, ambiguous, misleading
+    "pragmatics",    // register, politeness, tone, discourse use
+    "orthography",   // spelling, spacing, diacritics, capitalization, punctuation
+    "unnatural",     // grammatically fine but not idiomatic
+    "better-option"  // understandable, but a clearer/more natural alternative exists
+  ] as const;
+
+  // Error tags are constrained by the enum above via Zod.
+
+  // 1) Pull a small batch of candidates (limit 12) that failed.
+  // Note: We deliberately do not filter by errorTag here to avoid type drift issues
+  // if the Prisma client hasn't been regenerated yet. We gate updates below instead.
+  const untaggedWhere: Prisma.QuizResultWhereInput = {
+    isAcceptable: false,
+    OR: [{ errorTag: null }, { errorTag: "" }],
+  };
+
+  const candidates = await prismaClient.quizResult.findMany({
+    where: untaggedWhere,
+    // Newest first to prioritize recent data
+    orderBy: { createdAt: "desc" },
+    take: 12,
+  });
+
+  if (candidates.length === 0) return;
+
+  // 2) Ask the model to assign a tag per id, using structured output constrained to ERROR_TAGS
+  const ZItem = z.object({ id: z.number().int(), tag: z.enum(ERROR_TAGS) });
+  const ZOut = z.object({ items: z.array(ZItem).max(12) });
+
+  const toTag = candidates;
+  const system = {
+    role: "system" as const,
+    content: `
+  You are a language-learning error classifier.
+
+  Task:
+  - For each entry, assign exactly one error tag from the allowed list.
+  - Tags: ${ERROR_TAGS.join(", ")}.
+  - Use the tag that best explains why the userInput is wrong compared to the acceptableTerm.
+  - If the userInput is already natural and acceptable, use "ok".
+  - Return only valid JSON matching the schema provided (no extra text).
+
+  Be concise, consistent, and deterministic.
+  `.trim(),
+  };
+  const TAG_DESCRIPTIONS: Record<(typeof ERROR_TAGS)[number], string> = {
+    ok: "No issues; a native speaker would accept this",
+    "better-option": "Understandable, but a clearer or more natural alternative exists",
+    "input-error": "Transcription artifact: STT glitch, typo, spacing, or diacritics",
+    pragmatics: "Register, politeness, tone, or discourse use is off",
+    orthography: "Spelling, spacing, capitalization, diacritics, or punctuation issue",
+    form: "Morphology/inflection/agreement/derivation is incorrect",
+    syntax: "Word order or construction/valency is incorrect",
+    lexis: "Wrong word choice, irrelevant word choice, bad collocation, or false friend",
+    semantics: "Meaning is inaccurate, ambiguous, or misleading",
+    unnatural: "Grammatically fine but not idiomatic or natural",
+  };
+
+  const tagDescriptionsBlock = Object.entries(TAG_DESCRIPTIONS)
+    .map(([k, v]) => `\`${k}\`: ${v}.`)
+    .join("\n");
+
+  const entriesBlock = toTag
+    .map(
+      (r) =>
+        [
+          `id=${r.id}`,
+          `lang=${r.langCode}`,
+          `teacherQuestion=${r.definition}`,
+          `studentResponse=${r.userInput}`,
+          `---`,
+        ].join("\n"),
+    )
+    .join("\n");
+
+  const user = {
+    role: "user" as const,
+    content: [
+      "Return JSON: { items: [{ id, tag }] }.",
+      `Tags enum: ${ERROR_TAGS.join(", ")}.`,
+      "Tag descriptions:",
+      tagDescriptionsBlock,
+      "Entries:",
+      "```",
+      entriesBlock,
+      "```",
+    ].join("\n\n"),
+  };
+
+  const structured = await generateStructuredOutput({
+    model: ["openai", "cheap"],
+    messages: [system, user],
+    schema: ZOut,
+    maxTokens: 3000,
+  });
+
+  if (!structured.items.length) return;
+  console.log(JSON.stringify([system, user, structured], null, 2));
+  // 3) Apply tags; only set tag if it's currently null/empty to avoid overwriting
+  const DOWNVOTE_TAGS = new Set(["ok", "input-error", "better-option", "pragmatics", "orthography"]);
+  const updates = structured.items.map((it) => {
+    const where: Prisma.QuizResultWhereInput = {
+      id: it.id,
+      isAcceptable: false,
+      OR: [{ errorTag: null }, { errorTag: "" }],
+    };
+    const data: Prisma.QuizResultUpdateManyMutationInput = {
+      errorTag: it.tag,
+      ...(DOWNVOTE_TAGS.has(it.tag) ? { helpfulness: -1 } : {}),
+    };
+    return prismaClient.quizResult.updateMany({ where, data });
+  });
+
+  await Promise.all(updates);
+}
+
 const storeTrainingData: StoreTrainingData = async (props, exp) => {
   const { term, definition, langCode, userInput, userId, eventType } =
     props;
   const { yesNo, why } = exp;
-
+  void addTagsToList();
   const created = await prismaClient.quizResult.create({
     data: {
       userId,
