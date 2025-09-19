@@ -12,6 +12,7 @@ import {
   GradingResult,
 } from "./types";
 import { playAudio } from "../play-audio";
+import { useUserSettings } from "@/koala/settings-provider";
 
 const queue = (): Queue => ({
   newWordIntro: [], // DONE
@@ -85,6 +86,7 @@ export function useReview(deckId: number) {
   const repairCardMutation = trpc.editCard.useMutation();
   const [state, dispatch] = useReducer(reducer, initialState());
   const [isFetching, setIsFetching] = useState(true);
+  const userSettings = useUserSettings();
 
   // Use URL "take" param if available, otherwise default to 5.
   const urlParams = new URLSearchParams(window.location.search);
@@ -135,7 +137,11 @@ export function useReview(deckId: number) {
     },
     giveUp: async (cardUUID: string) => {
       const card = state.cards[cardUUID];
-      card && (await playAudio(card.termAndDefinitionAudio));
+      card &&
+        (await playAudio(
+          card.termAndDefinitionAudio,
+          userSettings.playbackSpeed,
+        ));
       dispatch({ type: "GIVE_UP", payload: { cardUUID } });
     },
     completeItem: (uuid: string) => {

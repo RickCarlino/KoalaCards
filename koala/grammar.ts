@@ -30,16 +30,16 @@ const zodGradeResponse = z.object({
 async function addTagsToList() {
   console.log("tagging untagged quiz results");
   const ERROR_TAGS = [
-    "ok",            // no issues, a native speaker would say this
-    "form",          // morphology, inflection, agreement, derivation
-    "input-error",   // speech-to-text glitch, typo, spacing, accent usage, transcription slip
-    "syntax",        // word order, constructions, valency, sentence structure
-    "lexis",         // wrong word, collocation, false friend, sense mismatch
-    "semantics",     // meaning inaccurate, ambiguous, misleading
-    "pragmatics",    // register, politeness, tone, discourse use
-    "orthography",   // spelling, spacing, diacritics, capitalization, punctuation
-    "unnatural",     // grammatically fine but not idiomatic
-    "better-option"  // understandable, but a clearer/more natural alternative exists
+    "ok", // no issues, a native speaker would say this
+    "form", // morphology, inflection, agreement, derivation
+    "input-error", // speech-to-text glitch, typo, spacing, accent usage, transcription slip
+    "syntax", // word order, constructions, valency, sentence structure
+    "lexis", // wrong word, collocation, false friend, sense mismatch
+    "semantics", // meaning inaccurate, ambiguous, misleading
+    "pragmatics", // register, politeness, tone, discourse use
+    "orthography", // spelling, spacing, diacritics, capitalization, punctuation
+    "unnatural", // grammatically fine but not idiomatic
+    "better-option", // understandable, but a clearer/more natural alternative exists
   ] as const;
 
   // Error tags are constrained by the enum above via Zod.
@@ -59,10 +59,15 @@ async function addTagsToList() {
     take: 12,
   });
 
-  if (candidates.length === 0) return;
+  if (candidates.length === 0) {
+    return;
+  }
 
   // 2) Ask the model to assign a tag per id, using structured output constrained to ERROR_TAGS
-  const ZItem = z.object({ id: z.number().int(), tag: z.enum(ERROR_TAGS) });
+  const ZItem = z.object({
+    id: z.number().int(),
+    tag: z.enum(ERROR_TAGS),
+  });
   const ZOut = z.object({ items: z.array(ZItem).max(12) });
 
   const toTag = candidates;
@@ -83,13 +88,17 @@ async function addTagsToList() {
   };
   const TAG_DESCRIPTIONS: Record<(typeof ERROR_TAGS)[number], string> = {
     ok: "No issues; a native speaker would accept this",
-    "better-option": "Understandable, but a clearer or more natural alternative exists",
-    "input-error": "Transcription artifact: STT glitch, typo, spacing, or diacritics",
+    "better-option":
+      "Understandable, but a clearer or more natural alternative exists",
+    "input-error":
+      "Transcription artifact: STT glitch, typo, spacing, or diacritics",
     pragmatics: "Register, politeness, tone, or discourse use is off",
-    orthography: "Spelling, spacing, capitalization, diacritics, or punctuation issue",
+    orthography:
+      "Spelling, spacing, capitalization, diacritics, or punctuation issue",
     form: "Morphology/inflection/agreement/derivation is incorrect",
     syntax: "Word order or construction/valency is incorrect",
-    lexis: "Wrong word choice, irrelevant word choice, bad collocation, or false friend",
+    lexis:
+      "Wrong word choice, irrelevant word choice, bad collocation, or false friend",
     semantics: "Meaning is inaccurate, ambiguous, or misleading",
     unnatural: "Grammatically fine but not idiomatic or natural",
   };
@@ -99,15 +108,14 @@ async function addTagsToList() {
     .join("\n");
 
   const entriesBlock = toTag
-    .map(
-      (r) =>
-        [
-          `id=${r.id}`,
-          `lang=${r.langCode}`,
-          `teacherQuestion=${r.definition}`,
-          `studentResponse=${r.userInput}`,
-          `---`,
-        ].join("\n"),
+    .map((r) =>
+      [
+        `id=${r.id}`,
+        `lang=${r.langCode}`,
+        `teacherQuestion=${r.definition}`,
+        `studentResponse=${r.userInput}`,
+        `---`,
+      ].join("\n"),
     )
     .join("\n");
 
@@ -132,10 +140,18 @@ async function addTagsToList() {
     maxTokens: 3000,
   });
 
-  if (!structured.items.length) return;
+  if (!structured.items.length) {
+    return;
+  }
   console.log(JSON.stringify([system, user, structured], null, 2));
   // 3) Apply tags; only set tag if it's currently null/empty to avoid overwriting
-  const DOWNVOTE_TAGS = new Set(["ok", "input-error", "better-option", "pragmatics", "orthography"]);
+  const DOWNVOTE_TAGS = new Set([
+    "ok",
+    "input-error",
+    "better-option",
+    "pragmatics",
+    "orthography",
+  ]);
   const updates = structured.items.map((it) => {
     const where: Prisma.QuizResultWhereInput = {
       id: it.id,

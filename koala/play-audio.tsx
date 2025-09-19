@@ -1,5 +1,5 @@
 let lastAudio: string;
-export const playAudio = (urlOrDataURI: string) => {
+export const playAudio = (urlOrDataURI: string, playbackRate?: number) => {
   return new Promise((resolve, reject) => {
     if (!urlOrDataURI) {
       reject(new Error("No audio source provided."));
@@ -8,6 +8,19 @@ export const playAudio = (urlOrDataURI: string) => {
     let done = false;
 
     const audio = new Audio(urlOrDataURI);
+
+    // Apply playback rate if provided and valid; otherwise, keep legacy
+    // behavior of slowing repeated taps to 0.6x.
+    const hasValidRate =
+      typeof playbackRate === "number" &&
+      Number.isFinite(playbackRate) &&
+      playbackRate > 0;
+    if (hasValidRate) {
+      audio.playbackRate = playbackRate as number;
+    }
+    if (!hasValidRate && lastAudio === urlOrDataURI) {
+      audio.playbackRate = 0.6;
+    }
 
     const ok = () => {
       if (done) {
@@ -18,9 +31,6 @@ export const playAudio = (urlOrDataURI: string) => {
       audio.pause();
       resolve("");
     };
-    if (lastAudio === urlOrDataURI) {
-      audio.playbackRate = 0.6;
-    }
     lastAudio = urlOrDataURI;
 
     audio.onended = ok;
