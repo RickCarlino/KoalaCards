@@ -219,7 +219,7 @@ export async function getLessons({
   take,
 }: GetLessonInputParams) {
   if (take > DECK_HAND_HARD_CAP) {
-    take = 45;
+    take = DECK_HAND_HARD_CAP;
   }
 
   const rawHand = await buildHand(userId, deckId, now, take);
