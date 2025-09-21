@@ -8,6 +8,9 @@ import { CardImage } from "../components/CardImage";
 import { usePhaseManager } from "../hooks/usePhaseManager";
 import { HOTKEYS } from "../hotkeys";
 import { FeedbackVote } from "../components/FeedbackVote";
+import { useQuizGrading } from "../use-quiz-grading";
+import { playAudio } from "@/koala/play-audio";
+import { useUserSettings } from "@/koala/settings-provider";
 
 type Phase = "ready" | "processing" | "success" | "failure";
 
@@ -88,6 +91,11 @@ export const RemedialOutro: CardUI = ({
   const [gradingResult, setGradingResult] = useState<GradingResult | null>(
     null,
   );
+  const userSettings = useUserSettings();
+  const { gradeWithAgain, isLoading } = useQuizGrading({
+    cardId: card.cardId,
+    onSuccess: onProceed,
+  });
 
   const { gradeAudio } = useVoiceGrading({
     targetText: card.term,
@@ -132,6 +140,18 @@ export const RemedialOutro: CardUI = ({
     onProvideAudioHandler?.(processRecording);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStepUuid]);
+
+  const handleIDK = async () => {
+    await playAudio(
+      card.termAndDefinitionAudio,
+      userSettings.playbackSpeed,
+    );
+    await playAudio(
+      card.termAndDefinitionAudio,
+      userSettings.playbackSpeed,
+    );
+    await gradeWithAgain();
+  };
 
   // Early return for failure case
   if (phase === "failure") {
@@ -195,6 +215,18 @@ export const RemedialOutro: CardUI = ({
       <Text size="xl" fw={700} ta="center">
         How would you say "{definition}"?
       </Text>
+
+      <Button
+        color="red"
+        variant="outline"
+        onClick={handleIDK}
+        disabled={isLoading}
+        fullWidth
+        size="md"
+        maw={400}
+      >
+        I don't know ({HOTKEYS.FAIL})
+      </Button>
 
       {renderContent()}
     </Stack>

@@ -40,6 +40,7 @@ import { useRef } from "react";
 import { useMediaRecorder } from "@/koala/hooks/use-media-recorder";
 import { useUserSettings } from "@/koala/settings-provider";
 import { playBlob } from "@/koala/utils/play-blob-audio";
+import { playAudio } from "@/koala/play-audio";
 
 export const CardReview: React.FC<CardReviewWithRecordingProps> = (
   props,
@@ -49,7 +50,6 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
     completeItem,
     currentStepUuid,
     itemType,
-    onGiveUp,
     onPlayAudio,
     onSkip,
   } = props;
@@ -114,6 +114,15 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
     itemType === "remedialOutro";
 
   const handleFail = async () => {
+    // Always reinforce by playing the term audio twice on fail
+    await playAudio(
+      card.termAndDefinitionAudio,
+      userSettings.playbackSpeed,
+    );
+    await playAudio(
+      card.termAndDefinitionAudio,
+      userSettings.playbackSpeed,
+    );
     if (isQuizStep) {
       // Proper "fail": grade AGAIN and advance
       await gradeQuiz.mutateAsync({
@@ -122,8 +131,8 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
       });
       return;
     }
-    // Non-quiz steps: behave like skip/give up for now
-    onGiveUp(card.uuid);
+    // Non-quiz steps: advance to next (no extra audio; already played above)
+    onSkip(card.uuid);
   };
 
   useHotkeys([

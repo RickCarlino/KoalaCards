@@ -1,4 +1,4 @@
-import { Stack, Text } from "@mantine/core";
+import { Button, Stack, Text } from "@mantine/core";
 import { CardReviewProps } from "../types";
 import { useEffect, useState } from "react";
 import { useVoiceGrading } from "../use-voice-grading";
@@ -11,6 +11,7 @@ import { usePhaseManager } from "../hooks/usePhaseManager";
 import { useGradeHandler } from "../hooks/useGradeHandler";
 import { playAudio } from "@/koala/play-audio";
 import { useUserSettings } from "@/koala/settings-provider";
+import { HOTKEYS } from "../hotkeys";
 
 type Phase = "ready" | "processing" | "success" | "failure";
 type QuizType = "speaking" | "newWordOutro" | "remedialOutro";
@@ -151,6 +152,19 @@ export const QuizCard: React.FC<QuizCardProps> = ({
     onProceed();
   };
 
+  const handleIDK = async () => {
+    // Play reinforcement twice, then grade as AGAIN
+    await playAudio(
+      card.termAndDefinitionAudio,
+      userSettings.playbackSpeed,
+    );
+    await playAudio(
+      card.termAndDefinitionAudio,
+      userSettings.playbackSpeed,
+    );
+    await gradeWithAgain();
+  };
+
   // Early return for failure case
   if (phase === "failure") {
     return (
@@ -225,6 +239,19 @@ export const QuizCard: React.FC<QuizCardProps> = ({
       )}
 
       {!feedback && promptText}
+
+      {quizType !== "speaking" && phase === "ready" && (
+        <Button
+          color="red"
+          variant="outline"
+          onClick={handleIDK}
+          fullWidth
+          size="md"
+          maw={400}
+        >
+          I don’t know ({HOTKEYS.FAIL})
+        </Button>
+      )}
 
       {renderContent()}
     </Stack>
