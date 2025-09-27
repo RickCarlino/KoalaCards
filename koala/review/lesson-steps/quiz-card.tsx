@@ -240,7 +240,7 @@ export const QuizCard: React.FC<QuizCardProps> = ({
 
       {!feedback && promptText}
 
-      {quizType !== "speaking" && phase === "ready" && (
+      {phase === "ready" && (
         <Button
           color="red"
           variant="outline"
