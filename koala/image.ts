@@ -21,7 +21,7 @@ export async function maybeGetCardImageUrl(
   return await storageProvider.getExpiringURL(blobID);
 }
 
-const CHEAPNESS = 0.25; // % of cards that will get an image.
+const CHEAPNESS = 0.1; // % of cards that will get an image.
 
 export async function maybeAddImageToCard(card: Card) {
   if (card.imageBlobId) {
@@ -30,15 +30,13 @@ export async function maybeAddImageToCard(card: Card) {
 
   const cardCount = await prismaClient.card.count({
     where: {
-      userId: card.userId,
-      imageBlobId: { not: null },
+      userId: card.userId
     },
   });
 
-  const cheap = Math.random() < CHEAPNESS;
-  const skip = cardCount < 50 ? false : cheap;
+  const proceed = cardCount < 15 || Math.random() < CHEAPNESS;
 
-  if (skip) {
+  if (!proceed) {
     return;
   }
 
