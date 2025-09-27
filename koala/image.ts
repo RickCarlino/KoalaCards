@@ -30,7 +30,7 @@ export async function maybeAddImageToCard(card: Card) {
 
   const cardCount = await prismaClient.card.count({
     where: {
-      userId: card.userId
+      userId: card.userId,
     },
   });
 

@@ -234,22 +234,13 @@ export async function getLessonsDue(
   deckId: number,
   now: number = Date.now(),
 ) {
-  const deck = await prismaClient.deck.findUnique({
-    where: { id: deckId },
-    select: { userId: true },
+  return prismaClient.card.count({
+    where: {
+      deckId,
+      flagged: { not: true },
+      lastReview: { gt: 0 },
+      nextReview: { lte: now },
+      lastFailure: 0,
+    },
   });
-  const userId =
-    deck?.userId ??
-    (
-      await prismaClient.card.findFirst({
-        where: { deckId },
-        select: { userId: true },
-      })
-    )?.userId;
-  if (!userId) {
-    return 0;
-  }
-
-  const hand = await buildHand(userId, deckId, now, DECK_HAND_HARD_CAP);
-  return hand.length;
 }
