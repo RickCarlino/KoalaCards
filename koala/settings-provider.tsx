@@ -24,6 +24,7 @@ const EMPTY: UserSettings = {
   updatedAt: new Date(),
   dailyWritingGoal: 300,
   writingFirst: false,
+  performCorrectiveReviews: true,
 };
 
 const UserSettingsContext = createContext<UserSettings>(EMPTY);

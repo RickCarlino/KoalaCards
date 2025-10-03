@@ -21,6 +21,7 @@ import {
   IconPlayerPlayFilled,
 } from "@tabler/icons-react";
 import { compare } from "@/koala/quiz-evaluators/evaluator-utils";
+import { useUserSettings } from "@/koala/settings-provider";
 
 type LessonProps = {
   lesson: InputFloodLessonType;
@@ -106,6 +107,7 @@ export function InputFloodLesson({
   langCode,
   onComplete,
 }: LessonProps) {
+  const userSettings = useUserSettings();
   const steps = useMemo<StepKind[]>(() => {
     const s: StepKind[] = [{ t: "diagnosis" }];
     for (let i = 0; i < lesson.flood.target.items.length; i++) {
@@ -185,7 +187,7 @@ export function InputFloodLesson({
         return;
       }
       const blob = await res.blob();
-      await playBlob(blob);
+      await playBlob(blob, userSettings.playbackSpeed);
     } finally {
       setIsAudioPlaying(false);
     }

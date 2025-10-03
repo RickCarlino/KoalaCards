@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { playBeep } from "@/koala/utils/play-beep";
 
 export type RecorderControls = {
-  start: () => Promise<void>;
+  start: (startOptions?: { playBeep?: boolean }) => Promise<void>;
   stop: () => Promise<Blob>;
   isRecording: boolean;
   mimeType: string | null;
@@ -12,6 +13,7 @@ export function useMediaRecorder(): RecorderControls {
   const chunksRef = useRef<Blob[]>([]);
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [mimeType, setMimeType] = useState<string | null>(null);
+  const beepArmedRef = useRef<boolean>(false);
 
   const preferredMime = useMemo(() => {
     const webm = "audio/webm;codecs=opus";
@@ -39,7 +41,9 @@ export function useMediaRecorder(): RecorderControls {
     };
   }, [recorder]);
 
-  async function start(): Promise<void> {
+  async function start(startOptions?: {
+    playBeep?: boolean;
+  }): Promise<void> {
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: true,
     });
@@ -53,13 +57,22 @@ export function useMediaRecorder(): RecorderControls {
     const rec = new MediaRecorder(stream, options);
     setMimeType(rec.mimeType);
     chunksRef.current = [];
+    // Arm the beep; fire on first actual audio data or track unmute.
+    const shouldBeep = startOptions?.playBeep !== false;
+    beepArmedRef.current = shouldBeep;
+
     rec.ondataavailable = (e: BlobEvent) => {
       if (e.data && e.data.size > 0) {
         chunksRef.current.push(e.data);
+        if (beepArmedRef.current) {
+          beepArmedRef.current = false;
+          void playBeep();
+        }
       }
     };
-    // Use a timeslice so iOS/WebKit emits chunks during recording
-    rec.start(1000);
+
+    // Use a shorter timeslice so iOS/WebKit emits chunks promptly
+    rec.start(250);
     setRecorder(rec);
     setIsRecording(true);
   }
@@ -70,6 +83,8 @@ export function useMediaRecorder(): RecorderControls {
       if (!current) {
         return resolve(new Blob());
       }
+      // Disarm pending beep
+      beepArmedRef.current = false;
       current.onstop = () => {
         const blob = new Blob(chunksRef.current, {
           type: current.mimeType,

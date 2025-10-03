@@ -1,4 +1,4 @@
-import { Stack, Text } from "@mantine/core";
+import { Button, Stack, Text } from "@mantine/core";
 import { CardReviewProps } from "../types";
 import { useEffect, useState } from "react";
 import { useVoiceGrading } from "../use-voice-grading";
@@ -10,6 +10,8 @@ import { CardImage } from "../components/CardImage";
 import { usePhaseManager } from "../hooks/usePhaseManager";
 import { useGradeHandler } from "../hooks/useGradeHandler";
 import { playAudio } from "@/koala/play-audio";
+import { useUserSettings } from "@/koala/settings-provider";
+import { HOTKEYS } from "../hotkeys";
 
 type Phase = "ready" | "processing" | "success" | "failure";
 type QuizType = "speaking" | "newWordOutro" | "remedialOutro";
@@ -65,6 +67,7 @@ export const QuizCard: React.FC<QuizCardProps> = ({
   const [userTranscription, setUserTranscription] = useState<string>("");
   const [feedback, setFeedback] = useState<string>("");
   const [quizResultId, setQuizResultId] = useState<number | null>(null);
+  const userSettings = useUserSettings();
 
   const config = getQuizConfig(quizType);
 
@@ -104,7 +107,10 @@ export const QuizCard: React.FC<QuizCardProps> = ({
   });
 
   const play = async () => {
-    await playAudio(card.termAndDefinitionAudio);
+    await playAudio(
+      card.termAndDefinitionAudio,
+      userSettings.playbackSpeed,
+    );
   };
 
   useEffect(() => {
@@ -144,6 +150,19 @@ export const QuizCard: React.FC<QuizCardProps> = ({
     // Grade the quiz as AGAIN (failed) and proceed
     await gradeWithAgain();
     onProceed();
+  };
+
+  const handleIDK = async () => {
+    // Play reinforcement twice, then grade as AGAIN
+    await playAudio(
+      card.termAndDefinitionAudio,
+      userSettings.playbackSpeed,
+    );
+    await playAudio(
+      card.termAndDefinitionAudio,
+      userSettings.playbackSpeed,
+    );
+    await gradeWithAgain();
   };
 
   // Early return for failure case
@@ -220,6 +239,19 @@ export const QuizCard: React.FC<QuizCardProps> = ({
       )}
 
       {!feedback && promptText}
+
+      {phase === "ready" && (
+        <Button
+          color="red"
+          variant="outline"
+          onClick={handleIDK}
+          fullWidth
+          size="md"
+          maw={400}
+        >
+          I don’t know ({HOTKEYS.FAIL})
+        </Button>
+      )}
 
       {renderContent()}
     </Stack>

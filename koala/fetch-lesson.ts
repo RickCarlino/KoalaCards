@@ -219,7 +219,7 @@ export async function getLessons({
   take,
 }: GetLessonInputParams) {
   if (take > DECK_HAND_HARD_CAP) {
-    take = 45;
+    take = DECK_HAND_HARD_CAP;
   }
 
   const rawHand = await buildHand(userId, deckId, now, take);
@@ -234,22 +234,40 @@ export async function getLessonsDue(
   deckId: number,
   now: number = Date.now(),
 ) {
-  const deck = await prismaClient.deck.findUnique({
-    where: { id: deckId },
-    select: { userId: true },
+  return prismaClient.card.count({
+    where: {
+      deckId,
+      flagged: { not: true },
+      lastReview: { gt: 0 },
+      nextReview: { lte: now },
+      lastFailure: 0,
+    },
   });
-  const userId =
-    deck?.userId ??
-    (
-      await prismaClient.card.findFirst({
-        where: { deckId },
-        select: { userId: true },
-      })
-    )?.userId;
-  if (!userId) {
-    return 0;
+}
+
+/**
+ * Determine if the user may begin new cards in this deck right now.
+ * Conditions:
+ *  - User has remaining new‑card capacity in the current rolling window
+ *  - Deck contains at least one brand‑new card (never reviewed)
+ */
+export async function canStartNewLessons(
+  userId: string,
+  deckId: number,
+  now: number = Date.now(),
+): Promise<boolean> {
+  const { newRemaining } = await getDailyLimits(userId, now);
+  if (newRemaining <= 0) {
+    return false;
   }
 
-  const hand = await buildHand(userId, deckId, now, DECK_HAND_HARD_CAP);
-  return hand.length;
+  const newCardsInDeck = await prismaClient.card.count({
+    where: {
+      userId,
+      deckId,
+      flagged: { not: true },
+      lastReview: 0,
+    },
+  });
+  return newCardsInDeck > 0;
 }

@@ -1,6 +1,7 @@
-import { getLessonsDue } from "@/koala/fetch-lesson";
+import { canStartNewLessons, getLessonsDue } from "@/koala/fetch-lesson";
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { playAudio } from "@/koala/play-audio";
+import { useUserSettings } from "@/koala/settings-provider";
 import { prismaClient } from "@/koala/prisma-client";
 import { CardReview } from "@/koala/review";
 import { HOTKEYS } from "@/koala/review/hotkeys";
@@ -120,7 +121,13 @@ export const getServerSideProps: GetServerSideProps<
     return redirect("/settings");
   }
 
-  if ((await getLessonsDue(deck.id)) < 1) {
+  const hasDue = (await getLessonsDue(deck.id)) >= 1;
+  const canStartNew = await canStartNewLessons(
+    user.id,
+    deck.id,
+    Date.now(),
+  );
+  if (!hasDue && !canStartNew) {
     return redirect("/review");
   }
 
@@ -416,16 +423,23 @@ function InnerReviewPage({
     progress,
     cardsRemaining,
   } = useReview(deckId);
+  const userSettings = useUserSettings();
 
   async function playCard() {
     switch (currentItem?.itemType) {
       case "remedialIntro":
       case "newWordIntro":
-        return await playAudio(card.termAndDefinitionAudio);
+        return await playAudio(
+          card.termAndDefinitionAudio,
+          userSettings.playbackSpeed,
+        );
       case "speaking":
       case "newWordOutro":
       case "remedialOutro":
-        return await playAudio(card.definitionAudio);
+        return await playAudio(
+          card.definitionAudio,
+          userSettings.playbackSpeed,
+        );
       default:
         console.warn("No audio available for this card type.");
     }
