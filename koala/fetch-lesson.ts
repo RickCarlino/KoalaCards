@@ -244,3 +244,30 @@ export async function getLessonsDue(
     },
   });
 }
+
+/**
+ * Determine if the user may begin new cards in this deck right now.
+ * Conditions:
+ *  - User has remaining new‑card capacity in the current rolling window
+ *  - Deck contains at least one brand‑new card (never reviewed)
+ */
+export async function canStartNewLessons(
+  userId: string,
+  deckId: number,
+  now: number = Date.now(),
+): Promise<boolean> {
+  const { newRemaining } = await getDailyLimits(userId, now);
+  if (newRemaining <= 0) {
+    return false;
+  }
+
+  const newCardsInDeck = await prismaClient.card.count({
+    where: {
+      userId,
+      deckId,
+      flagged: { not: true },
+      lastReview: 0,
+    },
+  });
+  return newCardsInDeck > 0;
+}

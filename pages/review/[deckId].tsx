@@ -1,4 +1,4 @@
-import { getLessonsDue } from "@/koala/fetch-lesson";
+import { canStartNewLessons, getLessonsDue } from "@/koala/fetch-lesson";
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { playAudio } from "@/koala/play-audio";
 import { useUserSettings } from "@/koala/settings-provider";
@@ -121,7 +121,13 @@ export const getServerSideProps: GetServerSideProps<
     return redirect("/settings");
   }
 
-  if ((await getLessonsDue(deck.id)) < 1) {
+  const hasDue = (await getLessonsDue(deck.id)) >= 1;
+  const canStartNew = await canStartNewLessons(
+    user.id,
+    deck.id,
+    Date.now(),
+  );
+  if (!hasDue && !canStartNew) {
     return redirect("/review");
   }
 
