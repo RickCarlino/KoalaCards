@@ -1,7 +1,7 @@
 import { createDeck, Grade } from "femto-fsrs";
 import type { Card } from "@prisma/client";
 
-const FSRS = createDeck({ requestedRetentionRate: 0.72 });
+const FSRS = createDeck({ requestedRetentionRate: 0.71 });
 
 const DAYS = 24 * 60 * 60 * 1000;
 
