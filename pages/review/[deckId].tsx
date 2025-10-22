@@ -54,7 +54,6 @@ type ReviewDeckPageProps = {
   deckId: number;
   correctivePicks: PickedMistake[];
   userSettingsForEdit: MinimalUserSettings | null;
-  autoStartCorrectiveId: number | null;
 };
 
 const redirect = (destination: string) => ({
@@ -128,6 +127,9 @@ export const getServerSideProps: GetServerSideProps<
     deck.id,
     Date.now(),
   );
+  if (!hasDue && !canStartNew) {
+    return redirect("/review");
+  }
 
   if (userSettings.writingFirst) {
     const now = new Date();
@@ -158,15 +160,6 @@ export const getServerSideProps: GetServerSideProps<
   const correctivePicks = shouldPerformCorrectiveReviews(userSettings)
     ? await getCorrectivePicksForUser(user.id)
     : [];
-
-  const noLessonsAvailable = !hasDue && !canStartNew;
-  if (noLessonsAvailable && correctivePicks.length === 0) {
-    return redirect("/review");
-  }
-
-  const autoStartCorrectiveId = noLessonsAvailable
-    ? correctivePicks[0]?.id ?? null
-    : null;
   const userSettingsForEdit: MinimalUserSettings | null = userSettings
     ? {
         id: userSettings.id,
@@ -184,7 +177,6 @@ export const getServerSideProps: GetServerSideProps<
       deckId,
       correctivePicks,
       userSettingsForEdit,
-      autoStartCorrectiveId,
     },
   };
 };
@@ -406,7 +398,6 @@ function InnerReviewPage({
   deckId,
   correctivePicks,
   userSettingsForEdit,
-  autoStartCorrectiveId,
 }: ReviewDeckPageProps) {
   const [assistantOpen, setAssistantOpen] = React.useState(false);
   const [picks, setPicks] =
@@ -433,9 +424,6 @@ function InnerReviewPage({
     cardsRemaining,
   } = useReview(deckId);
   const userSettings = useUserSettings();
-  const [autoStartStatus, setAutoStartStatus] = React.useState<
-    "idle" | "starting" | "failed" | "done"
-  >(autoStartCorrectiveId ? "starting" : "idle");
 
   async function playCard() {
     switch (currentItem?.itemType) {
@@ -463,38 +451,14 @@ function InnerReviewPage({
       playCard();
     }
   }, [currentItem]);
-  const startDrill = React.useCallback(
-    async (id: number) => {
-      try {
-        const res = await genMutation.mutateAsync({ resultId: id });
-        setGen(res as GenerateResponse);
-        return true;
-      } catch {
-        return false;
-      }
-    },
-    [genMutation],
-  );
-
-  React.useEffect(() => {
-    if (
-      !autoStartCorrectiveId ||
-      autoStartStatus !== "starting" ||
-      currentItem
-    ) {
-      return;
+  const startDrill = async (id: number) => {
+    try {
+      const res = await genMutation.mutateAsync({ resultId: id });
+      setGen(res as GenerateResponse);
+    } catch {
+      // non-blocking; ignore here
     }
-    let cancelled = false;
-    void startDrill(autoStartCorrectiveId).then((success) => {
-      if (cancelled) {
-        return;
-      }
-      setAutoStartStatus(success ? "done" : "failed");
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [autoStartCorrectiveId, autoStartStatus, currentItem, startDrill]);
+  };
 
   if (error) {
     return <MessageState title="Error">{error.message}</MessageState>;
@@ -521,20 +485,6 @@ function InnerReviewPage({
             }}
           />
         </Container>
-      );
-    }
-    if (autoStartStatus === "starting") {
-      return (
-        <MessageState title="Loading">
-          Preparing a corrective drill…
-        </MessageState>
-      );
-    }
-    if (autoStartStatus === "failed") {
-      return (
-        <MessageState title="Oops">
-          We couldn't start a corrective drill. Please try again later.
-        </MessageState>
       );
     }
     return (
