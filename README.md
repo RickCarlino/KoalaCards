@@ -117,6 +117,7 @@ Configuration details for Google Sign-In can be found in the `.env.example` file
 
 - The application is actively used but may have areas with limited documentation.
 - The app is now single‑language (Korean). Other languages are not supported.
+- If you require support for languages other than Korean, you must use [Release 7.1](https://github.com/RickCarlino/KoalaCards/releases/tag/v7.1.0) or a fork. Other languages will no longer be supported beyond this release.
 
 ## Contributing 🤝
 
