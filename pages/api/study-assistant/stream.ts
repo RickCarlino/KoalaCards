@@ -113,112 +113,84 @@ export default async function handler(
     closed = true;
   });
 
-  const wantsRomanization = ["ko", "ja", "zh", "ar", "he", "ru"].includes(
-    current.langCode.toLowerCase(),
-  );
-  const system = `You are a language-learning study assistant.
+  const system = `You are a Korean-learning study assistant.
 Output should be optimized for fast reading and practice.
 
 GLOBAL RULES:
-- Target language (TL): ${current.langCode}.
+- Target language (TL): Korean (Hangul only).
+- Never include romanization of Korean under any circumstances (e.g., RR, Yale, McCune-Reischauer, or phonetic hints).
 - Be concise and stream short chunks.
 - Avoid headings, code fences, and heavy formatting.
-- Keep vocabulary around CEFR A2 unless the user asks otherwise.
-- If the user asks for examples or a story, always include the key vocab exactly as provided: "${current.term}".
-- If you present examples: put the TL sentence first, then an English gloss on the next line.
-- ${wantsRomanization ? "If feasible, add a romanization line like: ROMA: <romanization>." : "Do not add romanization."}
-
-STORY REQUESTS:
-- Write 3–4 short sentences entirely in the TL (no inline English).
-- Use the key vocab naturally at least once.
-- After the story, add one line: EN: <1-line English summary>.
-- Then add a small 'Key Usage' section with 2 examples following the TL + English pattern above${
-    wantsRomanization ? ", and ROMA if feasible" : ""
-  }.
+- Mirror the vocabulary level of the material. Students will have a diverse range of proficiency.
+- If you present examples: put the TL sentence first (Hangul), then an English gloss on the next line.
+- Your goal is to teach Korean, but you can explain in English when appropriate.
 
 EXPLANATION REQUESTS:
 - Explain briefly in English, but keep TL examples short and concrete.
 
 TRANSLATION/PHRASES REQUESTS:
-- Provide 2–4 variations in the TL with the follow-up English gloss lines.
+- Provide 2-4 variations in Korean with the follow-up English gloss lines.
 `;
 
   // Compact context message (kept tiny for latency)
   const contextAsUser: ChatMessage = {
     role: "user",
-    content: `Context:\n- Current term: ${current.term}\n- Definition: ${current.definition}\n- Language: ${current.langCode}${current.lessonType ? `\n- Lesson type: ${current.lessonType}` : ""}`,
+    content: `Context:\n- Current term: ${current.term}\n- Definition: ${current.definition}\n- Language: Korean (ko)${current.lessonType ? `\n- Lesson type: ${current.lessonType}` : ""}`,
   };
 
-  const chatMessages: Array<
-    ChatMessage | { role: "system"; content: string }
-  > = [{ role: "system", content: system }, contextAsUser, ...messages];
+  const stream = await openai.chat.completions.create({
+    model: "gpt-5-mini",
+    messages: [
+      { role: "system", content: system },
+      contextAsUser,
+      ...messages,
+    ],
+    reasoning_effort: "minimal",
+    stream: true,
+  });
 
-  try {
-    const stream = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages:
-        chatMessages as unknown as OpenAI.Chat.Completions.ChatCompletionMessageParam[],
-      temperature: 0.4,
-      top_p: 0.95,
-      frequency_penalty: 0.2,
-      presence_penalty: 0.1,
-      stream: true,
-    });
-
-    let _full = "";
-    for await (const part of stream) {
-      if (closed) {
-        break;
-      }
-      const chunk = part.choices?.[0]?.delta?.content || "";
-      if (chunk) {
-        _full += chunk;
-        writeSSE(res, chunk);
-      }
+  let _full = "";
+  for await (const part of stream) {
+    if (closed) {
+      break;
     }
+    const chunk = part.choices?.[0]?.delta?.content || "";
+    if (chunk) {
+      _full += chunk;
+      writeSSE(res, chunk);
+    }
+  }
 
-    // Suggestions: run a quick structured output call, then emit as a separate event
-    try {
-      const suggestPrompt: CoreMessage[] = [
-        {
-          role: "system",
-          content: `You generate compact flashcard suggestions for a TL deck.
+  // Suggestions: run a quick structured output call, then emit as a separate event
+  const suggestPrompt: CoreMessage[] = [
+    {
+      role: "system",
+      content: `You generate compact flashcard suggestions for a Korean deck.
 Rules:
-- TL is ${current.langCode}.
+- TL is Korean (Hangul only). Never include romanization.
 - Return up to 5 useful, high-frequency phrases that reuse or collocate with the key vocab "${current.term}" when appropriate.
 - Keep the TL phrase under 120 characters and natural (CEFR A2-B1).
 - Provide a succinct English translation.
-- Set gender: "M" | "F" | "N" (pick best guess; use "N" if unclear).
+- Although Korean has no grammatical gender, the gender is used for text-to-speech purposes. Mix it up.
 - Output only data; no extra text.`,
-        },
-        {
-          role: "user",
-          content: `Key vocab: ${current.term}\nDefinition: ${current.definition}\nUser goal: ${messages[messages.length - 1]?.content ?? ""}`,
-        },
-      ];
+    },
+    {
+      role: "user",
+      content: `Key vocab: ${current.term}\nDefinition: ${current.definition}\nUser goal: ${messages[messages.length - 1]?.content ?? ""}`,
+    },
+  ];
 
-      const result = await generateStructuredOutput({
-        model: ["openai", "fast"],
-        messages: suggestPrompt,
-        schema: SuggestionsSchema,
-        maxTokens: 400,
-      });
-      const limited = {
-        suggestions: (result?.suggestions ?? []).slice(0, 5),
-      };
-      writeSSE(res, JSON.stringify(limited), "suggestions");
-    } catch {
-      // Non-fatal; skip suggestions
-    }
+  const result = await generateStructuredOutput({
+    model: ["openai", "fast"],
+    messages: suggestPrompt,
+    schema: SuggestionsSchema,
+    maxTokens: 400,
+  });
+  const limited = {
+    suggestions: (result?.suggestions ?? []).slice(0, 5),
+  };
+  writeSSE(res, JSON.stringify(limited), "suggestions");
 
-    writeSSE(res, "done", "done");
-    res.end();
-  } catch {
-    try {
-      writeSSE(res, "Sorry, there was an error.");
-      writeSSE(res, "done", "done");
-    } finally {
-      res.end();
-    }
-  }
+  writeSSE(res, "done", "done");
+  res.end();
 }
