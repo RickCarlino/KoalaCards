@@ -21,7 +21,7 @@ async function buildQuizPayload(card: Card) {
       lessonType: "new",
       speed: 100,
     }),
-    langCode: card.langCode,
+    langCode: "ko",
     imageURL: (await maybeGetCardImageUrl(card.imageBlobId)) || "",
   };
 }

@@ -64,7 +64,7 @@ export const reviewAssistant = procedure
 
     const deck = await prismaClient.deck.findUnique({
       where: { id: input.deckId, userId },
-      select: { id: true, langCode: true, name: true },
+      select: { id: true, name: true },
     });
 
     if (!deck) {
@@ -88,7 +88,7 @@ export const reviewAssistant = procedure
 
     const system = [
       `You are an embedded language-learning assistant in a flashcard trainer.`,
-      `The learner is currently studying the deck "${deck.name}" (${deck.langCode}).`,
+      `The learner is currently studying the deck "${deck.name}" (Korean).`,
       `Use recent cards only as contextual background; do not repeat them verbatim unless directly relevant to the learner's request.`,
       `Keep all responses concise and actionable.`,
       `When it is useful, suggest up to four new flashcards, each with a phrase and translation.`,
@@ -98,7 +98,7 @@ export const reviewAssistant = procedure
       `Propose only high-quality, non-duplicate flashcard pairs closely tied to the learner's current topic or recent cards.`,
       `All explanations must be in English. Avoid suggesting single-word cards; focus on phrases, lexical clusters,`,
       `collocations, or full sentences that are contextually useful.`,
-      LANG_OVERRIDES[deck.langCode as LangCode] || "",
+      LANG_OVERRIDES["ko" as LangCode] || "",
     ].join(" \n");
 
     const contextBlock = [

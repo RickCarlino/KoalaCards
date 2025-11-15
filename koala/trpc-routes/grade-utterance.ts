@@ -28,7 +28,6 @@ export const gradeUtteranceRoute = procedure
     const res = await gradeUtterance({
       term: input.answer,
       definition: input.prompt_en,
-      langCode: input.langCode,
       userInput: input.attempt,
       userId,
       eventType: input.eventType || "input-flood-production",

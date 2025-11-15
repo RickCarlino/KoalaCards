@@ -26,7 +26,6 @@ type LocalCard = Pick<
   | "nextReview"
   | "term"
   | "definition"
-  | "langCode"
   | "imageBlobId"
   | "lastFailure"
   | "flagged"
@@ -140,7 +139,7 @@ async function buildQuizPayload(
       lessonType: "new",
       speed: r > 1 ? speedPct : 100,
     }),
-    langCode: q.langCode,
+    langCode: "ko",
     lastReview: q.lastReview ?? 0,
     imageURL: await maybeGetCardImageUrl(q.imageBlobId),
     stability: q.stability,

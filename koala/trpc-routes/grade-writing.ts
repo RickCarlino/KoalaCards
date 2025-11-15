@@ -86,7 +86,7 @@ export const gradeWriting = procedure
     // 1️⃣ Verify deck ownership / language
     const deck = await prismaClient.deck.findUnique({
       where: { id: deckId, userId },
-      select: { langCode: true },
+      select: { id: true },
     });
 
     if (!deck) {
@@ -124,9 +124,7 @@ export const gradeWriting = procedure
         { role: "system", content: ESSAY_GRADING_PROMPT },
         {
           role: "user",
-          content: `Language: ${getLangName(
-            deck.langCode,
-          )}\n\nText to analyze:\n${cleanedText.trim()}`,
+          content: `Language: ${getLangName("ko")}\n\nText to analyze:\n${cleanedText.trim()}`,
         },
       ],
       maxTokens: 5000,

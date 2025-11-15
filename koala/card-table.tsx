@@ -10,7 +10,6 @@ type Card = {
   term: string;
   definition: string;
   createdAt: string; // ISO
-  langCode: string;
   gender: string;
   repetitions: number;
   lapses: number;

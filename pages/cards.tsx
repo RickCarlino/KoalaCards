@@ -23,7 +23,6 @@ type CardRecord = {
   term: string;
   definition: string;
   createdAt: string; // ISO
-  langCode: string;
   gender: string;
   repetitions: number;
   lapses: number;
@@ -46,7 +45,6 @@ const SORT_OPTIONS = [
   { label: "Date Failed", value: "lastFailure" },
   { label: "Definition", value: "definition" },
   { label: "Paused", value: "flagged" },
-  { label: "Language", value: "langCode" },
   { label: "Term", value: "term" },
   { label: "Next Review", value: "nextReview" },
   { label: "Repetitions", value: "repetitions" },
@@ -151,7 +149,6 @@ async function fetchCards(
     term: c.term,
     definition: c.definition,
     createdAt: c.createdAt.toISOString(),
-    langCode: c.langCode,
     gender: c.gender,
     repetitions: c.repetitions ?? 0,
     lapses: c.lapses ?? 0,

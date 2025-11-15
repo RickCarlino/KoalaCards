@@ -327,7 +327,7 @@ export const getServerSideProps: GetServerSideProps<
         term: card.term,
         definition: card.definition,
         flagged: card.flagged,
-        langCode: card.langCode,
+        langCode: "ko",
         gender: card.gender,
         imageURL,
         repetitions: card.repetitions ?? 0,

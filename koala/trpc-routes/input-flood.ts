@@ -91,11 +91,7 @@ export const inputFloodGenerate = procedure
       throw new Error("No wrong results found");
     }
 
-    const parsedLang = LANG_CODES.safeParse(result.langCode);
-    if (!parsedLang.success) {
-      throw new Error("Unsupported language code");
-    }
-    const langCode = parsedLang.data as LangCode;
+    const langCode = "ko" as LangCode;
 
     const prompt = buildInputFloodPrompt({
       langCode,

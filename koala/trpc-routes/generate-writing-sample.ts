@@ -36,14 +36,12 @@ export const generateWritingSample = procedure
 
     const deck = await prismaClient.deck.findUnique({
       where: { id: input.deckId, userId },
-      select: {
-        langCode: true,
-      },
+      select: { id: true },
     });
     if (!deck) {
       throw new TRPCError({ code: "NOT_FOUND" });
     }
-    const language = getLangName(deck.langCode as LangCode);
+    const language = getLangName("ko" as LangCode);
     return await chat(
       `Provide a sample response to the question. Respond in ${language}.`,
       input.prompt,

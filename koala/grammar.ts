@@ -11,7 +11,6 @@ type Explanation = z.infer<typeof zodGradeResponse>;
 type GrammarCorrectionProps = {
   term: string; // Prompt term
   definition: string; // Example correct answer
-  langCode: string;
   userInput: string;
   userId: string;
   eventType?: string;
@@ -111,7 +110,7 @@ async function addTagsToList() {
     .map((r) =>
       [
         `id=${r.id}`,
-        `lang=${r.langCode}`,
+        `lang=ko`,
         `teacherQuestion=${r.definition}`,
         `studentResponse=${r.userInput}`,
         `---`,
@@ -169,8 +168,7 @@ async function addTagsToList() {
 }
 
 const storeTrainingData: StoreTrainingData = async (props, exp) => {
-  const { term, definition, langCode, userInput, userId, eventType } =
-    props;
+  const { term, definition, userInput, userId, eventType } = props;
   const { yesNo, why } = exp;
   void addTagsToList();
   const created = await prismaClient.quizResult.create({
@@ -178,7 +176,6 @@ const storeTrainingData: StoreTrainingData = async (props, exp) => {
       userId,
       acceptableTerm: term,
       definition,
-      langCode,
       userInput,
       isAcceptable: yesNo === "yes",
       // reason field mapped from the model; store under reason
@@ -195,12 +192,12 @@ const LANG_OVERRIDES: Partial<Record<LangCode, string>> = {
 };
 
 async function run(props: GrammarCorrectionProps): Promise<Explanation> {
-  const override = LANG_OVERRIDES[props.langCode as LangCode] || "";
+  const override = LANG_OVERRIDES["ko" as LangCode] || "";
   const messages = [
     {
       role: "user" as const,
       content: [
-        `I am learning ${getLangName(props.langCode)}.`,
+        `I am learning ${getLangName("ko")}.`,
         `My prompt was: ${props.definition} (${props.term})`,
         `Let's say I am in a situation that warrants the sentence or prompt above.`,
         `Could one say "${props.userInput}"?`,
@@ -254,7 +251,6 @@ export const grammarCorrectionNext: QuizEvaluator = async ({
 export async function gradeUtterance(params: {
   term: string;
   definition: string;
-  langCode: LangCode | string;
   userInput: string;
   userId: string;
   eventType?: string;
@@ -266,7 +262,6 @@ export async function gradeUtterance(params: {
   const { explanation, quizResultId } = await runAndStore({
     term: params.term,
     definition: params.definition,
-    langCode: String(params.langCode),
     userInput: params.userInput,
     userId: params.userId,
     eventType: params.eventType || "speaking-judgement",

@@ -277,7 +277,7 @@ export const getServerSideProps: GetServerSideProps<BetaProps> = async (
   });
   const picks = results.map((r) => ({
     id: r.id,
-    langCode: r.langCode,
+    langCode: "ko",
     definition: r.definition,
     userInput: r.userInput,
     reason: r.reason,

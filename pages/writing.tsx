@@ -88,7 +88,7 @@ export const getServerSideProps: GetServerSideProps<
   const totalCount = await prismaClient.writingSubmission.count({ where });
 
   // Fetch user's writing submissions with pagination
-  const submissions = await prismaClient.writingSubmission.findMany({
+  const submissionsRaw = await prismaClient.writingSubmission.findMany({
     where,
     orderBy: { createdAt: "desc" },
     take: ITEMS_PER_PAGE,
@@ -103,20 +103,24 @@ export const getServerSideProps: GetServerSideProps<
         select: {
           id: true,
           name: true,
-          langCode: true,
         },
       },
     },
   });
+  const submissions = submissionsRaw.map((s) => ({
+    ...s,
+    deck: { ...s.deck, langCode: "ko" },
+  }));
 
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
   // Decks for filter options
-  const decks = await prismaClient.deck.findMany({
+  const decksRaw = await prismaClient.deck.findMany({
     where: { userId: dbUser.id },
     orderBy: [{ name: "asc" }],
-    select: { id: true, name: true, langCode: true },
+    select: { id: true, name: true },
   });
+  const decks = decksRaw.map((d) => ({ ...d, langCode: "ko" }));
 
   return {
     props: {
