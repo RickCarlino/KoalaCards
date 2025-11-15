@@ -83,7 +83,6 @@ model VerificationToken {
 
 model Deck {
   id                 Int                 @id @default(autoincrement())
-  langCode           String
   name               String
   userId             String
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -104,7 +103,6 @@ model Card {
   flagged     Boolean  @default(false)
   term        String
   definition  String
-  langCode    String
   // Gender can be "M"ale, "F"emale, or "N"eutral
   gender      String   @default("N")
   createdAt   DateTime @default(now())
@@ -134,7 +132,6 @@ model QuizResult {
   createdAt      DateTime @default(now())
   user           User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId         String?
-  langCode       String
   definition     String
   acceptableTerm String
   userInput      String
@@ -146,9 +143,7 @@ model QuizResult {
   errorTag       String?  @db.VarChar(20)
 
   @@index([createdAt])
-  @@index([langCode, createdAt])
   @@index([userId, createdAt])
-  @@index([userId, langCode, createdAt])
 }
 
 model WritingSubmission {
