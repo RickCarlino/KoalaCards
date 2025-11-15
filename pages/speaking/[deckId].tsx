@@ -258,14 +258,6 @@ export default function SpeakingImprovementsPage({
             />
           </Box>
         ) : null}
-
-        <Card withBorder padding="md">
-          <Text size="sm" c="dimmed">
-            This page focuses on repeated speaking drills for common
-            mistakes. You can practice as much as you want — no session
-            limits.
-          </Text>
-        </Card>
       </Stack>
     </Container>
   );
