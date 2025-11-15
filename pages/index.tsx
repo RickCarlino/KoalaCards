@@ -9,7 +9,6 @@ import {
   IconPlus,
   IconSettings,
   IconStar,
-  IconMicrophone,
 } from "@tabler/icons-react";
 import Link from "next/link";
 import { GetServerSideProps } from "next/types";
@@ -22,8 +21,6 @@ interface IndexProps {
   didStudy: boolean;
   // Has the user EVER done a writing exercise?
   didWrite: boolean;
-  // Does the user have enough recent negatives for Input Flood?
-  showInputFlood: boolean;
 }
 
 interface NavItem {
@@ -56,16 +53,11 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     where: { userId: dbUser.id },
   });
 
-  const negativeResultCount = await prismaClient.quizResult.count({
-    where: { userId: dbUser.id, isAcceptable: false },
-  });
-
   return {
     props: {
       hasCards: cardCount > 0,
       didStudy: reviewCount > 0,
       didWrite: writingCount > 0,
-      showInputFlood: negativeResultCount > 1,
     },
   };
 };
@@ -77,13 +69,6 @@ const navItems: NavItem[] = [
     show: (props) => props.hasCards,
     blink: (props) => props.hasCards && !props.didStudy,
     icon: IconStar,
-  },
-  {
-    path: () => "/input-flood",
-    name: "Input Flood (Beta)",
-    show: (props) => props.showInputFlood,
-    blink: () => false,
-    icon: IconMicrophone,
   },
   {
     path: () => "/create",

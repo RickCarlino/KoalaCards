@@ -22,6 +22,7 @@ import {
   IconGitMerge,
   IconPencil,
   IconPlus,
+  IconMicrophone,
   IconStars,
   IconTrash,
   IconX,
@@ -354,6 +355,43 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
             >
               <IconStars size={20} stroke={2} />
               Study Cards
+            </div>
+          </Link>
+          <Link
+            href={`/speaking/${deck.id}`}
+            style={{
+              textDecoration: "none",
+              display: "block",
+              marginBottom: "8px",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+                padding: "8px 16px",
+                backgroundColor: "transparent",
+                color: "#C2255C",
+                borderRadius: "8px",
+                fontWeight: 500,
+                fontSize: "14px",
+                cursor: "pointer",
+                transition: "all 0.3s ease",
+                border: "1px solid #FFD1E8",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#FFE3EF";
+                e.currentTarget.style.borderColor = "#F06595";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+                e.currentTarget.style.borderColor = "#FFD1E8";
+              }}
+            >
+              <IconMicrophone size={16} stroke={1.5} />
+              Speaking Improvements
             </div>
           </Link>
           <Link
