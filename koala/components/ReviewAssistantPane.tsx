@@ -1,7 +1,6 @@
 import React from "react";
 import {
   ActionIcon,
-  Badge,
   Box,
   Button,
   Drawer,
@@ -19,8 +18,9 @@ import {
   IconSend,
   IconX,
 } from "@tabler/icons-react";
-import { trpc } from "@/koala/trpc-config";
 import { useMediaQuery } from "@mantine/hooks";
+import { notifications } from "@mantine/notifications";
+import { trpc } from "@/koala/trpc-config";
 
 type Suggestion = {
   phrase: string;
@@ -42,8 +42,8 @@ type CurrentCard = {
 };
 
 export function ReviewAssistantPane({
-  deckId,
-  current,
+  deckId: _deckId,
+  current: _current,
   opened: controlledOpened,
   onOpen,
   onClose,
@@ -71,11 +71,10 @@ export function ReviewAssistantPane({
   const [input, setInput] = React.useState("");
   const viewportRef = React.useRef<HTMLDivElement | null>(null);
 
-  const reviewAssistant = trpc.reviewAssistant.useMutation();
-  const bulkCreateCards = trpc.bulkCreateCards.useMutation();
-  const [added, setAdded] = React.useState<Record<string, boolean>>({});
-
-  const keyFor = (s: Suggestion) => `${s.phrase}|||${s.translation}`;
+  // Streaming state
+  const abortRef = React.useRef<AbortController | null>(null);
+  const [isStreaming, setIsStreaming] = React.useState(false);
+  const bulkCreate = trpc.bulkCreateCards.useMutation();
 
   const scrollToBottom = React.useCallback(() => {
     const el = viewportRef.current;
@@ -90,66 +89,154 @@ export function ReviewAssistantPane({
 
   const onSend = async () => {
     const text = input.trim();
-    if (!text || reviewAssistant.isLoading) {
+    if (!text) {
       return;
     }
     setInput("");
-    setMessages((m) => [...m, { role: "user", content: text }]);
-    try {
-      // Include a short chat history for follow-ups (last 6 incl. pending message)
-      const historyPayload = [
-        ...messages,
-        { role: "user" as const, content: text },
-      ]
-        .slice(-6)
-        .map((m) => ({ role: m.role, content: m.content }));
+    const userMsg: ChatMessage = { role: "user", content: text };
+    setMessages((m) => [
+      ...m,
+      userMsg,
+      { role: "assistant", content: "" },
+    ]);
 
-      const result = await reviewAssistant.mutateAsync({
-        deckId,
-        userMessage: text,
-        history: historyPayload,
-        current,
+    // Start streaming
+    try {
+      setIsStreaming(true);
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      const body = JSON.stringify({
+        deckId: _deckId,
+        current: _current,
+        messages: [...messages, userMsg],
       });
-      setMessages((m) => [
-        ...m,
-        {
-          role: "assistant",
-          content: result.reply,
-          suggestions: result.suggestions,
-        },
-      ]);
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : String(e);
-      setMessages((m) => [
-        ...m,
-        {
-          role: "assistant",
-          content:
-            "Sorry — I couldn’t reply just now. Please try again in a moment. " +
-            message,
-        },
-      ]);
+
+      const res = await fetch("/api/study-assistant/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+        signal: controller.signal,
+      });
+      if (!res.ok || !res.body) {
+        throw new Error("Failed to connect");
+      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let currentEvent: string | null = null;
+
+      const applyToken = (token: string) => {
+        setMessages((m) => {
+          const last = m[m.length - 1];
+          if (!last || last.role !== "assistant") {
+            return m;
+          }
+          const updated = { ...last, content: last.content + token };
+          return [...m.slice(0, -1), updated];
+        });
+      };
+
+      // Basic SSE parser: handle event: <name> + data: <payload> frames
+      let reading = true;
+      while (reading) {
+        const { done, value } = await reader.read();
+        if (done) {
+          reading = false;
+          break;
+        }
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop() || "";
+        for (const chunk of parts) {
+          const dataLines: string[] = [];
+          currentEvent = null;
+          for (const line of chunk.split("\n")) {
+            if (line.startsWith("event:")) {
+              currentEvent = line.slice(6).trim();
+              continue;
+            }
+            if (line.startsWith("data:")) {
+              let v = line.slice(5);
+              if (v.startsWith(" ")) {
+                v = v.slice(1);
+              }
+              dataLines.push(v);
+              continue;
+            }
+          }
+          const payload = dataLines.join("\n");
+          if (!currentEvent) {
+            // token frame
+            applyToken(payload);
+            continue;
+          }
+          if (currentEvent === "suggestions") {
+            try {
+              const parsed = JSON.parse(payload) as {
+                suggestions?: Suggestion[];
+              };
+              if (parsed?.suggestions && parsed.suggestions.length > 0) {
+                setMessages((m) => {
+                  const last = m[m.length - 1];
+                  if (!last || last.role !== "assistant") {
+                    return m;
+                  }
+                  const updated = {
+                    ...last,
+                    suggestions: parsed.suggestions,
+                  };
+                  return [...m.slice(0, -1), updated];
+                });
+              }
+            } catch {
+              notifications.show({
+                title: "Note",
+                message: "Couldn't parse suggestions",
+                color: "yellow",
+              });
+            }
+          }
+          if (currentEvent === "done") {
+            // End of stream
+            setIsStreaming(false);
+          }
+        }
+      }
+    } catch {
+      setIsStreaming(false);
+      notifications.show({
+        title: "Assistant error",
+        message: "Connection failed or aborted.",
+        color: "red",
+      });
     }
   };
 
-  const addSuggestion = async (s: Suggestion) => {
-    const didAdd = await bulkCreateCards
-      .mutateAsync({
-        deckId,
+  const onStop = () => {
+    abortRef.current?.abort();
+    setIsStreaming(false);
+  };
+
+  const onAddSuggestion = async (s: Suggestion) => {
+    try {
+      await bulkCreate.mutateAsync({
+        deckId: _deckId,
         input: [
-          {
-            term: s.phrase,
-            definition: s.translation,
-            gender: s.gender,
-          },
+          { term: s.phrase, definition: s.translation, gender: s.gender },
         ],
-      })
-      .then(
-        () => true,
-        () => false,
-      );
-    if (didAdd) {
-      setAdded((prev) => ({ ...prev, [keyFor(s)]: true }));
+      });
+      notifications.show({
+        title: "Added",
+        message: "Card added to deck",
+      });
+    } catch {
+      notifications.show({
+        title: "Failed",
+        message: "Could not add card",
+        color: "red",
+      });
     }
   };
 
@@ -210,7 +297,14 @@ export function ReviewAssistantPane({
                 <Text size="sm" c="dimmed" mb={4}>
                   {m.role === "user" ? "You" : "Assistant"}
                 </Text>
-                <Text>{m.content}</Text>
+                <Text
+                  style={{
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                  }}
+                >
+                  {m.content}
+                </Text>
                 {m.suggestions && m.suggestions.length > 0 && (
                   <Stack gap={6} mt="sm">
                     {m.suggestions.map((s, idx) => (
@@ -225,22 +319,14 @@ export function ReviewAssistantPane({
                             {s.translation}
                           </Text>
                         </Box>
-                        <Group gap="xs">
-                          {added[keyFor(s)] && (
-                            <Badge color="teal" variant="light" size="sm">
-                              Added
-                            </Badge>
-                          )}
-                          <Button
-                            size="xs"
-                            leftSection={<IconPlus size={14} />}
-                            loading={bulkCreateCards.isLoading}
-                            disabled={!!added[keyFor(s)]}
-                            onClick={() => addSuggestion(s)}
-                          >
-                            Add card
-                          </Button>
-                        </Group>
+                        <Button
+                          size="xs"
+                          leftSection={<IconPlus size={14} />}
+                          loading={bulkCreate.isLoading}
+                          onClick={() => onAddSuggestion(s)}
+                        >
+                          Add card
+                        </Button>
                       </Group>
                     ))}
                   </Stack>
@@ -265,14 +351,26 @@ export function ReviewAssistantPane({
               }
             }}
           />
-          <Group justify="flex-end">
-            <Button
-              onClick={onSend}
-              loading={reviewAssistant.isLoading}
-              leftSection={<IconSend size={16} />}
-            >
-              Send
-            </Button>
+          <Group justify="space-between">
+            <Text size="xs" c="dimmed">
+              {isStreaming ? "Streaming…" : ""}
+            </Text>
+            <Group gap="xs">
+              {isStreaming ? (
+                <Button color="gray" variant="light" onClick={onStop}>
+                  Stop
+                </Button>
+              ) : (
+                <Button
+                  onClick={onSend}
+                  loading={false}
+                  leftSection={<IconSend size={16} />}
+                  disabled={false}
+                >
+                  Send
+                </Button>
+              )}
+            </Group>
           </Group>
         </Stack>
       </Drawer>
