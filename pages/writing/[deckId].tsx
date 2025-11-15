@@ -48,20 +48,18 @@ export const getServerSideProps: GetServerSideProps<
     return { notFound: true };
   }
 
-  const langCode = (
-    await prismaClient.deck.findUnique({
-      where: { id: parsedId, userId: dbUser.id },
-      select: { langCode: true },
-    })
-  )?.langCode as LangCode | undefined;
+  const deckExists = await prismaClient.deck.findUnique({
+    where: { id: parsedId, userId: dbUser.id },
+    select: { id: true },
+  });
 
-  if (!langCode) {
+  if (!deckExists) {
     return { redirect: { destination: "/review", permanent: false } };
   }
   return {
     props: {
       deckId: parsedId,
-      langCode,
+      langCode: "ko" as LangCode,
     },
   };
 };

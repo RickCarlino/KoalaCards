@@ -24,7 +24,7 @@
   </a>
 </p>
 
-KoalaCards is a [spaced repetition system (SRS)](https://en.wikipedia.org/wiki/Spaced_repetition) designed to enhance language learning, with a strong focus on **listening and speaking skills**. It leverages modern technologies like speech-to-text and large language models (LLMs) for objective, human-like assessment of user responses.
+KoalaCards is a [spaced repetition system (SRS)](https://en.wikipedia.org/wiki/Spaced_repetition) designed to help English speakers learn **Korean**, with a strong focus on **listening and speaking skills**. It leverages modern technologies like speech-to-text and large language models (LLMs) for objective, human-like assessment of user responses.
 
 Unlike traditional SRS apps that often rely on self-grading, KoalaCards provides:
 
@@ -76,12 +76,11 @@ Unlike traditional SRS apps that often rely on self-grading, KoalaCards provides
   - tRPC for type-safe API routes.
   - Prisma for database interaction.
 
-## Supported Languages
+## Language
 
-- **Officially Supported:** Korean, French, Italian, Spanish
-- **Untested/Limited Support:** Arabic, Catalan, Czech, Danish, Dutch, English, Finnish, Galician, German, Greek, Gujarati, Hebrew, Hindi, Hungarian, Indonesian, Kannada, Latvian, Lithuanian, Malay, Marathi, Norwegian, Polish, Portuguese, Punjabi, Romanian, Russian, Serbian, Slovak, Swedish, Turkish, Ukrainian, Vietnamese
+- **Target Language:** Korean (for English speakers)
 
-_Note: While multiple languages are supported, the primary focus is English speakers learning Korean._
+Note: The app was previously multi‑lingual; it is now intentionally focused on Korean.
 
 ## Technology Stack 💻
 
@@ -117,7 +116,7 @@ Configuration details for Google Sign-In can be found in the `.env.example` file
 ## Project Status and Limitations ⚠️
 
 - The application is actively used but may have areas with limited documentation.
-- While supporting multiple languages, the primary development focus has been on Korean for English speakers. Support and testing for other languages may vary.
+- The app is now single‑language (Korean). Other languages are not supported.
 
 ## Contributing 🤝
 

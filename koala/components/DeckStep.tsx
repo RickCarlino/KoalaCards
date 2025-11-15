@@ -170,13 +170,7 @@ export function DeckStep({
                   deckLang: val as LangCode,
                 })
               }
-              data={Object.keys(supportedLanguages)
-                .sort()
-                .filter((langCode) => langCode !== "en")
-                .map((langCode) => ({
-                  label: supportedLanguages[langCode as LangCode],
-                  value: langCode,
-                }))}
+              data={[{ value: "ko", label: supportedLanguages.ko }]}
               styles={{
                 input: {
                   borderColor: theme.colors.pink[1],

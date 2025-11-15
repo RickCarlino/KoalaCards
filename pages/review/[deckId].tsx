@@ -83,7 +83,7 @@ async function getCorrectivePicksForUser(
   });
   return results.map((r) => ({
     id: r.id,
-    langCode: r.langCode,
+    langCode: "ko",
     definition: r.definition,
     userInput: r.userInput,
     reason: r.reason,

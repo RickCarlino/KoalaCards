@@ -18,7 +18,7 @@ import { trpc } from "../koala/trpc-config";
 import Link from "next/link";
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
-  const { search, lang, page } = context.query;
+  const { search, page } = context.query;
   const pageNum = parseInt((page as string) || "1", 10);
   const filter = {
     ...(search
@@ -26,7 +26,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
           name: { contains: String(search), mode: "insensitive" as const },
         }
       : {}),
-    ...(lang && lang !== "" ? { langCode: String(lang) } : {}),
     published: true,
   };
   const take = 15;
@@ -43,10 +42,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     ...deck,
     createdAt: null,
   }));
-  const languagesGroup = await prisma.deck.groupBy({
-    by: ["langCode"],
-  });
-  const languages = languagesGroup.map((item) => item.langCode);
+  const languages = ["ko"];
 
   return {
     props: {
@@ -63,7 +59,6 @@ interface Deck {
   name: string;
   description: string | null;
   createdAt: string;
-  langCode: string;
   userId: string;
   _count: {
     Card: number;

@@ -38,16 +38,7 @@ export const mergeDecks = procedure
       });
     }
 
-    // Get the language code from the first deck (assuming all decks have the same language)
-    const langCode = decks[0].langCode;
-
-    // Verify all decks have the same language
-    if (!decks.every((deck) => deck.langCode === langCode)) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: "All decks must be in the same language",
-      });
-    }
+    // Single-language app: language consistency is implicit
 
     // Execute the merge operation in a transaction
     const result = await prismaClient.$transaction(async (tx) => {
@@ -55,7 +46,6 @@ export const mergeDecks = procedure
       const newDeck = await tx.deck.create({
         data: {
           name: input.newDeckName,
-          langCode,
           userId,
           published: false,
         },

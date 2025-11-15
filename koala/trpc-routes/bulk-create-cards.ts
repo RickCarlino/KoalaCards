@@ -41,7 +41,7 @@ export const bulkCreateCards = procedure
     }
 
     const results: { term: string; definition: string }[] = [];
-    const { deckId: inDeckId, deckName, langCode: inLangCode } = input;
+    const { deckId: inDeckId, deckName } = input;
 
     let deck =
       inDeckId &&
@@ -49,13 +49,13 @@ export const bulkCreateCards = procedure
         where: { id: inDeckId, userId },
       }));
 
-    if (!deck && deckName && inLangCode) {
+    if (!deck && deckName) {
       deck =
         (await prismaClient.deck.findFirst({
-          where: { userId, langCode: inLangCode, name: deckName },
+          where: { userId, name: deckName },
         })) ??
         (await prismaClient.deck.create({
-          data: { userId, langCode: inLangCode, name: deckName },
+          data: { userId, name: deckName },
         }));
     }
 
@@ -64,11 +64,11 @@ export const bulkCreateCards = procedure
         code: inDeckId ? "NOT_FOUND" : "BAD_REQUEST",
         message: inDeckId
           ? `Deck with ID ${inDeckId} not found or access denied.`
-          : "Input must include either 'deckId' or both 'deckName' and 'langCode'.",
+          : "Input must include either 'deckId' or 'deckName'.",
       });
     }
 
-    const { id: deckId, langCode } = deck;
+    const { id: deckId } = deck;
     let processed = 0;
 
     for (const { term, definition, gender } of input.input) {
@@ -88,7 +88,6 @@ export const bulkCreateCards = procedure
       const card = await prismaClient.card.create({
         data: {
           userId,
-          langCode,
           term,
           definition,
           deckId,

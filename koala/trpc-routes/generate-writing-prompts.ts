@@ -83,12 +83,11 @@ export const generateWritingPrompts = procedure
 
 async function draftPrompts(
   seeds: string[],
-  deck: {
+  _deck: {
     name: string;
     id: number;
     createdAt: Date;
     userId: string;
-    langCode: string;
     published: boolean;
     parentDeckId: number | null;
   },
@@ -101,9 +100,7 @@ async function draftPrompts(
   const systemPrompt = [
     promptIntro,
     tasks,
-    `Write your response in ${getLangName(
-      deck.langCode,
-    )} (not English). **No numbering, bullets, or labels** - one per line, no extra text.`,
+    `Write your response in ${getLangName("ko")} (not English). **No numbering, bullets, or labels** - one per line, no extra text.`,
   ].join("\n\n");
 
   const response = await chat(systemPrompt);

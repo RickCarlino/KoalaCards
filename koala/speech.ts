@@ -5,7 +5,7 @@ import { generateSpeechURL } from "./generate-speech-url";
 import { removeParens } from "./quiz-evaluators/evaluator-utils";
 
 type AudioLessonParams = {
-  card: Pick<Card, "term" | "definition" | "gender" | "langCode">;
+  card: Pick<Card, "term" | "definition" | "gender">;
   lessonType: LessonType | "new";
   speed?: number;
 };
@@ -32,6 +32,6 @@ export async function generateLessonAudio(params: AudioLessonParams) {
       speed: params.speed || 100,
     }),
     gender: params.card.gender as "N",
-    langCode: params.card.langCode,
+    langCode: "ko",
   });
 }

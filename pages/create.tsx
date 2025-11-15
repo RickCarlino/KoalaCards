@@ -71,7 +71,7 @@ export const getServerSideProps: GetServerSideProps<
       decks: decks.map((deck) => ({
         id: deck.id,
         name: deck.name,
-        langCode: deck.langCode,
+        langCode: "ko",
       })),
     },
   };
@@ -432,10 +432,7 @@ function DeckSection(props: DeckSectionProps) {
           placeholder="Select language"
           value={deckLang}
           onChange={(v) => onSetLang((v as LangCode) || deckLang)}
-          data={Object.entries(supportedLanguages).map(([code, name]) => ({
-            value: code,
-            label: name,
-          }))}
+          data={[{ value: "ko", label: supportedLanguages.ko }]}
         />
       </>
     );

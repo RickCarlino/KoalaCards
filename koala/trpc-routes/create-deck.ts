@@ -28,20 +28,20 @@ export const createDeck = procedure
     }
 
     const existing = await prismaClient.deck.findFirst({
-      where: { userId, name: input.name, langCode: input.langCode },
+      where: { userId, name: input.name },
     });
 
     const deck =
       existing ??
       (await prismaClient.deck.create({
-        data: { userId, name: input.name, langCode: input.langCode },
-        select: { id: true, name: true, langCode: true },
+        data: { userId, name: input.name },
+        select: { id: true, name: true },
       }));
 
     const normalized: { id: number; name: string; langCode: LangCode } = {
       id: deck.id,
       name: deck.name,
-      langCode: deck.langCode as LangCode,
+      langCode: "ko" as LangCode,
     };
 
     return normalized;
