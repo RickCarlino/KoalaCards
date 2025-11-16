@@ -21,6 +21,7 @@ import {
 import { useMediaQuery } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { trpc } from "@/koala/trpc-config";
+import { createExampleStreamParser } from "@/koala/utils/example-stream-parser";
 
 type Suggestion = {
   phrase: string;
@@ -40,6 +41,9 @@ type CurrentCard = {
   langCode: string;
   lessonType?: "speaking" | "new" | "remedial";
 };
+
+const collapseNewlines = (value: string) =>
+  value.replace(/\n{3,}/g, "\n\n");
 
 export function ReviewAssistantPane({
   deckId: _deckId,
@@ -73,6 +77,8 @@ export function ReviewAssistantPane({
 
   // Streaming state
   const abortRef = React.useRef<AbortController | null>(null);
+  const parserRef =
+    React.useRef<ReturnType<typeof createExampleStreamParser> | null>(null);
   const [isStreaming, setIsStreaming] = React.useState(false);
   const bulkCreate = trpc.bulkCreateCards.useMutation();
 
@@ -99,6 +105,49 @@ export function ReviewAssistantPane({
       userMsg,
       { role: "assistant", content: "" },
     ]);
+    parserRef.current = createExampleStreamParser();
+
+    const applyParsed = (
+      textDelta: string,
+      newExamples: { phrase: string; translation: string }[],
+    ) => {
+      if (!textDelta && newExamples.length === 0) {
+        return;
+      }
+      setMessages((m) => {
+        const last = m[m.length - 1];
+        if (!last || last.role !== "assistant") {
+          return m;
+        }
+        const nextContent = textDelta
+          ? collapseNewlines(last.content + textDelta)
+          : last.content;
+        const updated: ChatMessage = {
+          ...last,
+          content: nextContent,
+          suggestions: newExamples.length
+            ? [
+                ...(last.suggestions ?? []),
+                ...newExamples.map((ex) => ({
+                  phrase: ex.phrase,
+                  translation: ex.translation,
+                  gender: "N" as const,
+                })),
+              ]
+            : last.suggestions,
+        };
+        return [...m.slice(0, -1), updated];
+      });
+    };
+
+    const finalizeParser = () => {
+      if (!parserRef.current) {
+        return;
+      }
+      const { textDelta, examples } = parserRef.current.flush();
+      parserRef.current = null;
+      applyParsed(textDelta, examples);
+    };
 
     // Start streaming
     try {
@@ -126,17 +175,6 @@ export function ReviewAssistantPane({
       const decoder = new TextDecoder();
       let buffer = "";
       let currentEvent: string | null = null;
-
-      const applyToken = (token: string) => {
-        setMessages((m) => {
-          const last = m[m.length - 1];
-          if (!last || last.role !== "assistant") {
-            return m;
-          }
-          const updated = { ...last, content: last.content + token };
-          return [...m.slice(0, -1), updated];
-        });
-      };
 
       // Basic SSE parser: handle event: <name> + data: <payload> frames
       let reading = true;
@@ -169,48 +207,33 @@ export function ReviewAssistantPane({
           const payload = dataLines.join("\n");
           if (!currentEvent) {
             // token frame
-            applyToken(payload);
+            const parser: ReturnType<typeof createExampleStreamParser> =
+              parserRef.current ?? createExampleStreamParser();
+            parserRef.current = parser;
+            const { textDelta, examples } = parser.push(payload);
+            applyParsed(textDelta, examples);
             continue;
-          }
-          if (currentEvent === "suggestions") {
-            try {
-              const parsed = JSON.parse(payload) as {
-                suggestions?: Suggestion[];
-              };
-              if (parsed?.suggestions && parsed.suggestions.length > 0) {
-                setMessages((m) => {
-                  const last = m[m.length - 1];
-                  if (!last || last.role !== "assistant") {
-                    return m;
-                  }
-                  const updated = {
-                    ...last,
-                    suggestions: parsed.suggestions,
-                  };
-                  return [...m.slice(0, -1), updated];
-                });
-              }
-            } catch {
-              notifications.show({
-                title: "Note",
-                message: "Couldn't parse suggestions",
-                color: "yellow",
-              });
-            }
           }
           if (currentEvent === "done") {
             // End of stream
+            finalizeParser();
             setIsStreaming(false);
+            reading = false;
+            break;
           }
         }
       }
+      finalizeParser();
     } catch {
-      setIsStreaming(false);
+      finalizeParser();
       notifications.show({
         title: "Assistant error",
         message: "Connection failed or aborted.",
         color: "red",
       });
+    } finally {
+      parserRef.current = null;
+      setIsStreaming(false);
     }
   };
 

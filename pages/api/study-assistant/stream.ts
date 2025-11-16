@@ -4,7 +4,6 @@ import { authOptions } from "../auth/[...nextauth]";
 import OpenAI from "openai";
 import { prismaClient } from "@/koala/prisma-client";
 import { z } from "zod";
-import { generateStructuredOutput, type CoreMessage } from "@/koala/ai";
 
 // Keep this feature isolated: single API route, no changes elsewhere.
 
@@ -38,16 +37,6 @@ const BodySchema = z.object({
       content: z.string(),
     }),
   ),
-});
-
-const SuggestionSchema = z.object({
-  phrase: z.string().max(160),
-  translation: z.string().max(200),
-  gender: z.union([z.literal("M"), z.literal("F"), z.literal("N")]),
-});
-
-const SuggestionsSchema = z.object({
-  suggestions: z.array(SuggestionSchema).max(5),
 });
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -126,7 +115,7 @@ GLOBAL RULES:
 - Follow standard Korean discourse conventions: prefer names, roles, or context-driven zero subjects over literal third-person pronouns (그는/그녀); keep references natural and situation-specific.
 - Use grammatically complete, idiomatic sentences. Favor clear connective endings (e.g., -면, -해서, -더라도) instead of literal translations of English conjunctions.
 - Compose each sentence directly in Korean, using natural collocations and fully conjugated predicates rather than bare dictionary forms.
-- If you present examples: put the TL sentence first (Hangul), then an English gloss on the next line.
+- If you present examples: wrap each pair inside [[EXAMPLE]]...[[/EXAMPLE]] with the TL sentence (Hangul only) on one line and the English gloss on the next line, e.g. [[EXAMPLE]]<newline>한국어 문장<newline>English gloss<newline>[[/EXAMPLE]].
 - Your goal is to teach Korean, but you can explain in English when appropriate.
 
 EXPLANATION REQUESTS:
@@ -166,37 +155,6 @@ TRANSLATION/PHRASES REQUESTS:
       writeSSE(res, chunk);
     }
   }
-
-  // Suggestions: run a quick structured output call, then emit as a separate event
-  const suggestPrompt: CoreMessage[] = [
-    {
-      role: "system",
-      content: `You generate compact flashcard suggestions for a Korean deck.
-Rules:
-- TL is Korean (Hangul only) with no romanization.
-- Return up to 5 useful, high-frequency phrases that reuse or collocate with the key vocab "${current.term}" when appropriate.
-- Keep every phrase native-sounding (CEFR B1-C2) and under 120 characters, using Korean-style subject omission or concrete roles/names instead of literal third-person pronouns.
-- Compose each phrase directly in Korean with idiomatic collocations, fully conjugated predicates, and correct particles—treat it like natural speech, not a translation draft.
-- Provide a succinct English translation.
-- Although Korean has no grammatical gender, the gender field powers TTS voice variety—cycle through M/F/N thoughtfully.
-- Output only data; no extra text.`,
-    },
-    {
-      role: "user",
-      content: `Key vocab: ${current.term}\nDefinition: ${current.definition}\nUser goal: ${messages[messages.length - 1]?.content ?? ""}`,
-    },
-  ];
-
-  const result = await generateStructuredOutput({
-    model: ["openai", "fast"],
-    messages: suggestPrompt,
-    schema: SuggestionsSchema,
-    maxTokens: 400,
-  });
-  const limited = {
-    suggestions: (result?.suggestions ?? []).slice(0, 5),
-  };
-  writeSSE(res, JSON.stringify(limited), "suggestions");
 
   writeSSE(res, "done", "done");
   res.end();
