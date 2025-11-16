@@ -5,7 +5,8 @@ import { z } from "zod";
  * Maximum number of example sentences allowed in a single flood section
  * (applies to both target and contrast items).
  */
-export const FLOOD_ITEM_COUNT_MAX = 4;
+// Shorten lessons: fewer examples per section
+export const FLOOD_ITEM_COUNT_MAX = 3;
 
 /**
  * Minimum number of example sentences required in a flood section
@@ -17,7 +18,9 @@ export const FLOOD_ITEM_COUNT_MIN = 2;
  * Max tokens for the lesson generation structured output request
  * (inputFloodGenerate -> generateStructuredOutput).
  */
-export const INPUT_FLOOD_GENERATE_MAX_TOKENS = 12000;
+// Reduce completion size for faster, cheaper generations while
+// still comfortably fitting the schema-bound lesson output.
+export const INPUT_FLOOD_GENERATE_MAX_TOKENS = 3000;
 
 /**
  * Maximum number of grading items accepted per request
@@ -46,12 +49,12 @@ export const INPUT_FLOOD_GRADE_TEXT_LIMIT = 200;
 /**
  * Maximum number of production Q&A items returned in a lesson.
  */
-export const INPUT_FLOOD_PRODUCTION_MAX = 6;
+export const INPUT_FLOOD_PRODUCTION_MAX = 4;
 
 /**
  * Minimum number of production Q&A items required in a lesson.
  */
-export const INPUT_FLOOD_PRODUCTION_MIN = 3;
+export const INPUT_FLOOD_PRODUCTION_MIN = 2;
 
 // (Removed) Previously duplicated prompt-specific rule bounds; use RULES_COUNT_MIN/MAX instead.
 

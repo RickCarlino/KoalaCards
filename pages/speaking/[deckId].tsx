@@ -3,10 +3,10 @@ import Link from "next/link";
 import React from "react";
 import {
   Anchor,
-  Box,
   Button,
   Card,
   Container,
+  Loader,
   Group,
   Stack,
   Text,
@@ -87,117 +87,47 @@ export const getServerSideProps: GetServerSideProps<
   return { props: { deckId, picks } };
 };
 
-function PicksList({
-  picks,
-  onStart,
-  onHelpful,
-  onNotHelpful,
-}: {
-  picks: PickedMistake[];
-  onStart: (id: number) => void;
-  onHelpful: (id: number, helpful: boolean) => void;
-  onNotHelpful: (id: number) => void;
-}) {
-  const [expanded, setExpanded] = React.useState<Set<number>>(new Set());
-  if (!picks.length) {
-    return (
-      <Card withBorder padding="lg">
-        <Stack gap="xs">
-          <Title order={4}>No suggestions yet</Title>
-          <Text c="dimmed" size="sm">
-            We’ll show speaking improvements here after you make a few
-            attempts during reviews.
-          </Text>
-        </Stack>
-      </Card>
-    );
-  }
-  return (
-    <Stack gap={8}>
-      {picks.map((p) => (
-        <Card key={p.id} withBorder padding="md">
-          <Stack gap={6}>
-            <Group gap={8} align="center">
-              <Button
-                size="xs"
-                variant="subtle"
-                aria-expanded={expanded.has(p.id)}
-                aria-controls={`reason-${p.id}`}
-                onClick={() =>
-                  setExpanded((prev) => {
-                    const next = new Set(prev);
-                    next.has(p.id) ? next.delete(p.id) : next.add(p.id);
-                    return next;
-                  })
-                }
-              >
-                Details
-              </Button>
-              <Text
-                size="sm"
-                style={{ flex: 1 }}
-                lineClamp={1}
-                title={p.definition}
-              >
-                {p.definition}
-              </Text>
-            </Group>
-            {expanded.has(p.id) ? (
-              <Text id={`reason-${p.id}`} size="sm" c="dimmed">
-                {p.reason}
-              </Text>
-            ) : null}
-            <Group gap={8}>
-              <Button
-                size="sm"
-                variant="light"
-                onClick={() => onStart(p.id)}
-              >
-                Start Drill
-              </Button>
-              <Button
-                size="sm"
-                variant={p.helpfulness > 0 ? "filled" : "subtle"}
-                color="green"
-                aria-pressed={p.helpfulness > 0}
-                onClick={() => onHelpful(p.id, !(p.helpfulness > 0))}
-              >
-                Helpful
-              </Button>
-              <Button
-                size="sm"
-                variant="subtle"
-                color="red"
-                onClick={() => onNotHelpful(p.id)}
-              >
-                Not Helpful
-              </Button>
-            </Group>
-          </Stack>
-        </Card>
-      ))}
-    </Stack>
-  );
-}
-
 export default function SpeakingImprovementsPage({
   deckId,
-  picks: initialPicks,
+  picks: _initialPicks,
 }: SpeakingPageProps) {
-  const [picks, setPicks] = React.useState<PickedMistake[]>(initialPicks);
   const [gen, setGen] = React.useState<GenerateResponse | null>(null);
   const genMutation = trpc.inputFloodGenerate.useMutation();
-  const editResult = trpc.editQuizResult.useMutation();
+  const [isLoading, setIsLoading] = React.useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(
+    null,
+  );
+  const [hasAttempted, setHasAttempted] = React.useState<boolean>(false);
+  const startedRef = React.useRef<boolean>(false);
 
-  const startDrill = async (id: number) => {
+  const startRandom = async () => {
+    if (isLoading) {
+      return;
+    }
+    setHasAttempted(true);
+    setIsLoading(true);
+    setErrorMessage(null);
     try {
-      const res = await genMutation.mutateAsync({ resultId: id });
+      const res = await genMutation.mutateAsync({});
       setGen(res as GenerateResponse);
       window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
     } catch {
-      // do nothing; non-blocking UI
+      setErrorMessage(
+        "We couldn't find an issue to practice right now. Please try again in a moment.",
+      );
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  React.useEffect(() => {
+    if (startedRef.current) {
+      return;
+    }
+    startedRef.current = true;
+    void startRandom();
+  }, []);
 
   return (
     <Container size="md" py="xl">
@@ -210,53 +140,57 @@ export default function SpeakingImprovementsPage({
         </Group>
 
         {gen ? (
+          <>
+            <InputFloodLessonComponent
+              lesson={gen.lesson}
+              langCode={gen.source.langCode}
+              onComplete={() => setGen(null)}
+            />
+            <Group justify="flex-end" mt="md">
+              <Button
+                variant="default"
+                onClick={() => {
+                  setGen(null);
+                  void startRandom();
+                }}
+              >
+                Pick Another Issue
+              </Button>
+            </Group>
+          </>
+        ) : null}
+
+        {!gen && (genMutation.isLoading || isLoading) ? (
           <Card withBorder padding="lg">
-            <Stack gap="md">
-              <Title order={4}>Drill</Title>
-              <InputFloodLessonComponent
-                lesson={gen.lesson}
-                langCode={gen.source.langCode}
-                onComplete={() => setGen(null)}
-              />
+            <Group align="center" gap="sm">
+              <Loader size="sm" />
+              <Text>Finding an issue and generating a drill…</Text>
+            </Group>
+          </Card>
+        ) : null}
+
+        {!gen && !isLoading && errorMessage ? (
+          <Card withBorder padding="lg">
+            <Stack gap="sm">
+              <Text c="red">{errorMessage}</Text>
               <Group justify="flex-end">
-                <Button variant="default" onClick={() => setGen(null)}>
-                  Pick Another Issue
+                <Button
+                  onClick={() => void startRandom()}
+                  variant="default"
+                >
+                  Try Again
                 </Button>
               </Group>
             </Stack>
           </Card>
         ) : null}
 
-        {!gen ? (
-          <Box>
-            <Title order={4} mb="xs">
-              Pick an issue to practice
-            </Title>
-            <PicksList
-              picks={picks}
-              onStart={startDrill}
-              onHelpful={(id, helpful) => {
-                setPicks((prev) =>
-                  prev.map((p) =>
-                    p.id === id
-                      ? { ...p, helpfulness: helpful ? 1 : 0 }
-                      : p,
-                  ),
-                );
-                editResult.mutate({
-                  resultId: id,
-                  data: { helpfulness: helpful ? 1 : 0 },
-                });
-              }}
-              onNotHelpful={(id) => {
-                setPicks((prev) => prev.filter((p) => p.id !== id));
-                editResult.mutate({
-                  resultId: id,
-                  data: { helpfulness: -1 },
-                });
-              }}
-            />
-          </Box>
+        {!gen && !isLoading && !errorMessage && hasAttempted ? (
+          <Group justify="flex-end">
+            <Button onClick={() => void startRandom()} variant="default">
+              Start Practice
+            </Button>
+          </Group>
         ) : null}
       </Stack>
     </Container>
