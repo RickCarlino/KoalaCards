@@ -77,8 +77,9 @@ export function ReviewAssistantPane({
 
   // Streaming state
   const abortRef = React.useRef<AbortController | null>(null);
-  const parserRef =
-    React.useRef<ReturnType<typeof createExampleStreamParser> | null>(null);
+  const parserRef = React.useRef<ReturnType<
+    typeof createExampleStreamParser
+  > | null>(null);
   const [isStreaming, setIsStreaming] = React.useState(false);
   const bulkCreate = trpc.bulkCreateCards.useMutation();
 
