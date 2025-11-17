@@ -6,13 +6,13 @@ import { z } from "zod";
  * (applies to both target and contrast items).
  */
 // Shorten lessons: fewer examples per section
-export const FLOOD_ITEM_COUNT_MAX = 3;
+export const FLOOD_ITEM_COUNT_MAX = 2;
 
 /**
  * Minimum number of example sentences required in a flood section
  * (applies to both target and contrast items).
  */
-export const FLOOD_ITEM_COUNT_MIN = 2;
+export const FLOOD_ITEM_COUNT_MIN = 1;
 
 /**
  * Max tokens for the lesson generation structured output request
@@ -49,12 +49,12 @@ export const INPUT_FLOOD_GRADE_TEXT_LIMIT = 200;
 /**
  * Maximum number of production Q&A items returned in a lesson.
  */
-export const INPUT_FLOOD_PRODUCTION_MAX = 4;
+export const INPUT_FLOOD_PRODUCTION_MAX = 2;
 
 /**
  * Minimum number of production Q&A items required in a lesson.
  */
-export const INPUT_FLOOD_PRODUCTION_MIN = 2;
+export const INPUT_FLOOD_PRODUCTION_MIN = 1;
 
 // (Removed) Previously duplicated prompt-specific rule bounds; use RULES_COUNT_MIN/MAX instead.
 

@@ -299,10 +299,17 @@ export function InputFloodLesson({
     [
       "space",
       (e) => {
-        e.preventDefault();
-        if (isAudioPlaying || step.t === "diagnosis") {
+        if (step.t === "diagnosis") {
+          if (!passed.has("diagnosis")) {
+            e.preventDefault();
+            markPassedAndNext();
+          }
           return;
         }
+        if (isAudioPlaying) {
+          return;
+        }
+        e.preventDefault();
         void handleRecordToggle();
       },
     ],

@@ -12,6 +12,7 @@ import {
   Text,
   Title,
 } from "@mantine/core";
+import { useHotkeys } from "@mantine/hooks";
 
 import { prismaClient } from "@/koala/prisma-client";
 import { getServersideUser } from "@/koala/get-serverside-user";
@@ -98,12 +99,15 @@ export default function SpeakingImprovementsPage({
     null,
   );
   const [hasAttempted, setHasAttempted] = React.useState<boolean>(false);
+  const [isLessonComplete, setIsLessonComplete] =
+    React.useState<boolean>(false);
   const startedRef = React.useRef<boolean>(false);
 
   const startRandom = async () => {
     if (isLoading) {
       return;
     }
+    setIsLessonComplete(false);
     setHasAttempted(true);
     setIsLoading(true);
     setErrorMessage(null);
@@ -116,6 +120,7 @@ export default function SpeakingImprovementsPage({
       setErrorMessage(
         "We couldn't find an issue to practice right now. Please try again in a moment.",
       );
+      setIsLessonComplete(true);
     } finally {
       setIsLoading(false);
     }
@@ -128,6 +133,18 @@ export default function SpeakingImprovementsPage({
     startedRef.current = true;
     void startRandom();
   }, []);
+
+  useHotkeys([
+    [
+      "space",
+      (event) => {
+        if (!gen && isLessonComplete && !isLoading) {
+          event.preventDefault();
+          void startRandom();
+        }
+      },
+    ],
+  ]);
 
   return (
     <Container size="md" py="xl">
@@ -144,7 +161,10 @@ export default function SpeakingImprovementsPage({
             <InputFloodLessonComponent
               lesson={gen.lesson}
               langCode={gen.source.langCode}
-              onComplete={() => setGen(null)}
+              onComplete={() => {
+                setGen(null);
+                setIsLessonComplete(true);
+              }}
             />
             <Group justify="flex-end" mt="md">
               <Button
