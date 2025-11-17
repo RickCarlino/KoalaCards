@@ -20,15 +20,6 @@ import { trpc } from "@/koala/trpc-config";
 import { InputFloodLesson as InputFloodLessonComponent } from "@/koala/input-flood/InputFloodLesson";
 import type { InputFloodLesson as InputFloodLessonType } from "@/koala/types/input-flood";
 
-type PickedMistake = {
-  id: number;
-  langCode: string;
-  definition: string;
-  userInput: string;
-  reason: string;
-  helpfulness: number;
-};
-
 type GenerateResponse = {
   lesson: InputFloodLessonType;
   source: { quizResultId: number; langCode: string };
@@ -36,115 +27,139 @@ type GenerateResponse = {
 
 type SpeakingPageProps = {
   deckId: number;
-  picks: PickedMistake[];
 };
-
-async function getCorrectivePicksForUser(
-  userId: string,
-): Promise<PickedMistake[]> {
-  const results = await prismaClient.quizResult.findMany({
-    where: {
-      userId,
-      isAcceptable: false,
-      helpfulness: { gt: 0 },
-    },
-    orderBy: [{ createdAt: "asc" }],
-    take: 25,
-  });
-  return results.map((r) => ({
-    id: r.id,
-    langCode: "ko",
-    definition: r.definition,
-    userInput: r.userInput,
-    reason: r.reason,
-    helpfulness: r.helpfulness,
-  }));
-}
 
 export const getServerSideProps: GetServerSideProps<
   SpeakingPageProps
 > = async (ctx) => {
   const user = await getServersideUser(ctx);
   if (!user) {
-    return {
-      redirect: { destination: "/api/auth/signin", permanent: false },
-    };
+    return { redirect: { destination: "/api/auth/signin", permanent: false } };
   }
 
-  const deckId = Number(ctx.params?.deckId);
-  if (!deckId) {
+  const deckIdParam = Array.isArray(ctx.params?.deckId)
+    ? ctx.params?.deckId[0]
+    : ctx.params?.deckId;
+  const deckIdNum = Number(deckIdParam);
+
+  if (!Number.isFinite(deckIdNum) || deckIdNum <= 0) {
     return { redirect: { destination: "/review", permanent: false } };
   }
 
   const deck = await prismaClient.deck.findUnique({
-    where: { userId: user.id, id: deckId },
+    where: { userId: user.id, id: deckIdNum },
     select: { id: true },
   });
+
   if (!deck) {
     return { redirect: { destination: "/review", permanent: false } };
   }
 
-  const picks = await getCorrectivePicksForUser(user.id);
-  return { props: { deckId, picks } };
+  return { props: { deckId: deckIdNum } };
 };
 
 export default function SpeakingImprovementsPage({
   deckId,
-  picks: _initialPicks,
 }: SpeakingPageProps) {
   const [gen, setGen] = React.useState<GenerateResponse | null>(null);
   const genMutation = trpc.inputFloodGenerate.useMutation();
-  const [isLoading, setIsLoading] = React.useState<boolean>(false);
-  const [errorMessage, setErrorMessage] = React.useState<string | null>(
-    null,
-  );
-  const [hasAttempted, setHasAttempted] = React.useState<boolean>(false);
-  const [isLessonComplete, setIsLessonComplete] =
-    React.useState<boolean>(false);
-  const startedRef = React.useRef<boolean>(false);
+  const editQuizResultMutation = trpc.editQuizResult.useMutation();
 
-  const startRandom = async () => {
-    if (isLoading) {
-      return;
-    }
+  const [hasAttempted, setHasAttempted] = React.useState(false);
+  const [isLessonComplete, setIsLessonComplete] = React.useState(false);
+  const startedRef = React.useRef(false);
+
+  const startLesson = async () => {
+    if (genMutation.isLoading) return;
     setIsLessonComplete(false);
     setHasAttempted(true);
-    setIsLoading(true);
-    setErrorMessage(null);
-    try {
-      const res = await genMutation.mutateAsync({});
-      setGen(res as GenerateResponse);
+
+    const res = await genMutation.mutateAsync({});
+    setGen(res as GenerateResponse);
+    if (typeof window !== "undefined") {
       window.scrollTo({ top: 0, behavior: "smooth" });
-      return;
-    } catch {
-      setErrorMessage(
-        "We couldn't find an issue to practice right now. Please try again in a moment.",
-      );
-      setIsLessonComplete(true);
-    } finally {
-      setIsLoading(false);
     }
   };
 
+  const handleLessonComplete = async () => {
+    if (!gen) return;
+
+    await editQuizResultMutation.mutateAsync({
+      resultId: gen.source.quizResultId,
+      data: { reviewedAt: new Date() },
+    });
+
+    setGen(null);
+    setIsLessonComplete(true);
+    void startLesson();
+  };
+
   React.useEffect(() => {
-    if (startedRef.current) {
-      return;
-    }
+    if (startedRef.current) return;
     startedRef.current = true;
-    void startRandom();
+    void startLesson();
   }, []);
 
   useHotkeys([
     [
       "space",
       (event) => {
-        if (!gen && isLessonComplete && !isLoading) {
-          event.preventDefault();
-          void startRandom();
-        }
+        if (gen) return;
+        if (!isLessonComplete) return;
+        if (genMutation.isLoading) return;
+        event.preventDefault();
+        void startLesson();
       },
     ],
   ]);
+
+  const renderContent = () => {
+    if (gen) {
+      return (
+        <>
+          <InputFloodLessonComponent
+            lesson={gen.lesson}
+            langCode={gen.source.langCode}
+            onComplete={handleLessonComplete}
+          />
+          <Group justify="flex-end" mt="md">
+            <Button
+              variant="default"
+              onClick={() => {
+                setGen(null);
+                void startLesson();
+              }}
+            >
+              Pick Another Issue
+            </Button>
+          </Group>
+        </>
+      );
+    }
+
+    if (genMutation.isLoading) {
+      return (
+        <Card withBorder padding="lg">
+          <Group align="center" gap="sm">
+            <Loader size="sm" />
+            <Text>Finding an issue and generating a drill…</Text>
+          </Group>
+        </Card>
+      );
+    }
+
+    if (hasAttempted) {
+      return (
+        <Group justify="flex-end">
+          <Button onClick={() => void startLesson()} variant="default">
+            Start Practice
+          </Button>
+        </Group>
+      );
+    }
+
+    return null;
+  };
 
   return (
     <Container size="md" py="xl">
@@ -155,63 +170,7 @@ export default function SpeakingImprovementsPage({
             Back to Review
           </Anchor>
         </Group>
-
-        {gen ? (
-          <>
-            <InputFloodLessonComponent
-              lesson={gen.lesson}
-              langCode={gen.source.langCode}
-              onComplete={() => {
-                setGen(null);
-                setIsLessonComplete(true);
-              }}
-            />
-            <Group justify="flex-end" mt="md">
-              <Button
-                variant="default"
-                onClick={() => {
-                  setGen(null);
-                  void startRandom();
-                }}
-              >
-                Pick Another Issue
-              </Button>
-            </Group>
-          </>
-        ) : null}
-
-        {!gen && (genMutation.isLoading || isLoading) ? (
-          <Card withBorder padding="lg">
-            <Group align="center" gap="sm">
-              <Loader size="sm" />
-              <Text>Finding an issue and generating a drill…</Text>
-            </Group>
-          </Card>
-        ) : null}
-
-        {!gen && !isLoading && errorMessage ? (
-          <Card withBorder padding="lg">
-            <Stack gap="sm">
-              <Text c="red">{errorMessage}</Text>
-              <Group justify="flex-end">
-                <Button
-                  onClick={() => void startRandom()}
-                  variant="default"
-                >
-                  Try Again
-                </Button>
-              </Group>
-            </Stack>
-          </Card>
-        ) : null}
-
-        {!gen && !isLoading && !errorMessage && hasAttempted ? (
-          <Group justify="flex-end">
-            <Button onClick={() => void startRandom()} variant="default">
-              Start Practice
-            </Button>
-          </Group>
-        ) : null}
+        {renderContent()}
       </Stack>
     </Container>
   );
