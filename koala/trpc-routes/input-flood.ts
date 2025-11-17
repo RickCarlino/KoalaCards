@@ -72,6 +72,15 @@ export const inputFloodGenerate = procedure
           userId,
           isAcceptable: false,
           reviewedAt: null,
+          errorTag: {
+            in: [
+              "form",
+              "syntax",
+              "semantics",
+              "orthography",
+              "unnatural",
+            ]
+          }
         },
         orderBy: { createdAt: "desc" },
         take: INPUT_FLOOD_RECENT_RESULTS_TAKE,
@@ -116,7 +125,7 @@ export const inputFloodGrade = procedure
 
     const languageName =
       supportedLanguages[
-        input.language as keyof typeof supportedLanguages
+      input.language as keyof typeof supportedLanguages
       ] || input.language;
     const items = input.items
       .slice(0, INPUT_FLOOD_GRADE_ITEMS_MAX)
