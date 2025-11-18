@@ -5,6 +5,7 @@ import {
   Button,
   Drawer,
   Group,
+  Loader,
   ScrollArea,
   Stack,
   Text,
@@ -21,7 +22,10 @@ import {
 import { useMediaQuery } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { trpc } from "@/koala/trpc-config";
-import { createExampleStreamParser } from "@/koala/utils/example-stream-parser";
+import {
+  createExampleStreamParser,
+  EXAMPLE_PLACEHOLDER,
+} from "@/koala/utils/example-stream-parser";
 
 type Suggestion = {
   phrase: string;
@@ -44,6 +48,38 @@ type CurrentCard = {
 
 const collapseNewlines = (value: string) =>
   value.replace(/\n{3,}/g, "\n\n");
+
+function ExampleSuggestionRow({
+  suggestion,
+  onAdd,
+  isLoading,
+}: {
+  suggestion: Suggestion;
+  onAdd: () => void;
+  isLoading: boolean;
+}) {
+  return (
+    <Group align="flex-start" gap="xs" wrap="nowrap">
+      <ActionIcon
+        variant="light"
+        color="indigo"
+        radius="xl"
+        size="md"
+        onClick={onAdd}
+        disabled={isLoading}
+        aria-label={`Add card for ${suggestion.phrase}`}
+      >
+        {isLoading ? <Loader size="xs" /> : <IconPlus size={14} />}
+      </ActionIcon>
+      <Box>
+        <Text fw={600}>{suggestion.phrase}</Text>
+        <Text size="sm" c="dimmed">
+          {suggestion.translation}
+        </Text>
+      </Box>
+    </Group>
+  );
+}
 
 export function ReviewAssistantPane({
   deckId: _deckId,
@@ -82,6 +118,95 @@ export function ReviewAssistantPane({
   > | null>(null);
   const [isStreaming, setIsStreaming] = React.useState(false);
   const bulkCreate = trpc.bulkCreateCards.useMutation();
+  const messageTextStyle = React.useMemo(
+    () =>
+      ({
+        whiteSpace: "pre-wrap",
+        wordBreak: "break-word",
+      }) as React.CSSProperties,
+    [],
+  );
+  const renderMessageContent = (
+    message: ChatMessage,
+    messageIndex: number,
+  ) => {
+    const nodes: React.ReactNode[] = [];
+    const suggestions = message.suggestions ?? [];
+    const hasInlineExamples =
+      suggestions.length > 0 &&
+      message.content.includes(EXAMPLE_PLACEHOLDER);
+
+    if (hasInlineExamples) {
+      const parts = message.content.split(EXAMPLE_PLACEHOLDER);
+      let suggestionIdx = 0;
+      parts.forEach((part, partIdx) => {
+        if (part) {
+          nodes.push(
+            <Text
+              key={`msg-${messageIndex}-text-${partIdx}`}
+              style={messageTextStyle}
+            >
+              {part}
+            </Text>,
+          );
+        }
+        if (partIdx < parts.length - 1) {
+          const suggestion = suggestions[suggestionIdx];
+          if (suggestion) {
+            nodes.push(
+              <ExampleSuggestionRow
+                key={`msg-${messageIndex}-example-${suggestionIdx}`}
+                suggestion={suggestion}
+                onAdd={() => onAddSuggestion(suggestion)}
+                isLoading={bulkCreate.isLoading}
+              />,
+            );
+          }
+          suggestionIdx += 1;
+        }
+      });
+      if (suggestionIdx < suggestions.length) {
+        for (
+          let idx = suggestionIdx;
+          idx < suggestions.length;
+          idx += 1
+        ) {
+          const suggestion = suggestions[idx];
+          nodes.push(
+            <ExampleSuggestionRow
+              key={`msg-${messageIndex}-extra-${idx}`}
+              suggestion={suggestion}
+              onAdd={() => onAddSuggestion(suggestion)}
+              isLoading={bulkCreate.isLoading}
+            />,
+          );
+        }
+      }
+      return nodes;
+    }
+
+    nodes.push(
+      <Text
+        key={`msg-${messageIndex}-text`}
+        style={messageTextStyle}
+      >
+        {message.content}
+      </Text>,
+    );
+
+    suggestions.forEach((suggestion, idx) => {
+      nodes.push(
+        <ExampleSuggestionRow
+          key={`msg-${messageIndex}-fallback-${idx}`}
+          suggestion={suggestion}
+          onAdd={() => onAddSuggestion(suggestion)}
+          isLoading={bulkCreate.isLoading}
+        />,
+      );
+    });
+
+    return nodes;
+  };
 
   const scrollToBottom = React.useCallback(() => {
     const el = viewportRef.current;
@@ -321,40 +446,7 @@ export function ReviewAssistantPane({
                 <Text size="sm" c="dimmed" mb={4}>
                   {m.role === "user" ? "You" : "Assistant"}
                 </Text>
-                <Text
-                  style={{
-                    whiteSpace: "pre-wrap",
-                    wordBreak: "break-word",
-                  }}
-                >
-                  {m.content}
-                </Text>
-                {m.suggestions && m.suggestions.length > 0 && (
-                  <Stack gap={6} mt="sm">
-                    {m.suggestions.map((s, idx) => (
-                      <Group
-                        key={idx}
-                        justify="space-between"
-                        wrap="nowrap"
-                      >
-                        <Box>
-                          <Text fw={600}>{s.phrase}</Text>
-                          <Text size="sm" c="dimmed">
-                            {s.translation}
-                          </Text>
-                        </Box>
-                        <Button
-                          size="xs"
-                          leftSection={<IconPlus size={14} />}
-                          loading={bulkCreate.isLoading}
-                          onClick={() => onAddSuggestion(s)}
-                        >
-                          Add card
-                        </Button>
-                      </Group>
-                    ))}
-                  </Stack>
-                )}
+                <Stack gap={6}>{renderMessageContent(m, i)}</Stack>
               </Box>
             ))}
           </Stack>

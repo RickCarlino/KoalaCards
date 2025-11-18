@@ -1,5 +1,6 @@
 const EXAMPLE_START = "[[EXAMPLE]]";
 const EXAMPLE_END = "[[/EXAMPLE]]";
+export const EXAMPLE_PLACEHOLDER = "[[__EXAMPLE_SLOT__]]";
 
 type ExampleBlock = {
   phrase: string;
@@ -87,6 +88,9 @@ export function createExampleStreamParser() {
       const parsed = parseExample(exampleBuffer);
       if (parsed) {
         foundExamples.push(parsed);
+        emittedText += EXAMPLE_PLACEHOLDER;
+      } else {
+        emittedText += exampleBuffer;
       }
       exampleBuffer = "";
       collectingExample = false;
