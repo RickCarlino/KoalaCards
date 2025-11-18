@@ -21,6 +21,7 @@ import {
 } from "@tabler/icons-react";
 import { useMediaQuery } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
+import ReactMarkdown, { type Components } from "react-markdown";
 import { trpc } from "@/koala/trpc-config";
 import {
   createExampleStreamParser,
@@ -81,6 +82,94 @@ function ExampleSuggestionRow({
   );
 }
 
+function AssistantMarkdown({
+  content,
+  style,
+}: {
+  content: string;
+  style: React.CSSProperties;
+}) {
+  const markdownComponents = React.useMemo<Components>(
+    () => ({
+      p: ({ children }) => (
+        <Text component="p" style={{ ...style, margin: 0 }}>
+          {children}
+        </Text>
+      ),
+      ul: ({ children }) => (
+        <Box
+          component="ul"
+          style={{ ...style, margin: "0 0 8px 18px", paddingLeft: 0 }}
+        >
+          {children}
+        </Box>
+      ),
+      ol: ({ children }) => (
+        <Box
+          component="ol"
+          style={{ ...style, margin: "0 0 8px 18px", paddingLeft: 0 }}
+        >
+          {children}
+        </Box>
+      ),
+      li: ({ children }) => (
+        <Box component="li" style={{ ...style, marginBottom: 4 }}>
+          {children}
+        </Box>
+      ),
+      a: ({ children, href }) => (
+        <Text
+          component="a"
+          href={href}
+          c="indigo.7"
+          style={style}
+          target="_blank"
+          rel="noreferrer"
+        >
+          {children}
+        </Text>
+      ),
+      code: ({ inline, children }) => (
+        <Text
+          component="code"
+          style={{
+            ...style,
+            display: inline ? "inline" : "block",
+            padding: inline ? "0 4px" : "4px",
+            backgroundColor: "rgba(0, 0, 0, 0.05)",
+            borderRadius: 4,
+            fontFamily: "var(--mantine-font-family-monospace)",
+          }}
+        >
+          {children}
+        </Text>
+      ),
+      blockquote: ({ children }) => (
+        <Box
+          component="blockquote"
+          style={{
+            ...style,
+            margin: "4px 0",
+            padding: "4px 12px",
+            borderLeft: "3px solid var(--mantine-color-gray-4)",
+            backgroundColor: "var(--mantine-color-gray-0)",
+          }}
+        >
+          {children}
+        </Box>
+      ),
+    }),
+    [style],
+  );
+  return (
+    <Box style={style}>
+      <ReactMarkdown components={markdownComponents}>
+        {content}
+      </ReactMarkdown>
+    </Box>
+  );
+}
+
 export function ReviewAssistantPane({
   deckId: _deckId,
   current: _current,
@@ -126,6 +215,29 @@ export function ReviewAssistantPane({
       }) as React.CSSProperties,
     [],
   );
+  const renderTextNode = (
+    value: string,
+    key: string,
+    role: ChatMessage["role"],
+  ) => {
+    if (!value) {
+      return null;
+    }
+    if (role === "assistant") {
+      return (
+        <AssistantMarkdown
+          key={key}
+          content={value}
+          style={messageTextStyle}
+        />
+      );
+    }
+    return (
+      <Text key={key} style={messageTextStyle}>
+        {value}
+      </Text>
+    );
+  };
   const renderMessageContent = (
     message: ChatMessage,
     messageIndex: number,
@@ -140,15 +252,13 @@ export function ReviewAssistantPane({
       const parts = message.content.split(EXAMPLE_PLACEHOLDER);
       let suggestionIdx = 0;
       parts.forEach((part, partIdx) => {
-        if (part) {
-          nodes.push(
-            <Text
-              key={`msg-${messageIndex}-text-${partIdx}`}
-              style={messageTextStyle}
-            >
-              {part}
-            </Text>,
-          );
+        const textNode = renderTextNode(
+          part,
+          `msg-${messageIndex}-text-${partIdx}`,
+          message.role,
+        );
+        if (textNode) {
+          nodes.push(textNode);
         }
         if (partIdx < parts.length - 1) {
           const suggestion = suggestions[suggestionIdx];
@@ -185,14 +295,14 @@ export function ReviewAssistantPane({
       return nodes;
     }
 
-    nodes.push(
-      <Text
-        key={`msg-${messageIndex}-text`}
-        style={messageTextStyle}
-      >
-        {message.content}
-      </Text>,
+    const fallbackNode = renderTextNode(
+      message.content,
+      `msg-${messageIndex}-text`,
+      message.role,
     );
+    if (fallbackNode) {
+      nodes.push(fallbackNode);
+    }
 
     suggestions.forEach((suggestion, idx) => {
       nodes.push(
