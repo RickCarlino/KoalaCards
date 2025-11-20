@@ -34,7 +34,9 @@ export const getServerSideProps: GetServerSideProps<
 > = async (ctx) => {
   const user = await getServersideUser(ctx);
   if (!user) {
-    return { redirect: { destination: "/api/auth/signin", permanent: false } };
+    return {
+      redirect: { destination: "/api/auth/signin", permanent: false },
+    };
   }
 
   const deckIdParam = Array.isArray(ctx.params?.deckId)
@@ -70,7 +72,9 @@ export default function SpeakingImprovementsPage({
   const startedRef = React.useRef(false);
 
   const startLesson = async () => {
-    if (genMutation.isLoading) return;
+    if (genMutation.isLoading) {
+      return;
+    }
     setIsLessonComplete(false);
     setHasAttempted(true);
 
@@ -82,7 +86,9 @@ export default function SpeakingImprovementsPage({
   };
 
   const handleLessonComplete = async () => {
-    if (!gen) return;
+    if (!gen) {
+      return;
+    }
 
     await editQuizResultMutation.mutateAsync({
       resultId: gen.source.quizResultId,
@@ -95,7 +101,9 @@ export default function SpeakingImprovementsPage({
   };
 
   React.useEffect(() => {
-    if (startedRef.current) return;
+    if (startedRef.current) {
+      return;
+    }
     startedRef.current = true;
     void startLesson();
   }, []);
@@ -104,9 +112,15 @@ export default function SpeakingImprovementsPage({
     [
       "space",
       (event) => {
-        if (gen) return;
-        if (!isLessonComplete) return;
-        if (genMutation.isLoading) return;
+        if (gen) {
+          return;
+        }
+        if (!isLessonComplete) {
+          return;
+        }
+        if (genMutation.isLoading) {
+          return;
+        }
         event.preventDefault();
         void startLesson();
       },

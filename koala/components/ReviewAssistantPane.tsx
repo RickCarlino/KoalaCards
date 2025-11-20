@@ -50,6 +50,11 @@ type CurrentCard = {
 const collapseNewlines = (value: string) =>
   value.replace(/\n{3,}/g, "\n\n");
 
+type MarkdownCodeProps = {
+  inline?: boolean;
+  children: React.ReactNode;
+};
+
 function ExampleSuggestionRow({
   suggestion,
   onAdd,
@@ -129,21 +134,24 @@ function AssistantMarkdown({
           {children}
         </Text>
       ),
-      code: ({ inline, children }) => (
-        <Text
-          component="code"
-          style={{
-            ...style,
-            display: inline ? "inline" : "block",
-            padding: inline ? "0 4px" : "4px",
-            backgroundColor: "rgba(0, 0, 0, 0.05)",
-            borderRadius: 4,
-            fontFamily: "var(--mantine-font-family-monospace)",
-          }}
-        >
-          {children}
-        </Text>
-      ),
+      code: (props) => {
+        const { inline: isInline, children } = props as MarkdownCodeProps;
+        return (
+          <Text
+            component="code"
+            style={{
+              ...style,
+              display: isInline ? "inline" : "block",
+              padding: isInline ? "0 4px" : "4px",
+              backgroundColor: "rgba(0, 0, 0, 0.05)",
+              borderRadius: 4,
+              fontFamily: "var(--mantine-font-family-monospace)",
+            }}
+          >
+            {children}
+          </Text>
+        );
+      },
       blockquote: ({ children }) => (
         <Box
           component="blockquote"
@@ -276,11 +284,7 @@ export function ReviewAssistantPane({
         }
       });
       if (suggestionIdx < suggestions.length) {
-        for (
-          let idx = suggestionIdx;
-          idx < suggestions.length;
-          idx += 1
-        ) {
+        for (let idx = suggestionIdx; idx < suggestions.length; idx += 1) {
           const suggestion = suggestions[idx];
           nodes.push(
             <ExampleSuggestionRow
