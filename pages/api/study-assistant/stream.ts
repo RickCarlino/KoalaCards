@@ -5,8 +5,6 @@ import OpenAI from "openai";
 import { prismaClient } from "@/koala/prisma-client";
 import { z } from "zod";
 
-// Keep this feature isolated: single API route, no changes elsewhere.
-
 export const config = {
   api: {
     bodyParser: true,
@@ -17,14 +15,12 @@ type ChatMessage = { role: "user" | "assistant"; content: string };
 
 const BodySchema = z.object({
   deckId: z.number(),
-  // Existing chat transcript (last N turns). Keep it small on the client.
   messages: z.array(
     z.object({
       role: z.union([z.literal("user"), z.literal("assistant")]),
       content: z.string(),
     }),
   ),
-  // Optional activity log to help the assistant understand recent actions.
   contextLog: z.array(z.string().max(240)).max(30).optional(),
 });
 
@@ -71,7 +67,6 @@ export default async function handler(
   }
   const { deckId, messages, contextLog } = parsed.data;
 
-  // Verify deck ownership
   const deck = await prismaClient.deck.findUnique({
     where: { id: deckId, userId: dbUser.id },
   });
@@ -79,7 +74,6 @@ export default async function handler(
     return res.status(404).end("Deck not found");
   }
 
-  // Prepare SSE response
   res.writeHead(200, {
     "Content-Type": "text/event-stream",
     "Cache-Control": "no-cache, no-transform",

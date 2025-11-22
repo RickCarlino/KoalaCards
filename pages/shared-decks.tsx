@@ -37,7 +37,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     skip: (pageNum - 1) * take,
     take,
   });
-  // Since Deck model does not have a createdAt field, provide a fallback null
   const decks = decksRaw.map((deck) => ({
     ...deck,
     createdAt: null,

@@ -17,7 +17,6 @@ import { LangCode, supportedLanguages } from "@/koala/shared-types";
 import { trpc } from "@/koala/trpc-config";
 
 type CreateNewProps = {
-  // Keeping small and explicit. We only need this for rendering the default.
   defaultLang: LangCode;
 };
 
@@ -39,7 +38,6 @@ export const getServerSideProps: GetServerSideProps<
 type Level = "Beginner" | "Intermediate" | "Advanced";
 
 const PLACEHOLDERS = [
-  // Everyday Basics
   "greetings and introductions",
   "numbers and counting",
   "telling the time",
@@ -51,7 +49,6 @@ const PLACEHOLDERS = [
   "asking for help",
   "emergencies and safety",
 
-  // Travel
   "airport check-in",
   "customs and immigration",
   "hotel check-in/out",
@@ -63,7 +60,6 @@ const PLACEHOLDERS = [
   "asking for recommendations",
   "handling lost items",
 
-  // Food & Dining
   "restaurant conversations",
   "ordering drinks",
   "street food and markets",
@@ -75,7 +71,6 @@ const PLACEHOLDERS = [
   "bar conversations",
   "cooking and recipes",
 
-  // Shopping & Money
   "shopping and prices",
   "bargaining at markets",
   "paying for stuff",
@@ -87,7 +82,6 @@ const PLACEHOLDERS = [
   "buying gifts",
   "returns and exchanges",
 
-  // Work & School
   "job interview practice",
   "office small talk",
   "meetings and presentations",
@@ -99,7 +93,6 @@ const PLACEHOLDERS = [
   "giving a speech",
   "research and study habits",
 
-  // Daily Life
   "daily routines",
   "household chores",
   "health and exercise",
@@ -111,7 +104,6 @@ const PLACEHOLDERS = [
   "using technology",
   "social media",
 
-  // Relationships
   "family and friends",
   "dating and romance",
   "weddings and celebrations",
@@ -123,7 +115,6 @@ const PLACEHOLDERS = [
   "birthdays",
   "holidays and traditions",
 
-  // Advanced / Abstract
   "current events",
   "politics and government",
   "environment and nature",
@@ -171,9 +162,7 @@ export default function CreateNew({ defaultLang }: CreateNewProps) {
   const parseCards = trpc.parseCards.useMutation();
   const bulkCreate = trpc.bulkCreateCards.useMutation();
 
-  // Randomly set the value until user focuses, then stop.
   React.useEffect(() => {
-    // Helper to pick a random suggestion
     const randomize = () => {
       const next = Math.floor(Math.random() * PLACEHOLDERS.length);
       setPlaceholderIndex(next);
@@ -184,7 +173,6 @@ export default function CreateNew({ defaultLang }: CreateNewProps) {
       return;
     }
 
-    // Set an initial suggestion immediately
     if (!interest) {
       randomize();
     }
@@ -200,13 +188,11 @@ export default function CreateNew({ defaultLang }: CreateNewProps) {
 
   const onGo = async () => {
     try {
-      // Step 1: Create the deck immediately so we have an ID.
       const deck = await createDeck.mutateAsync({
         name: "My First Koala Deck",
         langCode: lang,
       });
 
-      // Step 2: Generate cards via the "vibe" method from a synthesized prompt.
       const topic = interest.trim() || PLACEHOLDERS[placeholderIndex];
       const { cards } = await parseCards.mutateAsync({
         langCode: lang,
@@ -217,7 +203,6 @@ export default function CreateNew({ defaultLang }: CreateNewProps) {
         }),
       });
 
-      // Step 3: Persist generated cards into the new deck.
       const input = cards.map((c) => ({
         ...c,
         gender: (c.gender ?? "N") as "M" | "F" | "N",
@@ -233,7 +218,6 @@ export default function CreateNew({ defaultLang }: CreateNewProps) {
       }
       await bulkCreate.mutateAsync({ deckId: deck.id, input });
 
-      // Step 4: Go straight to review for the new deck.
       await router.push(`/review/${deck.id}`);
     } catch (e) {
       console.error(e);

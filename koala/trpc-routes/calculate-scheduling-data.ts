@@ -58,8 +58,6 @@ export function calculateSchedulingData(
   };
 }
 
-// Gives a human-readable representation of the next quiz due date.
-// Uses the nearest time unit, all the way up to months.
 export function getGradeButtonText(quiz: PartialCard): [Grade, string][] {
   const now = Date.now();
   const SCALE: Record<Grade, string> = {
@@ -79,7 +77,6 @@ export function getGradeButtonText(quiz: PartialCard): [Grade, string][] {
     if (minutes < 5) {
       return [grade, emoji + " Very Soon"];
     }
-    // Use minutes, hours, days, months:
     if (minutes < 60) {
       const val = Math.floor(minutes);
       return [grade, `${emoji}${val} minute${val === 1 ? "" : "s"}`];

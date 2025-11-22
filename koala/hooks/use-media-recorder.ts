@@ -57,7 +57,6 @@ export function useMediaRecorder(): RecorderControls {
     const rec = new MediaRecorder(stream, options);
     setMimeType(rec.mimeType);
     chunksRef.current = [];
-    // Arm the beep; fire on first actual audio data or track unmute.
     const shouldBeep = startOptions?.playBeep !== false;
     beepArmedRef.current = shouldBeep;
 
@@ -71,7 +70,6 @@ export function useMediaRecorder(): RecorderControls {
       }
     };
 
-    // Use a shorter timeslice so iOS/WebKit emits chunks promptly
     rec.start(250);
     setRecorder(rec);
     setIsRecording(true);
@@ -83,7 +81,6 @@ export function useMediaRecorder(): RecorderControls {
       if (!current) {
         return resolve(new Blob());
       }
-      // Disarm pending beep
       beepArmedRef.current = false;
       current.onstop = () => {
         const blob = new Blob(chunksRef.current, {
@@ -94,7 +91,6 @@ export function useMediaRecorder(): RecorderControls {
         setIsRecording(false);
         resolve(blob);
       };
-      // Request any buffered data before stopping (helps on some iOS versions)
       if (typeof current.requestData === "function") {
         current.requestData();
       }

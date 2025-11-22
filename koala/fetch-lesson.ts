@@ -50,12 +50,10 @@ async function getDailyLimits(userId: string, now: number) {
     where: {
       userId,
       flagged: { not: true },
-      // Count new cards learned in the last 48 hours
       firstReview: { gte: now - TWO_DAYS_MS },
     },
   });
 
-  // Allow up to 2 days worth of new cards within the 48h window
   const windowAllowance = cardsPerDayMax * 2;
   return { newRemaining: Math.max(windowAllowance - newLearned, 0) };
 }
@@ -83,7 +81,6 @@ async function fetchBucket(
       break;
 
     case ROUTINE:
-      // Due cards only; exclude remedial to avoid duplicates
       where = {
         ...baseCard,
         lastFailure: 0,
@@ -102,7 +99,6 @@ async function fetchBucket(
   return prismaClient.card.findMany({ where, orderBy, take: limit });
 }
 
-/** Decide lessonType override for special buckets. */
 function tagLessonType(
   q: LocalCard,
   bucket: Bucket,
@@ -116,7 +112,6 @@ function tagLessonType(
   return q;
 }
 
-/** Build user‑visible payload, including TTS URLs. */
 async function buildQuizPayload(
   q: LocalCard & { quizType?: string },
   speedPct: number,
@@ -147,8 +142,6 @@ async function buildQuizPayload(
   };
 }
 
-/* ─────────────────── CORE HAND BUILDER ─────────────────── */
-/** Core selector ‑ returns LocalCard[] (no audio). */
 async function buildHand(
   userId: string,
   deckId: number,
@@ -244,12 +237,6 @@ export async function getLessonsDue(
   });
 }
 
-/**
- * Determine if the user may begin new cards in this deck right now.
- * Conditions:
- *  - User has remaining new‑card capacity in the current rolling window
- *  - Deck contains at least one brand‑new card (never reviewed)
- */
 export async function canStartNewLessons(
   userId: string,
   deckId: number,

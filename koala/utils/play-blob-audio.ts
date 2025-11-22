@@ -19,7 +19,6 @@ export const playBlob = (
       resolve();
     };
     audio.onerror = () => {
-      // Treat playback errors as non-fatal; still resolve to continue flow
       cleanup();
       resolve();
     };
@@ -27,7 +26,6 @@ export const playBlob = (
   });
 };
 
-// Ensure only one audio plays at a time across the app
 let _currentAudio: HTMLAudioElement | null = null;
 let _currentUrl: string | null = null;
 
@@ -38,16 +36,12 @@ export const playBlobExclusive = (
   if (_currentAudio) {
     try {
       _currentAudio.pause();
-    } catch {
-      /* ignore */
-    }
+    } catch {}
   }
   if (_currentUrl) {
     try {
       URL.revokeObjectURL(_currentUrl);
-    } catch {
-      /* ignore */
-    }
+    } catch {}
     _currentUrl = null;
   }
 
@@ -62,15 +56,11 @@ export const playBlobExclusive = (
   const cleanup = () => {
     try {
       audio.pause();
-    } catch {
-      /* ignore */
-    }
+    } catch {}
     if (_currentUrl) {
       try {
         URL.revokeObjectURL(_currentUrl);
-      } catch {
-        /* ignore */
-      }
+      } catch {}
     }
     if (_currentAudio === audio) {
       _currentAudio = null;

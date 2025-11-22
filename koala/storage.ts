@@ -2,61 +2,24 @@ import { File, Storage } from "@google-cloud/storage";
 import { createHash } from "crypto";
 import { errorReport } from "./error-report";
 
-// Storage interface for future implementations
 export interface StorageProvider {
-  /**
-   * Uploads a file from a URL to storage.
-   * @param url The URL of the file to download.
-   * @param destination The destination path in storage.
-   * @returns Promise resolving to the expiring URL of the uploaded file.
-   */
   uploadFromBase64(url: string, destination: string): Promise<string>;
 
-  /**
-   * Generates an expiring URL for accessing a stored file.
-   * @param destination The path to the file in storage.
-   * @returns Promise resolving to the signed URL.
-   */
   getExpiringURL(destination: string): Promise<string>;
 
-  /**
-   * Creates a blob ID with MD5 hash and extension.
-   * @param kind The category/folder for the blob.
-   * @param content The content to hash.
-   * @param ext The file extension.
-   * @returns The blob ID string.
-   */
   createBlobID(kind: string, content: string, ext: string): string;
 
-  /**
-   * Gets a file object for direct operations (GCS-specific for now).
-   * @param destination The path to the file in storage.
-   * @returns The file object.
-   */
   getFile(destination: string): File;
 
-  /**
-   * Saves buffer data to storage.
-   * @param destination The path to save the file.
-   * @param buffer The buffer data to save.
-   * @param options Save options like metadata.
-   * @returns Promise that resolves when save is complete.
-   */
   saveBuffer(
     destination: string,
     buffer: Buffer,
     options?: { metadata?: { contentType: string } },
   ): Promise<void>;
 
-  /**
-   * Checks if a file exists in storage.
-   * @param destination The path to check.
-   * @returns Promise resolving to [exists] tuple.
-   */
   fileExists(destination: string): Promise<[boolean]>;
 }
 
-// Google Cloud Storage implementation
 class GCSStorageProvider implements StorageProvider {
   private storage: Storage;
   private bucketName: string;
@@ -104,7 +67,7 @@ class GCSStorageProvider implements StorageProvider {
     const [url] = await blob.getSignedUrl({
       version: "v4",
       action: "read",
-      expires: Date.now() + 3600 * 1000, // URL expires in 1 hour
+      expires: Date.now() + 3600 * 1000,
     });
     return url;
   }
@@ -133,8 +96,6 @@ class GCSStorageProvider implements StorageProvider {
   }
 }
 
-// Create the storage provider instance. We can default to the existing GCS implementation.
 const storageProvider = new GCSStorageProvider();
 
-// Export the new provider-agnostic interface
 export { storageProvider };

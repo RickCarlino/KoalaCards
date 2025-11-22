@@ -1,5 +1,5 @@
-const MIN_LEN = 4; // First 4 characters === No leniency
-const POINT_INCR = 10; // 1 point of leniency Every 10 characters after that.
+const MIN_LEN = 4;
+const POINT_INCR = 10;
 
 function calculateCutoff(length: number): number {
   return Math.ceil(Math.max(length - MIN_LEN, 0) / POINT_INCR);
@@ -53,9 +53,9 @@ function levenshtein(a: string, b: string): number {
       } else {
         matrix[i][j] =
           Math.min(
-            matrix[i - 1][j - 1], // substitution
-            matrix[i][j - 1], // insertion
-            matrix[i - 1][j], // deletion
+            matrix[i - 1][j - 1],
+            matrix[i][j - 1],
+            matrix[i - 1][j],
           ) + 1;
       }
     }
@@ -68,15 +68,10 @@ export const stripFinalPunctuation = (str: string) => {
 };
 
 function strip(input: string): string {
-  // This regex matches any punctuation, space, or number
-  // \p{P} matches any kind of punctuation character
-  // \s matches any whitespace character
-  // \p{N} matches any kind of numeric character in any script
   return input.replace(/[\p{P}\s\p{N}]/gu, "").toLocaleLowerCase();
 }
 
 export const removeParens = (input: string): string => {
-  // Replace parents and double whitespace
   return input
     .replace(/\(.*?\)/g, "")
     .replace(/\s{2,}/g, " ")

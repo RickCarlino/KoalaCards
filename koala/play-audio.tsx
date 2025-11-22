@@ -9,8 +9,6 @@ export const playAudio = (urlOrDataURI: string, playbackRate?: number) => {
 
     const audio = new Audio(urlOrDataURI);
 
-    // Apply playback rate if provided and valid; otherwise, keep legacy
-    // behavior of slowing repeated taps to 0.6x.
     const hasValidRate =
       typeof playbackRate === "number" &&
       Number.isFinite(playbackRate) &&
@@ -27,7 +25,6 @@ export const playAudio = (urlOrDataURI: string, playbackRate?: number) => {
         return;
       }
       done = true;
-      // Stop audio from playing:
       audio.pause();
       resolve("");
     };

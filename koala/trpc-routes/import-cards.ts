@@ -35,12 +35,10 @@ export async function setGrade(
     where: { id: card.id },
     data: {
       ...(grade === Grade.AGAIN ? { lastFailure: now } : {}),
-      // Stats:
       difficulty: data.difficulty,
       lapses: data.lapses,
       repetitions: data.repetitions,
       stability: data.stability,
-      // Timestamps:
       firstReview: data.firstReview,
       lastReview: data.lastReview,
       nextReview: data.nextReview,

@@ -83,9 +83,7 @@ const userCleanup = async (user: User) => {
       console.log(log);
       return;
     } else {
-      // Users must create a card within 5 days of signing up.
       if (cardCount === 0) {
-        // Calculate days since registration using createdAt
         const daysSinceRegistration = calculateDays(createdAt);
         const a = daysSinceRegistration > 1;
         const b = lastSeenDays > 1;

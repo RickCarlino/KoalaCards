@@ -73,7 +73,6 @@ export const getServerSideProps: GetServerSideProps<
   if (userSettings.writingFirst) {
     const now = new Date();
     const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    // Get user's writing progress in the last 24 hours
     const writingProgress = await prismaClient.writingSubmission.aggregate(
       {
         _sum: { correctionCharacterCount: true },
@@ -223,7 +222,6 @@ function InnerReviewPage({ deckId }: ReviewDeckPageProps) {
     currentItem?.stepUuid,
   ]);
 
-  // useEffect, call playCard when the currentItem changes:
   React.useEffect(() => {
     if (currentItem) {
       playCard();

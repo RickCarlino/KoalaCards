@@ -62,9 +62,6 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
   const { start, stop, isRecording } = useMediaRecorder();
   const userSettings = useUserSettings();
 
-  // Show a helpful notification if mic access fails (with iOS Safari guidance)
-  // Error handling moved into consumer callbacks as needed.
-
   const openCardEditor = () =>
     window.open(`/cards/${card.cardId}`, "_blank");
 
@@ -99,7 +96,6 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
       return;
     }
     const blob = await stop();
-    // Probabilistic self-playback of user's own recording (await to avoid overlap)
     if (userSettings && Math.random() < userSettings.playbackPercentage) {
       await playBlob(blob, userSettings.playbackSpeed);
     }
@@ -114,7 +110,6 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
     itemType === "remedialOutro";
 
   const handleFail = async () => {
-    // Always reinforce by playing the term audio twice on fail
     await playAudio(
       card.termAndDefinitionAudio,
       userSettings.playbackSpeed,
@@ -124,14 +119,12 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
       userSettings.playbackSpeed,
     );
     if (isQuizStep) {
-      // Proper "fail": grade AGAIN and advance
       await gradeQuiz.mutateAsync({
         perceivedDifficulty: Grade.AGAIN,
         cardID: card.cardId,
       });
       return;
     }
-    // Non-quiz steps: advance to next (no extra audio; already played above)
     onSkip(card.uuid);
   };
 

@@ -5,11 +5,6 @@ import { generateAIText, generateStructuredOutput } from "../ai";
 import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc-procedure";
 
-/**
- * ----------------------------
- *  Schema definitions
- * ----------------------------
- */
 const ApiResponseSchema = z.object({
   fullCorrection: z.string(),
   feedback: z.array(z.string()),
@@ -23,11 +18,6 @@ const EssayResponseSchema = z.object({
 
 type EssayResponse = z.infer<typeof EssayResponseSchema>;
 
-/**
- * ----------------------------
- *  Prompt definitions
- * ----------------------------
- */
 const BASIC_CLEANUP_PROMPT = `You are a meticulous copy-editor. Correct only spelling, capitalization, spacing, and punctuation errors in the text provided. **Do not** change word choice, grammar, or style. **Output exactly the corrected text and nothing else.**`;
 
 const ESSAY_GRADING_PROMPT = String.raw`
@@ -58,11 +48,6 @@ All explanations and feedback bullets must be written **in English**.
 
 Do **not** output anything else - no prose before or after the JSON block.`;
 
-/**
- * ----------------------------
- *  Procedure definition
- * ----------------------------
- */
 const inputSchema = z.object({
   text: z.string().min(1).max(2000),
   prompt: z.string(),
@@ -83,7 +68,6 @@ export const gradeWriting = procedure
       });
     }
 
-    // 1️⃣ Verify deck ownership / language
     const deck = await prismaClient.deck.findUnique({
       where: { id: deckId, userId },
       select: { id: true },
@@ -96,9 +80,6 @@ export const gradeWriting = procedure
       });
     }
 
-    /**
-     * 2️⃣ Basic cleanup - purely mechanical fixes
-     */
     const cleanedText = await generateAIText({
       model: ["openai", "fast"] as const,
       messages: [
@@ -114,9 +95,6 @@ export const gradeWriting = procedure
       });
     }
 
-    /**
-     * 3️⃣ Substantive grading - grammar + collocation checks
-     */
     const feedback = await generateStructuredOutput({
       model: ["openai", "good"],
       schema: ApiResponseSchema,
@@ -137,7 +115,6 @@ export const gradeWriting = procedure
       });
     }
 
-    // 4️⃣ Persist submission & correction
     await prismaClient.writingSubmission.create({
       data: {
         userId,

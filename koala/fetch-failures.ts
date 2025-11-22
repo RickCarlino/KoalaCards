@@ -27,7 +27,7 @@ async function buildQuizPayload(card: Card) {
 }
 
 export async function getRepairCards(p: GetRepairInputParams) {
-  const { userId, /*deckId,*/ take } = p;
+  const { userId, take } = p;
   if (take > 45) {
     return errorReport("Too many cards requested.");
   }
@@ -35,7 +35,6 @@ export async function getRepairCards(p: GetRepairInputParams) {
   const uniqueByCardId = await prismaClient.card.findMany({
     where: {
       userId,
-      // deckId,
       lastFailure: { gt: 0 },
     },
     orderBy: { lastFailure: "asc" },

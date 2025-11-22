@@ -12,7 +12,7 @@ import { editQuizResult } from "./edit-quiz-results";
 import { editUserSettings } from "./edit-user-settings";
 import { generateWritingPrompts } from "./generate-writing-prompts";
 import { generateWritingSample } from "./generate-writing-sample";
-import { getDailyWritingProgress } from "./get-daily-writing-progress"; // Added import
+import { getDailyWritingProgress } from "./get-daily-writing-progress";
 import { getNextQuizzes } from "./get-next-quizzes";
 import { getUserSettings } from "./get-user-settings";
 import { gradeQuiz } from "./grade-quiz";

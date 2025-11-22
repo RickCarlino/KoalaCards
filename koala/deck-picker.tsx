@@ -12,21 +12,17 @@ import {
   Text,
   useMantineTheme,
 } from "@mantine/core";
-import { LangCode, supportedLanguages } from "./shared-types"; // Adjusted path
-import { getLangName } from "./get-lang-name"; // Adjusted path
-import { buttonShadow, paperStyle, titleStyle } from "./styles"; // Adjusted path
+import { LangCode, supportedLanguages } from "./shared-types";
+import { getLangName } from "./get-lang-name";
+import { buttonShadow, paperStyle, titleStyle } from "./styles";
 import { DEFAULT_LANG } from "./types/create-reducer";
 
-// --- Define types specific to DeckPicker ---
-
-// Define Deck type locally (or import if moved to a shared location)
 export interface Deck {
   id: number;
   name: string;
   langCode: string;
 }
 
-// Define relevant state parts needed by the picker
 interface DeckPickerState {
   deckSelection: "existing" | "new";
   deckId?: number;
@@ -34,34 +30,29 @@ interface DeckPickerState {
   deckLang: LangCode;
 }
 
-// Define relevant action types the picker needs to dispatch
 type DeckPickerAction =
   | { type: "SET_DECK_SELECTION"; deckSelection: "existing" | "new" }
   | { type: "SET_DECK_ID"; deckId: number | undefined }
   | { type: "SET_DECK_NAME"; deckName: string }
   | { type: "SET_DECK_LANG"; deckLang: LangCode };
 
-// Define the props for the new component
 interface DeckPickerProps {
   decks: Deck[];
   state: DeckPickerState;
   dispatch: React.Dispatch<DeckPickerAction>;
-  onNext: () => void; // Keep onNext for now, assuming similar step logic
-  title?: string; // Optional title override
+  onNext: () => void;
+  title?: string;
 }
-
-// --- DeckPicker Component ---
 
 export function DeckPicker({
   decks,
   state,
   dispatch,
   onNext,
-  title = "Step 1: Select or Create Deck", // Default title
+  title = "Step 1: Select or Create Deck",
 }: DeckPickerProps) {
   const theme = useMantineTheme();
 
-  // Handler for picking an existing deck
   const handleExistingDeckChange = (deckId: number | undefined) => {
     dispatch({ type: "SET_DECK_ID", deckId });
     const selectedDeck = decks.find((d) => d.id === deckId);
@@ -70,33 +61,24 @@ export function DeckPicker({
         type: "SET_DECK_LANG",
         deckLang: selectedDeck.langCode as LangCode,
       });
-      // Automatically set the deck name when an existing deck is selected
       dispatch({ type: "SET_DECK_NAME", deckName: selectedDeck.name });
     } else {
-      // Clear deck name if selection is cleared
       dispatch({ type: "SET_DECK_NAME", deckName: "" });
     }
   };
 
-  // Handler for switching between "existing" vs "new" deck
   const handleDeckModeChange = (value: "existing" | "new") => {
     dispatch({ type: "SET_DECK_SELECTION", deckSelection: value });
 
-    // Reset fields based on mode change
     dispatch({ type: "SET_DECK_ID", deckId: undefined });
     dispatch({ type: "SET_DECK_NAME", deckName: "" });
     dispatch({ type: "SET_DECK_LANG", deckLang: DEFAULT_LANG });
-
-    // If switching back to existing and there are decks, select the first one?
-    // Or leave it blank? Let's leave it blank for now.
   };
 
-  // Check if "Next" is disabled
   const isNextDisabled = (() => {
     if (state.deckSelection === "existing") {
-      return !state.deckId; // must have chosen an existing deck
+      return !state.deckId;
     } else {
-      // must have a deck name if creating a new deck
       return !state.deckName.trim();
     }
   })();
@@ -131,7 +113,7 @@ export function DeckPicker({
               radio: { cursor: "pointer" },
               label: { cursor: "pointer" },
             }}
-            disabled={decks.length === 0} // Disable if no decks exist
+            disabled={decks.length === 0}
           />
           <Radio
             value="new"
@@ -155,7 +137,7 @@ export function DeckPicker({
             value={state.deckId ? String(state.deckId) : null}
             onChange={(val) =>
               handleExistingDeckChange(val ? Number(val) : undefined)
-            } // Handle null case
+            }
             data={decks.map((d) => ({
               label: `${d.name} (${getLangName(d.langCode)})`,
               value: String(d.id),
@@ -169,7 +151,7 @@ export function DeckPicker({
               },
             }}
             searchable
-            clearable // Allow clearing the selection
+            clearable
           />
         )}
         {state.deckSelection === "existing" && decks.length === 0 && (

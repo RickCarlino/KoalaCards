@@ -1,5 +1,3 @@
-// Shared AI type definitions to avoid importing vendor SDK types
-
 export type ImageModel = "imageDefault";
 export type TextModel = "good" | "fast" | "cheap";
 export type ModelKind = TextModel | ImageModel;

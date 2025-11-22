@@ -9,7 +9,7 @@ type Card = {
   flagged: boolean;
   term: string;
   definition: string;
-  createdAt: string; // ISO
+  createdAt: string;
   gender: string;
   repetitions: number;
   lapses: number;

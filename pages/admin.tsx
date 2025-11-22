@@ -59,7 +59,6 @@ export async function getServerSideProps(
     },
   });
 
-  // Get studied card counts for all users (cards with repetitions > 0)
   const studiedByUserRows = await prismaClient.card.groupBy({
     by: ["userId"],
     where: { repetitions: { gt: 0 } },

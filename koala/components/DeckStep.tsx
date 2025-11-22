@@ -25,7 +25,6 @@ export function DeckStep({
 }: DeckStepProps) {
   const theme = useMantineTheme();
 
-  // Handler for picking an existing deck
   const handleExistingDeckChange = (deckId: number | undefined) => {
     dispatch({ type: "SET_DECK_ID", deckId });
     const selectedDeck = decks.find((d) => d.id === deckId);
@@ -38,28 +37,23 @@ export function DeckStep({
     }
   };
 
-  // Handler for switching between "existing" vs "new" deck
   const handleDeckModeChange = (value: "existing" | "new") => {
     dispatch({ type: "SET_DECK_SELECTION", deckSelection: value });
 
     if (value === "existing") {
-      // Reset new-deck fields
       dispatch({ type: "SET_DECK_NAME", deckName: "" });
       dispatch({ type: "SET_DECK_LANG", deckLang: DEFAULT_LANG });
     } else {
-      // Reset existing-deck fields
       dispatch({ type: "SET_DECK_ID", deckId: undefined });
       dispatch({ type: "SET_DECK_NAME", deckName: "" });
       dispatch({ type: "SET_DECK_LANG", deckLang: DEFAULT_LANG });
     }
   };
 
-  // Check if "Next" is disabled
   const isNextDisabled = (() => {
     if (state.deckSelection === "existing") {
-      return !state.deckId; // must have chosen an existing deck
+      return !state.deckId;
     } else {
-      // must have a deck name if creating a new deck
       return !state.deckName.trim();
     }
   })();

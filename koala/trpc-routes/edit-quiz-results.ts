@@ -2,7 +2,6 @@ import { z } from "zod";
 import { procedure } from "../trpc-procedure";
 import { prismaClient } from "../prisma-client";
 
-// Generic QuizResult edit RPC: caller submits a Partial of allowed fields
 const EditableFieldsSchema = z
   .object({
     reviewedAt: z.date().nullable().optional(),

@@ -10,7 +10,6 @@ type QuizEvaluatorInput = {
 type QuizEvaluatorOutput = {
   result: QuizResult;
   userMessage: string;
-  // Present when grammar evaluation stores a QuizResult
   quizResultId?: number;
 };
 

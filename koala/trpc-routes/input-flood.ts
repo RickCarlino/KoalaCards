@@ -209,8 +209,6 @@ export const inputFloodGenerate = procedure
     return { lesson, source: { quizResultId: result.id, langCode } };
   });
 
-// prompt builder moved to koala/input-flood/prompt for reuse
-
 export const inputFloodGrade = procedure
   .input(GradeRequestSchema)
   .output(GradeResponseSchema)

@@ -36,7 +36,6 @@ export const inputFloodGenerateDev = procedure
       messages: [{ role: "user", content: prompt }],
       schema: InputFloodLessonSchema,
     });
-    // quizResultId is 0 to indicate dev-generated (no DB row)
     return {
       lesson,
       source: { quizResultId: 0, langCode: input.langCode },

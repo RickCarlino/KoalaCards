@@ -16,18 +16,6 @@ export const procedure = t.procedure.use(
         message: "Please log in.",
       });
     }
-    // // Uncomment and deploy if we ever get a "hug of death"
-    // // from HN, product hunt, etc..
-    // const email = ctx.user?.email || "";
-    // if (superUsers.length) {
-    //   if (!superUsers.includes(email.toLowerCase())) {
-    //     console.error(`=== Refusing to serve ${email} ===`);
-    //     throw new TRPCError({
-    //       code: "UNAUTHORIZED",
-    //       message: "You are not authorized to use this service.",
-    //     });
-    //   }
-    // }
     return next();
   }),
 );

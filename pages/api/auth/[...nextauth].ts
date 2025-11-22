@@ -35,8 +35,6 @@ const EMAIL_SERVER_OPTIONS: Partial<EmailUserConfig> = {
     const random = crypto.getRandomValues(new Uint8Array(8));
     return Buffer.from(random).toString("hex").slice(0, 6);
   },
-  // SOLUTION TO iOS EMAIL PREIVIEW ISSUE:
-  // https://github.com/nextauthjs/next-auth/issues/4965#issuecomment-1189094806
   async sendVerificationRequest(params) {
     const { identifier, provider } = params;
     const url = new URL(params.url);
@@ -75,7 +73,6 @@ export const authOptions: AuthOptions = {
       ? GoogleProvider({
           clientId,
           clientSecret,
-          // allowDangerousEmailAccountLinking: true,
         })
       : EmailProvider(EMAIL_SERVER_OPTIONS),
   ],

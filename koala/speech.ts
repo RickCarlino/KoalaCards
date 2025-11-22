@@ -19,7 +19,6 @@ const DICTATION = `<speak>
 
 const SSML: Record<LessonType, string> = {
   speaking: `<speak><voice language="en-US" gender="female">{{definition}}</voice></speak>`,
-  // listening: `<speak><prosody rate="{{speed}}%">{{term}}</prosody></speak>`,
   new: DICTATION,
   remedial: DICTATION,
 };

@@ -1,10 +1,7 @@
-// Tiny utility to play a short confirmation beep.
-// Uses Web Audio API to avoid loading an asset and keeps it snappy.
-
 export type BeepOptions = {
   durationMs?: number;
   frequencyHz?: number;
-  volume?: number; // 0.0 – 1.0
+  volume?: number;
 };
 
 export async function playBeep(options: BeepOptions = {}): Promise<void> {
@@ -13,8 +10,6 @@ export async function playBeep(options: BeepOptions = {}): Promise<void> {
   }
   const { durationMs = 120, frequencyHz = 880, volume = 0.15 } = options;
 
-  // Some browsers require user gesture; if suspended, try to resume.
-  // Support prefixed webkitAudioContext without using `any` types.
   const win = window as unknown as {
     AudioContext?: typeof AudioContext;
     webkitAudioContext?: typeof AudioContext;
@@ -33,7 +28,6 @@ export async function playBeep(options: BeepOptions = {}): Promise<void> {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
-    // Smooth attack/decay to avoid clicks
     const now = ctx.currentTime;
     const attack = 0.01;
     const decay = Math.max(0.01, durationMs / 1000 - attack);
@@ -55,11 +49,8 @@ export async function playBeep(options: BeepOptions = {}): Promise<void> {
       osc.onended = () => resolve();
     });
   } finally {
-    // Close to free audio hardware quickly, especially on mobile
     try {
       await ctx.close();
-    } catch {
-      // noop
-    }
+    } catch {}
   }
 }

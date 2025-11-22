@@ -140,20 +140,16 @@ export const QuizCard: React.FC<QuizCardProps> = ({
     }
   };
 
-  // Register handler with parent so it can invoke processing on stop
   useEffect(() => {
     onProvideAudioHandler?.(processRecording);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStepUuid]);
 
   const handleFailureContinue = async () => {
-    // Grade the quiz as AGAIN (failed) and proceed
     await gradeWithAgain();
     onProceed();
   };
 
   const handleIDK = async () => {
-    // Play reinforcement twice, then grade as AGAIN
     await playAudio(
       card.termAndDefinitionAudio,
       userSettings.playbackSpeed,
@@ -165,7 +161,6 @@ export const QuizCard: React.FC<QuizCardProps> = ({
     await gradeWithAgain();
   };
 
-  // Early return for failure case
   if (phase === "failure") {
     return (
       <FailureView

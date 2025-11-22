@@ -3,7 +3,6 @@ import { prismaClient } from "@/koala/prisma-client";
 import { GetServerSideProps } from "next";
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
-  // Authenticate user using the standard method in this project
   const dbUser = await getServersideUser(context);
   if (!dbUser) {
     return {
@@ -11,7 +10,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     };
   }
 
-  // Get params
   const id = Number(context.query.id);
   const page = context.query.page || "1";
 
@@ -28,13 +26,11 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     },
   });
 
-  // Redirect back to the writing page
   return {
     redirect: { destination: `/writing?page=${page}`, permanent: false },
   };
 };
 
-// This component will never be rendered since we always redirect
 export default function DeletePage() {
   return null;
 }

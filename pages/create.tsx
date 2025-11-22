@@ -138,10 +138,8 @@ export default function CreateUnified(props: LanguageInputPageProps) {
         dispatch({ type: "SET_RAW_INPUT", rawInput: arr.join("\n") });
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.isReady, router.query.mode, router.query.words]);
 
-  // CSV/text parsing helpers
   const lines = React.useMemo(() => {
     return state.rawInput
       .split("\n")
@@ -367,8 +365,6 @@ export default function CreateUnified(props: LanguageInputPageProps) {
     </Container>
   );
 }
-
-// Helpers and subcomponents
 
 function parseCsvLine(line: string, separator: string) {
   const parts = line.split(separator);

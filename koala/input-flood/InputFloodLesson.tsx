@@ -195,7 +195,6 @@ export function InputFloodLesson({
       return;
     }
     if (step.t === "diagnosis") {
-      // Speak the English error explanation first (not the mistake)
       const tl = lesson.diagnosis.error_explanation;
       if (tl) {
         spokenRef.current.add(k);
@@ -255,7 +254,6 @@ export function InputFloodLesson({
     setGradeText(null);
 
     if (step.t === "production") {
-      // Fuzzy pre-check: if close enough, accept without AI grading
       if (compare(expected, transcription)) {
         setGradeText("Good match");
         markPassedAndNext();

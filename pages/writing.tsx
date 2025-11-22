@@ -54,7 +54,6 @@ interface WritingHistory {
 export const getServerSideProps: GetServerSideProps<
   WritingHistory
 > = async (ctx) => {
-  // Authenticate user
   const dbUser = await getServersideUser(ctx);
   if (!dbUser) {
     return {
@@ -62,7 +61,6 @@ export const getServerSideProps: GetServerSideProps<
     };
   }
 
-  // Get filters from query params
   const toStr = (v: unknown) =>
     Array.isArray(v) ? v[0] : (v as string | undefined);
   const page = Number(toStr(ctx.query.page)) || 1;
@@ -71,7 +69,6 @@ export const getServerSideProps: GetServerSideProps<
   const deckId = deckIdRaw ? Number(deckIdRaw) : null;
   const skip = (page - 1) * ITEMS_PER_PAGE;
 
-  // Build where and get total count for pagination
   const where = {
     userId: dbUser.id,
     ...(deckId ? { deckId } : {}),
@@ -87,7 +84,6 @@ export const getServerSideProps: GetServerSideProps<
   };
   const totalCount = await prismaClient.writingSubmission.count({ where });
 
-  // Fetch user's writing submissions with pagination
   const submissionsRaw = await prismaClient.writingSubmission.findMany({
     where,
     orderBy: { createdAt: "desc" },
@@ -114,7 +110,6 @@ export const getServerSideProps: GetServerSideProps<
 
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
-  // Decks for filter options
   const decksRaw = await prismaClient.deck.findMany({
     where: { userId: dbUser.id },
     orderBy: [{ name: "asc" }],

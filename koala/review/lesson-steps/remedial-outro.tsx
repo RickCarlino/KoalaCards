@@ -135,10 +135,8 @@ export const RemedialOutro: CardUI = ({
     }
   };
 
-  // Register handler for parent to trigger on recording stop
   useEffect(() => {
     onProvideAudioHandler?.(processRecording);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStepUuid]);
 
   const handleIDK = async () => {
@@ -153,7 +151,6 @@ export const RemedialOutro: CardUI = ({
     await gradeWithAgain();
   };
 
-  // Early return for failure case
   if (phase === "failure") {
     return (
       <FailureView
@@ -168,7 +165,6 @@ export const RemedialOutro: CardUI = ({
     );
   }
 
-  // Early return for success case
   if (phase === "success") {
     return (
       <SuccessView

@@ -12,15 +12,12 @@ interface Deck {
   langCode: string;
 }
 
-// Main state and action types
 export interface State {
-  // Deck selection
   deckSelection: "existing" | "new";
-  deckId?: number; // if using an existing deck
-  deckName: string; // if creating a new deck
-  deckLang: LangCode; // always store the final deck language
+  deckId?: number;
+  deckName: string;
+  deckLang: LangCode;
 
-  // Card creation
   rawInput: string;
   processedCards: ProcessedCard[];
 }
@@ -36,7 +33,6 @@ export type Action =
   | { type: "SET_DECK_NAME"; deckName: string }
   | { type: "SET_DECK_LANG"; deckLang: LangCode };
 
-// Component-specific action types
 type DeckAction =
   | { type: "SET_DECK_SELECTION"; deckSelection: "existing" | "new" }
   | { type: "SET_DECK_ID"; deckId: number | undefined }
@@ -49,7 +45,6 @@ type ReviewAction =
   | { type: "EDIT_CARD"; card: ProcessedCard; index: number }
   | { type: "REMOVE_CARD"; index: number };
 
-// Component Props interfaces
 export interface DeckStepProps {
   decks: Deck[];
   state: Pick<State, "deckSelection" | "deckId" | "deckName" | "deckLang">;

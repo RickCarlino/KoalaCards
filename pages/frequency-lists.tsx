@@ -12,7 +12,6 @@ import {
 import Link from "next/link";
 import { alphabetical } from "radash";
 
-// Data structure for frequency lists
 interface FrequencyListItem {
   title: string;
   description: string;
@@ -25,7 +24,6 @@ interface LanguageData {
   lists: FrequencyListItem[];
 }
 
-// Frequency list data
 const frequencyListsData: LanguageData[] = [
   {
     name: "Spanish",
@@ -150,7 +148,6 @@ const frequencyListsData: LanguageData[] = [
 const FrequencyListsPage = () => {
   const theme = useMantineTheme();
 
-  // Accordion styles to match branding
   const accordionStyles = {
     item: {
       borderRadius: theme.radius.md,

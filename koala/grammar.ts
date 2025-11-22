@@ -9,8 +9,8 @@ import { LangCode } from "./shared-types";
 type Explanation = z.infer<typeof zodGradeResponse>;
 
 type GrammarCorrectionProps = {
-  term: string; // Prompt term
-  definition: string; // Example correct answer
+  term: string;
+  definition: string;
   userInput: string;
   userId: string;
   eventType?: string;
@@ -29,23 +29,18 @@ const zodGradeResponse = z.object({
 async function addTagsToList() {
   console.log("tagging untagged quiz results");
   const ERROR_TAGS = [
-    "ok", // no issues, a native speaker would say this
-    "form", // morphology, inflection, agreement, derivation
-    "input-error", // speech-to-text glitch, typo, spacing, accent usage, transcription slip
-    "syntax", // word order, constructions, valency, sentence structure
-    "lexis", // wrong word, collocation, false friend, sense mismatch
-    "semantics", // meaning inaccurate, ambiguous, misleading
-    "pragmatics", // register, politeness, tone, discourse use
-    "orthography", // spelling, spacing, diacritics, capitalization, punctuation
-    "unnatural", // grammatically fine but not idiomatic
-    "better-option", // understandable, but a clearer/more natural alternative exists
+    "ok",
+    "form",
+    "input-error",
+    "syntax",
+    "lexis",
+    "semantics",
+    "pragmatics",
+    "orthography",
+    "unnatural",
+    "better-option",
   ] as const;
 
-  // Error tags are constrained by the enum above via Zod.
-
-  // 1) Pull a small batch of candidates (limit 12) that failed.
-  // Note: We deliberately do not filter by errorTag here to avoid type drift issues
-  // if the Prisma client hasn't been regenerated yet. We gate updates below instead.
   const untaggedWhere: Prisma.QuizResultWhereInput = {
     isAcceptable: false,
     OR: [{ errorTag: null }, { errorTag: "" }],
@@ -53,7 +48,6 @@ async function addTagsToList() {
 
   const candidates = await prismaClient.quizResult.findMany({
     where: untaggedWhere,
-    // Newest first to prioritize recent data
     orderBy: { createdAt: "desc" },
     take: 12,
   });
@@ -62,7 +56,6 @@ async function addTagsToList() {
     return;
   }
 
-  // 2) Ask the model to assign a tag per id, using structured output constrained to ERROR_TAGS
   const ZItem = z.object({
     id: z.number().int(),
     tag: z.enum(ERROR_TAGS),
@@ -143,7 +136,6 @@ async function addTagsToList() {
     return;
   }
   console.log(JSON.stringify([system, user, structured], null, 2));
-  // 3) Apply tags; only set tag if it's currently null/empty to avoid overwriting
   const DOWNVOTE_TAGS = new Set([
     "ok",
     "input-error",
@@ -178,7 +170,6 @@ const storeTrainingData: StoreTrainingData = async (props, exp) => {
       definition,
       userInput,
       isAcceptable: yesNo === "yes",
-      // reason field mapped from the model; store under reason
       reason: why,
       eventType: eventType || "speaking-judgement",
     },

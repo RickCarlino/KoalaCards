@@ -8,8 +8,8 @@ import { draw } from "radash";
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 type SpeechBody = {
-  tl?: string; // target-language text (required)
-  en?: string; // English gloss (optional)
+  tl?: string;
+  en?: string;
   format?: "wav" | "mp3" | "opus";
 };
 
@@ -44,7 +44,7 @@ export default async function handler(
   }
   const input = enText.trim() ? `${tlText}\n${enText}` : tlText;
 
-  const model = "gpt-4o-mini-tts"; // OpenAI Speech (TTS)
+  const model = "gpt-4o-mini-tts";
   const VOICES = [
     "alloy",
     "ash",

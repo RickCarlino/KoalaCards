@@ -201,7 +201,6 @@ export function ReviewAssistantPane({
   const [input, setInput] = React.useState("");
   const viewportRef = React.useRef<HTMLDivElement | null>(null);
 
-  // Streaming state
   const abortRef = React.useRef<AbortController | null>(null);
   const parserRef = React.useRef<ReturnType<
     typeof createExampleStreamParser
@@ -382,7 +381,6 @@ export function ReviewAssistantPane({
       applyParsed(textDelta, examples);
     };
 
-    // Start streaming
     try {
       setIsStreaming(true);
       abortRef.current?.abort();
@@ -409,7 +407,6 @@ export function ReviewAssistantPane({
       let buffer = "";
       let currentEvent: string | null = null;
 
-      // Basic SSE parser: handle event: <name> + data: <payload> frames
       let reading = true;
       while (reading) {
         const { done, value } = await reader.read();
@@ -439,7 +436,6 @@ export function ReviewAssistantPane({
           }
           const payload = dataLines.join("\n");
           if (!currentEvent) {
-            // token frame
             const parser: ReturnType<typeof createExampleStreamParser> =
               parserRef.current ?? createExampleStreamParser();
             parserRef.current = parser;
@@ -448,7 +444,6 @@ export function ReviewAssistantPane({
             continue;
           }
           if (currentEvent === "done") {
-            // End of stream
             finalizeParser();
             setIsStreaming(false);
             reading = false;
@@ -501,7 +496,7 @@ export function ReviewAssistantPane({
 
   return (
     <>
-      {/* Optional floating toggle button (desktop only by default) */}
+      {}
       {showFloatingButton && (
         <Box
           style={{ position: "fixed", right: 16, bottom: 16, zIndex: 300 }}

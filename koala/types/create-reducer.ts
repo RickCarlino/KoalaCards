@@ -7,7 +7,7 @@ export const INITIAL_STATE: State = {
   deckSelection: "existing",
   deckId: undefined,
   deckName: "",
-  deckLang: DEFAULT_LANG, // default to Korean if user selects "new deck" but hasn't changed
+  deckLang: DEFAULT_LANG,
   rawInput: "",
   processedCards: [],
 };

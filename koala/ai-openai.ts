@@ -24,7 +24,7 @@ const DEFAULT_IMAGE_SIZE = "1024x1024" as const;
 const registry: Record<ModelKind, string> = {
   fast: "gpt-5.1",
   cheap: "gpt-5-mini",
-  good: "gpt-5-mini", // GPT 5 too expensive for general use. Testing a mini everywhere approach.
+  good: "gpt-5-mini",
   imageDefault: "dall-e-3",
 };
 
@@ -83,7 +83,6 @@ export const openaiGenerateStructuredOutput: StructuredGenFn = async (
     ...(usesGpt5
       ? {
           verbosity: "low" as const,
-          // SDK types lag the new "none" option, so cast to allow it.
           reasoning_effort:
             reasoningEffort as unknown as ChatCompletionCreateParamsNonStreaming["reasoning_effort"],
           max_completion_tokens: options.maxTokens ?? 1000,

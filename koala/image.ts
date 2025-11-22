@@ -2,7 +2,6 @@ import { createDallEImage, createDallEPrompt } from "./dall-e";
 import { prismaClient } from "./prisma-client";
 import { storageProvider } from "./storage";
 
-// fetcher will just show images if present.
 type Card = {
   id: number;
   term: string;
@@ -21,7 +20,7 @@ export async function maybeGetCardImageUrl(
   return await storageProvider.getExpiringURL(blobID);
 }
 
-const CHEAPNESS = 0.1; // % of cards that will get an image.
+const CHEAPNESS = 0.1;
 
 export async function maybeAddImageToCard(card: Card) {
   if (card.imageBlobId) {
