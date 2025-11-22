@@ -31,3 +31,4 @@ TODO.md
 todo.txt
 yarn-debug.log*
 yarn-error.log*
+.vscode

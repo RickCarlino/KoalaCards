@@ -40,13 +40,6 @@ type ChatMessage = {
   suggestions?: Suggestion[];
 };
 
-type CurrentCard = {
-  term: string;
-  definition: string;
-  langCode: string;
-  lessonType?: "speaking" | "new" | "remedial";
-};
-
 const collapseNewlines = (value: string) =>
   value.replace(/\n{3,}/g, "\n\n");
 
@@ -180,18 +173,18 @@ function AssistantMarkdown({
 
 export function ReviewAssistantPane({
   deckId: _deckId,
-  current: _current,
   opened: controlledOpened,
   onOpen,
   onClose,
   showFloatingButton = true,
+  contextLog = [],
 }: {
   deckId: number;
-  current: CurrentCard;
   opened?: boolean;
   onOpen?: () => void;
   onClose?: () => void;
   showFloatingButton?: boolean;
+  contextLog?: string[];
 }) {
   const [uncontrolledOpened, setUncontrolledOpened] =
     React.useState(false);
@@ -398,8 +391,8 @@ export function ReviewAssistantPane({
 
       const body = JSON.stringify({
         deckId: _deckId,
-        current: _current,
         messages: [...messages, userMsg],
+        contextLog,
       });
 
       const res = await fetch("/api/study-assistant/stream", {

@@ -17,19 +17,6 @@ type ChatMessage = { role: "user" | "assistant"; content: string };
 
 const BodySchema = z.object({
   deckId: z.number(),
-  // Minimal current context
-  current: z.object({
-    term: z.string(),
-    definition: z.string(),
-    langCode: z.string(),
-    lessonType: z
-      .union([
-        z.literal("speaking"),
-        z.literal("new"),
-        z.literal("remedial"),
-      ])
-      .optional(),
-  }),
   // Existing chat transcript (last N turns). Keep it small on the client.
   messages: z.array(
     z.object({
@@ -37,6 +24,8 @@ const BodySchema = z.object({
       content: z.string(),
     }),
   ),
+  // Optional activity log to help the assistant understand recent actions.
+  contextLog: z.array(z.string().max(240)).max(30).optional(),
 });
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -80,7 +69,7 @@ export default async function handler(
   if (!parsed.success) {
     return res.status(400).end("Invalid body");
   }
-  const { deckId, current, messages } = parsed.data;
+  const { deckId, messages, contextLog } = parsed.data;
 
   // Verify deck ownership
   const deck = await prismaClient.deck.findUnique({
@@ -128,17 +117,24 @@ TRANSLATION/PHRASES REQUESTS:
 - Treat each variation as something you would naturally say in Korean. Use idiomatic grammar, correct particles, and fully conjugated verbs suited to polite speech.
 `;
 
-  // Compact context message (kept tiny for latency)
-  const contextAsUser: ChatMessage = {
-    role: "user",
-    content: `Context:\n- Current term: ${current.term}\n- Definition: ${current.definition}\n- Language: Korean (ko)${current.lessonType ? `\n- Lesson type: ${current.lessonType}` : ""}`,
-  };
+  const activityLogLines =
+    contextLog?.map((line) => line.trim()).filter(Boolean) ?? [];
+
+  const activityLogMessage: ChatMessage | null = activityLogLines.length
+    ? {
+        role: "user",
+        content: `Activity log:\n${activityLogLines
+          .slice(-30)
+          .map((line) => `- ${line}`)
+          .join("\n")}`,
+      }
+    : null;
 
   const stream = await openai.chat.completions.create({
     model: "gpt-5.1-chat-latest",
     messages: [
       { role: "system", content: system },
-      contextAsUser,
+      ...(activityLogMessage ? [activityLogMessage] : []),
       ...messages,
     ],
     stream: true,
