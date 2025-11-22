@@ -49,8 +49,6 @@ export async function playBeep(options: BeepOptions = {}): Promise<void> {
       osc.onended = () => resolve();
     });
   } finally {
-    try {
-      await ctx.close();
-    } catch {}
+    await ctx.close().catch(() => undefined);
   }
 }

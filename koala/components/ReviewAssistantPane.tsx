@@ -471,24 +471,16 @@ export function ReviewAssistantPane({
   };
 
   const onAddSuggestion = async (s: Suggestion) => {
-    try {
-      await bulkCreate.mutateAsync({
-        deckId: _deckId,
-        input: [
-          { term: s.phrase, definition: s.translation, gender: s.gender },
-        ],
-      });
-      notifications.show({
-        title: "Added",
-        message: "Card added to deck",
-      });
-    } catch {
-      notifications.show({
-        title: "Failed",
-        message: "Could not add card",
-        color: "red",
-      });
-    }
+    await bulkCreate.mutateAsync({
+      deckId: _deckId,
+      input: [
+        { term: s.phrase, definition: s.translation, gender: s.gender },
+      ],
+    });
+    notifications.show({
+      title: "Added",
+      message: "Card added to deck",
+    });
   };
 
   const theme = useMantineTheme();
@@ -496,7 +488,6 @@ export function ReviewAssistantPane({
 
   return (
     <>
-      {}
       {showFloatingButton && (
         <Box
           style={{ position: "fixed", right: 16, bottom: 16, zIndex: 300 }}

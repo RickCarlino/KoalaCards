@@ -34,14 +34,10 @@ export const playBlobExclusive = (
   playbackRate?: number,
 ): Promise<void> => {
   if (_currentAudio) {
-    try {
-      _currentAudio.pause();
-    } catch {}
+    _currentAudio?.pause();
   }
   if (_currentUrl) {
-    try {
-      URL.revokeObjectURL(_currentUrl);
-    } catch {}
+    URL.revokeObjectURL(_currentUrl);
     _currentUrl = null;
   }
 
@@ -54,13 +50,9 @@ export const playBlobExclusive = (
   }
 
   const cleanup = () => {
-    try {
-      audio.pause();
-    } catch {}
+    audio.pause();
     if (_currentUrl) {
-      try {
-        URL.revokeObjectURL(_currentUrl);
-      } catch {}
+      URL.revokeObjectURL(_currentUrl);
     }
     if (_currentAudio === audio) {
       _currentAudio = null;

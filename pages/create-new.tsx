@@ -6,7 +6,6 @@ import {
   Container,
   Group,
   SegmentedControl,
-  Select,
   Text,
   TextInput,
   Title,
@@ -16,9 +15,13 @@ import { getServersideUser } from "@/koala/get-serverside-user";
 import { LangCode, supportedLanguages } from "@/koala/shared-types";
 import { trpc } from "@/koala/trpc-config";
 
-type CreateNewProps = {
-  defaultLang: LangCode;
-};
+type CreateNewProps = Record<string, never>;
+type Level = "Beginner" | "Intermediate" | "Advanced";
+
+const KOREAN_LANG_CODE: LangCode = "ko";
+const KOREAN_LANGUAGE_NAME =
+  supportedLanguages[KOREAN_LANG_CODE] || "Korean";
+const LEVELS: Level[] = ["Beginner", "Intermediate", "Advanced"];
 
 export const getServerSideProps: GetServerSideProps<
   CreateNewProps
@@ -30,12 +33,8 @@ export const getServerSideProps: GetServerSideProps<
     };
   }
 
-  const defaultLang: LangCode = "ko";
-
-  return { props: { defaultLang } };
+  return { props: {} };
 };
-
-type Level = "Beginner" | "Intermediate" | "Advanced";
 
 const PLACEHOLDERS = [
   "greetings and introductions",
@@ -129,31 +128,27 @@ const PLACEHOLDERS = [
 
 function generateCardPrompt({
   level,
-  langName,
   topic,
 }: {
   level: Level;
-  langName: LangCode;
   topic: string;
 }) {
-  const lang = supportedLanguages[langName] || langName;
   return [
-    `You are a ${lang} language teacher that helps students learn by creating short example sentence flashcards.`,
+    `You are a ${KOREAN_LANGUAGE_NAME} language teacher that helps students learn by creating short example sentence flashcards.`,
     `the perfect example sentence is only a few syllables long.`,
     `the perfect example sentence uses common words and grammar suitable for a ${level.toLowerCase()} learner.`,
     `the learner said they are interested ${topic}.`,
     `Create 15 example sentences with English translations (do NOT include romanizations or pronunciations).`,
-    `Use language that reflects how ${lang} speakers actually talk in real life.`,
+    `Use language that reflects how ${KOREAN_LANGUAGE_NAME} speakers actually talk in real life.`,
     `Do NOT come up with low quality english sentence and lazily translate them to the target language.`,
     `Authenticity is very important! Both in terms of the language used and the cultural context.`,
     `Use a variety of sentence structures and vocabulary.`,
   ].join("\n");
 }
 
-export default function CreateNew({ defaultLang }: CreateNewProps) {
+export default function CreateNew() {
   const router = useRouter();
   const [level, setLevel] = React.useState<Level>("Beginner");
-  const [lang, setLang] = React.useState<LangCode>(defaultLang);
   const [interest, setInterest] = React.useState<string>("");
   const [placeholderIndex, setPlaceholderIndex] =
     React.useState<number>(0);
@@ -186,19 +181,25 @@ export default function CreateNew({ defaultLang }: CreateNewProps) {
     return () => clearInterval(id);
   }, [hasFocused, interest]);
 
+  const handleLevelChange = (value: string) => {
+    const nextLevel = LEVELS.find((option) => option === value);
+    if (nextLevel) {
+      setLevel(nextLevel);
+    }
+  };
+
   const onGo = async () => {
     try {
       const deck = await createDeck.mutateAsync({
         name: "My First Koala Deck",
-        langCode: lang,
+        langCode: KOREAN_LANG_CODE,
       });
 
       const topic = interest.trim() || PLACEHOLDERS[placeholderIndex];
       const { cards } = await parseCards.mutateAsync({
-        langCode: lang,
+        langCode: KOREAN_LANG_CODE,
         text: generateCardPrompt({
           level,
-          langName: lang,
           topic,
         }),
       });
@@ -242,21 +243,11 @@ export default function CreateNew({ defaultLang }: CreateNewProps) {
         <Text>I am a</Text>
         <SegmentedControl
           value={level}
-          onChange={(v) => setLevel(v as Level)}
-          data={["Beginner", "Intermediate", "Advanced"].map((l) => ({
+          onChange={handleLevelChange}
+          data={LEVELS.map((l) => ({
             label: l,
             value: l,
           }))}
-        />
-        <Select
-          value={lang}
-          onChange={(v) => setLang((v as LangCode) || lang)}
-          data={Object.entries(supportedLanguages).map(([code, name]) => ({
-            value: code,
-            label: name,
-          }))}
-          searchable
-          style={{ minWidth: 220 }}
         />
         <Text>Make cards related to...</Text>
       </Group>
