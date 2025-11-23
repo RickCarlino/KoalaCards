@@ -4,8 +4,6 @@ import {
   type LanguageModelIdentifier,
 } from "@/koala/ai";
 import {
-  FLOOD_ITEM_COUNT_MAX,
-  FLOOD_ITEM_COUNT_MIN,
   INPUT_FLOOD_GENERATE_MAX_TOKENS,
   INPUT_FLOOD_GRADE_ITEMS_MAX,
   INPUT_FLOOD_GRADE_ITEMS_MIN,
@@ -14,10 +12,6 @@ import {
   INPUT_FLOOD_RECENT_RESULTS_TAKE,
   INPUT_FLOOD_SENTENCE_MAX_WORDS,
   INPUT_FLOOD_WHY_ERROR_MAX_CHARS,
-  INPUT_FLOOD_PRODUCTION_MAX,
-  INPUT_FLOOD_PRODUCTION_MIN,
-  RULES_COUNT_MAX,
-  RULES_COUNT_MIN,
   InputFloodLessonSchema,
 } from "@/koala/types/input-flood";
 import { draw, shuffle } from "radash";
@@ -64,14 +58,11 @@ const JSON_SCHEMA_SKELETON = `{
   "diagnosis": {
     "original": string,
     "corrected": string,
-    "error_explanation": string,
-    "rules": string[]
+    "error_explanation": string
   },
-  "flood": {
-    "target": { "label": string, "items": [{ "text": string, "en": string }] },
-    "contrast": { "label": string, "items": [{ "text": string, "en": string }] } | null
-  },
-  "production": [{ "prompt_en": string, "answer": string }]
+  "target": { "label": string, "example": { "text": string, "en": string } },
+  "contrast": { "label": string, "example": { "text": string, "en": string } } | null,
+  "production": { "prompt_en": string, "answer": string }
 }`;
 
 type ConversationInput = {
@@ -109,19 +100,18 @@ const buildConversationPrompt = (input: ConversationInput): string => {
       .concat(
         " Pick 1-4 from the rubric (correct, incomplete/unrelated, grammatical issue, wrong word) and note why in one English sentence addressing the learner.",
       ),
-    "Step 2 — Lesson recap:\n- Write ≤1 paragraph in English explaining the issue and the fix.\n- Add 1-2 Korean example sentences that model the corrected pattern.\n- Optionally add 0-2 contrastive Korean examples only if a different pattern is causing confusion. Keep all Korean sentences short, natural, and varied in vocab.",
-    "Step 3 — Drills:\n- Create prompt/response pairs that force the corrected pattern. Prompts stay in English, answers in Korean.",
+    "Step 2 — Lesson recap:\n- Write ≤1 paragraph in English explaining the issue and the fix.\n- Add exactly 1 Korean example sentence that models the corrected pattern.\n- Optionally add 1 contrastive Korean example only if a different pattern is causing confusion. Keep all Korean sentences short, natural, and varied in vocab.",
+    "Step 3 — Drills:\n- Create 1 prompt/response pair that forces the corrected pattern. Prompt stays in English, answer in Korean.",
     "Step 4 — JSONization (return JSON ONLY):",
     JSON_SCHEMA_SKELETON,
     "Conversion guardrails:",
     `- Use the learner's exact attempt (${input.attempt}) as diagnosis.original.`,
     `- diagnosis.corrected must be a natural Korean sentence that actually expresses "${input.definition}" (or the corrected nuance you explained) and fits everyday speech.`,
     `- diagnosis.error_explanation must be short (under ${INPUT_FLOOD_WHY_ERROR_MAX_CHARS} characters), written in English, and speak directly to the learner ("You ...").`,
-    `- diagnosis.rules must contain ${RULES_COUNT_MIN}-${RULES_COUNT_MAX} short English reminders that start with "You..." or otherwise address the learner in second person.`,
-    `- flood.target.label should name the correct pattern. Provide ${FLOOD_ITEM_COUNT_MIN}-${FLOOD_ITEM_COUNT_MAX} target sentences; each items[].text is Korean only and ≤ ${INPUT_FLOOD_SENTENCE_MAX_WORDS} words, and items[].en is its natural English gloss.`,
-    `- flood.contrast only exists if a clearly different-but-related pattern caused confusion. When used, include ${FLOOD_ITEM_COUNT_MIN}-${FLOOD_ITEM_COUNT_MAX} sentences that avoid the target pattern. Otherwise set it to null.`,
-    `- production must include ${INPUT_FLOOD_PRODUCTION_MIN}-${INPUT_FLOOD_PRODUCTION_MAX} prompt/answer pairs. prompt_en stays in English, answer stays in Korean and highlights the corrected pattern.`,
-    `- All Korean outputs (diagnosis.corrected, flood sentences, production answers) must avoid romanization, brackets, parenthetical notes, or English words unless they are proper nouns. Keep them short and natural.`,
+    `- target.label should name the correct pattern. Provide 1 target sentence in target.example.text (Korean only, ≤ ${INPUT_FLOOD_SENTENCE_MAX_WORDS} words) with its natural English gloss in target.example.en.`,
+    `- contrast only exists if a clearly different-but-related pattern caused confusion. When used, include exactly 1 sentence in contrast.example that avoids the target pattern. Otherwise set it to null.`,
+    `- production must include exactly 1 prompt/answer pair. prompt_en stays in English, answer stays in Korean and highlights the corrected pattern.`,
+    `- All Korean outputs (diagnosis.corrected, target/contrast sentences, production answers) must avoid romanization, brackets, parenthetical notes, or English words unless they are proper nouns. Keep them short and natural.`,
     `- ${errorLine}`,
     `- Use ${input.acceptableTerm} as the reference for what a good answer sounded like, but you can adjust wording to keep it natural and idiomatic.`,
     `- ${reasonLine}`,
