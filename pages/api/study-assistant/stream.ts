@@ -11,7 +11,8 @@ export const config = {
   },
 };
 
-type ChatMessage = { role: "user" | "assistant"; content: string };
+type CompletionMessage =
+  OpenAI.Chat.Completions.ChatCompletionMessageParam;
 
 const BodySchema = z.object({
   deckId: z.number(),
@@ -88,6 +89,10 @@ export default async function handler(
   const system = `You are a Korean-learning study assistant.
 Output should be optimized for fast reading and practice.
 
+CONTEXT HANDLING:
+- You receive a recent activity log; newer entries are more relevant. Use it to resolve references like "this/that/it", "that sentence", or "that card" by defaulting to the latest card term/definition or spoken answer.
+- When a user explicitly asks for English (e.g., "in English", "translate to English"), give a concise English response first, grounded in the latest relevant card. Keep Korean examples short and only when helpful.
+
 GLOBAL RULES:
 - Target language (TL): Korean (Hangul only).
 - Output Hangul only—no romanization (RR, Yale, McCune-Reischauer, phonetic hints).
@@ -114,15 +119,16 @@ TRANSLATION/PHRASES REQUESTS:
   const activityLogLines =
     contextLog?.map((line) => line.trim()).filter(Boolean) ?? [];
 
-  const activityLogMessage: ChatMessage | null = activityLogLines.length
-    ? {
-        role: "user",
-        content: `Activity log:\n${activityLogLines
-          .slice(-30)
-          .map((line) => `- ${line}`)
-          .join("\n")}`,
-      }
-    : null;
+  const recentActivityLines = activityLogLines.slice(-30).reverse();
+  const activityLogMessage: CompletionMessage | null =
+    recentActivityLines.length > 0
+      ? {
+          role: "system",
+          content: `Recent activity log (newest first):\n${recentActivityLines
+            .map((line) => `- ${line}`)
+            .join("\n")}`,
+        }
+      : null;
 
   const stream = await openai.chat.completions.create({
     model: "gpt-5.1-chat-latest",
