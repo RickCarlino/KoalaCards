@@ -20,7 +20,7 @@ export async function maybeGetCardImageUrl(
   return await storageProvider.getExpiringURL(blobID);
 }
 
-const CHEAPNESS = 0.1;
+const CHEAPNESS = 0.33;
 
 export async function maybeAddImageToCard(card: Card) {
   if (card.imageBlobId) {

@@ -25,7 +25,7 @@ const registry: Record<ModelKind, string> = {
   fast: "gpt-5.1",
   cheap: "gpt-5-mini",
   good: "gpt-5-mini",
-  imageDefault: "dall-e-3",
+  imageDefault: "gpt-image-1-mini",
 };
 
 type ReasoningEffortLevel = Exclude<ReasoningEffort, null> | "none";
