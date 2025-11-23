@@ -1,36 +1,38 @@
 import { Card } from "@prisma/client";
 import { template } from "radash";
-import { LessonType } from "./shared-types";
 import { generateSpeechURL } from "./generate-speech-url";
 import { removeParens } from "./quiz-evaluators/evaluator-utils";
+import { generateDefinitionSpeechURL } from "./generate-definition-speech-url";
 
-type AudioLessonParams = {
-  card: Pick<Card, "term" | "definition" | "gender">;
-  lessonType: LessonType | "new";
+type TermAudioParams = {
+  card: Pick<Card, "term" | "gender">;
   speed?: number;
 };
 
-const DICTATION = `<speak>
-  <prosody rate="{{speed}}%">{{term}}</prosody>
-  <break time="0.4s"/>
-  <voice language="en-US" gender="female">{{definition}}</voice>
-  <break time="0.4s"/>
-</speak>`;
+const TERM_ONLY = `<speak><prosody rate="{{speed}}%">{{term}}</prosody></speak>`;
+const MIN_SPEAKING_RATE = 0.25;
+const MAX_SPEAKING_RATE = 4;
 
-const SSML: Record<LessonType, string> = {
-  speaking: `<speak><voice language="en-US" gender="female">{{definition}}</voice></speak>`,
-  new: DICTATION,
-  remedial: DICTATION,
-};
-
-export async function generateLessonAudio(params: AudioLessonParams) {
+export async function generateTermAudio(params: TermAudioParams) {
+  const speedPct = params.speed ?? 100;
+  const gender =
+    (["M", "F", "N"] as const).find((g) => g === params.card.gender) ||
+    "N";
+  const speakingRate = Math.min(
+    MAX_SPEAKING_RATE,
+    Math.max(MIN_SPEAKING_RATE, speedPct / 100),
+  );
   return await generateSpeechURL({
-    text: template(SSML[params.lessonType], {
+    text: template(TERM_ONLY, {
       term: removeParens(params.card.term),
-      definition: removeParens(params.card.definition),
-      speed: params.speed || 100,
+      speed: speedPct,
     }),
-    gender: params.card.gender as "N",
+    gender,
     langCode: "ko",
+    speed: speakingRate,
   });
+}
+
+export async function generateDefinitionAudio(definition: string) {
+  return await generateDefinitionSpeechURL(removeParens(definition));
 }

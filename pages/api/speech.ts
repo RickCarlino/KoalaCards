@@ -49,7 +49,6 @@ export default async function handler(
     "alloy",
     "ash",
     "ballad",
-    "coral",
     "echo",
     "fable",
     "nova",

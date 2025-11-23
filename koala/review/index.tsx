@@ -40,7 +40,7 @@ import { useRef } from "react";
 import { useMediaRecorder } from "@/koala/hooks/use-media-recorder";
 import { useUserSettings } from "@/koala/settings-provider";
 import { playBlob } from "@/koala/utils/play-blob-audio";
-import { playAudio } from "@/koala/play-audio";
+import { playTermThenDefinition } from "./playback";
 
 export const CardReview: React.FC<CardReviewWithRecordingProps> = (
   props,
@@ -110,14 +110,8 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
     itemType === "remedialOutro";
 
   const handleFail = async () => {
-    await playAudio(
-      card.termAndDefinitionAudio,
-      userSettings.playbackSpeed,
-    );
-    await playAudio(
-      card.termAndDefinitionAudio,
-      userSettings.playbackSpeed,
-    );
+    await playTermThenDefinition(card, userSettings.playbackSpeed);
+    await playTermThenDefinition(card, userSettings.playbackSpeed);
     if (isQuizStep) {
       await gradeQuiz.mutateAsync({
         perceivedDifficulty: Grade.AGAIN,

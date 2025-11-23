@@ -9,9 +9,9 @@ import { FailureView } from "../components/FailureView";
 import { CardImage } from "../components/CardImage";
 import { usePhaseManager } from "../hooks/usePhaseManager";
 import { useGradeHandler } from "../hooks/useGradeHandler";
-import { playAudio } from "@/koala/play-audio";
 import { useUserSettings } from "@/koala/settings-provider";
 import { HOTKEYS } from "../hotkeys";
+import { playTermThenDefinition } from "../playback";
 
 type Phase = "ready" | "processing" | "success" | "failure";
 type QuizType = "speaking" | "newWordOutro" | "remedialOutro";
@@ -107,10 +107,7 @@ export const QuizCard: React.FC<QuizCardProps> = ({
   });
 
   const play = async () => {
-    await playAudio(
-      card.termAndDefinitionAudio,
-      userSettings.playbackSpeed,
-    );
+    await playTermThenDefinition(card, userSettings.playbackSpeed);
   };
 
   useEffect(() => {
@@ -150,14 +147,8 @@ export const QuizCard: React.FC<QuizCardProps> = ({
   };
 
   const handleIDK = async () => {
-    await playAudio(
-      card.termAndDefinitionAudio,
-      userSettings.playbackSpeed,
-    );
-    await playAudio(
-      card.termAndDefinitionAudio,
-      userSettings.playbackSpeed,
-    );
+    await playTermThenDefinition(card, userSettings.playbackSpeed);
+    await playTermThenDefinition(card, userSettings.playbackSpeed);
     await gradeWithAgain();
   };
 

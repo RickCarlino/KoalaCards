@@ -11,8 +11,8 @@ import {
   State,
   GradingResult,
 } from "./types";
-import { playAudio } from "../play-audio";
 import { useUserSettings } from "@/koala/settings-provider";
+import { playTermThenDefinition } from "./playback";
 
 const queue = (): Queue => ({
   newWordIntro: [],
@@ -135,11 +135,9 @@ export function useReview(deckId: number) {
     },
     giveUp: async (cardUUID: string) => {
       const card = state.cards[cardUUID];
-      card &&
-        (await playAudio(
-          card.termAndDefinitionAudio,
-          userSettings.playbackSpeed,
-        ));
+      if (card) {
+        await playTermThenDefinition(card, userSettings.playbackSpeed);
+      }
       dispatch({ type: "GIVE_UP", payload: { cardUUID } });
     },
     completeItem: (uuid: string) => {

@@ -4,6 +4,7 @@ import { playAudio } from "@/koala/play-audio";
 import { prismaClient } from "@/koala/prisma-client";
 import { CardReview } from "@/koala/review";
 import { HOTKEYS } from "@/koala/review/hotkeys";
+import { playTermThenDefinition } from "@/koala/review/playback";
 import { useReview } from "@/koala/review/reducer";
 import { useUserSettings } from "@/koala/settings-provider";
 import { GradingResult } from "@/koala/review/types";
@@ -189,8 +190,8 @@ function InnerReviewPage({ deckId }: ReviewDeckPageProps) {
     switch (currentItem?.itemType) {
       case "remedialIntro":
       case "newWordIntro":
-        return await playAudio(
-          card.termAndDefinitionAudio,
+        return await playTermThenDefinition(
+          card,
           userSettings.playbackSpeed,
         );
       case "speaking":

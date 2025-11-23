@@ -9,8 +9,8 @@ import { usePhaseManager } from "../hooks/usePhaseManager";
 import { HOTKEYS } from "../hotkeys";
 import { FeedbackVote } from "../components/FeedbackVote";
 import { useQuizGrading } from "../use-quiz-grading";
-import { playAudio } from "@/koala/play-audio";
 import { useUserSettings } from "@/koala/settings-provider";
+import { playTermThenDefinition } from "../playback";
 
 type Phase = "ready" | "processing" | "success" | "failure";
 
@@ -140,14 +140,8 @@ export const RemedialOutro: CardUI = ({
   }, [currentStepUuid]);
 
   const handleIDK = async () => {
-    await playAudio(
-      card.termAndDefinitionAudio,
-      userSettings.playbackSpeed,
-    );
-    await playAudio(
-      card.termAndDefinitionAudio,
-      userSettings.playbackSpeed,
-    );
+    await playTermThenDefinition(card, userSettings.playbackSpeed);
+    await playTermThenDefinition(card, userSettings.playbackSpeed);
     await gradeWithAgain();
   };
 

@@ -3,7 +3,7 @@ import type { Card, Prisma } from "@prisma/client";
 import { getUserSettings } from "./auth-helpers";
 import { maybeGetCardImageUrl } from "./image";
 import { LessonType } from "./shared-types";
-import { generateLessonAudio } from "./speech";
+import { generateDefinitionAudio, generateTermAudio } from "./speech";
 
 type Bucket = typeof NEW_CARD | typeof ROUTINE | typeof REMEDIAL;
 
@@ -29,6 +29,7 @@ type LocalCard = Pick<
   | "imageBlobId"
   | "lastFailure"
   | "flagged"
+  | "gender"
 >;
 
 const NEW_CARD = "N" as const;
@@ -39,7 +40,6 @@ const TWO_DAYS_MS = ONE_DAY_MS * 2;
 const NEW_CARD_DEFAULT_TARGET = 7;
 const DECK_HAND_HARD_CAP = 50;
 const ROUND_ROBIN_ORDER: Bucket[] = [REMEDIAL, NEW_CARD, ROUTINE];
-const ENGLISH_SPEED = 125;
 const PER_BUCKET_PREFETCH = 45;
 
 async function getDailyLimits(userId: string, now: number) {
@@ -117,6 +117,11 @@ async function buildQuizPayload(
   speedPct: number,
 ) {
   const r = q.repetitions ?? 0;
+  const definitionAudio = await generateDefinitionAudio(q.definition);
+  const termAudio = await generateTermAudio({
+    card: q as Card,
+    speed: r > 1 ? speedPct : 100,
+  });
   return {
     cardId: q.id,
     definition: q.definition,
@@ -124,16 +129,8 @@ async function buildQuizPayload(
     repetitions: r,
     lapses: q.lapses,
     lessonType: (q.quizType as LessonType) ?? ("speaking" as LessonType),
-    definitionAudio: await generateLessonAudio({
-      card: q as Card,
-      lessonType: "speaking",
-      speed: ENGLISH_SPEED,
-    }),
-    termAndDefinitionAudio: await generateLessonAudio({
-      card: q as Card,
-      lessonType: "new",
-      speed: r > 1 ? speedPct : 100,
-    }),
+    definitionAudio,
+    termAudio,
     langCode: "ko",
     lastReview: q.lastReview ?? 0,
     imageURL: await maybeGetCardImageUrl(q.imageBlobId),
