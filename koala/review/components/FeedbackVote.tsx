@@ -15,11 +15,9 @@ export function FeedbackVote({ resultId, onClick }: Props) {
   const vote = (value: 1 | -1) => {
     if (selected !== null) {
       return;
-    } // one-off
+    }
     setSelected(value);
-    // Trigger optional callback immediately so parent can continue UI flow
     onClick?.();
-    // Persist vote in background; ignore resolution here
     void mutation.mutateAsync({
       resultId,
       data: { helpfulness: value },

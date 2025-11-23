@@ -2,32 +2,26 @@ import { prismaClient } from "@/koala/prisma-client";
 import { Card } from "@prisma/client";
 import { errorReport } from "./error-report";
 import { maybeGetCardImageUrl } from "./image";
-import { generateLessonAudio } from "./speech";
+import { generateDefinitionAudio, generateTermAudio } from "./speech";
 import { GetRepairInputParams } from "./fetch-failure-types";
 import { map } from "radash";
 
 async function buildQuizPayload(card: Card) {
+  const definitionAudio = await generateDefinitionAudio(card.definition);
+  const termAudio = await generateTermAudio({ card, speed: 100 });
   return {
     cardId: card.id,
     definition: card.definition,
     term: card.term,
-    definitionAudio: await generateLessonAudio({
-      card: card,
-      lessonType: "speaking",
-      speed: 100,
-    }),
-    termAndDefinitionAudio: await generateLessonAudio({
-      card: card,
-      lessonType: "new",
-      speed: 100,
-    }),
+    definitionAudio,
+    termAudio,
     langCode: "ko",
     imageURL: (await maybeGetCardImageUrl(card.imageBlobId)) || "",
   };
 }
 
 export async function getRepairCards(p: GetRepairInputParams) {
-  const { userId, /*deckId,*/ take } = p;
+  const { userId, take } = p;
   if (take > 45) {
     return errorReport("Too many cards requested.");
   }
@@ -35,7 +29,6 @@ export async function getRepairCards(p: GetRepairInputParams) {
   const uniqueByCardId = await prismaClient.card.findMany({
     where: {
       userId,
-      // deckId,
       lastFailure: { gt: 0 },
     },
     orderBy: { lastFailure: "asc" },

@@ -43,7 +43,6 @@ const SYSTEM_PROMPT = `
 
   The target language for this upload is: `;
 
-// Schema for card structure
 const CardSchema = z.object({
   cards: z.array(
     z.object({
@@ -54,8 +53,6 @@ const CardSchema = z.object({
   ),
 });
 
-/** Ingests a body of text containing card data and asynchronously returns
- * structured term/definition pairs. */
 export async function createCardsFromText(
   langCode: string,
   input: string,

@@ -30,9 +30,7 @@ const NULL_TABLE = (
 export default function Train({ data, totalPages, page }: TrainProps) {
   const router = useRouter();
 
-  // Handler for pagination changes:
   const onPageChange = (newPage: number) => {
-    // We push a new route with the updated page param
     router.push(`/train?page=${newPage}`);
   };
 
@@ -87,7 +85,6 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const dbUser = await getServersideUser(ctx);
   const userId = dbUser?.id;
 
-  // Only approved users can access
   if (!userId || !isApprovedUser(userId)) {
     return {
       redirect: {
@@ -97,11 +94,9 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
     };
   }
 
-  // Parse the page param, default to 1
   const page = parseInt(ctx.query.page as string, 10) || 1;
   const rowsPerPage = 200;
 
-  // Count total records (adjust filter for your 30-days condition, etc.)
   const totalCount = await prismaClient.quizResult.count({
     where: {
       createdAt: { gte: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30) },
@@ -121,7 +116,6 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
     take: rowsPerPage,
   });
 
-  // Return serialized data plus pagination info
   return {
     props: {
       data: JSON.parse(JSON.stringify(data)),

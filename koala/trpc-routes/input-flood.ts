@@ -1,30 +1,34 @@
+import {
+  generateStructuredOutput,
+  type CoreMessage,
+  type LanguageModelIdentifier,
+} from "@/koala/ai";
+import {
+  FLOOD_ITEM_COUNT_MAX,
+  FLOOD_ITEM_COUNT_MIN,
+  INPUT_FLOOD_GENERATE_MAX_TOKENS,
+  INPUT_FLOOD_GRADE_ITEMS_MAX,
+  INPUT_FLOOD_GRADE_ITEMS_MIN,
+  INPUT_FLOOD_GRADE_MAX_TOKENS,
+  INPUT_FLOOD_GRADE_TEXT_LIMIT,
+  INPUT_FLOOD_RECENT_RESULTS_TAKE,
+  INPUT_FLOOD_SENTENCE_MAX_WORDS,
+  INPUT_FLOOD_WHY_ERROR_MAX_CHARS,
+  INPUT_FLOOD_PRODUCTION_MAX,
+  INPUT_FLOOD_PRODUCTION_MIN,
+  RULES_COUNT_MAX,
+  RULES_COUNT_MIN,
+  InputFloodLessonSchema,
+} from "@/koala/types/input-flood";
+import { draw, shuffle } from "radash";
 import { z } from "zod";
-import { procedure } from "../trpc-procedure";
 import { prismaClient } from "../prisma-client";
 import {
   LANG_CODES,
   type LangCode,
   supportedLanguages,
 } from "../shared-types";
-import { shuffle, draw } from "radash";
-import { generateStructuredOutput } from "@/koala/ai";
-import {
-  InputFloodLessonSchema,
-  FLOOD_ITEM_COUNT_MAX,
-  FLOOD_ITEM_COUNT_MIN,
-  INPUT_FLOOD_SENTENCE_MAX_WORDS,
-  INPUT_FLOOD_WHY_ERROR_MAX_CHARS,
-  RULES_COUNT_MIN,
-  RULES_COUNT_MAX,
-  INPUT_FLOOD_PRODUCTION_MIN,
-  INPUT_FLOOD_PRODUCTION_MAX,
-  INPUT_FLOOD_RECENT_RESULTS_TAKE,
-  INPUT_FLOOD_GENERATE_MAX_TOKENS,
-  INPUT_FLOOD_GRADE_MAX_TOKENS,
-  INPUT_FLOOD_GRADE_ITEMS_MIN,
-  INPUT_FLOOD_GRADE_ITEMS_MAX,
-  INPUT_FLOOD_GRADE_TEXT_LIMIT,
-} from "@/koala/types/input-flood";
+import { procedure } from "../trpc-procedure";
 
 const GradeRequestSchema = z.object({
   language: z.string(),
@@ -48,6 +52,99 @@ const GradeResponseSchema = z.object({
     }),
   ),
 });
+
+const MULTIPASS_CONVERSATION_MODEL: LanguageModelIdentifier = [
+  "openai",
+  "fast",
+];
+
+const LESSON_CONVERSATION_SYSTEM_PROMPT = `You are a veteran Korean language coach. Speak in plain English when explaining issues, but supply Korean sentences whenever you give examples. Keep every Korean sentence natural, idiomatic, and at most ${INPUT_FLOOD_SENTENCE_MAX_WORDS} words. Never use romanization, brackets, emojis, or notes in Korean text. Address the learner directly as "you" whenever you describe their mistake in English.`;
+
+const JSON_SCHEMA_SKELETON = `{
+  "diagnosis": {
+    "original": string,
+    "corrected": string,
+    "error_explanation": string,
+    "rules": string[]
+  },
+  "flood": {
+    "target": { "label": string, "items": [{ "text": string, "en": string }] },
+    "contrast": { "label": string, "items": [{ "text": string, "en": string }] } | null
+  },
+  "production": [{ "prompt_en": string, "answer": string }]
+}`;
+
+type ConversationInput = {
+  definition: string;
+  acceptableTerm: string;
+  attempt: string;
+  reason: string;
+};
+
+const normalizeWhitespace = (value: string): string =>
+  value.replace(/\s+/g, " ").trim();
+
+const prepareConversationInput = (
+  input: ConversationInput,
+): ConversationInput => ({
+  definition: normalizeWhitespace(input.definition),
+  acceptableTerm: normalizeWhitespace(input.acceptableTerm),
+  attempt: normalizeWhitespace(input.attempt),
+  reason: normalizeWhitespace(input.reason),
+});
+const buildConversationPrompt = (input: ConversationInput): string => {
+  const reasonLine = input.reason
+    ? `Coaching note: ${input.reason}. Hit this directly in your lesson.`
+    : "";
+  const errorLine = input.reason
+    ? `The issue we logged was: ${input.reason}.`
+    : "Address the underlying issue directly in every section.";
+
+  return [
+    "We are simulating a short back-and-forth like the example conversation. Think through these mini-steps quickly and then convert everything to JSON.",
+    "Step 1 — Rate the learner:\n- Prompt in English:"
+      .concat(` ${input.definition}`)
+      .concat(` (acceptable response: ${input.acceptableTerm}).`)
+      .concat(` Learner replied: ${input.attempt}.`)
+      .concat(
+        " Pick 1-4 from the rubric (correct, incomplete/unrelated, grammatical issue, wrong word) and note why in one English sentence addressing the learner.",
+      ),
+    "Step 2 — Lesson recap:\n- Write ≤1 paragraph in English explaining the issue and the fix.\n- Add 1-2 Korean example sentences that model the corrected pattern.\n- Optionally add 0-2 contrastive Korean examples only if a different pattern is causing confusion. Keep all Korean sentences short, natural, and varied in vocab.",
+    "Step 3 — Drills:\n- Create prompt/response pairs that force the corrected pattern. Prompts stay in English, answers in Korean.",
+    "Step 4 — JSONization (return JSON ONLY):",
+    JSON_SCHEMA_SKELETON,
+    "Conversion guardrails:",
+    `- Use the learner's exact attempt (${input.attempt}) as diagnosis.original.`,
+    `- diagnosis.corrected must be a natural Korean sentence that actually expresses "${input.definition}" (or the corrected nuance you explained) and fits everyday speech.`,
+    `- diagnosis.error_explanation must be short (under ${INPUT_FLOOD_WHY_ERROR_MAX_CHARS} characters), written in English, and speak directly to the learner ("You ...").`,
+    `- diagnosis.rules must contain ${RULES_COUNT_MIN}-${RULES_COUNT_MAX} short English reminders that start with "You..." or otherwise address the learner in second person.`,
+    `- flood.target.label should name the correct pattern. Provide ${FLOOD_ITEM_COUNT_MIN}-${FLOOD_ITEM_COUNT_MAX} target sentences; each items[].text is Korean only and ≤ ${INPUT_FLOOD_SENTENCE_MAX_WORDS} words, and items[].en is its natural English gloss.`,
+    `- flood.contrast only exists if a clearly different-but-related pattern caused confusion. When used, include ${FLOOD_ITEM_COUNT_MIN}-${FLOOD_ITEM_COUNT_MAX} sentences that avoid the target pattern. Otherwise set it to null.`,
+    `- production must include ${INPUT_FLOOD_PRODUCTION_MIN}-${INPUT_FLOOD_PRODUCTION_MAX} prompt/answer pairs. prompt_en stays in English, answer stays in Korean and highlights the corrected pattern.`,
+    `- All Korean outputs (diagnosis.corrected, flood sentences, production answers) must avoid romanization, brackets, parenthetical notes, or English words unless they are proper nouns. Keep them short and natural.`,
+    `- ${errorLine}`,
+    `- Use ${input.acceptableTerm} as the reference for what a good answer sounded like, but you can adjust wording to keep it natural and idiomatic.`,
+    `- ${reasonLine}`,
+    "Return JSON ONLY with double quotes and zero commentary.",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+};
+
+const runLessonConversation = async (rawInput: ConversationInput) => {
+  const input = prepareConversationInput(rawInput);
+  const conversation: CoreMessage[] = [
+    { role: "system", content: LESSON_CONVERSATION_SYSTEM_PROMPT },
+    { role: "user", content: buildConversationPrompt(input) },
+  ];
+
+  return generateStructuredOutput({
+    model: MULTIPASS_CONVERSATION_MODEL,
+    messages: conversation,
+    schema: InputFloodLessonSchema,
+    maxTokens: INPUT_FLOOD_GENERATE_MAX_TOKENS,
+  });
+};
 
 export const inputFloodGenerate = procedure
   .input(z.object({ resultId: z.number().optional() }).optional())
@@ -79,6 +176,15 @@ export const inputFloodGenerate = procedure
           userId,
           isAcceptable: false,
           reviewedAt: null,
+          errorTag: {
+            in: [
+              "form",
+              "syntax",
+              "semantics",
+              "orthography",
+              "unnatural",
+            ],
+          },
         },
         orderBy: { createdAt: "desc" },
         take: INPUT_FLOOD_RECENT_RESULTS_TAKE,
@@ -93,126 +199,15 @@ export const inputFloodGenerate = procedure
 
     const langCode = "ko" as LangCode;
 
-    const prompt = buildInputFloodPrompt({
-      langCode,
+    const lesson = await runLessonConversation({
       definition: result.definition,
-      provided: result.userInput,
+      acceptableTerm: result.acceptableTerm,
+      attempt: result.userInput,
       reason: result.reason,
-    });
-
-    const lesson = await generateStructuredOutput({
-      model: ["openai", "cheap"],
-      messages: [{ role: "user", content: prompt }],
-      schema: InputFloodLessonSchema,
-      maxTokens: INPUT_FLOOD_GENERATE_MAX_TOKENS,
     });
 
     return { lesson, source: { quizResultId: result.id, langCode } };
   });
-
-type PromptParams = {
-  langCode: LangCode;
-  definition: string;
-  provided: string;
-  reason: string;
-};
-
-function buildInputFloodPrompt({
-  langCode,
-  definition,
-  provided,
-  reason,
-}: PromptParams): string {
-  const language = supportedLanguages[langCode];
-  return `You are a language-teaching generator. Create an INPUT FLOOD exercise in ${language}.
-
-Background:
-
-Input flood = saturating comprehensible input with many 
-natural examples of a target form so learners internalize it through 
-frequency and use it correctly. Support: Krashen's Input Hypothesis 
-(i+1), Ellis/Tomasello usage-based accounts, studies (Trahey & White 
-1993; Doughty & Varela 1998; Hernández 2008; Han et al. 2008). 
-Benefits: implicit learning, lower cognitive load, durable retention, 
-engagement, broad accessibility, supports noticing. Often paired with 
-input enhancement, narrow reading, processing instruction, structural 
-priming.
-
-Task: Based on the data:
-- Expected meaning in English: ${definition}
-- Learner's attempt in ${language}: ${provided}
-- Why they are wrong: ${reason}
-
-Output JSON ONLY, strictly matching the schema. All learner-facing text must be ${language} except rules/diagnosis (English). No transliteration.
-Sentences must be short (≤${INPUT_FLOOD_SENTENCE_MAX_WORDS} words), high-frequency, everyday, and idiomatic. Provide English translations in "en" fields.
-No duplicates; vary verbs and nouns (>=${FLOOD_ITEM_COUNT_MIN} distinct verbs and nouns per section).
-
-How it is used (important):
-- flood.target and flood.contrast sentences are shown directly to learners and used verbatim in flashcards. Speech to text (TTS) voices will read them aloud.
-- Therefore, flood entries must be ONLY the sentence (field "text") and its English translation (field "en").
-- Do NOT add parenthetical explanations, labels, grammar tags, notes, romanization, or bracketed content in either field.
-- Do NOT wrap sentences in quotes. Do NOT include emojis or placeholders.
-- The learner's incorrect sentence must NOT appear unless corrected; only include correct sentences.
-
-Validity rules:
-- flood.target: every sentence must exemplify the target form indicated by flood.target.label and be grammatical.
-- flood.contrast: if included, every sentence must exemplify the contrasting form indicated by flood.contrast.label and must NOT use the target form.
-  If there is no clear contrasting form, set flood.contrast = null.
-- If the issue is vocabulary or usage, include the relevant word(s) in varied, grammatical contexts within flood.target (and flood.contrast if included).
-
-Tone:
-corrective, concise.
-Always speak directly to the learner as "you".
-Do not say "The student" or similar.
-Always explain in English.
-
-Steps:
-1. Diagnosis:  
-   - original: the learner's attempt (${provided}).  
-   - corrected: one natural sentence in ${language} that correctly expresses the expected meaning (no English).  
-  - error_explanation: brief rationale (≤${INPUT_FLOOD_WHY_ERROR_MAX_CHARS} chars).  
-  - rules: ${RULES_COUNT_MIN}-${RULES_COUNT_MAX} English bullet rules.  
-2. Flood:
-   - target: label of the target form and ${FLOOD_ITEM_COUNT_MIN}-${FLOOD_ITEM_COUNT_MAX} example sentences in items[].  
-   - contrast: label of the contrasting form and ${FLOOD_ITEM_COUNT_MIN}-${FLOOD_ITEM_COUNT_MAX} example sentences in items[] OR null.
-3. Production: ${INPUT_FLOOD_PRODUCTION_MIN}-${INPUT_FLOOD_PRODUCTION_MAX} items. Each: English prompt + ${language} answer.
-
-Classification rule (internal, don't output):  
-- give_up (“idk”, “몰라요”, etc.) => treat as no attempt. 
-error_explanation = “You gave up. Correct form is X.”
-If a clear contrasting form is explicit in the reason, include flood.contrast with an appropriate label; otherwise set flood.contrast = null. Model only the target form in flood.target.
-- off_language (not in ${language} / unrelated text) => Use give_up.
-- totally_wrong (wrong meaning/form) => same as give_up.
-- vocabulary => Misunderstanding of a specifc word or words.
-  IF IT IS A VOCABULARY MISTAKE, MAKE SURE FLOOD.TARGET and FLOOD.CONTRAST
-  CONTAIN THE VOCABULARY WORD(S) IN VARIOUS CONTEXTS.
-  GRAMMATICALLY CORRECT SENTENCES ONLY!
-- usage => Misunderstanding of a common collocation or usage pattern.
-- form => Incorrect morphological form (tense, agreement, etc.).
-- grammar => Nongrammatical speech or grammar pattern misunderstanding.
-- answer => normal compare & contrast.  
-
-STRICT COUNTS:
-  flood.target.items = ${FLOOD_ITEM_COUNT_MIN}-${FLOOD_ITEM_COUNT_MAX};
-  flood.contrast.items = ${FLOOD_ITEM_COUNT_MIN}-${FLOOD_ITEM_COUNT_MAX} or null;
-  production = ${INPUT_FLOOD_PRODUCTION_MIN}-${INPUT_FLOOD_PRODUCTION_MAX}.
-
-Schema:
-{
-  "diagnosis": {
-    "original": string,
-    "corrected": string,
-    "error_explanation": string,
-    "rules": string[]
-  },
-  // flood entries are used verbatim in study cards — DO NOT add parenthesized/bracketed notes, quotes, emojis, or explanations
-  "flood": {
-    "target": { "label": string, "items": [{ "text": string, "en": string }] },
-    "contrast": { "label": string, "items": [{ "text": string, "en": string }] } | null
-  },
-  "production": [{ "prompt_en": string, "answer": string }]
-}`;
-}
 
 export const inputFloodGrade = procedure
   .input(GradeRequestSchema)

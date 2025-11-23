@@ -10,7 +10,6 @@ export const gradeSpeakingQuiz = procedure
     z.object({
       isCorrect: z.boolean(),
       feedback: z.string(),
-      // Present when grammar feedback is generated; null for exact matches
       quizResultId: z.number().nullable(),
     }),
   )

@@ -11,15 +11,15 @@ import {
   State,
   GradingResult,
 } from "./types";
-import { playAudio } from "../play-audio";
 import { useUserSettings } from "@/koala/settings-provider";
+import { playTermThenDefinition } from "./playback";
 
 const queue = (): Queue => ({
-  newWordIntro: [], // DONE
-  remedialIntro: [], // DONE
-  speaking: [], // Needs testing.
-  newWordOutro: [], // DONE
-  remedialOutro: [], // DONE
+  newWordIntro: [],
+  remedialIntro: [],
+  speaking: [],
+  newWordOutro: [],
+  remedialOutro: [],
 });
 
 function removeCardFromQueues(
@@ -60,7 +60,6 @@ function getItemsDue(queue: Queue): number {
 }
 
 export function nextQueueItem(queue: Queue): QueueItem | undefined {
-  // Get first item from the queue with the highest priority:
   for (const type of EVERY_QUEUE_TYPE) {
     const item = queue[type][0];
     if (item) {
@@ -88,7 +87,6 @@ export function useReview(deckId: number) {
   const [isFetching, setIsFetching] = useState(true);
   const userSettings = useUserSettings();
 
-  // Use URL "take" param if available, otherwise default to 5.
   const urlParams = new URLSearchParams(window.location.search);
   const takeParam = urlParams.get("take");
   const take = takeParam
@@ -137,11 +135,9 @@ export function useReview(deckId: number) {
     },
     giveUp: async (cardUUID: string) => {
       const card = state.cards[cardUUID];
-      card &&
-        (await playAudio(
-          card.termAndDefinitionAudio,
-          userSettings.playbackSpeed,
-        ));
+      if (card) {
+        await playTermThenDefinition(card, userSettings.playbackSpeed);
+      }
       dispatch({ type: "GIVE_UP", payload: { cardUUID } });
     },
     completeItem: (uuid: string) => {
@@ -192,7 +188,6 @@ function reducer(state: State, action: Action): State {
       const { uuid } = action.payload;
       const updatedQueue = { ...state.queue };
 
-      // Find which card this item belongs to
       let cardUUID: string | undefined;
       for (const queueType of EVERY_QUEUE_TYPE) {
         const item = state.queue[queueType].find(
@@ -204,14 +199,12 @@ function reducer(state: State, action: Action): State {
         }
       }
 
-      // Remove the item from all queue types by stepUuid
       for (const queueType of EVERY_QUEUE_TYPE) {
         updatedQueue[queueType] = updatedQueue[queueType].filter(
           (item) => item.stepUuid !== uuid,
         );
       }
 
-      // Check if this was the last item for this card
       const hasMoreItems = Object.values(updatedQueue).some((queue) =>
         queue.some((item) => item.cardUUID === cardUUID),
       );

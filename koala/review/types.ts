@@ -1,7 +1,6 @@
 import { z } from "zod";
-import { QuizList as ZodQuizList } from "../types/zod"; // Renamed to avoid conflict
+import { QuizList as ZodQuizList } from "../types/zod";
 
-// Types from logic.ts
 type QuizList = z.infer<typeof ZodQuizList>["quizzes"];
 export type ItemType = keyof Queue;
 export type QueueItem = {

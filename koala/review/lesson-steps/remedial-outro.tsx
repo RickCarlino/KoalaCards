@@ -9,8 +9,8 @@ import { usePhaseManager } from "../hooks/usePhaseManager";
 import { HOTKEYS } from "../hotkeys";
 import { FeedbackVote } from "../components/FeedbackVote";
 import { useQuizGrading } from "../use-quiz-grading";
-import { playAudio } from "@/koala/play-audio";
 import { useUserSettings } from "@/koala/settings-provider";
+import { playTermThenDefinition } from "../playback";
 
 type Phase = "ready" | "processing" | "success" | "failure";
 
@@ -135,25 +135,16 @@ export const RemedialOutro: CardUI = ({
     }
   };
 
-  // Register handler for parent to trigger on recording stop
   useEffect(() => {
     onProvideAudioHandler?.(processRecording);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStepUuid]);
 
   const handleIDK = async () => {
-    await playAudio(
-      card.termAndDefinitionAudio,
-      userSettings.playbackSpeed,
-    );
-    await playAudio(
-      card.termAndDefinitionAudio,
-      userSettings.playbackSpeed,
-    );
+    await playTermThenDefinition(card, userSettings.playbackSpeed);
+    await playTermThenDefinition(card, userSettings.playbackSpeed);
     await gradeWithAgain();
   };
 
-  // Early return for failure case
   if (phase === "failure") {
     return (
       <FailureView
@@ -168,7 +159,6 @@ export const RemedialOutro: CardUI = ({
     );
   }
 
-  // Early return for success case
   if (phase === "success") {
     return (
       <SuccessView

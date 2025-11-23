@@ -56,7 +56,7 @@ const randomVoice = (langCode: string, gender: Gender) => {
   return draw(l2) || l2[0];
 };
 
-const VERSION = "v1"; // Bust cache with this. Be careful with changing this.
+const VERSION = "v1";
 
 const callTTS = async (voice: string, params: AudioLessonParams) => {
   const p = params.text.includes("<speak>")

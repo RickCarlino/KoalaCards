@@ -1,46 +1,62 @@
-let lastAudio: string;
-export const playAudio = (urlOrDataURI: string, playbackRate?: number) => {
+let lastAudio: string | undefined;
+let playbackQueue: Promise<void> = Promise.resolve();
+
+const playSingleAudio = (
+  urlOrDataURI: string,
+  playbackRate?: number,
+): Promise<void> => {
   return new Promise((resolve, reject) => {
-    if (!urlOrDataURI) {
-      reject(new Error("No audio source provided."));
-      return;
-    }
     let done = false;
-
     const audio = new Audio(urlOrDataURI);
-
-    // Apply playback rate if provided and valid; otherwise, keep legacy
-    // behavior of slowing repeated taps to 0.6x.
     const hasValidRate =
       typeof playbackRate === "number" &&
       Number.isFinite(playbackRate) &&
       playbackRate > 0;
+
     if (hasValidRate) {
-      audio.playbackRate = playbackRate as number;
+      audio.playbackRate = playbackRate;
     }
     if (!hasValidRate && lastAudio === urlOrDataURI) {
       audio.playbackRate = 0.6;
     }
 
-    const ok = () => {
+    const fail = (error: unknown) => {
       if (done) {
         return;
       }
       done = true;
-      // Stop audio from playing:
       audio.pause();
-      resolve("");
+      reject(error);
     };
+
+    const finish = () => {
+      if (done) {
+        return;
+      }
+      done = true;
+      audio.pause();
+      resolve();
+    };
+
+    audio.onended = finish;
+    audio.onerror = fail;
     lastAudio = urlOrDataURI;
 
-    audio.onended = ok;
-
-    audio.onerror = (e) => {
-      reject(e);
-    };
-
-    audio.play().catch((e) => {
-      reject(e);
-    });
+    audio.play().catch(fail);
   });
+};
+
+export const playAudio = (
+  urlOrDataURI: string,
+  playbackRate?: number,
+): Promise<void> => {
+  if (!urlOrDataURI) {
+    return Promise.reject(new Error("No audio source provided."));
+  }
+
+  playbackQueue = playbackQueue
+    .catch(() => undefined)
+    .then(() => playSingleAudio(urlOrDataURI, playbackRate));
+
+  return playbackQueue;
 };

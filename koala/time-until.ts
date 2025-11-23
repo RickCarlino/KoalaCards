@@ -9,7 +9,6 @@ const calculateDiff = (timestamp: number, now: number) => {
   const isPast = difference < 0;
   difference = Math.abs(difference);
 
-  // Convert milliseconds to seconds
   difference = Math.floor(difference / 1000);
 
   const years = Math.floor(difference / secondsInYear);
@@ -29,7 +28,6 @@ const calculateDiff = (timestamp: number, now: number) => {
   return {
     isPast,
     times: {
-      // Order matters.
       years,
       days,
       hours,

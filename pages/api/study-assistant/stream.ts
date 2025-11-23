@@ -4,9 +4,6 @@ import { authOptions } from "../auth/[...nextauth]";
 import OpenAI from "openai";
 import { prismaClient } from "@/koala/prisma-client";
 import { z } from "zod";
-import { generateStructuredOutput, type CoreMessage } from "@/koala/ai";
-
-// Keep this feature isolated: single API route, no changes elsewhere.
 
 export const config = {
   api: {
@@ -14,40 +11,18 @@ export const config = {
   },
 };
 
-type ChatMessage = { role: "user" | "assistant"; content: string };
+type CompletionMessage =
+  OpenAI.Chat.Completions.ChatCompletionMessageParam;
 
 const BodySchema = z.object({
   deckId: z.number(),
-  // Minimal current context
-  current: z.object({
-    term: z.string(),
-    definition: z.string(),
-    langCode: z.string(),
-    lessonType: z
-      .union([
-        z.literal("speaking"),
-        z.literal("new"),
-        z.literal("remedial"),
-      ])
-      .optional(),
-  }),
-  // Existing chat transcript (last N turns). Keep it small on the client.
   messages: z.array(
     z.object({
       role: z.union([z.literal("user"), z.literal("assistant")]),
       content: z.string(),
     }),
   ),
-});
-
-const SuggestionSchema = z.object({
-  phrase: z.string().max(160),
-  translation: z.string().max(200),
-  gender: z.union([z.literal("M"), z.literal("F"), z.literal("N")]),
-});
-
-const SuggestionsSchema = z.object({
-  suggestions: z.array(SuggestionSchema).max(5),
+  contextLog: z.array(z.string().max(240)).max(30).optional(),
 });
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -91,9 +66,8 @@ export default async function handler(
   if (!parsed.success) {
     return res.status(400).end("Invalid body");
   }
-  const { deckId, current, messages } = parsed.data;
+  const { deckId, messages, contextLog } = parsed.data;
 
-  // Verify deck ownership
   const deck = await prismaClient.deck.findUnique({
     where: { id: deckId, userId: dbUser.id },
   });
@@ -101,7 +75,6 @@ export default async function handler(
     return res.status(404).end("Deck not found");
   }
 
-  // Prepare SSE response
   res.writeHead(200, {
     "Content-Type": "text/event-stream",
     "Cache-Control": "no-cache, no-transform",
@@ -116,36 +89,54 @@ export default async function handler(
   const system = `You are a Korean-learning study assistant.
 Output should be optimized for fast reading and practice.
 
+CONTEXT HANDLING:
+- You receive a recent activity log; newer entries are more relevant. Use it to resolve references like "this/that/it", "that sentence", or "that card" by defaulting to the latest card term/definition or spoken answer.
+- When a user explicitly asks for English (e.g., "in English", "translate to English"), give a concise English response first, grounded in the latest relevant card. Keep Korean examples short and only when helpful.
+
 GLOBAL RULES:
 - Target language (TL): Korean (Hangul only).
-- Never include romanization of Korean under any circumstances (e.g., RR, Yale, McCune-Reischauer, or phonetic hints).
+- Output Hangul only—no romanization (RR, Yale, McCune-Reischauer, phonetic hints).
 - Be concise and stream short chunks.
 - Avoid headings, code fences, and heavy formatting.
 - Mirror the vocabulary level of the material. Students will have a diverse range of proficiency.
-- If you present examples: put the TL sentence first (Hangul), then an English gloss on the next line.
+- Produce native Korean sentences that sound like they came from a Korean tutor speaking to an English learner.
+- Follow standard Korean discourse conventions: prefer names, roles, or context-driven zero subjects over literal third-person pronouns (그는/그녀); keep references natural and situation-specific.
+- Use grammatically complete, idiomatic sentences. Favor clear connective endings (e.g., -면, -해서, -더라도) instead of literal translations of English conjunctions.
+- Compose each sentence directly in Korean, using natural collocations and fully conjugated predicates rather than bare dictionary forms.
+- If you present examples: wrap each pair inside [[EXAMPLE]]...[[/EXAMPLE]] with the TL sentence (Hangul only) on one line and the English gloss on the next line, e.g. [[EXAMPLE]]<newline>한국어 문장<newline>English gloss<newline>[[/EXAMPLE]].
 - Your goal is to teach Korean, but you can explain in English when appropriate.
 
 EXPLANATION REQUESTS:
 - Explain briefly in English, but keep TL examples short and concrete.
 
 TRANSLATION/PHRASES REQUESTS:
+- Keep it short. Phrases can be phrases, sentence fragments, or full sentences as appropriate. Long sentences are not useful since this is a flashcard app.
 - Provide 2-4 variations in Korean with the follow-up English gloss lines.
+- Each variation must stand on its own (no missing subjects or objects) and read like speech from a native Korean tutor.
+- Treat each variation as something you would naturally say in Korean. Use idiomatic grammar, correct particles, and fully conjugated verbs suited to polite speech.
 `;
 
-  // Compact context message (kept tiny for latency)
-  const contextAsUser: ChatMessage = {
-    role: "user",
-    content: `Context:\n- Current term: ${current.term}\n- Definition: ${current.definition}\n- Language: Korean (ko)${current.lessonType ? `\n- Lesson type: ${current.lessonType}` : ""}`,
-  };
+  const activityLogLines =
+    contextLog?.map((line) => line.trim()).filter(Boolean) ?? [];
+
+  const recentActivityLines = activityLogLines.slice(-30).reverse();
+  const activityLogMessage: CompletionMessage | null =
+    recentActivityLines.length > 0
+      ? {
+          role: "system",
+          content: `Recent activity log (newest first):\n${recentActivityLines
+            .map((line) => `- ${line}`)
+            .join("\n")}`,
+        }
+      : null;
 
   const stream = await openai.chat.completions.create({
-    model: "gpt-5-mini",
+    model: "gpt-5.1-chat-latest",
     messages: [
       { role: "system", content: system },
-      contextAsUser,
+      ...(activityLogMessage ? [activityLogMessage] : []),
       ...messages,
     ],
-    reasoning_effort: "minimal",
     stream: true,
   });
 
@@ -160,36 +151,6 @@ TRANSLATION/PHRASES REQUESTS:
       writeSSE(res, chunk);
     }
   }
-
-  // Suggestions: run a quick structured output call, then emit as a separate event
-  const suggestPrompt: CoreMessage[] = [
-    {
-      role: "system",
-      content: `You generate compact flashcard suggestions for a Korean deck.
-Rules:
-- TL is Korean (Hangul only). Never include romanization.
-- Return up to 5 useful, high-frequency phrases that reuse or collocate with the key vocab "${current.term}" when appropriate.
-- Keep the TL phrase under 120 characters and natural (CEFR A2-B1).
-- Provide a succinct English translation.
-- Although Korean has no grammatical gender, the gender is used for text-to-speech purposes. Mix it up.
-- Output only data; no extra text.`,
-    },
-    {
-      role: "user",
-      content: `Key vocab: ${current.term}\nDefinition: ${current.definition}\nUser goal: ${messages[messages.length - 1]?.content ?? ""}`,
-    },
-  ];
-
-  const result = await generateStructuredOutput({
-    model: ["openai", "fast"],
-    messages: suggestPrompt,
-    schema: SuggestionsSchema,
-    maxTokens: 400,
-  });
-  const limited = {
-    suggestions: (result?.suggestions ?? []).slice(0, 5),
-  };
-  writeSSE(res, JSON.stringify(limited), "suggestions");
 
   writeSSE(res, "done", "done");
   res.end();

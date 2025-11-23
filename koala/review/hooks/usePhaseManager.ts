@@ -7,7 +7,6 @@ export function usePhaseManager<T extends string>(
 ) {
   const [phase, setPhase] = useState<T>(initialPhase);
 
-  // Reset phase when step changes
   useEffect(() => {
     setPhase(initialPhase);
     additionalResetStates?.();

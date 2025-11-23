@@ -26,11 +26,10 @@ import { alphabetical } from "radash";
 import { useCallback, useMemo, useState } from "react";
 
 type WritingPageProps = { deckId: number; langCode: LangCode };
-// Match the schema defined in koala/trpc-routes/grade-writing.ts
 type Feedback = {
   fullCorrection: string;
   fullText: string;
-  feedback: string[]; // Per schema in grade-writing.ts
+  feedback: string[];
 };
 
 export const getServerSideProps: GetServerSideProps<
@@ -64,7 +63,6 @@ export const getServerSideProps: GetServerSideProps<
   };
 };
 
-// Step type to track the current writing flow step
 type Step = "prompt-selection" | "sample-reading" | "writing" | "feedback";
 
 export default function WritingPage({
@@ -74,7 +72,6 @@ export default function WritingPage({
   const theme = useMantineTheme();
   const router = useRouter();
 
-  // State for tracking the current step in the writing flow
   const [currentStep, setCurrentStep] = useState<Step>("prompt-selection");
 
   const [prompts, setPrompts] = useState<string[]>([]);
@@ -97,7 +94,6 @@ export default function WritingPage({
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [loadingReview, setLoadingReview] = useState(false);
 
-  // Fetch daily writing progress data
   const dailyWritingProgressQuery = trpc.getDailyWritingProgress.useQuery(
     {},
     { refetchOnWindowFocus: false },
@@ -123,7 +119,6 @@ export default function WritingPage({
       setFeedback(data);
       setLoadingReview(false);
       setCurrentStep("feedback");
-      // Refetch writing progress data after successful submission
       dailyWritingProgressQuery.refetch();
     },
     onError: (err) => {
@@ -230,7 +225,6 @@ export default function WritingPage({
   };
 
   const handleWriteMore = () => {
-    // Reset everything and go back to step 1
     setCurrentStep("prompt-selection");
     setSelectedPrompt(null);
     setEssay("");
@@ -239,31 +233,26 @@ export default function WritingPage({
     setSelectedWords({});
     setDefinitions([]);
     setDefinitionsError(null);
-    // Clear prompts to force going back to initial step with progress bar
     setPrompts([]);
     setTranslations([]);
   };
 
   const toggleWord = useCallback((raw: string) => {
-    // Remove trailing punctuation and convert to lowercase for consistent key
     const key = raw.replace(/[.,!?;:]$/, "").toLowerCase();
     if (!key) {
       return;
     }
 
-    // Toggle the word's selection status
     setSelectedWords((prev) => {
       const copy = { ...prev };
       copy[key] ? delete copy[key] : (copy[key] = true);
       return copy;
     });
 
-    // Clear previous definitions when selecting new words
     setDefinitions([]);
     setDefinitionsError(null);
   }, []);
 
-  // Consistent style for clickable words
   const clickableStyle = useCallback(
     (active: boolean) => ({
       cursor: "pointer",
@@ -276,7 +265,6 @@ export default function WritingPage({
     [theme],
   );
 
-  // Render text with clickable words consistently across all sections
   const renderClickableText = (text: string) => {
     if (!text) {
       return null;
@@ -285,12 +273,10 @@ export default function WritingPage({
     return (
       <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
         {text.split(/(\s+)/).map((token, i) => {
-          // For whitespace, just return a span
           if (/\s+/.test(token)) {
             return <span key={i}>{token}</span>;
           }
 
-          // For words, make them clickable with consistent styling
           const normalizedToken = token
             .replace(/[.,!?;:]$/, "")
             .toLowerCase();
@@ -323,25 +309,20 @@ export default function WritingPage({
     }
     setDefinitionsLoading(true);
     try {
-      // Include all the prompts and the essay for better context
       let contextText = "";
 
-      // Include all prompts first
       if (prompts.length > 0) {
         contextText += "Prompts:\n" + prompts.join("\n\n") + "\n\n";
       }
 
-      // Add the essay if it exists
       if (essay.trim()) {
         contextText += "Essay:\n" + essay;
       }
 
-      // Add the sample response if viewing it
       if (currentStep === "sample-reading" && sampleResponse) {
         contextText += "Sample Response:\n" + sampleResponse;
       }
 
-      // Add corrected text if available
       if (corrected) {
         contextText += "\n\nCorrected Text:\n" + corrected;
       }
@@ -353,7 +334,6 @@ export default function WritingPage({
       });
       setDefinitions(res.definitions);
 
-      // Show success notification
       if (res.definitions.length > 0) {
         notifications.show({
           title: "Words Defined",
@@ -409,17 +389,14 @@ export default function WritingPage({
   const canCreate = definitions.length > 0 && !definitionsLoading;
   const showDefs = definitions.length > 0 && !definitionsLoading;
 
-  // Get corrected text from feedback
   const corrected = useMemo(
     () => feedback?.fullCorrection || "",
     [feedback],
   );
 
-  // Extract writing progress data
   const writingProgressData = dailyWritingProgressQuery.data;
   const isLoadingProgress = dailyWritingProgressQuery.isLoading;
 
-  // Render initial writing exercise step with progress bar and generate button
   const renderInitialStep = () => (
     <Paper withBorder shadow="sm" p="md" mb="lg">
       <Stack gap="md">
@@ -481,7 +458,6 @@ export default function WritingPage({
     </Paper>
   );
 
-  // Render prompt selection step (shown after prompts are loaded)
   const renderPromptSelectionStep = () => (
     <Paper withBorder shadow="sm" p="md" mb="lg">
       <Title order={4} mb="md">
@@ -533,7 +509,6 @@ export default function WritingPage({
       ))}
     </Paper>
   );
-  // Render sample reading step
   const renderSampleReadingStep = () => (
     <Paper withBorder shadow="sm" p="md" mb="lg">
       <Stack gap="md">
@@ -612,7 +587,6 @@ export default function WritingPage({
     </Paper>
   );
 
-  // Render writing step
   const renderWritingStep = () => (
     <Paper withBorder shadow="sm" p="md">
       <Title order={4} mb="xs">
@@ -696,7 +670,6 @@ export default function WritingPage({
     </Paper>
   );
 
-  // Render feedback step
   const renderFeedbackStep = () => (
     <Paper withBorder shadow="sm" p="md" mt="md">
       <Stack gap="md">

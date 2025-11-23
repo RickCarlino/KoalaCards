@@ -3,7 +3,7 @@ import type { Card, Prisma } from "@prisma/client";
 import { getUserSettings } from "./auth-helpers";
 import { maybeGetCardImageUrl } from "./image";
 import { LessonType } from "./shared-types";
-import { generateLessonAudio } from "./speech";
+import { generateDefinitionAudio, generateTermAudio } from "./speech";
 
 type Bucket = typeof NEW_CARD | typeof ROUTINE | typeof REMEDIAL;
 
@@ -29,6 +29,7 @@ type LocalCard = Pick<
   | "imageBlobId"
   | "lastFailure"
   | "flagged"
+  | "gender"
 >;
 
 const NEW_CARD = "N" as const;
@@ -39,7 +40,6 @@ const TWO_DAYS_MS = ONE_DAY_MS * 2;
 const NEW_CARD_DEFAULT_TARGET = 7;
 const DECK_HAND_HARD_CAP = 50;
 const ROUND_ROBIN_ORDER: Bucket[] = [REMEDIAL, NEW_CARD, ROUTINE];
-const ENGLISH_SPEED = 125;
 const PER_BUCKET_PREFETCH = 45;
 
 async function getDailyLimits(userId: string, now: number) {
@@ -50,12 +50,10 @@ async function getDailyLimits(userId: string, now: number) {
     where: {
       userId,
       flagged: { not: true },
-      // Count new cards learned in the last 48 hours
       firstReview: { gte: now - TWO_DAYS_MS },
     },
   });
 
-  // Allow up to 2 days worth of new cards within the 48h window
   const windowAllowance = cardsPerDayMax * 2;
   return { newRemaining: Math.max(windowAllowance - newLearned, 0) };
 }
@@ -83,7 +81,6 @@ async function fetchBucket(
       break;
 
     case ROUTINE:
-      // Due cards only; exclude remedial to avoid duplicates
       where = {
         ...baseCard,
         lastFailure: 0,
@@ -102,7 +99,6 @@ async function fetchBucket(
   return prismaClient.card.findMany({ where, orderBy, take: limit });
 }
 
-/** Decide lessonType override for special buckets. */
 function tagLessonType(
   q: LocalCard,
   bucket: Bucket,
@@ -116,12 +112,16 @@ function tagLessonType(
   return q;
 }
 
-/** Build user‑visible payload, including TTS URLs. */
 async function buildQuizPayload(
   q: LocalCard & { quizType?: string },
   speedPct: number,
 ) {
   const r = q.repetitions ?? 0;
+  const definitionAudio = await generateDefinitionAudio(q.definition);
+  const termAudio = await generateTermAudio({
+    card: q as Card,
+    speed: r > 1 ? speedPct : 100,
+  });
   return {
     cardId: q.id,
     definition: q.definition,
@@ -129,16 +129,8 @@ async function buildQuizPayload(
     repetitions: r,
     lapses: q.lapses,
     lessonType: (q.quizType as LessonType) ?? ("speaking" as LessonType),
-    definitionAudio: await generateLessonAudio({
-      card: q as Card,
-      lessonType: "speaking",
-      speed: ENGLISH_SPEED,
-    }),
-    termAndDefinitionAudio: await generateLessonAudio({
-      card: q as Card,
-      lessonType: "new",
-      speed: r > 1 ? speedPct : 100,
-    }),
+    definitionAudio,
+    termAudio,
     langCode: "ko",
     lastReview: q.lastReview ?? 0,
     imageURL: await maybeGetCardImageUrl(q.imageBlobId),
@@ -147,8 +139,6 @@ async function buildQuizPayload(
   };
 }
 
-/* ─────────────────── CORE HAND BUILDER ─────────────────── */
-/** Core selector ‑ returns LocalCard[] (no audio). */
 async function buildHand(
   userId: string,
   deckId: number,
@@ -244,12 +234,6 @@ export async function getLessonsDue(
   });
 }
 
-/**
- * Determine if the user may begin new cards in this deck right now.
- * Conditions:
- *  - User has remaining new‑card capacity in the current rolling window
- *  - Deck contains at least one brand‑new card (never reviewed)
- */
 export async function canStartNewLessons(
   userId: string,
   deckId: number,

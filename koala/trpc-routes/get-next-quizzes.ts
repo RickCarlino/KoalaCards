@@ -5,7 +5,7 @@ import { procedure } from "../trpc-procedure";
 import { QuizInput, QuizList } from "../types/zod";
 
 export async function getLessonMeta(userId: string, deckId?: number) {
-  const currentDate = new Date().getTime(); // Current time in milliseconds
+  const currentDate = new Date().getTime();
 
   let quizzesDue = await prismaClient.card.count({
     where: {
@@ -31,9 +31,6 @@ export async function getLessonMeta(userId: string, deckId?: number) {
 
   quizzesDue += reviewsDue;
 
-  // Cards that have no quiz yet:
-  // Count of Quizzes where repetitions and lapses are 0
-  // by distinct cardID
   const newCards = await prismaClient.card.count({
     where: {
       userId,

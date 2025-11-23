@@ -1,7 +1,6 @@
 import { prismaClient } from "../prisma-client";
 
 export async function backfillDecks(userID: string) {
-  // Find all cards without a deck for the given user
   const cards = await prismaClient.card.findMany({
     where: {
       userId: userID,
@@ -13,7 +12,6 @@ export async function backfillDecks(userID: string) {
     return;
   }
 
-  // Single-language app: ensure a single default deck for Korean
   const deckName = "Korean Deck";
   let deck = await prismaClient.deck.findFirst({
     where: { userId: userID, name: deckName },
@@ -25,7 +23,6 @@ export async function backfillDecks(userID: string) {
     });
   }
 
-  // Assign all orphaned cards to the default deck
   await prismaClient.card.updateMany({
     where: { id: { in: cards.map((c) => c.id) } },
     data: { deckId: deck.id },

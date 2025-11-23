@@ -64,7 +64,6 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
   const [selectedDeckIds, setSelectedDeckIds] = useState<number[]>([]);
   const [isMerging, setIsMerging] = useState(false);
   const [mergeError, setMergeError] = useState<string | null>(null);
-  // Blink animation styles from index.tsx
   const blinkKeyframes = `
     @keyframes blink {
       0% {
@@ -112,7 +111,6 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
 
     setIsMerging(true);
     try {
-      // Find the first selected deck to use its name
       const firstSelectedDeck = decks.find(
         (deck) => deck.id === selectedDeckIds[0],
       );
@@ -171,7 +169,7 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
           willPublish &&
           !confirm("Are you sure you want to share this deck?")
         ) {
-          event.currentTarget.checked = false; // Reset the switch visually if the user cancels
+          event.currentTarget.checked = false;
           return;
         }
         await updateDeckMutation.mutateAsync({

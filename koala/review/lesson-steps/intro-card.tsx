@@ -53,10 +53,8 @@ export const IntroCard: React.FC<IntroCardProps> = ({
     }
   };
 
-  // Register handler for parent to trigger when recording stops
   useEffect(() => {
     onProvideAudioHandler?.(processRecording);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStepUuid]);
 
   const renderContent = () => {

@@ -12,7 +12,7 @@ const Quiz = z.object({
     z.literal("remedial"),
   ]),
   definitionAudio: z.string(),
-  termAndDefinitionAudio: z.string(),
+  termAudio: z.string(),
   langCode: z.string(),
   lastReview: z.number(),
   imageURL: z.string().optional(),

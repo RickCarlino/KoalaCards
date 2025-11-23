@@ -117,19 +117,19 @@ export const ControlBar: React.FC<ControlBarProps> = (props) => {
                 onClick={openCardEditor}
                 leftSection={<IconEdit size={16} />}
               >
-                Edit card ({HOTKEYS.EDIT})
+                Edit card ({HOTKEYS.EDIT.toUpperCase()})
               </Menu.Item>
               <Menu.Item
                 onClick={onArchiveClick}
                 leftSection={<IconArchive size={16} />}
               >
-                Archive card ({HOTKEYS.ARCHIVE})
+                Archive card ({HOTKEYS.ARCHIVE.toUpperCase()})
               </Menu.Item>
               <Menu.Item
                 onClick={() => onSkip(card.uuid)}
                 leftSection={<IconPlayerSkipForwardFilled size={16} />}
               >
-                Next card ({HOTKEYS.SKIP})
+                Next card ({HOTKEYS.SKIP.toUpperCase()})
               </Menu.Item>
               <Menu.Item
                 onClick={() =>
@@ -137,7 +137,7 @@ export const ControlBar: React.FC<ControlBarProps> = (props) => {
                 }
                 leftSection={<IconLetterF size={16} />}
               >
-                Fail card ({HOTKEYS.FAIL})
+                Fail card ({HOTKEYS.FAIL.toUpperCase()})
               </Menu.Item>
               {false}
             </Menu.Dropdown>

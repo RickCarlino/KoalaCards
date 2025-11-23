@@ -1,7 +1,7 @@
 import { backfillDecks } from "@/koala/decks/backfill-decks";
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { prismaClient } from "@/koala/prisma-client";
-import { LangCode, supportedLanguages } from "@/koala/shared-types";
+import { LangCode } from "@/koala/shared-types";
 import { trpc } from "@/koala/trpc-config";
 import { INITIAL_STATE, reducer } from "@/koala/types/create-reducer";
 import type {
@@ -138,10 +138,8 @@ export default function CreateUnified(props: LanguageInputPageProps) {
         dispatch({ type: "SET_RAW_INPUT", rawInput: arr.join("\n") });
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.isReady, router.query.mode, router.query.words]);
 
-  // CSV/text parsing helpers
   const lines = React.useMemo(() => {
     return state.rawInput
       .split("\n")
@@ -317,16 +315,12 @@ export default function CreateUnified(props: LanguageInputPageProps) {
             deckSelection={state.deckSelection}
             deckId={state.deckId}
             deckName={state.deckName}
-            deckLang={state.deckLang}
             onSelectExistingDeck={onExistingDeckChange}
             onSetSelection={(sel) =>
               dispatch({ type: "SET_DECK_SELECTION", deckSelection: sel })
             }
             onSetDeckName={(name) =>
               dispatch({ type: "SET_DECK_NAME", deckName: name })
-            }
-            onSetLang={(code) =>
-              dispatch({ type: "SET_DECK_LANG", deckLang: code })
             }
           />
 
@@ -368,8 +362,6 @@ export default function CreateUnified(props: LanguageInputPageProps) {
   );
 }
 
-// Helpers and subcomponents
-
 function parseCsvLine(line: string, separator: string) {
   const parts = line.split(separator);
   const term = parts[0]?.trim() ?? "";
@@ -389,11 +381,9 @@ type DeckSectionProps = {
   deckSelection: State["deckSelection"];
   deckId?: number;
   deckName: string;
-  deckLang: LangCode;
   onSelectExistingDeck: (val: string | null) => void;
   onSetSelection: (sel: "existing" | "new") => void;
   onSetDeckName: (name: string) => void;
-  onSetLang: (code: LangCode) => void;
 };
 
 function DeckSection(props: DeckSectionProps) {
@@ -402,11 +392,9 @@ function DeckSection(props: DeckSectionProps) {
     deckSelection,
     deckId,
     deckName,
-    deckLang,
     onSelectExistingDeck,
     onSetSelection,
     onSetDeckName,
-    onSetLang,
   } = props;
 
   const fields =
@@ -426,13 +414,6 @@ function DeckSection(props: DeckSectionProps) {
           value={deckName}
           onChange={(e) => onSetDeckName(e.currentTarget.value)}
           mb="sm"
-        />
-        <Select
-          label="Language"
-          placeholder="Select language"
-          value={deckLang}
-          onChange={(v) => onSetLang((v as LangCode) || deckLang)}
-          data={[{ value: "ko", label: supportedLanguages.ko }]}
         />
       </>
     );

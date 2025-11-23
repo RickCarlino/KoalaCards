@@ -15,25 +15,19 @@ import { GetServerSideProps } from "next/types";
 import * as React from "react";
 
 interface IndexProps {
-  // Does the user have ANY cards?
   hasCards: boolean;
-  // Has the user EVER studied?
   didStudy: boolean;
-  // Has the user EVER done a writing exercise?
   didWrite: boolean;
 }
 
 interface NavItem {
   path: (props: IndexProps) => string;
   name: string;
-  // Don't show the item if it returns true
-  show: (props: IndexProps) => boolean; // See my instructions.
-  // Blink the border
+  show: (props: IndexProps) => boolean;
   blink: (props: IndexProps) => boolean;
   icon: typeof IconStar;
 }
 
-// Get serverside props:
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const dbUser = await getServersideUser(context);
   if (!dbUser) {

@@ -16,7 +16,6 @@ export type ImageModel = "imageDefault";
 export type LanguageModelIdentifier = [LLMVendor, TextModel];
 export type ImageModelIdentifier = [LLMVendor, ImageModel];
 
-// Shared option types for language model requests
 export type LanguageGenOptions = {
   model: LanguageModelIdentifier;
   messages: CoreMessage[];
@@ -27,7 +26,6 @@ export type StructuredGenOptions<S extends z.ZodTypeAny> =
     schema: S;
   };
 
-// Function type definitions
 export type LanguageGenFn = (
   options: LanguageGenOptions,
 ) => Promise<string>;

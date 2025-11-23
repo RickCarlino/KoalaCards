@@ -9,7 +9,6 @@ export function replaceCards(
     return { ...acc, [item.uuid]: item };
   }, {} as QuizMap);
 
-  // Start with a fresh state
   const freshState: State = {
     ...state,
     queue: {
@@ -92,6 +91,6 @@ export function replaceCards(
     ...nextState,
     cards,
     currentItem: nextQueueItem(nextState.queue),
-    gradingResults: {}, // Clear grading results to prevent memory leak
+    gradingResults: {},
   };
 }

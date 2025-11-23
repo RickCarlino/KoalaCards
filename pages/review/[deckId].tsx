@@ -1,11 +1,13 @@
 import { canStartNewLessons, getLessonsDue } from "@/koala/fetch-lesson";
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { playAudio } from "@/koala/play-audio";
-import { useUserSettings } from "@/koala/settings-provider";
 import { prismaClient } from "@/koala/prisma-client";
 import { CardReview } from "@/koala/review";
 import { HOTKEYS } from "@/koala/review/hotkeys";
+import { playTermThenDefinition } from "@/koala/review/playback";
 import { useReview } from "@/koala/review/reducer";
+import { useUserSettings } from "@/koala/settings-provider";
+import { GradingResult } from "@/koala/review/types";
 import {
   Anchor,
   Box,
@@ -19,6 +21,10 @@ import { GetServerSideProps } from "next";
 import Link from "next/link";
 import React from "react";
 import ReviewAssistantPane from "@/koala/components/ReviewAssistantPane";
+import {
+  StudyAssistantContextProvider,
+  useStudyAssistantContext,
+} from "@/koala/study-assistant-context";
 type ReviewDeckPageProps = { deckId: number };
 
 const redirect = (destination: string) => ({
@@ -68,7 +74,6 @@ export const getServerSideProps: GetServerSideProps<
   if (userSettings.writingFirst) {
     const now = new Date();
     const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    // Get user's writing progress in the last 24 hours
     const writingProgress = await prismaClient.writingSubmission.aggregate(
       {
         _sum: { correctionCharacterCount: true },
@@ -160,6 +165,7 @@ const NoMoreQuizzesState = ({
 
 function InnerReviewPage({ deckId }: ReviewDeckPageProps) {
   const [assistantOpen, setAssistantOpen] = React.useState(false);
+  const { addContextEvent, contextLog } = useStudyAssistantContext();
   const {
     state,
     isFetching,
@@ -169,18 +175,23 @@ function InnerReviewPage({ deckId }: ReviewDeckPageProps) {
     giveUp,
     completeItem,
     refetchQuizzes,
-    onGradingResultCaptured,
+    onGradingResultCaptured: captureGradingResult,
     progress,
     cardsRemaining,
   } = useReview(deckId);
   const userSettings = useUserSettings();
+  const card = currentItem ? state.cards[currentItem.cardUUID] : undefined;
 
   async function playCard() {
+    if (!card) {
+      console.warn("No card available for playback.");
+      return;
+    }
     switch (currentItem?.itemType) {
       case "remedialIntro":
       case "newWordIntro":
-        return await playAudio(
-          card.termAndDefinitionAudio,
+        return await playTermThenDefinition(
+          card,
           userSettings.playbackSpeed,
         );
       case "speaking":
@@ -195,12 +206,77 @@ function InnerReviewPage({ deckId }: ReviewDeckPageProps) {
     }
   }
 
-  // useEffect, call playCard when the currentItem changes:
+  React.useEffect(() => {
+    if (!card || !currentItem) {
+      return;
+    }
+    addContextEvent(
+      "card-shown",
+      `Term: ${card.term}; Definition: ${card.definition}; Step: ${currentItem.itemType}`,
+    );
+  }, [
+    addContextEvent,
+    card?.definition,
+    card?.term,
+    card?.uuid,
+    currentItem?.itemType,
+    currentItem?.stepUuid,
+  ]);
+
   React.useEffect(() => {
     if (currentItem) {
       playCard();
     }
   }, [currentItem]);
+
+  const handleGradingResultCaptured = React.useCallback(
+    (cardUUID: string, result: GradingResult) => {
+      const cardForResult = state.cards[cardUUID];
+      if (cardForResult) {
+        const outcome = result.isCorrect ? "correct" : "incorrect";
+        const userSaid = result.transcription
+          ? `User said: ${result.transcription}.`
+          : "";
+        const feedback = result.feedback
+          ? `Feedback: ${result.feedback}.`
+          : "";
+        addContextEvent(
+          "grading-result",
+          `Card: ${cardForResult.term}; Outcome: ${outcome}. ${userSaid} ${feedback}`.trim(),
+        );
+      }
+      captureGradingResult(cardUUID, result);
+    },
+    [addContextEvent, captureGradingResult, state.cards],
+  );
+
+  const handleSkipCard = React.useCallback(
+    (cardUUID: string) => {
+      const skipped = state.cards[cardUUID];
+      if (skipped) {
+        addContextEvent(
+          "skip-card",
+          `Card: ${skipped.term}; Definition: ${skipped.definition}`,
+        );
+      }
+      skipCard(cardUUID);
+    },
+    [addContextEvent, skipCard, state.cards],
+  );
+
+  const handleGiveUp = React.useCallback(
+    (cardUUID: string) => {
+      const abandoned = state.cards[cardUUID];
+      if (abandoned) {
+        addContextEvent(
+          "gave-up",
+          `Card: ${abandoned.term}; Definition: ${abandoned.definition}`,
+        );
+      }
+      giveUp(cardUUID);
+    },
+    [addContextEvent, giveUp, state.cards],
+  );
 
   if (error) {
     return <MessageState title="Error">{error.message}</MessageState>;
@@ -214,7 +290,6 @@ function InnerReviewPage({ deckId }: ReviewDeckPageProps) {
     );
   }
 
-  const card = state.cards[currentItem.cardUUID];
   if (!card) {
     return <MessageState title="Oops">No card data.</MessageState>;
   }
@@ -225,15 +300,15 @@ function InnerReviewPage({ deckId }: ReviewDeckPageProps) {
         <CardReview
           card={card}
           itemType={currentItem.itemType}
-          onSkip={skipCard}
-          onGiveUp={giveUp}
+          onSkip={handleSkipCard}
+          onGiveUp={handleGiveUp}
           onProceed={() => {
             completeItem(currentItem.stepUuid);
           }}
           onPlayAudio={playCard}
           currentStepUuid={currentItem.stepUuid}
           completeItem={completeItem}
-          onGradingResultCaptured={onGradingResultCaptured}
+          onGradingResultCaptured={handleGradingResultCaptured}
           progress={progress}
           cardsRemaining={cardsRemaining}
           onOpenAssistant={() => setAssistantOpen(true)}
@@ -244,21 +319,20 @@ function InnerReviewPage({ deckId }: ReviewDeckPageProps) {
       </Box>
       <ReviewAssistantPane
         deckId={deckId}
-        current={{
-          term: card.term,
-          definition: card.definition,
-          langCode: card.langCode,
-          lessonType: card.lessonType,
-        }}
         opened={assistantOpen}
         onOpen={() => setAssistantOpen(true)}
         onClose={() => setAssistantOpen(false)}
         showFloatingButton={false}
+        contextLog={contextLog}
       />
     </Container>
   );
 }
 
 export default function ReviewDeckPageWrapper(props: ReviewDeckPageProps) {
-  return <InnerReviewPage {...props} />;
+  return (
+    <StudyAssistantContextProvider>
+      <InnerReviewPage {...props} />
+    </StudyAssistantContextProvider>
+  );
 }

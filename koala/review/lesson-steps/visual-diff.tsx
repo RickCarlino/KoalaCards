@@ -38,7 +38,6 @@ export const VisualDiff: React.FC<SentencecorrectionProps> = ({
           }
 
           const style = {
-            // Make incorrect text lighter weight, and correct text bold
             fontWeight: part.added ? "bold" : "normal",
             textDecoration: part.removed ? "line-through" : "none",
             fontSize: `${fontSize}em`,

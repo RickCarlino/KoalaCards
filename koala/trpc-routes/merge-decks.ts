@@ -7,7 +7,7 @@ import { TRPCError } from "@trpc/server";
 export const mergeDecks = procedure
   .input(
     z.object({
-      deckIds: z.array(z.number()).min(2), // At least 2 decks to merge
+      deckIds: z.array(z.number()).min(2),
       newDeckName: z.string().min(1),
     }),
   )
@@ -21,7 +21,6 @@ export const mergeDecks = procedure
     const userSettings = await getUserSettings(ctx.user?.id);
     const userId = userSettings.user.id;
 
-    // Verify all decks exist and belong to the current user
     const decks = await prismaClient.deck.findMany({
       where: {
         id: { in: input.deckIds },
@@ -29,7 +28,6 @@ export const mergeDecks = procedure
       },
     });
 
-    // If not all decks were found, the user doesn't own some of the requested decks
     if (decks.length !== input.deckIds.length) {
       throw new TRPCError({
         code: "FORBIDDEN",
@@ -38,11 +36,7 @@ export const mergeDecks = procedure
       });
     }
 
-    // Single-language app: language consistency is implicit
-
-    // Execute the merge operation in a transaction
     const result = await prismaClient.$transaction(async (tx) => {
-      // Create the new deck
       const newDeck = await tx.deck.create({
         data: {
           name: input.newDeckName,
@@ -61,7 +55,6 @@ export const mergeDecks = procedure
         },
       });
 
-      // Update all cards from the source decks to point to the new deck
       const updateResult = await tx.card.updateMany({
         where: {
           userId,
@@ -72,7 +65,6 @@ export const mergeDecks = procedure
         },
       });
 
-      // Delete the source decks
       await tx.deck.deleteMany({
         where: {
           id: { in: input.deckIds },

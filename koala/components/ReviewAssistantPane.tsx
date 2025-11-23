@@ -5,6 +5,7 @@ import {
   Button,
   Drawer,
   Group,
+  Loader,
   ScrollArea,
   Stack,
   Text,
@@ -20,7 +21,12 @@ import {
 } from "@tabler/icons-react";
 import { useMediaQuery } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
+import ReactMarkdown, { type Components } from "react-markdown";
 import { trpc } from "@/koala/trpc-config";
+import {
+  createExampleStreamParser,
+  EXAMPLE_PLACEHOLDER,
+} from "@/koala/utils/example-stream-parser";
 
 type Suggestion = {
   phrase: string;
@@ -34,27 +40,151 @@ type ChatMessage = {
   suggestions?: Suggestion[];
 };
 
-type CurrentCard = {
-  term: string;
-  definition: string;
-  langCode: string;
-  lessonType?: "speaking" | "new" | "remedial";
+const collapseNewlines = (value: string) =>
+  value.replace(/\n{3,}/g, "\n\n");
+
+type MarkdownCodeProps = {
+  inline?: boolean;
+  children: React.ReactNode;
 };
+
+function ExampleSuggestionRow({
+  suggestion,
+  onAdd,
+  isLoading,
+}: {
+  suggestion: Suggestion;
+  onAdd: () => void;
+  isLoading: boolean;
+}) {
+  return (
+    <Group align="flex-start" gap="xs" wrap="nowrap">
+      <ActionIcon
+        variant="light"
+        color="indigo"
+        radius="xl"
+        size="md"
+        onClick={onAdd}
+        disabled={isLoading}
+        aria-label={`Add card for ${suggestion.phrase}`}
+      >
+        {isLoading ? <Loader size="xs" /> : <IconPlus size={14} />}
+      </ActionIcon>
+      <Box>
+        <Text fw={600}>{suggestion.phrase}</Text>
+        <Text size="sm" c="dimmed">
+          {suggestion.translation}
+        </Text>
+      </Box>
+    </Group>
+  );
+}
+
+function AssistantMarkdown({
+  content,
+  style,
+}: {
+  content: string;
+  style: React.CSSProperties;
+}) {
+  const markdownComponents = React.useMemo<Components>(
+    () => ({
+      p: ({ children }) => (
+        <Text component="p" style={{ ...style, margin: 0 }}>
+          {children}
+        </Text>
+      ),
+      ul: ({ children }) => (
+        <Box
+          component="ul"
+          style={{ ...style, margin: "0 0 8px 18px", paddingLeft: 0 }}
+        >
+          {children}
+        </Box>
+      ),
+      ol: ({ children }) => (
+        <Box
+          component="ol"
+          style={{ ...style, margin: "0 0 8px 18px", paddingLeft: 0 }}
+        >
+          {children}
+        </Box>
+      ),
+      li: ({ children }) => (
+        <Box component="li" style={{ ...style, marginBottom: 4 }}>
+          {children}
+        </Box>
+      ),
+      a: ({ children, href }) => (
+        <Text
+          component="a"
+          href={href}
+          c="indigo.7"
+          style={style}
+          target="_blank"
+          rel="noreferrer"
+        >
+          {children}
+        </Text>
+      ),
+      code: (props) => {
+        const { inline: isInline, children } = props as MarkdownCodeProps;
+        return (
+          <Text
+            component="code"
+            style={{
+              ...style,
+              display: isInline ? "inline" : "block",
+              padding: isInline ? "0 4px" : "4px",
+              backgroundColor: "rgba(0, 0, 0, 0.05)",
+              borderRadius: 4,
+              fontFamily: "var(--mantine-font-family-monospace)",
+            }}
+          >
+            {children}
+          </Text>
+        );
+      },
+      blockquote: ({ children }) => (
+        <Box
+          component="blockquote"
+          style={{
+            ...style,
+            margin: "4px 0",
+            padding: "4px 12px",
+            borderLeft: "3px solid var(--mantine-color-gray-4)",
+            backgroundColor: "var(--mantine-color-gray-0)",
+          }}
+        >
+          {children}
+        </Box>
+      ),
+    }),
+    [style],
+  );
+  return (
+    <Box style={style}>
+      <ReactMarkdown components={markdownComponents}>
+        {content}
+      </ReactMarkdown>
+    </Box>
+  );
+}
 
 export function ReviewAssistantPane({
   deckId: _deckId,
-  current: _current,
   opened: controlledOpened,
   onOpen,
   onClose,
   showFloatingButton = true,
+  contextLog = [],
 }: {
   deckId: number;
-  current: CurrentCard;
   opened?: boolean;
   onOpen?: () => void;
   onClose?: () => void;
   showFloatingButton?: boolean;
+  contextLog?: string[];
 }) {
   const [uncontrolledOpened, setUncontrolledOpened] =
     React.useState(false);
@@ -71,10 +201,118 @@ export function ReviewAssistantPane({
   const [input, setInput] = React.useState("");
   const viewportRef = React.useRef<HTMLDivElement | null>(null);
 
-  // Streaming state
   const abortRef = React.useRef<AbortController | null>(null);
+  const parserRef = React.useRef<ReturnType<
+    typeof createExampleStreamParser
+  > | null>(null);
   const [isStreaming, setIsStreaming] = React.useState(false);
   const bulkCreate = trpc.bulkCreateCards.useMutation();
+  const messageTextStyle = React.useMemo(
+    () =>
+      ({
+        whiteSpace: "pre-wrap",
+        wordBreak: "break-word",
+      }) as React.CSSProperties,
+    [],
+  );
+  const renderTextNode = (
+    value: string,
+    key: string,
+    role: ChatMessage["role"],
+  ) => {
+    if (!value) {
+      return null;
+    }
+    if (role === "assistant") {
+      return (
+        <AssistantMarkdown
+          key={key}
+          content={value}
+          style={messageTextStyle}
+        />
+      );
+    }
+    return (
+      <Text key={key} style={messageTextStyle}>
+        {value}
+      </Text>
+    );
+  };
+  const renderMessageContent = (
+    message: ChatMessage,
+    messageIndex: number,
+  ) => {
+    const nodes: React.ReactNode[] = [];
+    const suggestions = message.suggestions ?? [];
+    const hasInlineExamples =
+      suggestions.length > 0 &&
+      message.content.includes(EXAMPLE_PLACEHOLDER);
+
+    if (hasInlineExamples) {
+      const parts = message.content.split(EXAMPLE_PLACEHOLDER);
+      let suggestionIdx = 0;
+      parts.forEach((part, partIdx) => {
+        const textNode = renderTextNode(
+          part,
+          `msg-${messageIndex}-text-${partIdx}`,
+          message.role,
+        );
+        if (textNode) {
+          nodes.push(textNode);
+        }
+        if (partIdx < parts.length - 1) {
+          const suggestion = suggestions[suggestionIdx];
+          if (suggestion) {
+            nodes.push(
+              <ExampleSuggestionRow
+                key={`msg-${messageIndex}-example-${suggestionIdx}`}
+                suggestion={suggestion}
+                onAdd={() => onAddSuggestion(suggestion)}
+                isLoading={bulkCreate.isLoading}
+              />,
+            );
+          }
+          suggestionIdx += 1;
+        }
+      });
+      if (suggestionIdx < suggestions.length) {
+        for (let idx = suggestionIdx; idx < suggestions.length; idx += 1) {
+          const suggestion = suggestions[idx];
+          nodes.push(
+            <ExampleSuggestionRow
+              key={`msg-${messageIndex}-extra-${idx}`}
+              suggestion={suggestion}
+              onAdd={() => onAddSuggestion(suggestion)}
+              isLoading={bulkCreate.isLoading}
+            />,
+          );
+        }
+      }
+      return nodes;
+    }
+
+    const fallbackNode = renderTextNode(
+      message.content,
+      `msg-${messageIndex}-text`,
+      message.role,
+    );
+    if (fallbackNode) {
+      nodes.push(fallbackNode);
+    }
+
+    suggestions.forEach((suggestion, idx) => {
+      nodes.push(
+        <ExampleSuggestionRow
+          key={`msg-${messageIndex}-fallback-${idx}`}
+          suggestion={suggestion}
+          onAdd={() => onAddSuggestion(suggestion)}
+          isLoading={bulkCreate.isLoading}
+        />,
+      );
+    });
+
+    return nodes;
+  };
 
   const scrollToBottom = React.useCallback(() => {
     const el = viewportRef.current;
@@ -99,8 +337,50 @@ export function ReviewAssistantPane({
       userMsg,
       { role: "assistant", content: "" },
     ]);
+    parserRef.current = createExampleStreamParser();
 
-    // Start streaming
+    const applyParsed = (
+      textDelta: string,
+      newExamples: { phrase: string; translation: string }[],
+    ) => {
+      if (!textDelta && newExamples.length === 0) {
+        return;
+      }
+      setMessages((m) => {
+        const last = m[m.length - 1];
+        if (!last || last.role !== "assistant") {
+          return m;
+        }
+        const nextContent = textDelta
+          ? collapseNewlines(last.content + textDelta)
+          : last.content;
+        const updated: ChatMessage = {
+          ...last,
+          content: nextContent,
+          suggestions: newExamples.length
+            ? [
+                ...(last.suggestions ?? []),
+                ...newExamples.map((ex) => ({
+                  phrase: ex.phrase,
+                  translation: ex.translation,
+                  gender: "N" as const,
+                })),
+              ]
+            : last.suggestions,
+        };
+        return [...m.slice(0, -1), updated];
+      });
+    };
+
+    const finalizeParser = () => {
+      if (!parserRef.current) {
+        return;
+      }
+      const { textDelta, examples } = parserRef.current.flush();
+      parserRef.current = null;
+      applyParsed(textDelta, examples);
+    };
+
     try {
       setIsStreaming(true);
       abortRef.current?.abort();
@@ -109,8 +389,8 @@ export function ReviewAssistantPane({
 
       const body = JSON.stringify({
         deckId: _deckId,
-        current: _current,
         messages: [...messages, userMsg],
+        contextLog,
       });
 
       const res = await fetch("/api/study-assistant/stream", {
@@ -127,18 +407,6 @@ export function ReviewAssistantPane({
       let buffer = "";
       let currentEvent: string | null = null;
 
-      const applyToken = (token: string) => {
-        setMessages((m) => {
-          const last = m[m.length - 1];
-          if (!last || last.role !== "assistant") {
-            return m;
-          }
-          const updated = { ...last, content: last.content + token };
-          return [...m.slice(0, -1), updated];
-        });
-      };
-
-      // Basic SSE parser: handle event: <name> + data: <payload> frames
       let reading = true;
       while (reading) {
         const { done, value } = await reader.read();
@@ -168,49 +436,32 @@ export function ReviewAssistantPane({
           }
           const payload = dataLines.join("\n");
           if (!currentEvent) {
-            // token frame
-            applyToken(payload);
+            const parser: ReturnType<typeof createExampleStreamParser> =
+              parserRef.current ?? createExampleStreamParser();
+            parserRef.current = parser;
+            const { textDelta, examples } = parser.push(payload);
+            applyParsed(textDelta, examples);
             continue;
           }
-          if (currentEvent === "suggestions") {
-            try {
-              const parsed = JSON.parse(payload) as {
-                suggestions?: Suggestion[];
-              };
-              if (parsed?.suggestions && parsed.suggestions.length > 0) {
-                setMessages((m) => {
-                  const last = m[m.length - 1];
-                  if (!last || last.role !== "assistant") {
-                    return m;
-                  }
-                  const updated = {
-                    ...last,
-                    suggestions: parsed.suggestions,
-                  };
-                  return [...m.slice(0, -1), updated];
-                });
-              }
-            } catch {
-              notifications.show({
-                title: "Note",
-                message: "Couldn't parse suggestions",
-                color: "yellow",
-              });
-            }
-          }
           if (currentEvent === "done") {
-            // End of stream
+            finalizeParser();
             setIsStreaming(false);
+            reading = false;
+            break;
           }
         }
       }
+      finalizeParser();
     } catch {
-      setIsStreaming(false);
+      finalizeParser();
       notifications.show({
         title: "Assistant error",
         message: "Connection failed or aborted.",
         color: "red",
       });
+    } finally {
+      parserRef.current = null;
+      setIsStreaming(false);
     }
   };
 
@@ -220,24 +471,16 @@ export function ReviewAssistantPane({
   };
 
   const onAddSuggestion = async (s: Suggestion) => {
-    try {
-      await bulkCreate.mutateAsync({
-        deckId: _deckId,
-        input: [
-          { term: s.phrase, definition: s.translation, gender: s.gender },
-        ],
-      });
-      notifications.show({
-        title: "Added",
-        message: "Card added to deck",
-      });
-    } catch {
-      notifications.show({
-        title: "Failed",
-        message: "Could not add card",
-        color: "red",
-      });
-    }
+    await bulkCreate.mutateAsync({
+      deckId: _deckId,
+      input: [
+        { term: s.phrase, definition: s.translation, gender: s.gender },
+      ],
+    });
+    notifications.show({
+      title: "Added",
+      message: "Card added to deck",
+    });
   };
 
   const theme = useMantineTheme();
@@ -245,7 +488,6 @@ export function ReviewAssistantPane({
 
   return (
     <>
-      {/* Optional floating toggle button (desktop only by default) */}
       {showFloatingButton && (
         <Box
           style={{ position: "fixed", right: 16, bottom: 16, zIndex: 300 }}
@@ -297,40 +539,7 @@ export function ReviewAssistantPane({
                 <Text size="sm" c="dimmed" mb={4}>
                   {m.role === "user" ? "You" : "Assistant"}
                 </Text>
-                <Text
-                  style={{
-                    whiteSpace: "pre-wrap",
-                    wordBreak: "break-word",
-                  }}
-                >
-                  {m.content}
-                </Text>
-                {m.suggestions && m.suggestions.length > 0 && (
-                  <Stack gap={6} mt="sm">
-                    {m.suggestions.map((s, idx) => (
-                      <Group
-                        key={idx}
-                        justify="space-between"
-                        wrap="nowrap"
-                      >
-                        <Box>
-                          <Text fw={600}>{s.phrase}</Text>
-                          <Text size="sm" c="dimmed">
-                            {s.translation}
-                          </Text>
-                        </Box>
-                        <Button
-                          size="xs"
-                          leftSection={<IconPlus size={14} />}
-                          loading={bulkCreate.isLoading}
-                          onClick={() => onAddSuggestion(s)}
-                        >
-                          Add card
-                        </Button>
-                      </Group>
-                    ))}
-                  </Stack>
-                )}
+                <Stack gap={6}>{renderMessageContent(m, i)}</Stack>
               </Box>
             ))}
           </Stack>

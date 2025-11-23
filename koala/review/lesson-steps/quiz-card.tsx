@@ -9,9 +9,9 @@ import { FailureView } from "../components/FailureView";
 import { CardImage } from "../components/CardImage";
 import { usePhaseManager } from "../hooks/usePhaseManager";
 import { useGradeHandler } from "../hooks/useGradeHandler";
-import { playAudio } from "@/koala/play-audio";
 import { useUserSettings } from "@/koala/settings-provider";
 import { HOTKEYS } from "../hotkeys";
+import { playTermThenDefinition } from "../playback";
 
 type Phase = "ready" | "processing" | "success" | "failure";
 type QuizType = "speaking" | "newWordOutro" | "remedialOutro";
@@ -107,10 +107,7 @@ export const QuizCard: React.FC<QuizCardProps> = ({
   });
 
   const play = async () => {
-    await playAudio(
-      card.termAndDefinitionAudio,
-      userSettings.playbackSpeed,
-    );
+    await playTermThenDefinition(card, userSettings.playbackSpeed);
   };
 
   useEffect(() => {
@@ -140,32 +137,21 @@ export const QuizCard: React.FC<QuizCardProps> = ({
     }
   };
 
-  // Register handler with parent so it can invoke processing on stop
   useEffect(() => {
     onProvideAudioHandler?.(processRecording);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStepUuid]);
 
   const handleFailureContinue = async () => {
-    // Grade the quiz as AGAIN (failed) and proceed
     await gradeWithAgain();
     onProceed();
   };
 
   const handleIDK = async () => {
-    // Play reinforcement twice, then grade as AGAIN
-    await playAudio(
-      card.termAndDefinitionAudio,
-      userSettings.playbackSpeed,
-    );
-    await playAudio(
-      card.termAndDefinitionAudio,
-      userSettings.playbackSpeed,
-    );
+    await playTermThenDefinition(card, userSettings.playbackSpeed);
+    await playTermThenDefinition(card, userSettings.playbackSpeed);
     await gradeWithAgain();
   };
 
-  // Early return for failure case
   if (phase === "failure") {
     return (
       <FailureView

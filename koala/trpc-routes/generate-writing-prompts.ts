@@ -21,7 +21,6 @@ Using three hidden example sentences only as loose inspiration, generate three d
 `.trim();
 
 const promptTemplates = [
-  // "Comparative / Evaluative: Compare two ideas or experiences implied by the hidden sentence.",
   "Opinion / Argument: Give and support a viewpoint on a topic inspired by the hidden sentence.",
   "Personal Narrative: Draw on the theme hinted by the hidden sentence.",
   "Procedural / How-to: Explain a process or give advice based on the hidden sentence.",

@@ -5,7 +5,6 @@ import superjson from "superjson";
 
 function getBaseUrl() {
   if (typeof window !== "undefined") {
-    // browser should use relative path
     return "";
   }
 
@@ -30,6 +29,5 @@ export const trpc = createTRPCNext<AppRouter>({
       ],
     };
   },
-  /** @link https://trpc.io/docs/ssr **/
   ssr: false,
 });

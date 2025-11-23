@@ -1,10 +1,9 @@
 import { z } from "zod";
 import { generateStructuredOutput } from "../ai";
-import { LANG_CODES } from "../shared-types"; // Import LangCode type
+import { LANG_CODES } from "../shared-types";
 import { procedure } from "../trpc-procedure";
 import { getLangName } from "../get-lang-name";
 
-// Updated Input schema: context text, words to define, and language code
 const inputSchema = z.object({
   langCode: LANG_CODES,
   contextText: z
@@ -16,7 +15,6 @@ const inputSchema = z.object({
     .describe("The specific words selected by the user."),
 });
 
-// Updated Zod schema for the expected structured output from OpenAI
 const DefinitionSchema = z.object({
   definitions: z
     .array(
@@ -38,7 +36,6 @@ const DefinitionSchema = z.object({
     .describe("An array of definitions for the provided words."),
 });
 
-// Output schema for the tRPC route - includes lemma now
 const outputSchema = DefinitionSchema;
 
 export const defineUnknownWords = procedure
@@ -50,13 +47,9 @@ export const defineUnknownWords = procedure
       throw new Error("User not found");
     }
 
-    // Use the new input fields
     const { langCode, contextText, wordsToDefine } = input;
     const languageName = getLangName(langCode);
 
-    // No need for the marker check anymore, input schema ensures wordsToDefine is not empty
-
-    // Updated prompt asking for definitions and lemmas, context might be essay or prompt
     const prompt = `Context (${languageName}):
 ${contextText}
 
