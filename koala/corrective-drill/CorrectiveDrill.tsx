@@ -9,7 +9,7 @@ import {
   Text,
   Title,
 } from "@mantine/core";
-import type { InputFloodLesson as InputFloodLessonType } from "@/koala/types/input-flood";
+import type { CorrectiveDrillLesson } from "@/koala/types/corrective-drill";
 import { playBlobExclusive } from "@/koala/utils/play-blob-audio";
 import { trpc } from "@/koala/trpc-config";
 import { useMediaRecorder } from "@/koala/hooks/use-media-recorder";
@@ -24,7 +24,7 @@ import { compare } from "@/koala/quiz-evaluators/evaluator-utils";
 import { useUserSettings } from "@/koala/settings-provider";
 
 type LessonProps = {
-  lesson: InputFloodLessonType;
+  lesson: CorrectiveDrillLesson;
   langCode: string;
   onComplete?: () => void;
 };
@@ -62,7 +62,7 @@ export function DiagnosisCard({
   targetLabel,
   contrastLabel,
 }: {
-  diagnosis: InputFloodLessonType["diagnosis"];
+  diagnosis: CorrectiveDrillLesson["diagnosis"];
   targetLabel?: string;
   contrastLabel?: string | null;
 }) {
@@ -90,20 +90,20 @@ export function DiagnosisCard({
 
 type StepKind =
   | { t: "diagnosis" }
-  | { t: "floodTarget" }
-  | { t: "floodContrast" }
+  | { t: "target" }
+  | { t: "contrast" }
   | { t: "production" };
 
-export function InputFloodLesson({
+export function CorrectiveDrill({
   lesson,
   langCode,
   onComplete,
 }: LessonProps) {
   const userSettings = useUserSettings();
   const steps = useMemo<StepKind[]>(() => {
-    const s: StepKind[] = [{ t: "diagnosis" }, { t: "floodTarget" }];
+    const s: StepKind[] = [{ t: "diagnosis" }, { t: "target" }];
     if (lesson.contrast) {
-      s.push({ t: "floodContrast" });
+      s.push({ t: "contrast" });
     }
     s.push({ t: "production" });
     return s;
@@ -128,10 +128,10 @@ export function InputFloodLesson({
     if (s.t === "production") {
       return "P";
     }
-    if (s.t === "floodTarget") {
+    if (s.t === "target") {
       return "A";
     }
-    if (s.t === "floodContrast") {
+    if (s.t === "contrast") {
       return "B";
     }
     return "diagnosis";
@@ -195,13 +195,13 @@ export function InputFloodLesson({
       }
       return;
     }
-    if (step.t === "floodTarget") {
+    if (step.t === "target") {
       const it = lesson.target.example;
       spokenRef.current.add(k);
       void requestSpeech(it.text, it.en);
       return;
     }
-    if (step.t === "floodContrast") {
+    if (step.t === "contrast") {
       const it = lesson.contrast?.example;
       if (it) {
         spokenRef.current.add(k);
@@ -214,10 +214,10 @@ export function InputFloodLesson({
     if (s.t === "diagnosis") {
       return lesson.diagnosis.corrected;
     }
-    if (s.t === "floodTarget") {
+    if (s.t === "target") {
       return lesson.target.example.text;
     }
-    if (s.t === "floodContrast") {
+    if (s.t === "contrast") {
       return lesson.contrast?.example.text || "";
     }
     if (s.t === "production") {
@@ -277,7 +277,7 @@ export function InputFloodLesson({
 
     const baseMatch = Boolean(isMatch ?? compare(expected, transcription));
     const relaxedMatch =
-      step.t === "floodTarget"
+      step.t === "target"
         ? compare(expected, transcription, 3) || baseMatch
         : baseMatch;
     setLastMatch(relaxedMatch);
@@ -341,7 +341,7 @@ export function InputFloodLesson({
           </>
         ) : null}
 
-        {step.t === "floodTarget" ? (
+        {step.t === "target" ? (
           <>
             {!passed.has(keyFor(step)) ? (
               <>
@@ -379,7 +379,7 @@ export function InputFloodLesson({
           </>
         ) : null}
 
-        {step.t === "floodContrast" ? (
+        {step.t === "contrast" ? (
           <>
             {lesson.contrast?.example.en ? (
               <Text size="sm" c="dimmed">

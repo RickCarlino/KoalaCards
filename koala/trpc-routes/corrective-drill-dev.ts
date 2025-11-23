@@ -1,11 +1,11 @@
 import { z } from "zod";
 import { procedure } from "../trpc-procedure";
 import { LANG_CODES } from "../shared-types";
-import { buildInputFloodPrompt } from "@/koala/input-flood/prompt";
+import { buildCorrectiveDrillPrompt } from "@/koala/corrective-drill/prompt";
 import { generateStructuredOutput } from "@/koala/ai";
-import { InputFloodLessonSchema } from "@/koala/types/input-flood";
+import { CorrectiveDrillLessonSchema } from "@/koala/types/corrective-drill";
 
-export const inputFloodGenerateDev = procedure
+export const correctiveDrillGenerateDev = procedure
   .input(
     z.object({
       langCode: LANG_CODES,
@@ -16,7 +16,7 @@ export const inputFloodGenerateDev = procedure
   )
   .output(
     z.object({
-      lesson: InputFloodLessonSchema,
+      lesson: CorrectiveDrillLessonSchema,
       source: z.object({ quizResultId: z.number(), langCode: LANG_CODES }),
     }),
   )
@@ -25,7 +25,7 @@ export const inputFloodGenerateDev = procedure
     if (!userId) {
       throw new Error("Unauthorized");
     }
-    const prompt = buildInputFloodPrompt({
+    const prompt = buildCorrectiveDrillPrompt({
       langCode: input.langCode,
       definition: input.definition,
       provided: input.provided,
@@ -34,7 +34,7 @@ export const inputFloodGenerateDev = procedure
     const lesson = await generateStructuredOutput({
       model: ["openai", "fast"],
       messages: [{ role: "user", content: prompt }],
-      schema: InputFloodLessonSchema,
+      schema: CorrectiveDrillLessonSchema,
     });
     return {
       lesson,

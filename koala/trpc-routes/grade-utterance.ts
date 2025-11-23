@@ -30,7 +30,7 @@ export const gradeUtteranceRoute = procedure
       definition: input.prompt_en,
       userInput: input.attempt,
       userId,
-      eventType: input.eventType || "input-flood-production",
+      eventType: input.eventType || "corrective-drill-production",
     });
     return res;
   });

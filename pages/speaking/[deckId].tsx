@@ -17,11 +17,11 @@ import { useHotkeys } from "@mantine/hooks";
 import { prismaClient } from "@/koala/prisma-client";
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { trpc } from "@/koala/trpc-config";
-import { InputFloodLesson as InputFloodLessonComponent } from "@/koala/input-flood/InputFloodLesson";
-import type { InputFloodLesson as InputFloodLessonType } from "@/koala/types/input-flood";
+import { CorrectiveDrill } from "@/koala/corrective-drill/CorrectiveDrill";
+import type { CorrectiveDrillLesson } from "@/koala/types/corrective-drill";
 
 type GenerateResponse = {
-  lesson: InputFloodLessonType;
+  lesson: CorrectiveDrillLesson;
   source: { quizResultId: number; langCode: string };
 };
 
@@ -60,11 +60,11 @@ export const getServerSideProps: GetServerSideProps<
   return { props: { deckId: deckIdNum } };
 };
 
-export default function SpeakingImprovementsPage({
+export default function CorrectiveDrillPage({
   deckId,
 }: SpeakingPageProps) {
   const [gen, setGen] = React.useState<GenerateResponse | null>(null);
-  const genMutation = trpc.inputFloodGenerate.useMutation();
+  const genMutation = trpc.correctiveDrillGenerate.useMutation();
   const editQuizResultMutation = trpc.editQuizResult.useMutation();
 
   const [hasAttempted, setHasAttempted] = React.useState(false);
@@ -131,7 +131,7 @@ export default function SpeakingImprovementsPage({
     if (gen) {
       return (
         <>
-          <InputFloodLessonComponent
+          <CorrectiveDrill
             lesson={gen.lesson}
             langCode={gen.source.langCode}
             onComplete={handleLessonComplete}
@@ -179,7 +179,7 @@ export default function SpeakingImprovementsPage({
     <Container size="md" py="xl">
       <Stack gap="md">
         <Group justify="space-between" align="center">
-          <Title order={2}>Speaking Improvements</Title>
+          <Title order={2}>Corrective Drill</Title>
           <Anchor component={Link} href={`/review/${deckId}`}>
             Back to Review
           </Anchor>

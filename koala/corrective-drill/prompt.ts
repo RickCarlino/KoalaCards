@@ -1,7 +1,7 @@
 import {
-  INPUT_FLOOD_SENTENCE_MAX_WORDS,
-  INPUT_FLOOD_WHY_ERROR_MAX_CHARS,
-} from "@/koala/types/input-flood";
+  CORRECTIVE_DRILL_SENTENCE_MAX_WORDS,
+  CORRECTIVE_DRILL_ERROR_MAX_CHARS,
+} from "@/koala/types/corrective-drill";
 import { LangCode } from "@/koala/shared-types";
 
 export type PromptParams = {
@@ -11,16 +11,16 @@ export type PromptParams = {
   reason: string;
 };
 
-export function buildInputFloodPrompt({
+export function buildCorrectiveDrillPrompt({
   langCode: _langCode,
   definition,
   provided,
   reason,
 }: PromptParams): string {
-  return `역할: 한국어 교육을 위한 입력 범람(Input Flood) 훈련 과제를 생성한다.
+  return `역할: 한국어 교정 훈련을 위한 corrective drill을 생성한다.
 
-입력 범람 요약:
-- 학습자가 틀린 지점을 "많고 자연스러운 예문"으로 포화시켜 사용 패턴을 체득하게 한다.
+교정 드릴 요약:
+- 학습자가 틀린 지점을 자연스러운 예문과 한 번의 말하기 연습으로 바로잡는다.
 - 문장들은 모두 실제 사용 맥락에서 자연스럽고 빈도 높은 표현이어야 한다(번역투 금지).
 
 데이터:
@@ -35,7 +35,7 @@ export function buildInputFloodPrompt({
 - 로마자 표기, 괄호/대괄호, 품사 태그, 따옴표, 이모지, 주석 금지.
 
 문장 지침(아주 중요):
-- 길이: 한 문장당 최대 ${INPUT_FLOOD_SENTENCE_MAX_WORDS} 어절 내.
+- 길이: 한 문장당 최대 ${CORRECTIVE_DRILL_SENTENCE_MAX_WORDS} 어절 내.
 - 자연스러운 회화/서술체를 사용(지나치게 문어적·번역투 표현 금지).
 - 2인칭 "당신" 사용 금지. 필요 시 주어 생략, 혹은 적절한 명령/청유/평서로 표현.
 - 그/그녀 같은 인칭대명사는 꼭 필요한 경우에만 쓰고, 가능하면 주어를 생략한다.
@@ -59,7 +59,7 @@ export function buildInputFloodPrompt({
 1) diagnosis
   - original: 학습자 시도문(그대로)
   - corrected: 해당 의미를 자연스럽게 표현한 한국어 한 문장
-  - error_explanation: 짧은 영어 설명(≤${INPUT_FLOOD_WHY_ERROR_MAX_CHARS}자)
+  - error_explanation: 짧은 영어 설명(≤${CORRECTIVE_DRILL_ERROR_MAX_CHARS}자)
 2) target
   - target: label + 예문 1개(example.text는 한국어, example.en은 영어 풀이)
   - contrast: label + 예문 1개 또는 null
