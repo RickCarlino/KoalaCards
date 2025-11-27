@@ -35,6 +35,7 @@ export type State = {
   cards: QuizMap;
   gradingResults: Record<string, GradingResult>;
   initialCardCount: number;
+  initialStepCount: number;
   completedCards: Set<string>;
 };
 
