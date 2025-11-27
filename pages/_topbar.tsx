@@ -30,7 +30,7 @@ const TopBar = ({ children }: TopBarProps) => {
   return (
     <AppShell
       header={{ height: { base: 60, md: 70, lg: 80 } }}
-      padding="md"
+      padding={0}
     >
       <AppShell.Header>
         <Group h="100%" px="md" justify="center">

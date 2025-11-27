@@ -15,8 +15,9 @@ import {
   Container,
   Text,
   Title,
+  useMantineTheme,
 } from "@mantine/core";
-import { useHotkeys } from "@mantine/hooks";
+import { useHotkeys, useMediaQuery } from "@mantine/hooks";
 import { GetServerSideProps } from "next";
 import Link from "next/link";
 import React from "react";
@@ -26,6 +27,7 @@ import {
   useStudyAssistantContext,
 } from "@/koala/study-assistant-context";
 type ReviewDeckPageProps = { deckId: number };
+const ASSISTANT_PANEL_WIDTH = 380;
 
 const redirect = (destination: string) => ({
   redirect: { destination, permanent: false } as const,
@@ -165,6 +167,11 @@ const NoMoreQuizzesState = ({
 
 function InnerReviewPage({ deckId }: ReviewDeckPageProps) {
   const [assistantOpen, setAssistantOpen] = React.useState(false);
+  const theme = useMantineTheme();
+  const isDesktop = useMediaQuery(`(min-width: ${theme.breakpoints.md})`);
+  const isLargeDesktop = useMediaQuery(
+    `(min-width: ${theme.breakpoints.lg})`,
+  );
   const { addContextEvent, contextLog } = useStudyAssistantContext();
   const {
     state,
@@ -181,6 +188,29 @@ function InnerReviewPage({ deckId }: ReviewDeckPageProps) {
   } = useReview(deckId);
   const userSettings = useUserSettings();
   const card = currentItem ? state.cards[currentItem.cardUUID] : undefined;
+
+  React.useEffect(() => {
+    if (isDesktop) {
+      setAssistantOpen(true);
+    }
+  }, [isDesktop]);
+
+  const headerHeight = React.useMemo(() => {
+    if (isLargeDesktop) {
+      return 80;
+    }
+    if (isDesktop) {
+      return 70;
+    }
+    return 60;
+  }, [isDesktop, isLargeDesktop]);
+  const contentHeight = isDesktop
+    ? `calc(100vh - ${headerHeight}px)`
+    : "100vh";
+  const showDesktopAssistant = isDesktop && assistantOpen;
+  const gridTemplate = showDesktopAssistant
+    ? `1fr ${ASSISTANT_PANEL_WIDTH}px`
+    : "1fr";
 
   async function playCard() {
     if (!card) {
@@ -278,6 +308,15 @@ function InnerReviewPage({ deckId }: ReviewDeckPageProps) {
     [addContextEvent, giveUp, state.cards],
   );
 
+  const openAssistant = React.useCallback(
+    () => setAssistantOpen(true),
+    [],
+  );
+  const closeAssistant = React.useCallback(
+    () => setAssistantOpen(false),
+    [],
+  );
+
   if (error) {
     return <MessageState title="Error">{error.message}</MessageState>;
   }
@@ -294,37 +333,57 @@ function InnerReviewPage({ deckId }: ReviewDeckPageProps) {
     return <MessageState title="Oops">No card data.</MessageState>;
   }
 
+  const assistantProps = {
+    deckId,
+    opened: assistantOpen,
+    onOpen: openAssistant,
+    onClose: closeAssistant,
+    contextLog,
+  };
+  const assistantOffset = showDesktopAssistant ? ASSISTANT_PANEL_WIDTH : 0;
+
   return (
-    <Container size="xl" py="md">
-      <Box p="md">
-        <CardReview
-          card={card}
-          itemType={currentItem.itemType}
-          onSkip={handleSkipCard}
-          onGiveUp={handleGiveUp}
-          onProceed={() => {
-            completeItem(currentItem.stepUuid);
-          }}
-          onPlayAudio={playCard}
-          currentStepUuid={currentItem.stepUuid}
-          completeItem={completeItem}
-          onGradingResultCaptured={handleGradingResultCaptured}
-          progress={progress}
-          cardsRemaining={cardsRemaining}
-          onOpenAssistant={() => setAssistantOpen(true)}
-          disableRecord={Boolean(
-            state.gradingResults[currentItem.cardUUID]?.isCorrect,
-          )}
-        />
+    <Container fluid px={0} py={0}>
+      <Box
+        style={{
+          display: "grid",
+          gridTemplateColumns: gridTemplate,
+          gridTemplateRows: "1fr",
+          gap: "16px",
+          alignItems: "stretch",
+          minHeight: contentHeight,
+          height: contentHeight,
+          width: "100%",
+        }}
+      >
+        <Box py="md" style={{ height: "100%", minHeight: 0 }}>
+          <CardReview
+            card={card}
+            itemType={currentItem.itemType}
+            onSkip={handleSkipCard}
+            onGiveUp={handleGiveUp}
+            onProceed={() => {
+              completeItem(currentItem.stepUuid);
+            }}
+            onPlayAudio={playCard}
+            currentStepUuid={currentItem.stepUuid}
+            completeItem={completeItem}
+            onGradingResultCaptured={handleGradingResultCaptured}
+            progress={progress}
+            cardsRemaining={cardsRemaining}
+            onOpenAssistant={openAssistant}
+            assistantOffsetRight={assistantOffset}
+            disableRecord={Boolean(
+              state.gradingResults[currentItem.cardUUID]?.isCorrect,
+            )}
+          />
+        </Box>
+
+        {showDesktopAssistant && (
+          <ReviewAssistantPane {...assistantProps} />
+        )}
       </Box>
-      <ReviewAssistantPane
-        deckId={deckId}
-        opened={assistantOpen}
-        onOpen={() => setAssistantOpen(true)}
-        onClose={() => setAssistantOpen(false)}
-        showFloatingButton={false}
-        contextLog={contextLog}
-      />
+      {!isDesktop && <ReviewAssistantPane {...assistantProps} />}
     </Container>
   );
 }

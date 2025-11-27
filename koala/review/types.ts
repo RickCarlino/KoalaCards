@@ -74,6 +74,7 @@ export type CardReviewProps = {
   itemType: ItemType;
   card: Quiz;
   currentStepUuid: string;
+  assistantOffsetRight?: number;
   onGradingResultCaptured: (
     cardUUID: string,
     result: GradingResult,

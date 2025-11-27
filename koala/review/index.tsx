@@ -135,7 +135,8 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
   return (
     <Box
       style={{
-        minHeight: "100vh",
+        minHeight: "100%",
+        height: "100%",
         position: "relative",
         paddingBottom: "80px",
       }}
@@ -153,7 +154,7 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
           position: "fixed",
           bottom: 0,
           left: 0,
-          right: 0,
+          right: props.assistantOffsetRight ?? 0,
           backgroundColor: "var(--mantine-color-pink-0)",
           borderTop: "1px solid var(--mantine-color-pink-2)",
           padding:
