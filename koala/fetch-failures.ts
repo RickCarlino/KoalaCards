@@ -8,7 +8,7 @@ import { map } from "radash";
 
 async function buildQuizPayload(card: Card) {
   const definitionAudio = await generateDefinitionAudio(card.definition);
-  const termAudio = await generateTermAudio({ card, speed: 100 });
+  const termAudio = await generateTermAudio({ card });
   return {
     cardId: card.id,
     definition: card.definition,

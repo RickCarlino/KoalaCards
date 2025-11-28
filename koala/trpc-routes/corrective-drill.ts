@@ -4,22 +4,16 @@ import {
   type LanguageModelIdentifier,
 } from "@/koala/ai";
 import {
-  FLOOD_ITEM_COUNT_MAX,
-  FLOOD_ITEM_COUNT_MIN,
-  INPUT_FLOOD_GENERATE_MAX_TOKENS,
-  INPUT_FLOOD_GRADE_ITEMS_MAX,
-  INPUT_FLOOD_GRADE_ITEMS_MIN,
-  INPUT_FLOOD_GRADE_MAX_TOKENS,
-  INPUT_FLOOD_GRADE_TEXT_LIMIT,
-  INPUT_FLOOD_RECENT_RESULTS_TAKE,
-  INPUT_FLOOD_SENTENCE_MAX_WORDS,
-  INPUT_FLOOD_WHY_ERROR_MAX_CHARS,
-  INPUT_FLOOD_PRODUCTION_MAX,
-  INPUT_FLOOD_PRODUCTION_MIN,
-  RULES_COUNT_MAX,
-  RULES_COUNT_MIN,
-  InputFloodLessonSchema,
-} from "@/koala/types/input-flood";
+  CORRECTIVE_DRILL_GENERATE_MAX_TOKENS,
+  CORRECTIVE_DRILL_GRADE_ITEMS_MAX,
+  CORRECTIVE_DRILL_GRADE_ITEMS_MIN,
+  CORRECTIVE_DRILL_GRADE_MAX_TOKENS,
+  CORRECTIVE_DRILL_GRADE_TEXT_LIMIT,
+  CORRECTIVE_DRILL_RECENT_RESULTS_TAKE,
+  CORRECTIVE_DRILL_SENTENCE_MAX_WORDS,
+  CORRECTIVE_DRILL_ERROR_MAX_CHARS,
+  CorrectiveDrillLessonSchema,
+} from "@/koala/types/corrective-drill";
 import { draw, shuffle } from "radash";
 import { z } from "zod";
 import { prismaClient } from "../prisma-client";
@@ -40,8 +34,8 @@ const GradeRequestSchema = z.object({
         attempt: z.string().default(""),
       }),
     )
-    .min(INPUT_FLOOD_GRADE_ITEMS_MIN)
-    .max(INPUT_FLOOD_GRADE_ITEMS_MAX),
+    .min(CORRECTIVE_DRILL_GRADE_ITEMS_MIN)
+    .max(CORRECTIVE_DRILL_GRADE_ITEMS_MAX),
 });
 
 const GradeResponseSchema = z.object({
@@ -58,20 +52,17 @@ const MULTIPASS_CONVERSATION_MODEL: LanguageModelIdentifier = [
   "fast",
 ];
 
-const LESSON_CONVERSATION_SYSTEM_PROMPT = `You are a veteran Korean language coach. Speak in plain English when explaining issues, but supply Korean sentences whenever you give examples. Keep every Korean sentence natural, idiomatic, and at most ${INPUT_FLOOD_SENTENCE_MAX_WORDS} words. Never use romanization, brackets, emojis, or notes in Korean text. Address the learner directly as "you" whenever you describe their mistake in English.`;
+const LESSON_CONVERSATION_SYSTEM_PROMPT = `You are a veteran Korean language coach. Speak in plain English when explaining issues, but supply Korean sentences whenever you give examples. Keep every Korean sentence natural, idiomatic, and at most ${CORRECTIVE_DRILL_SENTENCE_MAX_WORDS} words. Never use romanization, brackets, emojis, or notes in Korean text. Address the learner directly as "you" whenever you describe their mistake in English.`;
 
 const JSON_SCHEMA_SKELETON = `{
   "diagnosis": {
     "original": string,
     "corrected": string,
-    "error_explanation": string,
-    "rules": string[]
+    "error_explanation": string
   },
-  "flood": {
-    "target": { "label": string, "items": [{ "text": string, "en": string }] },
-    "contrast": { "label": string, "items": [{ "text": string, "en": string }] } | null
-  },
-  "production": [{ "prompt_en": string, "answer": string }]
+  "target": { "label": string, "example": { "text": string, "en": string } },
+  "contrast": { "label": string, "example": { "text": string, "en": string } } | null,
+  "production": { "prompt_en": string, "answer": string }
 }`;
 
 type ConversationInput = {
@@ -109,19 +100,18 @@ const buildConversationPrompt = (input: ConversationInput): string => {
       .concat(
         " Pick 1-4 from the rubric (correct, incomplete/unrelated, grammatical issue, wrong word) and note why in one English sentence addressing the learner.",
       ),
-    "Step 2 — Lesson recap:\n- Write ≤1 paragraph in English explaining the issue and the fix.\n- Add 1-2 Korean example sentences that model the corrected pattern.\n- Optionally add 0-2 contrastive Korean examples only if a different pattern is causing confusion. Keep all Korean sentences short, natural, and varied in vocab.",
-    "Step 3 — Drills:\n- Create prompt/response pairs that force the corrected pattern. Prompts stay in English, answers in Korean.",
+    "Step 2 — Lesson recap:\n- Write ≤1 paragraph in English explaining the issue and the fix.\n- Add exactly 1 Korean example sentence that models the corrected pattern.\n- Optionally add 1 contrastive Korean example only if a different pattern is causing confusion. Keep all Korean sentences short, natural, and varied in vocab.",
+    "Step 3 — Drills:\n- Create 1 prompt/response pair that forces the corrected pattern. Prompt stays in English, answer in Korean.",
     "Step 4 — JSONization (return JSON ONLY):",
     JSON_SCHEMA_SKELETON,
     "Conversion guardrails:",
     `- Use the learner's exact attempt (${input.attempt}) as diagnosis.original.`,
     `- diagnosis.corrected must be a natural Korean sentence that actually expresses "${input.definition}" (or the corrected nuance you explained) and fits everyday speech.`,
-    `- diagnosis.error_explanation must be short (under ${INPUT_FLOOD_WHY_ERROR_MAX_CHARS} characters), written in English, and speak directly to the learner ("You ...").`,
-    `- diagnosis.rules must contain ${RULES_COUNT_MIN}-${RULES_COUNT_MAX} short English reminders that start with "You..." or otherwise address the learner in second person.`,
-    `- flood.target.label should name the correct pattern. Provide ${FLOOD_ITEM_COUNT_MIN}-${FLOOD_ITEM_COUNT_MAX} target sentences; each items[].text is Korean only and ≤ ${INPUT_FLOOD_SENTENCE_MAX_WORDS} words, and items[].en is its natural English gloss.`,
-    `- flood.contrast only exists if a clearly different-but-related pattern caused confusion. When used, include ${FLOOD_ITEM_COUNT_MIN}-${FLOOD_ITEM_COUNT_MAX} sentences that avoid the target pattern. Otherwise set it to null.`,
-    `- production must include ${INPUT_FLOOD_PRODUCTION_MIN}-${INPUT_FLOOD_PRODUCTION_MAX} prompt/answer pairs. prompt_en stays in English, answer stays in Korean and highlights the corrected pattern.`,
-    `- All Korean outputs (diagnosis.corrected, flood sentences, production answers) must avoid romanization, brackets, parenthetical notes, or English words unless they are proper nouns. Keep them short and natural.`,
+    `- diagnosis.error_explanation must be short (under ${CORRECTIVE_DRILL_ERROR_MAX_CHARS} characters), written in English, and speak directly to the learner ("You ...").`,
+    `- target.label should name the correct pattern. Provide 1 target sentence in target.example.text (Korean only, ≤ ${CORRECTIVE_DRILL_SENTENCE_MAX_WORDS} words) with its natural English gloss in target.example.en.`,
+    `- contrast only exists if a clearly different-but-related pattern caused confusion. When used, include exactly 1 sentence in contrast.example that avoids the target pattern. Otherwise set it to null.`,
+    `- production must include exactly 1 prompt/answer pair. prompt_en stays in English, answer stays in Korean and highlights the corrected pattern.`,
+    `- All Korean outputs (diagnosis.corrected, target/contrast sentences, production answers) must avoid romanization, brackets, parenthetical notes, or English words unless they are proper nouns. Keep them short and natural.`,
     `- ${errorLine}`,
     `- Use ${input.acceptableTerm} as the reference for what a good answer sounded like, but you can adjust wording to keep it natural and idiomatic.`,
     `- ${reasonLine}`,
@@ -141,16 +131,16 @@ const runLessonConversation = async (rawInput: ConversationInput) => {
   return generateStructuredOutput({
     model: MULTIPASS_CONVERSATION_MODEL,
     messages: conversation,
-    schema: InputFloodLessonSchema,
-    maxTokens: INPUT_FLOOD_GENERATE_MAX_TOKENS,
+    schema: CorrectiveDrillLessonSchema,
+    maxTokens: CORRECTIVE_DRILL_GENERATE_MAX_TOKENS,
   });
 };
 
-export const inputFloodGenerate = procedure
+export const correctiveDrillGenerate = procedure
   .input(z.object({ resultId: z.number().optional() }).optional())
   .output(
     z.object({
-      lesson: InputFloodLessonSchema,
+      lesson: CorrectiveDrillLessonSchema,
       source: z.object({ quizResultId: z.number(), langCode: LANG_CODES }),
     }),
   )
@@ -187,7 +177,7 @@ export const inputFloodGenerate = procedure
           },
         },
         orderBy: { createdAt: "desc" },
-        take: INPUT_FLOOD_RECENT_RESULTS_TAKE,
+        take: CORRECTIVE_DRILL_RECENT_RESULTS_TAKE,
       });
       return draw(shuffle(results)) ?? null;
     };
@@ -209,7 +199,7 @@ export const inputFloodGenerate = procedure
     return { lesson, source: { quizResultId: result.id, langCode } };
   });
 
-export const inputFloodGrade = procedure
+export const correctiveDrillGrade = procedure
   .input(GradeRequestSchema)
   .output(GradeResponseSchema)
   .mutation(async ({ input, ctx }) => {
@@ -223,11 +213,14 @@ export const inputFloodGrade = procedure
         input.language as keyof typeof supportedLanguages
       ] || input.language;
     const items = input.items
-      .slice(0, INPUT_FLOOD_GRADE_ITEMS_MAX)
+      .slice(0, CORRECTIVE_DRILL_GRADE_ITEMS_MAX)
       .map((it) => ({
-        prompt_en: it.prompt_en.slice(0, INPUT_FLOOD_GRADE_TEXT_LIMIT),
-        answer: it.answer.slice(0, INPUT_FLOOD_GRADE_TEXT_LIMIT),
-        attempt: it.attempt.slice(0, INPUT_FLOOD_GRADE_TEXT_LIMIT),
+        prompt_en: it.prompt_en.slice(
+          0,
+          CORRECTIVE_DRILL_GRADE_TEXT_LIMIT,
+        ),
+        answer: it.answer.slice(0, CORRECTIVE_DRILL_GRADE_TEXT_LIMIT),
+        attempt: it.attempt.slice(0, CORRECTIVE_DRILL_GRADE_TEXT_LIMIT),
       }));
 
     const rubric = `You are grading short language speaking drills in ${languageName}.
@@ -260,7 +253,7 @@ You cannot take away points for word choice or register as long as the response 
       model: ["openai", "good"],
       messages: [{ role: "user", content: userMsg }],
       schema: GradeResponseSchema,
-      maxTokens: INPUT_FLOOD_GRADE_MAX_TOKENS,
+      maxTokens: CORRECTIVE_DRILL_GRADE_MAX_TOKENS,
     });
 
     return graded;

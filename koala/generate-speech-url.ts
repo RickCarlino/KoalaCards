@@ -56,12 +56,17 @@ const randomVoice = (langCode: string, gender: Gender) => {
   return draw(l2) || l2[0];
 };
 
-const VERSION = "v1";
+const VERSION = "v2";
 
 const callTTS = async (voice: string, params: AudioLessonParams) => {
   const p = params.text.includes("<speak>")
     ? { ssml: params.text }
     : { text: params.text };
+  const audioConfig: protos.google.cloud.texttospeech.v1.IAudioConfig = {
+    audioEncoding: protos.google.cloud.texttospeech.v1.AudioEncoding.MP3,
+  };
+  audioConfig.speakingRate = params.speed || 1.0;
+
   const request: protos.google.cloud.texttospeech.v1.ISynthesizeSpeechRequest =
     {
       input: p,
@@ -73,11 +78,7 @@ const callTTS = async (voice: string, params: AudioLessonParams) => {
             params.gender as keyof typeof protos.google.cloud.texttospeech.v1.SsmlVoiceGender
           ],
       },
-      audioConfig: {
-        audioEncoding:
-          protos.google.cloud.texttospeech.v1.AudioEncoding.MP3,
-        speakingRate: params.speed || 1.0,
-      },
+      audioConfig,
     };
 
   const [response] = await CLIENT.synthesizeSpeech(request);

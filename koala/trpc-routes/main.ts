@@ -19,8 +19,11 @@ import { gradeQuiz } from "./grade-quiz";
 import { gradeSpeakingQuiz } from "./grade-speaking-quiz";
 import { gradeUtteranceRoute } from "./grade-utterance";
 import { gradeWriting } from "./grade-writing";
-import { inputFloodGenerate, inputFloodGrade } from "./input-flood";
-import { inputFloodGenerateDev } from "./input-flood-dev";
+import {
+  correctiveDrillGenerate,
+  correctiveDrillGrade,
+} from "./corrective-drill";
+import { correctiveDrillGenerateDev } from "./corrective-drill-dev";
 import { mergeDecks } from "./merge-decks";
 import { parseCards } from "./parse-cards";
 import { reportDeck } from "./report-deck";
@@ -46,9 +49,9 @@ export const appRouter = router({
   gradeSpeakingQuiz,
   gradeWriting,
   gradeUtterance: gradeUtteranceRoute,
-  inputFloodGenerate,
-  inputFloodGrade,
-  inputFloodGenerateDev,
+  correctiveDrillGenerate,
+  correctiveDrillGrade,
+  correctiveDrillGenerateDev,
   editQuizResult,
   createDeck,
   mergeDecks,

@@ -112,15 +112,11 @@ function tagLessonType(
   return q;
 }
 
-async function buildQuizPayload(
-  q: LocalCard & { quizType?: string },
-  speedPct: number,
-) {
+async function buildQuizPayload(q: LocalCard & { quizType?: string }) {
   const r = q.repetitions ?? 0;
   const definitionAudio = await generateDefinitionAudio(q.definition);
   const termAudio = await generateTermAudio({
     card: q as Card,
-    speed: r > 1 ? speedPct : 100,
   });
   return {
     cardId: q.id,
@@ -212,11 +208,8 @@ export async function getLessons({
   }
 
   const rawHand = await buildHand(userId, deckId, now, take);
-  const speedPct = Math.round(
-    (await getUserSettings(userId)).playbackSpeed * 100,
-  );
 
-  return Promise.all(rawHand.map((q) => buildQuizPayload(q, speedPct)));
+  return Promise.all(rawHand.map((q) => buildQuizPayload(q)));
 }
 
 export async function getLessonsDue(

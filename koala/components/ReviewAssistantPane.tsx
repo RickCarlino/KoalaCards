@@ -5,585 +5,237 @@ import {
   Button,
   Drawer,
   Group,
-  Loader,
-  ScrollArea,
   Stack,
   Text,
-  Textarea,
   Title,
   useMantineTheme,
 } from "@mantine/core";
-import {
-  IconMessage,
-  IconPlus,
-  IconSend,
-  IconX,
-} from "@tabler/icons-react";
+import { IconMessage, IconX } from "@tabler/icons-react";
 import { useMediaQuery } from "@mantine/hooks";
-import { notifications } from "@mantine/notifications";
-import ReactMarkdown, { type Components } from "react-markdown";
-import { trpc } from "@/koala/trpc-config";
-import {
-  createExampleStreamParser,
-  EXAMPLE_PLACEHOLDER,
-} from "@/koala/utils/example-stream-parser";
+import AssistantMessageList from "./study-assistant/AssistantMessageList";
+import AssistantComposer from "./study-assistant/AssistantComposer";
+import { useAssistantChat } from "./study-assistant/useAssistantChat";
+import { ChatMessage, Suggestion } from "./study-assistant/types";
 
-type Suggestion = {
-  phrase: string;
-  translation: string;
-  gender: "M" | "F" | "N";
+type ReviewAssistantPaneProps = {
+  deckId: number;
+  opened: boolean;
+  onOpen: () => void;
+  onClose: () => void;
+  contextLog: string[];
 };
 
-type ChatMessage = {
-  role: "user" | "assistant";
-  content: string;
-  suggestions?: Suggestion[];
+type AssistantPanelProps = {
+  messages: ChatMessage[];
+  input: string;
+  onInputChange: (value: string) => void;
+  onSend: () => void;
+  onStop: () => void;
+  isStreaming: boolean;
+  viewportRef: React.RefObject<HTMLDivElement>;
+  onAddSuggestion: (suggestion: Suggestion) => void | Promise<void>;
+  isAdding: boolean;
+  onClose: () => void;
 };
 
-const collapseNewlines = (value: string) =>
-  value.replace(/\n{3,}/g, "\n\n");
-
-type MarkdownCodeProps = {
-  inline?: boolean;
-  children: React.ReactNode;
-};
-
-function ExampleSuggestionRow({
-  suggestion,
-  onAdd,
-  isLoading,
-}: {
-  suggestion: Suggestion;
-  onAdd: () => void;
-  isLoading: boolean;
-}) {
+function AssistantHeader({ onClose }: { onClose: () => void }) {
   return (
-    <Group align="flex-start" gap="xs" wrap="nowrap">
+    <Group justify="space-between" mb="xs">
+      <Group gap="xs">
+        <IconMessage size={18} />
+        <Title order={4}>Study Assistant</Title>
+      </Group>
       <ActionIcon
-        variant="light"
-        color="indigo"
-        radius="xl"
-        size="md"
-        onClick={onAdd}
-        disabled={isLoading}
-        aria-label={`Add card for ${suggestion.phrase}`}
+        variant="subtle"
+        onClick={onClose}
+        aria-label="Close assistant"
       >
-        {isLoading ? <Loader size="xs" /> : <IconPlus size={14} />}
+        <IconX size={18} />
       </ActionIcon>
-      <Box>
-        <Text fw={600}>{suggestion.phrase}</Text>
-        <Text size="sm" c="dimmed">
-          {suggestion.translation}
-        </Text>
-      </Box>
     </Group>
   );
 }
 
-function AssistantMarkdown({
-  content,
-  style,
+function AssistantPanel({
+  messages,
+  input,
+  onInputChange,
+  onSend,
+  onStop,
+  isStreaming,
+  viewportRef,
+  onAddSuggestion,
+  isAdding,
+  onClose,
+}: AssistantPanelProps) {
+  return (
+    <Stack gap="sm" h="100%" style={{ minHeight: 0 }}>
+      <AssistantHeader onClose={onClose} />
+      <Box style={{ flex: 1, minHeight: 0 }}>
+        <AssistantMessageList
+          messages={messages}
+          viewportRef={viewportRef}
+          onAddSuggestion={onAddSuggestion}
+          isAdding={isAdding}
+        />
+      </Box>
+      <AssistantComposer
+        value={input}
+        onChange={onInputChange}
+        onSend={onSend}
+        onStop={onStop}
+        isStreaming={isStreaming}
+      />
+    </Stack>
+  );
+}
+
+function DesktopAssistantShell({
+  opened,
+  onOpen,
+  children,
 }: {
-  content: string;
-  style: React.CSSProperties;
+  opened: boolean;
+  onOpen: () => void;
+  children: React.ReactNode;
 }) {
-  const markdownComponents = React.useMemo<Components>(
-    () => ({
-      p: ({ children }) => (
-        <Text component="p" style={{ ...style, margin: 0 }}>
-          {children}
-        </Text>
-      ),
-      ul: ({ children }) => (
+  return (
+    <Box
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        minHeight: 0,
+        borderLeft: "1px solid var(--mantine-color-gray-3)",
+        backgroundColor: "white",
+        padding: opened ? 0 : "16px",
+      }}
+    >
+      {opened ? (
         <Box
-          component="ul"
-          style={{ ...style, margin: "0 0 8px 18px", paddingLeft: 0 }}
-        >
-          {children}
-        </Box>
-      ),
-      ol: ({ children }) => (
-        <Box
-          component="ol"
-          style={{ ...style, margin: "0 0 8px 18px", paddingLeft: 0 }}
-        >
-          {children}
-        </Box>
-      ),
-      li: ({ children }) => (
-        <Box component="li" style={{ ...style, marginBottom: 4 }}>
-          {children}
-        </Box>
-      ),
-      a: ({ children, href }) => (
-        <Text
-          component="a"
-          href={href}
-          c="indigo.7"
-          style={style}
-          target="_blank"
-          rel="noreferrer"
-        >
-          {children}
-        </Text>
-      ),
-      code: (props) => {
-        const { inline: isInline, children } = props as MarkdownCodeProps;
-        return (
-          <Text
-            component="code"
-            style={{
-              ...style,
-              display: isInline ? "inline" : "block",
-              padding: isInline ? "0 4px" : "4px",
-              backgroundColor: "rgba(0, 0, 0, 0.05)",
-              borderRadius: 4,
-              fontFamily: "var(--mantine-font-family-monospace)",
-            }}
-          >
-            {children}
-          </Text>
-        );
-      },
-      blockquote: ({ children }) => (
-        <Box
-          component="blockquote"
           style={{
-            ...style,
-            margin: "4px 0",
-            padding: "4px 12px",
-            borderLeft: "3px solid var(--mantine-color-gray-4)",
-            backgroundColor: "var(--mantine-color-gray-0)",
+            height: "100%",
+            display: "flex",
+            padding: "16px",
+            minHeight: 0,
           }}
         >
-          {children}
+          <Box style={{ flex: 1, minHeight: 0, width: "100%" }}>
+            {children}
+          </Box>
         </Box>
-      ),
-    }),
-    [style],
-  );
-  return (
-    <Box style={style}>
-      <ReactMarkdown components={markdownComponents}>
-        {content}
-      </ReactMarkdown>
+      ) : (
+        <Stack
+          justify="center"
+          gap="sm"
+          style={{ height: "100%", minHeight: 0 }}
+        >
+          <Group gap="xs">
+            <IconMessage size={18} />
+            <Title order={5}>Study Assistant</Title>
+          </Group>
+          <Text c="dimmed">
+            Keep the assistant open alongside your review.
+          </Text>
+          <Button
+            onClick={onOpen}
+            leftSection={<IconMessage size={16} />}
+            variant="light"
+          >
+            Open Assistant
+          </Button>
+        </Stack>
+      )}
     </Box>
   );
 }
 
+function MobileAssistantShell({
+  opened,
+  onClose,
+  children,
+}: {
+  opened: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <Drawer
+      opened={opened}
+      onClose={onClose}
+      position="right"
+      size="100%"
+      overlayProps={{ opacity: 0.35, blur: 1 }}
+      withCloseButton={false}
+      styles={{
+        content: {
+          display: "flex",
+          flexDirection: "column",
+          height: "100%",
+          padding: 0,
+        },
+      }}
+    >
+      <Box style={{ flex: 1, padding: "16px", minHeight: 0 }}>
+        {children}
+      </Box>
+    </Drawer>
+  );
+}
+
 export function ReviewAssistantPane({
-  deckId: _deckId,
-  opened: controlledOpened,
+  deckId,
+  opened,
   onOpen,
   onClose,
-  showFloatingButton = true,
-  contextLog = [],
-}: {
-  deckId: number;
-  opened?: boolean;
-  onOpen?: () => void;
-  onClose?: () => void;
-  showFloatingButton?: boolean;
-  contextLog?: string[];
-}) {
-  const [uncontrolledOpened, setUncontrolledOpened] =
-    React.useState(false);
-  const opened = controlledOpened ?? uncontrolledOpened;
-  const open = () => (onOpen ? onOpen() : setUncontrolledOpened(true));
-  const close = () => (onClose ? onClose() : setUncontrolledOpened(false));
-  const [messages, setMessages] = React.useState<ChatMessage[]>([
-    {
-      role: "assistant",
-      content:
-        "Hi! Ask me about the cards you just reviewed, or request new practice questions. I’ll also suggest new flashcards when helpful.",
-    },
-  ]);
-  const [input, setInput] = React.useState("");
-  const viewportRef = React.useRef<HTMLDivElement | null>(null);
-
-  const abortRef = React.useRef<AbortController | null>(null);
-  const parserRef = React.useRef<ReturnType<
-    typeof createExampleStreamParser
-  > | null>(null);
-  const [isStreaming, setIsStreaming] = React.useState(false);
-  const bulkCreate = trpc.bulkCreateCards.useMutation();
-  const messageTextStyle = React.useMemo(
-    () =>
-      ({
-        whiteSpace: "pre-wrap",
-        wordBreak: "break-word",
-      }) as React.CSSProperties,
-    [],
-  );
-  const renderTextNode = (
-    value: string,
-    key: string,
-    role: ChatMessage["role"],
-  ) => {
-    if (!value) {
-      return null;
-    }
-    if (role === "assistant") {
-      return (
-        <AssistantMarkdown
-          key={key}
-          content={value}
-          style={messageTextStyle}
-        />
-      );
-    }
-    return (
-      <Text key={key} style={messageTextStyle}>
-        {value}
-      </Text>
-    );
-  };
-  const renderMessageContent = (
-    message: ChatMessage,
-    messageIndex: number,
-  ) => {
-    const nodes: React.ReactNode[] = [];
-    const suggestions = message.suggestions ?? [];
-    const hasInlineExamples =
-      suggestions.length > 0 &&
-      message.content.includes(EXAMPLE_PLACEHOLDER);
-
-    if (hasInlineExamples) {
-      const parts = message.content.split(EXAMPLE_PLACEHOLDER);
-      let suggestionIdx = 0;
-      parts.forEach((part, partIdx) => {
-        const textNode = renderTextNode(
-          part,
-          `msg-${messageIndex}-text-${partIdx}`,
-          message.role,
-        );
-        if (textNode) {
-          nodes.push(textNode);
-        }
-        if (partIdx < parts.length - 1) {
-          const suggestion = suggestions[suggestionIdx];
-          if (suggestion) {
-            nodes.push(
-              <ExampleSuggestionRow
-                key={`msg-${messageIndex}-example-${suggestionIdx}`}
-                suggestion={suggestion}
-                onAdd={() => onAddSuggestion(suggestion)}
-                isLoading={bulkCreate.isLoading}
-              />,
-            );
-          }
-          suggestionIdx += 1;
-        }
-      });
-      if (suggestionIdx < suggestions.length) {
-        for (let idx = suggestionIdx; idx < suggestions.length; idx += 1) {
-          const suggestion = suggestions[idx];
-          nodes.push(
-            <ExampleSuggestionRow
-              key={`msg-${messageIndex}-extra-${idx}`}
-              suggestion={suggestion}
-              onAdd={() => onAddSuggestion(suggestion)}
-              isLoading={bulkCreate.isLoading}
-            />,
-          );
-        }
-      }
-      return nodes;
-    }
-
-    const fallbackNode = renderTextNode(
-      message.content,
-      `msg-${messageIndex}-text`,
-      message.role,
-    );
-    if (fallbackNode) {
-      nodes.push(fallbackNode);
-    }
-
-    suggestions.forEach((suggestion, idx) => {
-      nodes.push(
-        <ExampleSuggestionRow
-          key={`msg-${messageIndex}-fallback-${idx}`}
-          suggestion={suggestion}
-          onAdd={() => onAddSuggestion(suggestion)}
-          isLoading={bulkCreate.isLoading}
-        />,
-      );
-    });
-
-    return nodes;
-  };
-
-  const scrollToBottom = React.useCallback(() => {
-    const el = viewportRef.current;
-    if (el) {
-      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-    }
-  }, []);
-
-  React.useEffect(() => {
-    scrollToBottom();
-  }, [messages, scrollToBottom]);
-
-  const onSend = async () => {
-    const text = input.trim();
-    if (!text) {
-      return;
-    }
-    setInput("");
-    const userMsg: ChatMessage = { role: "user", content: text };
-    setMessages((m) => [
-      ...m,
-      userMsg,
-      { role: "assistant", content: "" },
-    ]);
-    parserRef.current = createExampleStreamParser();
-
-    const applyParsed = (
-      textDelta: string,
-      newExamples: { phrase: string; translation: string }[],
-    ) => {
-      if (!textDelta && newExamples.length === 0) {
-        return;
-      }
-      setMessages((m) => {
-        const last = m[m.length - 1];
-        if (!last || last.role !== "assistant") {
-          return m;
-        }
-        const nextContent = textDelta
-          ? collapseNewlines(last.content + textDelta)
-          : last.content;
-        const updated: ChatMessage = {
-          ...last,
-          content: nextContent,
-          suggestions: newExamples.length
-            ? [
-                ...(last.suggestions ?? []),
-                ...newExamples.map((ex) => ({
-                  phrase: ex.phrase,
-                  translation: ex.translation,
-                  gender: "N" as const,
-                })),
-              ]
-            : last.suggestions,
-        };
-        return [...m.slice(0, -1), updated];
-      });
-    };
-
-    const finalizeParser = () => {
-      if (!parserRef.current) {
-        return;
-      }
-      const { textDelta, examples } = parserRef.current.flush();
-      parserRef.current = null;
-      applyParsed(textDelta, examples);
-    };
-
-    try {
-      setIsStreaming(true);
-      abortRef.current?.abort();
-      const controller = new AbortController();
-      abortRef.current = controller;
-
-      const body = JSON.stringify({
-        deckId: _deckId,
-        messages: [...messages, userMsg],
-        contextLog,
-      });
-
-      const res = await fetch("/api/study-assistant/stream", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body,
-        signal: controller.signal,
-      });
-      if (!res.ok || !res.body) {
-        throw new Error("Failed to connect");
-      }
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let currentEvent: string | null = null;
-
-      let reading = true;
-      while (reading) {
-        const { done, value } = await reader.read();
-        if (done) {
-          reading = false;
-          break;
-        }
-        buffer += decoder.decode(value, { stream: true });
-        const parts = buffer.split("\n\n");
-        buffer = parts.pop() || "";
-        for (const chunk of parts) {
-          const dataLines: string[] = [];
-          currentEvent = null;
-          for (const line of chunk.split("\n")) {
-            if (line.startsWith("event:")) {
-              currentEvent = line.slice(6).trim();
-              continue;
-            }
-            if (line.startsWith("data:")) {
-              let v = line.slice(5);
-              if (v.startsWith(" ")) {
-                v = v.slice(1);
-              }
-              dataLines.push(v);
-              continue;
-            }
-          }
-          const payload = dataLines.join("\n");
-          if (!currentEvent) {
-            const parser: ReturnType<typeof createExampleStreamParser> =
-              parserRef.current ?? createExampleStreamParser();
-            parserRef.current = parser;
-            const { textDelta, examples } = parser.push(payload);
-            applyParsed(textDelta, examples);
-            continue;
-          }
-          if (currentEvent === "done") {
-            finalizeParser();
-            setIsStreaming(false);
-            reading = false;
-            break;
-          }
-        }
-      }
-      finalizeParser();
-    } catch {
-      finalizeParser();
-      notifications.show({
-        title: "Assistant error",
-        message: "Connection failed or aborted.",
-        color: "red",
-      });
-    } finally {
-      parserRef.current = null;
-      setIsStreaming(false);
-    }
-  };
-
-  const onStop = () => {
-    abortRef.current?.abort();
-    setIsStreaming(false);
-  };
-
-  const onAddSuggestion = async (s: Suggestion) => {
-    await bulkCreate.mutateAsync({
-      deckId: _deckId,
-      input: [
-        { term: s.phrase, definition: s.translation, gender: s.gender },
-      ],
-    });
-    notifications.show({
-      title: "Added",
-      message: "Card added to deck",
-    });
-  };
-
+  contextLog,
+}: ReviewAssistantPaneProps) {
   const theme = useMantineTheme();
-  const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints.sm})`);
+  const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints.md})`);
+  const {
+    messages,
+    input,
+    setInput,
+    isStreaming,
+    sendMessage,
+    stopStreaming,
+    viewportRef,
+    addSuggestion,
+    isAddingSuggestion,
+  } = useAssistantChat({ deckId, contextLog });
+
+  const handleClose = React.useCallback(() => {
+    stopStreaming();
+    onClose();
+  }, [onClose, stopStreaming]);
+
+  const panel = (
+    <AssistantPanel
+      messages={messages}
+      input={input}
+      onInputChange={setInput}
+      onSend={sendMessage}
+      onStop={stopStreaming}
+      isStreaming={isStreaming}
+      viewportRef={viewportRef}
+      onAddSuggestion={addSuggestion}
+      isAdding={isAddingSuggestion}
+      onClose={handleClose}
+    />
+  );
+
+  if (isMobile) {
+    return (
+      <MobileAssistantShell opened={opened} onClose={handleClose}>
+        {panel}
+      </MobileAssistantShell>
+    );
+  }
 
   return (
-    <>
-      {showFloatingButton && (
-        <Box
-          style={{ position: "fixed", right: 16, bottom: 16, zIndex: 300 }}
-        >
-          <Button
-            leftSection={<IconMessage size={18} />}
-            onClick={open}
-            variant="filled"
-            color="indigo"
-          >
-            Study Assistant
-          </Button>
-        </Box>
-      )}
-
-      <Drawer
-        opened={opened}
-        onClose={close}
-        position={isMobile ? "bottom" : "right"}
-        size={isMobile ? "100%" : 420}
-        overlayProps={{ opacity: 0.3, blur: 1 }}
-        withCloseButton={false}
-        styles={{
-          content: { display: "flex", flexDirection: "column" },
-        }}
-      >
-        <Group justify="space-between" mb="xs">
-          <Title order={4}>Study Assistant</Title>
-          <ActionIcon
-            variant="subtle"
-            onClick={close}
-            aria-label="Close assistant"
-          >
-            <IconX size={18} />
-          </ActionIcon>
-        </Group>
-
-        <ScrollArea.Autosize
-          mah={isMobile ? "55vh" : "calc(100vh - 220px)"}
-          viewportRef={viewportRef}
-        >
-          <Stack gap="sm" pr="sm">
-            {messages.map((m, i) => (
-              <Box
-                key={i}
-                p="sm"
-                bg={m.role === "user" ? "gray.1" : "blue.0"}
-              >
-                <Text size="sm" c="dimmed" mb={4}>
-                  {m.role === "user" ? "You" : "Assistant"}
-                </Text>
-                <Stack gap={6}>{renderMessageContent(m, i)}</Stack>
-              </Box>
-            ))}
-          </Stack>
-        </ScrollArea.Autosize>
-
-        <Stack gap="xs" mt="sm">
-          <Textarea
-            autosize
-            minRows={2}
-            maxRows={6}
-            placeholder="Ask about recent cards or request practice…"
-            value={input}
-            onChange={(e) => setInput(e.currentTarget.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                onSend();
-              }
-            }}
-          />
-          <Group justify="space-between">
-            <Text size="xs" c="dimmed">
-              {isStreaming ? "Streaming…" : ""}
-            </Text>
-            <Group gap="xs">
-              {isStreaming ? (
-                <Button color="gray" variant="light" onClick={onStop}>
-                  Stop
-                </Button>
-              ) : (
-                <Button
-                  onClick={onSend}
-                  loading={false}
-                  leftSection={<IconSend size={16} />}
-                  disabled={false}
-                >
-                  Send
-                </Button>
-              )}
-            </Group>
-          </Group>
-        </Stack>
-      </Drawer>
-    </>
+    <DesktopAssistantShell opened={opened} onOpen={onOpen}>
+      {panel}
+    </DesktopAssistantShell>
   );
 }
 

@@ -76,6 +76,7 @@ function initialState(): State {
     currentItem: undefined,
     gradingResults: {},
     initialCardCount: 0,
+    initialStepCount: 0,
     completedCards: new Set(),
   };
 }
@@ -116,9 +117,12 @@ export function useReview(deckId: number) {
     }
   }, [deckId]);
 
+  const remainingSteps = getItemsDue(state.queue);
   const progress =
-    state.initialCardCount > 0
-      ? (state.completedCards.size / state.initialCardCount) * 100
+    state.initialStepCount > 0
+      ? ((state.initialStepCount - remainingSteps) /
+          state.initialStepCount) *
+        100
       : 0;
 
   return {
@@ -174,6 +178,7 @@ function reducer(state: State, action: Action): State {
       return {
         ...newState,
         initialCardCount: Object.keys(newState.cards).length,
+        initialStepCount: getItemsDue(newState.queue),
         completedCards: new Set(),
       };
     case "SKIP_CARD":

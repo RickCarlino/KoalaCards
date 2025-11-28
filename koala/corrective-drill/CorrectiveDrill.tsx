@@ -9,7 +9,7 @@ import {
   Text,
   Title,
 } from "@mantine/core";
-import type { InputFloodLesson as InputFloodLessonType } from "@/koala/types/input-flood";
+import type { CorrectiveDrillLesson } from "@/koala/types/corrective-drill";
 import { playBlobExclusive } from "@/koala/utils/play-blob-audio";
 import { trpc } from "@/koala/trpc-config";
 import { useMediaRecorder } from "@/koala/hooks/use-media-recorder";
@@ -24,7 +24,7 @@ import { compare } from "@/koala/quiz-evaluators/evaluator-utils";
 import { useUserSettings } from "@/koala/settings-provider";
 
 type LessonProps = {
-  lesson: InputFloodLessonType;
+  lesson: CorrectiveDrillLesson;
   langCode: string;
   onComplete?: () => void;
 };
@@ -62,7 +62,7 @@ export function DiagnosisCard({
   targetLabel,
   contrastLabel,
 }: {
-  diagnosis: InputFloodLessonType["diagnosis"];
+  diagnosis: CorrectiveDrillLesson["diagnosis"];
   targetLabel?: string;
   contrastLabel?: string | null;
 }) {
@@ -90,29 +90,22 @@ export function DiagnosisCard({
 
 type StepKind =
   | { t: "diagnosis" }
-  | { t: "floodTarget"; i: number }
-  | { t: "floodContrast"; i: number }
-  | { t: "production"; i: number };
+  | { t: "target" }
+  | { t: "contrast" }
+  | { t: "production" };
 
-export function InputFloodLesson({
+export function CorrectiveDrill({
   lesson,
   langCode,
   onComplete,
 }: LessonProps) {
   const userSettings = useUserSettings();
   const steps = useMemo<StepKind[]>(() => {
-    const s: StepKind[] = [{ t: "diagnosis" }];
-    for (let i = 0; i < lesson.flood.target.items.length; i++) {
-      s.push({ t: "floodTarget", i });
+    const s: StepKind[] = [{ t: "diagnosis" }, { t: "target" }];
+    if (lesson.contrast) {
+      s.push({ t: "contrast" });
     }
-    if (lesson.flood.contrast && lesson.flood.contrast.items.length) {
-      for (let i = 0; i < lesson.flood.contrast.items.length; i++) {
-        s.push({ t: "floodContrast", i });
-      }
-    }
-    for (let i = 0; i < lesson.production.length; i++) {
-      s.push({ t: "production", i });
-    }
+    s.push({ t: "production" });
     return s;
   }, [lesson]);
 
@@ -132,16 +125,16 @@ export function InputFloodLesson({
   const step = steps[idx];
 
   const keyFor = (s: StepKind): string => {
-    if (s.t === "floodTarget") {
-      return `A-${s.i}`;
-    }
-    if (s.t === "floodContrast") {
-      return `B-${s.i}`;
-    }
     if (s.t === "production") {
-      return `P-${s.i}`;
+      return "P";
     }
-    return s.t;
+    if (s.t === "target") {
+      return "A";
+    }
+    if (s.t === "contrast") {
+      return "B";
+    }
+    return "diagnosis";
   };
 
   const next = () => {
@@ -202,14 +195,14 @@ export function InputFloodLesson({
       }
       return;
     }
-    if (step.t === "floodTarget") {
-      const it = lesson.flood.target.items[step.i];
+    if (step.t === "target") {
+      const it = lesson.target.example;
       spokenRef.current.add(k);
       void requestSpeech(it.text, it.en);
       return;
     }
-    if (step.t === "floodContrast") {
-      const it = lesson.flood.contrast?.items[step.i];
+    if (step.t === "contrast") {
+      const it = lesson.contrast?.example;
       if (it) {
         spokenRef.current.add(k);
         void requestSpeech(it.text, it.en);
@@ -221,14 +214,14 @@ export function InputFloodLesson({
     if (s.t === "diagnosis") {
       return lesson.diagnosis.corrected;
     }
-    if (s.t === "floodTarget") {
-      return lesson.flood.target.items[s.i].text;
+    if (s.t === "target") {
+      return lesson.target.example.text;
     }
-    if (s.t === "floodContrast") {
-      return lesson.flood.contrast?.items[s.i].text || "";
+    if (s.t === "contrast") {
+      return lesson.contrast?.example.text || "";
     }
     if (s.t === "production") {
-      return lesson.production[s.i].answer;
+      return lesson.production.answer;
     }
     return "";
   };
@@ -261,7 +254,7 @@ export function InputFloodLesson({
       }
       setGrading(true);
       try {
-        const item = lesson.production[step.i];
+        const item = lesson.production;
         const res = await gradeMutation.mutateAsync({
           langCode: langCode as LangCode,
           prompt_en: item.prompt_en,
@@ -284,7 +277,7 @@ export function InputFloodLesson({
 
     const baseMatch = Boolean(isMatch ?? compare(expected, transcription));
     const relaxedMatch =
-      step.t === "floodTarget"
+      step.t === "target"
         ? compare(expected, transcription, 3) || baseMatch
         : baseMatch;
     setLastMatch(relaxedMatch);
@@ -327,8 +320,8 @@ export function InputFloodLesson({
           <>
             <DiagnosisCard
               diagnosis={lesson.diagnosis}
-              targetLabel={lesson.flood.target.label}
-              contrastLabel={lesson.flood.contrast?.label || null}
+              targetLabel={lesson.target.label}
+              contrastLabel={lesson.contrast?.label || null}
             />
             {!passed.has("diagnosis") ? (
               <Group justify="space-between" align="center">
@@ -348,24 +341,22 @@ export function InputFloodLesson({
           </>
         ) : null}
 
-        {step.t === "floodTarget" ? (
+        {step.t === "target" ? (
           <>
             {!passed.has(keyFor(step)) ? (
               <>
                 <Text size="sm" c="dimmed">
-                  {lesson.flood.target.items[step.i].en}
+                  {lesson.target.example.en}
                 </Text>
-                <Text fw={600}>
-                  {lesson.flood.target.items[step.i].text}
-                </Text>
+                <Text fw={600}>{lesson.target.example.text}</Text>
                 <Group justify="space-between" align="center">
                   <Button
                     leftSection={<IconPlayerPlayFilled size={16} />}
                     variant="default"
                     onClick={() =>
                       requestSpeech(
-                        lesson.flood.target.items[step.i].text,
-                        lesson.flood.target.items[step.i].en,
+                        lesson.target.example.text,
+                        lesson.target.example.en,
                       )
                     }
                     disabled={isAudioPlaying}
@@ -388,27 +379,25 @@ export function InputFloodLesson({
           </>
         ) : null}
 
-        {step.t === "floodContrast" ? (
+        {step.t === "contrast" ? (
           <>
-            {lesson.flood.contrast?.items[step.i].en ? (
+            {lesson.contrast?.example.en ? (
               <Text size="sm" c="dimmed">
-                {lesson.flood.contrast?.items[step.i].en}
+                {lesson.contrast?.example.en}
               </Text>
             ) : null}
             {!passed.has(keyFor(step)) ? (
               <>
-                <Text fw={600}>
-                  {lesson.flood.contrast?.items[step.i].text}
-                </Text>
+                <Text fw={600}>{lesson.contrast?.example.text}</Text>
                 <Group justify="space-between" align="center">
                   <Button
                     leftSection={<IconPlayerPlayFilled size={16} />}
                     variant="default"
                     onClick={() =>
-                      lesson.flood.contrast?.items[step.i]
+                      lesson.contrast?.example
                         ? requestSpeech(
-                            lesson.flood.contrast.items[step.i].text,
-                            lesson.flood.contrast.items[step.i].en,
+                            lesson.contrast.example.text,
+                            lesson.contrast.example.en,
                           )
                         : undefined
                     }
@@ -435,7 +424,7 @@ export function InputFloodLesson({
         {step.t === "production" ? (
           <>
             <Text fw={700} style={{ fontSize: 20 }}>
-              {lesson.production[step.i].prompt_en}
+              {lesson.production.prompt_en}
             </Text>
             <Group justify="space-between" align="center">
               <MicButton

@@ -35,6 +35,7 @@ export type State = {
   cards: QuizMap;
   gradingResults: Record<string, GradingResult>;
   initialCardCount: number;
+  initialStepCount: number;
   completedCards: Set<string>;
 };
 
@@ -74,6 +75,7 @@ export type CardReviewProps = {
   itemType: ItemType;
   card: Quiz;
   currentStepUuid: string;
+  assistantOffsetRight?: number;
   onGradingResultCaptured: (
     cardUUID: string,
     result: GradingResult,
