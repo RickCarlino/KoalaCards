@@ -10,6 +10,7 @@ import { deletePausedCards } from "./delete-paused-card";
 import { editCard } from "./edit-card";
 import { editQuizResult } from "./edit-quiz-results";
 import { editUserSettings } from "./edit-user-settings";
+import { exportDeck } from "./export-deck";
 import { generateWritingPrompts } from "./generate-writing-prompts";
 import { generateWritingSample } from "./generate-writing-sample";
 import { getDailyWritingProgress } from "./get-daily-writing-progress";
@@ -24,6 +25,7 @@ import {
   correctiveDrillGrade,
 } from "./corrective-drill";
 import { correctiveDrillGenerateDev } from "./corrective-drill-dev";
+import { importDeck } from "./import-deck";
 import { mergeDecks } from "./merge-decks";
 import { parseCards } from "./parse-cards";
 import { reportDeck } from "./report-deck";
@@ -43,6 +45,7 @@ export const appRouter = router({
   generateWritingPrompts,
   generateWritingSample,
   getDailyWritingProgress,
+  exportDeck,
   getNextQuizzes,
   getUserSettings,
   gradeQuiz,
@@ -55,6 +58,7 @@ export const appRouter = router({
   editQuizResult,
   createDeck,
   mergeDecks,
+  importDeck,
   parseCards,
   archiveCard,
   reportDeck,

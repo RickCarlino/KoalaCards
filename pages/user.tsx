@@ -25,6 +25,7 @@ import { notifications } from "@mantine/notifications";
 import { UnwrapPromise } from "@prisma/client/runtime/library";
 import { GetServerSidePropsContext } from "next";
 import { getSession, signOut } from "next-auth/react";
+import Link from "next/link";
 import React, { useState } from "react";
 
 const ONE_DAY = 24 * 60 * 60 * 1000;
@@ -316,16 +317,21 @@ export default function UserSettingsPage(props: Props) {
               </Group>
             </Stack>
           </Group>
-          <Button
-            variant="outline"
-            onClick={(event) => {
-              event.preventDefault();
-              signOut();
-              location.assign("/");
-            }}
-          >
-            Log Out
-          </Button>
+          <Group>
+            <Button component={Link} href="/user/export" variant="light">
+              Import / Export Decks
+            </Button>
+            <Button
+              variant="outline"
+              onClick={(event) => {
+                event.preventDefault();
+                signOut();
+                location.assign("/");
+              }}
+            >
+              Log Out
+            </Button>
+          </Group>
         </Group>
 
         <Grid gutter="lg">
