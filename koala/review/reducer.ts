@@ -125,6 +125,10 @@ export function useReview(deckId: number) {
         100
       : 0;
 
+  const findCardUUIDById = (cardId: number) =>
+    Object.values(state.cards).find((card) => card.cardId === cardId)
+      ?.uuid;
+
   return {
     error: mutation.isError ? mutation.error || "" : null,
     isFetching,
@@ -165,6 +169,23 @@ export function useReview(deckId: number) {
     },
     refetchQuizzes: () => {
       fetchQuizzes(deckId);
+    },
+    updateCardFields: (
+      cardId: number,
+      updates: { term: string; definition: string },
+    ) => {
+      const cardUUID = findCardUUIDById(cardId);
+      if (!cardUUID) {
+        return;
+      }
+      dispatch({
+        type: "UPDATE_CARD",
+        payload: {
+          cardUUID,
+          term: updates.term,
+          definition: updates.definition,
+        },
+      });
     },
   };
 }
@@ -242,6 +263,22 @@ function reducer(state: State, action: Action): State {
         gradingResults: {
           ...state.gradingResults,
           [action.payload.cardUUID]: action.payload.result,
+        },
+      };
+    case "UPDATE_CARD":
+      const target = state.cards[action.payload.cardUUID];
+      if (!target) {
+        return state;
+      }
+      return {
+        ...state,
+        cards: {
+          ...state.cards,
+          [action.payload.cardUUID]: {
+            ...target,
+            term: action.payload.term ?? target.term,
+            definition: action.payload.definition ?? target.definition,
+          },
         },
       };
     default:

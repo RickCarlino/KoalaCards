@@ -23,6 +23,13 @@ const BodySchema = z.object({
     }),
   ),
   contextLog: z.array(z.string().max(240)).max(30).optional(),
+  currentCard: z
+    .object({
+      cardId: z.number(),
+      term: z.string(),
+      definition: z.string(),
+    })
+    .optional(),
 });
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -66,7 +73,7 @@ export default async function handler(
   if (!parsed.success) {
     return res.status(400).end("Invalid body");
   }
-  const { deckId, messages, contextLog } = parsed.data;
+  const { deckId, messages, contextLog, currentCard } = parsed.data;
 
   const deck = await prismaClient.deck.findUnique({
     where: { id: deckId, userId: dbUser.id },
@@ -97,6 +104,18 @@ FLASHCARD SUGGESTIONS (“+” button)
   Definition
   [[/EXAMPLE]]
 * Keep any extra explanation short and after this block.
+
+CARD EDIT REQUESTS
+
+* When the user asks to fix, shorten, or rewrite the current card, start your reply with exactly one edit block:
+  [[EDIT_CARD]]
+  cardId: <CardID from the current card>
+  term: <updated term or leave unchanged>
+  definition: <updated definition or shorter wording>
+  note: <very short reason or reminder> (optional)
+  [[/EDIT_CARD]]
+* Keep the edit block first, then add a concise explanation.
+* Default to the newest card in the activity log if the request is ambiguous.
 
 CONTEXT
 
@@ -147,10 +166,18 @@ TRANSLATIONS / PHRASES
         }
       : null;
 
+  const currentCardMessage: CompletionMessage | null = currentCard
+    ? {
+        role: "system",
+        content: `Current card in view:\n- CardID: ${currentCard.cardId}\n- Term: ${currentCard.term}\n- Definition: ${currentCard.definition}`,
+      }
+    : null;
+
   const stream = await openai.chat.completions.create({
     model: "gpt-5.1-chat-latest",
     messages: [
       { role: "system", content: system },
+      ...(currentCardMessage ? [currentCardMessage] : []),
       ...(activityLogMessage ? [activityLogMessage] : []),
       ...messages,
     ],

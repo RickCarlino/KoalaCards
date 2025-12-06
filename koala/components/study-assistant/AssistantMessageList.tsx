@@ -10,14 +10,29 @@ import {
 } from "@mantine/core";
 import { IconPlus } from "@tabler/icons-react";
 import AssistantMarkdown from "./AssistantMarkdown";
-import { ChatMessage, Suggestion } from "./types";
-import { EXAMPLE_PLACEHOLDER } from "@/koala/utils/example-stream-parser";
+import AssistantEditCard from "./AssistantEditCard";
+import {
+  AssistantEditProposal,
+  AssistantRole,
+  ChatMessage,
+  Suggestion,
+} from "./types";
+import {
+  EDIT_PLACEHOLDER,
+  EXAMPLE_PLACEHOLDER,
+} from "@/koala/utils/example-stream-parser";
 
 type AssistantMessageListProps = {
   messages: ChatMessage[];
   viewportRef: React.RefObject<HTMLDivElement>;
   onAddSuggestion: (suggestion: Suggestion) => void | Promise<void>;
   isAdding: boolean;
+  onApplyEdit: (
+    proposal: AssistantEditProposal,
+    updates: { term: string; definition: string },
+  ) => void | Promise<void>;
+  onDismissEdit: (proposalId: string) => void;
+  savingEditId: string | null;
 };
 
 const messageTextStyle: React.CSSProperties = {
@@ -58,94 +73,154 @@ function ExampleSuggestionRow({
 }
 
 function renderTextNode(
-  message: ChatMessage,
+  role: AssistantRole,
+  content: string,
   key: string,
 ): React.ReactNode | null {
-  if (!message.content) {
+  if (!content) {
     return null;
   }
-  if (message.role === "assistant") {
+  if (role === "assistant") {
     return (
       <AssistantMarkdown
         key={key}
-        content={message.content}
+        content={content}
         style={messageTextStyle}
       />
     );
   }
   return (
     <Text key={key} style={messageTextStyle}>
-      {message.content}
+      {content}
     </Text>
   );
 }
+
+type PlaceholderType = "example" | "edit";
+
+const placeholderTokens: Record<PlaceholderType, string> = {
+  example: EXAMPLE_PLACEHOLDER,
+  edit: EDIT_PLACEHOLDER,
+};
+
+type PlaceholderHit = {
+  type: PlaceholderType;
+  index: number;
+  token: string;
+};
+
+const findNextPlaceholder = (content: string): PlaceholderHit | null => {
+  let best: PlaceholderHit | null = null;
+  (["example", "edit"] as PlaceholderType[]).forEach((type) => {
+    const token = placeholderTokens[type];
+    const idx = content.indexOf(token);
+    const isCloser = best === null || (idx !== -1 && idx < best.index);
+    if (idx !== -1 && isCloser) {
+      best = { type, index: idx, token };
+    }
+  });
+  return best;
+};
 
 function renderMessageContent(
   message: ChatMessage,
   messageIndex: number,
   onAddSuggestion: (suggestion: Suggestion) => void,
   isAdding: boolean,
+  onApplyEdit: (
+    proposal: AssistantEditProposal,
+    updates: { term: string; definition: string },
+  ) => void | Promise<void>,
+  onDismissEdit: (proposalId: string) => void,
+  savingEditId: string | null,
 ) {
   const nodes: React.ReactNode[] = [];
   const suggestions = message.suggestions ?? [];
-  const hasInlineExamples =
-    suggestions.length > 0 &&
-    message.content.includes(EXAMPLE_PLACEHOLDER);
+  const edits = message.edits ?? [];
+  let suggestionIdx = 0;
+  let editIdx = 0;
+  let remaining = message.content;
 
-  if (hasInlineExamples) {
-    const parts = message.content.split(EXAMPLE_PLACEHOLDER);
-    let suggestionIdx = 0;
-    parts.forEach((part, partIdx) => {
+  while (remaining.length > 0) {
+    const nextPlaceholder = findNextPlaceholder(remaining);
+    if (!nextPlaceholder) {
       const textNode = renderTextNode(
-        { ...message, content: part },
-        `msg-${messageIndex}-text-${partIdx}`,
+        message.role,
+        remaining,
+        `msg-${messageIndex}-text-${suggestionIdx}-${editIdx}`,
       );
       if (textNode) {
         nodes.push(textNode);
       }
-      if (partIdx < parts.length - 1) {
-        const suggestion = suggestions[suggestionIdx];
-        if (suggestion) {
-          nodes.push(
-            <ExampleSuggestionRow
-              key={`msg-${messageIndex}-example-${suggestionIdx}`}
-              suggestion={suggestion}
-              onAdd={() => onAddSuggestion(suggestion)}
-              isLoading={isAdding}
-            />,
-          );
-        }
-        suggestionIdx += 1;
+      break;
+    }
+
+    if (nextPlaceholder.index > 0) {
+      const textChunk = remaining.slice(0, nextPlaceholder.index);
+      const textNode = renderTextNode(
+        message.role,
+        textChunk,
+        `msg-${messageIndex}-text-${suggestionIdx}-${editIdx}-${nextPlaceholder.index}`,
+      );
+      if (textNode) {
+        nodes.push(textNode);
       }
-    });
-    if (suggestionIdx < suggestions.length) {
-      for (let idx = suggestionIdx; idx < suggestions.length; idx += 1) {
-        const suggestion = suggestions[idx];
+    }
+
+    remaining = remaining.slice(
+      nextPlaceholder.index + nextPlaceholder.token.length,
+    );
+
+    if (nextPlaceholder.type === "example") {
+      const suggestion = suggestions[suggestionIdx];
+      if (suggestion) {
         nodes.push(
           <ExampleSuggestionRow
-            key={`msg-${messageIndex}-extra-${idx}`}
+            key={`msg-${messageIndex}-example-${suggestionIdx}`}
             suggestion={suggestion}
             onAdd={() => onAddSuggestion(suggestion)}
             isLoading={isAdding}
           />,
         );
       }
+      suggestionIdx += 1;
+      continue;
     }
-    return nodes;
+
+    const proposal = edits[editIdx];
+    if (proposal) {
+      nodes.push(
+        <AssistantEditCard
+          key={`msg-${messageIndex}-edit-${proposal.id}`}
+          proposal={proposal}
+          onSave={(updates) => onApplyEdit(proposal, updates)}
+          onDismiss={() => onDismissEdit(proposal.id)}
+          isSaving={savingEditId === proposal.id}
+        />,
+      );
+    }
+    editIdx += 1;
   }
 
-  const fallbackNode = renderTextNode(message, `msg-${messageIndex}-text`);
-  if (fallbackNode) {
-    nodes.push(fallbackNode);
-  }
-
-  suggestions.forEach((suggestion, idx) => {
+  suggestions.slice(suggestionIdx).forEach((suggestion, idx) => {
     nodes.push(
       <ExampleSuggestionRow
         key={`msg-${messageIndex}-fallback-${idx}`}
         suggestion={suggestion}
         onAdd={() => onAddSuggestion(suggestion)}
         isLoading={isAdding}
+      />,
+    );
+  });
+
+  edits.slice(editIdx).forEach((proposal) => {
+    nodes.push(
+      <AssistantEditCard
+        key={`msg-${messageIndex}-edit-${proposal.id}`}
+        proposal={proposal}
+        onSave={(updates) => onApplyEdit(proposal, updates)}
+        onDismiss={() => onDismissEdit(proposal.id)}
+        isSaving={savingEditId === proposal.id}
       />,
     );
   });
@@ -158,6 +233,9 @@ export default function AssistantMessageList({
   viewportRef,
   onAddSuggestion,
   isAdding,
+  onApplyEdit,
+  onDismissEdit,
+  savingEditId,
 }: AssistantMessageListProps) {
   return (
     <ScrollArea
@@ -180,6 +258,9 @@ export default function AssistantMessageList({
                 index,
                 onAddSuggestion,
                 isAdding,
+                onApplyEdit,
+                onDismissEdit,
+                savingEditId,
               )}
             </Stack>
           </Box>

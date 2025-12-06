@@ -53,13 +53,22 @@ type GradingResultCapturedAction = {
   type: "STORE_GRADE_RESULT";
   payload: { cardUUID: string; result: GradingResult };
 };
+type UpdateCardAction = {
+  type: "UPDATE_CARD";
+  payload: {
+    cardUUID: string;
+    term?: string;
+    definition?: string;
+  };
+};
 
 export type Action =
   | ReplaceCardAction
   | SkipCardAction
   | CompleteItemAction
   | GiveUpAction
-  | GradingResultCapturedAction;
+  | GradingResultCapturedAction
+  | UpdateCardAction;
 export const EVERY_QUEUE_TYPE: (keyof Queue)[] = [
   "newWordIntro",
   "remedialIntro",
