@@ -64,7 +64,6 @@ Unlike traditional SRS apps that often rely on self-grading, KoalaCards provides
   - LLM-based grading for speaking quizzes.
   - Grammar correction and explanation.
   - Auto-define of unknown words.
-  - Generation of writing prompts for writing practice exercises.
 - **User Experience:**
   - User settings customization.
   - Review history and progress tracking.

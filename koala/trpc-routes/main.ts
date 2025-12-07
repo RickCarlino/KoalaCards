@@ -11,8 +11,6 @@ import { editCard } from "./edit-card";
 import { editQuizResult } from "./edit-quiz-results";
 import { editUserSettings } from "./edit-user-settings";
 import { exportDeck } from "./export-deck";
-import { generateWritingPrompts } from "./generate-writing-prompts";
-import { generateWritingSample } from "./generate-writing-sample";
 import { getDailyWritingProgress } from "./get-daily-writing-progress";
 import { getNextQuizzes } from "./get-next-quizzes";
 import { getUserSettings } from "./get-user-settings";
@@ -42,8 +40,6 @@ export const appRouter = router({
   deletePausedCards,
   editCard,
   editUserSettings,
-  generateWritingPrompts,
-  generateWritingSample,
   getDailyWritingProgress,
   exportDeck,
   getNextQuizzes,
