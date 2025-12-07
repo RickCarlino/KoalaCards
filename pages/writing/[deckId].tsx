@@ -302,7 +302,7 @@ export default function WritingPage({
   const renderWritingStep = () => (
     <Paper withBorder shadow="sm" p="md">
       <Title order={4} mb="xs">
-        Writing Prompt
+        Essay Title or Prompt
       </Title>
       <Textarea
         value={selectedPrompt}
