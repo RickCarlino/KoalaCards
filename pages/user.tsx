@@ -22,8 +22,7 @@ import {
   Title,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { UnwrapPromise } from "@prisma/client/runtime/library";
-import { GetServerSidePropsContext } from "next";
+import { GetServerSideProps } from "next";
 import { getSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import React, { useState } from "react";
@@ -31,446 +30,634 @@ import React, { useState } from "react";
 const ONE_DAY = 24 * 60 * 60 * 1000;
 const ONE_WEEK = 7 * ONE_DAY;
 
-function formatDate(date: Date): string {
+type ChartDataPoint = { date: string; count: number };
+type QuickStat = { label: string; value: number | string };
+type SerializedUserSettings = {
+  id: number;
+  playbackSpeed: number;
+  cardsPerDayMax: number;
+  playbackPercentage: number;
+  dailyWritingGoal: number | null;
+  writingFirst: boolean | null;
+  performCorrectiveReviews: boolean | null;
+  updatedAt: string;
+  user: {
+    name: string | null;
+    email: string | null;
+    image: string | null;
+    createdAt: string | null;
+  };
+};
+
+type Props = {
+  userSettings: SerializedUserSettings;
+  quickStats: QuickStat[];
+  cardChartData: ChartDataPoint[];
+  writingChartData: ChartDataPoint[];
+};
+
+function formatDateKey(date: Date): string {
   const year = date.getFullYear();
   const month = (date.getMonth() + 1).toString().padStart(2, "0");
   const day = date.getDate().toString().padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
-export async function getServerSideProps(
-  context: GetServerSidePropsContext,
-) {
-  const session = await getSession({ req: context.req });
-  if (!session?.user?.email) {
-    return { redirect: { destination: "/", permanent: false } };
-  }
-  const userSettings = await getUserSettingsFromEmail(session.user.email);
-  if (!userSettings) {
-    return { redirect: { destination: "/", permanent: false } };
-  }
-  const userId = userSettings.userId;
+function addDays(date: Date, deltaDays: number): Date {
+  const next = new Date(date);
+  next.setDate(next.getDate() + deltaDays);
+  return next;
+}
 
-  async function getUserCardStatistics(userId: string) {
-    const today = new Date();
-    const oneWeekAgo = new Date(today.getTime() - ONE_WEEK);
-    const yesterday = new Date(today.getTime() - ONE_DAY);
-    const tomorrow = new Date(today.getTime() + ONE_DAY);
-    const threeMonthsAgo = new Date(today);
-    threeMonthsAgo.setMonth(today.getMonth() - 3);
+function startOfDay(date: Date): Date {
+  const next = new Date(date);
+  next.setHours(0, 0, 0, 0);
+  return next;
+}
 
-    const BASE_QUERY = {
-      userId: userId,
-      flagged: { not: true },
-    } as const;
+function addMonths(date: Date, deltaMonths: number): Date {
+  const next = new Date(date);
+  next.setMonth(next.getMonth() + deltaMonths);
+  return next;
+}
 
-    const cardsDueNext24Hours = await prismaClient.card.count({
-      where: {
-        ...BASE_QUERY,
-        nextReview: { lt: tomorrow.getTime() },
-        firstReview: { gt: 0 },
-      },
-    });
-    const newCardsLast24Hours = (
-      await prismaClient.card.findMany({
-        select: { id: true },
-        where: {
-          userId,
-          firstReview: { gte: yesterday.getTime() },
-        },
-        distinct: ["id"],
-      })
-    ).length;
-    const newCardsLastWeek = (
-      await prismaClient.card.findMany({
-        select: { id: true },
-        where: {
-          userId,
-          firstReview: { gte: oneWeekAgo.getTime() },
-        },
-        distinct: ["id"],
-      })
-    ).length;
-    const uniqueCardsLast24Hours = await prismaClient.card.count({
-      where: {
-        ...BASE_QUERY,
-        lastReview: { gte: yesterday.getTime() },
-      },
-    });
-    const uniqueCardsLastWeek = await prismaClient.card.count({
-      where: {
-        ...BASE_QUERY,
-        lastReview: { gte: oneWeekAgo.getTime() },
-      },
-    });
+function dateKeysInclusive(start: Date, end: Date): string[] {
+  const keys: string[] = [];
+  let day = startOfDay(start);
+  const endDay = startOfDay(end);
 
-    const recentLearnedQuizzes = await prismaClient.card.findMany({
-      where: {
-        userId,
-        firstReview: { gte: threeMonthsAgo.getTime() },
-      },
-      select: {
-        id: true,
-        firstReview: true,
-      },
-      orderBy: {
-        firstReview: "asc",
-      },
-    });
-
-    const firstLearnedDates: Record<string, Date> = {};
-    for (const card of recentLearnedQuizzes) {
-      if (card.firstReview && !firstLearnedDates[card.id]) {
-        firstLearnedDates[card.id] = new Date(card.firstReview);
-      }
-    }
-
-    const cumulativeChartData: ChartDataPoint[] = [];
-    let cumulativeCount = 0;
-
-    const sortedLearnedDates = Object.values(firstLearnedDates).sort(
-      (a, b) => a.getTime() - b.getTime(),
-    );
-    let learnedDateIndex = 0;
-    const endDate = new Date();
-    let currentDate = new Date(threeMonthsAgo);
-
-    while (currentDate <= endDate) {
-      const dateString = formatDate(currentDate);
-      const currentDayEnd = new Date(currentDate);
-      currentDayEnd.setHours(23, 59, 59, 999);
-
-      while (
-        learnedDateIndex < sortedLearnedDates.length &&
-        sortedLearnedDates[learnedDateIndex] <= currentDayEnd
-      ) {
-        cumulativeCount++;
-        learnedDateIndex++;
-      }
-
-      cumulativeChartData.push({
-        date: dateString,
-        count: cumulativeCount,
-      });
-
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-
-    const writingSubmissions =
-      await prismaClient.writingSubmission.findMany({
-        where: {
-          userId: userId,
-          createdAt: {
-            gte: threeMonthsAgo,
-          },
-        },
-        select: {
-          createdAt: true,
-          correctionCharacterCount: true,
-        },
-        orderBy: {
-          createdAt: "asc",
-        },
-      });
-
-    const dailyWritingData: Record<string, number> = {};
-
-    const initDate = new Date(threeMonthsAgo);
-    while (initDate <= endDate) {
-      dailyWritingData[formatDate(initDate)] = 0;
-      initDate.setDate(initDate.getDate() + 1);
-    }
-
-    for (const submission of writingSubmissions) {
-      const submissionDate = formatDate(submission.createdAt);
-      dailyWritingData[submissionDate] =
-        (dailyWritingData[submissionDate] || 0) +
-        submission.correctionCharacterCount;
-    }
-
-    const cumulativeWritingData: ChartDataPoint[] = [];
-    let cumulativeWritingCount = 0;
-
-    currentDate = new Date(threeMonthsAgo);
-    while (currentDate <= endDate) {
-      const dateString = formatDate(currentDate);
-      cumulativeWritingCount += dailyWritingData[dateString] || 0;
-
-      cumulativeWritingData.push({
-        date: dateString,
-        count: cumulativeWritingCount,
-      });
-
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-
-    const cardChartData = cumulativeChartData;
-    const writingChartData = cumulativeWritingData;
-
-    const weeklyTarget = userSettings.cardsPerDayMax * 7;
-    const statistics = {
-      ...(await getLessonMeta(userId)),
-      uniqueCardsLast24Hours,
-      uniqueCardsLastWeek,
-      newCardsLast24Hours,
-      newCardsLastWeek: `${newCardsLastWeek} / ${weeklyTarget}`,
-      cardsDueNext24Hours,
-      globalUsers: await prismaClient.user.count(),
-    };
-
-    return { statistics, cardChartData, writingChartData };
+  while (day <= endDay) {
+    keys.push(formatDateKey(day));
+    day = addDays(day, 1);
   }
 
-  const { statistics, cardChartData, writingChartData } =
-    await getUserCardStatistics(userId);
+  return keys;
+}
 
+function cumulativeSeriesFromDailyTotals(
+  dateKeys: readonly string[],
+  dailyTotals: Readonly<Record<string, number>>,
+): ChartDataPoint[] {
+  let runningTotal = 0;
+  return dateKeys.map((date) => {
+    runningTotal += dailyTotals[date] ?? 0;
+    return { date, count: runningTotal };
+  });
+}
+
+function cumulativeSeriesFromEvents<T>(params: {
+  dateKeys: readonly string[];
+  events: readonly T[];
+  getDate: (event: T) => Date;
+  getAmount: (event: T) => number;
+}): ChartDataPoint[] {
+  const dailyTotals: Record<string, number> = {};
+  for (const key of params.dateKeys) {
+    dailyTotals[key] = 0;
+  }
+
+  for (const event of params.events) {
+    const key = formatDateKey(params.getDate(event));
+    if (Object.prototype.hasOwnProperty.call(dailyTotals, key)) {
+      dailyTotals[key] += params.getAmount(event);
+    }
+  }
+
+  return cumulativeSeriesFromDailyTotals(params.dateKeys, dailyTotals);
+}
+
+function serializeUserSettings(
+  settings: Awaited<ReturnType<typeof getUserSettingsFromEmail>>,
+): SerializedUserSettings {
   return {
-    props: {
-      userSettings: JSON.parse(JSON.stringify(userSettings)),
-      stats: statistics,
-      cardChartData: cardChartData,
-      writingChartData: writingChartData,
+    id: settings.id,
+    playbackSpeed: settings.playbackSpeed,
+    cardsPerDayMax: settings.cardsPerDayMax,
+    playbackPercentage: settings.playbackPercentage,
+    dailyWritingGoal: settings.dailyWritingGoal ?? null,
+    writingFirst: settings.writingFirst ?? null,
+    performCorrectiveReviews: settings.performCorrectiveReviews ?? null,
+    updatedAt: settings.updatedAt.toISOString(),
+    user: {
+      name: settings.user?.name ?? null,
+      email: settings.user?.email ?? null,
+      image: settings.user?.image ?? null,
+      createdAt: settings.user?.createdAt?.toISOString() ?? null,
     },
   };
 }
 
-type ChartDataPoint = { date: string; count: number };
-type Props = UnwrapPromise<
-  ReturnType<typeof getServerSideProps>
->["props"] & {
+async function countNewCardsSince(userId: string, sinceMs: number) {
+  const rows = await prismaClient.card.findMany({
+    select: { id: true },
+    where: { userId, firstReview: { gte: sinceMs } },
+    distinct: ["id"],
+  });
+  return rows.length;
+}
+
+async function getUserProgressData(params: {
+  userId: string;
+  cardsPerDayMax: number;
+}): Promise<{
+  quickStats: QuickStat[];
   cardChartData: ChartDataPoint[];
   writingChartData: ChartDataPoint[];
+}> {
+  const now = new Date();
+  const yesterdayMs = now.getTime() - ONE_DAY;
+  const oneWeekAgoMs = now.getTime() - ONE_WEEK;
+  const tomorrowMs = now.getTime() + ONE_DAY;
+
+  const chartStart = startOfDay(addMonths(now, -3));
+  const chartEnd = now;
+  const dateKeys = dateKeysInclusive(chartStart, chartEnd);
+
+  const baseCardWhere = { userId: params.userId, flagged: { not: true } };
+
+  const [
+    lessonMeta,
+    cardsDueNext24Hours,
+    uniqueCardsLast24Hours,
+    uniqueCardsLastWeek,
+    newCardsLast24Hours,
+    newCardsLastWeek,
+    globalUsers,
+    learnedCards,
+    writingSubmissions,
+  ] = await Promise.all([
+    getLessonMeta(params.userId),
+    prismaClient.card.count({
+      where: {
+        ...baseCardWhere,
+        nextReview: { lt: tomorrowMs },
+        firstReview: { gt: 0 },
+      },
+    }),
+    prismaClient.card.count({
+      where: { ...baseCardWhere, lastReview: { gte: yesterdayMs } },
+    }),
+    prismaClient.card.count({
+      where: { ...baseCardWhere, lastReview: { gte: oneWeekAgoMs } },
+    }),
+    countNewCardsSince(params.userId, yesterdayMs),
+    countNewCardsSince(params.userId, oneWeekAgoMs),
+    prismaClient.user.count(),
+    prismaClient.card.findMany({
+      where: {
+        userId: params.userId,
+        firstReview: { gte: chartStart.getTime() },
+      },
+      select: { firstReview: true },
+    }),
+    prismaClient.writingSubmission.findMany({
+      where: { userId: params.userId, createdAt: { gte: chartStart } },
+      select: { createdAt: true, correctionCharacterCount: true },
+      orderBy: { createdAt: "asc" },
+    }),
+  ]);
+
+  const weeklyTarget = params.cardsPerDayMax * 7;
+  const learnedWithFirstReview = learnedCards.filter(
+    (card): card is { firstReview: number } =>
+      typeof card.firstReview === "number",
+  );
+  const cardChartData = cumulativeSeriesFromEvents({
+    dateKeys,
+    events: learnedWithFirstReview,
+    getDate: (card) => new Date(card.firstReview),
+    getAmount: () => 1,
+  });
+  const writingChartData = cumulativeSeriesFromEvents({
+    dateKeys,
+    events: writingSubmissions,
+    getDate: (submission) => submission.createdAt,
+    getAmount: (submission) => submission.correctionCharacterCount,
+  });
+
+  const quickStats: QuickStat[] = [
+    { label: "Total cards", value: lessonMeta.totalCards },
+    { label: "New cards in deck", value: lessonMeta.newCards },
+    { label: "Cards due now", value: lessonMeta.quizzesDue },
+    { label: "Cards due next 24 hours", value: cardsDueNext24Hours },
+    {
+      label: "New cards studied last 24 hours",
+      value: newCardsLast24Hours,
+    },
+    {
+      label: "New cards studied this week",
+      value: `${newCardsLastWeek} / ${weeklyTarget}`,
+    },
+    {
+      label: "Cards studied last 24 hours",
+      value: uniqueCardsLast24Hours,
+    },
+    { label: "Cards studied this week", value: uniqueCardsLastWeek },
+    { label: "Active Koala users", value: globalUsers },
+  ];
+
+  return { quickStats, cardChartData, writingChartData };
+}
+
+export const getServerSideProps: GetServerSideProps<Props> = async (
+  context,
+) => {
+  const session = await getSession({ req: context.req });
+  const email = session?.user?.email;
+  if (!email) {
+    return { redirect: { destination: "/", permanent: false } };
+  }
+
+  const userSettings = await getUserSettingsFromEmail(email);
+  const { quickStats, cardChartData, writingChartData } =
+    await getUserProgressData({
+      userId: userSettings.userId,
+      cardsPerDayMax: userSettings.cardsPerDayMax,
+    });
+
+  return {
+    props: {
+      userSettings: serializeUserSettings(userSettings),
+      quickStats,
+      cardChartData,
+      writingChartData,
+    },
+  };
 };
 
+function firstChar(value: string | null | undefined) {
+  if (!value) {
+    return undefined;
+  }
+  return value.trim()[0];
+}
+
+function parseFiniteNumber(value: number | string): number | null {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return null;
+  }
+  return parsed;
+}
+
+function ChartTooltip(props: {
+  label: string | number | undefined;
+  items: { name: string; value: number | string; color: string }[];
+}) {
+  if (props.items.length === 0) {
+    return null;
+  }
+
+  return (
+    <Paper px="md" py="sm" withBorder shadow="md" radius="md">
+      <Text fw={500} mb={5}>
+        {props.label}
+      </Text>
+      {props.items.map((item) => (
+        <Text key={item.name} c={item.color} fz="sm">
+          {item.name}: {item.value}
+        </Text>
+      ))}
+    </Paper>
+  );
+}
+
+function toChartTooltipItems(payload: unknown) {
+  if (!Array.isArray(payload)) {
+    return [];
+  }
+
+  const items: { name: string; value: number | string; color: string }[] =
+    [];
+
+  const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === "object" && value !== null;
+
+  for (const candidate of payload) {
+    if (!isRecord(candidate)) {
+      continue;
+    }
+
+    const name = candidate.name;
+    const value = candidate.value;
+    const color = candidate.color;
+
+    if (
+      typeof name === "string" &&
+      (typeof value === "number" || typeof value === "string") &&
+      typeof color === "string"
+    ) {
+      items.push({ name, value, color });
+    }
+  }
+
+  return items;
+}
+
+function ProgressChartCard(props: {
+  title: string;
+  data: ChartDataPoint[];
+  seriesLabel: string;
+  yAxisLabel: string;
+}) {
+  return (
+    <Grid.Col span={{ base: 12, md: 6 }}>
+      <Title order={4} mb="xs">
+        {props.title}
+      </Title>
+      <Card withBorder shadow="xs" p="md" radius="md">
+        <AreaChart
+          h={300}
+          data={props.data}
+          dataKey="date"
+          series={[
+            { name: "count", color: "blue", label: props.seriesLabel },
+          ]}
+          curveType="natural"
+          yAxisLabel={props.yAxisLabel}
+          xAxisLabel="Date"
+          tooltipProps={{
+            content: ({ label, payload }) => (
+              <ChartTooltip
+                label={label}
+                items={toChartTooltipItems(payload)}
+              />
+            ),
+          }}
+          gridProps={{ strokeDasharray: "3 3" }}
+        />
+      </Card>
+    </Grid.Col>
+  );
+}
+
+function QuickStatsCard(props: { stats: QuickStat[] }) {
+  return (
+    <Card withBorder shadow="xs" p="md" radius="md">
+      <Title order={5} mb="xs">
+        Quick Stats
+      </Title>
+      <Stack gap={6}>
+        {props.stats.map((stat) => (
+          <Group
+            key={stat.label}
+            gap="xs"
+            justify="space-between"
+            wrap="nowrap"
+          >
+            <Text c="dimmed" size="sm">
+              {stat.label}
+            </Text>
+            <Text fw={600}>{stat.value}</Text>
+          </Group>
+        ))}
+      </Stack>
+    </Card>
+  );
+}
+
+function PreferencesForm(props: {
+  settings: SerializedUserSettings;
+  onChange: (next: SerializedUserSettings) => void;
+  onSave: () => void;
+  isSaving: boolean;
+}) {
+  const applyNumber = (
+    field:
+      | "playbackSpeed"
+      | "cardsPerDayMax"
+      | "dailyWritingGoal"
+      | "playbackPercentage",
+    value: number | string,
+  ) => {
+    const parsed = parseFiniteNumber(value);
+    if (parsed === null) {
+      return;
+    }
+
+    if (field === "playbackSpeed") {
+      props.onChange({ ...props.settings, playbackSpeed: parsed });
+      return;
+    }
+    if (field === "cardsPerDayMax") {
+      props.onChange({ ...props.settings, cardsPerDayMax: parsed });
+      return;
+    }
+    if (field === "dailyWritingGoal") {
+      props.onChange({ ...props.settings, dailyWritingGoal: parsed });
+      return;
+    }
+    props.onChange({ ...props.settings, playbackPercentage: parsed });
+  };
+
+  const applyBool = (
+    field: "writingFirst" | "performCorrectiveReviews",
+    checked: boolean,
+  ) => {
+    if (field === "writingFirst") {
+      props.onChange({ ...props.settings, writingFirst: checked });
+      return;
+    }
+    props.onChange({
+      ...props.settings,
+      performCorrectiveReviews: checked,
+    });
+  };
+
+  return (
+    <Paper withBorder p="md" radius="md">
+      <Title order={4} mb="sm">
+        Preferences
+      </Title>
+
+      <Stack gap="md">
+        <Stack gap={6}>
+          <Text size="sm" fw={600}>
+            Audio playback speed
+          </Text>
+          <Slider
+            min={0.5}
+            max={2}
+            step={0.05}
+            value={props.settings.playbackSpeed}
+            onChange={(val) => applyNumber("playbackSpeed", val)}
+            marks={[
+              { value: 0.5, label: "0.5x" },
+              { value: 1, label: "1x" },
+              { value: 1.5, label: "1.5x" },
+              { value: 2, label: "2x" },
+            ]}
+          />
+        </Stack>
+
+        <NumberInput
+          label="New cards per day target"
+          description="Weekly target is 7× this value; daily new adjusts to meet it."
+          value={props.settings.cardsPerDayMax}
+          onChange={(value) => applyNumber("cardsPerDayMax", value)}
+          min={1}
+          max={50}
+          required
+        />
+
+        <NumberInput
+          label="Daily writing goal (characters)"
+          description="Set your daily writing practice target."
+          value={props.settings.dailyWritingGoal ?? 300}
+          onChange={(value) => applyNumber("dailyWritingGoal", value)}
+          min={1}
+          step={50}
+          required
+        />
+
+        <SegmentedControl
+          fullWidth
+          value={String(props.settings.playbackPercentage)}
+          onChange={(value) => applyNumber("playbackPercentage", value)}
+          data={[
+            { label: "Always (100%)", value: "1" },
+            { label: "Usually (66%)", value: "0.66" },
+            { label: "Sometimes (33%)", value: "0.33" },
+            { label: "Never (0%)", value: "0" },
+          ]}
+        />
+        <Text size="xs" c="dimmed">
+          Controls how often your recording is replayed right after you
+          speak, to reinforce pronunciation.
+        </Text>
+
+        <Switch
+          checked={props.settings.writingFirst ?? false}
+          onChange={(event) =>
+            applyBool("writingFirst", event.currentTarget.checked)
+          }
+          label="Require daily writing before card review"
+          description="Prioritize writing practice by requiring it before card review"
+          size="md"
+          color="blue"
+        />
+
+        <Switch
+          checked={props.settings.performCorrectiveReviews ?? true}
+          onChange={(event) =>
+            applyBool(
+              "performCorrectiveReviews",
+              event.currentTarget.checked,
+            )
+          }
+          label="Perform corrective reviews"
+          description="After a review session, optionally run a short corrective speaking drill"
+          size="md"
+          color="blue"
+        />
+
+        <Group justify="flex-end" mt="sm">
+          <Button
+            type="button"
+            loading={props.isSaving}
+            onClick={props.onSave}
+          >
+            Save Settings
+          </Button>
+        </Group>
+      </Stack>
+    </Paper>
+  );
+}
+
+function UserHeader(props: { user: SerializedUserSettings["user"] }) {
+  const initials =
+    firstChar(props.user.name) ?? firstChar(props.user.email) ?? "U";
+  const joinedLabel = props.user.createdAt
+    ? `Joined ${formatDateKey(new Date(props.user.createdAt))}`
+    : undefined;
+
+  const handleLogout = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    void signOut().finally(() => location.assign("/"));
+  };
+
+  return (
+    <Group justify="space-between" align="center">
+      <Group>
+        <Avatar src={props.user.image ?? undefined} radius="xl" size={56}>
+          {initials}
+        </Avatar>
+        <Stack gap={2}>
+          <Title order={2}>Account & Settings</Title>
+          <Group gap="xs">
+            {props.user.name ? (
+              <Badge variant="light">{props.user.name}</Badge>
+            ) : null}
+            {props.user.email ? (
+              <Badge color="gray" variant="outline">
+                {props.user.email}
+              </Badge>
+            ) : null}
+            {joinedLabel ? (
+              <Badge color="pink" variant="light">
+                {joinedLabel}
+              </Badge>
+            ) : null}
+          </Group>
+        </Stack>
+      </Group>
+      <Group>
+        <Button component={Link} href="/user/export" variant="light">
+          Import / Export Decks
+        </Button>
+        <Button variant="outline" onClick={handleLogout}>
+          Log Out
+        </Button>
+      </Group>
+    </Group>
+  );
+}
+
 export default function UserSettingsPage(props: Props) {
-  const { userSettings, stats, cardChartData, writingChartData } = props;
-  const [settings, setSettings] = useState(userSettings);
   const editUserSettings = trpc.editUserSettings.useMutation();
+  const [settings, setSettings] = useState(props.userSettings);
 
-  const handleChange = (value: number | string, name: string) => {
-    setSettings({ ...settings, [name]: parseFloat(String(value)) });
-  };
-
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    editUserSettings
-      .mutateAsync({
-        ...settings,
+  const saveSettings = async () => {
+    try {
+      await editUserSettings.mutateAsync({
+        id: settings.id,
+        playbackSpeed: settings.playbackSpeed,
+        cardsPerDayMax: settings.cardsPerDayMax,
+        playbackPercentage: settings.playbackPercentage,
+        dailyWritingGoal: settings.dailyWritingGoal ?? undefined,
+        writingFirst: settings.writingFirst ?? undefined,
+        performCorrectiveReviews:
+          settings.performCorrectiveReviews ?? undefined,
         updatedAt: new Date(settings.updatedAt),
-      })
-      .then(
-        () => {
-          location.reload();
-        },
-        (error: unknown) => {
-          notifications.show({
-            title: "Error",
-            message: `Error: ${JSON.stringify(error).slice(0, 100)}`,
-            color: "red",
-          });
-        },
-      );
+      });
+      location.reload();
+    } catch (error: unknown) {
+      notifications.show({
+        title: "Error",
+        message: `Error: ${JSON.stringify(error).slice(0, 100)}`,
+        color: "red",
+      });
+    }
   };
-
-  const statLabels: [keyof typeof stats, string][] = [
-    ["totalCards", "Total cards"],
-    ["newCards", "New cards in deck"],
-    ["quizzesDue", "Cards due now"],
-    ["cardsDueNext24Hours", "Cards due next 24 hours"],
-    ["newCardsLast24Hours", "New cards studied last 24 hours"],
-    ["newCardsLastWeek", "New cards studied this week"],
-    ["uniqueCardsLast24Hours", "Cards studied last 24 hours"],
-    ["uniqueCardsLastWeek", "Cards studied this week"],
-    ["globalUsers", "Active Koala users"],
-  ];
 
   return (
     <Container size="lg" mt="xl">
       <Stack gap="lg">
-        <Group justify="space-between" align="center">
-          <Group>
-            <Avatar
-              src={settings.user?.image || undefined}
-              radius="xl"
-              size={56}
-            >
-              {settings.user?.name?.[0] ||
-                settings.user?.email?.[0] ||
-                "U"}
-            </Avatar>
-            <Stack gap={2}>
-              <Title order={2}>Account & Settings</Title>
-              <Group gap="xs">
-                {settings.user?.name && (
-                  <Badge variant="light">{settings.user.name}</Badge>
-                )}
-                {settings.user?.email && (
-                  <Badge color="gray" variant="outline">
-                    {settings.user.email}
-                  </Badge>
-                )}
-                {settings.user?.createdAt && (
-                  <Badge color="pink" variant="light">
-                    Joined {formatDate(new Date(settings.user.createdAt))}
-                  </Badge>
-                )}
-              </Group>
-            </Stack>
-          </Group>
-          <Group>
-            <Button component={Link} href="/user/export" variant="light">
-              Import / Export Decks
-            </Button>
-            <Button
-              variant="outline"
-              onClick={(event) => {
-                event.preventDefault();
-                signOut();
-                location.assign("/");
-              }}
-            >
-              Log Out
-            </Button>
-          </Group>
-        </Group>
+        <UserHeader user={settings.user} />
 
         <Grid gutter="lg">
           <Grid.Col span={{ base: 12, md: 7 }}>
-            <Paper withBorder p="md" radius="md">
-              <Title order={4} mb="sm">
-                Preferences
-              </Title>
-              <form onSubmit={handleSubmit}>
-                <Stack gap="md">
-                  <Stack gap={6}>
-                    <Text size="sm" fw={600}>
-                      Audio playback speed
-                    </Text>
-                    <Slider
-                      min={0.5}
-                      max={2}
-                      step={0.05}
-                      value={settings.playbackSpeed}
-                      onChange={(val) =>
-                        handleChange(val, "playbackSpeed")
-                      }
-                      marks={[
-                        { value: 0.5, label: "0.5x" },
-                        { value: 1, label: "1x" },
-                        { value: 1.5, label: "1.5x" },
-                        { value: 2, label: "2x" },
-                      ]}
-                    />
-                  </Stack>
-
-                  <NumberInput
-                    label="New cards per day target"
-                    description="Weekly target is 7× this value; daily new adjusts to meet it."
-                    id="cardsPerDayMax"
-                    name="cardsPerDayMax"
-                    value={settings.cardsPerDayMax}
-                    onChange={(value) =>
-                      handleChange(value, "cardsPerDayMax")
-                    }
-                    min={1}
-                    max={50}
-                    required
-                  />
-
-                  <NumberInput
-                    label="Daily writing goal (characters)"
-                    description="Set your daily writing practice target."
-                    id="dailyWritingGoal"
-                    name="dailyWritingGoal"
-                    value={settings.dailyWritingGoal || 300}
-                    onChange={(value) =>
-                      handleChange(value, "dailyWritingGoal")
-                    }
-                    min={0}
-                    step={50}
-                    required
-                  />
-
-                  <SegmentedControl
-                    fullWidth
-                    value={String(settings.playbackPercentage)}
-                    onChange={(value) =>
-                      handleChange(value, "playbackPercentage")
-                    }
-                    data={[
-                      { label: "Always (100%)", value: "1" },
-                      { label: "Usually (66%)", value: "0.66" },
-                      { label: "Sometimes (33%)", value: "0.33" },
-                      { label: "Never (0%)", value: "0" },
-                    ]}
-                  />
-                  <Text size="xs" c="dimmed">
-                    Controls how often your recording is replayed right
-                    after you speak, to reinforce pronunciation.
-                  </Text>
-
-                  <Switch
-                    checked={settings.writingFirst || false}
-                    onChange={(event) =>
-                      setSettings({
-                        ...settings,
-                        writingFirst: event.currentTarget.checked,
-                      })
-                    }
-                    label="Require daily writing before card review"
-                    description="Prioritize writing practice by requiring it before card review"
-                    size="md"
-                    color="blue"
-                  />
-
-                  <Switch
-                    checked={settings.performCorrectiveReviews ?? true}
-                    onChange={(event) =>
-                      setSettings({
-                        ...settings,
-                        performCorrectiveReviews:
-                          event.currentTarget.checked,
-                      })
-                    }
-                    label="Perform corrective reviews"
-                    description="After a review session, optionally run a short corrective speaking drill"
-                    size="md"
-                    color="blue"
-                  />
-
-                  <Group justify="flex-end" mt="sm">
-                    <Button
-                      type="submit"
-                      loading={editUserSettings.isLoading}
-                    >
-                      Save Settings
-                    </Button>
-                  </Group>
-                </Stack>
-              </form>
-            </Paper>
+            <PreferencesForm
+              settings={settings}
+              onChange={setSettings}
+              onSave={saveSettings}
+              isSaving={editUserSettings.isLoading}
+            />
           </Grid.Col>
-
           <Grid.Col span={{ base: 12, md: 5 }}>
             <Stack gap="md">
-              <Card withBorder shadow="xs" p="md" radius="md">
-                <Title order={5} mb="xs">
-                  Quick Stats
-                </Title>
-                <Stack gap={6}>
-                  {statLabels.map(
-                    ([key, label]) =>
-                      stats[key] !== undefined && (
-                        <Group key={key} gap="xs" justify="space-between">
-                          <Text c="dimmed" size="sm">
-                            {label}
-                          </Text>
-                          <Text fw={600}>{stats[key]}</Text>
-                        </Group>
-                      ),
-                  )}
-                </Stack>
-              </Card>
+              <QuickStatsCard stats={props.quickStats} />
             </Stack>
           </Grid.Col>
         </Grid>
@@ -478,83 +665,18 @@ export default function UserSettingsPage(props: Props) {
         <Divider label="Progress" labelPosition="center" my="sm" />
 
         <Grid gutter="lg">
-          <Grid.Col span={{ base: 12, md: 6 }}>
-            <Title order={4} mb="xs">
-              Total Cards Learned (90 Days)
-            </Title>
-            <Card withBorder shadow="xs" p="md" radius="md">
-              <AreaChart
-                h={300}
-                data={cardChartData}
-                dataKey="date"
-                series={[
-                  { name: "count", color: "blue", label: "Total Learned" },
-                ]}
-                curveType="natural"
-                yAxisLabel="Cards Learned"
-                xAxisLabel="Date"
-                tooltipProps={{
-                  content: ({ label, payload }) => (
-                    <Paper
-                      px="md"
-                      py="sm"
-                      withBorder
-                      shadow="md"
-                      radius="md"
-                    >
-                      <Text fw={500} mb={5}>
-                        {label}
-                      </Text>
-                      {payload?.map((item) => (
-                        <Text key={item.name} c={item.color} fz="sm">
-                          {item.name}: {item.value}
-                        </Text>
-                      ))}
-                    </Paper>
-                  ),
-                }}
-                gridProps={{ strokeDasharray: "3 3" }}
-              />
-            </Card>
-          </Grid.Col>
-
-          <Grid.Col span={{ base: 12, md: 6 }}>
-            <Title order={4} mb="xs">
-              Total Writing Progress (90 Days)
-            </Title>
-            <Card withBorder shadow="xs" p="md" radius="md">
-              <AreaChart
-                h={300}
-                data={writingChartData}
-                dataKey="date"
-                series={[{ name: "count", color: "blue", label: "Total" }]}
-                curveType="natural"
-                yAxisLabel="Characters Written"
-                xAxisLabel="Date"
-                tooltipProps={{
-                  content: ({ label, payload }) => (
-                    <Paper
-                      px="md"
-                      py="sm"
-                      withBorder
-                      shadow="md"
-                      radius="md"
-                    >
-                      <Text fw={500} mb={5}>
-                        {label}
-                      </Text>
-                      {payload?.map((item) => (
-                        <Text key={item.name} c={item.color} fz="sm">
-                          {item.name}: {item.value}
-                        </Text>
-                      ))}
-                    </Paper>
-                  ),
-                }}
-                gridProps={{ strokeDasharray: "3 3" }}
-              />
-            </Card>
-          </Grid.Col>
+          <ProgressChartCard
+            title="Total Cards Learned (90 Days)"
+            data={props.cardChartData}
+            seriesLabel="Total Learned"
+            yAxisLabel="Cards Learned"
+          />
+          <ProgressChartCard
+            title="Total Writing Progress (90 Days)"
+            data={props.writingChartData}
+            seriesLabel="Total"
+            yAxisLabel="Characters Written"
+          />
         </Grid>
       </Stack>
     </Container>
