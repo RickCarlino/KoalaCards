@@ -240,28 +240,30 @@ function CardMetadata(props: {
   const deckName = props.deckName || "—";
   const language = props.langCode.toUpperCase();
 
-  const MetaRow = (row: { label: string; value: string }) => (
-    <Group gap="xs">
-      <Text c="dimmed" size="sm">
-        {row.label}
-      </Text>
-      <Text size="sm" fw={500}>
-        {row.value}
-      </Text>
-    </Group>
-  );
-
   return (
     <Paper withBorder p="lg" radius="md" mt="md">
       <Title order={5} mb="sm">
         Metadata
       </Title>
       <Stack gap={6}>
-        <MetaRow label="Deck:" value={deckName} />
-        <MetaRow label="Language:" value={language} />
-        <MetaRow label="Gender:" value={props.gender} />
+        <MetadataRow label="Deck:" value={deckName} />
+        <MetadataRow label="Language:" value={language} />
+        <MetadataRow label="Gender:" value={props.gender} />
       </Stack>
     </Paper>
+  );
+}
+
+function MetadataRow(props: { label: string; value: string }) {
+  return (
+    <Group gap="xs">
+      <Text c="dimmed" size="sm">
+        {props.label}
+      </Text>
+      <Text size="sm" fw={500}>
+        {props.value}
+      </Text>
+    </Group>
   );
 }
 

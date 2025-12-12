@@ -233,9 +233,9 @@ function SubmissionCard(props: {
           expanded={props.expanded}
           onToggle={props.onToggle}
         />
-        {props.expanded ? (
+        {props.expanded && (
           <SubmissionDetails submission={props.submission} />
-        ) : null}
+        )}
       </Stack>
     </Paper>
   );
