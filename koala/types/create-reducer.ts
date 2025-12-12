@@ -43,6 +43,14 @@ export function reducer(state: State, action: Action): State {
       return { ...state, deckName: action.deckName };
     case "SET_DECK_LANG":
       return { ...state, deckLang: action.deckLang };
+    case "SET_SELECTED_DECK":
+      return {
+        ...state,
+        deckSelection: "existing",
+        deckId: action.deck.id,
+        deckLang: action.deck.langCode,
+        deckName: action.deck.name,
+      };
     default:
       return state;
   }

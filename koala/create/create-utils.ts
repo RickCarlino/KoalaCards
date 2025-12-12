@@ -16,18 +16,23 @@ type BulkCreateInput =
     };
 
 export function parseNumericId(value: unknown): number | undefined {
-  if (typeof value !== "string") {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (typeof raw !== "string") {
     return undefined;
   }
-  const parsed = Number(value);
+  if (!raw.trim()) {
+    return undefined;
+  }
+  const parsed = Number(raw);
   return Number.isNaN(parsed) ? undefined : parsed;
 }
 
 export function parseWordsQuery(value: unknown): string[] {
-  if (typeof value !== "string") {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (typeof raw !== "string") {
     return [];
   }
-  const decoded = decodeURIComponent(value);
+  const decoded = decodeURIComponent(raw);
   return decoded
     .split(",")
     .map((word) => word.trim())

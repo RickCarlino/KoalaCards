@@ -19,10 +19,13 @@ import { backfillDecks } from "@/koala/decks/backfill-decks";
 import { getLangName } from "@/koala/get-lang-name";
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { prismaClient } from "@/koala/prisma-client";
-import { DEFAULT_LANG_CODE } from "@/koala/shared-types";
+import { DEFAULT_LANG_CODE, type Gender } from "@/koala/shared-types";
 import { trpc } from "@/koala/trpc-config";
 import { INITIAL_STATE, reducer } from "@/koala/types/create-reducer";
-import type { LanguageInputPageProps } from "@/koala/types/create-types";
+import type {
+  DeckSummary,
+  LanguageInputPageProps,
+} from "@/koala/types/create-types";
 import {
   Container,
   Grid,
@@ -34,6 +37,8 @@ import {
 import type { GetServerSideProps } from "next";
 import { useRouter } from "next/router";
 import React from "react";
+
+const DEFAULT_CARD_GENDER: Gender = "N";
 
 export const getServerSideProps: GetServerSideProps<
   LanguageInputPageProps
@@ -72,8 +77,6 @@ export default function CreatePage(props: LanguageInputPageProps) {
   const { decks } = props;
   const router = useRouter();
 
-  type DeckSummary = LanguageInputPageProps["decks"][number];
-
   const firstDeck = decks[0];
   const [loading, setLoading] = React.useState(false);
   const [separator, setSeparator] = React.useState(",");
@@ -88,10 +91,7 @@ export default function CreatePage(props: LanguageInputPageProps) {
   });
 
   const applySelectedDeck = (deck: DeckSummary) => {
-    dispatch({ type: "SET_DECK_SELECTION", deckSelection: "existing" });
-    dispatch({ type: "SET_DECK_ID", deckId: deck.id });
-    dispatch({ type: "SET_DECK_LANG", deckLang: deck.langCode });
-    dispatch({ type: "SET_DECK_NAME", deckName: deck.name });
+    dispatch({ type: "SET_SELECTED_DECK", deck });
   };
 
   const getDeckFromQuery = () => {
@@ -181,7 +181,7 @@ export default function CreatePage(props: LanguageInputPageProps) {
       });
       const processed = result.map((row) => ({
         ...row,
-        gender: "N" as const,
+        gender: DEFAULT_CARD_GENDER,
       }));
       dispatch({ type: "SET_PROCESSED_CARDS", processedCards: processed });
       notifySuccess("Processed", `Found ${processed.length} definitions`);
@@ -195,7 +195,7 @@ export default function CreatePage(props: LanguageInputPageProps) {
   const handleProcessCsv = () => {
     const processed = parsedRows
       .filter((row) => row.term && row.definition)
-      .map((row) => ({ ...row, gender: "N" as const }));
+      .map((row) => ({ ...row, gender: DEFAULT_CARD_GENDER }));
 
     if (!processed.length) {
       notifyValidationError(
@@ -235,19 +235,18 @@ export default function CreatePage(props: LanguageInputPageProps) {
 
   const onExistingDeckChange = (val: string | null) => {
     const deckId = parseNumericId(val);
-    dispatch({ type: "SET_DECK_ID", deckId });
-
     if (deckId === undefined) {
+      dispatch({ type: "SET_DECK_ID", deckId });
       return;
     }
 
     const selectedDeck = decks.find((deck) => deck.id === deckId);
     if (!selectedDeck) {
+      dispatch({ type: "SET_DECK_ID", deckId: undefined });
       return;
     }
 
-    dispatch({ type: "SET_DECK_LANG", deckLang: selectedDeck.langCode });
-    dispatch({ type: "SET_DECK_NAME", deckName: selectedDeck.name });
+    applySelectedDeck(selectedDeck);
   };
 
   const onEditCard = (

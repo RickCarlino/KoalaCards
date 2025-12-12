@@ -12,6 +12,8 @@ export interface Deck {
   langCode: LangCode;
 }
 
+export type DeckSummary = Deck;
+
 export interface State {
   deckSelection: "existing" | "new";
   deckId?: number;
@@ -31,7 +33,8 @@ export type Action =
   | { type: "SET_DECK_SELECTION"; deckSelection: "existing" | "new" }
   | { type: "SET_DECK_ID"; deckId: number | undefined }
   | { type: "SET_DECK_NAME"; deckName: string }
-  | { type: "SET_DECK_LANG"; deckLang: LangCode };
+  | { type: "SET_DECK_LANG"; deckLang: LangCode }
+  | { type: "SET_SELECTED_DECK"; deck: DeckSummary };
 
 export interface LanguageInputPageProps {
   decks: Deck[];
