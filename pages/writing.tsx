@@ -20,12 +20,73 @@ import {
   UnstyledButton,
 } from "@mantine/core";
 import { IconFilter, IconTrash } from "@tabler/icons-react";
+import type { Prisma } from "@prisma/client";
 import { GetServerSideProps } from "next";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
 
 const ITEMS_PER_PAGE = 5;
+
+function firstString(value: unknown) {
+  if (typeof value === "string") {
+    return value;
+  }
+  if (Array.isArray(value) && typeof value[0] === "string") {
+    return value[0];
+  }
+  return undefined;
+}
+
+function toPositiveNumberOrNull(value: string | undefined) {
+  if (!value) {
+    return null;
+  }
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return null;
+  }
+  return parsed > 0 ? parsed : null;
+}
+
+function toPositiveNumberOrDefault(
+  value: string | undefined,
+  fallback: number,
+) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+  return parsed > 0 ? parsed : fallback;
+}
+
+function formatDateISO(iso: string) {
+  return iso.slice(0, 10);
+}
+
+function buildWhere(params: {
+  userId: string;
+  deckId: number | null;
+  q: string;
+}): Prisma.WritingSubmissionWhereInput {
+  const where: Prisma.WritingSubmissionWhereInput = {
+    userId: params.userId,
+  };
+
+  if (params.deckId !== null) {
+    where.deckId = params.deckId;
+  }
+
+  if (params.q.trim().length > 0) {
+    where.OR = [
+      { prompt: { contains: params.q, mode: "insensitive" } },
+      { submission: { contains: params.q, mode: "insensitive" } },
+      { correction: { contains: params.q, mode: "insensitive" } },
+    ];
+  }
+
+  return where;
+}
 
 interface WritingHistory {
   submissions: {
@@ -42,10 +103,6 @@ interface WritingHistory {
   }[];
   totalPages: number;
   currentPage: number;
-  statusMessage?: {
-    type: "success" | "error";
-    message: string;
-  };
   decks: { id: number; name: string; langCode: string }[];
   q: string;
   deckId: number | null;
@@ -61,27 +118,12 @@ export const getServerSideProps: GetServerSideProps<
     };
   }
 
-  const toStr = (v: unknown) =>
-    Array.isArray(v) ? v[0] : (v as string | undefined);
-  const page = Number(toStr(ctx.query.page)) || 1;
-  const q = toStr(ctx.query.q) ?? "";
-  const deckIdRaw = toStr(ctx.query.deckId);
-  const deckId = deckIdRaw ? Number(deckIdRaw) : null;
+  const page = toPositiveNumberOrDefault(firstString(ctx.query.page), 1);
+  const q = firstString(ctx.query.q) ?? "";
+  const deckId = toPositiveNumberOrNull(firstString(ctx.query.deckId));
   const skip = (page - 1) * ITEMS_PER_PAGE;
 
-  const where = {
-    userId: dbUser.id,
-    ...(deckId ? { deckId } : {}),
-    ...(q
-      ? {
-          OR: [
-            { prompt: { contains: q, mode: "insensitive" as const } },
-            { submission: { contains: q, mode: "insensitive" as const } },
-            { correction: { contains: q, mode: "insensitive" as const } },
-          ],
-        }
-      : {}),
-  };
+  const where = buildWhere({ userId: dbUser.id, deckId, q });
   const totalCount = await prismaClient.writingSubmission.count({ where });
 
   const submissionsRaw = await prismaClient.writingSubmission.findMany({
@@ -148,28 +190,6 @@ export default function WritingHistoryPage({
     setExpandedItem(expandedItem === id ? null : id);
   };
 
-  const applyFilters = () => {
-    router.push({
-      pathname: "/writing",
-      query: {
-        page: 1,
-        ...(query ? { q: query } : {}),
-        ...(selectedDeckId ? { deckId: selectedDeckId } : {}),
-      },
-    });
-  };
-
-  const goToPage = (page: number) => {
-    router.push({
-      pathname: "/writing",
-      query: {
-        page,
-        ...(query ? { q: query } : {}),
-        ...(selectedDeckId ? { deckId: selectedDeckId } : {}),
-      },
-    });
-  };
-
   const deckOptions = useMemo(
     () =>
       [{ value: "", label: "All decks" }].concat(
@@ -181,7 +201,28 @@ export default function WritingHistoryPage({
     [decks],
   );
 
-  const formatDateISO = (iso: string) => iso.slice(0, 10);
+  const buildQuery = (page: number) => ({
+    page,
+    ...(query ? { q: query } : {}),
+    ...(selectedDeckId ? { deckId: selectedDeckId } : {}),
+  });
+
+  const pushWithFilters = (page: number) =>
+    router.push({ pathname: "/writing", query: buildQuery(page) });
+
+  const applyFilters = () => void pushWithFilters(1);
+  const goToPage = (page: number) => void pushWithFilters(page);
+
+  const confirmDelete = (id: number) => {
+    const ok = confirm("Are you sure you want to delete this submission?");
+    if (!ok) {
+      return;
+    }
+    void router.push({
+      pathname: "/writing/delete",
+      query: { id, page: currentPage },
+    });
+  };
 
   return (
     <Container size="md" py="md">
@@ -203,155 +244,208 @@ export default function WritingHistoryPage({
             data={deckOptions}
             style={{ minWidth: 220 }}
           />
-          <Group gap="sm">
-            <Button
-              leftSection={<IconFilter size={16} />}
-              variant="light"
-              onClick={applyFilters}
-            >
-              Apply
-            </Button>
-          </Group>
+          <Button
+            leftSection={<IconFilter size={16} />}
+            variant="light"
+            onClick={applyFilters}
+          >
+            Apply
+          </Button>
           <Group ml="auto">
-            {totalPages > 1 && (
-              <Pagination
-                total={totalPages}
-                value={currentPage}
-                onChange={(p) => goToPage(p)}
-              />
-            )}
+            <Pager
+              totalPages={totalPages}
+              page={currentPage}
+              onPage={goToPage}
+            />
           </Group>
         </Group>
       </Paper>
 
-      {submissions.length === 0 ? (
-        <Alert title="No submissions found" color="blue">
-          You haven't submitted any writing practice yet.{" "}
-          <Link href="/create">Add a deck</Link> and{" "}
-          <Link href="/review">do some writing exercises!</Link>
-        </Alert>
-      ) : (
-        <Stack gap="xl">
-          {submissions.map((submission) => (
-            <Paper key={submission.id} p="md" withBorder>
-              <Stack gap="md">
-                <Group justify="space-between" wrap="nowrap">
-                  <Stack gap={5}>
-                    <Text fw={700} size="lg">
-                      {formatDateISO(submission.createdAt)}
-                    </Text>
-                    <Group gap="xs">
-                      <Badge color="pink" variant="light">
-                        {submission.deck.name}
-                      </Badge>
-                      <Badge variant="outline">
-                        {submission.deck.langCode.toUpperCase()}
-                      </Badge>
-                    </Group>
-                  </Stack>
-                  <Tooltip label="Delete submission">
-                    <ActionIcon
-                      color="red"
-                      variant="subtle"
-                      onClick={() => {
-                        if (
-                          confirm(
-                            "Are you sure you want to delete this submission?",
-                          )
-                        ) {
-                          void router.push({
-                            pathname: "/writing/delete",
-                            query: {
-                              id: submission.id,
-                              page: currentPage,
-                            },
-                          });
-                        }
-                      }}
-                    >
-                      <IconTrash size={18} />
-                    </ActionIcon>
-                  </Tooltip>
-                </Group>
+      <WritingBody
+        submissions={submissions}
+        expandedItem={expandedItem}
+        onToggle={toggleItem}
+        onDelete={confirmDelete}
+      />
 
-                <Stack gap="xs">
-                  <Text fw={600} size="sm">
-                    Prompt:
-                  </Text>
-                  <Text size="sm" mb="xs">
-                    {submission.prompt}
-                  </Text>
-                </Stack>
-
-                <UnstyledButton
-                  onClick={() => toggleItem(submission.id)}
-                  styles={(theme) => ({
-                    root: {
-                      display: "block",
-                      width: "100%",
-                      textAlign: "center",
-                      padding: theme.spacing.xs,
-                      borderRadius: theme.radius.sm,
-                      color: theme.colors.blue[6],
-                      "&:hover": {
-                        backgroundColor: theme.colors.gray[0],
-                      },
-                    },
-                  })}
-                >
-                  {expandedItem === submission.id
-                    ? "Hide Details"
-                    : "Show Details"}
-                </UnstyledButton>
-
-                {expandedItem === submission.id && (
-                  <Stack gap="md" mt="xs">
-                    <Divider />
-
-                    <Stack gap="xs">
-                      <Text fw={600} size="sm">
-                        Your Submission:
-                      </Text>
-                      <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
-                        {submission.submission}
-                      </Text>
-                    </Stack>
-
-                    <Stack gap="xs">
-                      <Text fw={600} size="sm">
-                        Corrected Text:
-                      </Text>
-                      <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
-                        {submission.correction}
-                      </Text>
-                    </Stack>
-
-                    <Stack gap="xs">
-                      <Text fw={600} size="sm">
-                        Changes:
-                      </Text>
-                      <VisualDiff
-                        actual={submission.submission}
-                        expected={submission.correction}
-                      />
-                    </Stack>
-                  </Stack>
-                )}
-              </Stack>
-            </Paper>
-          ))}
-
-          {totalPages > 1 && (
-            <Group justify="center" mt="xl">
-              <Pagination
-                total={totalPages}
-                value={currentPage}
-                onChange={(p) => goToPage(p)}
-              />
-            </Group>
-          )}
-        </Stack>
-      )}
+      <BottomPager
+        totalPages={totalPages}
+        page={currentPage}
+        onPage={goToPage}
+      />
     </Container>
+  );
+}
+
+function Pager(props: {
+  totalPages: number;
+  page: number;
+  onPage: (page: number) => void;
+}) {
+  if (props.totalPages <= 1) {
+    return null;
+  }
+  return (
+    <Pagination
+      total={props.totalPages}
+      value={props.page}
+      onChange={props.onPage}
+    />
+  );
+}
+
+function BottomPager(props: {
+  totalPages: number;
+  page: number;
+  onPage: (page: number) => void;
+}) {
+  if (props.totalPages <= 1) {
+    return null;
+  }
+  return (
+    <Group justify="center" mt="xl">
+      <Pager {...props} />
+    </Group>
+  );
+}
+
+function WritingBody(props: {
+  submissions: WritingHistory["submissions"];
+  expandedItem: number | null;
+  onToggle: (id: number) => void;
+  onDelete: (id: number) => void;
+}) {
+  if (props.submissions.length === 0) {
+    return (
+      <Alert title="No submissions found" color="blue">
+        You haven't submitted any writing practice yet.{" "}
+        <Link href="/create">Add a deck</Link> and{" "}
+        <Link href="/review">do some writing exercises!</Link>
+      </Alert>
+    );
+  }
+
+  return (
+    <Stack gap="xl">
+      {props.submissions.map((submission) => (
+        <SubmissionCard
+          key={submission.id}
+          submission={submission}
+          expanded={props.expandedItem === submission.id}
+          onToggle={() => props.onToggle(submission.id)}
+          onDelete={() => props.onDelete(submission.id)}
+        />
+      ))}
+    </Stack>
+  );
+}
+
+function SubmissionCard(props: {
+  submission: WritingHistory["submissions"][number];
+  expanded: boolean;
+  onToggle: () => void;
+  onDelete: () => void;
+}) {
+  const detailsLabel = props.expanded ? "Hide Details" : "Show Details";
+
+  return (
+    <Paper p="md" withBorder>
+      <Stack gap="md">
+        <Group justify="space-between" wrap="nowrap">
+          <Stack gap={5}>
+            <Text fw={700} size="lg">
+              {formatDateISO(props.submission.createdAt)}
+            </Text>
+            <Group gap="xs">
+              <Badge color="pink" variant="light">
+                {props.submission.deck.name}
+              </Badge>
+              <Badge variant="outline">
+                {props.submission.deck.langCode.toUpperCase()}
+              </Badge>
+            </Group>
+          </Stack>
+          <Tooltip label="Delete submission">
+            <ActionIcon
+              color="red"
+              variant="subtle"
+              onClick={props.onDelete}
+            >
+              <IconTrash size={18} />
+            </ActionIcon>
+          </Tooltip>
+        </Group>
+
+        <Stack gap="xs">
+          <Text fw={600} size="sm">
+            Prompt:
+          </Text>
+          <Text size="sm" mb="xs">
+            {props.submission.prompt}
+          </Text>
+        </Stack>
+
+        <UnstyledButton
+          onClick={props.onToggle}
+          styles={(theme) => ({
+            root: {
+              display: "block",
+              width: "100%",
+              textAlign: "center",
+              padding: theme.spacing.xs,
+              borderRadius: theme.radius.sm,
+              color: theme.colors.blue[6],
+              "&:hover": {
+                backgroundColor: theme.colors.gray[0],
+              },
+            },
+          })}
+        >
+          {detailsLabel}
+        </UnstyledButton>
+
+        {props.expanded ? (
+          <SubmissionDetails submission={props.submission} />
+        ) : null}
+      </Stack>
+    </Paper>
+  );
+}
+
+function SubmissionDetails(props: {
+  submission: WritingHistory["submissions"][number];
+}) {
+  return (
+    <Stack gap="md" mt="xs">
+      <Divider />
+
+      <Stack gap="xs">
+        <Text fw={600} size="sm">
+          Your Submission:
+        </Text>
+        <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
+          {props.submission.submission}
+        </Text>
+      </Stack>
+
+      <Stack gap="xs">
+        <Text fw={600} size="sm">
+          Corrected Text:
+        </Text>
+        <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
+          {props.submission.correction}
+        </Text>
+      </Stack>
+
+      <Stack gap="xs">
+        <Text fw={600} size="sm">
+          Changes:
+        </Text>
+        <VisualDiff
+          actual={props.submission.submission}
+          expected={props.submission.correction}
+        />
+      </Stack>
+    </Stack>
   );
 }
