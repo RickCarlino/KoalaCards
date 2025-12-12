@@ -1,37 +1,8 @@
 import { File, Storage } from "@google-cloud/storage";
 import { createHash } from "crypto";
 import { errorReport } from "./error-report";
-
-type GcpCreds = { project_id: string } & Record<string, unknown>;
-
-function requireEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) {
-    errorReport(`Missing ENV Var: ${name}`);
-    throw new Error(`Missing ENV Var: ${name}`);
-  }
-  return value;
-}
-
-function parseJsonEnv(name: string): unknown {
-  const raw = requireEnv(name);
-  try {
-    return JSON.parse(raw);
-  } catch {
-    errorReport(`Invalid JSON in ENV Var: ${name}`);
-    throw new Error(`Invalid JSON in ENV Var: ${name}`);
-  }
-}
-
-function isGcpCreds(value: unknown): value is GcpCreds {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-  const record = value as Record<string, unknown>;
-  return (
-    typeof record.project_id === "string" && record.project_id.length > 0
-  );
-}
+import { requireEnv, parseJsonEnv } from "./utils/env";
+import { isGcpCreds } from "./types/gcp-creds";
 
 export interface StorageProvider {
   uploadFromBase64(url: string, destination: string): Promise<string>;
@@ -56,8 +27,8 @@ class GCSStorageProvider implements StorageProvider {
   private bucketName: string;
 
   constructor() {
-    this.bucketName = requireEnv("GCS_BUCKET_NAME");
-    const rawCreds = parseJsonEnv("GCP_JSON_CREDS");
+    this.bucketName = requireEnv("GCS_BUCKET_NAME", errorReport);
+    const rawCreds = parseJsonEnv("GCP_JSON_CREDS", errorReport);
     if (!isGcpCreds(rawCreds)) {
       errorReport("Invalid GCP_JSON_CREDS");
       throw new Error("Invalid GCP_JSON_CREDS");

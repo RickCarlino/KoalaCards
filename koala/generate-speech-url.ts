@@ -1,11 +1,11 @@
-import textToSpeech, {
-  TextToSpeechClient,
-  protos,
-} from "@google-cloud/text-to-speech";
+import textToSpeech, { protos } from "@google-cloud/text-to-speech";
 import { createHash } from "crypto";
 import { draw } from "radash";
 import { Gender } from "./shared-types";
 import { storageProvider } from "./storage";
+import { parseOptionalJsonEnv } from "./utils/env";
+import type { GcpCreds } from "./types/gcp-creds";
+import { isGcpCreds } from "./types/gcp-creds";
 
 type AudioLessonParams = {
   text: string;
@@ -16,7 +16,7 @@ type AudioLessonParams = {
 
 type VoicesTable = Record<string, Record<Gender, string[]>>;
 
-const Voices: VoicesTable = {
+const VOICES: VoicesTable = {
   en: {
     F: ["en-US-Wavenet-C"],
     M: ["en-US-Wavenet-A", "en-US-Wavenet-B", "en-US-Wavenet-D"],
@@ -39,44 +39,83 @@ const Voices: VoicesTable = {
   },
 };
 
-let CLIENT: TextToSpeechClient;
-const creds = JSON.parse(process.env.GCP_JSON_CREDS || "false");
-if (creds) {
-  CLIENT = new textToSpeech.TextToSpeechClient({
+function createTextToSpeechClient(creds: GcpCreds | null) {
+  if (!creds) {
+    return new textToSpeech.TextToSpeechClient();
+  }
+  return new textToSpeech.TextToSpeechClient({
     projectId: creds.project_id,
     credentials: creds,
   });
-} else {
-  CLIENT = new textToSpeech.TextToSpeechClient();
 }
 
-const randomVoice = (langCode: string, gender: Gender) => {
-  const l1 = Voices[langCode] || Voices.ko;
-  const l2 = l1[gender] || l1.N;
-  return draw(l2) || l2[0];
-};
+function resolveGcpCredsFromEnv(): GcpCreds | null {
+  const raw = parseOptionalJsonEnv("GCP_JSON_CREDS");
+  if (raw === undefined) {
+    return null;
+  }
+  if (!isGcpCreds(raw)) {
+    throw new Error("Invalid GCP_JSON_CREDS");
+  }
+  return raw;
+}
+
+const CLIENT = createTextToSpeechClient(resolveGcpCredsFromEnv());
 
 const VERSION = "v2";
 
-const callTTS = async (voice: string, params: AudioLessonParams) => {
-  const p = params.text.includes("<speak>")
-    ? { ssml: params.text }
-    : { text: params.text };
+function isSsml(text: string) {
+  return text.includes("<speak>");
+}
+
+function buildTtsInput(text: string) {
+  if (isSsml(text)) {
+    return { ssml: text };
+  }
+  return { text };
+}
+
+const SSML_GENDER: Record<
+  Gender,
+  protos.google.cloud.texttospeech.v1.SsmlVoiceGender
+> = {
+  F: protos.google.cloud.texttospeech.v1.SsmlVoiceGender.FEMALE,
+  M: protos.google.cloud.texttospeech.v1.SsmlVoiceGender.MALE,
+  N: protos.google.cloud.texttospeech.v1.SsmlVoiceGender.NEUTRAL,
+};
+
+function pickVoice(langCode: string, gender: Gender) {
+  const voicesByGender = VOICES[langCode] ?? VOICES.ko;
+  const voices = voicesByGender[gender] ?? voicesByGender.N;
+  return draw(voices) ?? voices[0];
+}
+
+function audioContentToBuffer(audioContent: unknown): Buffer {
+  if (!audioContent) {
+    throw new Error("TTS response missing audioContent");
+  }
+  if (typeof audioContent === "string") {
+    return Buffer.from(audioContent, "base64");
+  }
+  if (audioContent instanceof Uint8Array) {
+    return Buffer.from(audioContent);
+  }
+  throw new Error("TTS audioContent has an unexpected type");
+}
+
+async function callTts(voice: string, params: AudioLessonParams) {
   const audioConfig: protos.google.cloud.texttospeech.v1.IAudioConfig = {
     audioEncoding: protos.google.cloud.texttospeech.v1.AudioEncoding.MP3,
+    speakingRate: params.speed ?? 1.0,
   };
-  audioConfig.speakingRate = params.speed || 1.0;
 
   const request: protos.google.cloud.texttospeech.v1.ISynthesizeSpeechRequest =
     {
-      input: p,
+      input: buildTtsInput(params.text),
       voice: {
         languageCode: params.langCode,
         name: voice,
-        ssmlGender:
-          protos.google.cloud.texttospeech.v1.SsmlVoiceGender[
-            params.gender as keyof typeof protos.google.cloud.texttospeech.v1.SsmlVoiceGender
-          ],
+        ssmlGender: SSML_GENDER[params.gender],
       },
       audioConfig,
     };
@@ -84,9 +123,9 @@ const callTTS = async (voice: string, params: AudioLessonParams) => {
   const [response] = await CLIENT.synthesizeSpeech(request);
 
   return response;
-};
+}
 
-const hashURL = (text: string, langCode: string, gender: string) => {
+function hashURL(text: string, langCode: string, gender: Gender) {
   const hashInput = `${text}|${langCode}|${gender}`;
   const md5Hash = createHash("md5").update(hashInput).digest();
   const base64UrlHash =
@@ -98,7 +137,7 @@ const hashURL = (text: string, langCode: string, gender: string) => {
       .replace(/=+$/, "");
 
   return base64UrlHash;
-};
+}
 
 export async function generateSpeechURL(
   params: AudioLessonParams,
@@ -116,16 +155,13 @@ export async function generateSpeechURL(
   }
 
   const lang = params.langCode.slice(0, 2).toLocaleLowerCase();
-  const voice = randomVoice(lang, params.gender);
-  const response = await callTTS(voice, params);
+  const voice = pickVoice(lang, params.gender);
+  const response = await callTts(voice, params);
+  const audioBuffer = audioContentToBuffer(response.audioContent);
 
-  await storageProvider.saveBuffer(
-    fileName,
-    response.audioContent as Buffer,
-    {
-      metadata: { contentType: "audio/mpeg" },
-    },
-  );
+  await storageProvider.saveBuffer(fileName, audioBuffer, {
+    metadata: { contentType: "audio/mpeg" },
+  });
 
   return await storageProvider.getExpiringURL(fileName);
 }
