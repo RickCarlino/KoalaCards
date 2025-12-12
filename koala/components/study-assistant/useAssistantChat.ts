@@ -26,19 +26,29 @@ type UseAssistantChatOptions = {
   onCardEdited?: (cardId: number, updates: AssistantCardUpdates) => void;
 };
 
+const INITIAL_MESSAGES: ChatMessage[] = [
+  {
+    role: "assistant",
+    content:
+      "Hi! Ask me about the cards you just reviewed, or request new practice questions. I’ll also suggest new flashcards or edits when helpful.",
+  },
+];
+
+function appendOutgoing(
+  previous: ChatMessage[],
+  userMessage: ChatMessage,
+): ChatMessage[] {
+  return [...previous, userMessage, { role: "assistant", content: "" }];
+}
+
 export function useAssistantChat({
   deckId,
   contextLog,
   currentCard,
   onCardEdited,
 }: UseAssistantChatOptions) {
-  const [messages, setMessages] = React.useState<ChatMessage[]>([
-    {
-      role: "assistant",
-      content:
-        "Hi! Ask me about the cards you just reviewed, or request new practice questions. I’ll also suggest new flashcards or edits when helpful.",
-    },
-  ]);
+  const [messages, setMessages] =
+    React.useState<ChatMessage[]>(INITIAL_MESSAGES);
   const [input, setInput] = React.useState("");
   const [isStreaming, setIsStreaming] = React.useState(false);
   const [savingEditId, setSavingEditId] = React.useState<string | null>(
@@ -75,6 +85,15 @@ export function useAssistantChat({
       );
     },
     [currentCardRef],
+  );
+
+  const parseAndApplyChunk = React.useCallback(
+    (chunk: string) => {
+      const parser = parserRef.current ?? createAssistantStreamParser();
+      parserRef.current = parser;
+      applyParsed(parser.push(chunk));
+    },
+    [applyParsed],
   );
 
   const finalizeParser = React.useCallback(() => {
@@ -167,11 +186,7 @@ export function useAssistantChat({
     stopRequestedRef.current = false;
     setInput("");
     const userMsg: ChatMessage = { role: "user", content: text };
-    setMessages((prev) => [
-      ...prev,
-      userMsg,
-      { role: "assistant", content: "" },
-    ]);
+    setMessages((prev) => appendOutgoing(prev, userMsg));
     parserRef.current = createAssistantStreamParser();
 
     const controller = new AbortController();
@@ -184,13 +199,6 @@ export function useAssistantChat({
       contextLog: contextLogRef.current,
       currentCard: currentCardRef.current,
     });
-
-    const applyChunk = (chunk: string) => {
-      const parser = parserRef.current ?? createAssistantStreamParser();
-      parserRef.current = parser;
-      const parsed = parser.push(chunk);
-      applyParsed(parsed);
-    };
 
     try {
       setIsStreaming(true);
@@ -205,9 +213,7 @@ export function useAssistantChat({
       }
       const reader = res.body.getReader();
       await readSseStream(reader, {
-        onChunk: (chunk) => {
-          applyChunk(chunk);
-        },
+        onChunk: parseAndApplyChunk,
         onDone: () => {
           finalizeParser();
           setIsStreaming(false);
@@ -229,7 +235,7 @@ export function useAssistantChat({
       resetStreamingState();
     }
   }, [
-    applyParsed,
+    parseAndApplyChunk,
     deckId,
     finalizeParser,
     input,

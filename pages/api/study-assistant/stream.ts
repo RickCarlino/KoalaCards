@@ -32,68 +32,7 @@ const BodySchema = z.object({
     .optional(),
 });
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-function writeSSE(res: NextApiResponse, data: string, event?: string) {
-  if (event) {
-    res.write(`event: ${event}\n`);
-  }
-  const lines = data.split("\n");
-  for (const line of lines) {
-    res.write(`data: ${line}\n`);
-  }
-  res.write("\n");
-}
-
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse,
-) {
-  if (req.method !== "POST") {
-    res.setHeader("Allow", "POST");
-    return res.status(405).end("Method Not Allowed");
-  }
-
-  const session = await getServerSession(req, res, authOptions);
-  const email = session?.user?.email;
-  if (!email) {
-    return res.status(401).end("Unauthorized");
-  }
-
-  const dbUser = await prismaClient.user.findUnique({ where: { email } });
-  if (!dbUser) {
-    return res.status(401).end("Unauthorized");
-  }
-
-  if (!process.env.OPENAI_API_KEY) {
-    return res.status(500).end("Missing OPENAI_API_KEY");
-  }
-
-  const parsed = BodySchema.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).end("Invalid body");
-  }
-  const { deckId, messages, contextLog, currentCard } = parsed.data;
-
-  const deck = await prismaClient.deck.findUnique({
-    where: { id: deckId, userId: dbUser.id },
-  });
-  if (!deck) {
-    return res.status(404).end("Deck not found");
-  }
-
-  res.writeHead(200, {
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache, no-transform",
-    Connection: "keep-alive",
-  });
-
-  let closed = false;
-  req.on("close", () => {
-    closed = true;
-  });
-
-  const system = `You are a Korean-learning study assistant.
+const SYSTEM_PROMPT = `You are a Korean-learning study assistant.
 Optimize output for fast reading and practice.
 
 FLASHCARD SUGGESTIONS (“+” button)
@@ -152,31 +91,115 @@ TRANSLATIONS / PHRASES
 * Use idiomatic grammar, correct particles, and fully conjugated verbs in polite speech.
 `;
 
-  const activityLogLines =
+function getOpenAI() {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    return null;
+  }
+  return new OpenAI({ apiKey });
+}
+
+function writeSse(res: NextApiResponse, data: string, event?: string) {
+  if (event) {
+    res.write(`event: ${event}\n`);
+  }
+  for (const line of data.split("\n")) {
+    res.write(`data: ${line}\n`);
+  }
+  res.write("\n");
+}
+
+function toActivityLogMessage(
+  contextLog: string[] | undefined,
+): CompletionMessage | null {
+  const trimmed =
     contextLog?.map((line) => line.trim()).filter(Boolean) ?? [];
+  if (trimmed.length === 0) {
+    return null;
+  }
+  const recent = trimmed.slice(-30).reverse();
+  return {
+    role: "system",
+    content: `Recent activity log (newest first):\n${recent
+      .map((line) => `- ${line}`)
+      .join("\n")}`,
+  };
+}
 
-  const recentActivityLines = activityLogLines.slice(-30).reverse();
-  const activityLogMessage: CompletionMessage | null =
-    recentActivityLines.length > 0
-      ? {
-          role: "system",
-          content: `Recent activity log (newest first):\n${recentActivityLines
-            .map((line) => `- ${line}`)
-            .join("\n")}`,
-        }
-      : null;
-
-  const currentCardMessage: CompletionMessage | null = currentCard
-    ? {
-        role: "system",
-        content: `Current card in view:\n- CardID: ${currentCard.cardId}\n- Term: ${currentCard.term}\n- Definition: ${currentCard.definition}`,
+function toCurrentCardMessage(
+  currentCard:
+    | {
+        cardId: number;
+        term: string;
+        definition: string;
       }
-    : null;
+    | undefined,
+): CompletionMessage | null {
+  if (!currentCard) {
+    return null;
+  }
+  return {
+    role: "system",
+    content: `Current card in view:\n- CardID: ${currentCard.cardId}\n- Term: ${currentCard.term}\n- Definition: ${currentCard.definition}`,
+  };
+}
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+) {
+  if (req.method !== "POST") {
+    res.setHeader("Allow", "POST");
+    return res.status(405).end("Method Not Allowed");
+  }
+
+  const session = await getServerSession(req, res, authOptions);
+  const email = session?.user?.email;
+  if (!email) {
+    return res.status(401).end("Unauthorized");
+  }
+
+  const dbUser = await prismaClient.user.findUnique({ where: { email } });
+  if (!dbUser) {
+    return res.status(401).end("Unauthorized");
+  }
+
+  const openai = getOpenAI();
+  if (!openai) {
+    return res.status(500).end("Missing OPENAI_API_KEY");
+  }
+
+  const parsed = BodySchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).end("Invalid body");
+  }
+  const { deckId, messages, contextLog, currentCard } = parsed.data;
+
+  const deck = await prismaClient.deck.findUnique({
+    where: { id: deckId, userId: dbUser.id },
+  });
+  if (!deck) {
+    return res.status(404).end("Deck not found");
+  }
+
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache, no-transform",
+    Connection: "keep-alive",
+  });
+
+  let closed = false;
+  req.on("close", () => {
+    closed = true;
+  });
+
+  const activityLogMessage = toActivityLogMessage(contextLog);
+  const currentCardMessage = toCurrentCardMessage(currentCard);
 
   const stream = await openai.chat.completions.create({
     model: "gpt-5.1-chat-latest",
     messages: [
-      { role: "system", content: system },
+      { role: "system", content: SYSTEM_PROMPT },
       ...(currentCardMessage ? [currentCardMessage] : []),
       ...(activityLogMessage ? [activityLogMessage] : []),
       ...messages,
@@ -184,18 +207,16 @@ TRANSLATIONS / PHRASES
     stream: true,
   });
 
-  let _full = "";
   for await (const part of stream) {
     if (closed) {
       break;
     }
     const chunk = part.choices?.[0]?.delta?.content || "";
     if (chunk) {
-      _full += chunk;
-      writeSSE(res, chunk);
+      writeSse(res, chunk);
     }
   }
 
-  writeSSE(res, "done", "done");
+  writeSse(res, "done", "done");
   res.end();
 }
