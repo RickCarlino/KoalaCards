@@ -37,6 +37,20 @@ const REASONING_EFFORT: ReasoningMap = {
   good: "low",
 };
 
+function getReasoningEffort(
+  model: LanguageModelIdentifier | undefined,
+): ChatCompletionCreateParamsNonStreaming["reasoning_effort"] | undefined {
+  const modelKey = model?.[1];
+  if (!modelKey) {
+    return undefined;
+  }
+  const configured = REASONING_EFFORT[modelKey];
+  if (configured === "none") {
+    return undefined;
+  }
+  return configured;
+}
+
 function getModelString(
   identifier:
     | LanguageModelIdentifier
@@ -46,7 +60,7 @@ function getModelString(
   if (vendor !== "openai") {
     throw new Error(`Unsupported vendor: ${vendor}`);
   }
-  const modelString = registry[modelKey as ModelKind];
+  const modelString = registry[modelKey];
   if (!modelString) {
     throw new Error(
       `Unknown model key "${modelKey}" for vendor "${vendor}"`,
@@ -74,7 +88,7 @@ export const openaiGenerateStructuredOutput: StructuredGenFn = async (
   const modelName = getModelString(options.model ?? DEFAULT_MODEL);
   const usesGpt5 = modelName.startsWith("gpt-5");
   const reasoningEffort = usesGpt5
-    ? REASONING_EFFORT[options.model?.[1]]
+    ? getReasoningEffort(options.model)
     : undefined;
   const res = await openai.chat.completions.parse({
     model: modelName,
@@ -83,8 +97,7 @@ export const openaiGenerateStructuredOutput: StructuredGenFn = async (
     ...(usesGpt5
       ? {
           verbosity: "low" as const,
-          reasoning_effort:
-            reasoningEffort as unknown as ChatCompletionCreateParamsNonStreaming["reasoning_effort"],
+          reasoning_effort: reasoningEffort,
           max_completion_tokens: options.maxTokens ?? 1000,
         }
       : {}),

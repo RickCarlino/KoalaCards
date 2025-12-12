@@ -23,6 +23,13 @@ export type AssistantParserResult = {
   edits: CardEditBlock[];
 };
 
+function trimNonEmptyLines(value: string): string[] {
+  return value
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
 function getOverlap(source: string, token: string) {
   const max = Math.min(source.length, token.length - 1);
   for (let len = max; len > 0; len -= 1) {
@@ -34,10 +41,7 @@ function getOverlap(source: string, token: string) {
 }
 
 function parseExample(content: string): ExampleBlock | null {
-  const normalized = content
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
+  const normalized = trimNonEmptyLines(content);
   if (normalized.length < 2) {
     return null;
   }
@@ -47,11 +51,17 @@ function parseExample(content: string): ExampleBlock | null {
   };
 }
 
+function isEmptyEdit(edit: CardEditBlock): boolean {
+  return (
+    edit.cardId === undefined &&
+    edit.term === undefined &&
+    edit.definition === undefined &&
+    edit.note === undefined
+  );
+}
+
 function parseEdit(content: string): CardEditBlock | null {
-  const lines = content
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
+  const lines = trimNonEmptyLines(content);
 
   if (lines.length === 0) {
     return null;
@@ -88,20 +98,15 @@ function parseEdit(content: string): CardEditBlock | null {
     }
   }
 
-  if (
-    !edit.cardId &&
-    !edit.term &&
-    !edit.definition &&
-    !edit.note &&
-    lines.length >= 2
-  ) {
-    return {
-      term: lines[0],
-      definition: lines.slice(1).join(" "),
-    };
+  if (!isEmptyEdit(edit)) {
+    return edit;
   }
 
-  return edit;
+  if (lines.length < 2) {
+    return null;
+  }
+
+  return { term: lines[0], definition: lines.slice(1).join(" ") };
 }
 
 type BlockType = "example" | "edit";

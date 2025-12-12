@@ -10,11 +10,13 @@ export async function playBeep(options: BeepOptions = {}): Promise<void> {
   }
   const { durationMs = 120, frequencyHz = 880, volume = 0.15 } = options;
 
-  const win = window as unknown as {
-    AudioContext?: typeof AudioContext;
+  type AudioContextWindow = Window & {
     webkitAudioContext?: typeof AudioContext;
   };
-  const AudioCtx = win.AudioContext || win.webkitAudioContext;
+
+  const AudioCtx =
+    window.AudioContext ||
+    (window as AudioContextWindow).webkitAudioContext;
   if (!AudioCtx) {
     return;
   }
