@@ -1,6 +1,7 @@
 import { GetServerSideProps } from "next";
 import { CardTable } from "@/koala/card-table";
 import { trpc } from "@/koala/trpc-config";
+import { Pager } from "@/koala/components/Pager";
 import {
   Button,
   Container,
@@ -16,6 +17,14 @@ import { prismaClient } from "@/koala/prisma-client";
 import { useRouter } from "next/router";
 import { useState, useEffect, FormEvent } from "react";
 import { getServersideUser } from "@/koala/get-serverside-user";
+import type { Prisma } from "@prisma/client";
+import {
+  firstQueryValueFrom,
+  toBoolean,
+  toEnumOrDefault,
+  toPositiveIntOrDefault,
+  toPositiveIntOrNull,
+} from "@/koala/utils/query-params";
 
 type CardRecord = {
   id: number;
@@ -37,8 +46,8 @@ type DeckListItem = {
 
 type EditProps = {
   cards: CardRecord[];
-  sortBy: string;
-  sortOrder: string;
+  sortBy: SortBy;
+  sortOrder: SortOrder;
   page: number;
   totalPages: number;
   q: string;
@@ -47,7 +56,22 @@ type EditProps = {
   decks: DeckListItem[];
 };
 
-const SORT_OPTIONS = [
+const SORT_BY_VALUES = [
+  "createdAt",
+  "lastFailure",
+  "definition",
+  "flagged",
+  "term",
+  "nextReview",
+  "repetitions",
+  "lapses",
+] as const;
+type SortBy = (typeof SORT_BY_VALUES)[number];
+
+const SORT_ORDER_VALUES = ["asc", "desc"] as const;
+type SortOrder = (typeof SORT_ORDER_VALUES)[number];
+
+const SORT_OPTIONS: readonly { label: string; value: SortBy }[] = [
   { label: "Date Created", value: "createdAt" },
   { label: "Date Failed", value: "lastFailure" },
   { label: "Definition", value: "definition" },
@@ -58,7 +82,7 @@ const SORT_OPTIONS = [
   { label: "Lapses", value: "lapses" },
 ];
 
-const ORDER_OPTIONS = [
+const ORDER_OPTIONS: readonly { value: SortOrder; label: string }[] = [
   { value: "asc", label: "A -> Z" },
   { value: "desc", label: "Z -> A" },
 ];
@@ -108,44 +132,35 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   };
 };
 
-function parseQueryParams(query: Record<string, unknown>) {
-  const toStr = (val: unknown): string | undefined => {
-    if (typeof val === "string") {
-      return val;
-    }
-    if (Array.isArray(val)) {
-      return val[0];
-    }
-    return undefined;
-  };
-
-  const rawSortBy = toStr(query.sortBy) ?? "createdAt";
-  const rawSortOrder = toStr(query.sortOrder) ?? "desc";
-  const rawPage = parseInt(toStr(query.page) ?? "", 10);
-  const rawQ = toStr(query.q) ?? "";
-  const rawPaused = toStr(query.paused) ?? "false";
-  const rawDeckId = parseInt(
-    toStr(query.deckId) ?? toStr(query.deck_id) ?? "",
-    10,
+function parseQueryParams(query: Record<string, unknown>): {
+  sortBy: SortBy;
+  sortOrder: SortOrder;
+  page: number;
+  q: string;
+  paused: boolean;
+  deckId: number | null;
+} {
+  const sortBy = toEnumOrDefault(
+    firstQueryValueFrom(query, "sortBy"),
+    SORT_BY_VALUES,
+    "createdAt",
+  );
+  const sortOrder = toEnumOrDefault(
+    firstQueryValueFrom(query, "sortOrder"),
+    SORT_ORDER_VALUES,
+    "desc",
+  );
+  const page = toPositiveIntOrDefault(
+    firstQueryValueFrom(query, "page"),
+    1,
+  );
+  const q = firstQueryValueFrom(query, "q") ?? "";
+  const paused = toBoolean(firstQueryValueFrom(query, "paused"));
+  const deckId = toPositiveIntOrNull(
+    firstQueryValueFrom(query, "deckId", "deck_id"),
   );
 
-  const validSortBy = SORT_OPTIONS.map((o) => o.value).includes(rawSortBy)
-    ? rawSortBy
-    : "createdAt";
-  const finalSortOrder = rawSortOrder === "asc" ? "asc" : "desc";
-  const finalPage = !isNaN(rawPage) && rawPage > 0 ? rawPage : 1;
-  const finalPaused = rawPaused === "true";
-  const deckId =
-    Number.isFinite(rawDeckId) && rawDeckId > 0 ? rawDeckId : null;
-
-  return {
-    sortBy: validSortBy,
-    sortOrder: finalSortOrder,
-    page: finalPage,
-    q: rawQ,
-    paused: finalPaused,
-    deckId,
-  };
+  return { sortBy, sortOrder, page, q, paused, deckId };
 }
 
 function getValidDeckId(deckId: number | null, decks: DeckListItem[]) {
@@ -156,28 +171,69 @@ function getValidDeckId(deckId: number | null, decks: DeckListItem[]) {
   return decks.some((deck) => deck.id === deckId) ? deckId : null;
 }
 
+function buildCardWhere(params: {
+  userId: string;
+  paused: boolean;
+  deckId: number | null;
+  q: string;
+}): Prisma.CardWhereInput {
+  const where: Prisma.CardWhereInput = { userId: params.userId };
+
+  where.flagged = params.paused ? true : { not: true };
+
+  if (params.deckId !== null) {
+    where.deckId = params.deckId;
+  }
+
+  const query = params.q.trim();
+  if (query.length > 0) {
+    where.OR = [
+      { term: { contains: query, mode: "insensitive" } },
+      { definition: { contains: query, mode: "insensitive" } },
+    ];
+  }
+
+  return where;
+}
+
+function orderByFor(
+  sortBy: SortBy,
+  sortOrder: SortOrder,
+): Prisma.CardOrderByWithRelationInput {
+  if (sortBy === "createdAt") {
+    return { createdAt: sortOrder };
+  }
+  if (sortBy === "lastFailure") {
+    return { lastFailure: sortOrder };
+  }
+  if (sortBy === "definition") {
+    return { definition: sortOrder };
+  }
+  if (sortBy === "flagged") {
+    return { flagged: sortOrder };
+  }
+  if (sortBy === "term") {
+    return { term: sortOrder };
+  }
+  if (sortBy === "nextReview") {
+    return { nextReview: sortOrder };
+  }
+  if (sortBy === "repetitions") {
+    return { repetitions: sortOrder };
+  }
+  return { lapses: sortOrder };
+}
+
 async function fetchCards(
   userId: string,
-  sortBy: string,
-  sortOrder: string,
+  sortBy: SortBy,
+  sortOrder: SortOrder,
   page: number,
   q: string,
   paused: boolean,
   deckId: number | null,
 ) {
-  const where = {
-    userId,
-    ...(paused ? { flagged: true } : {}),
-    ...(deckId !== null ? { deckId } : {}),
-    ...(q
-      ? {
-          OR: [
-            { term: { contains: q, mode: "insensitive" as const } },
-            { definition: { contains: q, mode: "insensitive" as const } },
-          ],
-        }
-      : {}),
-  };
+  const where = buildCardWhere({ userId, paused, deckId, q });
 
   const totalCount = await prismaClient.card.count({ where });
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE) || 1;
@@ -185,7 +241,7 @@ async function fetchCards(
 
   const cardsData = await prismaClient.card.findMany({
     where,
-    orderBy: [{ [sortBy]: sortOrder }],
+    orderBy: [orderByFor(sortBy, sortOrder)],
     skip: (finalPage - 1) * ITEMS_PER_PAGE,
     take: ITEMS_PER_PAGE,
   });
@@ -220,12 +276,13 @@ export default function Edit({
   const deleteFlagged = trpc.deletePausedCards.useMutation();
   const router = useRouter();
 
-  const [currentSortBy, setCurrentSortBy] = useState(sortBy);
-  const [currentSortOrder, setCurrentSortOrder] = useState(sortOrder);
+  const [currentSortBy, setCurrentSortBy] = useState<SortBy>(sortBy);
+  const [currentSortOrder, setCurrentSortOrder] =
+    useState<SortOrder>(sortOrder);
   const [query, setQuery] = useState(q);
   const [showPaused, setShowPaused] = useState(paused);
   const [selectedDeckId, setSelectedDeckId] = useState(
-    deckId ? String(deckId) : "",
+    deckId === null ? "" : String(deckId),
   );
 
   useEffect(() => {
@@ -233,14 +290,18 @@ export default function Edit({
     setCurrentSortOrder(sortOrder);
     setQuery(q);
     setShowPaused(paused);
-    setSelectedDeckId(deckId ? String(deckId) : "");
+    setSelectedDeckId(deckId === null ? "" : String(deckId));
   }, [deckId, paused, q, sortBy, sortOrder]);
 
   const handleDeletePaused = async () => {
-    if (confirm("Are you sure you want to delete all paused cards?")) {
-      await deleteFlagged.mutateAsync({});
-      location.reload();
+    const ok = confirm(
+      "Are you sure you want to delete all paused cards?",
+    );
+    if (!ok) {
+      return;
     }
+    await deleteFlagged.mutateAsync({});
+    location.reload();
   };
 
   const buildQuery = (pageNumber: number) => ({
@@ -267,22 +328,29 @@ export default function Edit({
     });
   };
 
-  const Pagination = totalPages > 1 && (
-    <Group mt="md">
-      <Button disabled={page <= 1} onClick={() => goToPage(page - 1)}>
-        Previous
-      </Button>
-      <Text>
-        Page {page} of {totalPages}
-      </Text>
-      <Button
-        disabled={page >= totalPages}
-        onClick={() => goToPage(page + 1)}
-      >
-        Next
-      </Button>
-    </Group>
+  const pager = (
+    <Pager totalPages={totalPages} page={page} onPage={goToPage} />
   );
+
+  const setSortBy = (value: string | null) => {
+    if (!value) {
+      return;
+    }
+    const next = toEnumOrDefault(value, SORT_BY_VALUES, currentSortBy);
+    setCurrentSortBy(next);
+  };
+
+  const setSortOrder = (value: string | null) => {
+    if (!value) {
+      return;
+    }
+    const next = toEnumOrDefault(
+      value,
+      SORT_ORDER_VALUES,
+      currentSortOrder,
+    );
+    setCurrentSortOrder(next);
+  };
 
   return (
     <Container size="lg" py="lg">
@@ -306,13 +374,13 @@ export default function Edit({
             <Select
               label="Sort By"
               value={currentSortBy}
-              onChange={(value) => value && setCurrentSortBy(value)}
+              onChange={setSortBy}
               data={SORT_OPTIONS}
             />
             <Select
               label="Order"
               value={currentSortOrder}
-              onChange={(value) => value && setCurrentSortOrder(value)}
+              onChange={setSortOrder}
               data={ORDER_OPTIONS}
               style={{ width: 140 }}
             />
@@ -344,13 +412,15 @@ export default function Edit({
                 Delete Paused Cards
               </Button>
             </Group>
-            <Group ml="auto">{Pagination}</Group>
+            <Group ml="auto">{pager}</Group>
           </Group>
         </form>
       </Paper>
 
       <CardTable onDelete={() => undefined} cards={cards} />
-      {Pagination}
+      <Group justify="center" mt="md">
+        {pager}
+      </Group>
     </Container>
   );
 }

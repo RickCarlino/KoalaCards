@@ -1,6 +1,12 @@
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { prismaClient } from "@/koala/prisma-client";
+import { CenteredPager, Pager } from "@/koala/components/Pager";
 import { VisualDiff } from "@/koala/review/lesson-steps/visual-diff";
+import {
+  firstQueryValue,
+  toPositiveIntOrDefault,
+  toPositiveIntOrNull,
+} from "@/koala/utils/query-params";
 import {
   ActionIcon,
   Alert,
@@ -9,7 +15,6 @@ import {
   Container,
   Divider,
   Group,
-  Pagination,
   Paper,
   Select,
   Stack,
@@ -27,38 +32,6 @@ import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
 
 const ITEMS_PER_PAGE = 5;
-
-function firstString(value: unknown) {
-  if (typeof value === "string") {
-    return value;
-  }
-  if (Array.isArray(value) && typeof value[0] === "string") {
-    return value[0];
-  }
-  return undefined;
-}
-
-function toPositiveNumberOrNull(value: string | undefined) {
-  if (!value) {
-    return null;
-  }
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) {
-    return null;
-  }
-  return parsed > 0 ? parsed : null;
-}
-
-function toPositiveNumberOrDefault(
-  value: string | undefined,
-  fallback: number,
-) {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) {
-    return fallback;
-  }
-  return parsed > 0 ? parsed : fallback;
-}
 
 function formatDateISO(iso: string) {
   return iso.slice(0, 10);
@@ -118,9 +91,9 @@ export const getServerSideProps: GetServerSideProps<
     };
   }
 
-  const page = toPositiveNumberOrDefault(firstString(ctx.query.page), 1);
-  const q = firstString(ctx.query.q) ?? "";
-  const deckId = toPositiveNumberOrNull(firstString(ctx.query.deckId));
+  const page = toPositiveIntOrDefault(firstQueryValue(ctx.query.page), 1);
+  const q = firstQueryValue(ctx.query.q) ?? "";
+  const deckId = toPositiveIntOrNull(firstQueryValue(ctx.query.deckId));
   const skip = (page - 1) * ITEMS_PER_PAGE;
 
   const where = buildWhere({ userId: dbUser.id, deckId, q });
@@ -183,11 +156,11 @@ export default function WritingHistoryPage({
   const [expandedItem, setExpandedItem] = useState<number | null>(null);
   const [query, setQuery] = useState(q);
   const [selectedDeckId, setSelectedDeckId] = useState<string>(
-    deckId ? String(deckId) : "",
+    deckId === null ? "" : String(deckId),
   );
 
   const toggleItem = (id: number) => {
-    setExpandedItem(expandedItem === id ? null : id);
+    setExpandedItem((prev) => (prev === id ? null : id));
   };
 
   const deckOptions = useMemo(
@@ -268,44 +241,12 @@ export default function WritingHistoryPage({
         onDelete={confirmDelete}
       />
 
-      <BottomPager
+      <CenteredPager
         totalPages={totalPages}
         page={currentPage}
         onPage={goToPage}
       />
     </Container>
-  );
-}
-
-function Pager(props: {
-  totalPages: number;
-  page: number;
-  onPage: (page: number) => void;
-}) {
-  if (props.totalPages <= 1) {
-    return null;
-  }
-  return (
-    <Pagination
-      total={props.totalPages}
-      value={props.page}
-      onChange={props.onPage}
-    />
-  );
-}
-
-function BottomPager(props: {
-  totalPages: number;
-  page: number;
-  onPage: (page: number) => void;
-}) {
-  if (props.totalPages <= 1) {
-    return null;
-  }
-  return (
-    <Group justify="center" mt="xl">
-      <Pager {...props} />
-    </Group>
   );
 }
 
