@@ -7,6 +7,7 @@ import {
   toPositiveIntOrDefault,
   toPositiveIntOrNull,
 } from "@/koala/utils/query-params";
+import { formatIsoDate } from "@/koala/utils/formatters";
 import {
   ActionIcon,
   Alert,
@@ -32,10 +33,6 @@ import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
 
 const ITEMS_PER_PAGE = 5;
-
-function formatDateISO(iso: string) {
-  return iso.slice(0, 10);
-}
 
 function buildWhere(params: {
   userId: string;
@@ -307,7 +304,7 @@ function SubmissionCard(props: {
         <Group justify="space-between" wrap="nowrap">
           <Stack gap={5}>
             <Text fw={700} size="lg">
-              {formatDateISO(props.submission.createdAt)}
+              {formatIsoDate(props.submission.createdAt)}
             </Text>
             <Group gap="xs">
               <Badge color="pink" variant="light">

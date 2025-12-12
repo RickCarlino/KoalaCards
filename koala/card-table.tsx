@@ -3,6 +3,7 @@ import { IconPencil, IconTrash } from "@tabler/icons-react";
 import { useRouter } from "next/router";
 import React from "react";
 import { trpc } from "./trpc-config";
+import { formatIsoDate } from "./utils/formatters";
 
 type Card = {
   id: number;
@@ -28,9 +29,8 @@ interface CardRowProps {
 
 type DeleteState = "idle" | "deleting" | "deleted" | "error";
 
-const formatDateISO = (iso: string) => iso.slice(0, 10);
 const formatEpoch = (ms: number) =>
-  ms ? new Date(ms).toISOString().slice(0, 10) : "—";
+  ms ? formatIsoDate(new Date(ms).toISOString()) : "—";
 const getDeleteColor = (state: DeleteState) => {
   if (state === "error") {
     return "blue";
@@ -111,7 +111,7 @@ function CardRow({ card, onDelete }: CardRowProps) {
       <td>{card.repetitions}</td>
       <td>{card.lapses}</td>
       <td>{formatEpoch(card.nextReview)}</td>
-      <td>{formatDateISO(card.createdAt)}</td>
+      <td>{formatIsoDate(card.createdAt)}</td>
       <td>
         <Group gap="xs" wrap="nowrap">
           <Button

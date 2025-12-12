@@ -5,6 +5,10 @@ import {
 } from "next";
 import { getSession } from "next-auth/react";
 import { prismaClient } from "@/koala/prisma-client";
+import {
+  formatIsoDateTimeShort,
+  formatYesNo,
+} from "@/koala/utils/formatters";
 import { Container, Table, Title } from "@mantine/core";
 import { useRouter } from "next/router";
 import { Prisma } from "@prisma/client";
@@ -91,35 +95,6 @@ export async function getServerSideProps(
 
 type Props = InferGetServerSidePropsType<typeof getServerSideProps>;
 
-function yesNo(value: boolean): string {
-  return value ? "Yes" : "No";
-}
-
-function fmtDate(iso: string | null): string {
-  if (!iso) {
-    return "No";
-  }
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const MONTHS = [
-    "JAN",
-    "FEB",
-    "MAR",
-    "APR",
-    "MAY",
-    "JUN",
-    "JUL",
-    "AUG",
-    "SEP",
-    "OCT",
-    "NOV",
-    "DEC",
-  ];
-  return `${MONTHS[d.getMonth()]} ${pad(d.getDate())} ${pad(d.getHours())}:${pad(
-    d.getMinutes(),
-  )}`;
-}
-
 export default function AdminPage({ userData }: Props) {
   const router = useRouter();
   return (
@@ -149,8 +124,8 @@ export default function AdminPage({ userData }: Props) {
               <td>{u.daysSinceLastSeen}</td>
               <td>{u.cardCount}</td>
               <td>{u.studiedCount}</td>
-              <td>{yesNo(u.isAdmin)}</td>
-              <td>{fmtDate(u.createdAt)}</td>
+              <td>{formatYesNo(u.isAdmin)}</td>
+              <td>{formatIsoDateTimeShort(u.createdAt, "No")}</td>
             </tr>
           ))}
         </tbody>

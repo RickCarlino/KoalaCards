@@ -9,6 +9,10 @@ import {
   Title,
 } from "@mantine/core";
 import type { FormEvent } from "react";
+import {
+  formatIsoDateTimeShort,
+  formatYesNo,
+} from "@/koala/utils/formatters";
 
 export type UserOverviewCounts = {
   cardsTotal: number;
@@ -140,8 +144,14 @@ function ProfileCard(props: { user: UserOverviewUser }) {
       <KeyValueTable
         rows={[
           { k: "Email", v: props.user.email },
-          { k: "Created", v: fmtShort(props.user.createdAt) },
-          { k: "Last Seen", v: fmtShort(props.user.lastSeen) },
+          {
+            k: "Created",
+            v: formatIsoDateTimeShort(props.user.createdAt),
+          },
+          {
+            k: "Last Seen",
+            v: formatIsoDateTimeShort(props.user.lastSeen),
+          },
         ]}
       />
     </Paper>
@@ -211,7 +221,7 @@ function RecentWritingRows(props: { rows: UserOverviewRecentWriting[] }) {
 
   return props.rows.map((row) => (
     <tr key={row.id}>
-      <td>{fmtShort(row.createdAt)}</td>
+      <td>{formatIsoDateTimeShort(row.createdAt)}</td>
       <td>{row.prompt}</td>
       <td>{row.submissionCharacterCount}</td>
     </tr>
@@ -246,10 +256,10 @@ function RecentQuizRows(props: { rows: UserOverviewRecentQuiz[] }) {
 
   return props.rows.map((row) => (
     <tr key={row.id}>
-      <td>{fmtShort(row.createdAt)}</td>
+      <td>{formatIsoDateTimeShort(row.createdAt)}</td>
       <td>{row.definition}</td>
       <td>{row.userInput}</td>
-      <td>{yesNo(row.isAcceptable)}</td>
+      <td>{formatYesNo(row.isAcceptable)}</td>
     </tr>
   ));
 }
@@ -260,40 +270,4 @@ function EmptyRow(props: { colSpan: number; label: string }) {
       <td colSpan={props.colSpan}>{props.label}</td>
     </tr>
   );
-}
-
-function yesNo(value: boolean): string {
-  if (value) {
-    return "Yes";
-  }
-  return "No";
-}
-
-const MONTHS = [
-  "JAN",
-  "FEB",
-  "MAR",
-  "APR",
-  "MAY",
-  "JUN",
-  "JUL",
-  "AUG",
-  "SEP",
-  "OCT",
-  "NOV",
-  "DEC",
-] as const;
-
-function fmtShort(iso: string | null): string {
-  if (!iso) {
-    return "—";
-  }
-  const date = new Date(iso);
-  return `${MONTHS[date.getMonth()]} ${pad2(date.getDate())} ${pad2(
-    date.getHours(),
-  )}:${pad2(date.getMinutes())}`;
-}
-
-function pad2(value: number): string {
-  return String(value).padStart(2, "0");
 }
