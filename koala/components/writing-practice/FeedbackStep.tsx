@@ -51,8 +51,7 @@ export function FeedbackStep({
 }: FeedbackStepProps) {
   const selectedCount = Object.keys(selectedWords).length;
   const canExplain = !definitionsLoading;
-  const canCreate = definitions.length > 0 && !definitionsLoading;
-  const showDefinitions = definitions.length > 0 && !definitionsLoading;
+  const definitionsReady = !definitionsLoading && definitions.length > 0;
 
   return (
     <Paper withBorder shadow="sm" p="md" mt="md">
@@ -79,26 +78,17 @@ export function FeedbackStep({
         <Text fw={600}>Changes</Text>
         <VisualDiff actual={essay} expected={corrected} />
 
-        {feedback?.feedback?.length ? (
-          <Stack gap="xs">
-            <Text fw={600}>Feedback</Text>
-            {feedback.feedback.map((item, index) => (
-              <Box key={index}>
-                <ClickableText
-                  text={`• ${item}`}
-                  selectedWords={selectedWords}
-                  onToggleWord={onToggleWord}
-                />
-              </Box>
-            ))}
-          </Stack>
-        ) : null}
+        <FeedbackList
+          feedback={feedback}
+          selectedWords={selectedWords}
+          onToggleWord={onToggleWord}
+        />
 
         <Group>
           <Button onClick={onExplain} disabled={!canExplain}>
             Explain Selected Words ({selectedCount})
           </Button>
-          {canCreate ? (
+          {definitionsReady ? (
             <Button onClick={onCreateCards}>
               Create Cards from Words ({definitions.length})
             </Button>
@@ -111,20 +101,7 @@ export function FeedbackStep({
           </Button>
         </Group>
 
-        {definitionsLoading ? (
-          <Box
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-            }}
-          >
-            <Loader size="sm" color="blue" />
-            <Text ml="sm" c="dimmed">
-              Getting definitions...
-            </Text>
-          </Box>
-        ) : null}
+        <DefinitionsLoader loading={definitionsLoading} />
 
         {definitionsError ? (
           <Alert title="Error" color="red">
@@ -132,10 +109,47 @@ export function FeedbackStep({
           </Alert>
         ) : null}
 
-        {showDefinitions ? (
+        {definitionsReady ? (
           <DefinitionsList definitions={definitions} />
         ) : null}
       </Stack>
     </Paper>
+  );
+}
+
+function FeedbackList(props: {
+  feedback: WritingPracticeFeedback | null;
+  selectedWords: SelectedWords;
+  onToggleWord: (rawWord: string) => void;
+}) {
+  const items = props.feedback?.feedback ?? [];
+  if (items.length === 0) {
+    return null;
+  }
+  return (
+    <Stack gap="xs">
+      <Text fw={600}>Feedback</Text>
+      {items.map((item, index) => (
+        <Box key={index}>
+          <ClickableText
+            text={`• ${item}`}
+            selectedWords={props.selectedWords}
+            onToggleWord={props.onToggleWord}
+          />
+        </Box>
+      ))}
+    </Stack>
+  );
+}
+
+function DefinitionsLoader(props: { loading: boolean }) {
+  if (!props.loading) {
+    return null;
+  }
+  return (
+    <Stack align="center" gap={4}>
+      <Loader size="sm" color="blue" />
+      <Text c="dimmed">Getting definitions...</Text>
+    </Stack>
   );
 }

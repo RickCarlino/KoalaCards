@@ -12,6 +12,12 @@ import React from "react";
 
 type DeckSelection = State["deckSelection"];
 
+function parseDeckSelection(value: string): DeckSelection | undefined {
+  if (value === "existing" || value === "new") {
+    return value;
+  }
+}
+
 type DeckSectionProps = {
   deckOptions: DeckOption[];
   deckSelection: DeckSelection;
@@ -60,7 +66,12 @@ export function DeckSection(props: DeckSectionProps) {
         <Title order={4}>Deck</Title>
         <Radio.Group
           value={deckSelection}
-          onChange={(value) => onSetSelection(value as DeckSelection)}
+          onChange={(value) => {
+            const selection = parseDeckSelection(value);
+            if (selection) {
+              onSetSelection(selection);
+            }
+          }}
         >
           <Group gap="sm">
             <Radio value="existing" label="Existing" />

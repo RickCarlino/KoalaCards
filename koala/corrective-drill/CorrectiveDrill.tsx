@@ -1,27 +1,23 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "@mantine/hooks";
-import {
-  Button,
-  Card,
-  Group,
-  Progress,
-  Stack,
-  Text,
-  Title,
-} from "@mantine/core";
+import { Card, Progress, Stack } from "@mantine/core";
 import type { CorrectiveDrillLesson } from "@/koala/types/corrective-drill";
 import { playBlobExclusive } from "@/koala/utils/play-blob-audio";
 import { trpc } from "@/koala/trpc-config";
 import { useMediaRecorder } from "@/koala/hooks/use-media-recorder";
 import { useVoiceTranscription } from "@/koala/review/use-voice-transcription";
-import { LangCode } from "@/koala/shared-types";
-import {
-  IconMicrophone,
-  IconPlayerStopFilled,
-  IconPlayerPlayFilled,
-} from "@tabler/icons-react";
+import { parseLangCode } from "@/koala/shared-types";
 import { compare } from "@/koala/quiz-evaluators/evaluator-utils";
 import { useUserSettings } from "@/koala/settings-provider";
+import {
+  autoSpeechForStep,
+  buildSteps,
+  expectedForStep,
+  isMatchForStep,
+  stepKey,
+} from "@/koala/corrective-drill/corrective-drill-helpers";
+import { CorrectiveDrillStep } from "@/koala/corrective-drill/CorrectiveDrillStep";
+export { DiagnosisCard } from "@/koala/corrective-drill/components/DiagnosisCard";
 
 type LessonProps = {
   lesson: CorrectiveDrillLesson;
@@ -29,85 +25,14 @@ type LessonProps = {
   onComplete?: () => void;
 };
 
-function MicButton({
-  isRecording,
-  onClick,
-  disabled,
-}: {
-  isRecording: boolean;
-  onClick: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <Button
-      onClick={onClick}
-      disabled={disabled}
-      leftSection={
-        isRecording ? (
-          <IconPlayerStopFilled size={18} />
-        ) : (
-          <IconMicrophone size={18} />
-        )
-      }
-      color={isRecording ? "red" : "pink"}
-      variant={isRecording ? "filled" : "light"}
-    >
-      {isRecording ? "Stop" : "Speak"}
-    </Button>
-  );
-}
-
-export function DiagnosisCard({
-  diagnosis,
-  targetLabel,
-  contrastLabel,
-}: {
-  diagnosis: CorrectiveDrillLesson["diagnosis"];
-  targetLabel?: string;
-  contrastLabel?: string | null;
-}) {
-  return (
-    <Stack gap={8}>
-      <Title order={4}>Diagnosis</Title>
-      <Text c="red">❌ {diagnosis.original}</Text>
-      <Text c="green" fw={700} style={{ fontSize: 18 }}>
-        ✅ {diagnosis.corrected}
-      </Text>
-      {targetLabel ? (
-        <Text size="sm" c="dimmed">
-          {targetLabel}
-        </Text>
-      ) : null}
-      {contrastLabel ? (
-        <Text size="sm" c="dimmed">
-          Contrast: {contrastLabel}
-        </Text>
-      ) : null}
-      <Text size="sm">{diagnosis.error_explanation}</Text>
-    </Stack>
-  );
-}
-
-type StepKind =
-  | { t: "diagnosis" }
-  | { t: "target" }
-  | { t: "contrast" }
-  | { t: "production" };
-
 export function CorrectiveDrill({
   lesson,
   langCode,
   onComplete,
 }: LessonProps) {
   const userSettings = useUserSettings();
-  const steps = useMemo<StepKind[]>(() => {
-    const s: StepKind[] = [{ t: "diagnosis" }, { t: "target" }];
-    if (lesson.contrast) {
-      s.push({ t: "contrast" });
-    }
-    s.push({ t: "production" });
-    return s;
-  }, [lesson]);
+  const resolvedLangCode = parseLangCode(langCode) ?? "ko";
+  const steps = useMemo(() => buildSteps(lesson), [lesson]);
 
   const [idx, setIdx] = useState(0);
   const [passed, setPassed] = useState<Set<string>>(new Set());
@@ -123,28 +48,16 @@ export function CorrectiveDrill({
 
   const pct = Math.round(((idx + 1) / steps.length) * 100);
   const step = steps[idx];
+  const stepPassed = passed.has(stepKey(step));
 
-  const keyFor = (s: StepKind): string => {
-    if (s.t === "production") {
-      return "P";
-    }
-    if (s.t === "target") {
-      return "A";
-    }
-    if (s.t === "contrast") {
-      return "B";
-    }
-    return "diagnosis";
-  };
-
-  const next = () => {
+  const next = useCallback(() => {
     setHeard("");
     setLastMatch(null);
     setIdx((i) => Math.min(steps.length - 1, i + 1));
-  };
+  }, [steps.length]);
 
-  const markPassedAndNext = () => {
-    const k = keyFor(step);
+  const markPassedAndNext = useCallback(() => {
+    const k = stepKey(step);
     setPassed((prevSet) => {
       const ns = new Set(prevSet);
       ns.add(k);
@@ -156,79 +69,48 @@ export function CorrectiveDrill({
       return;
     }
     next();
-  };
+  }, [idx, next, onComplete, step, steps.length]);
 
-  const requestSpeech = async (tl: string, en?: string) => {
-    if (!tl.trim()) {
-      return;
-    }
-    setIsAudioPlaying(true);
-    try {
-      const res = await fetch("/api/speech", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tl, en, format: "mp3" }),
-      });
-      if (!res.ok) {
+  const requestSpeech = useCallback(
+    async (tl: string, en?: string) => {
+      if (!tl.trim()) {
         return;
       }
-      const blob = await res.blob();
-      await playBlobExclusive(blob, userSettings.playbackSpeed);
-    } finally {
-      setIsAudioPlaying(false);
-    }
-  };
+      setIsAudioPlaying(true);
+      try {
+        const res = await fetch("/api/speech", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tl, en, format: "mp3" }),
+        });
+        if (!res.ok) {
+          return;
+        }
+        const blob = await res.blob();
+        await playBlobExclusive(blob, userSettings.playbackSpeed);
+      } finally {
+        setIsAudioPlaying(false);
+      }
+    },
+    [userSettings.playbackSpeed],
+  );
 
   useEffect(() => {
-    const k = keyFor(step);
-    if (passed.has(k)) {
+    const k = stepKey(step);
+    if (passed.has(k) || spokenRef.current.has(k)) {
       return;
     }
-    if (spokenRef.current.has(k)) {
+    const payload = autoSpeechForStep(lesson, step);
+    if (!payload) {
       return;
     }
-    if (step.t === "diagnosis") {
-      const tl = lesson.diagnosis.error_explanation;
-      if (tl) {
-        spokenRef.current.add(k);
-        void requestSpeech(tl);
-      }
-      return;
-    }
-    if (step.t === "target") {
-      const it = lesson.target.example;
-      spokenRef.current.add(k);
-      void requestSpeech(it.text, it.en);
-      return;
-    }
-    if (step.t === "contrast") {
-      const it = lesson.contrast?.example;
-      if (it) {
-        spokenRef.current.add(k);
-        void requestSpeech(it.text, it.en);
-      }
-    }
-  }, [step]);
-
-  const expectedForStep = (s: StepKind): string => {
-    if (s.t === "diagnosis") {
-      return lesson.diagnosis.corrected;
-    }
-    if (s.t === "target") {
-      return lesson.target.example.text;
-    }
-    if (s.t === "contrast") {
-      return lesson.contrast?.example.text || "";
-    }
-    if (s.t === "production") {
-      return lesson.production.answer;
-    }
-    return "";
-  };
+    spokenRef.current.add(k);
+    void requestSpeech(payload.tl, payload.en);
+  }, [lesson, passed, requestSpeech, step]);
 
   const { transcribe } = useVoiceTranscription({
-    targetText: expectedForStep(steps[idx]),
-    langCode: langCode as LangCode,
+    targetText: expectedForStep(lesson, steps[idx]),
+    langCode: resolvedLangCode,
   });
 
   const handleRecordToggle = async () => {
@@ -237,16 +119,15 @@ export function CorrectiveDrill({
       return;
     }
     const blob = await stop();
-    const k = keyFor(step);
-    if (passed.has(k)) {
+    if (stepPassed) {
       return;
     }
-    const expected = expectedForStep(step);
+    const expected = expectedForStep(lesson, step);
     const { transcription, isMatch } = await transcribe(blob);
     setHeard(transcription);
     setGradeText(null);
 
-    if (step.t === "production") {
+    if (step.type === "production") {
       if (compare(expected, transcription)) {
         setGradeText("Good match");
         markPassedAndNext();
@@ -256,7 +137,7 @@ export function CorrectiveDrill({
       try {
         const item = lesson.production;
         const res = await gradeMutation.mutateAsync({
-          langCode: langCode as LangCode,
+          langCode: resolvedLangCode,
           prompt_en: item.prompt_en,
           answer: item.answer,
           attempt: transcription,
@@ -275,172 +156,69 @@ export function CorrectiveDrill({
       return;
     }
 
-    const baseMatch = Boolean(isMatch ?? compare(expected, transcription));
-    const relaxedMatch =
-      step.t === "target"
-        ? compare(expected, transcription, 3) || baseMatch
-        : baseMatch;
+    const relaxedMatch = isMatchForStep({
+      step,
+      expected,
+      transcription,
+      isMatch,
+    });
     setLastMatch(relaxedMatch);
     if (relaxedMatch) {
       markPassedAndNext();
     }
   };
 
-  useHotkeys([
-    [
-      "space",
-      (e) => {
-        if (step.t === "diagnosis") {
-          if (!passed.has("diagnosis")) {
-            e.preventDefault();
-            markPassedAndNext();
-          }
-          return;
+  const handleSpace = useCallback(
+    (e: KeyboardEvent) => {
+      if (step.type === "diagnosis") {
+        if (!stepPassed) {
+          e.preventDefault();
+          markPassedAndNext();
         }
-        if (isAudioPlaying) {
-          return;
-        }
-        e.preventDefault();
-        void handleRecordToggle();
-      },
-    ],
-  ]);
+        return;
+      }
+      if (isAudioPlaying) {
+        return;
+      }
+      e.preventDefault();
+      void handleRecordToggle();
+    },
+    [isAudioPlaying, markPassedAndNext, step.type, stepPassed],
+  );
+
+  useHotkeys([["space", handleSpace]]);
 
   useEffect(() => {
     setHeard("");
     setLastMatch(null);
   }, [idx]);
 
+  const handleListenAgain = useCallback(() => {
+    const payload = autoSpeechForStep(lesson, step);
+    if (!payload) {
+      return;
+    }
+    void requestSpeech(payload.tl, payload.en);
+  }, [lesson, requestSpeech, step]);
+
   return (
     <Card withBorder padding="lg">
       <Stack gap="md">
         <Progress value={pct} size="sm" radius="xl" />
-
-        {step.t === "diagnosis" ? (
-          <>
-            <DiagnosisCard
-              diagnosis={lesson.diagnosis}
-              targetLabel={lesson.target.label}
-              contrastLabel={lesson.contrast?.label || null}
-            />
-            {!passed.has("diagnosis") ? (
-              <Group justify="space-between" align="center">
-                <Button
-                  leftSection={<IconPlayerPlayFilled size={16} />}
-                  variant="default"
-                  onClick={() => requestSpeech(lesson.diagnosis.corrected)}
-                  disabled={isAudioPlaying}
-                >
-                  Listen Again
-                </Button>
-                <Button onClick={markPassedAndNext} variant="light">
-                  Start
-                </Button>
-              </Group>
-            ) : null}
-          </>
-        ) : null}
-
-        {step.t === "target" ? (
-          <>
-            {!passed.has(keyFor(step)) ? (
-              <>
-                <Text size="sm" c="dimmed">
-                  {lesson.target.example.en}
-                </Text>
-                <Text fw={600}>{lesson.target.example.text}</Text>
-                <Group justify="space-between" align="center">
-                  <Button
-                    leftSection={<IconPlayerPlayFilled size={16} />}
-                    variant="default"
-                    onClick={() =>
-                      requestSpeech(
-                        lesson.target.example.text,
-                        lesson.target.example.en,
-                      )
-                    }
-                    disabled={isAudioPlaying}
-                  >
-                    Listen Again
-                  </Button>
-                  <MicButton
-                    isRecording={isRecording}
-                    onClick={handleRecordToggle}
-                    disabled={isAudioPlaying}
-                  />
-                  {heard ? (
-                    <Text size="sm" c={lastMatch ? "green" : "red"}>
-                      {heard}
-                    </Text>
-                  ) : null}
-                </Group>
-              </>
-            ) : null}
-          </>
-        ) : null}
-
-        {step.t === "contrast" ? (
-          <>
-            {lesson.contrast?.example.en ? (
-              <Text size="sm" c="dimmed">
-                {lesson.contrast?.example.en}
-              </Text>
-            ) : null}
-            {!passed.has(keyFor(step)) ? (
-              <>
-                <Text fw={600}>{lesson.contrast?.example.text}</Text>
-                <Group justify="space-between" align="center">
-                  <Button
-                    leftSection={<IconPlayerPlayFilled size={16} />}
-                    variant="default"
-                    onClick={() =>
-                      lesson.contrast?.example
-                        ? requestSpeech(
-                            lesson.contrast.example.text,
-                            lesson.contrast.example.en,
-                          )
-                        : undefined
-                    }
-                    disabled={isAudioPlaying}
-                  >
-                    Listen Again
-                  </Button>
-                  <MicButton
-                    isRecording={isRecording}
-                    onClick={handleRecordToggle}
-                    disabled={isAudioPlaying}
-                  />
-                  {heard ? (
-                    <Text size="sm" c={lastMatch ? "green" : "red"}>
-                      {heard}
-                    </Text>
-                  ) : null}
-                </Group>
-              </>
-            ) : null}
-          </>
-        ) : null}
-
-        {step.t === "production" ? (
-          <>
-            <Text fw={700} style={{ fontSize: 20 }}>
-              {lesson.production.prompt_en}
-            </Text>
-            <Group justify="space-between" align="center">
-              <MicButton
-                isRecording={isRecording}
-                onClick={handleRecordToggle}
-                disabled={isAudioPlaying}
-              />
-            </Group>
-            {grading ? (
-              <Text size="sm" c="dimmed">
-                Grading...
-              </Text>
-            ) : null}
-            {gradeText ? <Text size="sm">{gradeText}</Text> : null}
-          </>
-        ) : null}
+        <CorrectiveDrillStep
+          lesson={lesson}
+          step={step}
+          isStepPassed={stepPassed}
+          isAudioPlaying={isAudioPlaying}
+          isRecording={isRecording}
+          heard={heard}
+          lastMatch={lastMatch}
+          grading={grading}
+          gradeText={gradeText}
+          onListenAgain={handleListenAgain}
+          onStartDiagnosis={markPassedAndNext}
+          onMicToggle={handleRecordToggle}
+        />
       </Stack>
     </Card>
   );

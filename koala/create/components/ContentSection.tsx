@@ -1,4 +1,4 @@
-import type { CreateMode } from "@/koala/create/modes";
+import { parseCreateMode, type CreateMode } from "@/koala/create/modes";
 import {
   Button,
   Divider,
@@ -87,7 +87,12 @@ export function ContentSection(props: ContentSectionProps) {
         <Title order={4}>Content</Title>
         <SegmentedControl
           value={mode}
-          onChange={(value) => setMode(value as CreateMode)}
+          onChange={(value) => {
+            const nextMode = parseCreateMode(value);
+            if (nextMode) {
+              setMode(nextMode);
+            }
+          }}
           data={[
             { label: "Free Form", value: "vibe" },
             { label: "Word list", value: "wordlist" },
