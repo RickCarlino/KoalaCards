@@ -19,6 +19,7 @@ import { backfillDecks } from "@/koala/decks/backfill-decks";
 import { getLangName } from "@/koala/get-lang-name";
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { prismaClient } from "@/koala/prisma-client";
+import { DEFAULT_LANG_CODE } from "@/koala/shared-types";
 import { trpc } from "@/koala/trpc-config";
 import { INITIAL_STATE, reducer } from "@/koala/types/create-reducer";
 import type { LanguageInputPageProps } from "@/koala/types/create-types";
@@ -61,7 +62,7 @@ export const getServerSideProps: GetServerSideProps<
       decks: decks.map((deck) => ({
         id: deck.id,
         name: deck.name,
-        langCode: "ko",
+        langCode: DEFAULT_LANG_CODE,
       })),
     },
   };
@@ -71,17 +72,36 @@ export default function CreatePage(props: LanguageInputPageProps) {
   const { decks } = props;
   const router = useRouter();
 
+  type DeckSummary = LanguageInputPageProps["decks"][number];
+
+  const firstDeck = decks[0];
   const [loading, setLoading] = React.useState(false);
   const [separator, setSeparator] = React.useState(",");
   const [mode, setMode] = React.useState<CreateMode>("vibe");
 
   const [state, dispatch] = React.useReducer(reducer, {
     ...INITIAL_STATE,
-    deckLang: decks[0]?.langCode ?? INITIAL_STATE.deckLang,
+    deckLang: firstDeck?.langCode ?? INITIAL_STATE.deckLang,
     deckSelection: getDeckSelectionFromDecks(decks),
-    deckId: decks[0]?.id,
-    deckName: decks[0]?.name || "",
+    deckId: firstDeck?.id,
+    deckName: firstDeck?.name || "",
   });
+
+  const applySelectedDeck = (deck: DeckSummary) => {
+    dispatch({ type: "SET_DECK_SELECTION", deckSelection: "existing" });
+    dispatch({ type: "SET_DECK_ID", deckId: deck.id });
+    dispatch({ type: "SET_DECK_LANG", deckLang: deck.langCode });
+    dispatch({ type: "SET_DECK_NAME", deckName: deck.name });
+  };
+
+  const getDeckFromQuery = () => {
+    const deckIdQuery = router.query.deckId ?? router.query.deck_id;
+    const deckId = parseNumericId(deckIdQuery);
+    if (deckId === undefined) {
+      return undefined;
+    }
+    return decks.find((deck) => deck.id === deckId);
+  };
 
   const parseCards = trpc.parseCards.useMutation();
   const turbine = trpc.turbine.useMutation();
@@ -97,18 +117,9 @@ export default function CreatePage(props: LanguageInputPageProps) {
       setMode(nextMode);
     }
 
-    const deckIdQuery = router.query.deckId ?? router.query.deck_id;
-    const deckId = parseNumericId(deckIdQuery);
-    const selectedDeck =
-      deckId === undefined
-        ? undefined
-        : decks.find((deck) => deck.id === deckId);
-
+    const selectedDeck = getDeckFromQuery();
     if (selectedDeck) {
-      dispatch({ type: "SET_DECK_SELECTION", deckSelection: "existing" });
-      dispatch({ type: "SET_DECK_ID", deckId: selectedDeck.id });
-      dispatch({ type: "SET_DECK_LANG", deckLang: selectedDeck.langCode });
-      dispatch({ type: "SET_DECK_NAME", deckName: selectedDeck.name });
+      applySelectedDeck(selectedDeck);
     }
 
     const words = parseWordsQuery(router.query.words);
@@ -226,16 +237,17 @@ export default function CreatePage(props: LanguageInputPageProps) {
     const deckId = parseNumericId(val);
     dispatch({ type: "SET_DECK_ID", deckId });
 
-    const selected =
-      deckId === undefined
-        ? undefined
-        : decks.find((deck) => deck.id === deckId);
-    if (!selected) {
+    if (deckId === undefined) {
       return;
     }
 
-    dispatch({ type: "SET_DECK_LANG", deckLang: selected.langCode });
-    dispatch({ type: "SET_DECK_NAME", deckName: selected.name });
+    const selectedDeck = decks.find((deck) => deck.id === deckId);
+    if (!selectedDeck) {
+      return;
+    }
+
+    dispatch({ type: "SET_DECK_LANG", deckLang: selectedDeck.langCode });
+    dispatch({ type: "SET_DECK_NAME", deckName: selectedDeck.name });
   };
 
   const onEditCard = (

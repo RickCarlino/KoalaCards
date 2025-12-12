@@ -8,6 +8,7 @@ import {
   toPositiveIntOrNull,
 } from "@/koala/utils/query-params";
 import { formatIsoDate } from "@/koala/utils/formatters";
+import { DEFAULT_LANG_CODE } from "@/koala/shared-types";
 import {
   ActionIcon,
   Alert,
@@ -117,7 +118,7 @@ export const getServerSideProps: GetServerSideProps<
   });
   const submissions = submissionsRaw.map((s) => ({
     ...s,
-    deck: { ...s.deck, langCode: "ko" },
+    deck: { ...s.deck, langCode: DEFAULT_LANG_CODE },
   }));
 
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
@@ -127,7 +128,10 @@ export const getServerSideProps: GetServerSideProps<
     orderBy: [{ name: "asc" }],
     select: { id: true, name: true },
   });
-  const decks = decksRaw.map((d) => ({ ...d, langCode: "ko" }));
+  const decks = decksRaw.map((d) => ({
+    ...d,
+    langCode: DEFAULT_LANG_CODE,
+  }));
 
   return {
     props: {

@@ -5,6 +5,7 @@ export type LangCode = "ko";
 export type LessonType = "speaking" | "new" | "remedial";
 export type QuizResult = "error" | "fail" | "pass";
 
+export const DEFAULT_LANG_CODE: LangCode = "ko";
 export const LANG_CODES = z.literal("ko");
 
 export const supportedLanguages: Record<LangCode, string> = {
