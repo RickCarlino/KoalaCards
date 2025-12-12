@@ -17,32 +17,20 @@ import { prismaClient } from "@/koala/prisma-client";
 import { useRouter } from "next/router";
 import { useState, useEffect, FormEvent } from "react";
 import { getServersideUser } from "@/koala/get-serverside-user";
-import type { Prisma } from "@prisma/client";
+import { toEnumOrDefault } from "@/koala/utils/query-params";
 import {
-  firstQueryValueFrom,
-  toBoolean,
-  toEnumOrDefault,
-  toPositiveIntOrDefault,
-  toPositiveIntOrNull,
-} from "@/koala/utils/query-params";
-
-type CardRecord = {
-  id: number;
-  flagged: boolean;
-  term: string;
-  definition: string;
-  createdAt: string;
-  gender: string;
-  repetitions: number;
-  lapses: number;
-  lastReview: number;
-  nextReview: number;
-};
-
-type DeckListItem = {
-  id: number;
-  name: string;
-};
+  DeckListItem,
+  SortBy,
+  SortOrder,
+  SORT_BY_VALUES,
+  SORT_OPTIONS,
+  SORT_ORDER_VALUES,
+  ORDER_OPTIONS,
+  fetchCardsForPage,
+  getValidDeckId,
+  parseCardsPageQuery,
+  type CardRecord,
+} from "@/koala/cards/cards-page-helpers";
 
 type EditProps = {
   cards: CardRecord[];
@@ -56,39 +44,6 @@ type EditProps = {
   decks: DeckListItem[];
 };
 
-const SORT_BY_VALUES = [
-  "createdAt",
-  "lastFailure",
-  "definition",
-  "flagged",
-  "term",
-  "nextReview",
-  "repetitions",
-  "lapses",
-] as const;
-type SortBy = (typeof SORT_BY_VALUES)[number];
-
-const SORT_ORDER_VALUES = ["asc", "desc"] as const;
-type SortOrder = (typeof SORT_ORDER_VALUES)[number];
-
-const SORT_OPTIONS: readonly { label: string; value: SortBy }[] = [
-  { label: "Date Created", value: "createdAt" },
-  { label: "Date Failed", value: "lastFailure" },
-  { label: "Definition", value: "definition" },
-  { label: "Paused", value: "flagged" },
-  { label: "Term", value: "term" },
-  { label: "Next Review", value: "nextReview" },
-  { label: "Repetitions", value: "repetitions" },
-  { label: "Lapses", value: "lapses" },
-];
-
-const ORDER_OPTIONS: readonly { value: SortOrder; label: string }[] = [
-  { value: "asc", label: "A -> Z" },
-  { value: "desc", label: "Z -> A" },
-];
-
-const ITEMS_PER_PAGE = 200;
-
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const dbUser = await getServersideUser(ctx);
   const userId = dbUser?.id;
@@ -99,7 +54,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
     };
   }
 
-  const parsedQuery = parseQueryParams(ctx.query);
+  const parsedQuery = parseCardsPageQuery(ctx.query);
   const decks = await prismaClient.deck.findMany({
     where: { userId },
     select: { id: true, name: true },
@@ -107,22 +62,22 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   });
 
   const selectedDeckId = getValidDeckId(parsedQuery.deckId, decks);
-  const { cards, totalPages } = await fetchCards(
+  const { cards, totalPages, page } = await fetchCardsForPage({
     userId,
-    parsedQuery.sortBy,
-    parsedQuery.sortOrder,
-    parsedQuery.page,
-    parsedQuery.q,
-    parsedQuery.paused,
-    selectedDeckId,
-  );
+    sortBy: parsedQuery.sortBy,
+    sortOrder: parsedQuery.sortOrder,
+    page: parsedQuery.page,
+    q: parsedQuery.q,
+    paused: parsedQuery.paused,
+    deckId: selectedDeckId,
+  });
 
   return {
     props: {
       cards,
       sortBy: parsedQuery.sortBy,
       sortOrder: parsedQuery.sortOrder,
-      page: parsedQuery.page,
+      page,
       totalPages,
       q: parsedQuery.q,
       paused: parsedQuery.paused,
@@ -132,141 +87,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   };
 };
 
-function parseQueryParams(query: Record<string, unknown>): {
-  sortBy: SortBy;
-  sortOrder: SortOrder;
-  page: number;
-  q: string;
-  paused: boolean;
-  deckId: number | null;
-} {
-  const sortBy = toEnumOrDefault(
-    firstQueryValueFrom(query, "sortBy"),
-    SORT_BY_VALUES,
-    "createdAt",
-  );
-  const sortOrder = toEnumOrDefault(
-    firstQueryValueFrom(query, "sortOrder"),
-    SORT_ORDER_VALUES,
-    "desc",
-  );
-  const page = toPositiveIntOrDefault(
-    firstQueryValueFrom(query, "page"),
-    1,
-  );
-  const q = firstQueryValueFrom(query, "q") ?? "";
-  const paused = toBoolean(firstQueryValueFrom(query, "paused"));
-  const deckId = toPositiveIntOrNull(
-    firstQueryValueFrom(query, "deckId", "deck_id"),
-  );
-
-  return { sortBy, sortOrder, page, q, paused, deckId };
-}
-
-function getValidDeckId(deckId: number | null, decks: DeckListItem[]) {
-  if (deckId === null) {
-    return null;
-  }
-
-  for (const deck of decks) {
-    if (deck.id === deckId) {
-      return deckId;
-    }
-  }
-  return null;
-}
-
-function buildCardWhere(params: {
-  userId: string;
-  paused: boolean;
-  deckId: number | null;
-  q: string;
-}): Prisma.CardWhereInput {
-  const where: Prisma.CardWhereInput = { userId: params.userId };
-
-  where.flagged = { not: true };
-  if (params.paused) {
-    where.flagged = true;
-  }
-
-  if (params.deckId !== null) {
-    where.deckId = params.deckId;
-  }
-
-  const query = params.q.trim();
-  if (query.length > 0) {
-    where.OR = [
-      { term: { contains: query, mode: "insensitive" } },
-      { definition: { contains: query, mode: "insensitive" } },
-    ];
-  }
-
-  return where;
-}
-
-function orderByFor(
-  sortBy: SortBy,
-  sortOrder: SortOrder,
-): Prisma.CardOrderByWithRelationInput {
-  switch (sortBy) {
-    case "createdAt":
-      return { createdAt: sortOrder };
-    case "lastFailure":
-      return { lastFailure: sortOrder };
-    case "definition":
-      return { definition: sortOrder };
-    case "flagged":
-      return { flagged: sortOrder };
-    case "term":
-      return { term: sortOrder };
-    case "nextReview":
-      return { nextReview: sortOrder };
-    case "repetitions":
-      return { repetitions: sortOrder };
-    case "lapses":
-      return { lapses: sortOrder };
-  }
-}
-
-async function fetchCards(
-  userId: string,
-  sortBy: SortBy,
-  sortOrder: SortOrder,
-  page: number,
-  q: string,
-  paused: boolean,
-  deckId: number | null,
-) {
-  const where = buildCardWhere({ userId, paused, deckId, q });
-
-  const totalCount = await prismaClient.card.count({ where });
-  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE) || 1;
-  const finalPage = Math.min(Math.max(page, 1), totalPages);
-
-  const cardsData = await prismaClient.card.findMany({
-    where,
-    orderBy: [orderByFor(sortBy, sortOrder)],
-    skip: (finalPage - 1) * ITEMS_PER_PAGE,
-    take: ITEMS_PER_PAGE,
-  });
-
-  const cards = cardsData.map((c) => ({
-    id: c.id,
-    flagged: c.flagged,
-    term: c.term,
-    definition: c.definition,
-    createdAt: c.createdAt.toISOString(),
-    gender: c.gender,
-    repetitions: c.repetitions ?? 0,
-    lapses: c.lapses ?? 0,
-    lastReview: c.lastReview ?? 0,
-    nextReview: c.nextReview ?? 0,
-  }));
-
-  return { cards, totalPages };
-}
-
-export default function Edit({
+export default function CardsPage({
   cards,
   sortBy,
   sortOrder,
