@@ -155,12 +155,19 @@ export default function WritingHistoryPage({
   const router = useRouter();
   const [expandedItem, setExpandedItem] = useState<number | null>(null);
   const [query, setQuery] = useState(q);
-  const [selectedDeckId, setSelectedDeckId] = useState<string>(
-    deckId === null ? "" : String(deckId),
+  const toDeckValue = (value: number | null) =>
+    value === null ? "" : String(value);
+  const [selectedDeckId, setSelectedDeckId] = useState<string>(() =>
+    toDeckValue(deckId),
   );
 
   const toggleItem = (id: number) => {
-    setExpandedItem((prev) => (prev === id ? null : id));
+    setExpandedItem((prev) => {
+      if (prev === id) {
+        return null;
+      }
+      return id;
+    });
   };
 
   const deckOptions = useMemo(
@@ -174,11 +181,16 @@ export default function WritingHistoryPage({
     [decks],
   );
 
-  const buildQuery = (page: number) => ({
-    page,
-    ...(query ? { q: query } : {}),
-    ...(selectedDeckId ? { deckId: selectedDeckId } : {}),
-  });
+  const buildQuery = (page: number) => {
+    const next: Record<string, string | number> = { page };
+    if (query) {
+      next.q = query;
+    }
+    if (selectedDeckId) {
+      next.deckId = selectedDeckId;
+    }
+    return next;
+  };
 
   const pushWithFilters = (page: number) =>
     router.push({ pathname: "/writing", query: buildQuery(page) });

@@ -6,12 +6,13 @@ import { QuizInput, QuizList } from "../types/zod";
 
 export async function getLessonMeta(userId: string, deckId?: number) {
   const currentDate = new Date().getTime();
+  const deckWhere = deckId ? { deckId } : {};
 
   let quizzesDue = await prismaClient.card.count({
     where: {
       userId,
       flagged: { not: true },
-      ...(deckId ? { deckId } : {}),
+      ...deckWhere,
       nextReview: { lt: currentDate },
       firstReview: { gt: 0 },
     },
@@ -19,14 +20,14 @@ export async function getLessonMeta(userId: string, deckId?: number) {
 
   const reviewsDue = await prismaClient.card.count({
     where: {
-      userId: userId,
+      userId,
       lastFailure: { not: 0 },
       flagged: { not: true },
     },
   });
 
   const totalCards = await prismaClient.card.count({
-    where: { userId, flagged: false, ...(deckId ? { deckId } : {}) },
+    where: { userId, flagged: false, ...deckWhere },
   });
 
   quizzesDue += reviewsDue;
@@ -35,7 +36,7 @@ export async function getLessonMeta(userId: string, deckId?: number) {
     where: {
       userId,
       flagged: false,
-      ...(deckId ? { deckId } : {}),
+      ...deckWhere,
       repetitions: 0,
       lapses: 0,
     },

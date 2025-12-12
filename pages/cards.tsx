@@ -168,7 +168,12 @@ function getValidDeckId(deckId: number | null, decks: DeckListItem[]) {
     return null;
   }
 
-  return decks.some((deck) => deck.id === deckId) ? deckId : null;
+  for (const deck of decks) {
+    if (deck.id === deckId) {
+      return deckId;
+    }
+  }
+  return null;
 }
 
 function buildCardWhere(params: {
@@ -179,7 +184,10 @@ function buildCardWhere(params: {
 }): Prisma.CardWhereInput {
   const where: Prisma.CardWhereInput = { userId: params.userId };
 
-  where.flagged = params.paused ? true : { not: true };
+  where.flagged = { not: true };
+  if (params.paused) {
+    where.flagged = true;
+  }
 
   if (params.deckId !== null) {
     where.deckId = params.deckId;
@@ -200,28 +208,24 @@ function orderByFor(
   sortBy: SortBy,
   sortOrder: SortOrder,
 ): Prisma.CardOrderByWithRelationInput {
-  if (sortBy === "createdAt") {
-    return { createdAt: sortOrder };
+  switch (sortBy) {
+    case "createdAt":
+      return { createdAt: sortOrder };
+    case "lastFailure":
+      return { lastFailure: sortOrder };
+    case "definition":
+      return { definition: sortOrder };
+    case "flagged":
+      return { flagged: sortOrder };
+    case "term":
+      return { term: sortOrder };
+    case "nextReview":
+      return { nextReview: sortOrder };
+    case "repetitions":
+      return { repetitions: sortOrder };
+    case "lapses":
+      return { lapses: sortOrder };
   }
-  if (sortBy === "lastFailure") {
-    return { lastFailure: sortOrder };
-  }
-  if (sortBy === "definition") {
-    return { definition: sortOrder };
-  }
-  if (sortBy === "flagged") {
-    return { flagged: sortOrder };
-  }
-  if (sortBy === "term") {
-    return { term: sortOrder };
-  }
-  if (sortBy === "nextReview") {
-    return { nextReview: sortOrder };
-  }
-  if (sortBy === "repetitions") {
-    return { repetitions: sortOrder };
-  }
-  return { lapses: sortOrder };
 }
 
 async function fetchCards(
@@ -276,13 +280,16 @@ export default function Edit({
   const deleteFlagged = trpc.deletePausedCards.useMutation();
   const router = useRouter();
 
+  const toDeckValue = (value: number | null) =>
+    value === null ? "" : String(value);
+
   const [currentSortBy, setCurrentSortBy] = useState<SortBy>(sortBy);
   const [currentSortOrder, setCurrentSortOrder] =
     useState<SortOrder>(sortOrder);
   const [query, setQuery] = useState(q);
   const [showPaused, setShowPaused] = useState(paused);
-  const [selectedDeckId, setSelectedDeckId] = useState(
-    deckId === null ? "" : String(deckId),
+  const [selectedDeckId, setSelectedDeckId] = useState(() =>
+    toDeckValue(deckId),
   );
 
   useEffect(() => {
@@ -290,7 +297,7 @@ export default function Edit({
     setCurrentSortOrder(sortOrder);
     setQuery(q);
     setShowPaused(paused);
-    setSelectedDeckId(deckId === null ? "" : String(deckId));
+    setSelectedDeckId(toDeckValue(deckId));
   }, [deckId, paused, q, sortBy, sortOrder]);
 
   const handleDeletePaused = async () => {
@@ -304,14 +311,21 @@ export default function Edit({
     location.reload();
   };
 
-  const buildQuery = (pageNumber: number) => ({
-    sortBy: currentSortBy,
-    sortOrder: currentSortOrder,
-    page: String(pageNumber),
-    q: query,
-    paused: String(showPaused),
-    ...(selectedDeckId ? { deckId: selectedDeckId } : {}),
-  });
+  const buildQuery = (pageNumber: number) => {
+    const next: Record<string, string> = {
+      sortBy: currentSortBy,
+      sortOrder: currentSortOrder,
+      page: String(pageNumber),
+      q: query,
+      paused: String(showPaused),
+    };
+
+    if (selectedDeckId) {
+      next.deckId = selectedDeckId;
+    }
+
+    return next;
+  };
 
   const handleSearch = (e: FormEvent) => {
     e.preventDefault();
@@ -320,6 +334,30 @@ export default function Edit({
       query: buildQuery(1),
     });
   };
+
+  const setEnumValue =
+    <T extends readonly string[]>(
+      values: T,
+      fallback: T[number],
+      set: (value: T[number]) => void,
+    ) =>
+    (value: string | null) => {
+      if (!value) {
+        return;
+      }
+      set(toEnumOrDefault(value, values, fallback));
+    };
+
+  const setSortBy = setEnumValue(
+    SORT_BY_VALUES,
+    currentSortBy,
+    setCurrentSortBy,
+  );
+  const setSortOrder = setEnumValue(
+    SORT_ORDER_VALUES,
+    currentSortOrder,
+    setCurrentSortOrder,
+  );
 
   const goToPage = (newPage: number) => {
     router.push({
@@ -331,26 +369,6 @@ export default function Edit({
   const pager = (
     <Pager totalPages={totalPages} page={page} onPage={goToPage} />
   );
-
-  const setSortBy = (value: string | null) => {
-    if (!value) {
-      return;
-    }
-    const next = toEnumOrDefault(value, SORT_BY_VALUES, currentSortBy);
-    setCurrentSortBy(next);
-  };
-
-  const setSortOrder = (value: string | null) => {
-    if (!value) {
-      return;
-    }
-    const next = toEnumOrDefault(
-      value,
-      SORT_ORDER_VALUES,
-      currentSortOrder,
-    );
-    setCurrentSortOrder(next);
-  };
 
   return (
     <Container size="lg" py="lg">
