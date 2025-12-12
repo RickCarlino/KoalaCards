@@ -3,13 +3,7 @@ import { z } from "zod";
 import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc-procedure";
 import { DeckExport } from "../types/deck-export";
-
-const normalizeGender = (value?: string | null) => {
-  if (value === "M" || value === "F" || value === "N") {
-    return value;
-  }
-  return "N";
-};
+import { normalizeGender } from "../types/gender";
 
 export const exportDeck = procedure
   .input(z.object({ deckId: z.number() }))

@@ -1,5 +1,5 @@
 import { uid } from "radash";
-import { useEffect, useReducer, useState } from "react";
+import { useCallback, useEffect, useReducer, useState } from "react";
 import { trpc } from "../trpc-config";
 import { replaceCards } from "./replace-cards";
 import {
@@ -7,12 +7,15 @@ import {
   EVERY_QUEUE_TYPE,
   Queue,
   QueueItem,
-  SkipCardAction,
   State,
   GradingResult,
 } from "./types";
 import { useUserSettings } from "@/koala/settings-provider";
 import { playTermThenDefinition } from "./playback";
+
+const DEFAULT_TAKE = 5;
+const MIN_TAKE = 1;
+const MAX_TAKE = 25;
 
 const createEmptyQueue = (): Queue => ({
   newWordIntro: [],
@@ -52,30 +55,69 @@ const findCardUUIDForStep = (
   return undefined;
 };
 
-const cardHasPendingSteps = (queue: Queue, cardUUID?: string) =>
-  Boolean(
-    cardUUID &&
-      EVERY_QUEUE_TYPE.some((type) =>
-        queue[type].some((item) => item.cardUUID === cardUUID),
-      ),
+const hasPendingStepsForCard = (queue: Queue, cardUUID?: string) => {
+  if (!cardUUID) {
+    return false;
+  }
+  return EVERY_QUEUE_TYPE.some((type) =>
+    queue[type].some((item) => item.cardUUID === cardUUID),
   );
-
-function skipCard(action: SkipCardAction, state: State): State {
-  const cardUUID = action.payload.uuid;
-  const updatedQueue = removeCardFromQueues(cardUUID, state.queue);
-
-  return {
-    ...state,
-    queue: updatedQueue,
-    currentItem: nextQueueItem(updatedQueue),
-  };
-}
+};
 
 function getItemsDue(queue: Queue): number {
   return EVERY_QUEUE_TYPE.reduce(
     (acc, type) => acc + queue[type].length,
     0,
   );
+}
+
+function parseTakeParam(raw: string | null): number {
+  if (!raw) {
+    return DEFAULT_TAKE;
+  }
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed)) {
+    return DEFAULT_TAKE;
+  }
+  return Math.min(Math.max(parsed, MIN_TAKE), MAX_TAKE);
+}
+
+function getTakeFromLocation(): number {
+  if (typeof window === "undefined") {
+    return DEFAULT_TAKE;
+  }
+  const urlParams = new URLSearchParams(window.location.search);
+  return parseTakeParam(urlParams.get("take"));
+}
+
+function calculateProgressPercent(params: {
+  initialSteps: number;
+  remainingSteps: number;
+}): number {
+  if (params.initialSteps <= 0) {
+    return 0;
+  }
+  return (
+    ((params.initialSteps - params.remainingSteps) / params.initialSteps) *
+    100
+  );
+}
+
+function findCardUUIDByCardId(
+  cards: State["cards"],
+  cardId: number,
+): string | undefined {
+  return Object.values(cards).find((card) => card.cardId === cardId)?.uuid;
+}
+
+function completeCardInState(state: State, cardUUID: string): State {
+  const updatedQueue = removeCardFromQueues(cardUUID, state.queue);
+  return {
+    ...state,
+    queue: updatedQueue,
+    currentItem: nextQueueItem(updatedQueue),
+    completedCards: new Set([...state.completedCards, cardUUID]),
+  };
 }
 
 export function nextQueueItem(queue: Queue): QueueItem | undefined {
@@ -85,7 +127,7 @@ export function nextQueueItem(queue: Queue): QueueItem | undefined {
       return item;
     }
   }
-  return;
+  return undefined;
 }
 
 function initialState(): State {
@@ -103,7 +145,7 @@ function initialState(): State {
 function completeStep(stepUuid: string, state: State): State {
   const cardUUID = findCardUUIDForStep(state.queue, stepUuid);
   const queueWithoutStep = removeStepFromQueues(stepUuid, state.queue);
-  const isCardDone = !cardHasPendingSteps(queueWithoutStep, cardUUID);
+  const isCardDone = !hasPendingStepsForCard(queueWithoutStep, cardUUID);
 
   return {
     ...state,
@@ -122,49 +164,45 @@ export function useReview(deckId: number) {
   const [state, dispatch] = useReducer(reducer, initialState());
   const [isFetching, setIsFetching] = useState(true);
   const userSettings = useUserSettings();
+  const take = getTakeFromLocation();
 
-  const urlParams = new URLSearchParams(window.location.search);
-  const takeParam = urlParams.get("take");
-  const take = takeParam
-    ? Math.min(Math.max(parseInt(takeParam, 10), 1), 25)
-    : 5;
-  const fetchQuizzes = async (currentDeckId: number) => {
-    setIsFetching(true);
-    try {
-      const fetchedData = await mutation.mutateAsync({
-        take,
-        deckId: currentDeckId,
-      });
-      const withUUID = fetchedData.quizzes.map((q) => ({
-        ...q,
-        uuid: uid(8),
-      }));
-      dispatch({ type: "REPLACE_CARDS", payload: withUUID });
-    } finally {
-      setIsFetching(false);
-    }
-  };
+  const fetchQuizzes = useCallback(
+    async (currentDeckId: number) => {
+      setIsFetching(true);
+      try {
+        const fetchedData = await mutation.mutateAsync({
+          take,
+          deckId: currentDeckId,
+        });
+        dispatch({
+          type: "REPLACE_CARDS",
+          payload: fetchedData.quizzes.map((quiz) => ({
+            ...quiz,
+            uuid: uid(8),
+          })),
+        });
+      } finally {
+        setIsFetching(false);
+      }
+    },
+    [mutation, take],
+  );
 
   useEffect(() => {
-    if (deckId) {
-      void fetchQuizzes(deckId);
+    if (!deckId) {
+      return;
     }
-  }, [deckId]);
+    void fetchQuizzes(deckId);
+  }, [deckId, fetchQuizzes]);
 
   const remainingSteps = getItemsDue(state.queue);
-  const progress =
-    state.initialStepCount > 0
-      ? ((state.initialStepCount - remainingSteps) /
-          state.initialStepCount) *
-        100
-      : 0;
-
-  const findCardUUIDById = (cardId: number) =>
-    Object.values(state.cards).find((card) => card.cardId === cardId)
-      ?.uuid;
+  const progress = calculateProgressPercent({
+    initialSteps: state.initialStepCount,
+    remainingSteps,
+  });
 
   return {
-    error: mutation.isError ? mutation.error || "" : null,
+    error: mutation.isError ? mutation.error : null,
     isFetching,
     state,
     currentItem: state.currentItem,
@@ -190,7 +228,7 @@ export function useReview(deckId: number) {
       result: GradingResult,
     ) => {
       const card = state.cards[cardUUID];
-      if (result.isCorrect && card.lessonType === "remedial") {
+      if (result.isCorrect && card?.lessonType === "remedial") {
         await repairCardMutation.mutateAsync({
           id: card.cardId,
           lastFailure: 0,
@@ -208,7 +246,7 @@ export function useReview(deckId: number) {
       cardId: number,
       updates: { term: string; definition: string },
     ) => {
-      const cardUUID = findCardUUIDById(cardId);
+      const cardUUID = findCardUUIDByCardId(state.cards, cardId);
       if (!cardUUID) {
         return;
       }
@@ -236,28 +274,11 @@ function reducer(state: State, action: Action): State {
       };
     }
     case "SKIP_CARD":
-      return {
-        ...skipCard(action, state),
-        completedCards: new Set([
-          ...state.completedCards,
-          action.payload.uuid,
-        ]),
-      };
+      return completeCardInState(state, action.payload.uuid);
     case "COMPLETE_ITEM":
       return completeStep(action.payload.uuid, state);
     case "GIVE_UP": {
-      const { cardUUID: giveUpCardUUID } = action.payload;
-      const giveUpQueue = removeCardFromQueues(
-        giveUpCardUUID,
-        state.queue,
-      );
-
-      return {
-        ...state,
-        queue: giveUpQueue,
-        currentItem: nextQueueItem(giveUpQueue),
-        completedCards: new Set([...state.completedCards, giveUpCardUUID]),
-      };
+      return completeCardInState(state, action.payload.cardUUID);
     }
     case "STORE_GRADE_RESULT":
       return {

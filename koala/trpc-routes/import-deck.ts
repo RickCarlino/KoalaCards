@@ -5,11 +5,12 @@ import { prismaClient } from "../prisma-client";
 import { storageProvider } from "../storage";
 import { procedure } from "../trpc-procedure";
 import { DeckExportCard, deckExportSchema } from "../types/deck-export";
+import { GenderCode, normalizeGender } from "../types/gender";
 
 type PreparedCardInput = {
   term: string;
   definition: string;
-  gender: "M" | "F" | "N";
+  gender: GenderCode;
   flagged: boolean;
   imageBlobId: string | null;
   stability: number;
@@ -36,13 +37,6 @@ const toNumber = (value: number, fallback: number): number => {
     return value;
   }
   return fallback;
-};
-
-const toGender = (value?: string): "M" | "F" | "N" => {
-  if (value === "M" || value === "F" || value === "N") {
-    return value;
-  }
-  return "N";
 };
 
 const parseDate = (value: string) => {
@@ -79,7 +73,7 @@ const normalizeCard = async (
   const prepared: PreparedCardInput = {
     term,
     definition,
-    gender: toGender(card.gender),
+    gender: normalizeGender(card.gender),
     flagged: Boolean(card.flagged),
     imageBlobId,
     stability: toNumber(card.stability, 0),
