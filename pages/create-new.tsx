@@ -22,6 +22,8 @@ const KOREAN_LANG_CODE: LangCode = "ko";
 const KOREAN_LANGUAGE_NAME =
   supportedLanguages[KOREAN_LANG_CODE] || "Korean";
 const LEVELS: Level[] = ["Beginner", "Intermediate", "Advanced"];
+const DEFAULT_DECK_NAME = "My First Koala Deck";
+const ROTATE_PLACEHOLDER_EVERY_MS = 700;
 
 export const getServerSideProps: GetServerSideProps<
   CreateNewProps
@@ -126,13 +128,7 @@ const PLACEHOLDERS = [
   "dreams and future plans",
 ];
 
-function generateCardPrompt({
-  level,
-  topic,
-}: {
-  level: Level;
-  topic: string;
-}) {
+function buildCardPrompt(level: Level, topic: string) {
   return [
     `You are a ${KOREAN_LANGUAGE_NAME} language teacher that helps students learn by creating short example sentence flashcards.`,
     `the perfect example sentence is only a few syllables long.`,
@@ -146,6 +142,22 @@ function generateCardPrompt({
   ].join("\n");
 }
 
+function parseLevel(value: string): Level | undefined {
+  return LEVELS.find((option) => option === value);
+}
+
+function pickRandomIndex(maxExclusive: number) {
+  if (maxExclusive <= 0) {
+    return 0;
+  }
+  return Math.floor(Math.random() * maxExclusive);
+}
+
+function resolveTopic(interest: string, fallback: string) {
+  const trimmed = interest.trim();
+  return trimmed ? trimmed : fallback;
+}
+
 export default function CreateNew() {
   const router = useRouter();
   const [level, setLevel] = React.useState<Level>("Beginner");
@@ -153,36 +165,43 @@ export default function CreateNew() {
   const [placeholderIndex, setPlaceholderIndex] =
     React.useState<number>(0);
   const [hasFocused, setHasFocused] = React.useState<boolean>(false);
+  const hasFocusedRef = React.useRef(hasFocused);
   const createDeck = trpc.createDeck.useMutation();
   const parseCards = trpc.parseCards.useMutation();
   const bulkCreate = trpc.bulkCreateCards.useMutation();
 
   React.useEffect(() => {
-    const randomize = () => {
-      const next = Math.floor(Math.random() * PLACEHOLDERS.length);
-      setPlaceholderIndex(next);
-      setInterest(PLACEHOLDERS[next]);
-    };
+    hasFocusedRef.current = hasFocused;
+  }, [hasFocused]);
 
+  const randomizePlaceholder = React.useCallback(() => {
+    if (hasFocusedRef.current) {
+      return;
+    }
+    const nextIndex = pickRandomIndex(PLACEHOLDERS.length);
+    setPlaceholderIndex(nextIndex);
+    setInterest(PLACEHOLDERS[nextIndex] ?? "");
+  }, []);
+
+  React.useEffect(() => {
     if (hasFocused) {
       return;
     }
 
     if (!interest) {
-      randomize();
+      randomizePlaceholder();
     }
 
-    const id = setInterval(() => {
-      if (!hasFocused) {
-        randomize();
-      }
-    }, 700);
+    const id = setInterval(
+      randomizePlaceholder,
+      ROTATE_PLACEHOLDER_EVERY_MS,
+    );
 
     return () => clearInterval(id);
-  }, [hasFocused, interest]);
+  }, [hasFocused, interest, randomizePlaceholder]);
 
   const handleLevelChange = (value: string) => {
-    const nextLevel = LEVELS.find((option) => option === value);
+    const nextLevel = parseLevel(value);
     if (nextLevel) {
       setLevel(nextLevel);
     }
@@ -191,24 +210,18 @@ export default function CreateNew() {
   const onGo = async () => {
     try {
       const deck = await createDeck.mutateAsync({
-        name: "My First Koala Deck",
+        name: DEFAULT_DECK_NAME,
         langCode: KOREAN_LANG_CODE,
       });
 
-      const topic = interest.trim() || PLACEHOLDERS[placeholderIndex];
+      const placeholder = PLACEHOLDERS[placeholderIndex] ?? "";
+      const topic = resolveTopic(interest, placeholder);
       const { cards } = await parseCards.mutateAsync({
         langCode: KOREAN_LANG_CODE,
-        text: generateCardPrompt({
-          level,
-          topic,
-        }),
+        text: buildCardPrompt(level, topic),
       });
 
-      const input = cards.map((c) => ({
-        ...c,
-        gender: (c.gender ?? "N") as "M" | "F" | "N",
-      }));
-      if (input.length === 0) {
+      if (cards.length === 0) {
         notifications.show({
           title: "No content",
           message:
@@ -217,7 +230,7 @@ export default function CreateNew() {
         });
         return;
       }
-      await bulkCreate.mutateAsync({ deckId: deck.id, input });
+      await bulkCreate.mutateAsync({ deckId: deck.id, input: cards });
 
       await router.push(`/review/${deck.id}`);
     } catch {
@@ -235,7 +248,7 @@ export default function CreateNew() {
         Create Your First Deck
       </Title>
       <Text c="dimmed" mb="lg">
-        Deck name will be "My First Koala Deck".
+        Deck name will be "{DEFAULT_DECK_NAME}".
       </Text>
 
       <Group align="center" wrap="wrap" gap="xs" mb="md">

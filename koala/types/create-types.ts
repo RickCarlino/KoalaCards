@@ -6,7 +6,7 @@ interface ProcessedCard {
   gender: Gender;
 }
 
-interface Deck {
+export interface Deck {
   id: number;
   name: string;
   langCode: LangCode;
@@ -32,40 +32,6 @@ export type Action =
   | { type: "SET_DECK_ID"; deckId: number | undefined }
   | { type: "SET_DECK_NAME"; deckName: string }
   | { type: "SET_DECK_LANG"; deckLang: LangCode };
-
-type DeckAction =
-  | { type: "SET_DECK_SELECTION"; deckSelection: "existing" | "new" }
-  | { type: "SET_DECK_ID"; deckId: number | undefined }
-  | { type: "SET_DECK_NAME"; deckName: string }
-  | { type: "SET_DECK_LANG"; deckLang: LangCode };
-
-type InputAction = { type: "SET_RAW_INPUT"; rawInput: string };
-
-type ReviewAction =
-  | { type: "EDIT_CARD"; card: ProcessedCard; index: number }
-  | { type: "REMOVE_CARD"; index: number };
-
-export interface DeckStepProps {
-  decks: Deck[];
-  state: Pick<State, "deckSelection" | "deckId" | "deckName" | "deckLang">;
-  dispatch: React.Dispatch<DeckAction>;
-  onNext: () => void;
-}
-
-export interface InputStepProps {
-  state: Pick<State, "deckLang" | "rawInput">;
-  dispatch: React.Dispatch<InputAction>;
-  onSubmit: () => void;
-  loading: boolean;
-}
-
-export interface ReviewStepProps {
-  state: Pick<State, "processedCards">;
-  dispatch: React.Dispatch<ReviewAction>;
-  onBack: () => void;
-  onSave: () => void;
-  loading: boolean;
-}
 
 export interface LanguageInputPageProps {
   decks: Deck[];
