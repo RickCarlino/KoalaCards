@@ -1,6 +1,6 @@
 import { Gender, LangCode } from "@/koala/shared-types";
 
-interface ProcessedCard {
+export interface ProcessedCard {
   term: string;
   definition: string;
   gender: Gender;
@@ -25,8 +25,12 @@ export interface State {
 }
 
 export type Action =
-  | { type: "ADD_CARD"; card: ProcessedCard }
-  | { type: "EDIT_CARD"; card: ProcessedCard; index: number }
+  | {
+      type: "EDIT_CARD_FIELD";
+      index: number;
+      field: "term" | "definition";
+      value: string;
+    }
   | { type: "REMOVE_CARD"; index: number }
   | { type: "SET_PROCESSED_CARDS"; processedCards: ProcessedCard[] }
   | { type: "SET_RAW_INPUT"; rawInput: string }

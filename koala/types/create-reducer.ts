@@ -14,15 +14,17 @@ export const INITIAL_STATE: State = {
 
 export function reducer(state: State, action: Action): State {
   switch (action.type) {
-    case "ADD_CARD":
-      return {
-        ...state,
-        processedCards: [...state.processedCards, action.card],
+    case "EDIT_CARD_FIELD": {
+      const existing = state.processedCards[action.index];
+      if (!existing) {
+        return state;
+      }
+      const processedCards = [...state.processedCards];
+      processedCards[action.index] = {
+        ...existing,
+        [action.field]: action.value,
       };
-    case "EDIT_CARD": {
-      const updatedCards = [...state.processedCards];
-      updatedCards[action.index] = action.card;
-      return { ...state, processedCards: updatedCards };
+      return { ...state, processedCards };
     }
     case "REMOVE_CARD":
       return {
