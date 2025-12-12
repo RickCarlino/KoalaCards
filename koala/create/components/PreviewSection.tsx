@@ -23,29 +23,54 @@ type PreviewSectionProps = {
 
 export function PreviewSection(props: PreviewSectionProps) {
   const { processedCards, onEdit, onRemove, canSave, onSave } = props;
+  const count = processedCards.length;
 
   return (
     <Paper withBorder p="md" radius="md">
       <Group justify="space-between" mb="xs">
         <Title order={4}>Preview</Title>
-        <Button onClick={onSave} disabled={!canSave}>
-          {processedCards.length
-            ? `Save (${processedCards.length})`
-            : "Save"}
-        </Button>
+        <SaveButton canSave={canSave} count={count} onSave={onSave} />
       </Group>
 
-      {processedCards.length ? (
-        <CardList
-          cards={processedCards}
-          onEdit={onEdit}
-          onRemove={onRemove}
-        />
-      ) : (
-        <Text c="dimmed">No cards yet. Generate or parse to preview.</Text>
-      )}
+      <PreviewBody
+        cards={processedCards}
+        onEdit={onEdit}
+        onRemove={onRemove}
+      />
     </Paper>
   );
+}
+
+function SaveButton(props: {
+  canSave: boolean;
+  count: number;
+  onSave: () => void;
+}) {
+  const { canSave, count, onSave } = props;
+  const label = count ? `Save (${count})` : "Save";
+  return (
+    <Button onClick={onSave} disabled={!canSave}>
+      {label}
+    </Button>
+  );
+}
+
+function PreviewBody(props: {
+  cards: State["processedCards"];
+  onEdit: (
+    index: number,
+    field: "term" | "definition",
+    value: string,
+  ) => void;
+  onRemove: (index: number) => void;
+}) {
+  const { cards, onEdit, onRemove } = props;
+  if (!cards.length) {
+    return (
+      <Text c="dimmed">No cards yet. Generate or parse to preview.</Text>
+    );
+  }
+  return <CardList cards={cards} onEdit={onEdit} onRemove={onRemove} />;
 }
 
 function CardList(props: {

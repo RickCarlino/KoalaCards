@@ -39,3 +39,5 @@ export type Action =
 export interface LanguageInputPageProps {
   decks: Deck[];
 }
+
+export type ParsedRow = { term: string; definition: string };
