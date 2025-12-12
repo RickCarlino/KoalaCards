@@ -73,8 +73,12 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
   const handleArchive = async () => {
     try {
       await archiveCardMutation.mutateAsync({ cardID: card.cardId });
-    } catch (error) {
-      console.error("Failed to archive card:", error);
+    } catch {
+      notifications.show({
+        title: "Archive failed",
+        message: "Could not archive this card. Please try again.",
+        color: "red",
+      });
     } finally {
       onSkip(card.uuid);
     }

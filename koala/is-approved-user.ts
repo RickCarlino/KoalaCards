@@ -11,7 +11,7 @@ export const isApprovedUser = (id: string) => {
   return approvedUserIDs.has(id);
 };
 
-async function deleteInactiveUser(id: string, email: string | null) {
+async function deleteInactiveUser(id: string) {
   if (isApprovedUser(id)) {
     return;
   }
@@ -34,9 +34,7 @@ async function deleteInactiveUser(id: string, email: string | null) {
     },
   });
 
-  await prismaClient.user.delete({ where: { id } }).then(() => {
-    console.log(`=== Delete ${email}`);
-  });
+  await prismaClient.user.delete({ where: { id } });
 }
 
 function calculateDays(lastSeen: Date | null) {
@@ -74,26 +72,21 @@ type User = {
 const userCleanup = async (user: User) => {
   const { email, id, lastSeen, createdAt } = user;
   const lastSeenDays = calculateDays(lastSeen);
-  if (lastSeenDays < 28) {
-    const su = userApproval(id, email);
-    const cardCount = await countCards(id);
-    if (cardCount > 1) {
-      const flair = su ? "@" : "";
-      const log = `== ${flair}${email} ${lastSeenDays}d ago ${cardCount} cards`;
-      console.log(log);
-      return;
-    } else {
-      if (cardCount === 0) {
-        const daysSinceRegistration = calculateDays(createdAt);
-        const a = daysSinceRegistration > 1;
-        const b = lastSeenDays > 1;
-        if (a || b) {
-          await deleteInactiveUser(id, email);
-        }
-      }
-    }
-  } else {
-    await deleteInactiveUser(user.id, email);
+  if (lastSeenDays >= 28) {
+    await deleteInactiveUser(id);
+    return;
+  }
+
+  userApproval(id, email);
+  const cardCount = await countCards(id);
+  if (cardCount > 0) {
+    return;
+  }
+
+  const daysSinceRegistration = calculateDays(createdAt);
+  const inactiveForDays = daysSinceRegistration > 1 || lastSeenDays > 1;
+  if (inactiveForDays) {
+    await deleteInactiveUser(id);
   }
 };
 

@@ -26,57 +26,64 @@ interface CardRowProps {
   onDelete: () => void;
 }
 
+type DeleteState = "idle" | "deleting" | "deleted" | "error";
+
+const formatDateISO = (iso: string) => iso.slice(0, 10);
+const formatEpoch = (ms: number) =>
+  ms ? new Date(ms).toISOString().slice(0, 10) : "—";
+const getDeleteColor = (state: DeleteState) => {
+  if (state === "error") {
+    return "blue";
+  }
+  if (state === "deleting") {
+    return "yellow";
+  }
+  return "red";
+};
+
 function CardRow({ card, onDelete }: CardRowProps) {
   const router = useRouter();
-  const del = trpc.deleteCard.useMutation();
+  const deleteMutation = trpc.deleteCard.useMutation();
   const edit = trpc.editCard.useMutation();
-  const [color, setColor] = React.useState("red");
-  const disabled = color !== "red";
-  const deleteCard = () => {
-    setColor("yellow");
-    del.mutateAsync({ id: card.id }).then(
-      () => {
-        setColor("gray");
-        onDelete();
-      },
-      (e) => {
-        console.error(e);
-        setColor("blue");
-      },
-    );
-  };
-
+  const [deleteState, setDeleteState] =
+    React.useState<DeleteState>("idle");
   const [paused, setPaused] = React.useState(card.flagged);
   const [toggling, setToggling] = React.useState(false);
+
+  const deleteColor = getDeleteColor(deleteState);
+  const isDeleting = deleteState === "deleting";
+  const isDeleted = deleteState === "deleted";
+
+  const deleteCard = async () => {
+    if (isDeleting) {
+      return;
+    }
+    setDeleteState("deleting");
+    try {
+      await deleteMutation.mutateAsync({ id: card.id });
+      setDeleteState("deleted");
+      onDelete();
+    } catch {
+      setDeleteState("error");
+    }
+  };
+
   const togglePaused = async () => {
     try {
       setToggling(true);
       const next = !paused;
       setPaused(next);
       await edit.mutateAsync({ id: card.id, flagged: next });
-    } catch (e) {
-      console.error(e);
+    } catch {
       setPaused((v) => !v);
     } finally {
       setToggling(false);
     }
   };
 
-  if (disabled) {
-    return (
-      <tr>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td></td>
-      </tr>
-    );
+  if (isDeleted) {
+    return null;
   }
-
-  const formatDateISO = (iso: string) => iso.slice(0, 10);
-  const formatEpoch = (ms: number) =>
-    ms ? new Date(ms).toISOString().slice(0, 10) : "—";
 
   return (
     <tr>
@@ -114,8 +121,8 @@ function CardRow({ card, onDelete }: CardRowProps) {
             <IconPencil stroke={1.5} />
           </Button>
           <Button
-            disabled={disabled}
-            color={color}
+            disabled={isDeleting}
+            color={deleteColor}
             onClick={deleteCard}
             variant="outline"
           >
@@ -146,7 +153,7 @@ export const CardTable: React.FC<CardTableProps> = ({
       </thead>
       <tbody>
         {cards.map((card) => (
-          <CardRow card={card as Card} onDelete={onDelete} key={card.id} />
+          <CardRow card={card} onDelete={onDelete} key={card.id} />
         ))}
       </tbody>
     </Table>

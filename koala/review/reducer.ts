@@ -14,7 +14,7 @@ import {
 import { useUserSettings } from "@/koala/settings-provider";
 import { playTermThenDefinition } from "./playback";
 
-const queue = (): Queue => ({
+const createEmptyQueue = (): Queue => ({
   newWordIntro: [],
   remedialIntro: [],
   speaking: [],
@@ -22,24 +22,47 @@ const queue = (): Queue => ({
   remedialOutro: [],
 });
 
-function removeCardFromQueues(
-  cardUUID: string,
+const filterQueue = (
   queue: Queue,
-): { updatedQueue: Queue } {
-  const updatedQueue = { ...queue };
-
+  predicate: (item: QueueItem) => boolean,
+): Queue => {
+  const next: Queue = { ...queue };
   for (const type of EVERY_QUEUE_TYPE) {
-    updatedQueue[type] = updatedQueue[type].filter(
-      (item) => item.cardUUID !== cardUUID,
-    );
+    next[type] = queue[type].filter(predicate);
   }
+  return next;
+};
 
-  return { updatedQueue };
-}
+const removeCardFromQueues = (cardUUID: string, queue: Queue) =>
+  filterQueue(queue, (item) => item.cardUUID !== cardUUID);
+
+const removeStepFromQueues = (stepUuid: string, queue: Queue) =>
+  filterQueue(queue, (item) => item.stepUuid !== stepUuid);
+
+const findCardUUIDForStep = (
+  queue: Queue,
+  stepUuid: string,
+): string | undefined => {
+  for (const type of EVERY_QUEUE_TYPE) {
+    const match = queue[type].find((item) => item.stepUuid === stepUuid);
+    if (match) {
+      return match.cardUUID;
+    }
+  }
+  return undefined;
+};
+
+const cardHasPendingSteps = (queue: Queue, cardUUID?: string) =>
+  Boolean(
+    cardUUID &&
+      EVERY_QUEUE_TYPE.some((type) =>
+        queue[type].some((item) => item.cardUUID === cardUUID),
+      ),
+  );
 
 function skipCard(action: SkipCardAction, state: State): State {
   const cardUUID = action.payload.uuid;
-  const { updatedQueue } = removeCardFromQueues(cardUUID, state.queue);
+  const updatedQueue = removeCardFromQueues(cardUUID, state.queue);
 
   return {
     ...state,
@@ -49,14 +72,10 @@ function skipCard(action: SkipCardAction, state: State): State {
 }
 
 function getItemsDue(queue: Queue): number {
-  const relevant: (keyof Queue)[] = [
-    "newWordIntro",
-    "remedialIntro",
-    "speaking",
-    "newWordOutro",
-    "remedialOutro",
-  ];
-  return relevant.reduce((acc, type) => acc + queue[type].length, 0);
+  return EVERY_QUEUE_TYPE.reduce(
+    (acc, type) => acc + queue[type].length,
+    0,
+  );
 }
 
 export function nextQueueItem(queue: Queue): QueueItem | undefined {
@@ -71,13 +90,29 @@ export function nextQueueItem(queue: Queue): QueueItem | undefined {
 
 function initialState(): State {
   return {
-    queue: queue(),
+    queue: createEmptyQueue(),
     cards: {},
     currentItem: undefined,
     gradingResults: {},
     initialCardCount: 0,
     initialStepCount: 0,
     completedCards: new Set(),
+  };
+}
+
+function completeStep(stepUuid: string, state: State): State {
+  const cardUUID = findCardUUIDForStep(state.queue, stepUuid);
+  const queueWithoutStep = removeStepFromQueues(stepUuid, state.queue);
+  const isCardDone = !cardHasPendingSteps(queueWithoutStep, cardUUID);
+
+  return {
+    ...state,
+    queue: queueWithoutStep,
+    currentItem: nextQueueItem(queueWithoutStep),
+    completedCards:
+      isCardDone && cardUUID
+        ? new Set([...state.completedCards, cardUUID])
+        : state.completedCards,
   };
 }
 
@@ -93,27 +128,26 @@ export function useReview(deckId: number) {
   const take = takeParam
     ? Math.min(Math.max(parseInt(takeParam, 10), 1), 25)
     : 5;
-  const fetchQuizzes = (currentDeckId: number) => {
+  const fetchQuizzes = async (currentDeckId: number) => {
     setIsFetching(true);
-    mutation
-      .mutateAsync(
-        { take, deckId: currentDeckId },
-        {
-          onSuccess: (fetchedData) => {
-            const withUUID = fetchedData.quizzes.map((q) => ({
-              ...q,
-              uuid: uid(8),
-            }));
-            dispatch({ type: "REPLACE_CARDS", payload: withUUID });
-          },
-        },
-      )
-      .finally(() => setIsFetching(false));
+    try {
+      const fetchedData = await mutation.mutateAsync({
+        take,
+        deckId: currentDeckId,
+      });
+      const withUUID = fetchedData.quizzes.map((q) => ({
+        ...q,
+        uuid: uid(8),
+      }));
+      dispatch({ type: "REPLACE_CARDS", payload: withUUID });
+    } finally {
+      setIsFetching(false);
+    }
   };
 
   useEffect(() => {
     if (deckId) {
-      fetchQuizzes(deckId);
+      void fetchQuizzes(deckId);
     }
   }, [deckId]);
 
@@ -168,7 +202,7 @@ export function useReview(deckId: number) {
       });
     },
     refetchQuizzes: () => {
-      fetchQuizzes(deckId);
+      void fetchQuizzes(deckId);
     },
     updateCardFields: (
       cardId: number,
@@ -191,10 +225,8 @@ export function useReview(deckId: number) {
 }
 
 function reducer(state: State, action: Action): State {
-  console.log(action.type);
-  console.log({ ...state, gradingResults: state.gradingResults });
   switch (action.type) {
-    case "REPLACE_CARDS":
+    case "REPLACE_CARDS": {
       const newState = replaceCards(action, state);
       return {
         ...newState,
@@ -202,6 +234,7 @@ function reducer(state: State, action: Action): State {
         initialStepCount: getItemsDue(newState.queue),
         completedCards: new Set(),
       };
+    }
     case "SKIP_CARD":
       return {
         ...skipCard(action, state),
@@ -211,42 +244,10 @@ function reducer(state: State, action: Action): State {
         ]),
       };
     case "COMPLETE_ITEM":
-      const { uuid } = action.payload;
-      const updatedQueue = { ...state.queue };
-
-      let cardUUID: string | undefined;
-      for (const queueType of EVERY_QUEUE_TYPE) {
-        const item = state.queue[queueType].find(
-          (item) => item.stepUuid === uuid,
-        );
-        if (item) {
-          cardUUID = item.cardUUID;
-          break;
-        }
-      }
-
-      for (const queueType of EVERY_QUEUE_TYPE) {
-        updatedQueue[queueType] = updatedQueue[queueType].filter(
-          (item) => item.stepUuid !== uuid,
-        );
-      }
-
-      const hasMoreItems = Object.values(updatedQueue).some((queue) =>
-        queue.some((item) => item.cardUUID === cardUUID),
-      );
-
-      return {
-        ...state,
-        queue: updatedQueue,
-        currentItem: nextQueueItem(updatedQueue),
-        completedCards:
-          !hasMoreItems && cardUUID
-            ? new Set([...state.completedCards, cardUUID])
-            : state.completedCards,
-      };
-    case "GIVE_UP":
+      return completeStep(action.payload.uuid, state);
+    case "GIVE_UP": {
       const { cardUUID: giveUpCardUUID } = action.payload;
-      const { updatedQueue: giveUpQueue } = removeCardFromQueues(
+      const giveUpQueue = removeCardFromQueues(
         giveUpCardUUID,
         state.queue,
       );
@@ -257,6 +258,7 @@ function reducer(state: State, action: Action): State {
         currentItem: nextQueueItem(giveUpQueue),
         completedCards: new Set([...state.completedCards, giveUpCardUUID]),
       };
+    }
     case "STORE_GRADE_RESULT":
       return {
         ...state,
@@ -265,7 +267,7 @@ function reducer(state: State, action: Action): State {
           [action.payload.cardUUID]: action.payload.result,
         },
       };
-    case "UPDATE_CARD":
+    case "UPDATE_CARD": {
       const target = state.cards[action.payload.cardUUID];
       if (!target) {
         return state;
@@ -281,6 +283,7 @@ function reducer(state: State, action: Action): State {
           },
         },
       };
+    }
     default:
       return state;
   }

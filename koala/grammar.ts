@@ -6,7 +6,73 @@ import { QuizEvaluator } from "./quiz-evaluators/types";
 import { getLangName } from "./get-lang-name";
 import { LangCode } from "./shared-types";
 
+const TARGET_LANG: LangCode = "ko";
+
+const ERROR_TAGS = [
+  "ok",
+  "form",
+  "input-error",
+  "syntax",
+  "lexis",
+  "semantics",
+  "pragmatics",
+  "orthography",
+  "unnatural",
+  "better-option",
+] as const;
+
+type ErrorTag = (typeof ERROR_TAGS)[number];
+
+const TAG_DESCRIPTIONS: Record<ErrorTag, string> = {
+  ok: "No issues; a native speaker would accept this",
+  "better-option":
+    "Understandable, but a clearer or more natural alternative exists",
+  "input-error":
+    "Transcription artifact: STT glitch, typo, spacing, or diacritics",
+  pragmatics: "Register, politeness, tone, or discourse use is off",
+  orthography:
+    "Spelling, spacing, capitalization, diacritics, or punctuation issue",
+  form: "Morphology/inflection/agreement/derivation is incorrect",
+  syntax: "Word order or construction/valency is incorrect",
+  lexis:
+    "Wrong word choice, irrelevant word choice, bad collocation, or false friend",
+  semantics: "Meaning is inaccurate, ambiguous, or misleading",
+  unnatural: "Grammatically fine but not idiomatic or natural",
+};
+
+const DOWNVOTE_TAGS = new Set<ErrorTag>([
+  "ok",
+  "input-error",
+  "better-option",
+  "pragmatics",
+  "orthography",
+]);
+
+const DEFAULT_EVENT_TYPE = "speaking-judgement";
+
+const tagSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        id: z.number().int(),
+        tag: z.enum(ERROR_TAGS),
+      }),
+    )
+    .max(12),
+});
+
+const zodGradeResponse = z.object({
+  yesNo: z.enum(["yes", "no"]),
+  why: z.string(),
+});
+
 type Explanation = z.infer<typeof zodGradeResponse>;
+
+type QuizResultEntry = {
+  id: number;
+  definition: string;
+  userInput: string;
+};
 
 type GrammarCorrectionProps = {
   term: string;
@@ -21,95 +87,38 @@ type StoreTrainingData = (
   exp: Explanation,
 ) => Promise<number>;
 
-const zodGradeResponse = z.object({
-  yesNo: z.enum(["yes", "no"]),
-  why: z.string(),
-});
+const tagDescriptionsBlock = Object.entries(TAG_DESCRIPTIONS)
+  .map(([k, v]) => `\`${k}\`: ${v}.`)
+  .join("\n");
 
-async function addTagsToList() {
-  console.log("tagging untagged quiz results");
-  const ERROR_TAGS = [
-    "ok",
-    "form",
-    "input-error",
-    "syntax",
-    "lexis",
-    "semantics",
-    "pragmatics",
-    "orthography",
-    "unnatural",
-    "better-option",
-  ] as const;
-
-  const untaggedWhere: Prisma.QuizResultWhereInput = {
-    isAcceptable: false,
-    OR: [{ errorTag: null }, { errorTag: "" }],
-  };
-
-  const candidates = await prismaClient.quizResult.findMany({
-    where: untaggedWhere,
-    orderBy: { createdAt: "desc" },
-    take: 12,
-  });
-
-  if (candidates.length === 0) {
-    return;
-  }
-
-  const ZItem = z.object({
-    id: z.number().int(),
-    tag: z.enum(ERROR_TAGS),
-  });
-  const ZOut = z.object({ items: z.array(ZItem).max(12) });
-
-  const toTag = candidates;
-  const system = {
-    role: "system" as const,
-    content: `
-  You are a language-learning error classifier.
-
-  Task:
-  - For each entry, assign exactly one error tag from the allowed list.
-  - Tags: ${ERROR_TAGS.join(", ")}.
-  - Use the tag that best explains why the userInput is wrong compared to the acceptableTerm.
-  - If the userInput is already natural and acceptable, use "ok".
-  - Return only valid JSON matching the schema provided (no extra text).
-
-  Be concise, consistent, and deterministic.
-  `.trim(),
-  };
-  const TAG_DESCRIPTIONS: Record<(typeof ERROR_TAGS)[number], string> = {
-    ok: "No issues; a native speaker would accept this",
-    "better-option":
-      "Understandable, but a clearer or more natural alternative exists",
-    "input-error":
-      "Transcription artifact: STT glitch, typo, spacing, or diacritics",
-    pragmatics: "Register, politeness, tone, or discourse use is off",
-    orthography:
-      "Spelling, spacing, capitalization, diacritics, or punctuation issue",
-    form: "Morphology/inflection/agreement/derivation is incorrect",
-    syntax: "Word order or construction/valency is incorrect",
-    lexis:
-      "Wrong word choice, irrelevant word choice, bad collocation, or false friend",
-    semantics: "Meaning is inaccurate, ambiguous, or misleading",
-    unnatural: "Grammatically fine but not idiomatic or natural",
-  };
-
-  const tagDescriptionsBlock = Object.entries(TAG_DESCRIPTIONS)
-    .map(([k, v]) => `\`${k}\`: ${v}.`)
-    .join("\n");
-
-  const entriesBlock = toTag
+const buildTaggingMessages = (entries: QuizResultEntry[]) => {
+  const entriesBlock = entries
     .map((r) =>
       [
         `id=${r.id}`,
-        `lang=ko`,
+        `lang=${TARGET_LANG}`,
         `teacherQuestion=${r.definition}`,
         `studentResponse=${r.userInput}`,
         `---`,
       ].join("\n"),
     )
     .join("\n");
+
+  const system = {
+    role: "system" as const,
+    content: `
+You are a language-learning error classifier.
+
+Task:
+- For each entry, assign exactly one error tag from the allowed list.
+- Tags: ${ERROR_TAGS.join(", ")}.
+- Use the tag that best explains why the userInput is wrong compared to the acceptableTerm.
+- If the userInput is already natural and acceptable, use "ok".
+- Return only valid JSON matching the schema provided (no extra text).
+
+Be concise, consistent, and deterministic.
+`.trim(),
+  };
 
   const user = {
     role: "user" as const,
@@ -125,33 +134,46 @@ async function addTagsToList() {
     ].join("\n\n"),
   };
 
+  return [system, user];
+};
+
+async function addTagsToList() {
+  const untaggedWhere: Prisma.QuizResultWhereInput = {
+    isAcceptable: false,
+    OR: [{ errorTag: null }, { errorTag: "" }],
+  };
+
+  const candidates = await prismaClient.quizResult.findMany({
+    where: untaggedWhere,
+    orderBy: { createdAt: "desc" },
+    take: 12,
+  });
+
+  if (!candidates.length) {
+    return;
+  }
+
+  const messages = buildTaggingMessages(candidates);
   const structured = await generateStructuredOutput({
     model: ["openai", "cheap"],
-    messages: [system, user],
-    schema: ZOut,
+    messages,
+    schema: tagSchema,
     maxTokens: 3000,
   });
 
   if (!structured.items.length) {
     return;
   }
-  console.log(JSON.stringify([system, user, structured], null, 2));
-  const DOWNVOTE_TAGS = new Set([
-    "ok",
-    "input-error",
-    "better-option",
-    "pragmatics",
-    "orthography",
-  ]);
-  const updates = structured.items.map((it) => {
+
+  const updates = structured.items.map((item) => {
     const where: Prisma.QuizResultWhereInput = {
-      id: it.id,
+      id: item.id,
       isAcceptable: false,
       OR: [{ errorTag: null }, { errorTag: "" }],
     };
     const data: Prisma.QuizResultUpdateManyMutationInput = {
-      errorTag: it.tag,
-      ...(DOWNVOTE_TAGS.has(it.tag) ? { helpfulness: -1 } : {}),
+      errorTag: item.tag,
+      ...(DOWNVOTE_TAGS.has(item.tag) ? { helpfulness: -1 } : {}),
     };
     return prismaClient.quizResult.updateMany({ where, data });
   });
@@ -171,7 +193,7 @@ const storeTrainingData: StoreTrainingData = async (props, exp) => {
       userInput,
       isAcceptable: yesNo === "yes",
       reason: why,
-      eventType: eventType || "speaking-judgement",
+      eventType: eventType ?? DEFAULT_EVENT_TYPE,
     },
   });
 
@@ -179,16 +201,17 @@ const storeTrainingData: StoreTrainingData = async (props, exp) => {
 };
 
 const LANG_OVERRIDES: Partial<Record<LangCode, string>> = {
-  ko: "For the sake of this discussion, let's say that formality levels don't need to be taken into consideration.",
+  [TARGET_LANG]:
+    "For the sake of this discussion, let's say that formality levels don't need to be taken into consideration.",
 };
 
 async function run(props: GrammarCorrectionProps): Promise<Explanation> {
-  const override = LANG_OVERRIDES["ko" as LangCode] || "";
+  const override = LANG_OVERRIDES[TARGET_LANG] ?? "";
   const messages = [
     {
       role: "user" as const,
       content: [
-        `I am learning ${getLangName("ko")}.`,
+        `I am learning ${getLangName(TARGET_LANG)}.`,
         `My prompt was: ${props.definition} (${props.term})`,
         `Let's say I am in a situation that warrants the sentence or prompt above.`,
         `Could one say "${props.userInput}"?`,
@@ -225,18 +248,10 @@ export const grammarCorrectionNext: QuizEvaluator = async ({
     ...card,
     userInput,
     userId: userID,
-    eventType: "speaking-judgement",
+    eventType: DEFAULT_EVENT_TYPE,
   });
-  console.log(JSON.stringify(explanation));
-  if (explanation.yesNo === "yes") {
-    return { result: "pass", userMessage: explanation.why, quizResultId };
-  } else {
-    return {
-      result: "fail",
-      userMessage: explanation.why,
-      quizResultId,
-    };
-  }
+  const result = explanation.yesNo === "yes" ? "pass" : "fail";
+  return { result, userMessage: explanation.why, quizResultId };
 };
 
 export async function gradeUtterance(params: {
@@ -255,7 +270,7 @@ export async function gradeUtterance(params: {
     definition: params.definition,
     userInput: params.userInput,
     userId: params.userId,
-    eventType: params.eventType || "speaking-judgement",
+    eventType: params.eventType ?? DEFAULT_EVENT_TYPE,
   });
   return {
     isCorrect: explanation.yesNo === "yes",

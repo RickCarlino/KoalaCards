@@ -226,26 +226,27 @@ function InnerReviewPage({ deckId }: ReviewDeckPageProps) {
     : "1fr";
 
   async function playCard() {
-    if (!card) {
-      console.warn("No card available for playback.");
+    if (!card || !currentItem) {
       return;
     }
-    switch (currentItem?.itemType) {
-      case "remedialIntro":
-      case "newWordIntro":
-        return await playTermThenDefinition(
-          card,
-          userSettings.playbackSpeed,
-        );
-      case "speaking":
-      case "newWordOutro":
-      case "remedialOutro":
-        return await playAudio(
-          card.definitionAudio,
-          userSettings.playbackSpeed,
-        );
-      default:
-        console.warn("No audio available for this card type.");
+    if (
+      currentItem.itemType === "remedialIntro" ||
+      currentItem.itemType === "newWordIntro"
+    ) {
+      return await playTermThenDefinition(
+        card,
+        userSettings.playbackSpeed,
+      );
+    }
+    if (
+      currentItem.itemType === "speaking" ||
+      currentItem.itemType === "newWordOutro" ||
+      currentItem.itemType === "remedialOutro"
+    ) {
+      return await playAudio(
+        card.definitionAudio,
+        userSettings.playbackSpeed,
+      );
     }
   }
 

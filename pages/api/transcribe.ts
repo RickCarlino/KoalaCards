@@ -84,10 +84,5 @@ export default async function handler(
   });
 
   const text = result.text ?? "There was a transcription error.";
-  console.log({
-    language,
-    hint,
-    text,
-  });
   return res.status(200).json({ text });
 }

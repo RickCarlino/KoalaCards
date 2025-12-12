@@ -9,7 +9,7 @@ interface ProcessedCard {
 interface Deck {
   id: number;
   name: string;
-  langCode: string;
+  langCode: LangCode;
 }
 
 export interface State {

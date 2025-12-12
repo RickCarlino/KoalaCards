@@ -55,6 +55,15 @@ const getQuizConfig = (quizType: QuizType) => {
   }
 };
 
+const getLastReviewMs = (lastReview: number | Date | null | undefined) => {
+  if (!lastReview) {
+    return 0;
+  }
+  return typeof lastReview === "number"
+    ? lastReview
+    : new Date(lastReview).getTime();
+};
+
 export const QuizCard: React.FC<QuizCardProps> = ({
   card,
   onProceed,
@@ -130,8 +139,7 @@ export const QuizCard: React.FC<QuizCardProps> = ({
       } else {
         setPhase("failure");
       }
-    } catch (error) {
-      console.error("Grading error:", error);
+    } catch {
       setPhase("failure");
       setFeedback("Error occurred during grading.");
     }
@@ -189,11 +197,7 @@ export const QuizCard: React.FC<QuizCardProps> = ({
             quizData={{
               difficulty: card.difficulty,
               stability: card.stability,
-              lastReview: card.lastReview
-                ? typeof card.lastReview === "number"
-                  ? card.lastReview
-                  : new Date(card.lastReview).getTime()
-                : 0,
+              lastReview: getLastReviewMs(card.lastReview),
               lapses: card.lapses,
               repetitions: card.repetitions,
             }}

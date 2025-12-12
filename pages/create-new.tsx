@@ -220,8 +220,7 @@ export default function CreateNew() {
       await bulkCreate.mutateAsync({ deckId: deck.id, input });
 
       await router.push(`/review/${deck.id}`);
-    } catch (e) {
-      console.error(e);
+    } catch {
       notifications.show({
         title: "Error",
         message: "Could not create your first deck. Please try again.",

@@ -123,8 +123,7 @@ export const RemedialOutro: CardUI = ({
       } else {
         setPhase("failure");
       }
-    } catch (error) {
-      console.error("Grading error:", error);
+    } catch {
       setPhase("failure");
       setGradingResult({
         transcription: "Error occurred during processing.",

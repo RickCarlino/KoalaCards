@@ -60,7 +60,6 @@ ${textsToTranslate.join("\n---\n")}
         return translatedTexts[0] || "";
       }
     } catch (error) {
-      console.error("Error during translation:", error);
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
         message: "Failed to translate text.",

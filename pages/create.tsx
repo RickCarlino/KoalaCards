@@ -25,8 +25,8 @@ import {
   Textarea,
   TextInput,
   Title,
-  useMantineTheme,
   Radio,
+  useMantineTheme,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { GetServerSideProps } from "next";
@@ -35,13 +35,103 @@ import React from "react";
 
 type Mode = "vibe" | "wordlist" | "csv";
 
-function handleError(error: unknown) {
-  console.error(error);
+type DeckSelection = State["deckSelection"];
+
+type BulkCreateInput =
+  | { deckId: number; input: State["processedCards"] }
+  | {
+      deckName: string;
+      langCode: LangCode;
+      input: State["processedCards"];
+    };
+
+function showError() {
   notifications.show({
     title: "Error",
     message: "Something went wrong. Please try again.",
     color: "red",
   });
+}
+
+function showValidationError(title: string, message: string) {
+  notifications.show({ title, message, color: "red" });
+}
+
+function showSuccess(title: string, message: string) {
+  notifications.show({ title, message, color: "green" });
+}
+
+function parseMode(value: unknown): Mode | undefined {
+  if (value === "vibe" || value === "wordlist" || value === "csv") {
+    return value;
+  }
+  return undefined;
+}
+
+function parseNumericId(value: unknown): number | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const parsed = Number(value);
+  return Number.isNaN(parsed) ? undefined : parsed;
+}
+
+function parseWordsQuery(value: unknown): string[] {
+  if (typeof value !== "string") {
+    return [];
+  }
+  const decoded = decodeURIComponent(value);
+  return decoded
+    .split(",")
+    .map((word) => word.trim())
+    .filter(Boolean);
+}
+
+function getDeckSelectionFromDecks(
+  decks: LanguageInputPageProps["decks"],
+) {
+  return decks.length ? ("existing" as const) : ("new" as const);
+}
+
+function canSaveToDeck(
+  state: Pick<
+    State,
+    "processedCards" | "deckSelection" | "deckId" | "deckName"
+  >,
+) {
+  if (state.processedCards.length === 0) {
+    return false;
+  }
+  if (state.deckSelection === "existing") {
+    return Boolean(state.deckId);
+  }
+  return Boolean(state.deckName.trim());
+}
+
+function makeBulkCreateInput(
+  state: Pick<
+    State,
+    "deckSelection" | "deckId" | "deckName" | "deckLang" | "processedCards"
+  >,
+): BulkCreateInput | undefined {
+  if (state.processedCards.length === 0) {
+    return undefined;
+  }
+  if (state.deckSelection === "existing") {
+    if (!state.deckId) {
+      return undefined;
+    }
+    return { deckId: state.deckId, input: state.processedCards };
+  }
+  const deckName = state.deckName.trim();
+  if (!deckName) {
+    return undefined;
+  }
+  return {
+    deckName,
+    langCode: state.deckLang,
+    input: state.processedCards,
+  };
 }
 
 export const getServerSideProps: GetServerSideProps<
@@ -79,7 +169,6 @@ export const getServerSideProps: GetServerSideProps<
 
 export default function CreateUnified(props: LanguageInputPageProps) {
   const { decks } = props;
-  useMantineTheme();
   const router = useRouter();
   const [loading, setLoading] = React.useState(false);
   const [separator, setSeparator] = React.useState(",");
@@ -87,8 +176,8 @@ export default function CreateUnified(props: LanguageInputPageProps) {
 
   const [state, dispatch] = React.useReducer(reducer, {
     ...INITIAL_STATE,
-    deckLang: (decks?.[0]?.langCode as LangCode) || INITIAL_STATE.deckLang,
-    deckSelection: decks.length ? "existing" : "new",
+    deckLang: decks[0]?.langCode ?? INITIAL_STATE.deckLang,
+    deckSelection: getDeckSelectionFromDecks(decks),
     deckId: decks[0]?.id,
     deckName: decks[0]?.name || "",
   });
@@ -98,47 +187,32 @@ export default function CreateUnified(props: LanguageInputPageProps) {
   const bulkCreate = trpc.bulkCreateCards.useMutation();
 
   React.useEffect(() => {
-    if (!router.isReady) {
+    const { isReady, query } = router;
+    if (!isReady) {
       return;
     }
-    const m = router.query.mode;
-    if (
-      typeof m === "string" &&
-      (m === "vibe" || m === "wordlist" || m === "csv")
-    ) {
-      setMode(m);
+    const nextMode = parseMode(query.mode);
+    if (nextMode) {
+      setMode(nextMode);
     }
-    const qDeckId = router.query.deckId ?? router.query.deck_id;
-    if (typeof qDeckId === "string") {
-      const parsed = Number(qDeckId);
-      if (!Number.isNaN(parsed)) {
-        const selected = decks.find((d) => d.id === parsed);
-        if (selected) {
-          dispatch({
-            type: "SET_DECK_SELECTION",
-            deckSelection: "existing",
-          });
-          dispatch({ type: "SET_DECK_ID", deckId: selected.id });
-          dispatch({
-            type: "SET_DECK_LANG",
-            deckLang: selected.langCode as LangCode,
-          });
-          dispatch({ type: "SET_DECK_NAME", deckName: selected.name });
-        }
-      }
+
+    const deckIdQuery = query.deckId ?? query.deck_id;
+    const deckId = parseNumericId(deckIdQuery);
+    const selectedDeck = deckId
+      ? decks.find((deck) => deck.id === deckId)
+      : undefined;
+    if (selectedDeck) {
+      dispatch({ type: "SET_DECK_SELECTION", deckSelection: "existing" });
+      dispatch({ type: "SET_DECK_ID", deckId: selectedDeck.id });
+      dispatch({ type: "SET_DECK_LANG", deckLang: selectedDeck.langCode });
+      dispatch({ type: "SET_DECK_NAME", deckName: selectedDeck.name });
     }
-    const words = router.query.words;
-    if (typeof words === "string") {
-      const decoded = decodeURIComponent(words);
-      const arr = decoded
-        .split(",")
-        .map((w) => w.trim())
-        .filter(Boolean);
-      if (arr.length) {
-        dispatch({ type: "SET_RAW_INPUT", rawInput: arr.join("\n") });
-      }
+
+    const words = parseWordsQuery(query.words);
+    if (words.length) {
+      dispatch({ type: "SET_RAW_INPUT", rawInput: words.join("\n") });
     }
-  }, [router.isReady, router.query.mode, router.query.words]);
+  }, [router, decks]);
 
   const lines = React.useMemo(() => {
     return state.rawInput
@@ -154,11 +228,7 @@ export default function CreateUnified(props: LanguageInputPageProps) {
 
   const handleSubmitVibe = async () => {
     if (!state.rawInput.trim()) {
-      notifications.show({
-        title: "No input",
-        message: "What cards shall we create?",
-        color: "red",
-      });
+      showValidationError("No input", "What cards shall we create?");
       return;
     }
     setLoading(true);
@@ -168,13 +238,9 @@ export default function CreateUnified(props: LanguageInputPageProps) {
         text: state.rawInput,
       });
       dispatch({ type: "SET_PROCESSED_CARDS", processedCards: cards });
-      notifications.show({
-        title: "Generated",
-        message: `Created ${cards.length} cards`,
-        color: "green",
-      });
-    } catch (e) {
-      handleError(e);
+      showSuccess("Generated", `Created ${cards.length} cards`);
+    } catch {
+      showError();
     } finally {
       setLoading(false);
     }
@@ -183,11 +249,7 @@ export default function CreateUnified(props: LanguageInputPageProps) {
   const handleProcessWordlist = async () => {
     const words = state.rawInput.trim();
     if (!words) {
-      notifications.show({
-        title: "No words",
-        message: "Add at least one word.",
-        color: "red",
-      });
+      showValidationError("No words", "Add at least one word.");
       return;
     }
     setLoading(true);
@@ -201,13 +263,9 @@ export default function CreateUnified(props: LanguageInputPageProps) {
         gender: "N" as const,
       }));
       dispatch({ type: "SET_PROCESSED_CARDS", processedCards: processed });
-      notifications.show({
-        title: "Processed",
-        message: `Found ${processed.length} definitions`,
-        color: "green",
-      });
-    } catch (e) {
-      handleError(e);
+      showSuccess("Processed", `Found ${processed.length} definitions`);
+    } catch {
+      showError();
     } finally {
       setLoading(false);
     }
@@ -218,55 +276,28 @@ export default function CreateUnified(props: LanguageInputPageProps) {
       .filter((r) => r.term && r.definition)
       .map((r) => ({ ...r, gender: "N" as const }));
     if (!processed.length) {
-      notifications.show({
-        title: "No valid rows",
-        message: "Provide term and definition.",
-        color: "red",
-      });
+      showValidationError("No valid rows", "Provide term and definition.");
       return;
     }
     dispatch({ type: "SET_PROCESSED_CARDS", processedCards: processed });
-    notifications.show({
-      title: "Parsed",
-      message: `Parsed ${processed.length} rows`,
-      color: "green",
-    });
+    showSuccess("Parsed", `Parsed ${processed.length} rows`);
   };
 
   const saveCards = async () => {
-    if (!state.processedCards.length) {
+    const payload = makeBulkCreateInput(state);
+    if (!payload) {
       return;
     }
     setLoading(true);
     try {
-      const payload =
-        state.deckSelection === "existing" && state.deckId
-          ? { deckId: state.deckId, input: state.processedCards }
-          : {
-              deckName: state.deckName.trim(),
-              langCode: state.deckLang,
-              input: state.processedCards,
-            };
-      await bulkCreate.mutateAsync(
-        payload as {
-          deckId?: number;
-          deckName?: string;
-          langCode?: LangCode;
-          input: {
-            term: string;
-            definition: string;
-            gender: "M" | "F" | "N";
-          }[];
-        },
+      await bulkCreate.mutateAsync(payload);
+      showSuccess(
+        "Saved",
+        `Added ${state.processedCards.length} cards to your deck`,
       );
-      notifications.show({
-        title: "Saved",
-        message: `Added ${state.processedCards.length} cards to your deck`,
-        color: "green",
-      });
       router.push("/review");
-    } catch (e) {
-      handleError(e);
+    } catch {
+      showError();
     } finally {
       setLoading(false);
     }
@@ -281,17 +312,13 @@ export default function CreateUnified(props: LanguageInputPageProps) {
     if (selected) {
       dispatch({
         type: "SET_DECK_LANG",
-        deckLang: selected.langCode as LangCode,
+        deckLang: selected.langCode,
       });
       dispatch({ type: "SET_DECK_NAME", deckName: selected.name });
     }
   };
 
-  const canSave =
-    state.processedCards.length > 0 &&
-    (state.deckSelection === "existing"
-      ? Boolean(state.deckId)
-      : Boolean(state.deckName.trim()));
+  const canSave = canSaveToDeck(state);
 
   return (
     <Container size="lg" py="lg" style={{ position: "relative" }}>
@@ -376,9 +403,11 @@ function makeDeckOptions(decks: LanguageInputPageProps["decks"]) {
   }));
 }
 
+type DeckOption = { value: string; label: string };
+
 type DeckSectionProps = {
-  deckOptions: { value: string; label: string }[];
-  deckSelection: State["deckSelection"];
+  deckOptions: DeckOption[];
+  deckSelection: DeckSelection;
   deckId?: number;
   deckName: string;
   onSelectExistingDeck: (val: string | null) => void;
@@ -397,26 +426,18 @@ function DeckSection(props: DeckSectionProps) {
     onSetDeckName,
   } = props;
 
-  const fields =
-    deckSelection === "existing" ? (
-      <Select
-        data={deckOptions}
-        value={deckId ? String(deckId) : null}
-        onChange={onSelectExistingDeck}
-        placeholder="Pick a deck"
-        label="Existing deck"
+  const contentBySelection: Record<DeckSelection, React.ReactNode> = {
+    existing: (
+      <ExistingDeckFields
+        deckOptions={deckOptions}
+        deckId={deckId}
+        onSelectExistingDeck={onSelectExistingDeck}
       />
-    ) : (
-      <>
-        <TextInput
-          label="Deck name"
-          placeholder="My Travel Phrases"
-          value={deckName}
-          onChange={(e) => onSetDeckName(e.currentTarget.value)}
-          mb="sm"
-        />
-      </>
-    );
+    ),
+    new: (
+      <NewDeckFields deckName={deckName} onSetDeckName={onSetDeckName} />
+    ),
+  };
 
   return (
     <Paper withBorder p="md" radius="md" mb="md">
@@ -432,8 +453,45 @@ function DeckSection(props: DeckSectionProps) {
           </Group>
         </Radio.Group>
       </Group>
-      {fields}
+      {contentBySelection[deckSelection]}
     </Paper>
+  );
+}
+
+type ExistingDeckFieldsProps = {
+  deckOptions: DeckOption[];
+  deckId?: number;
+  onSelectExistingDeck: (val: string | null) => void;
+};
+
+function ExistingDeckFields(props: ExistingDeckFieldsProps) {
+  const { deckOptions, deckId, onSelectExistingDeck } = props;
+  return (
+    <Select
+      data={deckOptions}
+      value={deckId ? String(deckId) : null}
+      onChange={onSelectExistingDeck}
+      placeholder="Pick a deck"
+      label="Existing deck"
+    />
+  );
+}
+
+type NewDeckFieldsProps = {
+  deckName: string;
+  onSetDeckName: (name: string) => void;
+};
+
+function NewDeckFields(props: NewDeckFieldsProps) {
+  const { deckName, onSetDeckName } = props;
+  return (
+    <TextInput
+      label="Deck name"
+      placeholder="My Travel Phrases"
+      value={deckName}
+      onChange={(e) => onSetDeckName(e.currentTarget.value)}
+      mb="sm"
+    />
   );
 }
 
@@ -584,8 +642,8 @@ function VibeContent(props: {
   return (
     <>
       <Text size="sm" c={themeColors.gray[7]} mb="xs">
-        What cards shall we create? Example: "Please make 25 {deckLangName}{" "}
-        example sentences about food."
+        What cards shall we create? Example:{" "}
+        {`"Please make 25 ${deckLangName} example sentences about food."`}
       </Text>
       <Textarea
         minRows={6}
@@ -721,6 +779,19 @@ type PreviewSectionProps = {
 
 function PreviewSection(props: PreviewSectionProps) {
   const { processedCards, onEdit, onRemove, canSave, onSave } = props;
+  if (processedCards.length === 0) {
+    return (
+      <Paper withBorder p="md" radius="md">
+        <Group justify="space-between" mb="xs">
+          <Title order={4}>Preview</Title>
+          <Button onClick={onSave} disabled={!canSave}>
+            Save
+          </Button>
+        </Group>
+        <Text c="dimmed">No cards yet. Generate or parse to preview.</Text>
+      </Paper>
+    );
+  }
   return (
     <Paper withBorder p="md" radius="md">
       <Group justify="space-between" mb="xs">
@@ -729,40 +800,29 @@ function PreviewSection(props: PreviewSectionProps) {
           Save {processedCards.length ? `(${processedCards.length})` : ""}
         </Button>
       </Group>
-      {processedCards.length === 0 ? (
-        <Text c="dimmed">No cards yet. Generate or parse to preview.</Text>
-      ) : (
-        processedCards.map((card, index) => (
-          <Group
-            key={`${card.term}-${index}`}
-            grow
-            align="flex-end"
-            mb="sm"
+      {processedCards.map((card, index) => (
+        <Group key={`${card.term}-${index}`} grow align="flex-end" mb="sm">
+          <TextInput
+            label="Term"
+            value={card.term}
+            onChange={(e) => onEdit(index, "term", e.currentTarget.value)}
+          />
+          <TextInput
+            label="Definition"
+            value={card.definition}
+            onChange={(e) =>
+              onEdit(index, "definition", e.currentTarget.value)
+            }
+          />
+          <Button
+            color="red"
+            variant="light"
+            onClick={() => onRemove(index)}
           >
-            <TextInput
-              label="Term"
-              value={card.term}
-              onChange={(e) =>
-                onEdit(index, "term", e.currentTarget.value)
-              }
-            />
-            <TextInput
-              label="Definition"
-              value={card.definition}
-              onChange={(e) =>
-                onEdit(index, "definition", e.currentTarget.value)
-              }
-            />
-            <Button
-              color="red"
-              variant="light"
-              onClick={() => onRemove(index)}
-            >
-              Remove
-            </Button>
-          </Group>
-        ))
-      )}
+            Remove
+          </Button>
+        </Group>
+      ))}
     </Paper>
   );
 }
