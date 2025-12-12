@@ -27,6 +27,12 @@ import { useRouter } from "next/router";
 import type { ReactNode } from "react";
 import type { CardPageProps } from "@/koala/cards/card-page-types";
 
+type CardEditValues = {
+  term: string;
+  definition: string;
+  flagged: boolean;
+};
+
 function formatReviewTime(timestamp: number, emptyLabel: string) {
   return timestamp > 0 ? timeUntil(timestamp) : emptyLabel;
 }
@@ -75,19 +81,11 @@ function CardEditForm(props: {
   term: string;
   definition: string;
   flagged: boolean;
-  onSave: (values: {
-    term: string;
-    definition: string;
-    flagged: boolean;
-  }) => Promise<void>;
+  onSave: (values: CardEditValues) => Promise<void>;
   onBack: () => void;
   onDelete: () => Promise<void>;
 }) {
-  const form = useForm<{
-    term: string;
-    definition: string;
-    flagged: boolean;
-  }>({
+  const form = useForm<CardEditValues>({
     initialValues: {
       term: props.term,
       definition: props.definition,
@@ -239,36 +237,29 @@ function CardMetadata(props: {
   langCode: string;
   gender: string;
 }) {
+  const deckName = props.deckName || "—";
+  const language = props.langCode.toUpperCase();
+
+  const MetaRow = (row: { label: string; value: string }) => (
+    <Group gap="xs">
+      <Text c="dimmed" size="sm">
+        {row.label}
+      </Text>
+      <Text size="sm" fw={500}>
+        {row.value}
+      </Text>
+    </Group>
+  );
+
   return (
     <Paper withBorder p="lg" radius="md" mt="md">
       <Title order={5} mb="sm">
         Metadata
       </Title>
       <Stack gap={6}>
-        <Group gap="xs">
-          <Text c="dimmed" size="sm">
-            Deck:
-          </Text>
-          <Text size="sm" fw={500}>
-            {props.deckName || "—"}
-          </Text>
-        </Group>
-        <Group gap="xs">
-          <Text c="dimmed" size="sm">
-            Language:
-          </Text>
-          <Text size="sm" fw={500}>
-            {props.langCode.toUpperCase()}
-          </Text>
-        </Group>
-        <Group gap="xs">
-          <Text c="dimmed" size="sm">
-            Gender:
-          </Text>
-          <Text size="sm" fw={500}>
-            {props.gender}
-          </Text>
-        </Group>
+        <MetaRow label="Deck:" value={deckName} />
+        <MetaRow label="Language:" value={language} />
+        <MetaRow label="Gender:" value={props.gender} />
       </Stack>
     </Paper>
   );
@@ -279,11 +270,7 @@ export function CardPageView({ card }: CardPageProps) {
   const updateMutation = trpc.editCard.useMutation();
   const deleteMutation = trpc.deleteCard.useMutation();
 
-  const handleSave = async (values: {
-    term: string;
-    definition: string;
-    flagged: boolean;
-  }) => {
+  const handleSave = async (values: CardEditValues) => {
     await updateMutation.mutateAsync({ id: card.id, ...values });
     router.back();
   };

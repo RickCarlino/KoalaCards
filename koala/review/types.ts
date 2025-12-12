@@ -43,7 +43,7 @@ export type ReplaceCardAction = { type: "REPLACE_CARDS"; payload: Quiz[] };
 export type SkipCardAction = { type: "SKIP_CARD"; payload: UUID };
 type CompleteItemAction = {
   type: "COMPLETE_ITEM";
-  payload: { uuid: string };
+  payload: { stepUuid: string };
 };
 type GiveUpAction = {
   type: "GIVE_UP";

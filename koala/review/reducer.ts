@@ -17,6 +17,10 @@ const DEFAULT_TAKE = 5;
 const MIN_TAKE = 1;
 const MAX_TAKE = 25;
 
+function clampInt(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
 const createEmptyQueue = (): Queue => ({
   newWordIntro: [],
   remedialIntro: [],
@@ -79,7 +83,7 @@ function parseTakeParam(raw: string | null): number {
   if (!Number.isFinite(parsed)) {
     return DEFAULT_TAKE;
   }
-  return Math.min(Math.max(parsed, MIN_TAKE), MAX_TAKE);
+  return clampInt(parsed, MIN_TAKE, MAX_TAKE);
 }
 
 function getTakeFromLocation(): number {
@@ -110,13 +114,23 @@ function findCardUUIDByCardId(
   return Object.values(cards).find((card) => card.cardId === cardId)?.uuid;
 }
 
+function markCardCompleted(
+  completedCards: State["completedCards"],
+  cardUUID: string,
+): State["completedCards"] {
+  if (completedCards.has(cardUUID)) {
+    return completedCards;
+  }
+  return new Set([...completedCards, cardUUID]);
+}
+
 function completeCardInState(state: State, cardUUID: string): State {
   const updatedQueue = removeCardFromQueues(cardUUID, state.queue);
   return {
     ...state,
     queue: updatedQueue,
     currentItem: nextQueueItem(updatedQueue),
-    completedCards: new Set([...state.completedCards, cardUUID]),
+    completedCards: markCardCompleted(state.completedCards, cardUUID),
   };
 }
 
@@ -146,15 +160,16 @@ function completeStep(stepUuid: string, state: State): State {
   const cardUUID = findCardUUIDForStep(state.queue, stepUuid);
   const queueWithoutStep = removeStepFromQueues(stepUuid, state.queue);
   const isCardDone = !hasPendingStepsForCard(queueWithoutStep, cardUUID);
+  let completedCards = state.completedCards;
+  if (isCardDone && cardUUID) {
+    completedCards = markCardCompleted(state.completedCards, cardUUID);
+  }
 
   return {
     ...state,
     queue: queueWithoutStep,
     currentItem: nextQueueItem(queueWithoutStep),
-    completedCards:
-      isCardDone && cardUUID
-        ? new Set([...state.completedCards, cardUUID])
-        : state.completedCards,
+    completedCards,
   };
 }
 
@@ -220,8 +235,8 @@ export function useReview(deckId: number) {
       }
       dispatch({ type: "GIVE_UP", payload: { cardUUID } });
     },
-    completeItem: (uuid: string) => {
-      dispatch({ type: "COMPLETE_ITEM", payload: { uuid } });
+    completeItem: (stepUuid: string) => {
+      dispatch({ type: "COMPLETE_ITEM", payload: { stepUuid } });
     },
     onGradingResultCaptured: async (
       cardUUID: string,
@@ -276,7 +291,7 @@ function reducer(state: State, action: Action): State {
     case "SKIP_CARD":
       return completeCardInState(state, action.payload.uuid);
     case "COMPLETE_ITEM":
-      return completeStep(action.payload.uuid, state);
+      return completeStep(action.payload.stepUuid, state);
     case "GIVE_UP": {
       return completeCardInState(state, action.payload.cardUUID);
     }
