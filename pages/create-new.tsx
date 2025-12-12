@@ -1,5 +1,4 @@
 import { GetServerSideProps } from "next";
-import React from "react";
 import { useRouter } from "next/router";
 import {
   Button,
@@ -14,14 +13,15 @@ import { notifications } from "@mantine/notifications";
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { LangCode, supportedLanguages } from "@/koala/shared-types";
 import { trpc } from "@/koala/trpc-config";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 type CreateNewProps = Record<string, never>;
-type Level = "Beginner" | "Intermediate" | "Advanced";
+const LEVELS = ["Beginner", "Intermediate", "Advanced"] as const;
+type Level = (typeof LEVELS)[number];
 
 const KOREAN_LANG_CODE: LangCode = "ko";
 const KOREAN_LANGUAGE_NAME =
   supportedLanguages[KOREAN_LANG_CODE] || "Korean";
-const LEVELS: Level[] = ["Beginner", "Intermediate", "Advanced"];
 const DEFAULT_DECK_NAME = "My First Koala Deck";
 const ROTATE_PLACEHOLDER_EVERY_MS = 700;
 
@@ -128,12 +128,12 @@ const PLACEHOLDERS = [
   "dreams and future plans",
 ];
 
-function buildCardPrompt(level: Level, topic: string) {
+function buildCardPrompt(params: { level: Level; topic: string }) {
   return [
     `You are a ${KOREAN_LANGUAGE_NAME} language teacher that helps students learn by creating short example sentence flashcards.`,
     `the perfect example sentence is only a few syllables long.`,
-    `the perfect example sentence uses common words and grammar suitable for a ${level.toLowerCase()} learner.`,
-    `the learner said they are interested ${topic}.`,
+    `the perfect example sentence uses common words and grammar suitable for a ${params.level.toLowerCase()} learner.`,
+    `the learner said they are interested ${params.topic}.`,
     `Create 15 example sentences with English translations (do NOT include romanizations or pronunciations).`,
     `Use language that reflects how ${KOREAN_LANGUAGE_NAME} speakers actually talk in real life.`,
     `Do NOT come up with low quality english sentence and lazily translate them to the target language.`,
@@ -142,8 +142,8 @@ function buildCardPrompt(level: Level, topic: string) {
   ].join("\n");
 }
 
-function parseLevel(value: string): Level | undefined {
-  return LEVELS.find((option) => option === value);
+function isLevel(value: string): value is Level {
+  return (LEVELS as readonly string[]).includes(value);
 }
 
 function pickRandomIndex(maxExclusive: number) {
@@ -158,52 +158,71 @@ function resolveTopic(interest: string, fallback: string) {
   return trimmed ? trimmed : fallback;
 }
 
+function useRotatingTopic(params: {
+  placeholders: readonly string[];
+  intervalMs: number;
+}) {
+  const [topic, setTopic] = useState<string>("");
+  const [placeholderIndex, setPlaceholderIndex] = useState<number>(0);
+  const [isFrozen, setIsFrozen] = useState<boolean>(false);
+
+  const placeholder = params.placeholders[placeholderIndex] ?? "";
+
+  const randomize = useCallback(() => {
+    if (params.placeholders.length === 0) {
+      return;
+    }
+    const nextIndex = pickRandomIndex(params.placeholders.length);
+    setPlaceholderIndex(nextIndex);
+    setTopic(params.placeholders[nextIndex] ?? "");
+  }, [params.placeholders]);
+
+  useEffect(() => {
+    if (isFrozen) {
+      return;
+    }
+
+    if (!topic) {
+      randomize();
+    }
+
+    const id = setInterval(randomize, params.intervalMs);
+    return () => clearInterval(id);
+  }, [isFrozen, params.intervalMs, randomize, topic]);
+
+  return {
+    topic,
+    setTopic,
+    placeholder,
+    freeze: () => setIsFrozen(true),
+  };
+}
+
 export default function CreateNew() {
   const router = useRouter();
-  const [level, setLevel] = React.useState<Level>("Beginner");
-  const [interest, setInterest] = React.useState<string>("");
-  const [placeholderIndex, setPlaceholderIndex] =
-    React.useState<number>(0);
-  const [hasFocused, setHasFocused] = React.useState<boolean>(false);
-  const hasFocusedRef = React.useRef(hasFocused);
+  const [level, setLevel] = useState<Level>("Beginner");
   const createDeck = trpc.createDeck.useMutation();
   const parseCards = trpc.parseCards.useMutation();
   const bulkCreate = trpc.bulkCreateCards.useMutation();
 
-  React.useEffect(() => {
-    hasFocusedRef.current = hasFocused;
-  }, [hasFocused]);
+  const {
+    topic,
+    setTopic,
+    placeholder: topicPlaceholder,
+    freeze,
+  } = useRotatingTopic({
+    placeholders: PLACEHOLDERS,
+    intervalMs: ROTATE_PLACEHOLDER_EVERY_MS,
+  });
 
-  const randomizePlaceholder = React.useCallback(() => {
-    if (hasFocusedRef.current) {
-      return;
-    }
-    const nextIndex = pickRandomIndex(PLACEHOLDERS.length);
-    setPlaceholderIndex(nextIndex);
-    setInterest(PLACEHOLDERS[nextIndex] ?? "");
-  }, []);
-
-  React.useEffect(() => {
-    if (hasFocused) {
-      return;
-    }
-
-    if (!interest) {
-      randomizePlaceholder();
-    }
-
-    const id = setInterval(
-      randomizePlaceholder,
-      ROTATE_PLACEHOLDER_EVERY_MS,
-    );
-
-    return () => clearInterval(id);
-  }, [hasFocused, interest, randomizePlaceholder]);
+  const levelOptions = useMemo(
+    () => LEVELS.map((level) => ({ label: level, value: level })),
+    [],
+  );
 
   const handleLevelChange = (value: string) => {
-    const nextLevel = parseLevel(value);
-    if (nextLevel) {
-      setLevel(nextLevel);
+    if (isLevel(value)) {
+      setLevel(value);
     }
   };
 
@@ -214,11 +233,10 @@ export default function CreateNew() {
         langCode: KOREAN_LANG_CODE,
       });
 
-      const placeholder = PLACEHOLDERS[placeholderIndex] ?? "";
-      const topic = resolveTopic(interest, placeholder);
+      const resolvedTopic = resolveTopic(topic, topicPlaceholder);
       const { cards } = await parseCards.mutateAsync({
         langCode: KOREAN_LANG_CODE,
-        text: buildCardPrompt(level, topic),
+        text: buildCardPrompt({ level, topic: resolvedTopic }),
       });
 
       if (cards.length === 0) {
@@ -256,19 +274,16 @@ export default function CreateNew() {
         <SegmentedControl
           value={level}
           onChange={handleLevelChange}
-          data={LEVELS.map((l) => ({
-            label: l,
-            value: l,
-          }))}
+          data={levelOptions}
         />
         <Text>Make cards related to...</Text>
       </Group>
 
       <TextInput
-        placeholder={`e.g., ${PLACEHOLDERS[placeholderIndex]}`}
-        value={interest}
-        onFocus={() => setHasFocused(true)}
-        onChange={(e) => setInterest(e.currentTarget.value)}
+        placeholder={`e.g., ${topicPlaceholder}`}
+        value={topic}
+        onFocus={freeze}
+        onChange={(e) => setTopic(e.currentTarget.value)}
         mb="lg"
       />
 

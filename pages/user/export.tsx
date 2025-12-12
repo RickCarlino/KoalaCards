@@ -77,6 +77,19 @@ const downloadDeck = (name: string, payload: DeckExport) => {
   URL.revokeObjectURL(link.href);
 };
 
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
+
+const showSuccess = (title: string, message: string) =>
+  notifications.show({ title, message, color: "green" });
+
+const showError = (title: string, error: unknown, fallback: string) =>
+  notifications.show({
+    title,
+    message: getErrorMessage(error, fallback),
+    color: "red",
+  });
+
 type DeckActionsTableProps = {
   decks: DeckRow[];
   exportingDeckId: number | null;
@@ -144,6 +157,12 @@ function DeckActionsTable({
   );
 }
 
+function NoDecksState() {
+  return (
+    <Text>No decks available yet. Create one to start exporting.</Text>
+  );
+}
+
 export default function DeckExportPage({ decks }: Props) {
   const exportDeck = trpc.exportDeck.useMutation();
   const importDeck = trpc.importDeck.useMutation();
@@ -163,20 +182,13 @@ export default function DeckExportPage({ decks }: Props) {
     try {
       const payload = await exportDeck.mutateAsync({ deckId: deck.id });
       downloadDeck(deck.name, payload);
-      notifications.show({
-        title: "Export ready",
-        message: `Downloaded ${deck.name}`,
-        color: "green",
-      });
+      showSuccess("Export ready", `Downloaded ${deck.name}`);
     } catch (error) {
-      notifications.show({
-        title: "Export failed",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Unable to export this deck right now.",
-        color: "red",
-      });
+      showError(
+        "Export failed",
+        error,
+        "Unable to export this deck right now.",
+      );
     } finally {
       setExportingDeckId(null);
     }
@@ -223,24 +235,23 @@ export default function DeckExportPage({ decks }: Props) {
         payload: parsed.data,
       });
 
-      notifications.show({
-        title: "Import complete",
-        message: `Added ${result.importedCount} cards. ${result.skippedDuplicateCount} skipped as duplicates.`,
-        color: "green",
-      });
+      showSuccess(
+        "Import complete",
+        `Added ${result.importedCount} cards. ${result.skippedDuplicateCount} skipped as duplicates.`,
+      );
     } catch (error) {
-      notifications.show({
-        title: "Import failed",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Unable to import this file right now.",
-        color: "red",
-      });
+      showError(
+        "Import failed",
+        error,
+        "Unable to import this file right now.",
+      );
     } finally {
       resetFileInput();
     }
   };
+
+  const exportingId = exportDeck.isLoading ? exportingDeckId : null;
+  const importingId = importDeck.isLoading ? importingDeckId : null;
 
   return (
     <Container size="lg" py="lg">
@@ -255,18 +266,12 @@ export default function DeckExportPage({ decks }: Props) {
 
         <Paper withBorder p="md" radius="md">
           {decks.length === 0 ? (
-            <Text>
-              No decks available yet. Create one to start exporting.
-            </Text>
+            <NoDecksState />
           ) : (
             <DeckActionsTable
               decks={decks}
-              exportingDeckId={
-                exportDeck.isLoading ? exportingDeckId : null
-              }
-              importingDeckId={
-                importDeck.isLoading ? importingDeckId : null
-              }
+              exportingDeckId={exportingId}
+              importingDeckId={importingId}
               onExport={handleExport}
               onImport={handleImportClick}
             />
