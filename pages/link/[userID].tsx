@@ -1,86 +1,49 @@
-import React from "react";
-import type {
-  GetServerSidePropsContext,
-  InferGetServerSidePropsType,
-} from "next";
-import { getSession } from "next-auth/react";
-import { prismaClient } from "@/koala/prisma-client";
 import {
-  Button,
-  Container,
-  Group,
-  Paper,
-  Stack,
-  Table,
-  Text,
-  Title,
-} from "@mantine/core";
+  UserOverviewView,
+  type UserOverviewCounts,
+  type UserOverviewRecentQuiz,
+  type UserOverviewRecentWriting,
+  type UserOverviewUser,
+  type UserOverviewViewProps,
+} from "@/koala/admin/UserOverviewView";
+import { prismaClient } from "@/koala/prisma-client";
+import type { GetServerSideProps, GetServerSidePropsContext } from "next";
+import { getSession } from "next-auth/react";
 
-type OverviewCounts = {
-  cardsTotal: number;
-  cardsStudied: number;
-  cardsFlagged: number;
-  deckCount: number;
-  writingCount: number;
-  quizResultCount: number;
-};
+type ServerAction = { kind: "show" } | { kind: "delete"; userId: string };
 
-type RecentWriting = {
-  id: number;
-  prompt: string;
-  createdAt: string;
-  submissionCharacterCount: number;
-};
-
-type RecentQuiz = {
-  id: number;
-  createdAt: string;
-  definition: string;
-  userInput: string;
-  isAcceptable: boolean;
-};
-
-export async function getServerSideProps(
-  context: GetServerSidePropsContext,
-) {
+export const getServerSideProps: GetServerSideProps<
+  UserOverviewViewProps
+> = async (context) => {
   const session = await getSession({ req: context.req });
-  const email = session?.user?.email?.toLowerCase() ?? null;
+  const viewerEmail = normalizeEmail(session?.user?.email);
+  const superUsers = getAuthorizedEmails(process.env.AUTHORIZED_EMAILS);
 
-  const superUsers = (process.env.AUTHORIZED_EMAILS || "")
-    .split(",")
-    .map((x) => x.trim().toLowerCase())
-    .filter((x) => x.includes("@"));
-
-  if (!email || !superUsers.includes(email)) {
-    return {
-      redirect: {
-        destination: "/user",
-        permanent: false,
-      },
-    };
+  if (!viewerEmail || !superUsers.includes(viewerEmail)) {
+    return { redirect: { destination: "/user", permanent: false } };
   }
 
-  const userId = context.params?.userID as string | undefined;
+  const userId = getRouteUserId(context);
   if (!userId) {
     return { notFound: true };
   }
 
-  if (context.req.method === "POST" && context.query.intent === "delete") {
-    const currentUser = email
-      ? await prismaClient.user.findUnique({ where: { email } })
-      : null;
-    if (currentUser?.id === userId) {
+  const action = getServerAction(context, userId);
+  if (action.kind === "delete") {
+    const viewerUser = await prismaClient.user.findUnique({
+      where: { email: viewerEmail },
+      select: { id: true },
+    });
+    if (viewerUser?.id === action.userId) {
       return {
         redirect: {
-          destination: `/link/${userId}?error=self-delete`,
+          destination: `/link/${action.userId}?error=self-delete`,
           permanent: false,
         },
       };
     }
-    await prismaClient.user.delete({ where: { id: userId } });
-    return {
-      redirect: { destination: "/admin", permanent: false },
-    };
+    await prismaClient.user.delete({ where: { id: action.userId } });
+    return { redirect: { destination: "/admin", permanent: false } };
   }
 
   const user = await prismaClient.user.findUnique({
@@ -139,7 +102,7 @@ export async function getServerSideProps(
     },
   });
 
-  const counts: OverviewCounts = {
+  const counts: UserOverviewCounts = {
     cardsTotal,
     cardsStudied,
     cardsFlagged,
@@ -148,227 +111,105 @@ export async function getServerSideProps(
     quizResultCount,
   };
 
-  const recentWriting: RecentWriting[] = recentWritingRows.map((w) => ({
-    id: w.id,
-    prompt: w.prompt,
-    createdAt: w.createdAt.toISOString(),
-    submissionCharacterCount: w.submissionCharacterCount,
-  }));
+  const recentWriting: UserOverviewRecentWriting[] = recentWritingRows.map(
+    (row) => ({
+      id: row.id,
+      prompt: row.prompt,
+      createdAt: row.createdAt.toISOString(),
+      submissionCharacterCount: row.submissionCharacterCount,
+    }),
+  );
 
-  const recentQuiz: RecentQuiz[] = recentQuizRows.map((q) => ({
-    id: q.id,
-    createdAt: q.createdAt.toISOString(),
-    definition: q.definition,
-    userInput: q.userInput,
-    isAcceptable: q.isAcceptable,
-  }));
+  const recentQuiz: UserOverviewRecentQuiz[] = recentQuizRows.map(
+    (row) => ({
+      id: row.id,
+      createdAt: row.createdAt.toISOString(),
+      definition: row.definition,
+      userInput: row.userInput,
+      isAcceptable: row.isAcceptable,
+    }),
+  );
 
   return {
     props: {
-      user: {
-        id: user.id,
-        email: user.email ?? "(no email)",
-        name: user.name ?? null,
-        createdAt: user.createdAt.toISOString(),
-        lastSeen: user.lastSeen ? user.lastSeen.toISOString() : null,
-      },
-      error:
-        context.query.error === "self-delete"
-          ? "Admins cannot delete themselves."
-          : null,
+      user: toUserOverviewUser(user),
+      error: getErrorMessage(context),
       counts,
       recentWriting,
       recentQuiz,
     },
   };
-}
+};
 
-type Props = InferGetServerSidePropsType<typeof getServerSideProps>;
-
-function yesNo(value: boolean): string {
-  return value ? "Yes" : "No";
-}
-
-function fmtShort(iso: string | null): string {
-  if (!iso) {
-    return "—";
+function normalizeEmail(email: string | null | undefined): string | null {
+  if (!email) {
+    return null;
   }
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const MONTHS = [
-    "JAN",
-    "FEB",
-    "MAR",
-    "APR",
-    "MAY",
-    "JUN",
-    "JUL",
-    "AUG",
-    "SEP",
-    "OCT",
-    "NOV",
-    "DEC",
-  ];
-  return `${MONTHS[d.getMonth()]} ${pad(d.getDate())} ${pad(d.getHours())}:${pad(
-    d.getMinutes(),
-  )}`;
+  const normalized = email.trim().toLowerCase();
+  if (!normalized.includes("@")) {
+    return null;
+  }
+  return normalized;
 }
 
-export default function UserOverviewPage({
-  user,
-  error,
-  counts,
-  recentWriting,
-  recentQuiz,
-}: Props) {
-  function onConfirmDelete(e: React.FormEvent<HTMLFormElement>) {
-    if (typeof window !== "undefined") {
-      const ok = window.confirm(
-        "Delete this user and all related data? This cannot be undone.",
-      );
-      if (!ok) {
-        e.preventDefault();
-      }
-    }
+function getAuthorizedEmails(envValue: string | undefined): string[] {
+  return (envValue ?? "")
+    .split(",")
+    .map((value) => value.trim().toLowerCase())
+    .filter((value) => value.includes("@"));
+}
+
+function getRouteUserId(
+  context: GetServerSidePropsContext,
+): string | null {
+  const value = context.params?.userID;
+  if (typeof value === "string") {
+    return value;
   }
-  return (
-    <Container size="lg" mt="xl">
-      <Stack gap="md">
-        <Group justify="space-between" align="center">
-          <div>
-            <Title order={2}>User Overview</Title>
-            <Text size="sm" c="dimmed">
-              {user.email} {user.name ? `• ${user.name}` : ""}
-            </Text>
-            {error ? (
-              <Text size="sm" c="red" mt="xs">
-                {error}
-              </Text>
-            ) : null}
-          </div>
-          <form
-            method="POST"
-            action="?intent=delete"
-            onSubmit={onConfirmDelete}
-          >
-            <Button color="red" variant="outline" type="submit">
-              Delete User
-            </Button>
-          </form>
-        </Group>
+  if (Array.isArray(value) && typeof value[0] === "string") {
+    return value[0];
+  }
+  return null;
+}
 
-        <Group align="stretch">
-          <Paper withBorder p="md" radius="md" style={{ flex: 1 }}>
-            <Title order={4}>Profile</Title>
-            <Table mt="sm">
-              <tbody>
-                <tr>
-                  <td>Email</td>
-                  <td>{user.email}</td>
-                </tr>
-                <tr>
-                  <td>Created</td>
-                  <td>{fmtShort(user.createdAt)}</td>
-                </tr>
-                <tr>
-                  <td>Last Seen</td>
-                  <td>{fmtShort(user.lastSeen)}</td>
-                </tr>
-              </tbody>
-            </Table>
-          </Paper>
+function getServerAction(
+  context: GetServerSidePropsContext,
+  userId: string,
+): ServerAction {
+  const isDeleteRequest =
+    context.req.method === "POST" && context.query.intent === "delete";
 
-          <Paper withBorder p="md" radius="md" style={{ flex: 1 }}>
-            <Title order={4}>Counts</Title>
-            <Table mt="sm">
-              <tbody>
-                <tr>
-                  <td>Cards</td>
-                  <td>{counts.cardsTotal}</td>
-                </tr>
-                <tr>
-                  <td>Studied Cards</td>
-                  <td>{counts.cardsStudied}</td>
-                </tr>
-                <tr>
-                  <td>Flagged Cards</td>
-                  <td>{counts.cardsFlagged}</td>
-                </tr>
-                <tr>
-                  <td>Decks</td>
-                  <td>{counts.deckCount}</td>
-                </tr>
-                <tr>
-                  <td>Writing Submissions</td>
-                  <td>{counts.writingCount}</td>
-                </tr>
-                <tr>
-                  <td>Quiz Results</td>
-                  <td>{counts.quizResultCount}</td>
-                </tr>
-              </tbody>
-            </Table>
-          </Paper>
-        </Group>
+  if (!isDeleteRequest) {
+    return { kind: "show" };
+  }
+  return { kind: "delete", userId };
+}
 
-        <Paper withBorder p="md" radius="md">
-          <Title order={4}>Recent Writing</Title>
-          <Table striped highlightOnHover mt="sm">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Prompt</th>
-                <th>Chars</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentWriting.length === 0 ? (
-                <tr>
-                  <td colSpan={3}>No writing yet</td>
-                </tr>
-              ) : (
-                recentWriting.map((w) => (
-                  <tr key={w.id}>
-                    <td>{fmtShort(w.createdAt)}</td>
-                    <td>{w.prompt}</td>
-                    <td>{w.submissionCharacterCount}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </Table>
-        </Paper>
+function getErrorMessage(
+  context: GetServerSidePropsContext,
+): string | null {
+  if (context.query.error === "self-delete") {
+    return "Admins cannot delete themselves.";
+  }
+  return null;
+}
 
-        <Paper withBorder p="md" radius="md">
-          <Title order={4}>Recent Quiz</Title>
-          <Table striped highlightOnHover mt="sm">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Definition</th>
-                <th>Input</th>
-                <th>Accepted</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentQuiz.length === 0 ? (
-                <tr>
-                  <td colSpan={4}>No quiz results yet</td>
-                </tr>
-              ) : (
-                recentQuiz.map((q) => (
-                  <tr key={q.id}>
-                    <td>{fmtShort(q.createdAt)}</td>
-                    <td>{q.definition}</td>
-                    <td>{q.userInput}</td>
-                    <td>{yesNo(q.isAcceptable)}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </Table>
-        </Paper>
-      </Stack>
-    </Container>
-  );
+function toUserOverviewUser(user: {
+  id: string;
+  email: string | null;
+  name: string | null;
+  createdAt: Date;
+  lastSeen: Date | null;
+}): UserOverviewUser {
+  return {
+    id: user.id,
+    email: user.email ?? "(no email)",
+    name: user.name ?? null,
+    createdAt: user.createdAt.toISOString(),
+    lastSeen: user.lastSeen ? user.lastSeen.toISOString() : null,
+  };
+}
+
+export default function UserOverviewPage(props: UserOverviewViewProps) {
+  return <UserOverviewView {...props} />;
 }
