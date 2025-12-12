@@ -226,18 +226,25 @@ function CsvPreview(props: { rows: ParsedRow[] }) {
       </thead>
       <tbody>
         {rows.map((row, index) => (
-          <tr key={index}>
-            <td>
-              {row.term || <em style={{ color: "gray" }}>No term</em>}
-            </td>
-            <td>
-              {row.definition || (
-                <em style={{ color: "gray" }}>No definition</em>
-              )}
-            </td>
+          <tr key={getRowKey(row, index)}>
+            <td>{row.term || <EmptyCell text="No term" />}</td>
+            <td>{row.definition || <EmptyCell text="No definition" />}</td>
           </tr>
         ))}
       </tbody>
     </Table>
   );
+}
+
+function EmptyCell(props: { text: string }) {
+  const { text } = props;
+  return (
+    <Text component="span" c="dimmed" style={{ fontStyle: "italic" }}>
+      {text}
+    </Text>
+  );
+}
+
+function getRowKey(row: ParsedRow, index: number) {
+  return `${index}:${row.term}:${row.definition}`;
 }

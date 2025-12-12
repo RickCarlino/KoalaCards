@@ -11,6 +11,7 @@ import {
   Text,
   useMantineTheme,
 } from "@mantine/core";
+import type { ReactNode } from "react";
 import { LangCode, supportedLanguages } from "@/koala/shared-types";
 import { getLangName } from "@/koala/get-lang-name";
 import { DeckStepProps } from "../types/create-types";
@@ -25,38 +26,85 @@ export function DeckStep({
 }: DeckStepProps) {
   const theme = useMantineTheme();
 
-  const handleExistingDeckChange = (deckId: number | undefined) => {
-    dispatch({ type: "SET_DECK_ID", deckId });
-    const selectedDeck = decks.find((d) => d.id === deckId);
-    if (selectedDeck) {
-      dispatch({
-        type: "SET_DECK_LANG",
-        deckLang: selectedDeck.langCode as LangCode,
-      });
-      dispatch({ type: "SET_DECK_NAME", deckName: selectedDeck.name });
-    }
+  const inputStyles = {
+    input: {
+      borderColor: theme.colors.pink[1],
+      "&:focus": { borderColor: theme.colors.pink[5] },
+    },
   };
 
-  const handleDeckModeChange = (value: "existing" | "new") => {
-    dispatch({ type: "SET_DECK_SELECTION", deckSelection: value });
+  const selectDeck = (deckId: number | undefined) => {
+    dispatch({ type: "SET_DECK_ID", deckId });
 
-    if (value === "existing") {
+    const selectedDeck = findDeckById(decks, deckId);
+    if (!selectedDeck) {
       dispatch({ type: "SET_DECK_NAME", deckName: "" });
       dispatch({ type: "SET_DECK_LANG", deckLang: DEFAULT_LANG });
-    } else {
+      return;
+    }
+
+    dispatch({ type: "SET_DECK_LANG", deckLang: selectedDeck.langCode });
+    dispatch({ type: "SET_DECK_NAME", deckName: selectedDeck.name });
+  };
+
+  const setDeckSelection = (nextSelection: "existing" | "new") => {
+    dispatch({ type: "SET_DECK_SELECTION", deckSelection: nextSelection });
+
+    if (nextSelection === "new") {
       dispatch({ type: "SET_DECK_ID", deckId: undefined });
       dispatch({ type: "SET_DECK_NAME", deckName: "" });
       dispatch({ type: "SET_DECK_LANG", deckLang: DEFAULT_LANG });
+      return;
     }
+
+    if (!state.deckId) {
+      dispatch({ type: "SET_DECK_NAME", deckName: "" });
+      dispatch({ type: "SET_DECK_LANG", deckLang: DEFAULT_LANG });
+      return;
+    }
+
+    const selectedDeck = findDeckById(decks, state.deckId);
+    if (!selectedDeck) {
+      dispatch({ type: "SET_DECK_ID", deckId: undefined });
+      dispatch({ type: "SET_DECK_NAME", deckName: "" });
+      dispatch({ type: "SET_DECK_LANG", deckLang: DEFAULT_LANG });
+      return;
+    }
+
+    dispatch({ type: "SET_DECK_LANG", deckLang: selectedDeck.langCode });
+    dispatch({ type: "SET_DECK_NAME", deckName: selectedDeck.name });
   };
 
-  const isNextDisabled = (() => {
-    if (state.deckSelection === "existing") {
-      return !state.deckId;
-    } else {
-      return !state.deckName.trim();
-    }
-  })();
+  const deckFieldsBySelection: Record<
+    DeckStepProps["state"]["deckSelection"],
+    ReactNode
+  > = {
+    existing: (
+      <ExistingDeckFields
+        decks={decks}
+        deckId={state.deckId}
+        onSelectDeck={selectDeck}
+        inputStyles={inputStyles}
+        labelColor={theme.colors.gray[7]}
+      />
+    ),
+    new: (
+      <NewDeckFields
+        deckName={state.deckName}
+        deckLang={state.deckLang}
+        onChangeDeckName={(deckName) =>
+          dispatch({ type: "SET_DECK_NAME", deckName })
+        }
+        onChangeDeckLang={(deckLang) =>
+          dispatch({ type: "SET_DECK_LANG", deckLang })
+        }
+        inputStyles={inputStyles}
+        labelColor={theme.colors.gray[7]}
+      />
+    ),
+  };
+
+  const isNextDisabled = isNextDisabledForSelection(state);
 
   return (
     <Paper withBorder p="xl" radius="lg" style={paperStyle(theme)}>
@@ -71,14 +119,10 @@ export function DeckStep({
 
         <RadioGroup
           label={
-            <Text fw={500} c={theme.colors.gray[7]}>
-              Deck Mode
-            </Text>
+            <FieldLabel text="Deck Mode" color={theme.colors.gray[7]} />
           }
           value={state.deckSelection}
-          onChange={(value) =>
-            handleDeckModeChange(value as "existing" | "new")
-          }
+          onChange={(value) => setDeckSelection(parseDeckSelection(value))}
         >
           <Radio
             value="existing"
@@ -100,82 +144,7 @@ export function DeckStep({
           />
         </RadioGroup>
 
-        {state.deckSelection === "existing" && (
-          <Select
-            label={
-              <Text fw={500} c={theme.colors.gray[7]}>
-                Existing Deck
-              </Text>
-            }
-            placeholder="Select your deck"
-            value={state.deckId ? String(state.deckId) : null}
-            onChange={(val) => handleExistingDeckChange(Number(val))}
-            data={decks.map((d) => ({
-              label: `${d.name} (${getLangName(d.langCode)})`,
-              value: String(d.id),
-            }))}
-            styles={{
-              input: {
-                borderColor: theme.colors.pink[1],
-                "&:focus": {
-                  borderColor: theme.colors.pink[5],
-                },
-              },
-            }}
-          />
-        )}
-
-        {state.deckSelection === "new" && (
-          <>
-            <TextInput
-              label={
-                <Text fw={500} c={theme.colors.gray[7]}>
-                  New Deck Name
-                </Text>
-              }
-              placeholder="e.g. 'Spanish Travel Phrases'"
-              value={state.deckName}
-              onChange={(e) =>
-                dispatch({
-                  type: "SET_DECK_NAME",
-                  deckName: e.currentTarget.value,
-                })
-              }
-              styles={{
-                input: {
-                  borderColor: theme.colors.pink[1],
-                  "&:focus": {
-                    borderColor: theme.colors.pink[5],
-                  },
-                },
-              }}
-            />
-            <Select
-              label={
-                <Text fw={500} c={theme.colors.gray[7]}>
-                  Language
-                </Text>
-              }
-              placeholder="Choose language"
-              value={state.deckLang}
-              onChange={(val) =>
-                dispatch({
-                  type: "SET_DECK_LANG",
-                  deckLang: val as LangCode,
-                })
-              }
-              data={[{ value: "ko", label: supportedLanguages.ko }]}
-              styles={{
-                input: {
-                  borderColor: theme.colors.pink[1],
-                  "&:focus": {
-                    borderColor: theme.colors.pink[5],
-                  },
-                },
-              }}
-            />
-          </>
-        )}
+        {deckFieldsBySelection[state.deckSelection]}
 
         <Divider my="lg" color={theme.colors.pink[1]} />
         <Flex justify="flex-end">
@@ -193,4 +162,108 @@ export function DeckStep({
       </Flex>
     </Paper>
   );
+}
+
+function FieldLabel(props: { text: string; color: string }) {
+  const { text, color } = props;
+  return (
+    <Text fw={500} c={color}>
+      {text}
+    </Text>
+  );
+}
+
+function ExistingDeckFields(props: {
+  decks: DeckStepProps["decks"];
+  deckId: DeckStepProps["state"]["deckId"];
+  onSelectDeck: (deckId: number | undefined) => void;
+  inputStyles: Record<string, unknown>;
+  labelColor: string;
+}) {
+  const { decks, deckId, onSelectDeck, inputStyles, labelColor } = props;
+
+  return (
+    <Select
+      label={<FieldLabel text="Existing Deck" color={labelColor} />}
+      placeholder="Select your deck"
+      value={deckId ? String(deckId) : null}
+      onChange={(val) => onSelectDeck(parseDeckId(val))}
+      data={decks.map((d) => ({
+        label: `${d.name} (${getLangName(d.langCode)})`,
+        value: String(d.id),
+      }))}
+      styles={inputStyles}
+    />
+  );
+}
+
+function NewDeckFields(props: {
+  deckName: DeckStepProps["state"]["deckName"];
+  deckLang: DeckStepProps["state"]["deckLang"];
+  onChangeDeckName: (deckName: string) => void;
+  onChangeDeckLang: (deckLang: LangCode) => void;
+  inputStyles: Record<string, unknown>;
+  labelColor: string;
+}) {
+  const {
+    deckName,
+    deckLang,
+    onChangeDeckName,
+    onChangeDeckLang,
+    inputStyles,
+    labelColor,
+  } = props;
+
+  return (
+    <>
+      <TextInput
+        label={<FieldLabel text="New Deck Name" color={labelColor} />}
+        placeholder="e.g. 'Spanish Travel Phrases'"
+        value={deckName}
+        onChange={(e) => onChangeDeckName(e.currentTarget.value)}
+        styles={inputStyles}
+      />
+      <Select
+        label={<FieldLabel text="Language" color={labelColor} />}
+        placeholder="Choose language"
+        value={deckLang}
+        onChange={(val) => onChangeDeckLang(parseLangCode(val))}
+        data={[{ value: "ko", label: supportedLanguages.ko }]}
+        styles={inputStyles}
+      />
+    </>
+  );
+}
+
+function parseDeckSelection(value: string): "existing" | "new" {
+  return value === "existing" ? "existing" : "new";
+}
+
+function parseDeckId(value: string | null): number | undefined {
+  if (!value) {
+    return undefined;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function parseLangCode(value: string | null): LangCode {
+  return value === "ko" ? "ko" : DEFAULT_LANG;
+}
+
+function findDeckById(
+  decks: DeckStepProps["decks"],
+  deckId: number | undefined,
+) {
+  if (!deckId) {
+    return undefined;
+  }
+  return decks.find((d) => d.id === deckId);
+}
+
+function isNextDisabledForSelection(state: DeckStepProps["state"]) {
+  if (state.deckSelection === "existing") {
+    return !state.deckId;
+  }
+  return state.deckName.trim() === "";
 }

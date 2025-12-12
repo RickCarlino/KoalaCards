@@ -32,12 +32,15 @@ export default function AssistantEditCard({
     setDefinition(proposal.definition);
   }, [proposal.definition, proposal.term]);
 
-  const hasOriginalTerm =
-    proposal.originalTerm && proposal.originalTerm !== proposal.term;
-  const hasOriginalDefinition =
-    proposal.originalDefinition &&
-    proposal.originalDefinition !== proposal.definition;
   const canSave = term.trim() !== "" && definition.trim() !== "";
+  const showOriginalTerm = hasDifferentValue(
+    proposal.originalTerm,
+    proposal.term,
+  );
+  const showOriginalDefinition = hasDifferentValue(
+    proposal.originalDefinition,
+    proposal.definition,
+  );
 
   return (
     <Paper withBorder radius="md" p="sm" shadow="xs">
@@ -58,10 +61,11 @@ export default function AssistantEditCard({
           )}
         </Group>
 
-        {hasOriginalTerm && (
-          <Text size="xs" c="dimmed">
-            Current term: {proposal.originalTerm}
-          </Text>
+        {showOriginalTerm && (
+          <OriginalValue
+            label="Current term"
+            value={proposal.originalTerm}
+          />
         )}
         <TextInput
           label="Term"
@@ -69,10 +73,11 @@ export default function AssistantEditCard({
           onChange={(event) => setTerm(event.currentTarget.value)}
         />
 
-        {hasOriginalDefinition && (
-          <Text size="xs" c="dimmed">
-            Current definition: {proposal.originalDefinition}
-          </Text>
+        {showOriginalDefinition && (
+          <OriginalValue
+            label="Current definition"
+            value={proposal.originalDefinition}
+          />
         )}
         <Textarea
           label="Definition"
@@ -102,4 +107,26 @@ export default function AssistantEditCard({
       </Stack>
     </Paper>
   );
+}
+
+function OriginalValue(props: {
+  label: string;
+  value: string | undefined;
+}) {
+  const { label, value } = props;
+  if (!value) {
+    return null;
+  }
+  return (
+    <Text size="xs" c="dimmed">
+      {label}: {value}
+    </Text>
+  );
+}
+
+function hasDifferentValue(original: string | undefined, current: string) {
+  if (!original) {
+    return false;
+  }
+  return original !== current;
 }
