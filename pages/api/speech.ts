@@ -44,7 +44,7 @@ export default async function handler(
   }
   const input = enText.trim() ? `${tlText}\n${enText}` : tlText;
 
-  const model = "gpt-4o-mini-tts";
+  const model = "gpt-4o-mini-tts-2025-12-15";
   const VOICES = [
     "alloy",
     "ash",

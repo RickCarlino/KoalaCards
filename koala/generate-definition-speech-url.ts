@@ -3,7 +3,7 @@ import { createHash } from "crypto";
 import { storageProvider } from "./storage";
 
 const VOICE = "alloy";
-const MODEL = "gpt-4o-mini-tts";
+const MODEL = "gpt-4o-mini-tts-2025-12-15";
 const VERSION = "v1";
 const AUDIO_FORMAT = "mp3";
 
