@@ -18,16 +18,11 @@ import { gradeQuiz } from "./grade-quiz";
 import { gradeSpeakingQuiz } from "./grade-speaking-quiz";
 import { gradeUtteranceRoute } from "./grade-utterance";
 import { gradeWriting } from "./grade-writing";
-import {
-  correctiveDrillGenerate,
-  correctiveDrillGrade,
-} from "./corrective-drill";
-import { correctiveDrillGenerateDev } from "./corrective-drill-dev";
+import { correctiveDrillGenerate } from "./corrective-drill";
 import { importDeck } from "./import-deck";
 import { mergeDecks } from "./merge-decks";
 import { parseCards } from "./parse-cards";
 import { reportDeck } from "./report-deck";
-import { translate } from "./translate";
 import { turbine } from "./turbine";
 import { updateDeck } from "./update-deck";
 
@@ -49,8 +44,6 @@ export const appRouter = router({
   gradeWriting,
   gradeUtterance: gradeUtteranceRoute,
   correctiveDrillGenerate,
-  correctiveDrillGrade,
-  correctiveDrillGenerateDev,
   editQuizResult,
   createDeck,
   mergeDecks,
@@ -58,7 +51,6 @@ export const appRouter = router({
   parseCards,
   archiveCard,
   reportDeck,
-  translate,
   turbine,
   updateDeck,
 });

@@ -5,10 +5,6 @@ import {
 } from "@/koala/ai";
 import {
   CORRECTIVE_DRILL_GENERATE_MAX_TOKENS,
-  CORRECTIVE_DRILL_GRADE_ITEMS_MAX,
-  CORRECTIVE_DRILL_GRADE_ITEMS_MIN,
-  CORRECTIVE_DRILL_GRADE_MAX_TOKENS,
-  CORRECTIVE_DRILL_GRADE_TEXT_LIMIT,
   CORRECTIVE_DRILL_RECENT_RESULTS_TAKE,
   CORRECTIVE_DRILL_SENTENCE_MAX_WORDS,
   CORRECTIVE_DRILL_ERROR_MAX_CHARS,
@@ -17,35 +13,8 @@ import {
 import { draw, shuffle } from "radash";
 import { z } from "zod";
 import { prismaClient } from "../prisma-client";
-import {
-  LANG_CODES,
-  type LangCode,
-  supportedLanguages,
-} from "../shared-types";
+import { LANG_CODES, type LangCode } from "../shared-types";
 import { procedure } from "../trpc-procedure";
-
-const GradeRequestSchema = z.object({
-  language: z.string(),
-  items: z
-    .array(
-      z.object({
-        prompt_en: z.string(),
-        answer: z.string(),
-        attempt: z.string().default(""),
-      }),
-    )
-    .min(CORRECTIVE_DRILL_GRADE_ITEMS_MIN)
-    .max(CORRECTIVE_DRILL_GRADE_ITEMS_MAX),
-});
-
-const GradeResponseSchema = z.object({
-  grades: z.array(
-    z.object({
-      score: z.number(),
-      feedback: z.string(),
-    }),
-  ),
-});
 
 const MULTIPASS_CONVERSATION_MODEL: LanguageModelIdentifier = [
   "openai",
@@ -197,64 +166,4 @@ export const correctiveDrillGenerate = procedure
     });
 
     return { lesson, source: { quizResultId: result.id, langCode } };
-  });
-
-export const correctiveDrillGrade = procedure
-  .input(GradeRequestSchema)
-  .output(GradeResponseSchema)
-  .mutation(async ({ input, ctx }) => {
-    const userId = ctx.user?.id;
-    if (!userId) {
-      throw new Error("Unauthorized");
-    }
-
-    const languageName =
-      supportedLanguages[
-        input.language as keyof typeof supportedLanguages
-      ] || input.language;
-    const items = input.items
-      .slice(0, CORRECTIVE_DRILL_GRADE_ITEMS_MAX)
-      .map((it) => ({
-        prompt_en: it.prompt_en.slice(
-          0,
-          CORRECTIVE_DRILL_GRADE_TEXT_LIMIT,
-        ),
-        answer: it.answer.slice(0, CORRECTIVE_DRILL_GRADE_TEXT_LIMIT),
-        attempt: it.attempt.slice(0, CORRECTIVE_DRILL_GRADE_TEXT_LIMIT),
-      }));
-
-    const rubric = `You are grading short language speaking drills in ${languageName}.
-Score each item on two criteria and output JSON only as { "grades": [{ "score": number, "feedback": string }, ...] } with the same order and length as the input.
-
-Scoring (single numeric score 0-1):
-- 1 = Semantically correct AND uses the target form appropriately.
-- 0.5 = Meaning is acceptable but form is off, or vice versa.
-- 0 = Incorrect meaning, ungrammatical, or wrong form.
-
-Feedback: one short sentence in English, actionable and specific.
-Never give feedback that is not 100% needed.
-Any feedback that can be omitted should be omitted.
-This is not an attempt at creating perfect translations to the target language either.
-The focus is on correctly responding to the prompt, not nitpicking minor grammar/spacing/punctuation issues.
-The student can't see the "answer" field and there are countless ways to say the same thing.
-You cannot take away points for word choice or register as long as the response is natural and appropriate.
-`;
-
-    const userMsg = [
-      rubric,
-      `Items:`,
-      JSON.stringify(items),
-      `Return JSON ONLY.`,
-    ]
-      .filter(Boolean)
-      .join("\n\n");
-
-    const graded = await generateStructuredOutput({
-      model: ["openai", "good"],
-      messages: [{ role: "user", content: userMsg }],
-      schema: GradeResponseSchema,
-      maxTokens: CORRECTIVE_DRILL_GRADE_MAX_TOKENS,
-    });
-
-    return graded;
   });
