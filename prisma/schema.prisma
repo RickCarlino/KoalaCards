@@ -70,7 +70,6 @@ model UserSettings {
   updatedAt          DateTime @updatedAt
   dailyWritingGoal   Int      @default(150)
   writingFirst       Boolean  @default(false) // Always quiz writing before reviewing cards
-  performCorrectiveReviews Boolean @default(true)
 }
 
 model VerificationToken {

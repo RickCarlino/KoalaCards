@@ -7,7 +7,6 @@
 - Add Cards to a Deck (manual or bulk)
 - Deck Hub (/review)
 - Studying Cards (/review/[deckId])
-- Speaking Improvement Drills (/speaking/[deckId])
 - Writing Practice (/writing/[deckId])
 - Writing History (/writing)
 - Card Management (/cards and /cards/[id])
@@ -22,7 +21,7 @@
 ## Overview and Access
 - KoalaCards focuses on helping English speakers learn Korean through spaced repetition, speaking drills, and writing practice.
 - Sign in with Google if configured by the host; otherwise, expect an email magic link. The email flow lands on `/auth/email`, where clicking “Continue to App” completes login.
-- Microphone access is required for speaking quizzes and drills. Enable it in your browser or device settings before starting.
+- Microphone access is required for speaking quizzes. Enable it in your browser or device settings before starting.
 - All learning content and generators currently target Korean.
 
 ## Navigation Basics
@@ -58,7 +57,6 @@
 - Displays all your decks with **Due** and **New** counts. Cards are sorted by due volume.
 - Actions per deck card:
   - **Study Cards** starts a review session (button blinks when due items exist).
-  - **Speaking Improvements** opens corrective drills.
   - **Writing Practice** opens the writing flow for that deck.
   - Edit the deck name (pencil), save, or cancel; delete removes the deck and its cards (confirmation shown).
   - **Published** toggle shares/unshares the deck to the community list (confirmation shown when publishing).
@@ -88,15 +86,6 @@
   - Open the chat (speech bubble icon). Ask about recently shown cards or request new practice. Responses stream live; stop streaming if needed.
   - Suggested example phrases include **Add** buttons to instantly create new cards in the current deck.
 - End of session: When no items remain, you can fetch more quizzes, jump to **Add more cards**, **Practice Writing**, or return to deck selection.
-
-## Speaking Improvement Drills (/speaking/[deckId])
-- Starts a short corrective lesson pulled from your recent incorrect speaking quiz results. Initiates automatically on page load; **Pick Another Issue** restarts.
-- Steps include:
-  - **Diagnosis**: Shows your incorrect vs. corrected Korean and a short explanation.
-  - **Target**: Listen to and repeat a model sentence until it matches.
-  - **Contrast** (if provided): Practice a contrasting pattern.
-  - **Production**: Respond to an English prompt with Korean; graded with immediate feedback.
-- Use the **Speak** button (or space when allowed) to record. Audio playback buttons replay model sentences. Completing the drill marks the source quiz result as reviewed and queues the next issue.
 
 ## Writing Practice (/writing/[deckId])
 - Start from the deck card’s **Writing Practice** link or visit the URL directly.
@@ -149,7 +138,6 @@
   - Daily writing goal (characters).
   - Playback percentage (how often your recording is replayed after speaking).
   - **Require daily writing before card review** toggle to enforce writing-first.
-  - **Perform corrective reviews** toggle to allow optional post-review drills.
   - Save applies changes and reloads the page; a logout button signs you out.
 - Quick stats show totals (cards, new cards, due counts, weekly/new activity, global users, etc.).
 - Charts: cumulative cards learned and writing progress over the last 90 days.

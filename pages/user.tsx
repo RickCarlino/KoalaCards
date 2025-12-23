@@ -423,21 +423,6 @@ export default function UserSettingsPage(props: Props) {
                     color="blue"
                   />
 
-                  <Switch
-                    checked={settings.performCorrectiveReviews ?? true}
-                    onChange={(event) =>
-                      setSettings({
-                        ...settings,
-                        performCorrectiveReviews:
-                          event.currentTarget.checked,
-                      })
-                    }
-                    label="Perform corrective reviews"
-                    description="After a review session, optionally run a short corrective speaking drill"
-                    size="md"
-                    color="blue"
-                  />
-
                   <Group justify="flex-end" mt="sm">
                     <Button
                       type="submit"
