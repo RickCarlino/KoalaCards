@@ -25,7 +25,7 @@
 
 ## Status
 
-KoalaCards is complete! It meets my daily learning needs and is no in maintenance mode. The project accepts bug fixes and security updates only; no new features are planned.
+KoalaCards is complete! It meets my daily learning needs and is now in maintenance mode. The project accepts bug fixes and security updates only; no new features are planned.
 
 ## Overview
 
