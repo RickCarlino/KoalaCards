@@ -1,11 +1,32 @@
 import React from "react";
 import { notifications } from "@mantine/notifications";
 import { trpc } from "@/koala/trpc-config";
-import { createExampleStreamParser } from "@/koala/utils/example-stream-parser";
-import { ChatMessage, Suggestion } from "./types";
+import {
+  AssistantParserResult,
+  CardEditBlock,
+  EDIT_PLACEHOLDER,
+  createAssistantStreamParser,
+} from "@/koala/utils/example-stream-parser";
+import {
+  AssistantCardContext,
+  AssistantEditProposal,
+  ChatMessage,
+  Suggestion,
+} from "./types";
 
 const collapseNewlines = (value: string) =>
   value.replace(/\n{3,}/g, "\n\n");
+
+const stripEditPlaceholders = (content: string, keep: number) => {
+  let updated = content;
+  const placeholderCount = updated.split(EDIT_PLACEHOLDER).length - 1;
+  let excess = placeholderCount - keep;
+  while (excess > 0) {
+    updated = updated.replace(EDIT_PLACEHOLDER, "");
+    excess -= 1;
+  }
+  return collapseNewlines(updated);
+};
 
 type StreamHandlers = {
   onChunk: (payload: string) => void;
@@ -15,6 +36,11 @@ type StreamHandlers = {
 type UseAssistantChatOptions = {
   deckId: number;
   contextLog: string[];
+  currentCard?: AssistantCardContext;
+  onCardEdited?: (
+    cardId: number,
+    updates: { term: string; definition: string },
+  ) => void;
 };
 
 async function readStream(
@@ -62,28 +88,40 @@ async function readStream(
   }
 }
 
+const createProposalId = (cardId: number) =>
+  `edit-${cardId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
 export function useAssistantChat({
   deckId,
   contextLog,
+  currentCard,
+  onCardEdited,
 }: UseAssistantChatOptions) {
   const [messages, setMessages] = React.useState<ChatMessage[]>([
     {
       role: "assistant",
       content:
-        "Hi! Ask me about the cards you just reviewed, or request new practice questions. I’ll also suggest new flashcards when helpful.",
+        "Hi! Ask me about the cards you just reviewed, or request new practice questions. I’ll also suggest new flashcards or edits when helpful.",
     },
   ]);
   const [input, setInput] = React.useState("");
   const [isStreaming, setIsStreaming] = React.useState(false);
+  const [savingEditId, setSavingEditId] = React.useState<string | null>(
+    null,
+  );
   const viewportRef = React.useRef<HTMLDivElement | null>(null);
   const abortRef = React.useRef<AbortController | null>(null);
   const parserRef = React.useRef<ReturnType<
-    typeof createExampleStreamParser
+    typeof createAssistantStreamParser
   > | null>(null);
   const messagesRef = React.useRef<ChatMessage[]>(messages);
   const contextLogRef = React.useRef<string[]>(contextLog);
+  const currentCardRef = React.useRef<AssistantCardContext | undefined>(
+    currentCard,
+  );
   const stopRequestedRef = React.useRef(false);
   const bulkCreate = trpc.bulkCreateCards.useMutation();
+  const editCardMutation = trpc.editCard.useMutation();
 
   React.useEffect(() => {
     messagesRef.current = messages;
@@ -92,6 +130,10 @@ export function useAssistantChat({
   React.useEffect(() => {
     contextLogRef.current = contextLog;
   }, [contextLog]);
+
+  React.useEffect(() => {
+    currentCardRef.current = currentCard;
+  }, [currentCard]);
 
   const scrollToBottom = React.useCallback(() => {
     const el = viewportRef.current;
@@ -104,12 +146,52 @@ export function useAssistantChat({
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
+  const toSuggestion = (example: {
+    phrase: string;
+    translation: string;
+  }): Suggestion => ({
+    phrase: example.phrase,
+    translation: example.translation,
+    gender: "N",
+  });
+
+  const createEditProposal = React.useCallback(
+    (draft: CardEditBlock): AssistantEditProposal | null => {
+      const latestCard = currentCardRef.current;
+      const resolvedCardId = draft.cardId ?? latestCard?.cardId;
+      if (!resolvedCardId) {
+        return null;
+      }
+      const targetCard =
+        latestCard && resolvedCardId === latestCard.cardId
+          ? latestCard
+          : undefined;
+      const resolvedTerm = draft.term?.trim() || targetCard?.term || "";
+      const resolvedDefinition =
+        draft.definition?.trim() || targetCard?.definition || "";
+      if (!resolvedTerm && !resolvedDefinition) {
+        return null;
+      }
+      return {
+        id: createProposalId(resolvedCardId),
+        cardId: resolvedCardId,
+        term: resolvedTerm,
+        definition: resolvedDefinition,
+        note: draft.note,
+        originalTerm: targetCard?.term,
+        originalDefinition: targetCard?.definition,
+      };
+    },
+    [],
+  );
+
   const applyParsed = React.useCallback(
-    (
-      textDelta: string,
-      newExamples: { phrase: string; translation: string }[],
-    ) => {
-      if (!textDelta && newExamples.length === 0) {
+    (parsed: AssistantParserResult) => {
+      if (
+        !parsed.textDelta &&
+        parsed.examples.length === 0 &&
+        parsed.edits.length === 0
+      ) {
         return;
       }
       setMessages((prev) => {
@@ -117,27 +199,34 @@ export function useAssistantChat({
         if (!last || last.role !== "assistant") {
           return prev;
         }
-        const nextContent = textDelta
-          ? collapseNewlines(`${last.content}${textDelta}`)
+        const nextContent = parsed.textDelta
+          ? collapseNewlines(`${last.content}${parsed.textDelta}`)
           : last.content;
+        const nextSuggestions = parsed.examples.length
+          ? [
+              ...(last.suggestions ?? []),
+              ...parsed.examples.map(toSuggestion),
+            ]
+          : last.suggestions;
+        const newEdits = parsed.edits
+          .map(createEditProposal)
+          .filter((proposal): proposal is AssistantEditProposal =>
+            Boolean(proposal),
+          );
+        const nextEdits = newEdits.length
+          ? [...(last.edits ?? []), ...newEdits]
+          : last.edits;
+
         const updated: ChatMessage = {
           ...last,
           content: nextContent,
-          suggestions: newExamples.length
-            ? [
-                ...(last.suggestions ?? []),
-                ...newExamples.map<Suggestion>((example) => ({
-                  phrase: example.phrase,
-                  translation: example.translation,
-                  gender: "N",
-                })),
-              ]
-            : last.suggestions,
+          suggestions: nextSuggestions,
+          edits: nextEdits,
         };
         return [...prev.slice(0, -1), updated];
       });
     },
-    [],
+    [createEditProposal],
   );
 
   const finalizeParser = React.useCallback(() => {
@@ -145,9 +234,9 @@ export function useAssistantChat({
     if (!parser) {
       return;
     }
-    const { textDelta, examples } = parser.flush();
+    const parsed = parser.flush();
     parserRef.current = null;
-    applyParsed(textDelta, examples);
+    applyParsed(parsed);
   }, [applyParsed]);
 
   const resetStreamingState = React.useCallback(() => {
@@ -185,6 +274,64 @@ export function useAssistantChat({
     [bulkCreate, deckId],
   );
 
+  const removeEditProposal = React.useCallback((editId: string) => {
+    setMessages((prev) =>
+      prev.map((message) => {
+        if (!message.edits || message.edits.length === 0) {
+          return message;
+        }
+        const remaining = message.edits.filter(
+          (proposal) => proposal.id !== editId,
+        );
+        if (remaining.length === message.edits.length) {
+          return message;
+        }
+        const trimmedContent = stripEditPlaceholders(
+          message.content,
+          remaining.length,
+        );
+        return {
+          ...message,
+          content: trimmedContent,
+          edits: remaining.length ? remaining : undefined,
+        };
+      }),
+    );
+  }, []);
+
+  const applyEditProposal = React.useCallback(
+    async (
+      proposal: AssistantEditProposal,
+      updates: { term: string; definition: string },
+    ) => {
+      const term = updates.term.trim();
+      const definition = updates.definition.trim();
+      setSavingEditId(proposal.id);
+      try {
+        await editCardMutation.mutateAsync({
+          id: proposal.cardId,
+          term,
+          definition,
+        });
+        removeEditProposal(proposal.id);
+        onCardEdited?.(proposal.cardId, { term, definition });
+        notifications.show({
+          title: "Card updated",
+          message: "Changes saved to the card.",
+        });
+      } catch {
+        notifications.show({
+          title: "Assistant error",
+          message: "Unable to update the card.",
+          color: "red",
+        });
+      } finally {
+        setSavingEditId(null);
+      }
+    },
+    [editCardMutation, onCardEdited, removeEditProposal],
+  );
+
   const sendMessage = React.useCallback(async () => {
     const text = input.trim();
     if (!text || isStreaming) {
@@ -198,7 +345,7 @@ export function useAssistantChat({
       userMsg,
       { role: "assistant", content: "" },
     ]);
-    parserRef.current = createExampleStreamParser();
+    parserRef.current = createAssistantStreamParser();
 
     const controller = new AbortController();
     abortRef.current?.abort();
@@ -208,13 +355,14 @@ export function useAssistantChat({
       deckId,
       messages: [...messagesRef.current, userMsg],
       contextLog: contextLogRef.current,
+      currentCard: currentCardRef.current,
     });
 
     const applyChunk = (chunk: string) => {
-      const parser = parserRef.current ?? createExampleStreamParser();
+      const parser = parserRef.current ?? createAssistantStreamParser();
       parserRef.current = parser;
-      const { textDelta, examples } = parser.push(chunk);
-      applyParsed(textDelta, examples);
+      const parsed = parser.push(chunk);
+      applyParsed(parsed);
     };
 
     try {
@@ -272,5 +420,8 @@ export function useAssistantChat({
     viewportRef,
     addSuggestion,
     isAddingSuggestion: bulkCreate.isLoading,
+    onApplyEdit: applyEditProposal,
+    onDismissEdit: removeEditProposal,
+    savingEditId,
   };
 }

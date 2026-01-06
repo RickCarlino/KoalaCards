@@ -63,7 +63,7 @@ export const getServerSideProps: GetServerSideProps<
   };
 };
 
-type Step = "prompt-selection" | "sample-reading" | "writing" | "feedback";
+type Step = "writing" | "feedback";
 
 export default function WritingPage({
   deckId,
@@ -72,24 +72,10 @@ export default function WritingPage({
   const theme = useMantineTheme();
   const router = useRouter();
 
-  const [currentStep, setCurrentStep] = useState<Step>("prompt-selection");
-
-  const [prompts, setPrompts] = useState<string[]>([]);
-  const [loadingPrompts, setLoadingPrompts] = useState(false);
-  const [promptsError, setPromptsError] = useState<string | null>(null);
+  const [currentStep, setCurrentStep] = useState<Step>("writing");
 
   const [essay, setEssay] = useState("");
-  const [selectedPrompt, setSelectedPrompt] = useState<string | null>(
-    null,
-  );
-
-  const [translations, setTranslations] = useState<string[]>([]);
-  const [translatingIdx, setTranslatingIdx] = useState<number | null>(
-    null,
-  );
-
-  const [sampleResponse, setSampleResponse] = useState<string>("");
-  const [loadingSample, setLoadingSample] = useState(false);
+  const [selectedPrompt, setSelectedPrompt] = useState("Not set.");
 
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [loadingReview, setLoadingReview] = useState(false);
@@ -131,110 +117,31 @@ export default function WritingPage({
     },
   });
 
-  const generatePrompts = trpc.generateWritingPrompts.useMutation({
-    onSuccess: (data) => {
-      setPrompts(data);
-      setPromptsError(null);
-      setTranslations(Array(data.length).fill(""));
-      setSelectedPrompt(null);
-      setEssay("");
-      setSelectedWords({});
-      setDefinitions([]);
-    },
-    onError: (err) =>
-      setPromptsError(err.message || "Failed to generate prompts."),
-    onSettled: () => setLoadingPrompts(false),
-  });
-
-  const translate = trpc.translate.useMutation();
   const defineWords = trpc.defineUnknownWords.useMutation();
-  const generateSample = trpc.generateWritingSample.useMutation({
-    onSuccess: (data) => {
-      setSampleResponse(data);
-      setLoadingSample(false);
-    },
-    onError: (err) => {
-      notifications.show({
-        title: "Error",
-        message: err.message || "Failed to generate sample response",
-        color: "red",
-      });
-      setLoadingSample(false);
-    },
-  });
-
-  const handleGeneratePrompts = () => {
-    setLoadingPrompts(true);
-    setPrompts([]);
-    setPromptsError(null);
-    setSelectedWords({});
-    setDefinitions([]);
-    setDefinitionsError(null);
-    setSampleResponse("");
-    generatePrompts.mutate({ deckId });
-  };
-
-  const handleTranslate = (prompt: string, idx: number) => {
-    setTranslatingIdx(idx);
-    translate.mutate(
-      { text: prompt, targetLangCode: "en" },
-      {
-        onSuccess: (res) => {
-          const first = Array.isArray(res) ? res[0] : res;
-          setTranslations((t) =>
-            t.map((val, i) => (i === idx ? first : val)),
-          );
-          setTranslatingIdx(null);
-        },
-        onError: () => setTranslatingIdx(null),
-      },
-    );
-  };
-
-  const handleSelectPrompt = (prompt: string) => {
-    setSelectedPrompt(prompt);
-    setCurrentStep("writing");
-  };
-
-  const handleReadSample = (prompt: string) => {
-    setSelectedPrompt(prompt);
-    setLoadingSample(true);
-    setSelectedWords({});
-    setDefinitions([]);
-    setCurrentStep("sample-reading");
-
-    generateSample.mutate({
-      deckId,
-      prompt,
-    });
-  };
-
-  const handleProceedToWriting = () => {
-    setCurrentStep("writing");
-  };
 
   const handleReview = () => {
-    if (!selectedPrompt || !essay.trim()) {
+    if (!essay.trim()) {
       return;
     }
     setLoadingReview(true);
     setFeedback(null);
     setSelectedWords({});
     setDefinitions([]);
-    gradeWriting.mutate({ prompt: selectedPrompt, text: essay, deckId });
+    gradeWriting.mutate({
+      prompt: selectedPrompt || "Not set.",
+      text: essay,
+      deckId,
+    });
   };
 
   const handleWriteMore = () => {
-    setCurrentStep("prompt-selection");
-    setSelectedPrompt(null);
+    setCurrentStep("writing");
+    setSelectedPrompt("Not set.");
     setEssay("");
     setFeedback(null);
-    setSampleResponse("");
     setSelectedWords({});
     setDefinitions([]);
     setDefinitionsError(null);
-    setPrompts([]);
-    setTranslations([]);
   };
 
   const toggleWord = useCallback((raw: string) => {
@@ -307,20 +214,17 @@ export default function WritingPage({
       });
       return;
     }
+    setDefinitionsError(null);
     setDefinitionsLoading(true);
     try {
       let contextText = "";
 
-      if (prompts.length > 0) {
-        contextText += "Prompts:\n" + prompts.join("\n\n") + "\n\n";
+      if (selectedPrompt.trim()) {
+        contextText += "Prompt:\n" + selectedPrompt + "\n\n";
       }
 
       if (essay.trim()) {
         contextText += "Essay:\n" + essay;
-      }
-
-      if (currentStep === "sample-reading" && sampleResponse) {
-        contextText += "Sample Response:\n" + sampleResponse;
       }
 
       if (corrected) {
@@ -383,7 +287,6 @@ export default function WritingPage({
     window.open(url, "_blank");
   };
 
-  const hasPrompts = prompts.length > 0;
   const selectedCount = Object.keys(selectedWords).length;
   const canExplain = !definitionsLoading;
   const canCreate = definitions.length > 0 && !definitionsLoading;
@@ -395,205 +298,14 @@ export default function WritingPage({
   );
 
   const writingProgressData = dailyWritingProgressQuery.data;
-  const isLoadingProgress = dailyWritingProgressQuery.isLoading;
-
-  const renderInitialStep = () => (
-    <Paper withBorder shadow="sm" p="md" mb="lg">
-      <Stack gap="md">
-        <Title order={4}>Begin Writing Exercise</Title>
-
-        <Stack gap="sm">
-          <Text fw={600}>Daily Progress</Text>
-          {isLoadingProgress ? (
-            <Loader size="sm" />
-          ) : (
-            <>
-              <Progress
-                value={writingProgressData?.percentage || 0}
-                size="lg"
-                color={
-                  (writingProgressData?.percentage || 0) >= 100
-                    ? "teal"
-                    : "blue"
-                }
-                striped={(writingProgressData?.percentage || 0) >= 100}
-                animated={(writingProgressData?.percentage || 0) >= 100}
-              />
-              <Text size="sm">
-                {writingProgressData?.progress || 0} /{" "}
-                {writingProgressData?.goal || 300} characters
-                {(writingProgressData?.percentage || 0) >= 100 &&
-                  " (Goal reached!)"}
-              </Text>
-            </>
-          )}
-        </Stack>
-
-        <Group grow>
-          <Button
-            onClick={handleGeneratePrompts}
-            loading={loadingPrompts}
-            size="md"
-          >
-            Write with a prompt
-          </Button>
-          <Button
-            onClick={() => {
-              setSelectedPrompt("Not set.");
-              setCurrentStep("writing");
-            }}
-            size="md"
-            variant="light"
-          >
-            Write without a prompt
-          </Button>
-        </Group>
-
-        {promptsError && (
-          <Alert title="Error" color="red">
-            {promptsError}
-          </Alert>
-        )}
-      </Stack>
-    </Paper>
-  );
-
-  const renderPromptSelectionStep = () => (
-    <Paper withBorder shadow="sm" p="md" mb="lg">
-      <Title order={4} mb="md">
-        Select a Prompt
-      </Title>
-
-      {prompts.map((p, i) => (
-        <Paper key={i} withBorder shadow="sm" p="sm" mb="md">
-          <Stack gap="xs">
-            <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
-              {p}
-            </Text>
-            <Group>
-              <Button size="sm" onClick={() => handleSelectPrompt(p)}>
-                Select Prompt
-              </Button>
-              <Button
-                size="sm"
-                variant="light"
-                disabled={!!translations[i]}
-                loading={translatingIdx === i}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleTranslate(p, i);
-                }}
-              >
-                {translations[i] ? "Translated" : "Translate"}
-              </Button>
-              <Button
-                size="sm"
-                variant="subtle"
-                loading={loadingSample && selectedPrompt === p}
-                onClick={() => handleReadSample(p)}
-              >
-                Read sample response
-              </Button>
-            </Group>
-          </Stack>
-          {translations[i] && (
-            <Text
-              size="xs"
-              color="dimmed"
-              style={{ whiteSpace: "pre-wrap", marginTop: 8 }}
-            >
-              {translations[i]}
-            </Text>
-          )}
-        </Paper>
-      ))}
-    </Paper>
-  );
-  const renderSampleReadingStep = () => (
-    <Paper withBorder shadow="sm" p="md" mb="lg">
-      <Stack gap="md">
-        <Title order={4}>Sample Response</Title>
-        <Text fw={600}>Selected Prompt</Text>
-        {selectedPrompt && renderClickableText(selectedPrompt)}
-        <Text fw={600}>Sample Response (Click unknown words)</Text>
-        {loadingSample ? (
-          <Group>
-            <Loader size="sm" />
-            <Text c="dimmed">Generating sample response...</Text>
-          </Group>
-        ) : (
-          renderClickableText(sampleResponse)
-        )}
-
-        <Group>
-          <Button onClick={handleExplain} disabled={!canExplain}>
-            Explain Selected Words ({selectedCount})
-          </Button>
-          {canCreate && (
-            <Button onClick={handleCreateCards}>
-              Create Cards from Words ({definitions.length})
-            </Button>
-          )}
-          <Button onClick={handleProceedToWriting} variant="filled">
-            Continue to Writing
-          </Button>
-        </Group>
-
-        {definitionsLoading && (
-          <Box
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-            }}
-          >
-            <Loader size="sm" color="blue" />
-            <Text ml="sm" c="dimmed">
-              Getting definitions...
-            </Text>
-          </Box>
-        )}
-
-        {definitionsError && (
-          <Alert title="Error" color="red">
-            {definitionsError}
-          </Alert>
-        )}
-
-        {showDefs && (
-          <Stack gap="xs">
-            <Text fw={600}>Word Definitions</Text>
-            {alphabetical(definitions, (x) => x.definition).map((d, i) => {
-              const showLemma =
-                d.lemma && d.lemma.toLowerCase() !== d.word.toLowerCase();
-              return (
-                <Box key={i}>
-                  <Text fw={700} component="span">
-                    {d.word}
-                  </Text>
-                  {showLemma && (
-                    <Text component="span" c="dimmed" fs="italic">
-                      {" "}
-                      ({d.lemma})
-                    </Text>
-                  )}
-                  <Text component="span">: {d.definition}</Text>
-                </Box>
-              );
-            })}
-          </Stack>
-        )}
-      </Stack>
-    </Paper>
-  );
 
   const renderWritingStep = () => (
     <Paper withBorder shadow="sm" p="md">
       <Title order={4} mb="xs">
-        Writing Prompt
+        Essay Title or Prompt
       </Title>
       <Textarea
-        value={selectedPrompt || ""}
+        value={selectedPrompt}
         onChange={(e) => setSelectedPrompt(e.currentTarget.value)}
         autosize
         minRows={2}
@@ -767,13 +479,6 @@ export default function WritingPage({
         Writing Practice
       </Title>
 
-      {currentStep === "prompt-selection" && (
-        <>
-          {!hasPrompts && renderInitialStep()}
-          {hasPrompts && renderPromptSelectionStep()}
-        </>
-      )}
-      {currentStep === "sample-reading" && renderSampleReadingStep()}
       {currentStep === "writing" && renderWritingStep()}
       {currentStep === "feedback" && renderFeedbackStep()}
     </Container>

@@ -30,6 +30,11 @@ type CardRecord = {
   nextReview: number;
 };
 
+type DeckListItem = {
+  id: number;
+  name: string;
+};
+
 type EditProps = {
   cards: CardRecord[];
   sortBy: string;
@@ -38,6 +43,8 @@ type EditProps = {
   totalPages: number;
   q: string;
   paused: boolean;
+  deckId: number | null;
+  decks: DeckListItem[];
 };
 
 const SORT_OPTIONS = [
@@ -56,7 +63,7 @@ const ORDER_OPTIONS = [
   { value: "desc", label: "Z -> A" },
 ];
 
-const ITEMS_PER_PAGE = 32;
+const ITEMS_PER_PAGE = 200;
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const dbUser = await getServersideUser(ctx);
@@ -68,32 +75,59 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
     };
   }
 
-  const { sortBy, sortOrder, page, q, paused } = parseQueryParams(
-    ctx.query,
-  );
+  const parsedQuery = parseQueryParams(ctx.query);
+  const decks = await prismaClient.deck.findMany({
+    where: { userId },
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
+  });
+
+  const selectedDeckId = getValidDeckId(parsedQuery.deckId, decks);
   const { cards, totalPages } = await fetchCards(
     userId,
-    sortBy,
-    sortOrder,
-    page,
-    q,
-    paused,
+    parsedQuery.sortBy,
+    parsedQuery.sortOrder,
+    parsedQuery.page,
+    parsedQuery.q,
+    parsedQuery.paused,
+    selectedDeckId,
   );
 
   return {
-    props: { cards, sortBy, sortOrder, page, totalPages, q, paused },
+    props: {
+      cards,
+      sortBy: parsedQuery.sortBy,
+      sortOrder: parsedQuery.sortOrder,
+      page: parsedQuery.page,
+      totalPages,
+      q: parsedQuery.q,
+      paused: parsedQuery.paused,
+      deckId: selectedDeckId,
+      decks,
+    },
   };
 };
 
 function parseQueryParams(query: Record<string, unknown>) {
-  const toStr = (val: unknown): string | undefined =>
-    Array.isArray(val) ? val[0] : (val as string | undefined);
+  const toStr = (val: unknown): string | undefined => {
+    if (typeof val === "string") {
+      return val;
+    }
+    if (Array.isArray(val)) {
+      return val[0];
+    }
+    return undefined;
+  };
 
   const rawSortBy = toStr(query.sortBy) ?? "createdAt";
   const rawSortOrder = toStr(query.sortOrder) ?? "desc";
   const rawPage = parseInt(toStr(query.page) ?? "", 10);
   const rawQ = toStr(query.q) ?? "";
   const rawPaused = toStr(query.paused) ?? "false";
+  const rawDeckId = parseInt(
+    toStr(query.deckId) ?? toStr(query.deck_id) ?? "",
+    10,
+  );
 
   const validSortBy = SORT_OPTIONS.map((o) => o.value).includes(rawSortBy)
     ? rawSortBy
@@ -101,6 +135,8 @@ function parseQueryParams(query: Record<string, unknown>) {
   const finalSortOrder = rawSortOrder === "asc" ? "asc" : "desc";
   const finalPage = !isNaN(rawPage) && rawPage > 0 ? rawPage : 1;
   const finalPaused = rawPaused === "true";
+  const deckId =
+    Number.isFinite(rawDeckId) && rawDeckId > 0 ? rawDeckId : null;
 
   return {
     sortBy: validSortBy,
@@ -108,7 +144,16 @@ function parseQueryParams(query: Record<string, unknown>) {
     page: finalPage,
     q: rawQ,
     paused: finalPaused,
+    deckId,
   };
+}
+
+function getValidDeckId(deckId: number | null, decks: DeckListItem[]) {
+  if (deckId === null) {
+    return null;
+  }
+
+  return decks.some((deck) => deck.id === deckId) ? deckId : null;
 }
 
 async function fetchCards(
@@ -118,10 +163,12 @@ async function fetchCards(
   page: number,
   q: string,
   paused: boolean,
+  deckId: number | null,
 ) {
   const where = {
     userId,
     ...(paused ? { flagged: true } : {}),
+    ...(deckId !== null ? { deckId } : {}),
     ...(q
       ? {
           OR: [
@@ -167,6 +214,8 @@ export default function Edit({
   totalPages,
   q,
   paused,
+  deckId,
+  decks,
 }: EditProps) {
   const deleteFlagged = trpc.deletePausedCards.useMutation();
   const router = useRouter();
@@ -175,13 +224,17 @@ export default function Edit({
   const [currentSortOrder, setCurrentSortOrder] = useState(sortOrder);
   const [query, setQuery] = useState(q);
   const [showPaused, setShowPaused] = useState(paused);
+  const [selectedDeckId, setSelectedDeckId] = useState(
+    deckId ? String(deckId) : "",
+  );
 
   useEffect(() => {
     setCurrentSortBy(sortBy);
     setCurrentSortOrder(sortOrder);
     setQuery(q);
     setShowPaused(paused);
-  }, [sortBy, sortOrder, q, paused]);
+    setSelectedDeckId(deckId ? String(deckId) : "");
+  }, [deckId, paused, q, sortBy, sortOrder]);
 
   const handleDeletePaused = async () => {
     if (confirm("Are you sure you want to delete all paused cards?")) {
@@ -190,30 +243,27 @@ export default function Edit({
     }
   };
 
+  const buildQuery = (pageNumber: number) => ({
+    sortBy: currentSortBy,
+    sortOrder: currentSortOrder,
+    page: String(pageNumber),
+    q: query,
+    paused: String(showPaused),
+    ...(selectedDeckId ? { deckId: selectedDeckId } : {}),
+  });
+
   const handleSearch = (e: FormEvent) => {
     e.preventDefault();
     router.push({
       pathname: "/cards",
-      query: {
-        sortBy: currentSortBy,
-        sortOrder: currentSortOrder,
-        page: "1",
-        q: query,
-        paused: String(showPaused),
-      },
+      query: buildQuery(1),
     });
   };
 
   const goToPage = (newPage: number) => {
     router.push({
       pathname: "/cards",
-      query: {
-        sortBy: currentSortBy,
-        sortOrder: currentSortOrder,
-        page: String(newPage),
-        q: query,
-        paused: String(showPaused),
-      },
+      query: buildQuery(newPage),
     });
   };
 
@@ -270,6 +320,19 @@ export default function Edit({
               label="Show paused only"
               checked={showPaused}
               onChange={(e) => setShowPaused(e.currentTarget.checked)}
+            />
+            <Select
+              label="Deck"
+              value={selectedDeckId}
+              onChange={(value) => setSelectedDeckId(value ?? "")}
+              data={[
+                { value: "", label: "All decks" },
+                ...decks.map((deck) => ({
+                  value: String(deck.id),
+                  label: deck.name,
+                })),
+              ]}
+              style={{ minWidth: 220 }}
             />
             <Group gap="sm">
               <Button type="submit">Search</Button>

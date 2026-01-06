@@ -2,7 +2,6 @@ import { trpc } from "@/koala/trpc-config";
 import { Container, Grid, Center, Button } from "@mantine/core";
 import { fullHeightStyle } from "./styles";
 import { notifications } from "@mantine/notifications";
-import { UserSettings } from "@prisma/client";
 import { signIn } from "next-auth/react";
 import React, {
   createContext,
@@ -11,10 +10,35 @@ import React, {
   useContext,
 } from "react";
 
+type AppUserSettings = {
+  id: number;
+  userId: string;
+  playbackSpeed: number;
+  cardsPerDayMax: number;
+  playbackPercentage: number;
+  createdAt: Date;
+  updatedAt: Date;
+  dailyWritingGoal: number;
+  writingFirst: boolean;
+};
+
 interface UserSettingsProviderProps {
   children: React.ReactNode;
 }
-const EMPTY: UserSettings = {
+
+const pickAppUserSettings = (input: AppUserSettings): AppUserSettings => ({
+  id: input.id,
+  userId: input.userId,
+  playbackSpeed: input.playbackSpeed,
+  cardsPerDayMax: input.cardsPerDayMax,
+  playbackPercentage: input.playbackPercentage,
+  createdAt: input.createdAt,
+  updatedAt: input.updatedAt,
+  dailyWritingGoal: input.dailyWritingGoal,
+  writingFirst: input.writingFirst,
+});
+
+const EMPTY: AppUserSettings = {
   id: 0,
   userId: "0",
   playbackSpeed: 1,
@@ -24,19 +48,18 @@ const EMPTY: UserSettings = {
   updatedAt: new Date(),
   dailyWritingGoal: 300,
   writingFirst: false,
-  performCorrectiveReviews: true,
 };
 
-const UserSettingsContext = createContext<UserSettings>(EMPTY);
+const UserSettingsContext = createContext<AppUserSettings>(EMPTY);
 
-export const useUserSettings = (): UserSettings => {
+export const useUserSettings = (): AppUserSettings => {
   return useContext(UserSettingsContext);
 };
 
 export const UserSettingsProvider = ({
   children,
 }: UserSettingsProviderProps) => {
-  const [userSettings, setUserSettings] = useState<UserSettings>(EMPTY);
+  const [userSettings, setUserSettings] = useState<AppUserSettings>(EMPTY);
   const [loading, setLoading] = useState(true);
   const getUserSettings = trpc.getUserSettings.useMutation();
 
@@ -52,7 +75,7 @@ export const UserSettingsProvider = ({
       .mutateAsync({})
       .then((userSettings) => {
         if (userSettings) {
-          setUserSettings(userSettings);
+          setUserSettings(pickAppUserSettings(userSettings));
         }
       }, err)
       .finally(() => setLoading(false));

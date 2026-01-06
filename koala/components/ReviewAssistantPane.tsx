@@ -15,7 +15,12 @@ import { useMediaQuery } from "@mantine/hooks";
 import AssistantMessageList from "./study-assistant/AssistantMessageList";
 import AssistantComposer from "./study-assistant/AssistantComposer";
 import { useAssistantChat } from "./study-assistant/useAssistantChat";
-import { ChatMessage, Suggestion } from "./study-assistant/types";
+import {
+  AssistantCardContext,
+  AssistantEditProposal,
+  ChatMessage,
+  Suggestion,
+} from "./study-assistant/types";
 
 type ReviewAssistantPaneProps = {
   deckId: number;
@@ -23,6 +28,11 @@ type ReviewAssistantPaneProps = {
   onOpen: () => void;
   onClose: () => void;
   contextLog: string[];
+  currentCard?: AssistantCardContext;
+  onCardEdited?: (
+    cardId: number,
+    updates: { term: string; definition: string },
+  ) => void;
 };
 
 type AssistantPanelProps = {
@@ -36,6 +46,12 @@ type AssistantPanelProps = {
   onAddSuggestion: (suggestion: Suggestion) => void | Promise<void>;
   isAdding: boolean;
   onClose: () => void;
+  onApplyEdit: (
+    proposal: AssistantEditProposal,
+    updates: { term: string; definition: string },
+  ) => void | Promise<void>;
+  onDismissEdit: (proposalId: string) => void;
+  savingEditId: string | null;
 };
 
 function AssistantHeader({ onClose }: { onClose: () => void }) {
@@ -67,6 +83,9 @@ function AssistantPanel({
   onAddSuggestion,
   isAdding,
   onClose,
+  onApplyEdit,
+  onDismissEdit,
+  savingEditId,
 }: AssistantPanelProps) {
   return (
     <Stack gap="sm" h="100%" style={{ minHeight: 0 }}>
@@ -77,6 +96,9 @@ function AssistantPanel({
           viewportRef={viewportRef}
           onAddSuggestion={onAddSuggestion}
           isAdding={isAdding}
+          onApplyEdit={onApplyEdit}
+          onDismissEdit={onDismissEdit}
+          savingEditId={savingEditId}
         />
       </Box>
       <AssistantComposer
@@ -189,6 +211,8 @@ export function ReviewAssistantPane({
   onOpen,
   onClose,
   contextLog,
+  currentCard,
+  onCardEdited,
 }: ReviewAssistantPaneProps) {
   const theme = useMantineTheme();
   const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints.md})`);
@@ -202,7 +226,15 @@ export function ReviewAssistantPane({
     viewportRef,
     addSuggestion,
     isAddingSuggestion,
-  } = useAssistantChat({ deckId, contextLog });
+    onApplyEdit,
+    onDismissEdit,
+    savingEditId,
+  } = useAssistantChat({
+    deckId,
+    contextLog,
+    currentCard,
+    onCardEdited,
+  });
 
   const handleClose = React.useCallback(() => {
     stopStreaming();
@@ -221,6 +253,9 @@ export function ReviewAssistantPane({
       onAddSuggestion={addSuggestion}
       isAdding={isAddingSuggestion}
       onClose={handleClose}
+      onApplyEdit={onApplyEdit}
+      onDismissEdit={onDismissEdit}
+      savingEditId={savingEditId}
     />
   );
 

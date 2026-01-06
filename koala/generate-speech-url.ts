@@ -6,6 +6,7 @@ import { createHash } from "crypto";
 import { draw } from "radash";
 import { Gender } from "./shared-types";
 import { storageProvider } from "./storage";
+import { stripEmojis } from "./utils/emoji";
 
 type AudioLessonParams = {
   text: string;
@@ -103,11 +104,8 @@ const hashURL = (text: string, langCode: string, gender: string) => {
 export async function generateSpeechURL(
   params: AudioLessonParams,
 ): Promise<string> {
-  const base64UrlHash = hashURL(
-    params.text,
-    params.langCode,
-    params.gender,
-  );
+  const cleanText = stripEmojis(params.text);
+  const base64UrlHash = hashURL(cleanText, params.langCode, params.gender);
   const fileName = `lesson-audio/${base64UrlHash}.mp3`;
   const [exists] = await storageProvider.fileExists(fileName);
 
@@ -117,7 +115,7 @@ export async function generateSpeechURL(
 
   const lang = params.langCode.slice(0, 2).toLocaleLowerCase();
   const voice = randomVoice(lang, params.gender);
-  const response = await callTTS(voice, params);
+  const response = await callTTS(voice, { ...params, text: cleanText });
 
   await storageProvider.saveBuffer(
     fileName,

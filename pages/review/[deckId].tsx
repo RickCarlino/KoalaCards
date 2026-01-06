@@ -185,9 +185,22 @@ function InnerReviewPage({ deckId }: ReviewDeckPageProps) {
     onGradingResultCaptured: captureGradingResult,
     progress,
     cardsRemaining,
+    updateCardFields,
   } = useReview(deckId);
   const userSettings = useUserSettings();
   const card = currentItem ? state.cards[currentItem.cardUUID] : undefined;
+  const assistantCardContext = React.useMemo(
+    () =>
+      card
+        ? {
+            cardId: card.cardId,
+            term: card.term,
+            definition: card.definition,
+            uuid: card.uuid,
+          }
+        : undefined,
+    [card?.cardId, card?.definition, card?.term, card?.uuid],
+  );
 
   React.useEffect(() => {
     if (isDesktop) {
@@ -242,11 +255,12 @@ function InnerReviewPage({ deckId }: ReviewDeckPageProps) {
     }
     addContextEvent(
       "card-shown",
-      `Term: ${card.term}; Definition: ${card.definition}; Step: ${currentItem.itemType}`,
+      `CardID: ${card.cardId}; Term: ${card.term}; Definition: ${card.definition}; Step: ${currentItem.itemType}`,
     );
   }, [
     addContextEvent,
     card?.definition,
+    card?.cardId,
     card?.term,
     card?.uuid,
     currentItem?.itemType,
@@ -308,6 +322,29 @@ function InnerReviewPage({ deckId }: ReviewDeckPageProps) {
     [addContextEvent, giveUp, state.cards],
   );
 
+  const handleAssistantCardEdited = React.useCallback(
+    (cardId: number, updates: { term: string; definition: string }) => {
+      updateCardFields(cardId, updates);
+      const matchingCard = Object.values(state.cards).find(
+        (item) => item.cardId === cardId,
+      );
+      if (!matchingCard) {
+        return;
+      }
+      const termForLog = updates.term ?? matchingCard.term;
+      const definitionForLog =
+        updates.definition ?? matchingCard.definition;
+      if (!termForLog && !definitionForLog) {
+        return;
+      }
+      addContextEvent(
+        "card-edited",
+        `CardID ${cardId}; Term: ${termForLog || "(unchanged)"}; Definition: ${definitionForLog || "(unchanged)"}`,
+      );
+    },
+    [addContextEvent, state.cards, updateCardFields],
+  );
+
   const openAssistant = React.useCallback(
     () => setAssistantOpen(true),
     [],
@@ -339,6 +376,8 @@ function InnerReviewPage({ deckId }: ReviewDeckPageProps) {
     onOpen: openAssistant,
     onClose: closeAssistant,
     contextLog,
+    currentCard: assistantCardContext,
+    onCardEdited: handleAssistantCardEdited,
   };
   const assistantOffset = showDesktopAssistant ? ASSISTANT_PANEL_WIDTH : 0;
 

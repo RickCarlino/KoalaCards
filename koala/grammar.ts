@@ -126,7 +126,7 @@ async function addTagsToList() {
   };
 
   const structured = await generateStructuredOutput({
-    model: ["openai", "cheap"],
+    model: "cheap",
     messages: [system, user],
     schema: ZOut,
     maxTokens: 3000,
@@ -200,7 +200,7 @@ async function run(props: GrammarCorrectionProps): Promise<Explanation> {
     },
   ];
   const gradeResponse = await generateStructuredOutput({
-    model: ["openai", "cheap"],
+    model: "cheap",
     messages,
     schema: zodGradeResponse,
   });
@@ -238,28 +238,3 @@ export const grammarCorrectionNext: QuizEvaluator = async ({
     };
   }
 };
-
-export async function gradeUtterance(params: {
-  term: string;
-  definition: string;
-  userInput: string;
-  userId: string;
-  eventType?: string;
-}): Promise<{
-  isCorrect: boolean;
-  feedback: string;
-  quizResultId: number;
-}> {
-  const { explanation, quizResultId } = await runAndStore({
-    term: params.term,
-    definition: params.definition,
-    userInput: params.userInput,
-    userId: params.userId,
-    eventType: params.eventType || "speaking-judgement",
-  });
-  return {
-    isCorrect: explanation.yesNo === "yes",
-    feedback: explanation.why,
-    quizResultId,
-  };
-}

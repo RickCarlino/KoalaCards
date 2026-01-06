@@ -1,132 +1,75 @@
-# KoalaCards 🐨
+# KoalaCards
 
 <p align="center">
-  <img width="33%" src="./logo.png" alt="The KoalaCards Logo"/>
+  <img width="33%" src="./logo.png" alt="KoalaCards logo"/>
 </p>
 
 <p align="center">
   <a href="https://www.youtube.com/watch?v=OWjfC7ia1c8">
-  <img width="33%" src="https://img.youtube.com/vi/OWjfC7ia1c8/0.jpg"/>
+    <img width="33%" src="https://img.youtube.com/vi/OWjfC7ia1c8/0.jpg" alt="KoalaCards demo video thumbnail"/>
   </a>
 </p>
 
 <p align="center">
-  <a href="https://codeclimate.com/github/RickCarlino/KoalaCards/maintainability"><img src="https://api.codeclimate.com/v1/badges/b7666624c14bf8dcfb9b/maintainability" /></a>
+  <a href="https://codeclimate.com/github/RickCarlino/KoalaCards/maintainability"><img src="https://api.codeclimate.com/v1/badges/b7666624c14bf8dcfb9b/maintainability" alt="Code Climate maintainability"/></a>
   <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"/>
 </p>
 
-
 <p align="center">
   <a href="https://youtu.be/OWjfC7ia1c8">
-    Watch a short YouTube demo of the app (as of June 2025)
+    Demo video (June 2025)
     <br/>
     <img src="./screenshot.png" alt="KoalaCards UI screenshot"/>
   </a>
 </p>
 
-KoalaCards is a [spaced repetition system (SRS)](https://en.wikipedia.org/wiki/Spaced_repetition) designed to help English speakers learn **Korean**, with a strong focus on **listening and speaking skills**. It leverages modern technologies like speech-to-text and large language models (LLMs) for objective, human-like assessment of user responses.
+## Status
 
-Unlike traditional SRS apps that often rely on self-grading, KoalaCards provides:
+KoalaCards is complete! It meets my daily learning needs and is no in maintenance mode. The project accepts bug fixes and security updates only; no new features are planned.
 
-1.  **Objective Grading:** Machine-assisted grading ensures consistent and unbiased evaluation of listening and speaking skills.
-2.  **Flexible Assessment:** Accepts "close enough" answers that convey the correct meaning, mirroring the flexibility of human tutors while maintaining objectivity.
+## Overview
 
-## Table of Contents 📑
+KoalaCards is a spaced repetition system for English speakers learning Korean. It emphasizes speaking and writing practice with automatic grading and feedback powered by OpenAI models.
 
-- [Demo / Screenshots](#demo--screenshots)
-- [Features](#features-)
-- [Supported Languages](#supported-languages)
-- [Technology Stack](#technology-stack-)
-- [Developer Setup](#developer-setup-%EF%B8%8F)
-- [Authentication](#authentication-)
-- [Project Status and Limitations](#project-status-and-limitations-%EF%B8%8F)
-- [Contributing](#contributing-)
-- [License](#license-)
+The app focuses exclusively on Korean to allow for the best prompts possible.
 
-## Features 💡
+## Current feature set
 
-- **Spaced Repetition:** Utilizes the [FSRS scheduling algorithm](https://github.com/open-spaced-repetition/fsrs4anki) for efficient review scheduling.
-- **Quiz Types:**
-  - **Speaking Quiz:** Read an English prompt and speak the translation in the target language. Responses are transcribed and graded by an LLM (e.g., GPT). 🎤
-- **Card Management:**
-  - Create cards manually, from text input, CSV files, or word lists.
-  - Bulk card creation and import capabilities.
-  - Edit and delete individual cards.
-  - Pause specific cards from review.
-  - Associate AI-generated images with cards.
-- **Deck Management:**
-  - Organize cards into decks.
-  - Create, copy, update, and delete decks.
-  - Share and report decks.
-- **AI-Powered Features:**
-  - Text-to-Speech (TTS) for listening practice. 🗣️
-  - Speech-to-Text (STT) for transcribing spoken answers.
-  - LLM-based grading for speaking quizzes.
-  - Grammar correction and explanation.
-  - Auto-define of unknown words.
-  - Generation of writing prompts for writing practice exercises.
-- **User Experience:**
-  - User settings customization.
-  - Review history and progress tracking.
-  - Keyboard hotkeys for efficient review.
-  - Microphone permission handling.
-- **Admin & Infrastructure:**
-  - Admin panel for user management (implied).
-  - Docker support for easy deployment.
-  - tRPC for type-safe API routes.
-  - Prisma for database interaction.
+- Review sessions with new, remedial, and routine cards scheduled by FSRS (via `femto-fsrs`).
+- Speaking quizzes that record audio, transcribe responses, and grade answers using an LLM. Grading results are stored for later review.
+- Writing practice with user-defined prompts, AI corrections, and diff views. Daily writing goals are trackable.
+- Study assistant chat that references recent cards and can suggest or create new cards.
+- Card creation workflows: free-form generation, word list enrichment, CSV parsing.
+- Deck and card management: edit, pause, merge, publish, copy, import/export.
+- Optional AI-generated images for cards.
 
-## Language
+## Architecture and stack
 
-- **Target Language:** Korean (for English speakers)
+- Next.js (pages router) with React and TypeScript
+- tRPC for API procedures
+- Prisma with PostgreSQL
+- Mantine for UI
+- NextAuth for email magic links or Google OAuth
 
-Note: The app was previously multi‑lingual; it is now intentionally focused on Korean.
+## External services
 
-## Technology Stack 💻
+KoalaCards depends on hosted services in production:
 
-- **Framework:** Next.js (React)
-- **Language:** TypeScript
-- **API:** tRPC
-- **Database ORM:** Prisma
-- **Database:** PostgreSQL (implied)
-- **Styling:** MantineJS
-- **Testing:** Jest
-- **Linting/Formatting:** ESLint, Prettier
-- **Containerization:** Docker
-- **External Services:**
-  - OpenAI (GPT for grading, potentially TTS/STT)
-  - Google Cloud (Cloud Storage for audio/images, potentially TTS/STT)
-  - Authentication Providers (e.g., Google)
+- OpenAI API for LLM grading, study assistant chat, card parsing/generation, speech-to-text, and definition text-to-speech.
+- Google Cloud Text-to-Speech for term audio and Google Cloud Storage for cached audio and images.
+- Email delivery (for magic links) or Google OAuth for authentication.
 
-## Developer Setup 🛠️
+Setup details live in `SETUP.md` and `example.env`.
 
-Detailed setup instructions can be found in [SETUP.md](SETUP.md).
+## Documentation
 
-A Docker setup is available via `docker-compose.yml` for easier environment configuration.
+- `SETUP.md` for environment setup and infrastructure requirements.
+- `USER_MANUAL.md` for end-user workflows and route-level behavior.
 
-## Authentication 🔑
+## Contributing
 
-KoalaCards supports multiple authentication methods:
+Maintenance mode applies. Please focus contributions on bug fixes, security updates, or documentation corrections. For feature requests, open an issue to discuss scope.
 
-1.  **Email Magic Links (Self-hosted):** Default method sending a login link via email.
-2.  **Google Sign-In:** Allows users to sign in using their Google accounts.
+## License
 
-Configuration details for Google Sign-In can be found in the `.env.example` file and require setting up OAuth credentials in the Google Cloud Console. Both methods can be enabled simultaneously.
-
-## Project Status and Limitations ⚠️
-
-- The application is actively used but may have areas with limited documentation.
-- The app is now single‑language (Korean). Other languages are not supported.
-- If you require support for languages other than Korean, you must use [Release 7.1](https://github.com/RickCarlino/KoalaCards/releases/tag/v7.1.0) or a fork. Other languages will no longer be supported beyond this release.
-
-## Contributing 🤝
-
-Contributions are welcome! The source code is open source under the MIT license.
-
-- **Bug Reports & Feature Requests:** Please open an issue on GitHub.
-- **Code Contributions:** Fork the repository, make your changes, and submit a pull request.
-- **Questions/Discussion:** Use GitHub Issues or contact the maintainer (if contact info is provided elsewhere).
-
-## License 📄
-
-This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
+MIT. See `LICENSE`.

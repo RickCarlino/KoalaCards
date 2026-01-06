@@ -1,9 +1,10 @@
 import OpenAI from "openai";
 import { createHash } from "crypto";
 import { storageProvider } from "./storage";
+import { stripEmojis } from "./utils/emoji";
 
 const VOICE = "alloy";
-const MODEL = "gpt-4o-mini-tts";
+const MODEL = "gpt-4o-mini-tts-2025-12-15";
 const VERSION = "v1";
 const AUDIO_FORMAT = "mp3";
 
@@ -32,7 +33,7 @@ const hashInput = (text: string) => {
 export async function generateDefinitionSpeechURL(
   text: string,
 ): Promise<string> {
-  const cleanText = text.trim();
+  const cleanText = stripEmojis(text).trim();
   if (!cleanText) {
     throw new Error("No definition text provided for TTS.");
   }
