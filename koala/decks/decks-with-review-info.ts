@@ -6,13 +6,12 @@ export type DeckWithReviewInfo = {
   name: string;
   quizzesDue: number;
   newQuizzes: number;
-  published: boolean;
 };
 
 const fetchUserDecks = (userId: string) =>
   prismaClient.deck.findMany({
     where: { userId },
-    select: { id: true, name: true, published: true },
+    select: { id: true, name: true },
   });
 
 const newCardCount = async (deckId: number) => {
@@ -31,7 +30,6 @@ export const decksWithReviewInfo = async (
       name: deck.name,
       quizzesDue: (await getLessonsDue(deck.id)) || 0,
       newQuizzes: (await newCardCount(deck.id)) || 0,
-      published: deck.published,
     })),
   );
 };

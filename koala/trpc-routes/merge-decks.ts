@@ -41,7 +41,6 @@ export const mergeDecks = procedure
         data: {
           name: input.newDeckName,
           userId,
-          published: false,
         },
       });
 

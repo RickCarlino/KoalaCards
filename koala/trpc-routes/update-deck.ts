@@ -7,8 +7,7 @@ export const updateDeck = procedure
   .input(
     z.object({
       deckId: z.number(),
-      published: z.boolean(),
-      name: z.string().optional(),
+      name: z.string().min(1).max(100),
     }),
   )
   .output(z.void())
@@ -23,8 +22,7 @@ export const updateDeck = procedure
     await prismaClient.deck.update({
       where: { id: input.deckId },
       data: {
-        published: input.published,
-        ...(input.name ? { name: input.name } : {}),
+        name: input.name,
       },
     });
   });

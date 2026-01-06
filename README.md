@@ -40,7 +40,7 @@ The app focuses exclusively on Korean to allow for the best prompts possible.
 - Writing practice with user-defined prompts, AI corrections, and diff views. Daily writing goals are trackable.
 - Study assistant chat that references recent cards and can suggest or create new cards.
 - Card creation workflows: free-form generation, word list enrichment, CSV parsing.
-- Deck and card management: edit, pause, merge, publish, copy, import/export.
+- Deck and card management: edit, pause, merge, import/export.
 - Optional AI-generated images for cards.
 
 ## Architecture and stack

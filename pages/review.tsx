@@ -13,7 +13,6 @@ import {
   Container,
   Grid,
   Group,
-  Switch,
   Text,
   TextInput,
 } from "@mantine/core";
@@ -145,13 +144,12 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
       if (title !== deck.name && title.trim() !== "") {
         await updateDeckMutation.mutateAsync({
           deckId: deck.id,
-          published: deck.published,
           name: title.trim(),
         });
         refreshData();
       }
       setIsEditing(false);
-    }, [deck.id, deck.name, deck.published, title, updateDeckMutation]);
+    }, [deck.id, deck.name, title, updateDeckMutation]);
 
     const handleDelete = useCallback(async () => {
       if (!confirm("Are you sure you want to delete this deck?")) {
@@ -160,26 +158,6 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
       await deleteDeckMutation.mutateAsync({ deckId: deck.id });
       refreshData();
     }, [deck.id, deleteDeckMutation]);
-
-    const handlePublishToggle = useCallback(
-      async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const willPublish = event.currentTarget.checked;
-        if (
-          willPublish &&
-          !confirm("Are you sure you want to share this deck?")
-        ) {
-          event.currentTarget.checked = false;
-          return;
-        }
-        await updateDeckMutation.mutateAsync({
-          deckId: deck.id,
-          published: willPublish,
-          name: deck.name,
-        });
-        refreshData();
-      },
-      [deck.id, deck.name, updateDeckMutation],
-    );
 
     return (
       <Card
@@ -388,14 +366,6 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
             </div>
           </Link>
         </div>
-        <Group mt="md" grow align="center">
-          <Switch
-            checked={deck.published}
-            onChange={handlePublishToggle}
-            label="Published"
-            disabled={updateDeckMutation.isLoading}
-          />
-        </Group>
       </Card>
     );
   }

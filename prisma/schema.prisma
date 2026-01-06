@@ -86,7 +86,6 @@ model Deck {
   userId             String
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   Card               Card[]
-  published          Boolean             @default(false)
   parentDeckId       Int?
   createdAt          DateTime            @default(now())
   writingSubmissions WritingSubmission[] // Added relation to WritingSubmission
