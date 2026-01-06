@@ -4,17 +4,12 @@ import {
   openaiGenerateStructuredOutput,
   openaiGenerateText,
 } from "./ai-openai";
-import {
-  anthropicGenerateStructuredOutput,
-  anthropicGenerateText,
-} from "./ai-anthropic";
-import type { CoreMessage } from "./ai-types";
-export type { CoreMessage } from "./ai-types";
-export type LLMVendor = "openai" | "anthropic";
-export type TextModel = "good" | "fast" | "cheap";
+import type { CoreMessage, TextModel } from "./ai-types";
+export type { CoreMessage, TextModel } from "./ai-types";
+
 export type ImageModel = "imageDefault";
-export type LanguageModelIdentifier = [LLMVendor, TextModel];
-export type ImageModelIdentifier = [LLMVendor, ImageModel];
+export type LanguageModelIdentifier = TextModel;
+export type ImageModelIdentifier = ImageModel;
 
 export type LanguageGenOptions = {
   model: LanguageModelIdentifier;
@@ -39,37 +34,18 @@ export type ImageGenOptions = {
 export type ImageGenFn = (options: ImageGenOptions) => Promise<string>;
 
 export const generateAIText: LanguageGenFn = async (options) => {
-  switch (options.model[0]) {
-    case "openai":
-      return await openaiGenerateText(options);
-    case "anthropic":
-      return await anthropicGenerateText(options);
-    default:
-      throw new Error("Not implemented");
-  }
+  return await openaiGenerateText(options);
 };
 
 export const generateStructuredOutput: StructuredGenFn = async (
   options,
 ) => {
-  switch (options.model[0]) {
-    case "openai":
-      return await openaiGenerateStructuredOutput(options);
-    case "anthropic":
-      return await anthropicGenerateStructuredOutput(options);
-    default:
-      throw new Error("Not implemented");
-  }
+  return await openaiGenerateStructuredOutput(options);
 };
 
 export const generateAIImage: (
   prompt: string,
   model: ImageModelIdentifier,
 ) => Promise<string> = async (prompt, model) => {
-  switch (model[0]) {
-    case "openai":
-      return await openaiGenerateImage({ model, prompt });
-    default:
-      throw new Error("Not implemented");
-  }
+  return await openaiGenerateImage({ model, prompt });
 };

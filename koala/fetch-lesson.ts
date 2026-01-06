@@ -162,7 +162,7 @@ function takeFirstTwoEmojis(input: string) {
 
 async function requestEmojiDefinition(term: string, definition: string) {
   const response = await generateAIText({
-    model: ["openai", "fast"],
+    model: "fast",
     messages: [
       {
         role: "system",

@@ -126,7 +126,7 @@ async function addTagsToList() {
   };
 
   const structured = await generateStructuredOutput({
-    model: ["openai", "cheap"],
+    model: "cheap",
     messages: [system, user],
     schema: ZOut,
     maxTokens: 3000,
@@ -200,7 +200,7 @@ async function run(props: GrammarCorrectionProps): Promise<Explanation> {
     },
   ];
   const gradeResponse = await generateStructuredOutput({
-    model: ["openai", "cheap"],
+    model: "cheap",
     messages,
     schema: zodGradeResponse,
   });

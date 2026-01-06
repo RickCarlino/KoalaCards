@@ -66,7 +66,7 @@ export const gradeWriting = procedure
     }
 
     const feedback = await generateStructuredOutput({
-      model: ["openai", "good"],
+      model: "good",
       schema: ApiResponseSchema,
       messages: [
         { role: "system", content: ESSAY_GRADING_PROMPT },

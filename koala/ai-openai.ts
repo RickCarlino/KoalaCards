@@ -12,14 +12,12 @@ import type {
   LanguageGenFn,
   StructuredGenFn,
 } from "./ai";
-import type { ModelKind, TextModel } from "./ai-types";
+import type { TextModel } from "./ai-types";
 
-const DEFAULT_MODEL: LanguageModelIdentifier = ["openai", "fast"];
-const DEFAULT_IMAGE_MODEL: ImageModelIdentifier = [
-  "openai",
-  "imageDefault",
-];
+const DEFAULT_MODEL: LanguageModelIdentifier = "fast";
+const DEFAULT_IMAGE_MODEL: ImageModelIdentifier = "imageDefault";
 const DEFAULT_IMAGE_SIZE = "1024x1024" as const;
+type ModelKind = TextModel | ImageModelIdentifier;
 
 const registry: Record<ModelKind, string> = {
   fast: "gpt-5-nano",
@@ -42,15 +40,9 @@ function getModelString(
     | LanguageModelIdentifier
     | ImageModelIdentifier = DEFAULT_MODEL,
 ): string {
-  const [vendor, modelKey] = identifier;
-  if (vendor !== "openai") {
-    throw new Error(`Unsupported vendor: ${vendor}`);
-  }
-  const modelString = registry[modelKey as ModelKind];
+  const modelString = registry[identifier as ModelKind];
   if (!modelString) {
-    throw new Error(
-      `Unknown model key "${modelKey}" for vendor "${vendor}"`,
-    );
+    throw new Error(`Unknown model key "${identifier}"`);
   }
   return modelString;
 }
@@ -74,7 +66,7 @@ export const openaiGenerateStructuredOutput: StructuredGenFn = async (
   const modelName = getModelString(options.model ?? DEFAULT_MODEL);
   const usesGpt5 = modelName.startsWith("gpt-5");
   const reasoningEffort = usesGpt5
-    ? REASONING_EFFORT[options.model?.[1]]
+    ? REASONING_EFFORT[options.model ?? DEFAULT_MODEL]
     : undefined;
   const res = await openai.chat.completions.parse({
     model: modelName,
