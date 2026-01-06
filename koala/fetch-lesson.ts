@@ -1,9 +1,11 @@
 import { prismaClient } from "@/koala/prisma-client";
 import type { Card, Prisma } from "@prisma/client";
+import { generateAIText } from "./ai";
 import { getUserSettings } from "./auth-helpers";
 import { maybeGetCardImageUrl } from "./image";
 import { LessonType } from "./shared-types";
 import { generateDefinitionAudio, generateTermAudio } from "./speech";
+import { containsEmoji } from "./utils/emoji";
 
 type Bucket = typeof NEW_CARD | typeof ROUTINE | typeof REMEDIAL;
 
@@ -135,6 +137,108 @@ async function buildQuizPayload(q: LocalCard & { quizType?: string }) {
   };
 }
 
+type EmojiUpdate = {
+  id: number;
+  definition: string;
+};
+
+function needsEmojiDefinition(definition: string) {
+  return !containsEmoji(definition);
+}
+
+function appendEmojis(definition: string, emojis: string) {
+  const base = definition.trim();
+  return `${base} ${emojis}`;
+}
+
+function takeFirstTwoEmojis(input: string) {
+  const emojiRegex = /\p{Extended_Pictographic}/gu;
+  const matches = input.match(emojiRegex);
+  if (!matches) {
+    return null;
+  }
+  return matches.slice(0, 2).join(" ");
+}
+
+async function requestEmojiDefinition(term: string, definition: string) {
+  const response = await generateAIText({
+    model: ["openai", "fast"],
+    messages: [
+      {
+        role: "system",
+        content:
+          "Only reply with emoji. Pick the two emojis that best represent the flashcard.",
+      },
+      {
+        role: "user",
+        content: `${term}: ${definition}`,
+      },
+    ],
+    maxTokens: 50,
+  });
+
+  const raw = response.trim();
+  if (!containsEmoji(raw)) {
+    return null;
+  }
+  return takeFirstTwoEmojis(raw);
+}
+
+async function addEmojisToDefinitions(
+  hand: LocalCard[],
+): Promise<LocalCard[]> {
+  const pending = hand.filter((card) =>
+    needsEmojiDefinition(card.definition),
+  );
+  if (!pending.length) {
+    return hand;
+  }
+
+  const emojiUpdates = await Promise.all(
+    pending.map(async (card): Promise<EmojiUpdate | null> => {
+      const emojis = await requestEmojiDefinition(
+        card.term,
+        card.definition,
+      );
+      if (!emojis) {
+        return null;
+      }
+      return {
+        id: card.id,
+        definition: appendEmojis(card.definition, emojis),
+      };
+    }),
+  );
+
+  const updates = emojiUpdates.filter(
+    (update): update is EmojiUpdate => update !== null,
+  );
+  if (!updates.length) {
+    return hand;
+  }
+
+  await prismaClient.$transaction(
+    updates.map((update) =>
+      prismaClient.card.updateMany({
+        where: { id: update.id },
+        data: { definition: update.definition },
+      }),
+    ),
+  );
+
+  const updatesById = new Map(
+    updates.map((update) => [update.id, update.definition]),
+  );
+
+  return hand.map((card) => {
+    const definition = updatesById.get(card.id);
+    if (!definition) {
+      return card;
+    }
+    return { ...card, definition };
+  });
+}
+
 async function buildHand(
   userId: string,
   deckId: number,
@@ -208,8 +312,9 @@ export async function getLessons({
   }
 
   const rawHand = await buildHand(userId, deckId, now, take);
+  const hand = await addEmojisToDefinitions(rawHand);
 
-  return Promise.all(rawHand.map((q) => buildQuizPayload(q)));
+  return Promise.all(hand.slice(0, 5).map((q) => buildQuizPayload(q)));
 }
 
 export async function getLessonsDue(

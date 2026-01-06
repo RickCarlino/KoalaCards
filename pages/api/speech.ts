@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "./auth/[...nextauth]";
 import { prismaClient } from "@/koala/prisma-client";
 import { draw } from "radash";
+import { stripEmojis } from "@/koala/utils/emoji";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -39,10 +40,14 @@ export default async function handler(
   const { tl, en, format } = (req.body ?? {}) as SpeechBody;
   const tlText = (tl ?? "").toString();
   const enText = (en ?? "").toString();
-  if (!tlText.trim()) {
+  const cleanTlText = stripEmojis(tlText);
+  const cleanEnText = stripEmojis(enText);
+  if (!cleanTlText.trim()) {
     return res.status(400).json({ error: "Missing 'tl'" });
   }
-  const input = enText.trim() ? `${tlText}\n${enText}` : tlText;
+  const input = cleanEnText.trim()
+    ? `${cleanTlText}\n${cleanEnText}`
+    : cleanTlText;
 
   const model = "gpt-4o-mini-tts-2025-12-15";
   const VOICES = [

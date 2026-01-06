@@ -22,7 +22,7 @@ const DEFAULT_IMAGE_MODEL: ImageModelIdentifier = [
 const DEFAULT_IMAGE_SIZE = "1024x1024" as const;
 
 const registry: Record<ModelKind, string> = {
-  fast: "gpt-5.1",
+  fast: "gpt-5-nano",
   cheap: "gpt-5-mini",
   good: "gpt-5-mini",
   imageDefault: "gpt-image-1-mini",
