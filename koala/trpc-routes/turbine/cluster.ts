@@ -216,7 +216,7 @@ export async function clusters(
   }
 
   const results: Translation[][] = await Promise.all(
-    cluster(words.slice(0, 120), 10).map((chunk) => run(language, chunk)),
+    cluster(words.slice(0, 120), 12).map((chunk) => run(language, chunk)),
   );
   const c = alphabetical(results.flat(), (x: Translation) => x.term);
   return unique(c, (x: Translation) => x.term);
