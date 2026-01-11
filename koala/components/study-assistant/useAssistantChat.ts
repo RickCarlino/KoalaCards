@@ -91,19 +91,25 @@ async function readStream(
 const createProposalId = (cardId: number) =>
   `edit-${cardId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
+const INITIAL_ASSISTANT_MESSAGE =
+  "Hi! Ask me about the cards you just reviewed, or request new practice questions. I’ll also suggest new flashcards or edits when helpful.";
+
+const createInitialMessages = (): ChatMessage[] => [
+  {
+    role: "assistant",
+    content: INITIAL_ASSISTANT_MESSAGE,
+  },
+];
+
 export function useAssistantChat({
   deckId,
   contextLog,
   currentCard,
   onCardEdited,
 }: UseAssistantChatOptions) {
-  const [messages, setMessages] = React.useState<ChatMessage[]>([
-    {
-      role: "assistant",
-      content:
-        "Hi! Ask me about the cards you just reviewed, or request new practice questions. I’ll also suggest new flashcards or edits when helpful.",
-    },
-  ]);
+  const [messages, setMessages] = React.useState<ChatMessage[]>(
+    createInitialMessages,
+  );
   const [input, setInput] = React.useState("");
   const [isStreaming, setIsStreaming] = React.useState(false);
   const [savingEditId, setSavingEditId] = React.useState<string | null>(
@@ -410,6 +416,17 @@ export function useAssistantChat({
     resetStreamingState,
   ]);
 
+  const clearMessages = React.useCallback(() => {
+    if (isStreaming) {
+      return;
+    }
+    const initialMessages = createInitialMessages();
+    messagesRef.current = initialMessages;
+    setInput("");
+    setMessages(initialMessages);
+    setSavingEditId(null);
+  }, [isStreaming]);
+
   return {
     messages,
     input,
@@ -417,6 +434,7 @@ export function useAssistantChat({
     isStreaming,
     sendMessage,
     stopStreaming,
+    clearMessages,
     viewportRef,
     addSuggestion,
     isAddingSuggestion: bulkCreate.isLoading,
