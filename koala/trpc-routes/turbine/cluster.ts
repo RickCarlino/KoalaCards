@@ -48,9 +48,6 @@ Instructions:
 
 Examples (input -> output):
 
-    승낙하다 ⇒ {"term": "요청을 승낙해요", "definition": "accept a request"}
-    흔쾌하다 ⇒ {"term": "흔쾌히 응해요", "definition": "gladly agree"}
-    진학률 ⇒ {"term": "진학률이 높아요", "definition": "the college admission rate is high"}
     철라하다 ⇒ {"term": "철라한 환경", "definition": "a strict environment"}
     고려하다 ⇒ {"term": "고려해 보면", "definition": "if you consider it"}
     사수이다 ⇒ {"term": "사수이자 멘토입니다", "definition": "a senior and mentor"}
@@ -60,83 +57,80 @@ Examples (input -> output):
 
 Examples of high-quality outputs:
 
-    {"term": "기지를 파괴해요", "definition": "destroy the base"}
-    {"term": "미래를 예측해요", "definition": "predict the future"}
     {"term": "부정적 견해", "definition": "a negative view"}
-    {"term": "현상을 분석해", "definition": "analyze the phenomenon"}
-    {"term": "유명한 연출가", "definition": "a famous director"}
-    {"term": "내려야 하는데", "definition": "need to decide"}
-    {"term": "포근한 날씨", "definition": "mild weather"}
-    {"term": "드라마의 주인공", "definition": "the main character of the drama"}
-    {"term": "다재다능한 사람", "definition": "a versatile person"}
-    {"term": "장기 출장", "definition": "a long business trip"}
-    {"term": "매체를 통해", "definition": "through the media"}
     {"term": "잠이 드셨나요?", "definition": "Did you fall asleep?"}
-    {"term": "고통스러운 경험", "definition": "a painful experience"}
-    {"term": "주식을 거래했어", "definition": "traded stocks"}
-    {"term": "구멍을 뚫었어", "definition": "punched a hole"}
-    {"term": "보람찬 하루", "definition": "a rewarding day"}
-    {"term": "놀라지 않게끔", "definition": "so as not to be surprised"}
-    {"term": "일이 힘겹습니다", "definition": "the work is tough"}
-    {"term": "예제 문제", "definition": "an example problem"}
-    {"term": "목표가 이뤄졌어", "definition": "the goal was achieved"}
-    {"term": "빛나는 업적", "definition": "a brilliant achievement"}
-    {"term": "평범한 삶", "definition": "an ordinary life"}
-    {"term": "깊은 우정", "definition": "deep friendship"}
-    {"term": "집필한 내용", "definition": "written content"}
     {"term": "가벼운 배탈", "definition": "a mild stomachache"}
-    {"term": "카펫을 깔다", "definition": "lay a carpet"}
-    {"term": "천연 재료", "definition": "natural ingredients"}
-    {"term": "마루 밑입니다", "definition": "it's under the floor"}
-    {"term": "흥미로운 줄거리", "definition": "an interesting plot"}
-    {"term": "활용된 물품", "definition": "utilized items"}
-    {"term": "일상 생활", "definition": "everyday life"}
-    {"term": "명령을 내리다", "definition": "issue an order"}
-    {"term": "새로운 조리법", "definition": "a new recipe"}
-    {"term": "흥미로운 이야기", "definition": "an interesting story"}
-    {"term": "대학교 동창", "definition": "a university classmate"}
-    {"term": "기후 변화", "definition": "climate change"}
-    {"term": "천원짜리 지폐", "definition": "a 1,000-won bill"}
-    {"term": "공정한 사회", "definition": "a fair society"}
-    {"term": "회사의 기강", "definition": "company discipline"}
-    {"term": "저는 운동선수로는", "definition": "as an athlete"}
-    {"term": "피부가 간지럽다", "definition": "skin is itchy"}
-    {"term": "과연 그럴까요?", "definition": "is that really the case?"}
-    {"term": "고아원 원장", "definition": "an orphanage director"}
-    {"term": "재산을 소유해", "definition": "own property"}
-    {"term": "요구에 맞추어", "definition": "to meet the requirements"}
-    {"term": "가는 철사", "definition": "thin wire"}
     {"term": "분명한 목소리", "definition": "a clear voice"}
-    {"term": "근사한 저녁", "definition": "a lovely evening"}
-    {"term": "유리가 깨졌습니다", "definition": "the glass broke"}
-    {"term": "모험을 했습니다", "definition": "went on an adventure"}
-    {"term": "대책 강구", "definition": "devise countermeasures"}
-    {"term": "위기에서 빠져나갑니다", "definition": "escape from the crisis"}
-    {"term": "팀을 응원한다", "definition": "cheer for the team"}
-    {"term": "아버지의 명령", "definition": "a father's command"}
-    {"term": "문제가 존재하지만", "definition": "although a problem exists"}
-    {"term": "정오에야 시작", "definition": "start only at noon"}
-    {"term": "사정 설명합니다", "definition": "explain the circumstances"}
-    {"term": "열판한 논쟁", "definition": "a heated debate"}
-    {"term": "심한 피로감", "definition": "severe fatigue"}
-    {"term": "공식 발표", "definition": "an official announcement"}
-    {"term": "찬성 이유", "definition": "a reason for support"}
-    {"term": "서류를 제출해", "definition": "submit the documents"}
-    {"term": "김영수 올림", "definition": "Sincerely, Kim Young-soo"}
-    {"term": "미래를 두려워해", "definition": "fear the future"}
-    {"term": "우리끼리만 놀았어", "definition": "just hung out among ourselves"}
-    {"term": "맛있는 조합", "definition": "a delicious combination"}
-    {"term": "대륙과 대양", "definition": "continents and oceans"}
-    {"term": "출석 요구", "definition": "attendance requirement"}
+    {"term": "드라마의 주인공", "definition": "the main character of the drama"}
     {"term": "대화가 진지합니다", "definition": "the conversation is serious"}
-    {"term": "장사가 잘됐습니다", "definition": "business went well"}
+    {"term": "다재다능한 사람", "definition": "a versatile person"}
+    {"term": "미래를 두려워해", "definition": "fear the future"}
+    {"term": "평범한 삶", "definition": "an ordinary life"}
+    {"term": "기지를 파괴해요", "definition": "destroy the base"}
+    {"term": "깊은 우정", "definition": "deep friendship"}
+    {"term": "일이 힘겹습니다", "definition": "the work is tough"}
+    {"term": "새로운 조리법", "definition": "a new recipe"}
+    {"term": "대책 강구", "definition": "devise countermeasures"}
+    {"term": "놀라지 않게끔", "definition": "so as not to be surprised"}
+    {"term": "저는 운동선수로는", "definition": "as an athlete"}
+    {"term": "사정 설명합니다", "definition": "explain the circumstances"}
+    {"term": "회사의 기강", "definition": "company discipline"}
+    {"term": "흥미로운 줄거리", "definition": "an interesting plot"}
+    {"term": "찬성 이유", "definition": "a reason for support"}
+    {"term": "미래를 예측해요", "definition": "predict the future"}
     {"term": "아이돌 연습생", "definition": "an idol trainee"}
-    {"term": "긍정적인 태도", "definition": "a positive attitude"}
+    {"term": "포근한 날씨", "definition": "mild weather"}
+    {"term": "열판한 논쟁", "definition": "a heated debate"}
+    {"term": "과연 그럴까요?", "definition": "is that really the case?"}
     {"term": "분명한 발음", "definition": "clear pronunciation"}
-    {"term": "방을 치웠습니다", "definition": "cleaned the room"}
+    {"term": "카펫을 깔다", "definition": "lay a carpet"}
+    {"term": "심한 피로감", "definition": "severe fatigue"}
+    {"term": "공정한 사회", "definition": "a fair society"}
+    {"term": "재산을 소유해", "definition": "own property"}
+    {"term": "활용된 물품", "definition": "utilized items"}
+    {"term": "고아원 원장", "definition": "an orphanage director"}
+    {"term": "고통스러운 경험", "definition": "a painful experience"}
+    {"term": "명령을 내리다", "definition": "issue an order"}
+    {"term": "아버지의 명령", "definition": "a father's command"}
+    {"term": "집필한 내용", "definition": "written content"}
+    {"term": "긍정적인 태도", "definition": "a positive attitude"}
     {"term": "중요한 과업", "definition": "an important task"}
+    {"term": "출석 요구", "definition": "attendance requirement"}
+    {"term": "우리끼리만 놀았어", "definition": "just hung out among ourselves"}
+    {"term": "장기 출장", "definition": "a long business trip"}
+    {"term": "내려야 하는데", "definition": "need to decide"}
+    {"term": "대학교 동창", "definition": "a university classmate"}
+    {"term": "구멍을 뚫었어", "definition": "punched a hole"}
+    {"term": "팀을 응원한다", "definition": "cheer for the team"}
+    {"term": "맛있는 조합", "definition": "a delicious combination"}
+    {"term": "주식을 거래했어", "definition": "traded stocks"}
+    {"term": "목표가 이뤄졌어", "definition": "the goal was achieved"}
+    {"term": "대륙과 대양", "definition": "continents and oceans"}
+    {"term": "유명한 연출가", "definition": "a famous director"}
+    {"term": "정오에야 시작", "definition": "start only at noon"}
+    {"term": "가는 철사", "definition": "thin wire"}
+    {"term": "흥미로운 이야기", "definition": "an interesting story"}
+    {"term": "예제 문제", "definition": "an example problem"}
+    {"term": "서류를 제출해", "definition": "submit the documents"}
+    {"term": "보람찬 하루", "definition": "a rewarding day"}
+    {"term": "피부가 간지럽다", "definition": "skin is itchy"}
+    {"term": "문제가 존재하지만", "definition": "although a problem exists"}
+    {"term": "천연 재료", "definition": "natural ingredients"}
+    {"term": "위기에서 빠져나갑니다", "definition": "escape from the crisis"}
+    {"term": "기후 변화", "definition": "climate change"}
+    {"term": "일상 생활", "definition": "everyday life"}
+    {"term": "현상을 분석해", "definition": "analyze the phenomenon"}
+    {"term": "요구에 맞추어", "definition": "to meet the requirements"}
+    {"term": "매체를 통해", "definition": "through the media"}
+    {"term": "천원짜리 지폐", "definition": "a 1,000-won bill"}
+    {"term": "김영수 올림", "definition": "Sincerely, Kim Young-soo"}
+    {"term": "빛나는 업적", "definition": "a brilliant achievement"}
+    {"term": "근사한 저녁", "definition": "a lovely evening"}
+    {"term": "공식 발표", "definition": "an official announcement"}
 
 Avoid obscure, ungrammatical, or non-idiomatic examples. Skip misspellings. Skip proper names (names, places, etc..) unless they are part of a common collocation.
+DO NOT ADD HELPFUL NOTES OR EXPLANATIONS.
+DO NOT TELL ME YOU SKIPPED A WORD, JUST WRITE THE CARDS FOR THE VALID ONES.
 `;
 
 const USER_PROMPT = `
@@ -169,7 +163,7 @@ async function run(
   ];
 
   const content = await generateAIText({
-    model: "cheap" as const,
+    model: "good" as const,
     messages: part1,
   });
 
