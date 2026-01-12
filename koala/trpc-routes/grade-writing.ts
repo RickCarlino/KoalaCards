@@ -1,6 +1,5 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { getLangName } from "../get-lang-name";
 import { generateStructuredOutput } from "../ai";
 import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc-procedure";
@@ -73,7 +72,7 @@ export const gradeWriting = procedure
         {
           role: "user",
           content: [
-            `Language: ${getLangName("ko")}`,
+            `Language: Korean`,
             prompt ? `Prompt context: ${prompt}` : null,
             `Text to analyze:\n${text.trim()}`,
           ]

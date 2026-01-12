@@ -4,6 +4,7 @@ import { maybeGetCardImageUrl } from "@/koala/image";
 import { timeUntil } from "@/koala/time-until";
 import { trpc } from "@/koala/trpc-config";
 import {
+  Anchor,
   Badge,
   Button,
   Checkbox,
@@ -29,9 +30,11 @@ import {
 import { GetServerSideProps } from "next";
 import { prismaClient } from "@/koala/prisma-client";
 import { useRouter } from "next/router";
+import Link from "next/link";
 
 type CardView = {
   id: number;
+  deckId: number | null;
   term: string;
   definition: string;
   flagged: boolean;
@@ -75,6 +78,33 @@ function Stat({
   );
 }
 
+function DeckLabel({
+  deckId,
+  deckName,
+}: {
+  deckId: number | null;
+  deckName: string | null;
+}) {
+  if (!deckId || !deckName) {
+    return (
+      <Text size="sm" fw={500}>
+        —
+      </Text>
+    );
+  }
+
+  return (
+    <Anchor
+      component={Link}
+      href={`/cards?deckId=${deckId}`}
+      size="sm"
+      fw={500}
+    >
+      {deckName}
+    </Anchor>
+  );
+}
+
 function CardEditor({ card }: CardPageProps) {
   const router = useRouter();
   const form = useForm<{
@@ -113,7 +143,15 @@ function CardEditor({ card }: CardPageProps) {
     <Container size="md" py="xl">
       <Stack gap="lg">
         <Group justify="space-between" align="center">
-          <Title order={2}>{card.term}</Title>
+          <Stack gap={4}>
+            <Title order={2}>{card.term}</Title>
+            <Group gap="xs">
+              <Text c="dimmed" size="sm">
+                Deck:
+              </Text>
+              <DeckLabel deckId={card.deckId} deckName={card.deckName} />
+            </Group>
+          </Stack>
           <Group>
             <Badge color="pink" variant="light">
               {card.langCode.toUpperCase()}
@@ -265,9 +303,10 @@ function CardEditor({ card }: CardPageProps) {
                   <Text c="dimmed" size="sm">
                     Deck:
                   </Text>
-                  <Text size="sm" fw={500}>
-                    {card.deckName || "—"}
-                  </Text>
+                  <DeckLabel
+                    deckId={card.deckId}
+                    deckName={card.deckName}
+                  />
                 </Group>
                 <Group gap="xs">
                   <Text c="dimmed" size="sm">
@@ -324,6 +363,7 @@ export const getServerSideProps: GetServerSideProps<
     props: {
       card: {
         id: card.id,
+        deckId: card.deckId ?? null,
         term: card.term,
         definition: card.definition,
         flagged: card.flagged,
