@@ -58,7 +58,6 @@ Examples (input -> output):
 Examples of high-quality outputs:
 
     {"term": "심한 피로감", "definition": "severe fatigue"}
-    {"term": "피부가 간지럽다", "definition": "skin is itchy"}
     {"term": "공식 발표", "definition": "an official announcement"}
     {"term": "흥미로운 이야기", "definition": "an interesting story"}
     {"term": "기후 변화", "definition": "climate change"}
@@ -68,7 +67,6 @@ Examples of high-quality outputs:
     {"term": "요구에 맞추어", "definition": "to meet the requirements"}
     {"term": "맛있는 조합", "definition": "a delicious combination"}
     {"term": "정오에야 시작", "definition": "start only at noon"}
-    {"term": "카펫을 깔다", "definition": "lay a carpet"}
     {"term": "구멍을 뚫었어", "definition": "punched a hole"}
     {"term": "일이 힘겹습니다", "definition": "the work is tough"}
     {"term": "활용된 물품", "definition": "utilized items"}
@@ -132,6 +130,7 @@ Skip misspellings.
 Skip proper nouns (names, places, etc..) unless they are part of a common collocation.
 DO NOT ADD HELPFUL NOTES OR EXPLANATIONS.
 DO NOT TELL ME YOU SKIPPED A WORD, JUST WRITE THE CARDS FOR THE VALID ONES.
+DO NOT WRITE IN 해라체 OR USE ~다 ENDINGS FOR VERBS/ADJECTIVES! Other forms only.
 `;
 
 const USER_PROMPT = `
