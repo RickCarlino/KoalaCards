@@ -1,4 +1,3 @@
-import type { Card } from "@prisma/client";
 import { z } from "zod";
 import { generateStructuredOutput } from "../ai";
 import { getUserSettings } from "../auth-helpers";
@@ -21,6 +20,8 @@ type GrammarEvaluationInput = {
   definition: string;
   userInput: string;
   userId: string;
+  deckName: string | null;
+  deckDescription: string | null;
 };
 
 type GrammarMessage = {
@@ -28,8 +29,15 @@ type GrammarMessage = {
   content: string;
 };
 
+type SpeakingCard = {
+  term: string;
+  definition: string;
+  deckName: string | null;
+  deckDescription: string | null;
+};
+
 type SpeakingEvaluationInput = {
-  card: Pick<Card, "term" | "definition">;
+  card: SpeakingCard;
   userInput: string;
   userID: string;
 };
@@ -44,17 +52,39 @@ type SpeakingEvaluator = (
   input: SpeakingEvaluationInput,
 ) => Promise<SpeakingEvaluationOutput>;
 
+const buildDeckContext = (
+  deckName: string | null,
+  deckDescription: string | null,
+) => {
+  const parts: string[] = [];
+  if (deckName) {
+    parts.push(`This came from the deck "${deckName}".`);
+  }
+  if (deckDescription) {
+    parts.push(`Deck description: ${deckDescription}.`);
+  }
+  return parts.join(" ");
+};
+
 const buildGrammarPrompt = (input: GrammarEvaluationInput): string => {
+  const deckContext = buildDeckContext(
+    input.deckName,
+    input.deckDescription,
+  );
   return [
     "I am learning Korean.",
+    "This is a flashcard app.",
     `My prompt was: ${input.definition} (${input.term})`,
+    deckContext,
     `Let's say I am in a situation that warrants the sentence or prompt above.`,
     `Could one say "${input.userInput}"?`,
     `Would that be OK?`,
     `(entered via speech-to-text, I have no control over spacing or punctuation so please focus on the content.)`,
     "For the sake of this discussion, let's say that formality levels don't need to be taken into consideration.",
     `Explain in one tweet or less.`,
-  ].join(" ");
+  ]
+    .filter(Boolean)
+    .join(" ");
 };
 
 const buildGrammarMessages = (
@@ -112,6 +142,8 @@ const evaluateGrammarAttempt: SpeakingEvaluator = async ({
     definition: card.definition,
     userInput,
     userId: userID,
+    deckName: card.deckName,
+    deckDescription: card.deckDescription,
   };
   const evaluation = await requestGrammarEvaluation(grammarInput);
   const quizResultId = await saveQuizResult(grammarInput, evaluation);
@@ -137,10 +169,15 @@ async function getUserIdFromContext(
 async function getOwnedCardForSpeaking(
   cardID: number,
   userID: string,
-): Promise<Pick<Card, "term" | "definition">> {
+): Promise<SpeakingCard> {
   const card = await prismaClient.card.findUnique({
     where: { id: cardID },
-    select: { term: true, definition: true, userId: true },
+    select: {
+      term: true,
+      definition: true,
+      userId: true,
+      Deck: { select: { name: true, description: true } },
+    },
   });
 
   if (!card) {
@@ -151,7 +188,12 @@ async function getOwnedCardForSpeaking(
     throw new Error("Not your card");
   }
 
-  return { term: card.term, definition: card.definition };
+  return {
+    term: card.term,
+    definition: card.definition,
+    deckName: card.Deck?.name ?? null,
+    deckDescription: card.Deck?.description ?? null,
+  };
 }
 
 export const gradeSpeakingQuiz = procedure
