@@ -41,6 +41,8 @@ type AssistantPanelProps = {
   onInputChange: (value: string) => void;
   onSend: () => void;
   onStop: () => void;
+  onClear: () => void;
+  canClear: boolean;
   isStreaming: boolean;
   viewportRef: React.RefObject<HTMLDivElement>;
   onAddSuggestion: (suggestion: Suggestion) => void | Promise<void>;
@@ -78,6 +80,8 @@ function AssistantPanel({
   onInputChange,
   onSend,
   onStop,
+  onClear,
+  canClear,
   isStreaming,
   viewportRef,
   onAddSuggestion,
@@ -106,6 +110,8 @@ function AssistantPanel({
         onChange={onInputChange}
         onSend={onSend}
         onStop={onStop}
+        onClear={onClear}
+        canClear={canClear}
         isStreaming={isStreaming}
       />
     </Stack>
@@ -223,6 +229,7 @@ export function ReviewAssistantPane({
     isStreaming,
     sendMessage,
     stopStreaming,
+    clearMessages,
     viewportRef,
     addSuggestion,
     isAddingSuggestion,
@@ -241,6 +248,8 @@ export function ReviewAssistantPane({
     onClose();
   }, [onClose, stopStreaming]);
 
+  const canClear = messages.length > 1 || input.trim() !== "";
+
   const panel = (
     <AssistantPanel
       messages={messages}
@@ -248,6 +257,8 @@ export function ReviewAssistantPane({
       onInputChange={setInput}
       onSend={sendMessage}
       onStop={stopStreaming}
+      onClear={clearMessages}
+      canClear={canClear}
       isStreaming={isStreaming}
       viewportRef={viewportRef}
       onAddSuggestion={addSuggestion}

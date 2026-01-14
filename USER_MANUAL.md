@@ -10,8 +10,7 @@
 - Writing Practice (/writing/[deckId])
 - Writing History (/writing)
 - Card Management (/cards and /cards/[id])
-- Deck Management and Sharing
-- Community Decks (/shared-decks)
+- Deck Management
 - Frequency Lists (/frequency-lists)
 - Settings and Account (/user)
 - Quiz Results Export (approved users) (/train)
@@ -59,7 +58,6 @@
   - **Study Cards** starts a review session (button blinks when due items exist).
   - **Writing Practice** opens the writing flow for that deck.
   - Edit the deck name (pencil), save, or cancel; delete removes the deck and its cards (confirmation shown).
-  - **Published** toggle shares/unshares the deck to the community list (confirmation shown when publishing).
   - Checkbox selection enables **Merge Decks**: pick 2+ decks and click **Merge** to create a new deck named after the first selection with “(Merged)”; cards and writing submissions move to the new deck, and the old decks are deleted.
 - If you have no decks, the page invites you to add cards and links to `/create`.
 
@@ -117,16 +115,9 @@
   - View scheduling stats (repetitions, lapses, last/next review via time-until text, stability, difficulty) and the deck’s name, language, and gender. Stats are read-only.
   - If an image exists, it is shown; otherwise, a placeholder note appears.
 
-## Deck Management and Sharing
-- Rename, publish/unpublish, delete, and merge decks from `/review` (see Deck Hub above).
+## Deck Management
+- Rename, delete, and merge decks from `/review` (see Deck Hub above).
 - Deleting a deck also deletes its cards; merging moves cards and writing submissions into a new deck and removes the originals.
-- Publishing exposes the deck on the Community Decks page; unpublishing hides it.
-
-## Community Decks (/shared-decks)
-- Browse published decks with search and optional language filter (Korean is the only listed language).
-- Each deck card shows name, card count, owner ID, description (if provided), and a created date when available.
-- Buttons:
-  - **Report** and **Import** are present but currently have no visible effect; no confirmation or progress is shown after clicking.
 
 ## Frequency Lists (/frequency-lists)
 - Reference page listing external word-frequency resources for multiple languages (including Korean). Links open in new tabs. A link back to `/create` is provided for quick card creation after browsing.

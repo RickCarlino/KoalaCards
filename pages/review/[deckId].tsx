@@ -33,6 +33,11 @@ const redirect = (destination: string) => ({
   redirect: { destination, permanent: false } as const,
 });
 
+const buildReviewPath = (deckId: number) => `/review/${deckId}`;
+
+const buildWritingPracticeUrl = (returnTo: string) =>
+  `/writing/practice?returnTo=${encodeURIComponent(returnTo)}`;
+
 export const getServerSideProps: GetServerSideProps<
   ReviewDeckPageProps
 > = async (ctx) => {
@@ -91,7 +96,7 @@ export const getServerSideProps: GetServerSideProps<
     if (progress < goal) {
       return {
         redirect: {
-          destination: `/writing/${deckId}`,
+          destination: buildWritingPracticeUrl(buildReviewPath(deckId)),
           permanent: false,
         },
       };
@@ -130,6 +135,9 @@ const NoMoreQuizzesState = ({
   onReload: () => void;
 }) => {
   useHotkeys([[HOTKEYS.CONTINUE, onReload]]);
+  const writingPracticeUrl = buildWritingPracticeUrl(
+    buildReviewPath(deckId),
+  );
 
   return (
     <Container size="md" py="xl">
@@ -151,7 +159,7 @@ const NoMoreQuizzesState = ({
           </Anchor>
         </Box>
         <Box mb="xs">
-          <Anchor component={Link} href={`/writing/${deckId}`}>
+          <Anchor component={Link} href={writingPracticeUrl}>
             Practice Writing
           </Anchor>
         </Box>

@@ -1,7 +1,6 @@
 import { router } from "../trpc-procedure";
 import { archiveCard } from "./archive-card";
 import { bulkCreateCards } from "./bulk-create-cards";
-import { copyDeck } from "./copy-deck";
 import { createDeck } from "./create-deck";
 import { defineUnknownWords } from "./define-unknown-words";
 import { deleteCard } from "./delete-card";
@@ -20,13 +19,11 @@ import { gradeWriting } from "./grade-writing";
 import { importDeck } from "./import-deck";
 import { mergeDecks } from "./merge-decks";
 import { parseCards } from "./parse-cards";
-import { reportDeck } from "./report-deck";
 import { turbine } from "./turbine";
 import { updateDeck } from "./update-deck";
 
 export const appRouter = router({
   bulkCreateCards,
-  copyDeck,
   defineUnknownWords,
   deleteCard,
   deleteDeck,
@@ -46,7 +43,6 @@ export const appRouter = router({
   importDeck,
   parseCards,
   archiveCard,
-  reportDeck,
   turbine,
   updateDeck,
 });

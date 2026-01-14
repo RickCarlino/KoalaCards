@@ -314,7 +314,7 @@ export async function getLessons({
   const rawHand = await buildHand(userId, deckId, now, take);
   const hand = await addEmojisToDefinitions(rawHand);
 
-  return Promise.all(hand.slice(0, 5).map((q) => buildQuizPayload(q)));
+  return Promise.all(hand.map((q) => buildQuizPayload(q)));
 }
 
 export async function getLessonsDue(

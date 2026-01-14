@@ -1,0 +1,1 @@
+export const DECK_DESCRIPTION_MAX_LENGTH = 500;

@@ -5,6 +5,7 @@ import {
   IconBrandDiscord,
   IconBrandGithub,
   IconCards,
+  IconFileText,
   IconPencil,
   IconPlus,
   IconSettings,
@@ -65,6 +66,13 @@ const navItems: NavItem[] = [
     icon: IconStar,
   },
   {
+    path: () => "/writing/practice",
+    name: "Writing Practice",
+    show: () => true,
+    blink: () => false,
+    icon: IconPencil,
+  },
+  {
     path: () => "/create",
     name: "Create Cards",
     show: (_props) => true,
@@ -80,10 +88,10 @@ const navItems: NavItem[] = [
   },
   {
     path: () => "/writing",
-    name: "View Writing",
-    show: (props) => props.didWrite && props.didStudy,
+    name: "Writing History",
+    show: (props) => props.didWrite,
     blink: () => false,
-    icon: IconPencil,
+    icon: IconFileText,
   },
   {
     path: () => "/user",

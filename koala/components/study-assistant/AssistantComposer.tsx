@@ -7,7 +7,9 @@ type AssistantComposerProps = {
   onChange: (value: string) => void;
   onSend: () => void;
   onStop: () => void;
+  onClear: () => void;
   isStreaming: boolean;
+  canClear: boolean;
 };
 
 export default function AssistantComposer({
@@ -15,7 +17,9 @@ export default function AssistantComposer({
   onChange,
   onSend,
   onStop,
+  onClear,
   isStreaming,
+  canClear,
 }: AssistantComposerProps) {
   const handleSubmit = () => {
     onSend();
@@ -47,13 +51,23 @@ export default function AssistantComposer({
               Stop
             </Button>
           ) : (
-            <Button
-              onClick={handleSubmit}
-              leftSection={<IconSend size={16} />}
-              disabled={value.trim() === ""}
-            >
-              Send
-            </Button>
+            <>
+              <Button
+                variant="light"
+                color="gray"
+                onClick={onClear}
+                disabled={!canClear}
+              >
+                Clear
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                leftSection={<IconSend size={16} />}
+                disabled={value.trim() === ""}
+              >
+                Send
+              </Button>
+            </>
           )}
         </Group>
       </Group>
