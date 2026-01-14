@@ -132,12 +132,7 @@ function DeckActionButtons({
 
   return (
     <Group>
-      <Button
-        variant="subtle"
-        color="blue"
-        radius="xl"
-        onClick={onEdit}
-      >
+      <Button variant="subtle" color="blue" radius="xl" onClick={onEdit}>
         <IconPencil size={16} />
       </Button>
       <Button
@@ -353,39 +348,6 @@ function DeckLinks({ deckId, quizzesDue }: DeckLinksProps) {
         >
           <IconStars size={20} stroke={2} />
           Study Cards
-        </div>
-      </Link>
-      <Link
-        href={`/writing/${deckId}`}
-        style={{ textDecoration: "none", display: "block" }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "8px",
-            padding: "8px 16px",
-            backgroundColor: "transparent",
-            color: "#E64980",
-            borderRadius: "8px",
-            fontWeight: 500,
-            fontSize: "14px",
-            cursor: "pointer",
-            transition: "all 0.3s ease",
-            border: "1px solid #FCC2D7",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = "#FFDEEB";
-            e.currentTarget.style.borderColor = "#F06595";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = "transparent";
-            e.currentTarget.style.borderColor = "#FCC2D7";
-          }}
-        >
-          <IconPencil size={16} stroke={1.5} />
-          Writing Practice
         </div>
       </Link>
     </div>

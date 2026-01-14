@@ -35,32 +35,19 @@ Return JSON only:
 const inputSchema = z.object({
   text: z.string().min(1).max(2000),
   prompt: z.string(),
-  deckId: z.number(),
 });
 
 export const gradeWriting = procedure
   .input(inputSchema)
   .output(EssayResponseSchema)
   .mutation(async ({ input, ctx }): Promise<EssayResponse> => {
-    const { text, prompt, deckId } = input;
+    const { text, prompt } = input;
     const userId = ctx.user?.id;
 
     if (!userId) {
       throw new TRPCError({
         code: "UNAUTHORIZED",
         message: "User not authenticated",
-      });
-    }
-
-    const deck = await prismaClient.deck.findUnique({
-      where: { id: deckId, userId },
-      select: { id: true },
-    });
-
-    if (!deck) {
-      throw new TRPCError({
-        code: "NOT_FOUND",
-        message: "Deck not found or user does not have access.",
       });
     }
 
@@ -93,7 +80,6 @@ export const gradeWriting = procedure
     await prismaClient.writingSubmission.create({
       data: {
         userId,
-        deckId,
         prompt,
         submission: text,
         submissionCharacterCount: text.length,

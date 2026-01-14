@@ -38,7 +38,7 @@ interface WritingHistory {
       id: number;
       name: string;
       langCode: string;
-    };
+    } | null;
   }[];
   totalPages: number;
   currentPage: number;
@@ -105,7 +105,7 @@ export const getServerSideProps: GetServerSideProps<
   });
   const submissions = submissionsRaw.map((s) => ({
     ...s,
-    deck: { ...s.deck, langCode: "ko" },
+    deck: s.deck ? { ...s.deck, langCode: "ko" } : null,
   }));
 
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
@@ -227,119 +227,123 @@ export default function WritingHistoryPage({
       {submissions.length === 0 ? (
         <Alert title="No submissions found" color="blue">
           You haven't submitted any writing practice yet.{" "}
-          <Link href="/create">Add a deck</Link> and{" "}
-          <Link href="/review">do some writing exercises!</Link>
+          <Link href="/writing/practice">Start a writing session</Link> to
+          see your feedback here.
         </Alert>
       ) : (
         <Stack gap="xl">
-          {submissions.map((submission) => (
-            <Paper key={submission.id} p="md" withBorder>
-              <Stack gap="md">
-                <Group justify="space-between" wrap="nowrap">
-                  <Stack gap={5}>
-                    <Text fw={700} size="lg">
-                      {formatDateISO(submission.createdAt)}
+          {submissions.map((submission) => {
+            const deckLabel = submission.deck?.name ?? "General Practice";
+            const langLabel = (
+              submission.deck?.langCode ?? "ko"
+            ).toUpperCase();
+            return (
+              <Paper key={submission.id} p="md" withBorder>
+                <Stack gap="md">
+                  <Group justify="space-between" wrap="nowrap">
+                    <Stack gap={5}>
+                      <Text fw={700} size="lg">
+                        {formatDateISO(submission.createdAt)}
+                      </Text>
+                      <Group gap="xs">
+                        <Badge color="pink" variant="light">
+                          {deckLabel}
+                        </Badge>
+                        <Badge variant="outline">{langLabel}</Badge>
+                      </Group>
+                    </Stack>
+                    <Tooltip label="Delete submission">
+                      <ActionIcon
+                        color="red"
+                        variant="subtle"
+                        onClick={() => {
+                          if (
+                            confirm(
+                              "Are you sure you want to delete this submission?",
+                            )
+                          ) {
+                            void router.push({
+                              pathname: "/writing/delete",
+                              query: {
+                                id: submission.id,
+                                page: currentPage,
+                              },
+                            });
+                          }
+                        }}
+                      >
+                        <IconTrash size={18} />
+                      </ActionIcon>
+                    </Tooltip>
+                  </Group>
+
+                  <Stack gap="xs">
+                    <Text fw={600} size="sm">
+                      Prompt:
                     </Text>
-                    <Group gap="xs">
-                      <Badge color="pink" variant="light">
-                        {submission.deck.name}
-                      </Badge>
-                      <Badge variant="outline">
-                        {submission.deck.langCode.toUpperCase()}
-                      </Badge>
-                    </Group>
+                    <Text size="sm" mb="xs">
+                      {submission.prompt}
+                    </Text>
                   </Stack>
-                  <Tooltip label="Delete submission">
-                    <ActionIcon
-                      color="red"
-                      variant="subtle"
-                      onClick={() => {
-                        if (
-                          confirm(
-                            "Are you sure you want to delete this submission?",
-                          )
-                        ) {
-                          void router.push({
-                            pathname: "/writing/delete",
-                            query: {
-                              id: submission.id,
-                              page: currentPage,
-                            },
-                          });
-                        }
-                      }}
-                    >
-                      <IconTrash size={18} />
-                    </ActionIcon>
-                  </Tooltip>
-                </Group>
 
-                <Stack gap="xs">
-                  <Text fw={600} size="sm">
-                    Prompt:
-                  </Text>
-                  <Text size="sm" mb="xs">
-                    {submission.prompt}
-                  </Text>
-                </Stack>
-
-                <UnstyledButton
-                  onClick={() => toggleItem(submission.id)}
-                  styles={(theme) => ({
-                    root: {
-                      display: "block",
-                      width: "100%",
-                      textAlign: "center",
-                      padding: theme.spacing.xs,
-                      borderRadius: theme.radius.sm,
-                      color: theme.colors.blue[6],
-                      "&:hover": {
-                        backgroundColor: theme.colors.gray[0],
+                  <UnstyledButton
+                    onClick={() => toggleItem(submission.id)}
+                    styles={(theme) => ({
+                      root: {
+                        display: "block",
+                        width: "100%",
+                        textAlign: "center",
+                        padding: theme.spacing.xs,
+                        borderRadius: theme.radius.sm,
+                        color: theme.colors.blue[6],
+                        "&:hover": {
+                          backgroundColor: theme.colors.gray[0],
+                        },
                       },
-                    },
-                  })}
-                >
-                  {expandedItem === submission.id
-                    ? "Hide Details"
-                    : "Show Details"}
-                </UnstyledButton>
+                    })}
+                  >
+                    {expandedItem === submission.id
+                      ? "Hide Details"
+                      : "Show Details"}
+                  </UnstyledButton>
 
-                {expandedItem === submission.id && (
-                  <Stack gap="md" mt="xs">
-                    <Divider />
+                  {expandedItem === submission.id && (
+                    <Stack gap="md" mt="xs">
+                      <Divider />
 
-                    <Stack gap="xs">
-                      <Text fw={600} size="sm">
-                        Your Submission:
-                      </Text>
-                      <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
-                        {submission.submission}
-                      </Text>
+                      <Stack gap="xs">
+                        <Text fw={600} size="sm">
+                          Your Submission:
+                        </Text>
+                        <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
+                          {submission.submission}
+                        </Text>
+                      </Stack>
+
+                      <Stack gap="xs">
+                        <Text fw={600} size="sm">
+                          Corrected Text:
+                        </Text>
+                        <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
+                          {submission.correction}
+                        </Text>
+                      </Stack>
+
+                      <Stack gap="xs">
+                        <Text fw={600} size="sm">
+                          Changes:
+                        </Text>
+                        <VisualDiff
+                          actual={submission.submission}
+                          expected={submission.correction}
+                        />
+                      </Stack>
                     </Stack>
-
-                    <Stack gap="xs">
-                      <Text fw={600} size="sm">
-                        Corrected Text:
-                      </Text>
-                      <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
-                        {submission.correction}
-                      </Text>
-                    </Stack>
-
-                    <Stack gap="xs">
-                      <Text fw={600} size="sm">
-                        Changes:
-                      </Text>
-                      <VisualDiff
-                        actual={submission.submission}
-                        expected={submission.correction}
-                      />
-                    </Stack>
-                  </Stack>
-                )}
-              </Stack>
-            </Paper>
-          ))}
+                  )}
+                </Stack>
+              </Paper>
+            );
+          })}
 
           {totalPages > 1 && (
             <Group justify="center" mt="xl">

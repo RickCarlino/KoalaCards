@@ -149,8 +149,8 @@ model WritingSubmission {
   id                       Int      @id @default(autoincrement())
   user                     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId                   String
-  deck                     Deck     @relation(fields: [deckId], references: [id], onDelete: Cascade)
-  deckId                   Int
+  deck                     Deck?    @relation(fields: [deckId], references: [id], onDelete: SetNull)
+  deckId                   Int?
   prompt                   String
   submission               String   @db.Text // Use Text for potentially long submissions
   submissionCharacterCount Int
