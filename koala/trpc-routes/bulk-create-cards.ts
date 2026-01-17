@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc-procedure";
-import { backfillDecks } from "../decks/backfill-decks";
 import { LANG_CODES } from "../shared-types";
 import { TRPCError } from "@trpc/server";
 import { maybeAddImageToCard } from "../image";
@@ -108,6 +107,5 @@ export const bulkCreateCards = procedure
       }
     }
 
-    await backfillDecks(userId);
     return results;
   });

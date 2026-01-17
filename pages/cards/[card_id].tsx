@@ -34,7 +34,7 @@ import Link from "next/link";
 
 type CardView = {
   id: number;
-  deckId: number | null;
+  deckId: number;
   term: string;
   definition: string;
   flagged: boolean;
@@ -47,7 +47,7 @@ type CardView = {
   nextReview: number;
   stability: number;
   difficulty: number;
-  deckName: string | null;
+  deckName: string;
 };
 
 type CardPageProps = {
@@ -82,17 +82,9 @@ function DeckLabel({
   deckId,
   deckName,
 }: {
-  deckId: number | null;
-  deckName: string | null;
+  deckId: number;
+  deckName: string;
 }) {
-  if (!deckId || !deckName) {
-    return (
-      <Text size="sm" fw={500}>
-        —
-      </Text>
-    );
-  }
-
   return (
     <Anchor
       component={Link}
@@ -352,18 +344,20 @@ export const getServerSideProps: GetServerSideProps<
   const cardId = parseInt(card_id as string, 10);
   const card = await getCardOrFail(cardId, dbUser.id);
   const imageURL = (await maybeGetCardImageUrl(card.imageBlobId)) || null;
-  const deck = card.deckId
-    ? await prismaClient.deck.findFirst({
-        where: { id: card.deckId, userId: dbUser.id },
-        select: { name: true },
-      })
-    : null;
+  if (card.deckId === null) {
+    throw new Error("Card is missing a deck");
+  }
+  const deckId = card.deckId;
+  const deck = await prismaClient.deck.findFirstOrThrow({
+    where: { id: deckId, userId: dbUser.id },
+    select: { name: true },
+  });
 
   return {
     props: {
       card: {
         id: card.id,
-        deckId: card.deckId ?? null,
+        deckId,
         term: card.term,
         definition: card.definition,
         flagged: card.flagged,
@@ -376,7 +370,7 @@ export const getServerSideProps: GetServerSideProps<
         nextReview: card.nextReview ?? 0,
         stability: card.stability ?? 0,
         difficulty: card.difficulty ?? 0,
-        deckName: deck?.name || null,
+        deckName: deck.name,
       },
     },
   };

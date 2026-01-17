@@ -1,4 +1,3 @@
-import { backfillDecks } from "@/koala/decks/backfill-decks";
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { prismaClient } from "@/koala/prisma-client";
 import { LangCode } from "@/koala/shared-types";
@@ -54,7 +53,6 @@ export const getServerSideProps: GetServerSideProps<
     } as const;
   }
 
-  await backfillDecks(dbUser.id);
   const decks = await prismaClient.deck.findMany({
     where: { userId: dbUser.id },
     orderBy: { createdAt: "desc" },

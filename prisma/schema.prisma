@@ -106,8 +106,8 @@ model Card {
   gender      String   @default("N")
   createdAt   DateTime @default(now())
   imageBlobId String?
-  deckId      Int? // Nullable for gradual migration
-  Deck        Deck?    @relation(fields: [deckId], references: [id])
+  deckId      Int
+  Deck        Deck     @relation(fields: [deckId], references: [id])
   lastFailure Float    @default(0)
   // Scheduling/stat fields migrated from Quiz (speaking)
   stability   Float    @default(0)

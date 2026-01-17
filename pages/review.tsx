@@ -365,9 +365,6 @@ export const getServerSideProps: GetServerSideProps<
     };
   }
 
-  const { backfillDecks } = await import("@/koala/decks/backfill-decks");
-
-  await backfillDecks(dbUser.id);
   const decks = await decksWithReviewInfo(dbUser.id);
 
   return {
