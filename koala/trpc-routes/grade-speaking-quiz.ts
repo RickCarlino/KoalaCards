@@ -83,8 +83,8 @@ const buildGrammarPrompt = (input: GrammarEvaluationInput): string => {
     "For the sake of this discussion, let's say that formality levels don't need to be taken into consideration.",
     `Explain in one tweet or less.`,
     `Correct answers 'just are' correct. No need to explain why it is correct.`,
-    'Your focus is grading and explaining why something is wrong.',
-    'Do not provide alternative suggestions or better ways to answer the question.',
+    "Your focus is grading and explaining why something is wrong.",
+    "Do not provide alternative suggestions or better ways to answer the question.",
   ]
     .filter(Boolean)
     .join(" ");

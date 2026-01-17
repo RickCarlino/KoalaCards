@@ -8,6 +8,11 @@ const MODEL = "gpt-4o-mini-tts-2025-12-15";
 const VERSION = "v1";
 const AUDIO_FORMAT = "mp3";
 
+type OpenAISpeechParams = {
+  text: string;
+  filePrefix: string;
+};
+
 let client: OpenAI | null = null;
 
 const getClient = () => {
@@ -21,25 +26,25 @@ const getClient = () => {
   return client;
 };
 
-const hashInput = (text: string) => {
+const hashInput = (text: string, filePrefix: string) => {
   const normalized = text.trim();
-  const hashInputValue = `${VERSION}|${normalized}`;
+  const hashInputValue = `${VERSION}|${filePrefix}|${MODEL}|${VOICE}|${AUDIO_FORMAT}|${normalized}`;
   const hash = createHash("md5")
     .update(hashInputValue)
     .digest("base64url");
   return hash;
 };
 
-export async function generateDefinitionSpeechURL(
-  text: string,
+export async function generateOpenAISpeechURL(
+  params: OpenAISpeechParams,
 ): Promise<string> {
-  const cleanText = stripEmojis(text).trim();
+  const cleanText = stripEmojis(params.text).trim();
   if (!cleanText) {
-    throw new Error("No definition text provided for TTS.");
+    throw new Error("No speech text provided for TTS.");
   }
 
-  const hash = hashInput(cleanText);
-  const fileName = `lesson-definition-audio/${hash}.${AUDIO_FORMAT}`;
+  const hash = hashInput(cleanText, params.filePrefix);
+  const fileName = `${params.filePrefix}/${hash}.${AUDIO_FORMAT}`;
 
   const [exists] = await storageProvider.fileExists(fileName);
   if (exists) {
@@ -60,4 +65,13 @@ export async function generateDefinitionSpeechURL(
   });
 
   return await storageProvider.getExpiringURL(fileName);
+}
+
+export async function generateDefinitionSpeechURL(
+  text: string,
+): Promise<string> {
+  return await generateOpenAISpeechURL({
+    text,
+    filePrefix: "lesson-definition-audio",
+  });
 }

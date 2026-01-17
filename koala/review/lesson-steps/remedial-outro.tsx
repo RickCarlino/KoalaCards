@@ -10,7 +10,7 @@ import { HOTKEYS } from "../hotkeys";
 import { FeedbackVote } from "../components/FeedbackVote";
 import { useQuizGrading } from "../use-quiz-grading";
 import { useUserSettings } from "@/koala/settings-provider";
-import { playTermThenDefinition } from "../playback";
+import { playSpeechText, playTermThenDefinition } from "../playback";
 
 type Phase = "ready" | "processing" | "success" | "failure";
 
@@ -138,6 +138,19 @@ export const RemedialOutro: CardUI = ({
   useEffect(() => {
     onProvideAudioHandler?.(processRecording);
   }, [currentStepUuid]);
+
+  const feedbackText = gradingResult?.feedback?.trim() ?? "";
+
+  useEffect(() => {
+    if (phase !== "failure" || !feedbackText) {
+      return;
+    }
+    void playSpeechText(feedbackText, userSettings.playbackSpeed).catch(
+      (error) => {
+        console.error("Failed to play correction audio:", error);
+      },
+    );
+  }, [feedbackText, phase, userSettings.playbackSpeed]);
 
   const handleIDK = async () => {
     await playTermThenDefinition(card, userSettings.playbackSpeed);

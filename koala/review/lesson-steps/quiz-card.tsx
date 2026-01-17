@@ -11,7 +11,10 @@ import { usePhaseManager } from "../hooks/usePhaseManager";
 import { useGradeHandler } from "../hooks/useGradeHandler";
 import { useUserSettings } from "@/koala/settings-provider";
 import { HOTKEYS } from "../hotkeys";
-import { playTermThenDefinition } from "../playback";
+import {
+  playTermThenDefinition,
+  playTermThenDefinitionWithFeedback,
+} from "../playback";
 
 type Phase = "ready" | "processing" | "success" | "failure";
 type QuizType = "speaking" | "newWordOutro" | "remedialOutro";
@@ -106,15 +109,21 @@ export const QuizCard: React.FC<QuizCardProps> = ({
     gradeWithEasy,
   });
 
-  const play = async () => {
-    await playTermThenDefinition(card, userSettings.playbackSpeed);
-  };
-
   useEffect(() => {
-    if (phase === "success" || phase === "failure") {
-      play();
+    if (phase === "success") {
+      void playTermThenDefinition(card, userSettings.playbackSpeed);
+      return;
     }
-  }, [phase]);
+    if (phase === "failure") {
+      void playTermThenDefinitionWithFeedback(
+        card,
+        feedback,
+        userSettings.playbackSpeed,
+      ).catch((error) => {
+        console.error("Failed to play correction audio:", error);
+      });
+    }
+  }, [phase, card, feedback, userSettings.playbackSpeed]);
 
   const processRecording = async (blob: Blob) => {
     setPhase("processing");
