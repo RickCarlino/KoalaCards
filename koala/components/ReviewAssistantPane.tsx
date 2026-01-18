@@ -15,6 +15,7 @@ import { useMediaQuery } from "@mantine/hooks";
 import AssistantMessageList from "./study-assistant/AssistantMessageList";
 import AssistantComposer from "./study-assistant/AssistantComposer";
 import { useAssistantChat } from "./study-assistant/useAssistantChat";
+import { DeckSummary } from "@/koala/types/deck-summary";
 import {
   AssistantCardContext,
   AssistantEditProposal,
@@ -24,6 +25,7 @@ import {
 
 type ReviewAssistantPaneProps = {
   deckId: number;
+  decks: DeckSummary[];
   opened: boolean;
   onOpen: () => void;
   onClose: () => void;
@@ -45,8 +47,13 @@ type AssistantPanelProps = {
   canClear: boolean;
   isStreaming: boolean;
   viewportRef: React.RefObject<HTMLDivElement>;
-  onAddSuggestion: (suggestion: Suggestion) => void | Promise<void>;
+  onAddSuggestion: (
+    suggestion: Suggestion,
+    deckId: number,
+  ) => void | Promise<void>;
   isAdding: boolean;
+  decks: DeckSummary[];
+  currentDeckId: number;
   onClose: () => void;
   onApplyEdit: (
     proposal: AssistantEditProposal,
@@ -86,6 +93,8 @@ function AssistantPanel({
   viewportRef,
   onAddSuggestion,
   isAdding,
+  decks,
+  currentDeckId,
   onClose,
   onApplyEdit,
   onDismissEdit,
@@ -100,6 +109,8 @@ function AssistantPanel({
           viewportRef={viewportRef}
           onAddSuggestion={onAddSuggestion}
           isAdding={isAdding}
+          decks={decks}
+          currentDeckId={currentDeckId}
           onApplyEdit={onApplyEdit}
           onDismissEdit={onDismissEdit}
           savingEditId={savingEditId}
@@ -213,6 +224,7 @@ function MobileAssistantShell({
 
 export function ReviewAssistantPane({
   deckId,
+  decks,
   opened,
   onOpen,
   onClose,
@@ -263,6 +275,8 @@ export function ReviewAssistantPane({
       viewportRef={viewportRef}
       onAddSuggestion={addSuggestion}
       isAdding={isAddingSuggestion}
+      decks={decks}
+      currentDeckId={deckId}
       onClose={handleClose}
       onApplyEdit={onApplyEdit}
       onDismissEdit={onDismissEdit}

@@ -261,9 +261,9 @@ export function useAssistantChat({
   }, [isStreaming]);
 
   const addSuggestion = React.useCallback(
-    async (suggestion: Suggestion) => {
+    async (suggestion: Suggestion, targetDeckId: number) => {
       await bulkCreate.mutateAsync({
-        deckId,
+        deckId: targetDeckId,
         input: [
           {
             term: suggestion.phrase,
@@ -277,7 +277,7 @@ export function useAssistantChat({
         message: "Card added to deck",
       });
     },
-    [bulkCreate, deckId],
+    [bulkCreate],
   );
 
   const removeEditProposal = React.useCallback((editId: string) => {

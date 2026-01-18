@@ -7,6 +7,7 @@ import { HOTKEYS } from "@/koala/review/hotkeys";
 import { playTermThenDefinition } from "@/koala/review/playback";
 import { useReview } from "@/koala/review/reducer";
 import { useUserSettings } from "@/koala/settings-provider";
+import { DeckSummary } from "@/koala/types/deck-summary";
 import { GradingResult } from "@/koala/review/types";
 import {
   Anchor,
@@ -26,7 +27,7 @@ import {
   StudyAssistantContextProvider,
   useStudyAssistantContext,
 } from "@/koala/study-assistant-context";
-type ReviewDeckPageProps = { deckId: number };
+type ReviewDeckPageProps = { deckId: number; decks: DeckSummary[] };
 const ASSISTANT_PANEL_WIDTH = 380;
 
 const redirect = (destination: string) => ({
@@ -103,9 +104,16 @@ export const getServerSideProps: GetServerSideProps<
     }
   }
 
+  const decks = await prismaClient.deck.findMany({
+    where: { userId: user.id },
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
+  });
+
   return {
     props: {
       deckId,
+      decks,
     },
   };
 };
@@ -173,7 +181,7 @@ const NoMoreQuizzesState = ({
   );
 };
 
-function InnerReviewPage({ deckId }: ReviewDeckPageProps) {
+function InnerReviewPage({ deckId, decks }: ReviewDeckPageProps) {
   const [assistantOpen, setAssistantOpen] = React.useState(false);
   const theme = useMantineTheme();
   const isDesktop = useMediaQuery(`(min-width: ${theme.breakpoints.md})`);
@@ -380,6 +388,7 @@ function InnerReviewPage({ deckId }: ReviewDeckPageProps) {
 
   const assistantProps = {
     deckId,
+    decks,
     opened: assistantOpen,
     onOpen: openAssistant,
     onClose: closeAssistant,

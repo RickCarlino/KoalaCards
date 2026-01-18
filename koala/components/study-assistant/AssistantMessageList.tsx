@@ -1,13 +1,19 @@
 import React from "react";
 import { Box, ScrollArea, Stack, Text } from "@mantine/core";
 import AssistantMessageContent from "./AssistantMessageContent";
+import { DeckSummary } from "@/koala/types/deck-summary";
 import { AssistantEditProposal, ChatMessage, Suggestion } from "./types";
 
 type AssistantMessageListProps = {
   messages: ChatMessage[];
   viewportRef: React.RefObject<HTMLDivElement>;
-  onAddSuggestion: (suggestion: Suggestion) => void | Promise<void>;
+  onAddSuggestion: (
+    suggestion: Suggestion,
+    deckId: number,
+  ) => void | Promise<void>;
   isAdding: boolean;
+  decks: DeckSummary[];
+  currentDeckId: number;
   onApplyEdit: (
     proposal: AssistantEditProposal,
     updates: { term: string; definition: string },
@@ -21,6 +27,8 @@ export default function AssistantMessageList({
   viewportRef,
   onAddSuggestion,
   isAdding,
+  decks,
+  currentDeckId,
   onApplyEdit,
   onDismissEdit,
   savingEditId,
@@ -45,6 +53,8 @@ export default function AssistantMessageList({
               messageIndex={index}
               onAddSuggestion={onAddSuggestion}
               isAdding={isAdding}
+              decks={decks}
+              currentDeckId={currentDeckId}
               onApplyEdit={onApplyEdit}
               onDismissEdit={onDismissEdit}
               savingEditId={savingEditId}
