@@ -20,7 +20,7 @@ const DEFAULT_IMAGE_SIZE = "1024x1024" as const;
 type ModelKind = TextModel | ImageModelIdentifier;
 
 const registry: Record<ModelKind, string> = {
-  fast: "gpt-5-nano",
+  fast: "gpt-5-mini",
   cheap: "gpt-5-mini",
   good: "gpt-5-mini",
   imageDefault: "gpt-image-1-mini",
@@ -30,9 +30,9 @@ type ReasoningEffortLevel = Exclude<ReasoningEffort, null> | "none";
 type ReasoningMap = Record<TextModel, ReasoningEffortLevel>;
 
 const REASONING_EFFORT: ReasoningMap = {
-  fast: "none",
-  cheap: "minimal",
-  good: "low",
+  fast: "minimal",
+  cheap: "low",
+  good: "medium",
 };
 
 function getModelString(
