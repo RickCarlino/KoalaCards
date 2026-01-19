@@ -6,17 +6,21 @@ import {
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { trpc } from "@/koala/trpc-config";
 import {
+  ActionIcon,
   Alert,
   Badge,
+  Box,
   Button,
   Card,
   Checkbox,
   Container,
   Grid,
   Group,
+  Stack,
   Text,
   TextInput,
   Textarea,
+  Title,
 } from "@mantine/core";
 import {
   IconCheck,
@@ -37,22 +41,6 @@ type ReviewPageProps = {
 };
 
 const STUDY_TAKE_COUNT = 5;
-const BLINK_KEYFRAMES = `
-  @keyframes blink {
-    0% {
-      border-color: #ffdeeb;
-      box-shadow: 0 4px 12px rgba(246, 101, 149, 0);
-    }
-    50% {
-      border-color: #f06595;
-      box-shadow: 0 4px 20px rgba(246, 101, 149, 0.3);
-    }
-    100% {
-      border-color: #ffdeeb;
-      box-shadow: 0 4px 12px rgba(246, 101, 149, 0);
-    }
-  }
-`;
 
 type DeckTitleFieldProps = {
   isEditing: boolean;
@@ -73,14 +61,15 @@ function DeckTitleField({
         value={title}
         onChange={(e) => onChange(e.currentTarget.value)}
         autoFocus
-        variant="unstyled"
-        style={{ flex: 1 }}
+        size="sm"
+        aria-label="Deck name"
+        styles={{ input: { fontWeight: 600 } }}
       />
     );
   }
 
   return (
-    <Text fw={700} size="xl" style={{ flex: 1, textAlign: "center" }}>
+    <Text fw={600} size="lg" c="gray.8">
       {deckName}
     </Text>
   );
@@ -107,43 +96,52 @@ function DeckActionButtons({
 }: DeckActionButtonsProps) {
   if (isEditing) {
     return (
-      <Group>
-        <Button
-          variant="subtle"
+      <Group gap="xs">
+        <ActionIcon
+          variant="light"
           color="green"
-          radius="xl"
           onClick={onSave}
           disabled={isSaving}
+          size="lg"
+          aria-label="Save deck"
         >
-          <IconCheck size={16} />
-        </Button>
-        <Button
-          variant="subtle"
+          <IconCheck size={18} />
+        </ActionIcon>
+        <ActionIcon
+          variant="light"
           color="red"
-          radius="xl"
           onClick={onCancel}
           disabled={isSaving}
+          size="lg"
+          aria-label="Cancel edits"
         >
-          <IconX size={16} />
-        </Button>
+          <IconX size={18} />
+        </ActionIcon>
       </Group>
     );
   }
 
   return (
-    <Group>
-      <Button variant="subtle" color="blue" radius="xl" onClick={onEdit}>
-        <IconPencil size={16} />
-      </Button>
-      <Button
-        variant="subtle"
+    <Group gap="xs">
+      <ActionIcon
+        variant="light"
+        color="pink"
+        onClick={onEdit}
+        size="lg"
+        aria-label="Edit deck"
+      >
+        <IconPencil size={18} />
+      </ActionIcon>
+      <ActionIcon
+        variant="light"
         color="red"
-        radius="xl"
         onClick={onDelete}
         disabled={isDeleting}
+        size="lg"
+        aria-label="Delete deck"
       >
-        <IconTrash size={16} />
-      </Button>
+        <IconTrash size={18} />
+      </ActionIcon>
     </Group>
   );
 }
@@ -154,6 +152,7 @@ type DeckCardHeaderProps = {
   isEditing: boolean;
   title: string;
   deckName: string;
+  description: string;
   onTitleChange: (value: string) => void;
   onEdit: () => void;
   onSave: () => void;
@@ -169,6 +168,7 @@ function DeckCardHeader({
   isEditing,
   title,
   deckName,
+  description,
   onTitleChange,
   onEdit,
   onSave,
@@ -177,30 +177,34 @@ function DeckCardHeader({
   isSaving,
   isDeleting,
 }: DeckCardHeaderProps) {
+  const trimmedDescription = description.trim();
+  const hasDescription = trimmedDescription.length > 0;
+  const showDescription = !isEditing && hasDescription;
+
   return (
-    <Card.Section
-      style={{
-        backgroundColor: "#FFDEEB",
-        padding: "12px",
-        marginBottom: "12px",
-        borderRadius: "8px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-      }}
-    >
-      <Checkbox
-        checked={isSelected}
-        onChange={onToggleSelected}
-        size="md"
-        mr="sm"
-      />
-      <DeckTitleField
-        isEditing={isEditing}
-        title={title}
-        deckName={deckName}
-        onChange={onTitleChange}
-      />
+    <Group align="flex-start" justify="space-between" wrap="wrap">
+      <Group align="flex-start" gap="sm" wrap="nowrap" style={{ flex: 1 }}>
+        <Checkbox
+          checked={isSelected}
+          onChange={onToggleSelected}
+          size="sm"
+          mt={4}
+          aria-label={`Select ${deckName}`}
+        />
+        <Box style={{ flex: 1 }}>
+          <DeckTitleField
+            isEditing={isEditing}
+            title={title}
+            deckName={deckName}
+            onChange={onTitleChange}
+          />
+          {showDescription && (
+            <Text size="sm" c="gray.7" mt={4}>
+              {trimmedDescription}
+            </Text>
+          )}
+        </Box>
+      </Group>
       <DeckActionButtons
         isEditing={isEditing}
         onEdit={onEdit}
@@ -210,55 +214,34 @@ function DeckCardHeader({
         isSaving={isSaving}
         isDeleting={isDeleting}
       />
-    </Card.Section>
+    </Group>
   );
 }
 
 type DeckDescriptionFieldProps = {
-  isEditing: boolean;
   description: string;
   onChange: (value: string) => void;
 };
 
 function DeckDescriptionField({
-  isEditing,
   description,
   onChange,
 }: DeckDescriptionFieldProps) {
-  const trimmedDescription = description.trim();
-  const hasDescription = trimmedDescription.length > 0;
-
-  if (isEditing) {
-    return (
-      <div style={{ marginTop: "8px" }}>
-        <Textarea
-          label="Description"
-          value={description}
-          onChange={(e) => onChange(e.currentTarget.value)}
-          autosize
-          minRows={2}
-          maxRows={4}
-          maxLength={DECK_DESCRIPTION_MAX_LENGTH}
-        />
-        <Text
-          size="xs"
-          c="dimmed"
-          style={{ textAlign: "right", marginTop: "4px" }}
-        >
-          {description.length}/{DECK_DESCRIPTION_MAX_LENGTH} characters
-        </Text>
-      </div>
-    );
-  }
-
-  if (!hasDescription) {
-    return null;
-  }
-
   return (
-    <Text size="sm" mt="sm">
-      {trimmedDescription}
-    </Text>
+    <Stack gap={4}>
+      <Textarea
+        label="Description"
+        value={description}
+        onChange={(e) => onChange(e.currentTarget.value)}
+        autosize
+        minRows={2}
+        maxRows={4}
+        maxLength={DECK_DESCRIPTION_MAX_LENGTH}
+      />
+      <Text size="xs" c="dimmed" ta="right">
+        {description.length}/{DECK_DESCRIPTION_MAX_LENGTH} characters
+      </Text>
+    </Stack>
   );
 }
 
@@ -267,90 +250,32 @@ type DeckStatsProps = {
   newQuizzes: number;
 };
 
-function DeckStats({ quizzesDue, newQuizzes }: DeckStatsProps) {
-  return (
-    <Group justify="apart" mt="md">
-      <Badge
-        style={{
-          backgroundColor: "#FFDEEB",
-          color: "#E64980",
-          border: "1px solid #FCC2D7",
-          padding: "6px 12px",
-          fontSize: "14px",
-        }}
-      >
-        {quizzesDue} Due
-      </Badge>
-      <Badge
-        style={{
-          backgroundColor: "#E3F2FD",
-          color: "#1976D2",
-          border: "1px solid #90CAF9",
-          padding: "6px 12px",
-          fontSize: "14px",
-        }}
-      >
-        {newQuizzes} New
-      </Badge>
-    </Group>
-  );
-}
-
-type DeckLinksProps = {
+type DeckFooterProps = DeckStatsProps & {
   deckId: number;
-  quizzesDue: number;
 };
 
-function DeckLinks({ deckId, quizzesDue }: DeckLinksProps) {
-  const shouldBlink = quizzesDue > 0;
-  const blinkAnimation = shouldBlink
-    ? "blink 2s ease-in-out infinite"
-    : undefined;
-
+function DeckFooter({ deckId, quizzesDue, newQuizzes }: DeckFooterProps) {
   return (
-    <div style={{ marginTop: "16px" }}>
-      <style>{BLINK_KEYFRAMES}</style>
-      <Link
+    <Group justify="space-between" align="center" gap="sm" wrap="wrap">
+      <Group gap="xs">
+        <Badge color="pink" variant="light" radius="md">
+          {quizzesDue} due
+        </Badge>
+        <Badge color="gray" variant="light" radius="md">
+          {newQuizzes} new
+        </Badge>
+      </Group>
+      <Button
+        component={Link}
         href={`/review/${deckId}?take=${STUDY_TAKE_COUNT}`}
-        style={{
-          textDecoration: "none",
-          display: "block",
-          marginBottom: "8px",
-        }}
+        leftSection={<IconStars size={16} />}
+        color="pink"
+        variant="light"
+        size="sm"
       >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "8px",
-            padding: "10px 20px",
-            backgroundColor: "#F06595",
-            color: "white",
-            borderRadius: "8px",
-            fontWeight: 600,
-            fontSize: "16px",
-            cursor: "pointer",
-            transition: "all 0.3s ease",
-            border: "2px solid #F06595",
-            animation: blinkAnimation,
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = "#E64980";
-            e.currentTarget.style.borderColor = "#E64980";
-            e.currentTarget.style.transform = "translateY(-1px)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = "#F06595";
-            e.currentTarget.style.borderColor = "#F06595";
-            e.currentTarget.style.transform = "translateY(0)";
-          }}
-        >
-          <IconStars size={20} stroke={2} />
-          Study Cards
-        </div>
-      </Link>
-    </div>
+        Study Cards
+      </Button>
+    </Group>
   );
 }
 
@@ -481,52 +406,35 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
     }, [deck.id, deleteDeckMutation]);
 
     return (
-      <Card
-        style={{
-          height: "100%",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-          backgroundColor: "#FFF0F6",
-          border: "2px solid #FFDEEB",
-          borderRadius: "12px",
-          padding: "16px",
-          transition: "all 0.3s ease",
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = "translateY(-2px)";
-          e.currentTarget.style.boxShadow =
-            "0 6px 16px rgba(246, 101, 149, 0.12)";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = "translateY(0)";
-          e.currentTarget.style.boxShadow = "none";
-        }}
-      >
-        <DeckCardHeader
-          isSelected={isSelected}
-          onToggleSelected={() => handleToggleDeckSelection(deck.id)}
-          isEditing={isEditing}
-          title={title}
-          deckName={deck.name}
-          onTitleChange={setTitle}
-          onEdit={handleEdit}
-          onSave={handleSave}
-          onCancel={handleCancel}
-          onDelete={handleDelete}
-          isSaving={updateDeckMutation.isLoading}
-          isDeleting={deleteDeckMutation.isLoading}
-        />
-        <DeckDescriptionField
-          isEditing={isEditing}
-          description={description}
-          onChange={setDescription}
-        />
-        <DeckStats
-          quizzesDue={deck.quizzesDue}
-          newQuizzes={deck.newQuizzes}
-        />
-        <DeckLinks deckId={deck.id} quizzesDue={deck.quizzesDue} />
+      <Card withBorder p="sm">
+        <Stack gap="sm">
+          <DeckCardHeader
+            isSelected={isSelected}
+            onToggleSelected={() => handleToggleDeckSelection(deck.id)}
+            isEditing={isEditing}
+            title={title}
+            deckName={deck.name}
+            description={description}
+            onTitleChange={setTitle}
+            onEdit={handleEdit}
+            onSave={handleSave}
+            onCancel={handleCancel}
+            onDelete={handleDelete}
+            isSaving={updateDeckMutation.isLoading}
+            isDeleting={deleteDeckMutation.isLoading}
+          />
+          {isEditing && (
+            <DeckDescriptionField
+              description={description}
+              onChange={setDescription}
+            />
+          )}
+          <DeckFooter
+            quizzesDue={deck.quizzesDue}
+            newQuizzes={deck.newQuizzes}
+            deckId={deck.id}
+          />
+        </Stack>
       </Card>
     );
   }
@@ -534,67 +442,27 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
   function NoDecksMessage() {
     return (
       <Container size="md" py="xl">
-        <div style={{ textAlign: "center", marginBottom: "40px" }}>
-          <Text
-            style={{
-              fontSize: "32px",
-              fontWeight: 700,
-              color: "#E64980",
-              marginBottom: "8px",
-            }}
-          >
+        <Stack align="center" gap="xs" mb="xl">
+          <Title order={2} c="pink.7" ta="center">
             Welcome to Koala Cards 🌸
+          </Title>
+          <Text size="md" c="gray.7" ta="center">
+            Start your learning journey by adding some cards.
           </Text>
-          <Text
-            style={{
-              fontSize: "16px",
-              color: "#868E96",
-              marginBottom: "32px",
-            }}
-          >
-            Start your learning journey by adding some cards
-          </Text>
-        </div>
-        <Card
-          style={{
-            backgroundColor: "#FFF0F6",
-            border: "2px solid #FFDEEB",
-            borderRadius: "12px",
-            padding: "32px",
-            textAlign: "center",
-          }}
-        >
-          <Link href="/create" style={{ textDecoration: "none" }}>
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "12px",
-                padding: "14px 32px",
-                backgroundColor: "#F06595",
-                color: "white",
-                borderRadius: "8px",
-                fontWeight: 600,
-                fontSize: "18px",
-                cursor: "pointer",
-                transition: "all 0.3s ease",
-                border: "2px solid #F06595",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = "#E64980";
-                e.currentTarget.style.borderColor = "#E64980";
-                e.currentTarget.style.transform = "translateY(-2px)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = "#F06595";
-                e.currentTarget.style.borderColor = "#F06595";
-                e.currentTarget.style.transform = "translateY(0)";
-              }}
+        </Stack>
+        <Card withBorder p="xl" radius="md">
+          <Stack align="center" gap="md">
+            <Button
+              component={Link}
+              href="/create"
+              leftSection={<IconPlus size={18} />}
+              color="pink"
+              variant="light"
+              size="md"
             >
-              <IconPlus size={24} stroke={2} />
               Add Your First Cards
-            </div>
-          </Link>
+            </Button>
+          </Stack>
         </Card>
       </Container>
     );
@@ -610,33 +478,38 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
 
   return (
     <Container size="lg" py="md">
-      <div style={{ textAlign: "center", marginBottom: "32px" }}>
-        <Text
-          style={{
-            fontSize: "32px",
-            fontWeight: 700,
-            color: "#E64980",
-            marginBottom: "8px",
-          }}
-        >
+      <Stack gap="xs" mb="lg">
+        <Title order={2} c="pink.7">
           Your Decks
-        </Text>
-        <Text style={{ fontSize: "16px", color: "#868E96" }}>
+        </Title>
+        <Text size="md" c="gray.7">
           Choose a deck to start studying
         </Text>
-      </div>
+      </Stack>
 
       {selectedDeckIds.length >= 2 && (
-        <>
-          <Group justify="center" mb="lg">
+        <Card withBorder p="sm" mb="md">
+          <Group
+            justify="space-between"
+            align="center"
+            gap="sm"
+            wrap="wrap"
+          >
+            <Group gap="xs">
+              <Badge color="pink" variant="light" radius="md">
+                {selectedDeckIds.length} selected
+              </Badge>
+              <Text size="sm" c="gray.7">
+                Merge selected decks into one
+              </Text>
+            </Group>
             <Button
-              leftSection={<IconGitMerge size={18} />}
+              leftSection={<IconGitMerge size={16} />}
               color="pink"
               onClick={handleMergeDecks}
               loading={isMerging}
-              radius="xl"
             >
-              Merge {selectedDeckIds.length} Decks
+              Merge Decks
             </Button>
           </Group>
 
@@ -652,12 +525,12 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
               {mergeError}
             </Alert>
           )}
-        </>
+        </Card>
       )}
 
-      <Grid gutter="xl">
+      <Grid gutter="md">
         {sortedDecks.map((deck) => (
-          <Grid.Col key={deck.id} span={12}>
+          <Grid.Col key={deck.id} span={{ base: 12, md: 6 }}>
             <DeckCard deck={deck} />
           </Grid.Col>
         ))}
