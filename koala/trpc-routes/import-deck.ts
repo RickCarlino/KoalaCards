@@ -1,6 +1,5 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { backfillDecks } from "../decks/backfill-decks";
 import { prismaClient } from "../prisma-client";
 import { storageProvider } from "../storage";
 import { procedure } from "../trpc-procedure";
@@ -178,8 +177,6 @@ export const importDeck = procedure.input(importDeckInput).mutation(
 
       importedCount += 1;
     }
-
-    await backfillDecks(userId);
 
     return {
       importedCount,

@@ -1,6 +1,15 @@
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { prismaClient } from "@/koala/prisma-client";
-import { Card, Container, rem, Stack, Text } from "@mantine/core";
+import {
+  Card,
+  Container,
+  Group,
+  Stack,
+  Text,
+  ThemeIcon,
+  Title,
+  useMantineTheme,
+} from "@mantine/core";
 import {
   IconBrandDiscord,
   IconBrandGithub,
@@ -116,129 +125,102 @@ const navItems: NavItem[] = [
   },
 ];
 
+type NavCardProps = {
+  item: NavItem;
+  href: string;
+  attention: boolean;
+  isExternal: boolean;
+};
+
+function NavCard({ item, href, attention, isExternal }: NavCardProps) {
+  const theme = useMantineTheme();
+  const Icon = item.icon;
+  const styles = {
+    root: {
+      cursor: "pointer",
+      display: "block",
+      textDecoration: "none",
+      color: "inherit",
+      "&:focus-visible": {
+        outline: `2px solid ${theme.colors.pink[5]}`,
+        outlineOffset: 2,
+      },
+      ...(attention
+        ? {
+            borderColor: theme.colors.pink[4],
+            boxShadow: theme.shadows.sm,
+          }
+        : {}),
+    },
+  };
+
+  if (isExternal) {
+    return (
+      <Card
+        component="a"
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        styles={styles}
+        p="sm"
+      >
+        <Group gap="sm" wrap="nowrap">
+          <ThemeIcon variant="light" color="pink" radius="md" size="md">
+            <Icon size={18} stroke={1.5} />
+          </ThemeIcon>
+          <Text size="sm" fw={600} c="pink.7">
+            {item.name}
+          </Text>
+        </Group>
+      </Card>
+    );
+  }
+
+  return (
+    <Card component={Link} href={href} styles={styles} p="sm">
+      <Group gap="sm" wrap="nowrap">
+        <ThemeIcon variant="light" color="pink" radius="md" size="md">
+          <Icon size={18} stroke={1.5} />
+        </ThemeIcon>
+        <Text size="sm" fw={600} c="pink.7">
+          {item.name}
+        </Text>
+      </Group>
+    </Card>
+  );
+}
+
 const Index: React.FC<IndexProps> = (props) => {
   const visibleItems = navItems.filter((item) => item.show(props));
 
   return (
     <Container size="sm" py="xl">
-      <div style={{ textAlign: "center", marginBottom: rem(40) }}>
-        <Text size={rem(32)} fw={700} c="pink.6" mb="xs">
+      <Stack align="center" gap="xs" mb="xl">
+        <Title order={1} c="pink.7" ta="center">
           Welcome to Koala Cards
-        </Text>
-        <Text size="md" c="gray.6">
+        </Title>
+        <Text size="md" c="gray.7" ta="center">
           Your language learning marsupial companion.
         </Text>
-      </div>
+      </Stack>
 
-      <Stack gap="xs">
-        {visibleItems.map((item, index) => {
-          const Icon = item.icon;
-          const path = item.path(props);
-          const isExternal = path.startsWith("http");
-          const shouldBlink = item.blink(props);
-
-          const cardContent = (
-            <Card
-              key={index}
-              style={{
-                cursor: "pointer",
-                transition: "all 0.3s ease",
-                animation: shouldBlink
-                  ? "blink 2s ease-in-out infinite"
-                  : undefined,
-                backgroundColor: "#FFF0F6",
-                border: "1px solid #FFDEEB",
-                padding: "12px 16px",
-                borderRadius: "8px",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "translateY(-1px)";
-                e.currentTarget.style.boxShadow =
-                  "0 4px 12px rgba(246, 101, 149, 0.1)";
-                e.currentTarget.style.backgroundColor = "#FFDEEB";
-                e.currentTarget.style.borderColor = "#FCC2D7";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "none";
-                e.currentTarget.style.backgroundColor = "#FFF0F6";
-                e.currentTarget.style.borderColor = "#FFDEEB";
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                }}
-              >
-                <div
-                  style={{
-                    backgroundColor: "#FFDEEB",
-                    borderRadius: "6px",
-                    padding: "4px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}
-                >
-                  <Icon size={16} stroke={1.5} color="#E64980" />
-                </div>
-                <Text
-                  size="sm"
-                  fw={500}
-                  c="pink.7"
-                  style={{ lineHeight: 1.2 }}
-                >
-                  {item.name}
-                </Text>
-              </div>
-            </Card>
-          );
-
-          if (isExternal) {
-            return (
-              <a
-                key={index}
-                href={path}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ textDecoration: "none" }}
-              >
-                {cardContent}
-              </a>
-            );
-          }
+      <Stack gap="sm">
+        {visibleItems.map((item) => {
+          const href = item.path(props);
+          const isExternal = href.startsWith("http");
+          const attention = item.blink(props);
 
           return (
-            <Link
-              key={index}
-              href={path}
-              style={{ textDecoration: "none" }}
-            >
-              {cardContent}
-            </Link>
+            <NavCard
+              key={item.name}
+              item={item}
+              href={href}
+              isExternal={isExternal}
+              attention={attention}
+            />
           );
         })}
       </Stack>
-
-      <style jsx>{`
-        @keyframes blink {
-          0% {
-            border-color: #ffdeeb;
-            box-shadow: 0 4px 12px rgba(246, 101, 149, 0);
-          }
-          50% {
-            border-color: #f06595;
-            box-shadow: 0 4px 20px rgba(246, 101, 149, 0.3);
-          }
-          100% {
-            border-color: #ffdeeb;
-            box-shadow: 0 4px 12px rgba(246, 101, 149, 0);
-          }
-        }
-      `}</style>
     </Container>
   );
 };

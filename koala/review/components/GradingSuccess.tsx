@@ -26,6 +26,20 @@ const gradeColors = {
   [Grade.EASY]: "blue",
 } as const;
 
+const gradeLabels: Record<Grade, string> = {
+  [Grade.AGAIN]: "AGAIN",
+  [Grade.HARD]: "HARD",
+  [Grade.GOOD]: "GOOD",
+  [Grade.EASY]: "EASY",
+};
+
+const gradeHotkeys: Record<Grade, string> = {
+  [Grade.AGAIN]: HOTKEYS.GRADE_AGAIN,
+  [Grade.HARD]: HOTKEYS.GRADE_HARD,
+  [Grade.GOOD]: HOTKEYS.GRADE_GOOD,
+  [Grade.EASY]: HOTKEYS.GRADE_EASY,
+};
+
 export function GradingSuccess({
   quizData,
   onGradeSelect,
@@ -50,52 +64,31 @@ export function GradingSuccess({
       </Text>
       <Stack gap="sm" w="100%" maw={400}>
         {gradeOptions.map(([grade, timeText]) => {
-          const gradeLabels = {
-            [Grade.AGAIN]: "AGAIN",
-            [Grade.HARD]: "HARD",
-            [Grade.GOOD]: "GOOD",
-            [Grade.EASY]: "EASY",
-          };
-
-          const gradeHotkeys = {
-            [Grade.AGAIN]: HOTKEYS.GRADE_AGAIN,
-            [Grade.HARD]: HOTKEYS.GRADE_HARD,
-            [Grade.GOOD]: HOTKEYS.GRADE_GOOD,
-            [Grade.EASY]: HOTKEYS.GRADE_EASY,
-          };
+          const gradeValue = grade as Grade;
+          const label = gradeLabels[gradeValue];
+          const hotkey = gradeHotkeys[gradeValue];
 
           return (
             <Button
               key={grade}
-              onClick={() => onGradeSelect(grade as Grade)}
-              color={gradeColors[grade as Grade]}
+              onClick={() => onGradeSelect(gradeValue)}
+              color={gradeColors[gradeValue]}
               variant="outline"
               size="md"
               fullWidth
               disabled={isLoading}
-              styles={{
-                root: {
-                  height: 48,
-                  display: "flex",
-                  justifyContent: "space-between",
-                  paddingLeft: 16,
-                  paddingRight: 16,
-                },
-                label: {
-                  width: "100%",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                },
-              }}
+              justify="space-between"
+              h={48}
+              px="md"
+              rightSection={
+                <Text span fz="sm" opacity={0.8}>
+                  {timeText}
+                </Text>
+              }
             >
-              <span style={{ fontWeight: 600 }}>
-                {gradeLabels[grade as Grade]} (
-                {gradeHotkeys[grade as Grade]})
-              </span>
-              <span style={{ fontSize: "0.875em", opacity: 0.8 }}>
-                {timeText}
-              </span>
+              <Text span fw={600}>
+                {label} ({hotkey})
+              </Text>
             </Button>
           );
         })}

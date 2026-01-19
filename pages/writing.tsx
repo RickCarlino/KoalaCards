@@ -3,9 +3,10 @@ import { prismaClient } from "@/koala/prisma-client";
 import { VisualDiff } from "@/koala/review/lesson-steps/visual-diff";
 import {
   ActionIcon,
-  Alert,
-  Badge,
+  Box,
   Button,
+  Card,
+  Collapse,
   Container,
   Divider,
   Group,
@@ -17,9 +18,14 @@ import {
   TextInput,
   Title,
   Tooltip,
-  UnstyledButton,
 } from "@mantine/core";
-import { IconFilter, IconTrash } from "@tabler/icons-react";
+import {
+  IconChevronDown,
+  IconChevronUp,
+  IconFilter,
+  IconPencil,
+  IconTrash,
+} from "@tabler/icons-react";
 import { GetServerSideProps } from "next";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -50,6 +56,13 @@ interface WritingHistory {
   q: string;
   deckId: number | null;
 }
+
+type WritingSubmission = WritingHistory["submissions"][number];
+
+type DeckOption = {
+  value: string;
+  label: string;
+};
 
 export const getServerSideProps: GetServerSideProps<
   WritingHistory
@@ -129,6 +142,250 @@ export const getServerSideProps: GetServerSideProps<
   };
 };
 
+const formatDateISO = (iso: string) => iso.slice(0, 10);
+
+const buildDeckOptions = (decks: WritingHistory["decks"]): DeckOption[] =>
+  [{ value: "", label: "All decks" }].concat(
+    decks.map((deck) => ({
+      value: String(deck.id),
+      label: `${deck.name} (${deck.langCode})`,
+    })),
+  );
+
+type FiltersPanelProps = {
+  query: string;
+  selectedDeckId: string;
+  deckOptions: DeckOption[];
+  onQueryChange: (value: string) => void;
+  onDeckChange: (value: string | null) => void;
+  onApply: () => void;
+  totalPages: number;
+  currentPage: number;
+  onPageChange: (page: number) => void;
+};
+
+function FiltersPanel({
+  query,
+  selectedDeckId,
+  deckOptions,
+  onQueryChange,
+  onDeckChange,
+  onApply,
+  totalPages,
+  currentPage,
+  onPageChange,
+}: FiltersPanelProps) {
+  const showPagination = totalPages > 1;
+
+  return (
+    <Paper withBorder p="md" radius="md" mb="md">
+      <Stack gap="sm">
+        <Group align="flex-end" wrap="wrap" gap="md">
+          <TextInput
+            label="Search"
+            placeholder="Prompt, submission, or correction"
+            value={query}
+            onChange={(e) => onQueryChange(e.currentTarget.value)}
+            style={{ flex: 1, minWidth: 240 }}
+          />
+          <Select
+            label="Deck"
+            value={selectedDeckId}
+            onChange={onDeckChange}
+            data={deckOptions}
+            style={{ minWidth: 220 }}
+          />
+          <Group ml="auto">
+            <Button
+              leftSection={<IconFilter size={16} />}
+              variant="light"
+              onClick={onApply}
+            >
+              Apply
+            </Button>
+          </Group>
+        </Group>
+        {showPagination && (
+          <Group justify="space-between" align="center">
+            <Text size="xs" c="dimmed">
+              Page {currentPage} of {totalPages}
+            </Text>
+            <Pagination
+              total={totalPages}
+              value={currentPage}
+              onChange={onPageChange}
+            />
+          </Group>
+        )}
+      </Stack>
+    </Paper>
+  );
+}
+
+type SubmissionCardProps = {
+  submission: WritingSubmission;
+  isExpanded: boolean;
+  onToggle: () => void;
+  onDelete: () => void;
+};
+
+function SubmissionCard({
+  submission,
+  isExpanded,
+  onToggle,
+  onDelete,
+}: SubmissionCardProps) {
+  const detailsId = `writing-details-${submission.id}`;
+  const toggleLabel = isExpanded ? "Hide details" : "Show details";
+  const toggleIcon = isExpanded ? (
+    <IconChevronUp size={14} />
+  ) : (
+    <IconChevronDown size={14} />
+  );
+
+  return (
+    <Card withBorder p="sm">
+      <Stack gap="sm">
+        <Group justify="space-between" align="flex-start" wrap="wrap">
+          <Stack gap={2}>
+            <Text fw={600} size="sm" c="gray.8">
+              {formatDateISO(submission.createdAt)}
+            </Text>
+          </Stack>
+          <Group gap="xs">
+            <Button
+              variant="subtle"
+              size="xs"
+              color="pink"
+              onClick={onToggle}
+              rightSection={toggleIcon}
+              aria-expanded={isExpanded}
+              aria-controls={detailsId}
+            >
+              {toggleLabel}
+            </Button>
+            <Tooltip label="Delete submission">
+              <ActionIcon
+                color="red"
+                variant="light"
+                onClick={onDelete}
+                aria-label="Delete submission"
+              >
+                <IconTrash size={16} />
+              </ActionIcon>
+            </Tooltip>
+          </Group>
+        </Group>
+
+        <Box>
+          <Text size="xs" c="dimmed" fw={600}>
+            Prompt
+          </Text>
+          <Text size="sm" c="gray.8">
+            {submission.prompt}
+          </Text>
+        </Box>
+
+        <Collapse in={isExpanded}>
+          <Box id={detailsId}>
+            <Divider my="sm" />
+            <Stack gap="sm">
+              <Stack gap={4}>
+                <Text size="xs" c="dimmed" fw={600}>
+                  Your submission
+                </Text>
+                <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
+                  {submission.submission}
+                </Text>
+              </Stack>
+
+              <Stack gap={4}>
+                <Text size="xs" c="dimmed" fw={600}>
+                  Corrected text
+                </Text>
+                <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
+                  {submission.correction}
+                </Text>
+              </Stack>
+
+              <Stack gap={4}>
+                <Text size="xs" c="dimmed" fw={600}>
+                  Changes
+                </Text>
+                <VisualDiff
+                  actual={submission.submission}
+                  expected={submission.correction}
+                />
+              </Stack>
+            </Stack>
+          </Box>
+        </Collapse>
+      </Stack>
+    </Card>
+  );
+}
+
+type EmptyStateProps = {
+  hasFilters: boolean;
+};
+
+function EmptyState({ hasFilters }: EmptyStateProps) {
+  const title = hasFilters
+    ? "No submissions match your filters"
+    : "No writing submissions yet";
+  const description = hasFilters
+    ? "Try adjusting your search or start a new writing session."
+    : "Start a writing session to see feedback here.";
+
+  return (
+    <Card withBorder p="lg">
+      <Stack align="center" gap="sm">
+        <Title order={3} c="pink.7" ta="center">
+          {title}
+        </Title>
+        <Text size="sm" c="gray.7" ta="center">
+          {description}
+        </Text>
+        <Button
+          component={Link}
+          href="/writing/practice"
+          leftSection={<IconPencil size={16} />}
+          color="pink"
+          variant="light"
+        >
+          Start Writing
+        </Button>
+      </Stack>
+    </Card>
+  );
+}
+
+type PaginationRowProps = {
+  totalPages: number;
+  currentPage: number;
+  onPageChange: (page: number) => void;
+};
+
+function PaginationRow({
+  totalPages,
+  currentPage,
+  onPageChange,
+}: PaginationRowProps) {
+  if (totalPages <= 1) {
+    return null;
+  }
+
+  return (
+    <Group justify="center" mt="lg">
+      <Pagination
+        total={totalPages}
+        value={currentPage}
+        onChange={onPageChange}
+      />
+    </Group>
+  );
+}
+
 export default function WritingHistoryPage({
   submissions,
   totalPages,
@@ -144,216 +401,108 @@ export default function WritingHistoryPage({
     deckId ? String(deckId) : "",
   );
 
-  const toggleItem = (id: number) => {
-    setExpandedItem(expandedItem === id ? null : id);
-  };
+  const deckOptions = useMemo(() => buildDeckOptions(decks), [decks]);
+
+  const buildQueryParams = (page: number) => ({
+    page,
+    ...(query ? { q: query } : {}),
+    ...(selectedDeckId ? { deckId: selectedDeckId } : {}),
+  });
 
   const applyFilters = () => {
     router.push({
       pathname: "/writing",
-      query: {
-        page: 1,
-        ...(query ? { q: query } : {}),
-        ...(selectedDeckId ? { deckId: selectedDeckId } : {}),
-      },
+      query: buildQueryParams(1),
     });
   };
 
   const goToPage = (page: number) => {
     router.push({
       pathname: "/writing",
+      query: buildQueryParams(page),
+    });
+  };
+
+  const toggleItem = (id: number) => {
+    setExpandedItem((prev) => (prev === id ? null : id));
+  };
+
+  const handleDelete = (submissionId: number) => {
+    if (!confirm("Are you sure you want to delete this submission?")) {
+      return;
+    }
+    void router.push({
+      pathname: "/writing/delete",
       query: {
-        page,
-        ...(query ? { q: query } : {}),
-        ...(selectedDeckId ? { deckId: selectedDeckId } : {}),
+        id: submissionId,
+        page: currentPage,
       },
     });
   };
 
-  const deckOptions = useMemo(
-    () =>
-      [{ value: "", label: "All decks" }].concat(
-        decks.map((d) => ({
-          value: String(d.id),
-          label: `${d.name} (${d.langCode})`,
-        })),
-      ),
-    [decks],
-  );
-
-  const formatDateISO = (iso: string) => iso.slice(0, 10);
+  const hasSubmissions = submissions.length > 0;
+  const hasFilters = query.trim().length > 0 || selectedDeckId.length > 0;
 
   return (
     <Container size="md" py="md">
-      <Title order={2}>My Writing History</Title>
+      <Group
+        justify="space-between"
+        align="flex-start"
+        wrap="wrap"
+        mb="md"
+      >
+        <Stack gap={2}>
+          <Title order={2} c="pink.7">
+            Writing History
+          </Title>
+          <Text size="sm" c="gray.7">
+            Review feedback from your writing practice.
+          </Text>
+        </Stack>
+        <Button
+          component={Link}
+          href="/writing/practice"
+          leftSection={<IconPencil size={16} />}
+          color="pink"
+          variant="light"
+        >
+          New Writing Session
+        </Button>
+      </Group>
 
-      <Paper withBorder p="md" radius="md" mt="sm" mb="md">
-        <Group align="flex-end" wrap="wrap">
-          <TextInput
-            label="Search"
-            placeholder="Prompt, submission, or correction"
-            value={query}
-            onChange={(e) => setQuery(e.currentTarget.value)}
-            style={{ minWidth: 260 }}
-          />
-          <Select
-            label="Deck"
-            value={selectedDeckId}
-            onChange={(val) => setSelectedDeckId(val ?? "")}
-            data={deckOptions}
-            style={{ minWidth: 220 }}
-          />
-          <Group gap="sm">
-            <Button
-              leftSection={<IconFilter size={16} />}
-              variant="light"
-              onClick={applyFilters}
-            >
-              Apply
-            </Button>
-          </Group>
-          <Group ml="auto">
-            {totalPages > 1 && (
-              <Pagination
-                total={totalPages}
-                value={currentPage}
-                onChange={(p) => goToPage(p)}
-              />
-            )}
-          </Group>
-        </Group>
-      </Paper>
+      <FiltersPanel
+        query={query}
+        selectedDeckId={selectedDeckId}
+        deckOptions={deckOptions}
+        onQueryChange={setQuery}
+        onDeckChange={(val) => setSelectedDeckId(val ?? "")}
+        onApply={applyFilters}
+        totalPages={totalPages}
+        currentPage={currentPage}
+        onPageChange={goToPage}
+      />
 
-      {submissions.length === 0 ? (
-        <Alert title="No submissions found" color="blue">
-          You haven't submitted any writing practice yet.{" "}
-          <Link href="/writing/practice">Start a writing session</Link> to
-          see your feedback here.
-        </Alert>
+      {!hasSubmissions ? (
+        <EmptyState hasFilters={hasFilters} />
       ) : (
-        <Stack gap="xl">
+        <Stack gap="md">
           {submissions.map((submission) => {
-            const deckLabel = submission.deck?.name ?? "General Practice";
-            const langLabel = (
-              submission.deck?.langCode ?? "ko"
-            ).toUpperCase();
+            const isExpanded = expandedItem === submission.id;
             return (
-              <Paper key={submission.id} p="md" withBorder>
-                <Stack gap="md">
-                  <Group justify="space-between" wrap="nowrap">
-                    <Stack gap={5}>
-                      <Text fw={700} size="lg">
-                        {formatDateISO(submission.createdAt)}
-                      </Text>
-                      <Group gap="xs">
-                        <Badge color="pink" variant="light">
-                          {deckLabel}
-                        </Badge>
-                        <Badge variant="outline">{langLabel}</Badge>
-                      </Group>
-                    </Stack>
-                    <Tooltip label="Delete submission">
-                      <ActionIcon
-                        color="red"
-                        variant="subtle"
-                        onClick={() => {
-                          if (
-                            confirm(
-                              "Are you sure you want to delete this submission?",
-                            )
-                          ) {
-                            void router.push({
-                              pathname: "/writing/delete",
-                              query: {
-                                id: submission.id,
-                                page: currentPage,
-                              },
-                            });
-                          }
-                        }}
-                      >
-                        <IconTrash size={18} />
-                      </ActionIcon>
-                    </Tooltip>
-                  </Group>
-
-                  <Stack gap="xs">
-                    <Text fw={600} size="sm">
-                      Prompt:
-                    </Text>
-                    <Text size="sm" mb="xs">
-                      {submission.prompt}
-                    </Text>
-                  </Stack>
-
-                  <UnstyledButton
-                    onClick={() => toggleItem(submission.id)}
-                    styles={(theme) => ({
-                      root: {
-                        display: "block",
-                        width: "100%",
-                        textAlign: "center",
-                        padding: theme.spacing.xs,
-                        borderRadius: theme.radius.sm,
-                        color: theme.colors.blue[6],
-                        "&:hover": {
-                          backgroundColor: theme.colors.gray[0],
-                        },
-                      },
-                    })}
-                  >
-                    {expandedItem === submission.id
-                      ? "Hide Details"
-                      : "Show Details"}
-                  </UnstyledButton>
-
-                  {expandedItem === submission.id && (
-                    <Stack gap="md" mt="xs">
-                      <Divider />
-
-                      <Stack gap="xs">
-                        <Text fw={600} size="sm">
-                          Your Submission:
-                        </Text>
-                        <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
-                          {submission.submission}
-                        </Text>
-                      </Stack>
-
-                      <Stack gap="xs">
-                        <Text fw={600} size="sm">
-                          Corrected Text:
-                        </Text>
-                        <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
-                          {submission.correction}
-                        </Text>
-                      </Stack>
-
-                      <Stack gap="xs">
-                        <Text fw={600} size="sm">
-                          Changes:
-                        </Text>
-                        <VisualDiff
-                          actual={submission.submission}
-                          expected={submission.correction}
-                        />
-                      </Stack>
-                    </Stack>
-                  )}
-                </Stack>
-              </Paper>
+              <SubmissionCard
+                key={submission.id}
+                submission={submission}
+                isExpanded={isExpanded}
+                onToggle={() => toggleItem(submission.id)}
+                onDelete={() => handleDelete(submission.id)}
+              />
             );
           })}
-
-          {totalPages > 1 && (
-            <Group justify="center" mt="xl">
-              <Pagination
-                total={totalPages}
-                value={currentPage}
-                onChange={(p) => goToPage(p)}
-              />
-            </Group>
-          )}
+          <PaginationRow
+            totalPages={totalPages}
+            currentPage={currentPage}
+            onPageChange={goToPage}
+          />
         </Stack>
       )}
     </Container>

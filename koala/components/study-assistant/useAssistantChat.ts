@@ -92,7 +92,7 @@ const createProposalId = (cardId: number) =>
   `edit-${cardId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 const INITIAL_ASSISTANT_MESSAGE =
-  "Hi! Ask me about the cards you just reviewed, or request new practice questions. I’ll also suggest new flashcards or edits when helpful.";
+  "Hey! Ask me about the cards you just reviewed, or request new practice questions. I’ll also suggest new flashcards or edits when helpful.";
 
 const createInitialMessages = (): ChatMessage[] => [
   {
@@ -261,9 +261,9 @@ export function useAssistantChat({
   }, [isStreaming]);
 
   const addSuggestion = React.useCallback(
-    async (suggestion: Suggestion) => {
+    async (suggestion: Suggestion, targetDeckId: number) => {
       await bulkCreate.mutateAsync({
-        deckId,
+        deckId: targetDeckId,
         input: [
           {
             term: suggestion.phrase,
@@ -277,7 +277,7 @@ export function useAssistantChat({
         message: "Card added to deck",
       });
     },
-    [bulkCreate, deckId],
+    [bulkCreate],
   );
 
   const removeEditProposal = React.useCallback((editId: string) => {

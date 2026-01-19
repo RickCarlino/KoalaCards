@@ -8,6 +8,32 @@ interface SentencecorrectionProps {
   heading?: string;
 }
 
+type DiffTokenVariant = "added" | "removed" | "base";
+
+const getDiffVariant = (part: { added?: boolean; removed?: boolean }) => {
+  if (part.added) {
+    return "added";
+  }
+  if (part.removed) {
+    return "removed";
+  }
+  return "base";
+};
+
+const diffTokenProps: Record<
+  DiffTokenVariant,
+  {
+    fw?: number;
+    td?: "line-through";
+    fz?: "sm" | "md" | "lg";
+    px?: number;
+  }
+> = {
+  added: { fw: 600, fz: "lg", px: 2 },
+  removed: { fz: "sm", td: "line-through" },
+  base: { fz: "md" },
+};
+
 export const VisualDiff: React.FC<SentencecorrectionProps> = ({
   expected,
   actual,
@@ -27,27 +53,13 @@ export const VisualDiff: React.FC<SentencecorrectionProps> = ({
       </Text>
       <Text size="md" lh={1.6}>
         {diff.map((part, index) => {
-          let fontSize = 1;
-
-          if (part.added) {
-            fontSize = 1.1;
-          }
-
-          if (part.removed) {
-            fontSize = 0.8;
-          }
-
-          const style = {
-            fontWeight: part.added ? "bold" : "normal",
-            textDecoration: part.removed ? "line-through" : "none",
-            fontSize: `${fontSize}em`,
-            padding: part.added ? "0 2px" : "0",
-          };
+          const variant = getDiffVariant(part);
+          const tokenProps = diffTokenProps[variant];
 
           return (
-            <span key={index} style={style}>
+            <Text key={index} component="span" {...tokenProps}>
               {part.value}
-            </span>
+            </Text>
           );
         })}
       </Text>

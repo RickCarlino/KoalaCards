@@ -1,8 +1,9 @@
 import React from "react";
-import { ActionIcon, Group, Loader, Stack, Text } from "@mantine/core";
-import { IconPlus } from "@tabler/icons-react";
+import { Stack, Text } from "@mantine/core";
 import AssistantMarkdown from "./AssistantMarkdown";
 import AssistantEditCard from "./AssistantEditCard";
+import AssistantSuggestionRow from "./AssistantSuggestionRow";
+import { DeckSummary } from "@/koala/types/deck-summary";
 import { AssistantEditProposal, ChatMessage, Suggestion } from "./types";
 import {
   EDIT_PLACEHOLDER,
@@ -12,8 +13,13 @@ import {
 type AssistantMessageContentProps = {
   message: ChatMessage;
   messageIndex: number;
-  onAddSuggestion: (suggestion: Suggestion) => void | Promise<void>;
+  onAddSuggestion: (
+    suggestion: Suggestion,
+    deckId: number,
+  ) => void | Promise<void>;
   isAdding: boolean;
+  decks: DeckSummary[];
+  currentDeckId: number;
   onApplyEdit: (
     proposal: AssistantEditProposal,
     updates: { term: string; definition: string },
@@ -82,37 +88,19 @@ const chunkContent = (content: string): ContentChunk[] => {
   return chunks;
 };
 
-function ExampleSuggestionRow({
-  suggestion,
-  onAdd,
-  isLoading,
-}: {
-  suggestion: Suggestion;
-  onAdd: () => void;
-  isLoading: boolean;
-}) {
-  return (
-    <Group align="flex-start" gap="xs" wrap="nowrap">
-      <ActionIcon
-        variant="light"
-        color="indigo"
-        radius="xl"
-        size="md"
-        onClick={onAdd}
-        disabled={isLoading}
-        aria-label={`Add card for ${suggestion.phrase}`}
-      >
-        {isLoading ? <Loader size="xs" /> : <IconPlus size={14} />}
-      </ActionIcon>
-      <Stack gap={2}>
-        <Text fw={600}>{suggestion.phrase}</Text>
-        <Text size="sm" c="dimmed">
-          {suggestion.translation}
-        </Text>
-      </Stack>
-    </Group>
-  );
-}
+const resolveDefaultDeckId = (
+  decks: DeckSummary[],
+  currentDeckId: number,
+) => {
+  const matchesCurrent = decks.some((deck) => deck.id === currentDeckId);
+  if (matchesCurrent) {
+    return currentDeckId;
+  }
+  if (decks.length > 0) {
+    return decks[0].id;
+  }
+  return currentDeckId;
+};
 
 function renderText(
   message: ChatMessage,
@@ -143,6 +131,8 @@ export default function AssistantMessageContent({
   messageIndex,
   onAddSuggestion,
   isAdding,
+  decks,
+  currentDeckId,
   onApplyEdit,
   onDismissEdit,
   savingEditId,
@@ -152,6 +142,7 @@ export default function AssistantMessageContent({
   const edits = message.edits ?? [];
   let suggestionIdx = 0;
   let editIdx = 0;
+  const defaultDeckId = resolveDefaultDeckId(decks, currentDeckId);
 
   chunkContent(message.content).forEach((chunk, idx) => {
     if (chunk.kind === "text") {
@@ -170,11 +161,13 @@ export default function AssistantMessageContent({
       const suggestion = suggestions[suggestionIdx];
       if (suggestion) {
         nodes.push(
-          <ExampleSuggestionRow
+          <AssistantSuggestionRow
             key={`msg-${messageIndex}-example-${suggestionIdx}`}
             suggestion={suggestion}
-            onAdd={() => onAddSuggestion(suggestion)}
+            onAdd={(deckId) => onAddSuggestion(suggestion, deckId)}
             isLoading={isAdding}
+            decks={decks}
+            defaultDeckId={defaultDeckId}
           />,
         );
       }
@@ -199,11 +192,13 @@ export default function AssistantMessageContent({
 
   suggestions.slice(suggestionIdx).forEach((suggestion, idx) => {
     nodes.push(
-      <ExampleSuggestionRow
+      <AssistantSuggestionRow
         key={`msg-${messageIndex}-fallback-${idx}`}
         suggestion={suggestion}
-        onAdd={() => onAddSuggestion(suggestion)}
+        onAdd={(deckId) => onAddSuggestion(suggestion, deckId)}
         isLoading={isAdding}
+        decks={decks}
+        defaultDeckId={defaultDeckId}
       />,
     );
   });

@@ -5,16 +5,19 @@ import {
   Button,
   Drawer,
   Group,
+  Paper,
   Stack,
   Text,
   Title,
   useMantineTheme,
+  type DrawerProps,
 } from "@mantine/core";
 import { IconMessage, IconX } from "@tabler/icons-react";
 import { useMediaQuery } from "@mantine/hooks";
 import AssistantMessageList from "./study-assistant/AssistantMessageList";
 import AssistantComposer from "./study-assistant/AssistantComposer";
 import { useAssistantChat } from "./study-assistant/useAssistantChat";
+import { DeckSummary } from "@/koala/types/deck-summary";
 import {
   AssistantCardContext,
   AssistantEditProposal,
@@ -24,6 +27,7 @@ import {
 
 type ReviewAssistantPaneProps = {
   deckId: number;
+  decks: DeckSummary[];
   opened: boolean;
   onOpen: () => void;
   onClose: () => void;
@@ -45,8 +49,13 @@ type AssistantPanelProps = {
   canClear: boolean;
   isStreaming: boolean;
   viewportRef: React.RefObject<HTMLDivElement>;
-  onAddSuggestion: (suggestion: Suggestion) => void | Promise<void>;
+  onAddSuggestion: (
+    suggestion: Suggestion,
+    deckId: number,
+  ) => void | Promise<void>;
   isAdding: boolean;
+  decks: DeckSummary[];
+  currentDeckId: number;
   onClose: () => void;
   onApplyEdit: (
     proposal: AssistantEditProposal,
@@ -86,20 +95,24 @@ function AssistantPanel({
   viewportRef,
   onAddSuggestion,
   isAdding,
+  decks,
+  currentDeckId,
   onClose,
   onApplyEdit,
   onDismissEdit,
   savingEditId,
 }: AssistantPanelProps) {
   return (
-    <Stack gap="sm" h="100%" style={{ minHeight: 0 }}>
+    <Stack gap="sm" h="100%" mih={0}>
       <AssistantHeader onClose={onClose} />
-      <Box style={{ flex: 1, minHeight: 0 }}>
+      <Box flex={1} mih={0}>
         <AssistantMessageList
           messages={messages}
           viewportRef={viewportRef}
           onAddSuggestion={onAddSuggestion}
           isAdding={isAdding}
+          decks={decks}
+          currentDeckId={currentDeckId}
           onApplyEdit={onApplyEdit}
           onDismissEdit={onDismissEdit}
           savingEditId={savingEditId}
@@ -128,36 +141,13 @@ function DesktopAssistantShell({
   children: React.ReactNode;
 }) {
   return (
-    <Box
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        minHeight: 0,
-        borderLeft: "1px solid var(--mantine-color-gray-3)",
-        backgroundColor: "white",
-        padding: opened ? 0 : "16px",
-      }}
-    >
+    <Paper withBorder radius={0} h="100%" mih={0} p={opened ? 0 : "md"}>
       {opened ? (
-        <Box
-          style={{
-            height: "100%",
-            display: "flex",
-            padding: "16px",
-            minHeight: 0,
-          }}
-        >
-          <Box style={{ flex: 1, minHeight: 0, width: "100%" }}>
-            {children}
-          </Box>
+        <Box h="100%" mih={0} p="md">
+          {children}
         </Box>
       ) : (
-        <Stack
-          justify="center"
-          gap="sm"
-          style={{ height: "100%", minHeight: 0 }}
-        >
+        <Stack justify="center" gap="sm" h="100%" mih={0}>
           <Group gap="xs">
             <IconMessage size={18} />
             <Title order={5}>Study Assistant</Title>
@@ -174,9 +164,18 @@ function DesktopAssistantShell({
           </Button>
         </Stack>
       )}
-    </Box>
+    </Paper>
   );
 }
+
+const mobileDrawerStyles = {
+  body: {
+    padding: 0,
+    height: "100%",
+    display: "flex",
+    flexDirection: "column",
+  },
+} satisfies DrawerProps["styles"];
 
 function MobileAssistantShell({
   opened,
@@ -195,16 +194,9 @@ function MobileAssistantShell({
       size="100%"
       overlayProps={{ opacity: 0.35, blur: 1 }}
       withCloseButton={false}
-      styles={{
-        content: {
-          display: "flex",
-          flexDirection: "column",
-          height: "100%",
-          padding: 0,
-        },
-      }}
+      styles={mobileDrawerStyles}
     >
-      <Box style={{ flex: 1, padding: "16px", minHeight: 0 }}>
+      <Box flex={1} p="md" mih={0}>
         {children}
       </Box>
     </Drawer>
@@ -213,6 +205,7 @@ function MobileAssistantShell({
 
 export function ReviewAssistantPane({
   deckId,
+  decks,
   opened,
   onOpen,
   onClose,
@@ -263,6 +256,8 @@ export function ReviewAssistantPane({
       viewportRef={viewportRef}
       onAddSuggestion={addSuggestion}
       isAdding={isAddingSuggestion}
+      decks={decks}
+      currentDeckId={deckId}
       onClose={handleClose}
       onApplyEdit={onApplyEdit}
       onDismissEdit={onDismissEdit}

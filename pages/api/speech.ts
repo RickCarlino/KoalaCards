@@ -52,8 +52,6 @@ export default async function handler(
   const model = "gpt-4o-mini-tts-2025-12-15";
   const VOICES = [
     "alloy",
-    "ash",
-    "ballad",
     "echo",
     "fable",
     "nova",
