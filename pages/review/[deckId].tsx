@@ -46,132 +46,26 @@ import {
 import { Grade } from "femto-fsrs";
 import { GetServerSideProps } from "next";
 import Link from "next/link";
+import { uid } from "radash";
 import React from "react";
 import ReactMarkdown, {
   type Components,
   type ExtraProps,
 } from "react-markdown";
-import { uid } from "radash";
 import { z } from "zod";
-
 import { canStartNewLessons, getLessonsDue } from "@/koala/fetch-lesson";
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { prismaClient } from "@/koala/prisma-client";
 import { compare } from "@/koala/quiz-evaluators/evaluator-utils";
-import { LangCode } from "@/koala/shared-types";
+import { VisualDiff } from "@/koala/review/lesson-steps/visual-diff";
 import { useUserSettings } from "@/koala/settings-provider";
-import { DeckSummary } from "@/koala/types/deck-summary";
-import { QuizList as ZodQuizList } from "@/koala/types/zod";
+import { LangCode } from "@/koala/shared-types";
 import { trpc } from "@/koala/trpc-config";
 import { getGradeButtonText } from "@/koala/trpc-routes/calculate-scheduling-data";
-import { VisualDiff } from "@/koala/review/lesson-steps/visual-diff";
+import { DeckSummary } from "@/koala/types/deck-summary";
+import { QuizList as ZodQuizList } from "@/koala/types/zod";
 
 type ReviewDeckPageProps = { deckId: number; decks: DeckSummary[] };
-const ASSISTANT_PANEL_WIDTH = 380;
-const REVIEW_BACKGROUND =
-  "linear-gradient(180deg, rgba(255,240,246,0.35) 0%, rgba(255,255,255,1) 30%)";
-
-const redirect = (destination: string) => ({
-  redirect: { destination, permanent: false },
-});
-
-const buildReviewPath = (deckId: number) => `/review/${deckId}`;
-
-const buildWritingPracticeUrl = (returnTo: string) =>
-  `/writing/practice?returnTo=${encodeURIComponent(returnTo)}`;
-
-export const getServerSideProps: GetServerSideProps<
-  ReviewDeckPageProps
-> = async (ctx) => {
-  const user = await getServersideUser(ctx);
-  if (!user) {
-    return redirect("/api/auth/signin");
-  }
-
-  const deckId = Number(ctx.params?.deckId);
-  if (!deckId) {
-    return redirect("/review");
-  }
-
-  const deck = await prismaClient.deck.findUnique({
-    where: { userId: user.id, id: deckId },
-    select: { id: true },
-  });
-
-  if (!deck) {
-    return redirect("/review");
-  }
-
-  const userSettings = await prismaClient.userSettings.findUnique({
-    where: { userId: user.id },
-  });
-
-  if (!userSettings) {
-    return redirect("/settings");
-  }
-
-  const hasDue = (await getLessonsDue(deck.id)) >= 1;
-  const canStartNew = await canStartNewLessons(
-    user.id,
-    deck.id,
-    Date.now(),
-  );
-  if (!hasDue && !canStartNew) {
-    return redirect("/review");
-  }
-
-  if (userSettings.writingFirst) {
-    const now = new Date();
-    const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    const writingProgress = await prismaClient.writingSubmission.aggregate(
-      {
-        _sum: { correctionCharacterCount: true },
-        where: {
-          userId: user.id,
-          createdAt: { gte: last24Hours },
-        },
-      },
-    );
-
-    const progress = writingProgress._sum.correctionCharacterCount ?? 0;
-    const goal = userSettings.dailyWritingGoal ?? 100;
-    if (progress < goal) {
-      return {
-        redirect: {
-          destination: buildWritingPracticeUrl(buildReviewPath(deckId)),
-          permanent: false,
-        },
-      };
-    }
-  }
-
-  const decks = await prismaClient.deck.findMany({
-    where: { userId: user.id },
-    select: { id: true, name: true },
-    orderBy: { name: "asc" },
-  });
-
-  return {
-    props: {
-      deckId,
-      decks,
-    },
-  };
-};
-
-const HOTKEYS = {
-  GRADE_AGAIN: "a",
-  GRADE_HARD: "s",
-  GRADE_GOOD: "d",
-  GRADE_EASY: "f",
-  FAIL: "g",
-  EDIT: "n",
-  PLAY: "j",
-  SKIP: "k",
-  ARCHIVE: "l",
-  RECORD: "space",
-  CONTINUE: "h",
-};
 
 type QuizList = z.infer<typeof ZodQuizList>["quizzes"];
 
@@ -216,19 +110,24 @@ type State = {
 };
 
 type ReplaceCardAction = { type: "REPLACE_CARDS"; payload: Quiz[] };
+
 type SkipCardAction = { type: "SKIP_CARD"; payload: UUID };
+
 type CompleteItemAction = {
   type: "COMPLETE_ITEM";
   payload: { uuid: string };
 };
+
 type GiveUpAction = {
   type: "GIVE_UP";
   payload: { cardUUID: string };
 };
+
 type GradingResultCapturedAction = {
   type: "STORE_GRADE_RESULT";
   payload: { cardUUID: string; result: GradingResult };
 };
+
 type UpdateCardAction = {
   type: "UPDATE_CARD";
   payload: {
@@ -245,14 +144,6 @@ type Action =
   | GiveUpAction
   | GradingResultCapturedAction
   | UpdateCardAction;
-
-const EVERY_QUEUE_TYPE: QueueType[] = [
-  "newWordIntro",
-  "remedialIntro",
-  "speaking",
-  "newWordOutro",
-  "remedialOutro",
-];
 
 type CardReviewProps = {
   onProceed: () => void;
@@ -290,8 +181,525 @@ type PlaybackQueue = {
   controller: AbortController;
 };
 
+type SpeechRequestBody = {
+  tl: string;
+  format: "mp3";
+};
+
+type BeepOptions = {
+  durationMs?: number;
+  frequencyHz?: number;
+  volume?: number;
+};
+
+type RecorderControls = {
+  start: (startOptions?: { playBeep?: boolean }) => Promise<void>;
+  stop: () => Promise<Blob>;
+  isRecording: boolean;
+  mimeType: string | null;
+};
+
+interface UseVoiceTranscriptionOptions {
+  targetText: string;
+  langCode: LangCode;
+}
+
+interface TranscriptionResult {
+  transcription: string;
+  isMatch?: boolean;
+}
+
+interface UseVoiceGradingOptions {
+  targetText: string;
+  langCode: LangCode;
+  cardId: number;
+  cardUUID: string;
+  onGradingResultCaptured?: (
+    cardUUID: string,
+    result: GradingResult,
+  ) => void;
+}
+
+interface UseQuizGradingOptions {
+  cardId: number;
+  onSuccess?: () => void;
+  onError?: (error: unknown) => void;
+}
+
+interface UseGradeHandlerProps {
+  gradeWithAgain: () => Promise<void>;
+  gradeWithHard: () => Promise<void>;
+  gradeWithGood: () => Promise<void>;
+  gradeWithEasy: () => Promise<void>;
+}
+
+type ReviewStateCardProps = {
+  title: string;
+  children: React.ReactNode;
+};
+
+type MessageStateProps = {
+  title: string;
+  children: React.ReactNode;
+};
+
+type NoMoreQuizzesStateProps = {
+  deckId: number;
+  onReload: () => void;
+};
+
+type ReviewLayoutProps = {
+  contentHeight: string;
+  showAssistant: boolean;
+  assistant: React.ReactNode;
+  children: React.ReactNode;
+};
+
+type ReviewLayoutState = {
+  assistantOpen: boolean;
+  openAssistant: () => void;
+  closeAssistant: () => void;
+  showDesktopAssistant: boolean;
+  assistantOffset: number;
+  isDesktop: boolean;
+  contentHeight: string;
+};
+
+type ReviewHandlersParams = {
+  state: State;
+  addContextEvent: (type: string, summary: string) => void;
+  skipCard: (cardUUID: string) => void;
+  giveUp: (cardUUID: string) => void;
+  captureGradingResult: (cardUUID: string, result: GradingResult) => void;
+  updateCardFields: (
+    cardId: number,
+    updates: { term: string; definition: string },
+  ) => void;
+};
+
+type FeedbackVoteProps = {
+  resultId: number;
+  onClick?: () => void;
+};
+
+interface FailureViewProps {
+  imageURL?: string;
+  term: string;
+  definition: string;
+  userTranscription: string;
+  feedback?: string;
+  quizResultId?: number | null;
+  onContinue: () => void;
+  failureText?: string;
+}
+
+interface GradingSuccessProps {
+  quizData: {
+    difficulty: number;
+    stability: number;
+    lastReview: number;
+    lapses: number;
+    repetitions: number;
+  };
+  onGradeSelect: (grade: Grade) => void;
+  isLoading?: boolean;
+  feedback?: string;
+  quizResultId?: number | null;
+}
+
+type IntroCardProps = CardReviewProps & {
+  isRemedial?: boolean;
+};
+
+type IntroPhase = "ready" | "processing" | "retry" | "success";
+
+type QuizPhase = "ready" | "processing" | "success" | "failure";
+
+type QuizType = "speaking" | "newWordOutro" | "remedialOutro";
+
+type QuizConfig = {
+  headerText?: string;
+  headerColor?: "blue" | "orange";
+  promptText: (definition: string) => string;
+  instructionText: string;
+  failureText: string;
+};
+
+type QuizCardProps = CardReviewProps & {
+  quizType: QuizType;
+};
+
+type RemedialOutroPhase = "ready" | "processing" | "success" | "failure";
+
+type ControlBarProps = {
+  card: Quiz;
+  itemType: ItemType;
+  onSkip: (uuid: string) => void;
+  onGiveUp: (cardUUID: string) => void;
+  isRecording: boolean;
+  onRecordClick: () => void;
+  onArchiveClick: () => void;
+  onPlayAudio: () => void;
+  progress?: number;
+  cardsRemaining?: number;
+  onOpenAssistant?: () => void;
+  disableRecord?: boolean;
+  onFail?: () => void;
+};
+
+type ControlBarMenuProps = {
+  onEdit: () => void;
+  onArchive: () => void;
+  onSkip: () => void;
+  onFail: () => void;
+};
+
+type AssistantRole = "user" | "assistant";
+
+type Suggestion = {
+  phrase: string;
+  translation: string;
+  gender: "M" | "F" | "N";
+};
+
+type AssistantEditProposal = {
+  id: string;
+  cardId: number;
+  term: string;
+  definition: string;
+  note?: string;
+  originalTerm?: string;
+  originalDefinition?: string;
+};
+
+type AssistantCardContext = {
+  cardId: number;
+  term: string;
+  definition: string;
+  uuid?: string;
+};
+
+type ChatMessage = {
+  role: AssistantRole;
+  content: string;
+  suggestions?: Suggestion[];
+  edits?: AssistantEditProposal[];
+};
+
+type ContextEvent = {
+  id: string;
+  timestamp: number;
+  type: string;
+  summary: string;
+};
+
+type StudyAssistantContextValue = {
+  contextLog: string[];
+  addContextEvent: (type: string, summary: string) => void;
+};
+
+type AssistantComposerProps = {
+  value: string;
+  onChange: (value: string) => void;
+  onSend: () => void;
+  onStop: () => void;
+  onClear: () => void;
+  isStreaming: boolean;
+  canClear: boolean;
+};
+
+type AssistantPanelProps = {
+  messages: ChatMessage[];
+  input: string;
+  onInputChange: (value: string) => void;
+  onSend: () => void;
+  onStop: () => void;
+  onClear: () => void;
+  canClear: boolean;
+  isStreaming: boolean;
+  viewportRef: React.RefObject<HTMLDivElement>;
+  onAddSuggestion: (
+    suggestion: Suggestion,
+    deckId: number,
+  ) => void | Promise<void>;
+  isAdding: boolean;
+  decks: DeckSummary[];
+  currentDeckId: number;
+  onClose: () => void;
+  onApplyEdit: (
+    proposal: AssistantEditProposal,
+    updates: { term: string; definition: string },
+  ) => void | Promise<void>;
+  onDismissEdit: (proposalId: string) => void;
+  savingEditId: string | null;
+};
+
+type AssistantMessageListProps = {
+  messages: ChatMessage[];
+  viewportRef: React.RefObject<HTMLDivElement>;
+  onAddSuggestion: (
+    suggestion: Suggestion,
+    deckId: number,
+  ) => void | Promise<void>;
+  isAdding: boolean;
+  decks: DeckSummary[];
+  currentDeckId: number;
+  onApplyEdit: (
+    proposal: AssistantEditProposal,
+    updates: { term: string; definition: string },
+  ) => void | Promise<void>;
+  onDismissEdit: (proposalId: string) => void;
+  savingEditId: string | null;
+};
+
+type MessageTone = "user" | "assistant";
+
+type ExampleBlock = {
+  phrase: string;
+  translation: string;
+};
+
+type CardEditBlock = {
+  cardId?: number;
+  term?: string;
+  definition?: string;
+  note?: string;
+};
+
+type AssistantParserResult = {
+  textDelta: string;
+  examples: ExampleBlock[];
+  edits: CardEditBlock[];
+};
+
+type BlockType = "example" | "edit";
+
+type AssistantMessageContentProps = {
+  message: ChatMessage;
+  messageIndex: number;
+  onAddSuggestion: (
+    suggestion: Suggestion,
+    deckId: number,
+  ) => void | Promise<void>;
+  isAdding: boolean;
+  decks: DeckSummary[];
+  currentDeckId: number;
+  onApplyEdit: (
+    proposal: AssistantEditProposal,
+    updates: { term: string; definition: string },
+  ) => void | Promise<void>;
+  onDismissEdit: (proposalId: string) => void;
+  savingEditId: string | null;
+};
+
+type PlaceholderType = "example" | "edit";
+
+type ContentChunk =
+  | { kind: "text"; value: string }
+  | { kind: "placeholder"; placeholder: PlaceholderType };
+
+type MarkdownCodeProps = JSX.IntrinsicElements["code"] &
+  ExtraProps & { inline?: boolean };
+
+type AssistantMarkdownProps = {
+  content: string;
+  style: React.CSSProperties;
+};
+
+type AssistantSuggestionRowProps = {
+  suggestion: Suggestion;
+  onAdd: (deckId: number) => void;
+  isLoading: boolean;
+  decks: DeckSummary[];
+  defaultDeckId: number;
+};
+
+type AssistantEditCardProps = {
+  proposal: AssistantEditProposal;
+  onSave: (updates: { term: string; definition: string }) => void;
+  onDismiss: () => void;
+  isSaving: boolean;
+};
+
+type StreamHandlers = {
+  onChunk: (payload: string) => void;
+  onDone: () => void;
+};
+
+const ASSISTANT_PANEL_WIDTH = 380;
+
+const REVIEW_BACKGROUND =
+  "linear-gradient(180deg, rgba(255,240,246,0.35) 0%, rgba(255,255,255,1) 30%)";
+
+const HOTKEYS = {
+  GRADE_AGAIN: "a",
+  GRADE_HARD: "s",
+  GRADE_GOOD: "d",
+  GRADE_EASY: "f",
+  FAIL: "g",
+  EDIT: "n",
+  PLAY: "j",
+  SKIP: "k",
+  ARCHIVE: "l",
+  RECORD: "space",
+  CONTINUE: "h",
+};
+
+const EVERY_QUEUE_TYPE: QueueType[] = [
+  "newWordIntro",
+  "remedialIntro",
+  "speaking",
+  "newWordOutro",
+  "remedialOutro",
+];
+
+const SPEECH_FORMAT: SpeechRequestBody["format"] = "mp3";
+
+const gradeColors: Record<Grade, string> = {
+  [Grade.AGAIN]: "red",
+  [Grade.HARD]: "orange",
+  [Grade.GOOD]: "green",
+  [Grade.EASY]: "blue",
+};
+
+const gradeLabels: Record<Grade, string> = {
+  [Grade.AGAIN]: "AGAIN",
+  [Grade.HARD]: "HARD",
+  [Grade.GOOD]: "GOOD",
+  [Grade.EASY]: "EASY",
+};
+
+const gradeHotkeys: Record<Grade, string> = {
+  [Grade.AGAIN]: HOTKEYS.GRADE_AGAIN,
+  [Grade.HARD]: HOTKEYS.GRADE_HARD,
+  [Grade.GOOD]: HOTKEYS.GRADE_GOOD,
+  [Grade.EASY]: HOTKEYS.GRADE_EASY,
+};
+
+const quizConfigs: Record<QuizType, QuizConfig> = {
+  speaking: {
+    headerText: "Speaking Quiz",
+    headerColor: "blue",
+    promptText: (definition: string) =>
+      `Say "${definition}" in the target language`,
+    instructionText:
+      "Press the record button above and say the phrase in the target language.",
+    failureText: "Not quite right",
+  },
+  newWordOutro: {
+    promptText: (definition: string) =>
+      `How would you say "${definition}"?`,
+    instructionText:
+      "Press the record button above and say the phrase in the target language.",
+    failureText: "You got it wrong",
+  },
+  remedialOutro: {
+    headerText: "Remedial Review",
+    headerColor: "orange",
+    promptText: (definition: string) =>
+      `How would you say "${definition}"?`,
+    instructionText:
+      "Press the record button above and say the phrase in the target language.",
+    failureText: "Not quite right",
+  },
+};
+
+const remedialPhaseContent: Record<RemedialOutroPhase, React.ReactNode> = {
+  ready: (
+    <Text ta="center" c="dimmed">
+      Press the record button above and say the phrase in the target
+      language.
+    </Text>
+  ),
+  processing: (
+    <Text ta="center" c="dimmed">
+      Processing your response...
+    </Text>
+  ),
+  success: null,
+  failure: null,
+};
+
+const cardUIs: Record<ItemType, CardUI> = {
+  newWordIntro: NewWordIntro,
+  newWordOutro: NewWordOutro,
+  speaking: Speaking,
+  remedialIntro: RemedialIntro,
+  remedialOutro: RemedialOutro,
+};
+
+const StudyAssistantContext = React.createContext<
+  StudyAssistantContextValue | undefined
+>(undefined);
+
+const MAX_EVENTS = 30;
+
+const MAX_SUMMARY_LENGTH = 180;
+
+const messageToneStyles: Record<
+  MessageTone,
+  { background: string; labelColor: string }
+> = {
+  user: { background: "pink.1", labelColor: "pink.8" },
+  assistant: { background: "pink.0", labelColor: "pink.7" },
+};
+
+const messageScrollContainerStyle: React.CSSProperties = {
+  overflowY: "auto",
+  overflowX: "hidden",
+};
+
+const EXAMPLE_START = "[[EXAMPLE]]";
+
+const EXAMPLE_END = "[[/EXAMPLE]]";
+
+const EXAMPLE_PLACEHOLDER = "[[__EXAMPLE_SLOT__]]";
+
+const EDIT_START = "[[EDIT_CARD]]";
+
+const EDIT_END = "[[/EDIT_CARD]]";
+
+const EDIT_PLACEHOLDER = "[[__EDIT_SLOT__]]";
+
+const messageTextStyle: React.CSSProperties = {
+  whiteSpace: "pre-wrap",
+  wordBreak: "break-word",
+};
+
+const placeholderTokens: Record<PlaceholderType, string> = {
+  example: EXAMPLE_PLACEHOLDER,
+  edit: EDIT_PLACEHOLDER,
+};
+
+const placeholderOrder: PlaceholderType[] = ["example", "edit"];
+
+const blockSpacing = "0 0 8px 18px";
+
+const mobileDrawerStyles = {
+  body: {
+    padding: 0,
+    height: "100%",
+    display: "flex",
+    flexDirection: "column",
+  },
+} satisfies DrawerProps["styles"];
+
+const INITIAL_ASSISTANT_MESSAGE =
+  "Hey! Ask me about the cards you just reviewed, or request new practice questions. I'll also suggest new flashcards or edits when helpful.";
+
+const redirect = (destination: string) => ({
+  redirect: { destination, permanent: false },
+});
+
+const buildReviewPath = (deckId: number) => `/review/${deckId}`;
+
+const buildWritingPracticeUrl = (returnTo: string) =>
+  `/writing/practice?returnTo=${encodeURIComponent(returnTo)}`;
+
 let lastAudio: string | undefined;
+
 let currentAudio: HTMLAudioElement | null = null;
+
 let playbackQueue: PlaybackQueue = {
   id: 0,
   tail: Promise.resolve(),
@@ -417,13 +825,6 @@ const playAudio = (
   return playbackQueue.tail;
 };
 
-type SpeechRequestBody = {
-  tl: string;
-  format: "mp3";
-};
-
-const SPEECH_FORMAT: SpeechRequestBody["format"] = "mp3";
-
 const playTermThenDefinition = async (
   card: Pick<Quiz, "termAudio" | "definitionAudio">,
   playbackSpeed?: number,
@@ -517,12 +918,6 @@ const playBlob = (blob: Blob, playbackRate?: number): Promise<void> => {
   });
 };
 
-type BeepOptions = {
-  durationMs?: number;
-  frequencyHz?: number;
-  volume?: number;
-};
-
 async function playBeep(options: BeepOptions = {}): Promise<void> {
   if (typeof window === "undefined") {
     return;
@@ -570,13 +965,6 @@ async function playBeep(options: BeepOptions = {}): Promise<void> {
     await ctx.close().catch(() => undefined);
   }
 }
-
-type RecorderControls = {
-  start: (startOptions?: { playBeep?: boolean }) => Promise<void>;
-  stop: () => Promise<Blob>;
-  isRecording: boolean;
-  mimeType: string | null;
-};
 
 function useMediaRecorder(): RecorderControls {
   const [recorder, setRecorder] = React.useState<MediaRecorder | null>(
@@ -697,16 +1085,6 @@ async function transcribeBlob(
   return json.text ?? "";
 }
 
-interface UseVoiceTranscriptionOptions {
-  targetText: string;
-  langCode: LangCode;
-}
-
-interface TranscriptionResult {
-  transcription: string;
-  isMatch?: boolean;
-}
-
 function useVoiceTranscription(options: UseVoiceTranscriptionOptions) {
   const { targetText, langCode } = options;
   const transcribe = async (blob: Blob): Promise<TranscriptionResult> => {
@@ -726,17 +1104,6 @@ function useVoiceTranscription(options: UseVoiceTranscriptionOptions) {
     isLoading: false,
     error: null,
   };
-}
-
-interface UseVoiceGradingOptions {
-  targetText: string;
-  langCode: LangCode;
-  cardId: number;
-  cardUUID: string;
-  onGradingResultCaptured?: (
-    cardUUID: string,
-    result: GradingResult,
-  ) => void;
 }
 
 function useVoiceGrading(options: UseVoiceGradingOptions) {
@@ -777,12 +1144,6 @@ function useVoiceGrading(options: UseVoiceGradingOptions) {
     isLoading: gradeSpeakingQuiz.isLoading,
     error: gradeSpeakingQuiz.error,
   };
-}
-
-interface UseQuizGradingOptions {
-  cardId: number;
-  onSuccess?: () => void;
-  onError?: (error: unknown) => void;
 }
 
 function useQuizGrading({
@@ -834,13 +1195,6 @@ function usePhaseManager<T extends string>(
   }, [currentStepUuid]);
 
   return { phase, setPhase };
-}
-
-interface UseGradeHandlerProps {
-  gradeWithAgain: () => Promise<void>;
-  gradeWithHard: () => Promise<void>;
-  gradeWithGood: () => Promise<void>;
-  gradeWithEasy: () => Promise<void>;
 }
 
 function useGradeHandler({
@@ -1190,11 +1544,6 @@ function reducer(state: State, action: Action): State {
   }
 }
 
-type ReviewStateCardProps = {
-  title: string;
-  children: React.ReactNode;
-};
-
 function ReviewStateCard({ title, children }: ReviewStateCardProps) {
   return (
     <Container size="sm" py="xl">
@@ -1208,11 +1557,6 @@ function ReviewStateCard({ title, children }: ReviewStateCardProps) {
   );
 }
 
-type MessageStateProps = {
-  title: string;
-  children: React.ReactNode;
-};
-
 function MessageState({ title, children }: MessageStateProps) {
   return (
     <ReviewStateCard title={title}>
@@ -1220,11 +1564,6 @@ function MessageState({ title, children }: MessageStateProps) {
     </ReviewStateCard>
   );
 }
-
-type NoMoreQuizzesStateProps = {
-  deckId: number;
-  onReload: () => void;
-};
 
 function NoMoreQuizzesState({
   deckId,
@@ -1260,13 +1599,6 @@ function NoMoreQuizzesState({
   );
 }
 
-type ReviewLayoutProps = {
-  contentHeight: string;
-  showAssistant: boolean;
-  assistant: React.ReactNode;
-  children: React.ReactNode;
-};
-
 function ReviewLayout({
   contentHeight,
   showAssistant,
@@ -1293,16 +1625,6 @@ function ReviewLayout({
     </Box>
   );
 }
-
-type ReviewLayoutState = {
-  assistantOpen: boolean;
-  openAssistant: () => void;
-  closeAssistant: () => void;
-  showDesktopAssistant: boolean;
-  assistantOffset: number;
-  isDesktop: boolean;
-  contentHeight: string;
-};
 
 function useReviewLayout(): ReviewLayoutState {
   const [assistantOpen, setAssistantOpen] = React.useState(false);
@@ -1339,18 +1661,6 @@ function useReviewLayout(): ReviewLayoutState {
     contentHeight,
   };
 }
-
-type ReviewHandlersParams = {
-  state: State;
-  addContextEvent: (type: string, summary: string) => void;
-  skipCard: (cardUUID: string) => void;
-  giveUp: (cardUUID: string) => void;
-  captureGradingResult: (cardUUID: string, result: GradingResult) => void;
-  updateCardFields: (
-    cardId: number,
-    updates: { term: string; definition: string },
-  ) => void;
-};
 
 function useReviewHandlers({
   state,
@@ -1529,11 +1839,6 @@ function CardImage({
   );
 }
 
-type FeedbackVoteProps = {
-  resultId: number;
-  onClick?: () => void;
-};
-
 function FeedbackVote({ resultId, onClick }: FeedbackVoteProps) {
   const mutation = trpc.editQuizResult.useMutation();
   const [selected, setSelected] = React.useState<1 | -1 | null>(null);
@@ -1580,17 +1885,6 @@ function FeedbackVote({ resultId, onClick }: FeedbackVoteProps) {
       </Tooltip>
     </Group>
   );
-}
-
-interface FailureViewProps {
-  imageURL?: string;
-  term: string;
-  definition: string;
-  userTranscription: string;
-  feedback?: string;
-  quizResultId?: number | null;
-  onContinue: () => void;
-  failureText?: string;
 }
 
 function FailureView({
@@ -1653,41 +1947,6 @@ function renderFeedbackSection(
     </Stack>
   );
 }
-
-interface GradingSuccessProps {
-  quizData: {
-    difficulty: number;
-    stability: number;
-    lastReview: number;
-    lapses: number;
-    repetitions: number;
-  };
-  onGradeSelect: (grade: Grade) => void;
-  isLoading?: boolean;
-  feedback?: string;
-  quizResultId?: number | null;
-}
-
-const gradeColors: Record<Grade, string> = {
-  [Grade.AGAIN]: "red",
-  [Grade.HARD]: "orange",
-  [Grade.GOOD]: "green",
-  [Grade.EASY]: "blue",
-};
-
-const gradeLabels: Record<Grade, string> = {
-  [Grade.AGAIN]: "AGAIN",
-  [Grade.HARD]: "HARD",
-  [Grade.GOOD]: "GOOD",
-  [Grade.EASY]: "EASY",
-};
-
-const gradeHotkeys: Record<Grade, string> = {
-  [Grade.AGAIN]: HOTKEYS.GRADE_AGAIN,
-  [Grade.HARD]: HOTKEYS.GRADE_HARD,
-  [Grade.GOOD]: HOTKEYS.GRADE_GOOD,
-  [Grade.EASY]: HOTKEYS.GRADE_EASY,
-};
 
 function GradingSuccess({
   quizData,
@@ -1769,12 +2028,6 @@ function renderSuccessHeader(
     </Text>
   );
 }
-
-type IntroCardProps = CardReviewProps & {
-  isRemedial?: boolean;
-};
-
-type IntroPhase = "ready" | "processing" | "retry" | "success";
 
 const introPhaseContent = (
   term: string,
@@ -1876,52 +2129,13 @@ const IntroCard: React.FC<IntroCardProps> = ({
   );
 };
 
-const NewWordIntro: CardUI = (props) => {
+function NewWordIntro(props: CardReviewProps) {
   return <IntroCard {...props} isRemedial={false} />;
-};
+}
 
-const RemedialIntro: CardUI = (props) => {
+function RemedialIntro(props: CardReviewProps) {
   return <IntroCard {...props} isRemedial={true} />;
-};
-
-type QuizPhase = "ready" | "processing" | "success" | "failure";
-type QuizType = "speaking" | "newWordOutro" | "remedialOutro";
-
-type QuizConfig = {
-  headerText?: string;
-  headerColor?: "blue" | "orange";
-  promptText: (definition: string) => string;
-  instructionText: string;
-  failureText: string;
-};
-
-const quizConfigs: Record<QuizType, QuizConfig> = {
-  speaking: {
-    headerText: "Speaking Quiz",
-    headerColor: "blue",
-    promptText: (definition: string) =>
-      `Say "${definition}" in the target language`,
-    instructionText:
-      "Press the record button above and say the phrase in the target language.",
-    failureText: "Not quite right",
-  },
-  newWordOutro: {
-    promptText: (definition: string) =>
-      `How would you say "${definition}"?`,
-    instructionText:
-      "Press the record button above and say the phrase in the target language.",
-    failureText: "You got it wrong",
-  },
-  remedialOutro: {
-    headerText: "Remedial Review",
-    headerColor: "orange",
-    promptText: (definition: string) =>
-      `How would you say "${definition}"?`,
-    instructionText:
-      "Press the record button above and say the phrase in the target language.",
-    failureText: "Not quite right",
-  },
-};
+}
 
 const resolveLastReviewMs = (lastReview: Quiz["lastReview"]): number => {
   if (!lastReview) {
@@ -1935,10 +2149,6 @@ const resolveLastReviewMs = (lastReview: Quiz["lastReview"]): number => {
     return 0;
   }
   return parsed;
-};
-
-type QuizCardProps = CardReviewProps & {
-  quizType: QuizType;
 };
 
 const quizPhaseContent = (
@@ -2148,31 +2358,13 @@ const QuizCard: React.FC<QuizCardProps> = ({
   );
 };
 
-const NewWordOutro: CardUI = (props) => {
+function NewWordOutro(props: CardReviewProps) {
   return <QuizCard {...props} quizType="newWordOutro" />;
-};
+}
 
-const Speaking: CardUI = (props) => {
+function Speaking(props: CardReviewProps) {
   return <QuizCard {...props} quizType="speaking" />;
-};
-
-type RemedialOutroPhase = "ready" | "processing" | "success" | "failure";
-
-const remedialPhaseContent: Record<RemedialOutroPhase, React.ReactNode> = {
-  ready: (
-    <Text ta="center" c="dimmed">
-      Press the record button above and say the phrase in the target
-      language.
-    </Text>
-  ),
-  processing: (
-    <Text ta="center" c="dimmed">
-      Processing your response...
-    </Text>
-  ),
-  success: null,
-  failure: null,
-};
+}
 
 function renderSuccessSection(
   successText?: string,
@@ -2232,13 +2424,13 @@ function SuccessView({
   );
 }
 
-const RemedialOutro: CardUI = ({
+function RemedialOutro({
   card,
   onProceed,
   currentStepUuid,
   onGradingResultCaptured,
   onProvideAudioHandler,
-}) => {
+}: CardReviewProps) {
   const { term, definition } = card;
   const [gradingResult, setGradingResult] =
     React.useState<GradingResult | null>(null);
@@ -2363,35 +2555,11 @@ const RemedialOutro: CardUI = ({
       {remedialPhaseContent[phase]}
     </Stack>
   );
-};
-
-const cardUIs: Record<ItemType, CardUI> = {
-  newWordIntro: NewWordIntro,
-  newWordOutro: NewWordOutro,
-  speaking: Speaking,
-  remedialIntro: RemedialIntro,
-  remedialOutro: RemedialOutro,
-};
+}
 
 const UnknownCard: CardUI = ({ card }) => (
   <div>{`UNKNOWN CARD TYPE: ${card.uuid}`}</div>
 );
-
-type ControlBarProps = {
-  card: Quiz;
-  itemType: ItemType;
-  onSkip: (uuid: string) => void;
-  onGiveUp: (cardUUID: string) => void;
-  isRecording: boolean;
-  onRecordClick: () => void;
-  onArchiveClick: () => void;
-  onPlayAudio: () => void;
-  progress?: number;
-  cardsRemaining?: number;
-  onOpenAssistant?: () => void;
-  disableRecord?: boolean;
-  onFail?: () => void;
-};
 
 const getRecordLabel = (recordDisabled: boolean, isRecording: boolean) => {
   if (recordDisabled) {
@@ -2401,13 +2569,6 @@ const getRecordLabel = (recordDisabled: boolean, isRecording: boolean) => {
     return `Stop recording (${HOTKEYS.RECORD})`;
   }
   return `Record a response (${HOTKEYS.RECORD})`;
-};
-
-type ControlBarMenuProps = {
-  onEdit: () => void;
-  onArchive: () => void;
-  onSkip: () => void;
-  onFail: () => void;
 };
 
 function ControlBarMenu({
@@ -2727,57 +2888,6 @@ const CardReview: React.FC<CardReviewWithRecordingProps> = (props) => {
   );
 };
 
-type AssistantRole = "user" | "assistant";
-
-type Suggestion = {
-  phrase: string;
-  translation: string;
-  gender: "M" | "F" | "N";
-};
-
-type AssistantEditProposal = {
-  id: string;
-  cardId: number;
-  term: string;
-  definition: string;
-  note?: string;
-  originalTerm?: string;
-  originalDefinition?: string;
-};
-
-type AssistantCardContext = {
-  cardId: number;
-  term: string;
-  definition: string;
-  uuid?: string;
-};
-
-type ChatMessage = {
-  role: AssistantRole;
-  content: string;
-  suggestions?: Suggestion[];
-  edits?: AssistantEditProposal[];
-};
-
-type ContextEvent = {
-  id: string;
-  timestamp: number;
-  type: string;
-  summary: string;
-};
-
-type StudyAssistantContextValue = {
-  contextLog: string[];
-  addContextEvent: (type: string, summary: string) => void;
-};
-
-const StudyAssistantContext = React.createContext<
-  StudyAssistantContextValue | undefined
->(undefined);
-
-const MAX_EVENTS = 30;
-const MAX_SUMMARY_LENGTH = 180;
-
 const formatSummary = (value: string) =>
   value.replace(/\s+/g, " ").trim().slice(0, MAX_SUMMARY_LENGTH);
 
@@ -2847,16 +2957,6 @@ function useStudyAssistantContext() {
   return ctx;
 }
 
-type AssistantComposerProps = {
-  value: string;
-  onChange: (value: string) => void;
-  onSend: () => void;
-  onStop: () => void;
-  onClear: () => void;
-  isStreaming: boolean;
-  canClear: boolean;
-};
-
 function AssistantComposer({
   value,
   onChange,
@@ -2920,52 +3020,6 @@ function AssistantComposer({
   );
 }
 
-type AssistantPanelProps = {
-  messages: ChatMessage[];
-  input: string;
-  onInputChange: (value: string) => void;
-  onSend: () => void;
-  onStop: () => void;
-  onClear: () => void;
-  canClear: boolean;
-  isStreaming: boolean;
-  viewportRef: React.RefObject<HTMLDivElement>;
-  onAddSuggestion: (
-    suggestion: Suggestion,
-    deckId: number,
-  ) => void | Promise<void>;
-  isAdding: boolean;
-  decks: DeckSummary[];
-  currentDeckId: number;
-  onClose: () => void;
-  onApplyEdit: (
-    proposal: AssistantEditProposal,
-    updates: { term: string; definition: string },
-  ) => void | Promise<void>;
-  onDismissEdit: (proposalId: string) => void;
-  savingEditId: string | null;
-};
-
-type AssistantMessageListProps = {
-  messages: ChatMessage[];
-  viewportRef: React.RefObject<HTMLDivElement>;
-  onAddSuggestion: (
-    suggestion: Suggestion,
-    deckId: number,
-  ) => void | Promise<void>;
-  isAdding: boolean;
-  decks: DeckSummary[];
-  currentDeckId: number;
-  onApplyEdit: (
-    proposal: AssistantEditProposal,
-    updates: { term: string; definition: string },
-  ) => void | Promise<void>;
-  onDismissEdit: (proposalId: string) => void;
-  savingEditId: string | null;
-};
-
-type MessageTone = "user" | "assistant";
-
 const getMessageTone = (role: ChatMessage["role"]): MessageTone => {
   if (role === "user") {
     return "user";
@@ -2975,44 +3029,6 @@ const getMessageTone = (role: ChatMessage["role"]): MessageTone => {
 
 const getMessageLabel = (role: ChatMessage["role"]) =>
   role === "user" ? "You" : "Assistant";
-
-const messageToneStyles: Record<
-  MessageTone,
-  { background: string; labelColor: string }
-> = {
-  user: { background: "pink.1", labelColor: "pink.8" },
-  assistant: { background: "pink.0", labelColor: "pink.7" },
-};
-
-const messageScrollContainerStyle: React.CSSProperties = {
-  overflowY: "auto",
-  overflowX: "hidden",
-};
-
-const EXAMPLE_START = "[[EXAMPLE]]";
-const EXAMPLE_END = "[[/EXAMPLE]]";
-const EXAMPLE_PLACEHOLDER = "[[__EXAMPLE_SLOT__]]";
-const EDIT_START = "[[EDIT_CARD]]";
-const EDIT_END = "[[/EDIT_CARD]]";
-const EDIT_PLACEHOLDER = "[[__EDIT_SLOT__]]";
-
-type ExampleBlock = {
-  phrase: string;
-  translation: string;
-};
-
-type CardEditBlock = {
-  cardId?: number;
-  term?: string;
-  definition?: string;
-  note?: string;
-};
-
-type AssistantParserResult = {
-  textDelta: string;
-  examples: ExampleBlock[];
-  edits: CardEditBlock[];
-};
 
 function getOverlap(source: string, token: string) {
   const max = Math.min(source.length, token.length - 1);
@@ -3094,8 +3110,6 @@ function parseEdit(content: string): CardEditBlock | null {
 
   return edit;
 }
-
-type BlockType = "example" | "edit";
 
 function createAssistantStreamParser() {
   let buffer = "";
@@ -3286,42 +3300,6 @@ function AssistantMessageList({
   );
 }
 
-type AssistantMessageContentProps = {
-  message: ChatMessage;
-  messageIndex: number;
-  onAddSuggestion: (
-    suggestion: Suggestion,
-    deckId: number,
-  ) => void | Promise<void>;
-  isAdding: boolean;
-  decks: DeckSummary[];
-  currentDeckId: number;
-  onApplyEdit: (
-    proposal: AssistantEditProposal,
-    updates: { term: string; definition: string },
-  ) => void | Promise<void>;
-  onDismissEdit: (proposalId: string) => void;
-  savingEditId: string | null;
-};
-
-const messageTextStyle: React.CSSProperties = {
-  whiteSpace: "pre-wrap",
-  wordBreak: "break-word",
-};
-
-type PlaceholderType = "example" | "edit";
-
-const placeholderTokens: Record<PlaceholderType, string> = {
-  example: EXAMPLE_PLACEHOLDER,
-  edit: EDIT_PLACEHOLDER,
-};
-
-const placeholderOrder: PlaceholderType[] = ["example", "edit"];
-
-type ContentChunk =
-  | { kind: "text"; value: string }
-  | { kind: "placeholder"; placeholder: PlaceholderType };
-
 const chunkContent = (content: string): ContentChunk[] => {
   const chunks: ContentChunk[] = [];
   let remaining = content;
@@ -3496,16 +3474,6 @@ function AssistantMessageContent({
   return <Stack gap={6}>{nodes}</Stack>;
 }
 
-type MarkdownCodeProps = JSX.IntrinsicElements["code"] &
-  ExtraProps & { inline?: boolean };
-
-type AssistantMarkdownProps = {
-  content: string;
-  style: React.CSSProperties;
-};
-
-const blockSpacing = "0 0 8px 18px";
-
 function MarkdownCode(
   props: MarkdownCodeProps & { style: React.CSSProperties },
 ) {
@@ -3601,14 +3569,6 @@ function AssistantMarkdown({ content, style }: AssistantMarkdownProps) {
   );
 }
 
-type AssistantSuggestionRowProps = {
-  suggestion: Suggestion;
-  onAdd: (deckId: number) => void;
-  isLoading: boolean;
-  decks: DeckSummary[];
-  defaultDeckId: number;
-};
-
 const toDeckOptions = (decks: DeckSummary[]) =>
   decks.map((deck) => ({
     value: String(deck.id),
@@ -3677,13 +3637,6 @@ function AssistantSuggestionRow({
     </Group>
   );
 }
-
-type AssistantEditCardProps = {
-  proposal: AssistantEditProposal;
-  onSave: (updates: { term: string; definition: string }) => void;
-  onDismiss: () => void;
-  isSaving: boolean;
-};
 
 function AssistantEditCard({
   proposal,
@@ -3873,15 +3826,6 @@ function DesktopAssistantShell({
     </Paper>
   );
 }
-
-const mobileDrawerStyles = {
-  body: {
-    padding: 0,
-    height: "100%",
-    display: "flex",
-    flexDirection: "column",
-  },
-} satisfies DrawerProps["styles"];
 
 function MobileAssistantShell({
   opened,
@@ -4363,11 +4307,6 @@ const stripEditPlaceholders = (content: string, keep: number) => {
   return collapseNewlines(updated);
 };
 
-type StreamHandlers = {
-  onChunk: (payload: string) => void;
-  onDone: () => void;
-};
-
 async function readStream(
   reader: ReadableStreamDefaultReader<Uint8Array>,
   handlers: StreamHandlers,
@@ -4415,9 +4354,6 @@ async function readStream(
 
 const createProposalId = (cardId: number) =>
   `edit-${cardId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-
-const INITIAL_ASSISTANT_MESSAGE =
-  "Hey! Ask me about the cards you just reviewed, or request new practice questions. I'll also suggest new flashcards or edits when helpful.";
 
 const createInitialMessages = (): ChatMessage[] => [
   {
@@ -4548,6 +4484,85 @@ function InnerReviewPage({ deckId, decks }: ReviewDeckPageProps) {
     </Container>
   );
 }
+
+export const getServerSideProps: GetServerSideProps<
+  ReviewDeckPageProps
+> = async (ctx) => {
+  const user = await getServersideUser(ctx);
+  if (!user) {
+    return redirect("/api/auth/signin");
+  }
+
+  const deckId = Number(ctx.params?.deckId);
+  if (!deckId) {
+    return redirect("/review");
+  }
+
+  const deck = await prismaClient.deck.findUnique({
+    where: { userId: user.id, id: deckId },
+    select: { id: true },
+  });
+
+  if (!deck) {
+    return redirect("/review");
+  }
+
+  const userSettings = await prismaClient.userSettings.findUnique({
+    where: { userId: user.id },
+  });
+
+  if (!userSettings) {
+    return redirect("/settings");
+  }
+
+  const hasDue = (await getLessonsDue(deck.id)) >= 1;
+  const canStartNew = await canStartNewLessons(
+    user.id,
+    deck.id,
+    Date.now(),
+  );
+  if (!hasDue && !canStartNew) {
+    return redirect("/review");
+  }
+
+  if (userSettings.writingFirst) {
+    const now = new Date();
+    const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const writingProgress = await prismaClient.writingSubmission.aggregate(
+      {
+        _sum: { correctionCharacterCount: true },
+        where: {
+          userId: user.id,
+          createdAt: { gte: last24Hours },
+        },
+      },
+    );
+
+    const progress = writingProgress._sum.correctionCharacterCount ?? 0;
+    const goal = userSettings.dailyWritingGoal ?? 100;
+    if (progress < goal) {
+      return {
+        redirect: {
+          destination: buildWritingPracticeUrl(buildReviewPath(deckId)),
+          permanent: false,
+        },
+      };
+    }
+  }
+
+  const decks = await prismaClient.deck.findMany({
+    where: { userId: user.id },
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
+  });
+
+  return {
+    props: {
+      deckId,
+      decks,
+    },
+  };
+};
 
 export default function ReviewDeckPageWrapper(props: ReviewDeckPageProps) {
   return (
