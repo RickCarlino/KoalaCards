@@ -6,14 +6,17 @@ import { CardReview } from "@/koala/review";
 import { HOTKEYS } from "@/koala/review/hotkeys";
 import { playTermThenDefinition } from "@/koala/review/playback";
 import { useReview } from "@/koala/review/reducer";
+import { GradingResult, State } from "@/koala/review/types";
 import { useUserSettings } from "@/koala/settings-provider";
 import { DeckSummary } from "@/koala/types/deck-summary";
-import { GradingResult } from "@/koala/review/types";
 import {
   Anchor,
   Box,
   Button,
   Container,
+  Flex,
+  Paper,
+  Stack,
   Text,
   Title,
   useMantineTheme,
@@ -29,6 +32,8 @@ import {
 } from "@/koala/study-assistant-context";
 type ReviewDeckPageProps = { deckId: number; decks: DeckSummary[] };
 const ASSISTANT_PANEL_WIDTH = 380;
+const REVIEW_BACKGROUND =
+  "linear-gradient(180deg, rgba(255,240,246,0.35) 0%, rgba(255,255,255,1) 30%)";
 
 const redirect = (destination: string) => ({
   redirect: { destination, permanent: false } as const,
@@ -118,6 +123,24 @@ export const getServerSideProps: GetServerSideProps<
   };
 };
 
+type ReviewStateCardProps = {
+  title: string;
+  children: React.ReactNode;
+};
+
+function ReviewStateCard({ title, children }: ReviewStateCardProps) {
+  return (
+    <Container size="sm" py="xl">
+      <Paper withBorder p="xl" radius="lg">
+        <Stack gap="md">
+          <Title order={3}>{title}</Title>
+          {children}
+        </Stack>
+      </Paper>
+    </Container>
+  );
+}
+
 const MessageState = ({
   title,
   children,
@@ -125,14 +148,9 @@ const MessageState = ({
   title: string;
   children: React.ReactNode;
 }) => (
-  <Container size="md" py="xl">
-    <Box p="md">
-      <Title order={3} mb="md">
-        {title}
-      </Title>
-      <Text>{children}</Text>
-    </Box>
-  </Container>
+  <ReviewStateCard title={title}>
+    <Text c="gray.7">{children}</Text>
+  </ReviewStateCard>
 );
 
 const NoMoreQuizzesState = ({
@@ -148,75 +166,79 @@ const NoMoreQuizzesState = ({
   );
 
   return (
-    <Container size="md" py="xl">
-      <Box p="md">
-        <Title order={3} mb="md">
-          Lesson Complete
-        </Title>
-        <Box mb="lg">
-          <Button onClick={onReload} variant="filled" fullWidth mb="xs">
-            Fetch More Quizzes ({HOTKEYS.CONTINUE})
-          </Button>
-        </Box>
-        <Text mb="md">
+    <ReviewStateCard title="Lesson Complete">
+      <Stack gap="sm">
+        <Button onClick={onReload} variant="filled" fullWidth>
+          Fetch More Quizzes ({HOTKEYS.CONTINUE})
+        </Button>
+        <Text c="gray.7">
           You've reviewed all available quizzes for this session. You can:
         </Text>
-        <Box mb="xs">
+        <Stack gap={4}>
           <Anchor component={Link} href={`/cards?deckId=${deckId}`}>
             Add more cards to this deck
           </Anchor>
-        </Box>
-        <Box mb="xs">
           <Anchor component={Link} href={writingPracticeUrl}>
             Practice Writing
           </Anchor>
-        </Box>
-        <Box>
           <Anchor component={Link} href="/review">
             Go back to deck selection
           </Anchor>
-        </Box>
-      </Box>
-    </Container>
+        </Stack>
+      </Stack>
+    </ReviewStateCard>
   );
 };
 
-function InnerReviewPage({ deckId, decks }: ReviewDeckPageProps) {
+type ReviewLayoutProps = {
+  contentHeight: string;
+  showAssistant: boolean;
+  assistant: React.ReactNode;
+  children: React.ReactNode;
+};
+
+function ReviewLayout({
+  contentHeight,
+  showAssistant,
+  assistant,
+  children,
+}: ReviewLayoutProps) {
+  return (
+    <Box
+      w="100%"
+      h={contentHeight}
+      mih={contentHeight}
+      style={{ background: REVIEW_BACKGROUND }}
+    >
+      <Flex h="100%" mih={0} align="stretch" gap="md">
+        <Box flex={1} h="100%" mih={0} py="md">
+          {children}
+        </Box>
+        {showAssistant && (
+          <Box w={ASSISTANT_PANEL_WIDTH} h="100%" mih={0}>
+            {assistant}
+          </Box>
+        )}
+      </Flex>
+    </Box>
+  );
+}
+
+type ReviewLayoutState = {
+  assistantOpen: boolean;
+  openAssistant: () => void;
+  closeAssistant: () => void;
+  showDesktopAssistant: boolean;
+  assistantOffset: number;
+  isDesktop: boolean;
+  contentHeight: string;
+};
+
+function useReviewLayout(): ReviewLayoutState {
   const [assistantOpen, setAssistantOpen] = React.useState(false);
   const theme = useMantineTheme();
-  const isDesktop = useMediaQuery(`(min-width: ${theme.breakpoints.md})`);
-  const isLargeDesktop = useMediaQuery(
-    `(min-width: ${theme.breakpoints.lg})`,
-  );
-  const { addContextEvent, contextLog } = useStudyAssistantContext();
-  const {
-    state,
-    isFetching,
-    error,
-    currentItem,
-    skipCard,
-    giveUp,
-    completeItem,
-    refetchQuizzes,
-    onGradingResultCaptured: captureGradingResult,
-    progress,
-    cardsRemaining,
-    updateCardFields,
-  } = useReview(deckId);
-  const userSettings = useUserSettings();
-  const card = currentItem ? state.cards[currentItem.cardUUID] : undefined;
-  const assistantCardContext = React.useMemo(
-    () =>
-      card
-        ? {
-            cardId: card.cardId,
-            term: card.term,
-            definition: card.definition,
-            uuid: card.uuid,
-          }
-        : undefined,
-    [card?.cardId, card?.definition, card?.term, card?.uuid],
-  );
+  const isDesktop =
+    useMediaQuery(`(min-width: ${theme.breakpoints.md})`) ?? false;
 
   React.useEffect(() => {
     if (isDesktop) {
@@ -224,71 +246,50 @@ function InnerReviewPage({ deckId, decks }: ReviewDeckPageProps) {
     }
   }, [isDesktop]);
 
-  const headerHeight = React.useMemo(() => {
-    if (isLargeDesktop) {
-      return 80;
-    }
-    if (isDesktop) {
-      return 70;
-    }
-    return 60;
-  }, [isDesktop, isLargeDesktop]);
-  const contentHeight = isDesktop
-    ? `calc(100vh - ${headerHeight}px)`
-    : "100vh";
+  const contentHeight = "100vh";
   const showDesktopAssistant = isDesktop && assistantOpen;
-  const gridTemplate = showDesktopAssistant
-    ? `1fr ${ASSISTANT_PANEL_WIDTH}px`
-    : "1fr";
+  const assistantOffset = showDesktopAssistant ? ASSISTANT_PANEL_WIDTH : 0;
 
-  async function playCard() {
-    if (!card) {
-      console.warn("No card available for playback.");
-      return;
-    }
-    switch (currentItem?.itemType) {
-      case "remedialIntro":
-      case "newWordIntro":
-        return await playTermThenDefinition(
-          card,
-          userSettings.playbackSpeed,
-        );
-      case "speaking":
-      case "newWordOutro":
-      case "remedialOutro":
-        return await playAudio(
-          card.definitionAudio,
-          userSettings.playbackSpeed,
-        );
-      default:
-        console.warn("No audio available for this card type.");
-    }
-  }
+  const openAssistant = React.useCallback(
+    () => setAssistantOpen(true),
+    [],
+  );
+  const closeAssistant = React.useCallback(
+    () => setAssistantOpen(false),
+    [],
+  );
 
-  React.useEffect(() => {
-    if (!card || !currentItem) {
-      return;
-    }
-    addContextEvent(
-      "card-shown",
-      `CardID: ${card.cardId}; Term: ${card.term}; Definition: ${card.definition}; Step: ${currentItem.itemType}`,
-    );
-  }, [
-    addContextEvent,
-    card?.definition,
-    card?.cardId,
-    card?.term,
-    card?.uuid,
-    currentItem?.itemType,
-    currentItem?.stepUuid,
-  ]);
+  return {
+    assistantOpen,
+    openAssistant,
+    closeAssistant,
+    showDesktopAssistant,
+    assistantOffset,
+    isDesktop,
+    contentHeight,
+  };
+}
 
-  React.useEffect(() => {
-    if (currentItem) {
-      playCard();
-    }
-  }, [currentItem]);
+type ReviewHandlersParams = {
+  state: State;
+  addContextEvent: (type: string, summary: string) => void;
+  skipCard: (cardUUID: string) => void;
+  giveUp: (cardUUID: string) => void;
+  captureGradingResult: (cardUUID: string, result: GradingResult) => void;
+  updateCardFields: (
+    cardId: number,
+    updates: { term: string; definition: string },
+  ) => void;
+};
 
+function useReviewHandlers({
+  state,
+  addContextEvent,
+  skipCard,
+  giveUp,
+  captureGradingResult,
+  updateCardFields,
+}: ReviewHandlersParams) {
   const handleGradingResultCaptured = React.useCallback(
     (cardUUID: string, result: GradingResult) => {
       const cardForResult = state.cards[cardUUID];
@@ -361,14 +362,107 @@ function InnerReviewPage({ deckId, decks }: ReviewDeckPageProps) {
     [addContextEvent, state.cards, updateCardFields],
   );
 
-  const openAssistant = React.useCallback(
-    () => setAssistantOpen(true),
-    [],
+  return {
+    handleGradingResultCaptured,
+    handleSkipCard,
+    handleGiveUp,
+    handleAssistantCardEdited,
+  };
+}
+
+function InnerReviewPage({ deckId, decks }: ReviewDeckPageProps) {
+  const layout = useReviewLayout();
+  const { addContextEvent, contextLog } = useStudyAssistantContext();
+  const {
+    state,
+    isFetching,
+    error,
+    currentItem,
+    skipCard,
+    giveUp,
+    completeItem,
+    refetchQuizzes,
+    onGradingResultCaptured: captureGradingResult,
+    progress,
+    cardsRemaining,
+    updateCardFields,
+  } = useReview(deckId);
+  const userSettings = useUserSettings();
+  const card = currentItem ? state.cards[currentItem.cardUUID] : undefined;
+  const assistantCardContext = React.useMemo(
+    () =>
+      card
+        ? {
+            cardId: card.cardId,
+            term: card.term,
+            definition: card.definition,
+            uuid: card.uuid,
+          }
+        : undefined,
+    [card?.cardId, card?.definition, card?.term, card?.uuid],
   );
-  const closeAssistant = React.useCallback(
-    () => setAssistantOpen(false),
-    [],
-  );
+
+  const {
+    handleGradingResultCaptured,
+    handleSkipCard,
+    handleGiveUp,
+    handleAssistantCardEdited,
+  } = useReviewHandlers({
+    state,
+    addContextEvent,
+    skipCard,
+    giveUp,
+    captureGradingResult,
+    updateCardFields,
+  });
+
+  const playCard = React.useCallback(async () => {
+    if (!card) {
+      console.warn("No card available for playback.");
+      return;
+    }
+    switch (currentItem?.itemType) {
+      case "remedialIntro":
+      case "newWordIntro":
+        return await playTermThenDefinition(
+          card,
+          userSettings.playbackSpeed,
+        );
+      case "speaking":
+      case "newWordOutro":
+      case "remedialOutro":
+        return await playAudio(
+          card.definitionAudio,
+          userSettings.playbackSpeed,
+        );
+      default:
+        console.warn("No audio available for this card type.");
+    }
+  }, [card, currentItem?.itemType, userSettings.playbackSpeed]);
+
+  React.useEffect(() => {
+    if (!card || !currentItem) {
+      return;
+    }
+    addContextEvent(
+      "card-shown",
+      `CardID: ${card.cardId}; Term: ${card.term}; Definition: ${card.definition}; Step: ${currentItem.itemType}`,
+    );
+  }, [
+    addContextEvent,
+    card?.definition,
+    card?.cardId,
+    card?.term,
+    card?.uuid,
+    currentItem?.itemType,
+    currentItem?.stepUuid,
+  ]);
+
+  React.useEffect(() => {
+    if (currentItem) {
+      void playCard();
+    }
+  }, [currentItem, playCard]);
 
   if (error) {
     return <MessageState title="Error">{error.message}</MessageState>;
@@ -389,57 +483,43 @@ function InnerReviewPage({ deckId, decks }: ReviewDeckPageProps) {
   const assistantProps = {
     deckId,
     decks,
-    opened: assistantOpen,
-    onOpen: openAssistant,
-    onClose: closeAssistant,
+    opened: layout.assistantOpen,
+    onOpen: layout.openAssistant,
+    onClose: layout.closeAssistant,
     contextLog,
     currentCard: assistantCardContext,
     onCardEdited: handleAssistantCardEdited,
   };
-  const assistantOffset = showDesktopAssistant ? ASSISTANT_PANEL_WIDTH : 0;
 
   return (
     <Container fluid px={0} py={0}>
-      <Box
-        style={{
-          display: "grid",
-          gridTemplateColumns: gridTemplate,
-          gridTemplateRows: "1fr",
-          gap: "16px",
-          alignItems: "stretch",
-          minHeight: contentHeight,
-          height: contentHeight,
-          width: "100%",
-        }}
+      <ReviewLayout
+        contentHeight={layout.contentHeight}
+        showAssistant={layout.showDesktopAssistant}
+        assistant={<ReviewAssistantPane {...assistantProps} />}
       >
-        <Box py="md" style={{ height: "100%", minHeight: 0 }}>
+        <Box h="100%" mih={0}>
           <CardReview
             card={card}
             itemType={currentItem.itemType}
             onSkip={handleSkipCard}
             onGiveUp={handleGiveUp}
-            onProceed={() => {
-              completeItem(currentItem.stepUuid);
-            }}
+            onProceed={() => completeItem(currentItem.stepUuid)}
             onPlayAudio={playCard}
             currentStepUuid={currentItem.stepUuid}
             completeItem={completeItem}
             onGradingResultCaptured={handleGradingResultCaptured}
             progress={progress}
             cardsRemaining={cardsRemaining}
-            onOpenAssistant={openAssistant}
-            assistantOffsetRight={assistantOffset}
+            onOpenAssistant={layout.openAssistant}
+            assistantOffsetRight={layout.assistantOffset}
             disableRecord={Boolean(
               state.gradingResults[currentItem.cardUUID]?.isCorrect,
             )}
           />
         </Box>
-
-        {showDesktopAssistant && (
-          <ReviewAssistantPane {...assistantProps} />
-        )}
-      </Box>
-      {!isDesktop && <ReviewAssistantPane {...assistantProps} />}
+      </ReviewLayout>
+      {!layout.isDesktop && <ReviewAssistantPane {...assistantProps} />}
     </Container>
   );
 }

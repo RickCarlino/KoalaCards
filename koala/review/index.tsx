@@ -1,7 +1,7 @@
-import { Box } from "@mantine/core";
+import { Affix, Box, Paper } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { useHotkeys } from "@mantine/hooks";
-import React from "react";
+import React, { useRef } from "react";
 import { trpc } from "../trpc-config";
 import { ControlBar } from "./control-bar";
 import { HOTKEYS } from "./hotkeys";
@@ -36,7 +36,6 @@ interface CardReviewWithRecordingProps extends CardReviewProps {
   onFail?: () => void;
 }
 
-import { useRef } from "react";
 import { useMediaRecorder } from "@/koala/hooks/use-media-recorder";
 import { useUserSettings } from "@/koala/settings-provider";
 import { playBlob } from "@/koala/utils/play-blob-audio";
@@ -133,14 +132,7 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
   ] as [string, () => void][]);
 
   return (
-    <Box
-      style={{
-        minHeight: "100%",
-        height: "100%",
-        position: "relative",
-        paddingBottom: "80px",
-      }}
-    >
+    <Box h="100%" mih="100%" pos="relative" pb={80}>
       <Box p="md">
         <CardComponent
           {...props}
@@ -149,32 +141,37 @@ export const CardReview: React.FC<CardReviewWithRecordingProps> = (
           }}
         />
       </Box>
-      <Box
-        style={{
-          position: "fixed",
+      <Affix
+        position={{
           bottom: 0,
           left: 0,
           right: props.assistantOffsetRight ?? 0,
-          backgroundColor: "var(--mantine-color-pink-0)",
-          borderTop: "1px solid var(--mantine-color-pink-2)",
-          padding:
-            "calc(var(--mantine-spacing-sm) + env(safe-area-inset-bottom) / 2) var(--mantine-spacing-sm)",
-          zIndex: 100,
         }}
+        zIndex={100}
+        withinPortal={false}
       >
-        <ControlBar
-          {...props}
-          currentStepUuid={currentStepUuid}
-          isRecording={isRecording}
-          onRecordClick={handleRecordToggle}
-          onArchiveClick={handleArchive}
-          progress={props.progress}
-          cardsRemaining={props.cardsRemaining}
-          onOpenAssistant={props.onOpenAssistant}
-          disableRecord={props.disableRecord}
-          onFail={handleFail}
-        />
-      </Box>
+        <Paper
+          withBorder
+          radius={0}
+          bg="pink.0"
+          px="sm"
+          pt="sm"
+          pb="calc(var(--mantine-spacing-sm) + env(safe-area-inset-bottom) / 2)"
+        >
+          <ControlBar
+            {...props}
+            currentStepUuid={currentStepUuid}
+            isRecording={isRecording}
+            onRecordClick={handleRecordToggle}
+            onArchiveClick={handleArchive}
+            progress={props.progress}
+            cardsRemaining={props.cardsRemaining}
+            onOpenAssistant={props.onOpenAssistant}
+            disableRecord={props.disableRecord}
+            onFail={handleFail}
+          />
+        </Paper>
+      </Affix>
     </Box>
   );
 };
