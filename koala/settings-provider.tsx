@@ -9,12 +9,14 @@ import React, {
   useEffect,
   useContext,
 } from "react";
+import { REVIEW_TAKE_DEFAULT } from "@/koala/settings/review-take";
 
 type AppUserSettings = {
   id: number;
   userId: string;
   playbackSpeed: number;
   cardsPerDayMax: number;
+  reviewTakeCount: number;
   playbackPercentage: number;
   createdAt: Date;
   updatedAt: Date;
@@ -22,15 +24,22 @@ type AppUserSettings = {
   writingFirst: boolean;
 };
 
+type AppUserSettingsInput = Omit<AppUserSettings, "reviewTakeCount"> & {
+  reviewTakeCount?: number;
+};
+
 interface UserSettingsProviderProps {
   children: React.ReactNode;
 }
 
-const pickAppUserSettings = (input: AppUserSettings): AppUserSettings => ({
+const pickAppUserSettings = (
+  input: AppUserSettingsInput,
+): AppUserSettings => ({
   id: input.id,
   userId: input.userId,
   playbackSpeed: input.playbackSpeed,
   cardsPerDayMax: input.cardsPerDayMax,
+  reviewTakeCount: input.reviewTakeCount ?? REVIEW_TAKE_DEFAULT,
   playbackPercentage: input.playbackPercentage,
   createdAt: input.createdAt,
   updatedAt: input.updatedAt,
@@ -43,6 +52,7 @@ const EMPTY: AppUserSettings = {
   userId: "0",
   playbackSpeed: 1,
   cardsPerDayMax: 42,
+  reviewTakeCount: REVIEW_TAKE_DEFAULT,
   playbackPercentage: 0.5,
   createdAt: new Date(),
   updatedAt: new Date(),

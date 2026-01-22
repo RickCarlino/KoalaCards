@@ -3,6 +3,10 @@ import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc-procedure";
 import { getUserSettings } from "../auth-helpers";
 import { errorReport } from "@/koala/error-report";
+import {
+  REVIEW_TAKE_MAX,
+  REVIEW_TAKE_MIN,
+} from "@/koala/settings/review-take";
 
 export const editUserSettings = procedure
   .input(
@@ -10,6 +14,11 @@ export const editUserSettings = procedure
       id: z.optional(z.number()),
       playbackSpeed: z.number().min(0.5).max(2),
       cardsPerDayMax: z.number().min(1),
+      reviewTakeCount: z
+        .number()
+        .int()
+        .min(REVIEW_TAKE_MIN)
+        .max(REVIEW_TAKE_MAX),
       playbackPercentage: z.number().min(0).max(1),
       dailyWritingGoal: z.number().int().min(1).optional(),
       writingFirst: z.boolean().optional(),
@@ -33,6 +42,9 @@ export const editUserSettings = procedure
         }),
         ...(input.cardsPerDayMax !== undefined && {
           cardsPerDayMax: input.cardsPerDayMax,
+        }),
+        ...(input.reviewTakeCount !== undefined && {
+          reviewTakeCount: input.reviewTakeCount,
         }),
         ...(input.playbackPercentage !== undefined && {
           playbackPercentage: input.playbackPercentage,

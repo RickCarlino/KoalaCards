@@ -1,5 +1,10 @@
 import { getUserSettingsFromEmail } from "@/koala/auth-helpers";
+import { SectionCard } from "@/koala/components/SectionCard";
 import { prismaClient } from "@/koala/prisma-client";
+import {
+  REVIEW_TAKE_MAX,
+  REVIEW_TAKE_MIN,
+} from "@/koala/settings/review-take";
 import { trpc } from "@/koala/trpc-config";
 import { getLessonMeta } from "@/koala/trpc-routes/get-next-quizzes";
 import { AreaChart } from "@mantine/charts";
@@ -7,7 +12,6 @@ import {
   Avatar,
   Badge,
   Button,
-  Card,
   Container,
   Divider,
   Grid,
@@ -15,6 +19,7 @@ import {
   NumberInput,
   Paper,
   SegmentedControl,
+  SimpleGrid,
   Slider,
   Stack,
   Switch,
@@ -242,13 +247,411 @@ type Props = UnwrapPromise<
   writingChartData: ChartDataPoint[];
 };
 
+type SettingsFormValues = {
+  playbackSpeed: number;
+  cardsPerDayMax: number;
+  reviewTakeCount: number;
+  dailyWritingGoal: number;
+  playbackPercentage: number;
+  writingFirst: boolean;
+};
+
+type SettingsNumberKey =
+  | "playbackSpeed"
+  | "cardsPerDayMax"
+  | "reviewTakeCount"
+  | "dailyWritingGoal"
+  | "playbackPercentage";
+
+type SettingsSectionProps = {
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+};
+
+function SettingsSection({
+  title,
+  description,
+  children,
+}: SettingsSectionProps) {
+  return (
+    <Stack gap="sm">
+      <Stack gap={2}>
+        <Text size="sm" fw={600}>
+          {title}
+        </Text>
+        {description && (
+          <Text size="xs" c="dimmed">
+            {description}
+          </Text>
+        )}
+      </Stack>
+      {children}
+    </Stack>
+  );
+}
+
+type SettingsFormProps = {
+  values: SettingsFormValues;
+  onNumberChange: (
+    value: number | string,
+    name: SettingsNumberKey,
+  ) => void;
+  onWritingFirstChange: (checked: boolean) => void;
+  onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
+  isSaving: boolean;
+};
+
+function SettingsForm({
+  values,
+  onNumberChange,
+  onWritingFirstChange,
+  onSubmit,
+  isSaving,
+}: SettingsFormProps) {
+  return (
+    <form onSubmit={onSubmit}>
+      <Stack gap="lg">
+        <SettingsSection
+          title="Study pace"
+          description="Daily targets and review size."
+        >
+          <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
+            <NumberInput
+              label="New cards per day target"
+              description="Weekly target is 7× this value; daily new adjusts to meet it."
+              id="cardsPerDayMax"
+              name="cardsPerDayMax"
+              value={values.cardsPerDayMax}
+              onChange={(value) => onNumberChange(value, "cardsPerDayMax")}
+              min={1}
+              max={50}
+              required
+            />
+
+            <NumberInput
+              label="Cards per review session"
+              description="Controls how many cards are pulled when you start a deck review."
+              id="reviewTakeCount"
+              name="reviewTakeCount"
+              value={values.reviewTakeCount}
+              onChange={(value) =>
+                onNumberChange(value, "reviewTakeCount")
+              }
+              min={REVIEW_TAKE_MIN}
+              max={REVIEW_TAKE_MAX}
+              step={1}
+              required
+            />
+
+            <NumberInput
+              label="Daily writing goal (characters)"
+              description="Set your daily writing practice target."
+              id="dailyWritingGoal"
+              name="dailyWritingGoal"
+              value={values.dailyWritingGoal}
+              onChange={(value) =>
+                onNumberChange(value, "dailyWritingGoal")
+              }
+              min={0}
+              step={50}
+              required
+            />
+          </SimpleGrid>
+        </SettingsSection>
+
+        <Divider variant="dashed" />
+
+        <SettingsSection
+          title="Audio feedback"
+          description="Adjust playback speed and auto-replay."
+        >
+          <Stack gap="md">
+            <Stack gap={6}>
+              <Group justify="space-between" align="baseline">
+                <Text size="sm" fw={600}>
+                  Audio playback speed
+                </Text>
+                <Text size="xs" c="dimmed">
+                  {values.playbackSpeed.toFixed(2)}x
+                </Text>
+              </Group>
+              <Slider
+                min={0.5}
+                max={2}
+                step={0.05}
+                value={values.playbackSpeed}
+                onChange={(val) => onNumberChange(val, "playbackSpeed")}
+                marks={[
+                  { value: 0.5, label: "0.5x" },
+                  { value: 1, label: "1x" },
+                  { value: 1.5, label: "1.5x" },
+                  { value: 2, label: "2x" },
+                ]}
+              />
+            </Stack>
+
+            <Stack gap={6}>
+              <Text size="sm" fw={600}>
+                Replay your recording
+              </Text>
+              <SegmentedControl
+                fullWidth
+                value={String(values.playbackPercentage)}
+                onChange={(value) =>
+                  onNumberChange(value, "playbackPercentage")
+                }
+                data={[
+                  { label: "Always (100%)", value: "1" },
+                  { label: "Usually (66%)", value: "0.66" },
+                  { label: "Sometimes (33%)", value: "0.33" },
+                  { label: "Never (0%)", value: "0" },
+                ]}
+              />
+              <Text size="xs" c="dimmed">
+                Controls how often your recording replays after you answer.
+              </Text>
+            </Stack>
+          </Stack>
+        </SettingsSection>
+
+        <Divider variant="dashed" />
+
+        <SettingsSection title="Writing flow">
+          <Switch
+            checked={values.writingFirst}
+            onChange={(event) =>
+              onWritingFirstChange(event.currentTarget.checked)
+            }
+            label="Require daily writing before card review"
+            description="Prioritize writing practice by requiring it before card review."
+            size="md"
+          />
+        </SettingsSection>
+
+        <Group justify="flex-end" mt="xs">
+          <Button type="submit" loading={isSaving}>
+            Save Settings
+          </Button>
+        </Group>
+      </Stack>
+    </form>
+  );
+}
+
+type UserProfile = {
+  name?: string | null;
+  email?: string | null;
+  image?: string | null;
+  createdAt?: string | Date | null;
+};
+
+type AccountPanelProps = {
+  user: UserProfile | null | undefined;
+  onSignOut: () => void;
+};
+
+function AccountPanel({ user, onSignOut }: AccountPanelProps) {
+  const initial = user?.name?.[0] || user?.email?.[0] || "U";
+  const displayName = user?.name || user?.email || "Your account";
+  const secondaryEmail = user?.name ? user?.email : null;
+  const joinedAt = user?.createdAt
+    ? formatDate(new Date(user.createdAt))
+    : null;
+
+  return (
+    <Paper withBorder p="lg" radius="lg">
+      <Group justify="space-between" align="center" wrap="wrap" gap="lg">
+        <Group gap="md" wrap="nowrap">
+          <Avatar src={user?.image || undefined} radius="xl" size={64}>
+            {initial}
+          </Avatar>
+          <Stack gap={4}>
+            <Title order={2}>Account & Settings</Title>
+            <Text size="sm" fw={600}>
+              {displayName}
+            </Text>
+            {secondaryEmail && (
+              <Text size="sm" c="dimmed">
+                {secondaryEmail}
+              </Text>
+            )}
+            {joinedAt && (
+              <Badge color="pink" variant="light">
+                Joined {joinedAt}
+              </Badge>
+            )}
+          </Stack>
+        </Group>
+        <Group>
+          <Button component={Link} href="/user/export" variant="light">
+            Import / Export Decks
+          </Button>
+          <Button variant="outline" onClick={onSignOut}>
+            Log Out
+          </Button>
+        </Group>
+      </Group>
+    </Paper>
+  );
+}
+
+type StatRowProps = {
+  label: string;
+  value: number | string;
+};
+
+function StatRow({ label, value }: StatRowProps) {
+  return (
+    <Group gap="xs" justify="space-between">
+      <Text c="gray.7" size="sm">
+        {label}
+      </Text>
+      <Text fw={600}>{value}</Text>
+    </Group>
+  );
+}
+
+const QUICK_STATS_LABELS: Array<[string, string]> = [
+  ["totalCards", "Total cards"],
+  ["newCards", "New cards in deck"],
+  ["quizzesDue", "Cards due now"],
+  ["cardsDueNext24Hours", "Cards due next 24 hours"],
+  ["newCardsLast24Hours", "New cards studied last 24 hours"],
+  ["newCardsLastWeek", "New cards studied this week"],
+  ["uniqueCardsLast24Hours", "Cards studied last 24 hours"],
+  ["uniqueCardsLastWeek", "Cards studied this week"],
+  ["globalUsers", "Active Koala users"],
+];
+
+type QuickStatsCardProps = {
+  stats: Record<string, number | string | undefined>;
+};
+
+function QuickStatsCard({ stats }: QuickStatsCardProps) {
+  return (
+    <SectionCard
+      title="Quick Stats"
+      description="Snapshot across all decks."
+    >
+      <Stack gap="xs">
+        {QUICK_STATS_LABELS.map(([key, label]) => {
+          const value = stats[key];
+          if (value === undefined) {
+            return null;
+          }
+          return <StatRow key={key} label={label} value={value} />;
+        })}
+      </Stack>
+    </SectionCard>
+  );
+}
+
+type ProgressChartProps = {
+  title: string;
+  data: ChartDataPoint[];
+  series: { name: string; color: string; label: string };
+  yAxisLabel: string;
+};
+
+function ProgressChart({
+  title,
+  data,
+  series,
+  yAxisLabel,
+}: ProgressChartProps) {
+  return (
+    <Paper withBorder shadow="xs" p="md" radius="lg">
+      <Stack gap="sm">
+        <Title order={5}>{title}</Title>
+        <AreaChart
+          h={300}
+          data={data}
+          dataKey="date"
+          series={[series]}
+          curveType="natural"
+          yAxisLabel={yAxisLabel}
+          xAxisLabel="Date"
+          tooltipProps={{
+            content: ({ label, payload }) => (
+              <Paper px="md" py="sm" withBorder shadow="md" radius="md">
+                <Text fw={500} mb={5}>
+                  {label}
+                </Text>
+                {payload?.map((item) => (
+                  <Text key={item.name} c={item.color} fz="sm">
+                    {item.name}: {item.value}
+                  </Text>
+                ))}
+              </Paper>
+            ),
+          }}
+          gridProps={{ strokeDasharray: "3 3" }}
+        />
+      </Stack>
+    </Paper>
+  );
+}
+
+type ProgressSectionProps = {
+  cardChartData: ChartDataPoint[];
+  writingChartData: ChartDataPoint[];
+};
+
+function ProgressSection({
+  cardChartData,
+  writingChartData,
+}: ProgressSectionProps) {
+  return (
+    <Stack gap="md">
+      <Group justify="space-between" align="baseline">
+        <Title order={3}>Progress</Title>
+        <Text size="sm" c="dimmed">
+          Last 90 days
+        </Text>
+      </Group>
+      <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg">
+        <ProgressChart
+          title="Total Cards Learned"
+          data={cardChartData}
+          series={{ name: "count", color: "pink", label: "Total Learned" }}
+          yAxisLabel="Cards Learned"
+        />
+        <ProgressChart
+          title="Writing Progress"
+          data={writingChartData}
+          series={{ name: "count", color: "pink", label: "Total" }}
+          yAxisLabel="Characters Written"
+        />
+      </SimpleGrid>
+    </Stack>
+  );
+}
+
 export default function UserSettingsPage(props: Props) {
   const { userSettings, stats, cardChartData, writingChartData } = props;
   const [settings, setSettings] = useState(userSettings);
   const editUserSettings = trpc.editUserSettings.useMutation();
 
-  const handleChange = (value: number | string, name: string) => {
-    setSettings({ ...settings, [name]: parseFloat(String(value)) });
+  const handleNumberChange = (
+    value: number | string,
+    name: SettingsNumberKey,
+  ) => {
+    const parsed =
+      typeof value === "number" ? value : Number.parseFloat(value);
+    if (Number.isNaN(parsed)) {
+      return;
+    }
+    setSettings({ ...settings, [name]: parsed });
+  };
+
+  const handleWritingFirstChange = (checked: boolean) => {
+    setSettings({ ...settings, writingFirst: checked });
+  };
+
+  const handleSignOut = () => {
+    signOut();
+    location.assign("/");
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -272,275 +675,46 @@ export default function UserSettingsPage(props: Props) {
       );
   };
 
-  const statLabels: [keyof typeof stats, string][] = [
-    ["totalCards", "Total cards"],
-    ["newCards", "New cards in deck"],
-    ["quizzesDue", "Cards due now"],
-    ["cardsDueNext24Hours", "Cards due next 24 hours"],
-    ["newCardsLast24Hours", "New cards studied last 24 hours"],
-    ["newCardsLastWeek", "New cards studied this week"],
-    ["uniqueCardsLast24Hours", "Cards studied last 24 hours"],
-    ["uniqueCardsLastWeek", "Cards studied this week"],
-    ["globalUsers", "Active Koala users"],
-  ];
+  const formValues: SettingsFormValues = {
+    playbackSpeed: settings.playbackSpeed,
+    cardsPerDayMax: settings.cardsPerDayMax,
+    reviewTakeCount: settings.reviewTakeCount,
+    dailyWritingGoal: settings.dailyWritingGoal ?? 300,
+    playbackPercentage: settings.playbackPercentage,
+    writingFirst: Boolean(settings.writingFirst),
+  };
 
   return (
-    <Container size="lg" mt="xl">
-      <Stack gap="lg">
-        <Group justify="space-between" align="center">
-          <Group>
-            <Avatar
-              src={settings.user?.image || undefined}
-              radius="xl"
-              size={56}
-            >
-              {settings.user?.name?.[0] ||
-                settings.user?.email?.[0] ||
-                "U"}
-            </Avatar>
-            <Stack gap={2}>
-              <Title order={2}>Account & Settings</Title>
-              <Group gap="xs">
-                {settings.user?.name && (
-                  <Badge variant="light">{settings.user.name}</Badge>
-                )}
-                {settings.user?.email && (
-                  <Badge color="gray" variant="outline">
-                    {settings.user.email}
-                  </Badge>
-                )}
-                {settings.user?.createdAt && (
-                  <Badge color="pink" variant="light">
-                    Joined {formatDate(new Date(settings.user.createdAt))}
-                  </Badge>
-                )}
-              </Group>
-            </Stack>
-          </Group>
-          <Group>
-            <Button component={Link} href="/user/export" variant="light">
-              Import / Export Decks
-            </Button>
-            <Button
-              variant="outline"
-              onClick={(event) => {
-                event.preventDefault();
-                signOut();
-                location.assign("/");
-              }}
-            >
-              Log Out
-            </Button>
-          </Group>
-        </Group>
+    <Container size="xl" mt="xl" pb="xl">
+      <Stack gap="xl">
+        <AccountPanel user={settings.user} onSignOut={handleSignOut} />
 
-        <Grid gutter="lg">
+        <Grid gutter="xl">
           <Grid.Col span={{ base: 12, md: 7 }}>
-            <Paper withBorder p="md" radius="md">
-              <Title order={4} mb="sm">
-                Preferences
-              </Title>
-              <form onSubmit={handleSubmit}>
-                <Stack gap="md">
-                  <Stack gap={6}>
-                    <Text size="sm" fw={600}>
-                      Audio playback speed
-                    </Text>
-                    <Slider
-                      min={0.5}
-                      max={2}
-                      step={0.05}
-                      value={settings.playbackSpeed}
-                      onChange={(val) =>
-                        handleChange(val, "playbackSpeed")
-                      }
-                      marks={[
-                        { value: 0.5, label: "0.5x" },
-                        { value: 1, label: "1x" },
-                        { value: 1.5, label: "1.5x" },
-                        { value: 2, label: "2x" },
-                      ]}
-                    />
-                  </Stack>
-
-                  <NumberInput
-                    label="New cards per day target"
-                    description="Weekly target is 7× this value; daily new adjusts to meet it."
-                    id="cardsPerDayMax"
-                    name="cardsPerDayMax"
-                    value={settings.cardsPerDayMax}
-                    onChange={(value) =>
-                      handleChange(value, "cardsPerDayMax")
-                    }
-                    min={1}
-                    max={50}
-                    required
-                  />
-
-                  <NumberInput
-                    label="Daily writing goal (characters)"
-                    description="Set your daily writing practice target."
-                    id="dailyWritingGoal"
-                    name="dailyWritingGoal"
-                    value={settings.dailyWritingGoal || 300}
-                    onChange={(value) =>
-                      handleChange(value, "dailyWritingGoal")
-                    }
-                    min={0}
-                    step={50}
-                    required
-                  />
-
-                  <SegmentedControl
-                    fullWidth
-                    value={String(settings.playbackPercentage)}
-                    onChange={(value) =>
-                      handleChange(value, "playbackPercentage")
-                    }
-                    data={[
-                      { label: "Always (100%)", value: "1" },
-                      { label: "Usually (66%)", value: "0.66" },
-                      { label: "Sometimes (33%)", value: "0.33" },
-                      { label: "Never (0%)", value: "0" },
-                    ]}
-                  />
-                  <Text size="xs" c="dimmed">
-                    Controls how often your recording is replayed right
-                    after you speak, to reinforce pronunciation.
-                  </Text>
-
-                  <Switch
-                    checked={settings.writingFirst || false}
-                    onChange={(event) =>
-                      setSettings({
-                        ...settings,
-                        writingFirst: event.currentTarget.checked,
-                      })
-                    }
-                    label="Require daily writing before card review"
-                    description="Prioritize writing practice by requiring it before card review"
-                    size="md"
-                    color="blue"
-                  />
-
-                  <Group justify="flex-end" mt="sm">
-                    <Button
-                      type="submit"
-                      loading={editUserSettings.isLoading}
-                    >
-                      Save Settings
-                    </Button>
-                  </Group>
-                </Stack>
-              </form>
-            </Paper>
+            <SectionCard
+              title="Preferences"
+              titleOrder={3}
+              description="Tune your daily pace, session size, and audio feedback."
+            >
+              <SettingsForm
+                values={formValues}
+                onNumberChange={handleNumberChange}
+                onWritingFirstChange={handleWritingFirstChange}
+                onSubmit={handleSubmit}
+                isSaving={editUserSettings.isLoading}
+              />
+            </SectionCard>
           </Grid.Col>
 
           <Grid.Col span={{ base: 12, md: 5 }}>
-            <Stack gap="md">
-              <Card withBorder shadow="xs" p="md" radius="md">
-                <Title order={5} mb="xs">
-                  Quick Stats
-                </Title>
-                <Stack gap={6}>
-                  {statLabels.map(
-                    ([key, label]) =>
-                      stats[key] !== undefined && (
-                        <Group key={key} gap="xs" justify="space-between">
-                          <Text c="dimmed" size="sm">
-                            {label}
-                          </Text>
-                          <Text fw={600}>{stats[key]}</Text>
-                        </Group>
-                      ),
-                  )}
-                </Stack>
-              </Card>
-            </Stack>
+            <QuickStatsCard stats={stats} />
           </Grid.Col>
         </Grid>
 
-        <Divider label="Progress" labelPosition="center" my="sm" />
-
-        <Grid gutter="lg">
-          <Grid.Col span={{ base: 12, md: 6 }}>
-            <Title order={4} mb="xs">
-              Total Cards Learned (90 Days)
-            </Title>
-            <Card withBorder shadow="xs" p="md" radius="md">
-              <AreaChart
-                h={300}
-                data={cardChartData}
-                dataKey="date"
-                series={[
-                  { name: "count", color: "blue", label: "Total Learned" },
-                ]}
-                curveType="natural"
-                yAxisLabel="Cards Learned"
-                xAxisLabel="Date"
-                tooltipProps={{
-                  content: ({ label, payload }) => (
-                    <Paper
-                      px="md"
-                      py="sm"
-                      withBorder
-                      shadow="md"
-                      radius="md"
-                    >
-                      <Text fw={500} mb={5}>
-                        {label}
-                      </Text>
-                      {payload?.map((item) => (
-                        <Text key={item.name} c={item.color} fz="sm">
-                          {item.name}: {item.value}
-                        </Text>
-                      ))}
-                    </Paper>
-                  ),
-                }}
-                gridProps={{ strokeDasharray: "3 3" }}
-              />
-            </Card>
-          </Grid.Col>
-
-          <Grid.Col span={{ base: 12, md: 6 }}>
-            <Title order={4} mb="xs">
-              Total Writing Progress (90 Days)
-            </Title>
-            <Card withBorder shadow="xs" p="md" radius="md">
-              <AreaChart
-                h={300}
-                data={writingChartData}
-                dataKey="date"
-                series={[{ name: "count", color: "blue", label: "Total" }]}
-                curveType="natural"
-                yAxisLabel="Characters Written"
-                xAxisLabel="Date"
-                tooltipProps={{
-                  content: ({ label, payload }) => (
-                    <Paper
-                      px="md"
-                      py="sm"
-                      withBorder
-                      shadow="md"
-                      radius="md"
-                    >
-                      <Text fw={500} mb={5}>
-                        {label}
-                      </Text>
-                      {payload?.map((item) => (
-                        <Text key={item.name} c={item.color} fz="sm">
-                          {item.name}: {item.value}
-                        </Text>
-                      ))}
-                    </Paper>
-                  ),
-                }}
-                gridProps={{ strokeDasharray: "3 3" }}
-              />
-            </Card>
-          </Grid.Col>
-        </Grid>
+        <ProgressSection
+          cardChartData={cardChartData}
+          writingChartData={writingChartData}
+        />
       </Stack>
     </Container>
   );

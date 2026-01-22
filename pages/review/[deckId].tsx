@@ -59,6 +59,7 @@ import { prismaClient } from "@/koala/prisma-client";
 import { compare } from "@/koala/quiz-evaluators/evaluator-utils";
 import { VisualDiff } from "@/koala/review/lesson-steps/visual-diff";
 import { useUserSettings } from "@/koala/settings-provider";
+import { clampReviewTake } from "@/koala/settings/review-take";
 import { LangCode } from "@/koala/shared-types";
 import { trpc } from "@/koala/trpc-config";
 import { getGradeButtonText } from "@/koala/trpc-routes/calculate-scheduling-data";
@@ -1344,9 +1345,14 @@ function useReview(deckId: number) {
 
   const urlParams = new URLSearchParams(window.location.search);
   const takeParam = urlParams.get("take");
-  const take = takeParam
-    ? Math.min(Math.max(parseInt(takeParam, 10), 1), 25)
-    : 5;
+  let requestedTake = userSettings.reviewTakeCount;
+  if (takeParam) {
+    const parsedTake = Number.parseInt(takeParam, 10);
+    if (!Number.isNaN(parsedTake)) {
+      requestedTake = parsedTake;
+    }
+  }
+  const take = clampReviewTake(requestedTake);
   const fetchQuizzes = (currentDeckId: number) => {
     setIsFetching(true);
     mutation
