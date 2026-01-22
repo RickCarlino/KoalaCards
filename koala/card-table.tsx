@@ -1,10 +1,4 @@
-import {
-  ActionIcon,
-  Group,
-  Switch,
-  Table,
-  Text
-} from "@mantine/core";
+import { ActionIcon, Group, Switch, Table, Text } from "@mantine/core";
 import { IconPencil, IconTrash } from "@tabler/icons-react";
 import { useRouter } from "next/router";
 import React from "react";

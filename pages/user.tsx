@@ -13,9 +13,9 @@ import {
   Badge,
   Button,
   Container,
-  Divider,
   Grid,
   Group,
+  InputLabel,
   NumberInput,
   Paper,
   SegmentedControl,
@@ -263,20 +263,20 @@ type SettingsNumberKey =
   | "dailyWritingGoal"
   | "playbackPercentage";
 
-type SettingsSectionProps = {
+type SettingsGroupProps = {
   title: string;
   description?: string;
   children: React.ReactNode;
 };
 
-function SettingsSection({
+function SettingsGroup({
   title,
   description,
   children,
-}: SettingsSectionProps) {
+}: SettingsGroupProps) {
   return (
-    <Stack gap="sm">
-      <Stack gap={2}>
+    <Stack gap="md">
+      <Stack gap={4}>
         <Text size="sm" fw={600}>
           {title}
         </Text>
@@ -286,8 +286,45 @@ function SettingsSection({
           </Text>
         )}
       </Stack>
-      {children}
+      <Stack gap="md">{children}</Stack>
     </Stack>
+  );
+}
+
+type SettingsRowProps = {
+  label: string;
+  description?: string;
+  labelFor?: string;
+  children: React.ReactNode;
+};
+
+function SettingsRow({
+  label,
+  description,
+  labelFor,
+  children,
+}: SettingsRowProps) {
+  return (
+    <Grid align="flex-start" gutter={{ base: "sm", sm: "lg" }}>
+      <Grid.Col span={{ base: 12, sm: 5 }}>
+        <Stack gap={4}>
+          <InputLabel
+            size="sm"
+            fw={600}
+            labelElement={labelFor ? "label" : "div"}
+            htmlFor={labelFor}
+          >
+            {label}
+          </InputLabel>
+          {description && (
+            <Text size="xs" c="dimmed">
+              {description}
+            </Text>
+          )}
+        </Stack>
+      </Grid.Col>
+      <Grid.Col span={{ base: 12, sm: 7 }}>{children}</Grid.Col>
+    </Grid>
   );
 }
 
@@ -311,15 +348,17 @@ function SettingsForm({
 }: SettingsFormProps) {
   return (
     <form onSubmit={onSubmit}>
-      <Stack gap="lg">
-        <SettingsSection
+      <Stack gap="xl">
+        <SettingsGroup
           title="Study pace"
-          description="Daily targets and review size."
+          description="Daily targets and session size."
         >
-          <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
+          <SettingsRow
+            label="New cards per day target"
+            description="Weekly target is 7x this value; daily new adjusts to meet it."
+            labelFor="cardsPerDayMax"
+          >
             <NumberInput
-              label="New cards per day target"
-              description="Weekly target is 7× this value; daily new adjusts to meet it."
               id="cardsPerDayMax"
               name="cardsPerDayMax"
               value={values.cardsPerDayMax}
@@ -327,11 +366,16 @@ function SettingsForm({
               min={1}
               max={50}
               required
+              size="sm"
             />
+          </SettingsRow>
 
+          <SettingsRow
+            label="Cards per review session"
+            description="Cards pulled when you start a deck review."
+            labelFor="reviewTakeCount"
+          >
             <NumberInput
-              label="Cards per review session"
-              description="Controls how many cards are pulled when you start a deck review."
               id="reviewTakeCount"
               name="reviewTakeCount"
               value={values.reviewTakeCount}
@@ -342,11 +386,16 @@ function SettingsForm({
               max={REVIEW_TAKE_MAX}
               step={1}
               required
+              size="sm"
             />
+          </SettingsRow>
 
+          <SettingsRow
+            label="Daily writing goal (characters)"
+            description="Your daily writing practice target."
+            labelFor="dailyWritingGoal"
+          >
             <NumberInput
-              label="Daily writing goal (characters)"
-              description="Set your daily writing practice target."
               id="dailyWritingGoal"
               name="dailyWritingGoal"
               value={values.dailyWritingGoal}
@@ -356,82 +405,86 @@ function SettingsForm({
               min={0}
               step={50}
               required
+              size="sm"
             />
-          </SimpleGrid>
-        </SettingsSection>
+          </SettingsRow>
+        </SettingsGroup>
 
-        <Divider variant="dashed" />
-
-        <SettingsSection
+        <SettingsGroup
           title="Audio feedback"
-          description="Adjust playback speed and auto-replay."
+          description="Playback speed and auto-replay."
         >
-          <Stack gap="md">
-            <Stack gap={6}>
-              <Group justify="space-between" align="baseline">
+          <SettingsRow
+            label="Audio playback speed"
+            description="Adjust how fast spoken audio plays."
+          >
+            <Stack gap="xs">
+              <Group justify="flex-end">
                 <Text size="sm" fw={600}>
-                  Audio playback speed
-                </Text>
-                <Text size="xs" c="dimmed">
                   {values.playbackSpeed.toFixed(2)}x
                 </Text>
               </Group>
               <Slider
+                id="playbackSpeed"
                 min={0.5}
                 max={2}
                 step={0.05}
                 value={values.playbackSpeed}
                 onChange={(val) => onNumberChange(val, "playbackSpeed")}
+                label={(value) => `${value.toFixed(2)}x`}
                 marks={[
                   { value: 0.5, label: "0.5x" },
-                  { value: 1, label: "1x" },
-                  { value: 1.5, label: "1.5x" },
                   { value: 2, label: "2x" },
                 ]}
               />
             </Stack>
+          </SettingsRow>
 
-            <Stack gap={6}>
-              <Text size="sm" fw={600}>
-                Replay your recording
-              </Text>
-              <SegmentedControl
-                fullWidth
-                value={String(values.playbackPercentage)}
-                onChange={(value) =>
-                  onNumberChange(value, "playbackPercentage")
-                }
-                data={[
-                  { label: "Always (100%)", value: "1" },
-                  { label: "Usually (66%)", value: "0.66" },
-                  { label: "Sometimes (33%)", value: "0.33" },
-                  { label: "Never (0%)", value: "0" },
-                ]}
-              />
-              <Text size="xs" c="dimmed">
-                Controls how often your recording replays after you answer.
-              </Text>
-            </Stack>
-          </Stack>
-        </SettingsSection>
+          <SettingsRow
+            label="Replay your recording"
+            description="How often your recording replays after you answer."
+          >
+            <SegmentedControl
+              fullWidth
+              value={String(values.playbackPercentage)}
+              onChange={(value) =>
+                onNumberChange(value, "playbackPercentage")
+              }
+              data={[
+                { label: "Always 100%", value: "1" },
+                { label: "Usually 66%", value: "0.66" },
+                { label: "Sometimes 33%", value: "0.33" },
+                { label: "Never 0%", value: "0" },
+              ]}
+              size="sm"
+              aria-label="Replay your recording"
+            />
+          </SettingsRow>
+        </SettingsGroup>
 
-        <Divider variant="dashed" />
-
-        <SettingsSection title="Writing flow">
-          <Switch
-            checked={values.writingFirst}
-            onChange={(event) =>
-              onWritingFirstChange(event.currentTarget.checked)
-            }
+        <SettingsGroup
+          title="Writing flow"
+          description="Prioritize writing before review when you need focus."
+        >
+          <SettingsRow
             label="Require daily writing before card review"
-            description="Prioritize writing practice by requiring it before card review."
-            size="md"
-          />
-        </SettingsSection>
+            description="Encourages consistent writing practice."
+            labelFor="writingFirst"
+          >
+            <Switch
+              id="writingFirst"
+              checked={values.writingFirst}
+              onChange={(event) =>
+                onWritingFirstChange(event.currentTarget.checked)
+              }
+              size="md"
+            />
+          </SettingsRow>
+        </SettingsGroup>
 
-        <Group justify="flex-end" mt="xs">
-          <Button type="submit" loading={isSaving}>
-            Save Settings
+        <Group justify="flex-end">
+          <Button type="submit" loading={isSaving} size="sm">
+            Save settings
           </Button>
         </Group>
       </Stack>
@@ -460,15 +513,22 @@ function AccountPanel({ user, onSignOut }: AccountPanelProps) {
     : null;
 
   return (
-    <Paper withBorder p="lg" radius="lg">
-      <Group justify="space-between" align="center" wrap="wrap" gap="lg">
-        <Group gap="md" wrap="nowrap">
-          <Avatar src={user?.image || undefined} radius="xl" size={64}>
+    <Paper withBorder p="xl" radius="lg">
+      <Group
+        justify="space-between"
+        align="flex-start"
+        wrap="wrap"
+        gap="lg"
+      >
+        <Group gap="lg" wrap="nowrap">
+          <Avatar src={user?.image || undefined} radius="xl" size={72}>
             {initial}
           </Avatar>
-          <Stack gap={4}>
-            <Title order={2}>Account & Settings</Title>
-            <Text size="sm" fw={600}>
+          <Stack gap={6}>
+            <Text size="xs" c="dimmed" fw={600}>
+              Account
+            </Text>
+            <Text size="lg" fw={600}>
               {displayName}
             </Text>
             {secondaryEmail && (
@@ -477,20 +537,25 @@ function AccountPanel({ user, onSignOut }: AccountPanelProps) {
               </Text>
             )}
             {joinedAt && (
-              <Badge color="pink" variant="light">
+              <Badge color="pink" variant="light" radius="xl" size="sm">
                 Joined {joinedAt}
               </Badge>
             )}
           </Stack>
         </Group>
-        <Group>
-          <Button component={Link} href="/user/export" variant="light">
+        <Stack gap="xs" align="flex-end">
+          <Button
+            component={Link}
+            href="/user/export"
+            variant="light"
+            size="sm"
+          >
             Import / Export Decks
           </Button>
-          <Button variant="outline" onClick={onSignOut}>
+          <Button variant="outline" onClick={onSignOut} size="sm">
             Log Out
           </Button>
-        </Group>
+        </Stack>
       </Group>
     </Paper>
   );
@@ -503,11 +568,13 @@ type StatRowProps = {
 
 function StatRow({ label, value }: StatRowProps) {
   return (
-    <Group gap="xs" justify="space-between">
-      <Text c="gray.7" size="sm">
+    <Group gap="xs" justify="space-between" align="baseline">
+      <Text c="dimmed" size="sm">
         {label}
       </Text>
-      <Text fw={600}>{value}</Text>
+      <Text fw={600} size="sm">
+        {value}
+      </Text>
     </Group>
   );
 }
@@ -529,19 +596,20 @@ type QuickStatsCardProps = {
 };
 
 function QuickStatsCard({ stats }: QuickStatsCardProps) {
+  const rows = QUICK_STATS_LABELS.flatMap(([key, label]) => {
+    const value = stats[key];
+    return value === undefined ? [] : [{ key, label, value }];
+  });
+
   return (
     <SectionCard
       title="Quick Stats"
       description="Snapshot across all decks."
     >
-      <Stack gap="xs">
-        {QUICK_STATS_LABELS.map(([key, label]) => {
-          const value = stats[key];
-          if (value === undefined) {
-            return null;
-          }
-          return <StatRow key={key} label={label} value={value} />;
-        })}
+      <Stack gap="sm">
+        {rows.map((row) => (
+          <StatRow key={row.key} label={row.label} value={row.value} />
+        ))}
       </Stack>
     </SectionCard>
   );
@@ -685,8 +753,15 @@ export default function UserSettingsPage(props: Props) {
   };
 
   return (
-    <Container size="xl" mt="xl" pb="xl">
+    <Container size="lg" mt="xl" pb="xl">
       <Stack gap="xl">
+        <Stack gap={4}>
+          <Title order={2}>Settings</Title>
+          <Text size="sm" c="dimmed">
+            Adjust your study pace, audio feedback, and writing flow.
+          </Text>
+        </Stack>
+
         <AccountPanel user={settings.user} onSignOut={handleSignOut} />
 
         <Grid gutter="xl">
@@ -694,7 +769,7 @@ export default function UserSettingsPage(props: Props) {
             <SectionCard
               title="Preferences"
               titleOrder={3}
-              description="Tune your daily pace, session size, and audio feedback."
+              description="Daily pace, review size, and audio feedback."
             >
               <SettingsForm
                 values={formValues}
