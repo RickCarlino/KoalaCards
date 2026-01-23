@@ -4,6 +4,8 @@ import {
   DeckWithReviewInfo,
 } from "@/koala/decks/decks-with-review-info";
 import { getServersideUser } from "@/koala/get-serverside-user";
+import { useUserSettings } from "@/koala/settings-provider";
+import { clampReviewTake } from "@/koala/settings/review-take";
 import { trpc } from "@/koala/trpc-config";
 import {
   ActionIcon,
@@ -39,8 +41,6 @@ import { useCallback, useState } from "react";
 type ReviewPageProps = {
   decks: DeckWithReviewInfo[];
 };
-
-const STUDY_TAKE_COUNT = 5;
 
 type DeckTitleFieldProps = {
   isEditing: boolean;
@@ -252,9 +252,15 @@ type DeckStatsProps = {
 
 type DeckFooterProps = DeckStatsProps & {
   deckId: number;
+  takeCount: number;
 };
 
-function DeckFooter({ deckId, quizzesDue, newQuizzes }: DeckFooterProps) {
+function DeckFooter({
+  deckId,
+  quizzesDue,
+  newQuizzes,
+  takeCount,
+}: DeckFooterProps) {
   return (
     <Group justify="space-between" align="center" gap="sm" wrap="wrap">
       <Group gap="xs">
@@ -267,7 +273,7 @@ function DeckFooter({ deckId, quizzesDue, newQuizzes }: DeckFooterProps) {
       </Group>
       <Button
         component={Link}
-        href={`/review/${deckId}?take=${STUDY_TAKE_COUNT}`}
+        href={`/review/${deckId}?take=${takeCount}`}
         leftSection={<IconStars size={16} />}
         color="pink"
         variant="light"
@@ -304,6 +310,8 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
   const [selectedDeckIds, setSelectedDeckIds] = useState<number[]>([]);
   const [isMerging, setIsMerging] = useState(false);
   const [mergeError, setMergeError] = useState<string | null>(null);
+  const userSettings = useUserSettings();
+  const reviewTakeCount = clampReviewTake(userSettings.reviewTakeCount);
 
   const mergeDecks = trpc.mergeDecks.useMutation({
     onSuccess: () => {
@@ -433,6 +441,7 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
             quizzesDue={deck.quizzesDue}
             newQuizzes={deck.newQuizzes}
             deckId={deck.id}
+            takeCount={reviewTakeCount}
           />
         </Stack>
       </Card>

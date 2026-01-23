@@ -1,4 +1,4 @@
-import { Badge, Button, Group, Switch, Table, Text } from "@mantine/core";
+import { ActionIcon, Group, Switch, Table, Text } from "@mantine/core";
 import { IconPencil, IconTrash } from "@tabler/icons-react";
 import { useRouter } from "next/router";
 import React from "react";
@@ -88,11 +88,6 @@ function CardRow({ card, onDelete }: CardRowProps) {
             disabled={toggling}
             size="sm"
           />
-          {paused && (
-            <Badge size="xs" color="red" variant="light">
-              Paused
-            </Badge>
-          )}
         </Group>
       </td>
       <td>
@@ -107,20 +102,24 @@ function CardRow({ card, onDelete }: CardRowProps) {
       <td>{formatDateISO(card.createdAt)}</td>
       <td>
         <Group gap="xs" wrap="nowrap">
-          <Button
+          <ActionIcon
             onClick={() => router.push(`/cards/${card.id}`)}
             variant="light"
+            size="lg"
+            aria-label="Edit card"
           >
             <IconPencil stroke={1.5} />
-          </Button>
-          <Button
+          </ActionIcon>
+          <ActionIcon
             disabled={disabled}
             color={color}
             onClick={deleteCard}
             variant="outline"
+            size="lg"
+            aria-label="Delete card"
           >
             <IconTrash stroke={1.5} />
-          </Button>
+          </ActionIcon>
         </Group>
       </td>
     </tr>
@@ -132,7 +131,13 @@ export const CardTable: React.FC<CardTableProps> = ({
   onDelete,
 }) => {
   return (
-    <Table striped highlightOnHover withTableBorder withColumnBorders>
+    <Table
+      highlightOnHover
+      horizontalSpacing="md"
+      verticalSpacing="sm"
+      striped
+      stripedColor="pink.0"
+    >
       <thead>
         <tr>
           <th>Paused</th>

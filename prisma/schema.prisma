@@ -63,6 +63,7 @@ model UserSettings {
   playbackSpeed      Float    @default(1)
   // Cards/day max
   cardsPerDayMax     Int      @default(7)
+  reviewTakeCount    Int      @default(5)
   // Value from 0 to 1 representing the percentage liklihood
   // of a random playback of the user's audio.
   playbackPercentage Float    @default(0.125)

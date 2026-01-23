@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  REVIEW_TAKE_MAX,
+  REVIEW_TAKE_MIN,
+} from "@/koala/settings/review-take";
 
 const Quiz = z.object({
   cardId: z.number(),
@@ -28,6 +32,6 @@ export const QuizList = z.object({
 });
 
 export const QuizInput = z.object({
-  take: z.number(),
+  take: z.number().int().min(REVIEW_TAKE_MIN).max(REVIEW_TAKE_MAX),
   deckId: z.number(),
 });
