@@ -411,9 +411,9 @@ function FiltersPanel({
       description="Search across cards and refine the list."
     >
       <form onSubmit={onSubmit}>
-        <Stack gap="md">
-          <Grid gutter="md">
-            <Grid.Col span={{ base: 12, md: 6 }}>
+        <Stack gap="lg">
+          <Grid gutter="lg">
+            <Grid.Col span={{ base: 12, md: 12, xl: 6 }}>
               <TextInput
                 label="Search"
                 placeholder="Find by term or definition"
@@ -423,7 +423,7 @@ function FiltersPanel({
                 }
               />
             </Grid.Col>
-            <Grid.Col span={{ base: 12, md: 6 }}>
+            <Grid.Col span={{ base: 12, md: 12, xl: 6 }}>
               <Select
                 label="Deck"
                 value={selectedDeckId}
@@ -431,7 +431,7 @@ function FiltersPanel({
                 data={deckOptions}
               />
             </Grid.Col>
-            <Grid.Col span={{ base: 12, md: 5 }}>
+            <Grid.Col span={{ base: 12, md: 12, xl: 6 }}>
               <Select
                 label="Sort by"
                 value={sortBy}
@@ -441,7 +441,7 @@ function FiltersPanel({
                 data={SORT_OPTIONS}
               />
             </Grid.Col>
-            <Grid.Col span={{ base: 12, md: 4 }}>
+            <Grid.Col span={{ base: 12, md: 12, xl: 6 }}>
               <Select
                 label="Order"
                 value={sortOrder}
@@ -451,14 +451,13 @@ function FiltersPanel({
                 data={ORDER_OPTIONS}
               />
             </Grid.Col>
-            <Grid.Col span={{ base: 12, md: 3 }}>
+            <Grid.Col span={{ base: 12 }}>
               <Checkbox
                 label="Show paused only"
                 checked={showPaused}
                 onChange={(event) =>
                   onShowPausedChange(event.currentTarget.checked)
                 }
-                mt="md"
               />
             </Grid.Col>
             <Grid.Col span={{ base: 12 }}>

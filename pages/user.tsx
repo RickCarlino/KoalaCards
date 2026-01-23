@@ -432,10 +432,6 @@ function SettingsForm({
                 value={values.playbackSpeed}
                 onChange={(val) => onNumberChange(val, "playbackSpeed")}
                 label={(value) => `${value.toFixed(2)}x`}
-                marks={[
-                  { value: 0.5, label: "0.5x" },
-                  { value: 2, label: "2x" },
-                ]}
               />
             </Stack>
           </SettingsRow>
@@ -451,10 +447,10 @@ function SettingsForm({
                 onNumberChange(value, "playbackPercentage")
               }
               data={[
-                { label: "Always 100%", value: "1" },
-                { label: "Usually 66%", value: "0.66" },
-                { label: "Sometimes 33%", value: "0.33" },
-                { label: "Never 0%", value: "0" },
+                { label: "100%", value: "1" },
+                { label: "66%", value: "0.66" },
+                { label: "33%", value: "0.33" },
+                { label: "0%", value: "0" },
               ]}
               size="sm"
               aria-label="Replay your recording"
