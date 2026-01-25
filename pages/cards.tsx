@@ -57,6 +57,8 @@ const SORT_OPTIONS = [
   { label: "Date Created", value: "createdAt" },
   { label: "Date Failed", value: "lastFailure" },
   { label: "Definition", value: "definition" },
+  { label: "Difficulty", value: "difficulty" },
+  { label: "Stability", value: "stability" },
   { label: "Paused", value: "flagged" },
   { label: "Term", value: "term" },
   { label: "Last Review", value: "lastReview" },
