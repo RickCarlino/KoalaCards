@@ -1178,7 +1178,7 @@ type CountdownTimerOptions = {
   isPaused: boolean;
   resetKey: string | number;
   onComplete: () => void;
-  onStart?: () => void;
+  onTick?: () => void;
 };
 
 const RECORDING_COUNTDOWN_SECONDS = 10;
@@ -1189,27 +1189,25 @@ function useCountdownTimer({
   isPaused,
   resetKey,
   onComplete,
-  onStart,
+  onTick,
 }: CountdownTimerOptions): number {
   const [remainingSeconds, setRemainingSeconds] =
     React.useState(durationSeconds);
   const onCompleteRef = React.useRef(onComplete);
-  const onStartRef = React.useRef(onStart);
+  const onTickRef = React.useRef(onTick);
   const completedRef = React.useRef(false);
-  const startedRef = React.useRef(false);
 
   React.useEffect(() => {
     onCompleteRef.current = onComplete;
   }, [onComplete]);
 
   React.useEffect(() => {
-    onStartRef.current = onStart;
-  }, [onStart]);
+    onTickRef.current = onTick;
+  }, [onTick]);
 
   React.useEffect(() => {
     setRemainingSeconds(durationSeconds);
     completedRef.current = false;
-    startedRef.current = false;
   }, [durationSeconds, resetKey]);
 
   React.useEffect(() => {
@@ -1219,10 +1217,10 @@ function useCountdownTimer({
 
     const intervalId = window.setInterval(() => {
       setRemainingSeconds((prev) => {
-        if (!startedRef.current) {
-          startedRef.current = true;
-          onStartRef.current?.();
+        if (prev <= 0) {
+          return 0;
         }
+        onTickRef.current?.();
         if (prev <= 1) {
           if (!completedRef.current) {
             completedRef.current = true;
@@ -1296,7 +1294,7 @@ function useReviewTimers({
     isPaused: responsePaused,
     resetKey: currentStepUuid,
     onComplete: onResponseTimeout,
-    onStart: () => {
+    onTick: () => {
       void playBeep({
         frequencyHz: 560,
         durationMs: 160,
