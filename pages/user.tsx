@@ -253,6 +253,7 @@ type SettingsFormValues = {
   reviewTakeCount: number;
   dailyWritingGoal: number;
   playbackPercentage: number;
+  responseTimeoutSeconds: number;
   writingFirst: boolean;
 };
 
@@ -261,7 +262,8 @@ type SettingsNumberKey =
   | "cardsPerDayMax"
   | "reviewTakeCount"
   | "dailyWritingGoal"
-  | "playbackPercentage";
+  | "playbackPercentage"
+  | "responseTimeoutSeconds";
 
 type SettingsGroupProps = {
   title: string;
@@ -454,6 +456,29 @@ function SettingsForm({
               ]}
               size="sm"
               aria-label="Replay your recording"
+            />
+          </SettingsRow>
+        </SettingsGroup>
+
+        <SettingsGroup
+          title="Response timing"
+          description='Gentle countdowns for speaking and "How would you say" prompts.'
+        >
+          <SettingsRow
+            label="Response timeout (seconds)"
+            description="Set to 0 to disable."
+            labelFor="responseTimeoutSeconds"
+          >
+            <NumberInput
+              id="responseTimeoutSeconds"
+              name="responseTimeoutSeconds"
+              value={values.responseTimeoutSeconds}
+              onChange={(value) =>
+                onNumberChange(value, "responseTimeoutSeconds")
+              }
+              min={0}
+              step={1}
+              size="sm"
             />
           </SettingsRow>
         </SettingsGroup>
@@ -745,6 +770,7 @@ export default function UserSettingsPage(props: Props) {
     reviewTakeCount: settings.reviewTakeCount,
     dailyWritingGoal: settings.dailyWritingGoal ?? 300,
     playbackPercentage: settings.playbackPercentage,
+    responseTimeoutSeconds: settings.responseTimeoutSeconds ?? 0,
     writingFirst: Boolean(settings.writingFirst),
   };
 

@@ -14,6 +14,7 @@ import {
   Menu,
   Paper,
   Progress,
+  RingProgress,
   Select,
   Stack,
   Text,
@@ -158,6 +159,7 @@ type CardReviewProps = {
     result: GradingResult,
   ) => void;
   onProvideAudioHandler?: (handler: (blob: Blob) => Promise<void>) => void;
+  onResponsePhaseChange?: (phase: ResponsePhase) => void;
 };
 
 type CardUI = React.FC<CardReviewProps>;
@@ -191,6 +193,7 @@ type BeepOptions = {
   durationMs?: number;
   frequencyHz?: number;
   volume?: number;
+  tone?: OscillatorType;
 };
 
 type RecorderControls = {
@@ -314,7 +317,9 @@ type IntroCardProps = CardReviewProps & {
 
 type IntroPhase = "ready" | "processing" | "retry" | "success";
 
-type QuizPhase = "ready" | "processing" | "success" | "failure";
+type ResponsePhase = "ready" | "processing" | "success" | "failure";
+
+type QuizPhase = ResponsePhase;
 
 type QuizType = "speaking" | "newWordOutro" | "remedialOutro";
 
@@ -330,7 +335,20 @@ type QuizCardProps = CardReviewProps & {
   quizType: QuizType;
 };
 
-type RemedialOutroPhase = "ready" | "processing" | "success" | "failure";
+type RemedialOutroPhase = ResponsePhase;
+
+type TimerDockMode = "hidden" | "response" | "recording";
+
+type TimerDockState = {
+  mode: TimerDockMode;
+  remainingSeconds: number;
+  totalSeconds: number;
+  isPaused: boolean;
+};
+
+type TimerDockProps = TimerDockState & {
+  compact?: boolean;
+};
 
 type ControlBarProps = {
   card: Quiz;
@@ -532,6 +550,9 @@ const ASSISTANT_PANEL_WIDTH = 380;
 const REVIEW_BACKGROUND =
   "linear-gradient(180deg, rgba(255,240,246,0.35) 0%, rgba(255,255,255,1) 30%)";
 
+const TIMER_DOCK_BACKGROUND =
+  "linear-gradient(135deg, rgba(255,240,246,0.95) 0%, rgba(255,255,255,0.9) 60%, rgba(255,234,246,0.95) 100%)";
+
 const HOTKEYS = {
   GRADE_AGAIN: "a",
   GRADE_HARD: "s",
@@ -707,6 +728,39 @@ let playbackQueue: PlaybackQueue = {
   controller: new AbortController(),
 };
 
+type AudioPlaybackListener = (isPlaying: boolean) => void;
+
+let activeAudioCount = 0;
+let isAudioPlaying = false;
+const audioPlaybackListeners = new Set<AudioPlaybackListener>();
+
+const notifyAudioPlayback = () => {
+  const nextState = activeAudioCount > 0;
+  if (nextState === isAudioPlaying) {
+    return;
+  }
+  isAudioPlaying = nextState;
+  audioPlaybackListeners.forEach((listener) => listener(nextState));
+};
+
+const startAudioPlayback = () => {
+  activeAudioCount += 1;
+  notifyAudioPlayback();
+};
+
+const stopAudioPlayback = () => {
+  activeAudioCount = Math.max(0, activeAudioCount - 1);
+  notifyAudioPlayback();
+};
+
+const subscribeToAudioPlayback = (listener: AudioPlaybackListener) => {
+  audioPlaybackListeners.add(listener);
+  listener(isAudioPlaying);
+  return () => {
+    audioPlaybackListeners.delete(listener);
+  };
+};
+
 const stopCurrentAudio = () => {
   if (!currentAudio) {
     return;
@@ -743,6 +797,7 @@ const playSingleAudio = (
     }
 
     let done = false;
+    let playbackTracked = false;
     const { controller } = playbackQueue;
     const audio = new Audio(urlOrDataURI);
     currentAudio = audio;
@@ -755,11 +810,28 @@ const playSingleAudio = (
       audio.playbackRate = 0.6;
     }
 
+    const startPlayback = () => {
+      if (playbackTracked) {
+        return;
+      }
+      playbackTracked = true;
+      startAudioPlayback();
+    };
+
+    const stopPlayback = () => {
+      if (!playbackTracked) {
+        return;
+      }
+      playbackTracked = false;
+      stopAudioPlayback();
+    };
+
     const cleanup = () => {
       if (currentAudio === audio) {
         stopCurrentAudio();
       }
       controller.signal.removeEventListener("abort", handleAbort);
+      stopPlayback();
     };
 
     const fail = (error: unknown) => {
@@ -797,6 +869,7 @@ const playSingleAudio = (
     audio.onerror = fail;
     lastAudio = urlOrDataURI;
 
+    startPlayback();
     audio.play().catch(fail);
   });
 };
@@ -901,29 +974,66 @@ const playBlob = (blob: Blob, playbackRate?: number): Promise<void> => {
     audio.playbackRate = playbackRate;
   }
 
+  let playbackTracked = false;
+  const startPlayback = () => {
+    if (playbackTracked) {
+      return;
+    }
+    playbackTracked = true;
+    startAudioPlayback();
+  };
+
+  const stopPlayback = () => {
+    if (!playbackTracked) {
+      return;
+    }
+    playbackTracked = false;
+    stopAudioPlayback();
+  };
+
   const cleanup = () => {
     audio.pause();
     URL.revokeObjectURL(url);
+    stopPlayback();
   };
 
   return new Promise((resolve) => {
-    audio.onended = () => {
+    let done = false;
+    const finish = () => {
+      if (done) {
+        return;
+      }
+      done = true;
       cleanup();
       resolve();
     };
-    audio.onerror = () => {
-      cleanup();
-      resolve();
-    };
-    void audio.play();
+    audio.onended = finish;
+    audio.onerror = finish;
+    startPlayback();
+    void audio.play().catch(finish);
   });
 };
+
+function useAudioPlaybackState(): boolean {
+  const [isPlaying, setIsPlaying] = React.useState(isAudioPlaying);
+
+  React.useEffect(() => {
+    return subscribeToAudioPlayback(setIsPlaying);
+  }, []);
+
+  return isPlaying;
+}
 
 async function playBeep(options: BeepOptions = {}): Promise<void> {
   if (typeof window === "undefined") {
     return;
   }
-  const { durationMs = 120, frequencyHz = 880, volume = 0.15 } = options;
+  const {
+    durationMs = 120,
+    frequencyHz = 880,
+    volume = 0.15,
+    tone = "sine",
+  } = options;
 
   const win = window as typeof window & {
     webkitAudioContext?: typeof AudioContext;
@@ -946,7 +1056,7 @@ async function playBeep(options: BeepOptions = {}): Promise<void> {
     const attack = 0.01;
     const decay = Math.max(0.01, durationMs / 1000 - attack);
 
-    osc.type = "sine";
+    osc.type = tone;
     osc.frequency.value = frequencyHz;
 
     gain.gain.setValueAtTime(0, now);
@@ -1060,6 +1170,174 @@ function useMediaRecorder(): RecorderControls {
   }
 
   return { start, stop, isRecording, mimeType };
+}
+
+type CountdownTimerOptions = {
+  durationSeconds: number;
+  isActive: boolean;
+  isPaused: boolean;
+  resetKey: string | number;
+  onComplete: () => void;
+};
+
+const RECORDING_COUNTDOWN_SECONDS = 10;
+
+function useCountdownTimer({
+  durationSeconds,
+  isActive,
+  isPaused,
+  resetKey,
+  onComplete,
+}: CountdownTimerOptions): number {
+  const [remainingSeconds, setRemainingSeconds] =
+    React.useState(durationSeconds);
+  const onCompleteRef = React.useRef(onComplete);
+  const completedRef = React.useRef(false);
+
+  React.useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+
+  React.useEffect(() => {
+    setRemainingSeconds(durationSeconds);
+    completedRef.current = false;
+  }, [durationSeconds, resetKey]);
+
+  React.useEffect(() => {
+    if (!isActive || isPaused || durationSeconds <= 0) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setRemainingSeconds((prev) => {
+        if (prev <= 1) {
+          if (!completedRef.current) {
+            completedRef.current = true;
+            onCompleteRef.current();
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [durationSeconds, isActive, isPaused]);
+
+  return remainingSeconds;
+}
+
+type UseReviewTimersOptions = {
+  responseTimeoutSeconds: number;
+  currentStepUuid: string;
+  responsePhase: ResponsePhase | null;
+  isQuizItem: boolean;
+  isRecording: boolean;
+  isAudioPlaying: boolean;
+  onResponseTimeout: () => void;
+  onRecordingTimeout: () => void;
+};
+
+function useReviewTimers({
+  responseTimeoutSeconds,
+  currentStepUuid,
+  responsePhase,
+  isQuizItem,
+  isRecording,
+  isAudioPlaying,
+  onResponseTimeout,
+  onRecordingTimeout,
+}: UseReviewTimersOptions): TimerDockState {
+  const [recordingStartId, setRecordingStartId] = React.useState(0);
+
+  React.useEffect(() => {
+    if (!isRecording) {
+      return;
+    }
+    setRecordingStartId((prev) => prev + 1);
+  }, [isRecording]);
+
+  const isResponseTimeoutEnabled = responseTimeoutSeconds > 0;
+  const isResponseReady = responsePhase === "ready";
+  const isResponseTimerEligible =
+    isQuizItem && isResponseTimeoutEnabled && isResponseReady;
+  const shouldShowResponseTimer = isResponseTimerEligible && !isRecording;
+  const responsePaused = isAudioPlaying;
+
+  let mode: TimerDockMode = "hidden";
+
+  if (isRecording) {
+    mode = "recording";
+  }
+
+  if (!isRecording && shouldShowResponseTimer) {
+    mode = "response";
+  }
+
+  const responseCountdownActive =
+    shouldShowResponseTimer && !responsePaused;
+
+  const responseRemainingSeconds = useCountdownTimer({
+    durationSeconds: responseTimeoutSeconds,
+    isActive: responseCountdownActive,
+    isPaused: responsePaused,
+    resetKey: currentStepUuid,
+    onComplete: onResponseTimeout,
+  });
+
+  const responseBeepRef = React.useRef<string | null>(null);
+
+  React.useEffect(() => {
+    if (!responseCountdownActive || responseTimeoutSeconds <= 0) {
+      return;
+    }
+    if (responseBeepRef.current === currentStepUuid) {
+      return;
+    }
+    responseBeepRef.current = currentStepUuid;
+    void playBeep({
+      frequencyHz: 560,
+      durationMs: 160,
+      volume: 0.12,
+      tone: "triangle",
+    });
+  }, [currentStepUuid, responseCountdownActive, responseTimeoutSeconds]);
+
+  const recordingRemainingSeconds = useCountdownTimer({
+    durationSeconds: RECORDING_COUNTDOWN_SECONDS,
+    isActive: isRecording,
+    isPaused: false,
+    resetKey: recordingStartId,
+    onComplete: onRecordingTimeout,
+  });
+
+  const responseTotalSeconds = responseTimeoutSeconds;
+  const recordingTotalSeconds = RECORDING_COUNTDOWN_SECONDS;
+
+  if (mode === "recording") {
+    return {
+      mode,
+      remainingSeconds: recordingRemainingSeconds,
+      totalSeconds: recordingTotalSeconds,
+      isPaused: false,
+    };
+  }
+
+  if (mode === "response") {
+    return {
+      mode,
+      remainingSeconds: responseRemainingSeconds,
+      totalSeconds: responseTotalSeconds,
+      isPaused: responsePaused,
+    };
+  }
+
+  return {
+    mode: "hidden",
+    remainingSeconds: responseRemainingSeconds,
+    totalSeconds: responseTotalSeconds,
+    isPaused: false,
+  };
 }
 
 async function transcribeBlob(
@@ -2205,6 +2483,7 @@ const QuizCard: React.FC<QuizCardProps> = ({
   quizType,
   onGradingResultCaptured,
   onProvideAudioHandler,
+  onResponsePhaseChange,
 }) => {
   const { term, definition } = card;
   const [userTranscription, setUserTranscription] =
@@ -2244,6 +2523,10 @@ const QuizCard: React.FC<QuizCardProps> = ({
       setFeedback("");
     },
   );
+
+  React.useEffect(() => {
+    onResponsePhaseChange?.(phase);
+  }, [onResponsePhaseChange, phase]);
 
   const { handleGradeSelect } = useGradeHandler({
     gradeWithAgain,
@@ -2436,6 +2719,7 @@ function RemedialOutro({
   currentStepUuid,
   onGradingResultCaptured,
   onProvideAudioHandler,
+  onResponsePhaseChange,
 }: CardReviewProps) {
   const { term, definition } = card;
   const [gradingResult, setGradingResult] =
@@ -2459,6 +2743,10 @@ function RemedialOutro({
     currentStepUuid,
     () => setGradingResult(null),
   );
+
+  React.useEffect(() => {
+    onResponsePhaseChange?.(phase);
+  }, [onResponsePhaseChange, phase]);
 
   const processRecording = async (blob: Blob) => {
     setPhase("processing");
@@ -2576,6 +2864,153 @@ const getRecordLabel = (recordDisabled: boolean, isRecording: boolean) => {
   }
   return `Record a response (${HOTKEYS.RECORD})`;
 };
+
+const formatCountdown = (seconds: number) => {
+  const clamped = Math.max(0, Math.ceil(seconds));
+  const minutes = Math.floor(clamped / 60);
+  const remainder = clamped % 60;
+  if (minutes > 0) {
+    return `${minutes}:${remainder.toString().padStart(2, "0")}`;
+  }
+  return `${clamped}s`;
+};
+
+const getTimerProgressPercent = (
+  remainingSeconds: number,
+  totalSeconds: number,
+) => {
+  if (totalSeconds <= 0) {
+    return 0;
+  }
+  const clamped = Math.min(totalSeconds, Math.max(0, remainingSeconds));
+  return (clamped / totalSeconds) * 100;
+};
+
+const getTimerLabel = (mode: TimerDockMode) => {
+  switch (mode) {
+    case "recording":
+      return "Recording";
+    case "response":
+      return "Answer";
+    default:
+      return "Timer";
+  }
+};
+
+const getTimerColors = (mode: TimerDockMode) => {
+  if (mode === "recording") {
+    return {
+      text: "red.6",
+      ring: "red.6",
+      track: "rgba(255, 220, 228, 0.9)",
+      border: "rgba(255, 140, 160, 0.7)",
+      shadow: "rgba(255, 160, 180, 0.25)",
+    };
+  }
+  return {
+    text: "pink.7",
+    ring: "pink.6",
+    track: "rgba(255, 231, 240, 0.95)",
+    border: "rgba(255, 190, 210, 0.7)",
+    shadow: "rgba(255, 190, 210, 0.25)",
+  };
+};
+
+const getTimerDockSize = (compact?: boolean) => {
+  if (compact) {
+    return {
+      width: 132,
+      height: 32,
+      ringSize: 22,
+      ringThickness: 3,
+      labelSize: "xs",
+      valueSize: "xs",
+    };
+  }
+  return {
+    width: 160,
+    height: 38,
+    ringSize: 26,
+    ringThickness: 3,
+    labelSize: "xs",
+    valueSize: "sm",
+  };
+};
+
+function TimerDock({
+  mode,
+  remainingSeconds,
+  totalSeconds,
+  isPaused,
+  compact,
+}: TimerDockProps) {
+  const isVisible = mode !== "hidden";
+  const label = getTimerLabel(mode);
+  const colors = getTimerColors(mode);
+  const sizes = getTimerDockSize(compact);
+  const value = formatCountdown(remainingSeconds);
+  const progressPercent = getTimerProgressPercent(
+    remainingSeconds,
+    totalSeconds,
+  );
+  const isStalled = isPaused;
+  const contentOpacity = isStalled ? 0.6 : 1;
+
+  return (
+    <Paper
+      withBorder
+      radius="xl"
+      px="sm"
+      style={{
+        width: sizes.width,
+        height: sizes.height,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: TIMER_DOCK_BACKGROUND,
+        borderColor: colors.border,
+        boxShadow: `0 6px 16px ${colors.shadow}`,
+        opacity: isVisible ? 1 : 0,
+        pointerEvents: isVisible ? "auto" : "none",
+        transition: "opacity 160ms ease",
+      }}
+      aria-hidden={!isVisible}
+    >
+      <Group gap="xs" align="center" wrap="nowrap">
+        <Box style={{ opacity: contentOpacity }}>
+          <RingProgress
+            size={sizes.ringSize}
+            thickness={sizes.ringThickness}
+            roundCaps
+            sections={[{ value: progressPercent, color: colors.ring }]}
+            rootColor={colors.track}
+          />
+        </Box>
+        <Group gap={6} align="center" wrap="nowrap">
+          <Text
+            size={sizes.labelSize}
+            fw={600}
+            c={colors.text}
+            style={{ opacity: contentOpacity }}
+          >
+            {label}
+          </Text>
+          <Text
+            size={sizes.valueSize}
+            fw={700}
+            c={colors.text}
+            style={{
+              opacity: contentOpacity,
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            {value}
+          </Text>
+        </Group>
+      </Group>
+    </Paper>
+  );
+}
 
 function ControlBarMenu({
   onEdit,
@@ -2770,9 +3205,23 @@ const CardReview: React.FC<CardReviewWithRecordingProps> = (props) => {
   >(null);
   const { start, stop, isRecording } = useMediaRecorder();
   const userSettings = useUserSettings();
+  const isQuizItem = isQuizItemType(itemType);
+  const [responsePhase, setResponsePhase] =
+    React.useState<ResponsePhase | null>(null);
+  const isAudioPlaying = useAudioPlaybackState();
+  const theme = useMantineTheme();
+  const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints.sm})`);
 
   const openCardEditor = () =>
     window.open(`/cards/${card.cardId}`, "_blank");
+
+  React.useEffect(() => {
+    if (!isQuizItem) {
+      setResponsePhase(null);
+      return;
+    }
+    setResponsePhase("ready");
+  }, [currentStepUuid, isQuizItem]);
 
   const archiveCardMutation = trpc.archiveCard.useMutation();
   const gradeQuiz = trpc.gradeQuiz.useMutation({
@@ -2804,6 +3253,9 @@ const CardReview: React.FC<CardReviewWithRecordingProps> = (props) => {
       });
       return;
     }
+    if (isQuizItem) {
+      setResponsePhase("processing");
+    }
     const blob = await stop();
     if (userSettings && Math.random() < userSettings.playbackPercentage) {
       await playBlob(blob, userSettings.playbackSpeed);
@@ -2814,9 +3266,12 @@ const CardReview: React.FC<CardReviewWithRecordingProps> = (props) => {
   };
 
   const handleFail = async () => {
+    if (isQuizItem) {
+      setResponsePhase("processing");
+    }
     await playTermThenDefinition(card, userSettings.playbackSpeed);
     await playTermThenDefinition(card, userSettings.playbackSpeed);
-    if (isQuizItemType(itemType)) {
+    if (isQuizItem) {
       await gradeQuiz.mutateAsync({
         perceivedDifficulty: Grade.AGAIN,
         cardID: card.cardId,
@@ -2825,6 +3280,31 @@ const CardReview: React.FC<CardReviewWithRecordingProps> = (props) => {
     }
     onSkip(card.uuid);
   };
+
+  const handleTimeoutFail = async () => {
+    if (isRecording) {
+      await stop();
+    }
+    await handleFail();
+  };
+
+  const timerState = useReviewTimers({
+    responseTimeoutSeconds: userSettings.responseTimeoutSeconds,
+    currentStepUuid,
+    responsePhase,
+    isQuizItem,
+    isRecording,
+    isAudioPlaying,
+    onResponseTimeout: () => {
+      void handleTimeoutFail();
+    },
+    onRecordingTimeout: () => {
+      if (!isRecording) {
+        return;
+      }
+      void handleRecordToggle();
+    },
+  });
 
   const hotkeys: [string, () => void][] = [
     [HOTKEYS.PLAY, onPlayAudio],
@@ -2849,10 +3329,22 @@ const CardReview: React.FC<CardReviewWithRecordingProps> = (props) => {
     onProvideAudioHandler: (handler) => {
       onAudioHandlerRef.current = handler;
     },
+    onResponsePhaseChange: isQuizItem ? setResponsePhase : undefined,
   };
 
   return (
     <Box h="100%" mih="100%" pos="relative" pb={80}>
+      <Box
+        pos="absolute"
+        style={{
+          top: "calc(var(--mantine-spacing-sm) + env(safe-area-inset-top) / 2)",
+          right: "var(--mantine-spacing-md)",
+          zIndex: 2,
+          pointerEvents: "none",
+        }}
+      >
+        <TimerDock {...timerState} compact={isMobile} />
+      </Box>
       <Box p="md">
         <CardComponent {...cardProps} />
       </Box>

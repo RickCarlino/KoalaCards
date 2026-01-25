@@ -67,6 +67,7 @@ model UserSettings {
   // Value from 0 to 1 representing the percentage liklihood
   // of a random playback of the user's audio.
   playbackPercentage Float    @default(0.125)
+  responseTimeoutSeconds Int  @default(0)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
   dailyWritingGoal   Int      @default(150)
