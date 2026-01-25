@@ -59,6 +59,7 @@ const SORT_OPTIONS = [
   { label: "Definition", value: "definition" },
   { label: "Paused", value: "flagged" },
   { label: "Term", value: "term" },
+  { label: "Last Review", value: "lastReview" },
   { label: "Next Review", value: "nextReview" },
   { label: "Repetitions", value: "repetitions" },
   { label: "Lapses", value: "lapses" },
