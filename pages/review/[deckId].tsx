@@ -1178,6 +1178,7 @@ type CountdownTimerOptions = {
   isPaused: boolean;
   resetKey: string | number;
   onComplete: () => void;
+  onStart?: () => void;
 };
 
 const RECORDING_COUNTDOWN_SECONDS = 10;
@@ -1188,19 +1189,27 @@ function useCountdownTimer({
   isPaused,
   resetKey,
   onComplete,
+  onStart,
 }: CountdownTimerOptions): number {
   const [remainingSeconds, setRemainingSeconds] =
     React.useState(durationSeconds);
   const onCompleteRef = React.useRef(onComplete);
+  const onStartRef = React.useRef(onStart);
   const completedRef = React.useRef(false);
+  const startedRef = React.useRef(false);
 
   React.useEffect(() => {
     onCompleteRef.current = onComplete;
   }, [onComplete]);
 
   React.useEffect(() => {
+    onStartRef.current = onStart;
+  }, [onStart]);
+
+  React.useEffect(() => {
     setRemainingSeconds(durationSeconds);
     completedRef.current = false;
+    startedRef.current = false;
   }, [durationSeconds, resetKey]);
 
   React.useEffect(() => {
@@ -1210,6 +1219,10 @@ function useCountdownTimer({
 
     const intervalId = window.setInterval(() => {
       setRemainingSeconds((prev) => {
+        if (!startedRef.current) {
+          startedRef.current = true;
+          onStartRef.current?.();
+        }
         if (prev <= 1) {
           if (!completedRef.current) {
             completedRef.current = true;
@@ -1283,25 +1296,15 @@ function useReviewTimers({
     isPaused: responsePaused,
     resetKey: currentStepUuid,
     onComplete: onResponseTimeout,
+    onStart: () => {
+      void playBeep({
+        frequencyHz: 560,
+        durationMs: 160,
+        volume: 0.12,
+        tone: "triangle",
+      });
+    },
   });
-
-  const responseBeepRef = React.useRef<string | null>(null);
-
-  React.useEffect(() => {
-    if (!responseCountdownActive || responseTimeoutSeconds <= 0) {
-      return;
-    }
-    if (responseBeepRef.current === currentStepUuid) {
-      return;
-    }
-    responseBeepRef.current = currentStepUuid;
-    void playBeep({
-      frequencyHz: 560,
-      durationMs: 160,
-      volume: 0.12,
-      tone: "triangle",
-    });
-  }, [currentStepUuid, responseCountdownActive, responseTimeoutSeconds]);
 
   const recordingRemainingSeconds = useCountdownTimer({
     durationSeconds: RECORDING_COUNTDOWN_SECONDS,
