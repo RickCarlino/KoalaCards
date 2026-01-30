@@ -13,6 +13,7 @@ import { exportDeck } from "./export-deck";
 import { getDailyWritingProgress } from "./get-daily-writing-progress";
 import { getNextQuizzes } from "./get-next-quizzes";
 import { getUserSettings } from "./get-user-settings";
+import { generateMnemonic } from "./generate-mnemonic";
 import { gradeQuiz } from "./grade-quiz";
 import { gradeSpeakingQuiz } from "./grade-speaking-quiz";
 import { gradeWriting } from "./grade-writing";
@@ -34,6 +35,7 @@ export const appRouter = router({
   exportDeck,
   getNextQuizzes,
   getUserSettings,
+  generateMnemonic,
   gradeQuiz,
   gradeSpeakingQuiz,
   gradeWriting,
