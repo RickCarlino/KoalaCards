@@ -20,11 +20,9 @@ const outputSchema = z.object({
 
 const buildMnemonicPrompt = (term: string, definition: string) =>
   [
-    "Please suggest a mnemonic for the word, emphasizing a phonetic resemblance.",
-    "Return a short phonetic mnemonic that uses English words to help me remember the meaning.",
+    "Please suggest a mnemonic for the word to help me remember the meaning.",
     `Target word: ${term}`,
-    `Meaning: ${definition}`,
-    "One sentence mnemonic:",
+    `Meaning: ${definition}`
   ].join("\n");
 
 const stripCodeFence = (value: string) => {
