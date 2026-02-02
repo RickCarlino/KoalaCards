@@ -135,23 +135,25 @@ type NavCardProps = {
 function NavCard({ item, href, attention, isExternal }: NavCardProps) {
   const theme = useMantineTheme();
   const Icon = item.icon;
-  const styles = {
-    root: {
-      cursor: "pointer",
-      display: "block",
-      textDecoration: "none",
-      color: "inherit",
-      "&:focus-visible": {
-        outline: `2px solid ${theme.colors.pink[5]}`,
-        outlineOffset: 2,
-      },
-      ...(attention
-        ? {
-            borderColor: theme.colors.pink[4],
-            boxShadow: theme.shadows.sm,
-          }
-        : {}),
+  const rootStyles = {
+    cursor: "pointer",
+    display: "block",
+    textDecoration: "none",
+    color: "inherit",
+    "&:focus-visible": {
+      outline: `2px solid ${theme.colors.pink[5]}`,
+      outlineOffset: 2,
     },
+  };
+
+  const styles = {
+    root: attention
+      ? {
+          ...rootStyles,
+          borderColor: theme.colors.pink[4],
+          boxShadow: theme.shadows.sm,
+        }
+      : rootStyles,
   };
 
   if (isExternal) {

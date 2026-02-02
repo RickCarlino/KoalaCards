@@ -18,6 +18,7 @@ type AppUserSettings = {
   cardsPerDayMax: number;
   reviewTakeCount: number;
   playbackPercentage: number;
+  responseTimeoutSeconds: number;
   createdAt: Date;
   updatedAt: Date;
   dailyWritingGoal: number;
@@ -41,6 +42,7 @@ const pickAppUserSettings = (
   cardsPerDayMax: input.cardsPerDayMax,
   reviewTakeCount: input.reviewTakeCount ?? REVIEW_TAKE_DEFAULT,
   playbackPercentage: input.playbackPercentage,
+  responseTimeoutSeconds: input.responseTimeoutSeconds ?? 0,
   createdAt: input.createdAt,
   updatedAt: input.updatedAt,
   dailyWritingGoal: input.dailyWritingGoal,
@@ -54,6 +56,7 @@ const EMPTY: AppUserSettings = {
   cardsPerDayMax: 42,
   reviewTakeCount: REVIEW_TAKE_DEFAULT,
   playbackPercentage: 0.5,
+  responseTimeoutSeconds: 0,
   createdAt: new Date(),
   updatedAt: new Date(),
   dailyWritingGoal: 300,

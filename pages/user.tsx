@@ -253,6 +253,7 @@ type SettingsFormValues = {
   reviewTakeCount: number;
   dailyWritingGoal: number;
   playbackPercentage: number;
+  responseTimeoutSeconds: number;
   writingFirst: boolean;
 };
 
@@ -261,7 +262,8 @@ type SettingsNumberKey =
   | "cardsPerDayMax"
   | "reviewTakeCount"
   | "dailyWritingGoal"
-  | "playbackPercentage";
+  | "playbackPercentage"
+  | "responseTimeoutSeconds";
 
 type SettingsGroupProps = {
   title: string;
@@ -432,10 +434,6 @@ function SettingsForm({
                 value={values.playbackSpeed}
                 onChange={(val) => onNumberChange(val, "playbackSpeed")}
                 label={(value) => `${value.toFixed(2)}x`}
-                marks={[
-                  { value: 0.5, label: "0.5x" },
-                  { value: 2, label: "2x" },
-                ]}
               />
             </Stack>
           </SettingsRow>
@@ -451,13 +449,36 @@ function SettingsForm({
                 onNumberChange(value, "playbackPercentage")
               }
               data={[
-                { label: "Always 100%", value: "1" },
-                { label: "Usually 66%", value: "0.66" },
-                { label: "Sometimes 33%", value: "0.33" },
-                { label: "Never 0%", value: "0" },
+                { label: "100%", value: "1" },
+                { label: "66%", value: "0.66" },
+                { label: "33%", value: "0.33" },
+                { label: "0%", value: "0" },
               ]}
               size="sm"
               aria-label="Replay your recording"
+            />
+          </SettingsRow>
+        </SettingsGroup>
+
+        <SettingsGroup
+          title="Response timing"
+          description='Gentle countdowns for speaking and "How would you say" prompts.'
+        >
+          <SettingsRow
+            label="Response timeout (seconds)"
+            description="Set to 0 to disable."
+            labelFor="responseTimeoutSeconds"
+          >
+            <NumberInput
+              id="responseTimeoutSeconds"
+              name="responseTimeoutSeconds"
+              value={values.responseTimeoutSeconds}
+              onChange={(value) =>
+                onNumberChange(value, "responseTimeoutSeconds")
+              }
+              min={0}
+              step={1}
+              size="sm"
             />
           </SettingsRow>
         </SettingsGroup>
@@ -749,6 +770,7 @@ export default function UserSettingsPage(props: Props) {
     reviewTakeCount: settings.reviewTakeCount,
     dailyWritingGoal: settings.dailyWritingGoal ?? 300,
     playbackPercentage: settings.playbackPercentage,
+    responseTimeoutSeconds: settings.responseTimeoutSeconds ?? 0,
     writingFirst: Boolean(settings.writingFirst),
   };
 

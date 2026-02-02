@@ -1,5 +1,6 @@
 import { prismaClient } from "@/koala/prisma-client";
 import type { Card, Prisma } from "@prisma/client";
+import { shuffle } from "radash";
 import { generateAIText } from "./ai";
 import { getUserSettings } from "./auth-helpers";
 import { maybeGetCardImageUrl } from "./image";
@@ -43,6 +44,7 @@ const NEW_CARD_DEFAULT_TARGET = 7;
 const DECK_HAND_HARD_CAP = 50;
 const ROUND_ROBIN_ORDER: Bucket[] = [REMEDIAL, NEW_CARD, ROUTINE];
 const PER_BUCKET_PREFETCH = 45;
+const NEW_CARD_WINDOW_SIZE = 1000;
 
 async function getDailyLimits(userId: string, now: number) {
   const { cardsPerDayMax = NEW_CARD_DEFAULT_TARGET } =
@@ -73,32 +75,82 @@ async function fetchBucket(
     flagged: { not: true },
   };
 
+  if (bucket === NEW_CARD) {
+    return fetchRandomNewCards(baseCard, limit);
+  }
+
   let where: Prisma.CardWhereInput;
   let orderBy: Prisma.CardOrderByWithRelationInput | undefined;
 
-  switch (bucket) {
-    case NEW_CARD:
-      where = { ...baseCard, lastReview: 0 };
-      orderBy = { createdAt: "asc" };
-      break;
-
-    case ROUTINE:
-      where = {
-        ...baseCard,
-        lastFailure: 0,
-        lastReview: { gt: 0 },
-        nextReview: { lte: now },
-      };
-      orderBy = { nextReview: "asc" };
-      break;
-
-    case REMEDIAL:
-      where = { ...baseCard, lastFailure: { gt: 0 } };
-      orderBy = { lastFailure: "asc" };
-      break;
+  if (bucket === ROUTINE) {
+    where = {
+      ...baseCard,
+      lastFailure: 0,
+      lastReview: { gt: 0 },
+      nextReview: { lte: now },
+    };
+    orderBy = { nextReview: "asc" };
+  } else {
+    where = { ...baseCard, lastFailure: { gt: 0 } };
+    orderBy = { lastFailure: "asc" };
   }
 
   return prismaClient.card.findMany({ where, orderBy, take: limit });
+}
+
+async function fetchRandomNewCards(
+  baseCard: Prisma.CardWhereInput,
+  limit: number,
+): Promise<LocalCard[]> {
+  if (limit <= 0) {
+    return [];
+  }
+
+  const where: Prisma.CardWhereInput = {
+    ...baseCard,
+    lastReview: 0,
+  };
+
+  const total = await prismaClient.card.count({ where });
+  if (total === 0) {
+    return [];
+  }
+
+  const windowSize = Math.min(NEW_CARD_WINDOW_SIZE, total);
+  const maxOffset = Math.max(total - windowSize, 0);
+  const offset =
+    maxOffset > 0 ? Math.floor(Math.random() * (maxOffset + 1)) : 0;
+
+  const idRows = await prismaClient.card.findMany({
+    where,
+    select: { id: true },
+    orderBy: { createdAt: "asc" },
+    skip: offset,
+    take: windowSize,
+  });
+
+  if (!idRows.length) {
+    return [];
+  }
+
+  const pickedIds = shuffle(idRows.map((row) => row.id)).slice(0, limit);
+  if (!pickedIds.length) {
+    return [];
+  }
+
+  const cards = await prismaClient.card.findMany({
+    where: { id: { in: pickedIds } },
+  });
+
+  const cardsById = new Map(cards.map((card) => [card.id, card]));
+  const orderedCards: LocalCard[] = [];
+  for (const id of pickedIds) {
+    const card = cardsById.get(id);
+    if (card) {
+      orderedCards.push(card);
+    }
+  }
+  return orderedCards;
 }
 
 function tagLessonType(

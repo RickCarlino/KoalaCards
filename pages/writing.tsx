@@ -238,15 +238,15 @@ function SubmissionCard({
   const detailsId = `writing-details-${submission.id}`;
   const toggleLabel = isExpanded ? "Hide details" : "Show details";
   const toggleIcon = isExpanded ? (
-    <IconChevronUp size={14} />
+    <IconChevronUp size={16} />
   ) : (
-    <IconChevronDown size={14} />
+    <IconChevronDown size={16} />
   );
 
   return (
     <Card withBorder p="sm">
       <Stack gap="sm">
-        <Group justify="space-between" align="flex-start" wrap="wrap">
+        <Group justify="space-between" align="center" wrap="wrap">
           <Stack gap={2}>
             <Text fw={600} size="sm" c="gray.8">
               {formatDateISO(submission.createdAt)}
@@ -254,7 +254,6 @@ function SubmissionCard({
           </Stack>
           <Group gap="xs">
             <Button
-              variant="subtle"
               size="xs"
               color="pink"
               onClick={onToggle}

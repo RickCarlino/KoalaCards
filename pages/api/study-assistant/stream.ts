@@ -104,6 +104,7 @@ FLASHCARD SUGGESTIONS (“+” button)
   Definition
   [[/EXAMPLE]]
 * Keep any extra explanation short and after this block.
+* Definition must be a single, concise meaning. Do not add multiple meanings or alternate definitions. No slashes, semicolons, parenthesis, lists, etc..
 
 CARD EDIT REQUESTS
 
@@ -142,6 +143,7 @@ GLOBAL
 EXPLANATIONS
 
 * Explain briefly in English.
+* Provide exactly one concise explanation per card. If a word has multiple senses, choose the most relevant one and stick to it.
 * Keep Korean examples short and concrete.
 
 TRANSLATIONS / PHRASES
