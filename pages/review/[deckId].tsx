@@ -58,7 +58,6 @@ import { canStartNewLessons, getLessonsDue } from "@/koala/fetch-lesson";
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { prismaClient } from "@/koala/prisma-client";
 import { compare } from "@/koala/quiz-evaluators/evaluator-utils";
-import { MnemonicPanel } from "@/koala/review/components/mnemonic-panel";
 import { VisualDiff } from "@/koala/review/lesson-steps/visual-diff";
 import { useUserSettings } from "@/koala/settings-provider";
 import { clampReviewTake } from "@/koala/settings/review-take";
@@ -288,7 +287,6 @@ type FeedbackVoteProps = {
 };
 
 interface FailureViewProps {
-  cardId: number;
   imageURL?: string;
   term: string;
   definition: string;
@@ -2175,7 +2173,6 @@ function FeedbackVote({ resultId, onClick }: FeedbackVoteProps) {
 }
 
 function FailureView({
-  cardId,
   imageURL,
   term,
   definition,
@@ -2198,8 +2195,6 @@ function FailureView({
       </Text>
 
       <Text ta="center">{definition}</Text>
-
-      <MnemonicPanel cardId={cardId} term={term} />
 
       <Button onClick={onContinue} variant="light" color="blue">
         Continue ({HOTKEYS.CONTINUE})
@@ -2414,8 +2409,6 @@ const IntroCard: React.FC<IntroCardProps> = ({
 
       <Text ta="center">{definition}</Text>
 
-      <MnemonicPanel cardId={card.cardId} term={term} />
-
       {content}
     </Stack>
   );
@@ -2598,7 +2591,6 @@ const QuizCard: React.FC<QuizCardProps> = ({
   if (phase === "failure") {
     return (
       <FailureView
-        cardId={card.cardId}
         imageURL={card.imageURL}
         term={term}
         definition={definition}
@@ -2807,7 +2799,6 @@ function RemedialOutro({
   if (phase === "failure") {
     return (
       <FailureView
-        cardId={card.cardId}
         imageURL={card.imageURL}
         term={term}
         definition={definition}
