@@ -44,7 +44,7 @@ import {
   IconThumbUp,
   IconX,
 } from "@tabler/icons-react";
-import { Grade } from "femto-fsrs";
+import { Rating, type Grade } from "ts-fsrs";
 import { GetServerSideProps } from "next";
 import Link from "next/link";
 import { uid } from "radash";
@@ -577,26 +577,26 @@ const EVERY_QUEUE_TYPE: QueueType[] = [
 
 const SPEECH_FORMAT: SpeechRequestBody["format"] = "mp3";
 
-const gradeColors: Record<Grade, string> = {
-  [Grade.AGAIN]: "red",
-  [Grade.HARD]: "orange",
-  [Grade.GOOD]: "green",
-  [Grade.EASY]: "blue",
-};
+const gradeColors = {
+  [Rating.Again]: "red",
+  [Rating.Hard]: "orange",
+  [Rating.Good]: "green",
+  [Rating.Easy]: "blue",
+} satisfies Record<Grade, string>;
 
-const gradeLabels: Record<Grade, string> = {
-  [Grade.AGAIN]: "AGAIN",
-  [Grade.HARD]: "HARD",
-  [Grade.GOOD]: "GOOD",
-  [Grade.EASY]: "EASY",
-};
+const gradeLabels = {
+  [Rating.Again]: "AGAIN",
+  [Rating.Hard]: "HARD",
+  [Rating.Good]: "GOOD",
+  [Rating.Easy]: "EASY",
+} satisfies Record<Grade, string>;
 
-const gradeHotkeys: Record<Grade, string> = {
-  [Grade.AGAIN]: HOTKEYS.GRADE_AGAIN,
-  [Grade.HARD]: HOTKEYS.GRADE_HARD,
-  [Grade.GOOD]: HOTKEYS.GRADE_GOOD,
-  [Grade.EASY]: HOTKEYS.GRADE_EASY,
-};
+const gradeHotkeys = {
+  [Rating.Again]: HOTKEYS.GRADE_AGAIN,
+  [Rating.Hard]: HOTKEYS.GRADE_HARD,
+  [Rating.Good]: HOTKEYS.GRADE_GOOD,
+  [Rating.Easy]: HOTKEYS.GRADE_EASY,
+} satisfies Record<Grade, string>;
 
 const quizConfigs: Record<QuizType, QuizConfig> = {
   speaking: {
@@ -1447,10 +1447,10 @@ function useQuizGrading({
     };
   };
 
-  const gradeWithAgain = createGrader(Grade.AGAIN);
-  const gradeWithHard = createGrader(Grade.HARD);
-  const gradeWithGood = createGrader(Grade.GOOD);
-  const gradeWithEasy = createGrader(Grade.EASY);
+  const gradeWithAgain = createGrader(Rating.Again);
+  const gradeWithHard = createGrader(Rating.Hard);
+  const gradeWithGood = createGrader(Rating.Good);
+  const gradeWithEasy = createGrader(Rating.Easy);
 
   return {
     gradeWithAgain,
@@ -1485,16 +1485,16 @@ function useGradeHandler({
 }: UseGradeHandlerProps) {
   const handleGradeSelect = async (grade: Grade) => {
     switch (grade) {
-      case Grade.AGAIN:
+      case Rating.Again:
         await gradeWithAgain();
         break;
-      case Grade.HARD:
+      case Rating.Hard:
         await gradeWithHard();
         break;
-      case Grade.GOOD:
+      case Rating.Good:
         await gradeWithGood();
         break;
-      case Grade.EASY:
+      case Rating.Easy:
         await gradeWithEasy();
         break;
     }
@@ -2243,10 +2243,10 @@ function GradingSuccess({
   const gradeOptions = getGradeButtonText(quizData);
 
   const hotkeys: [string, () => void][] = [
-    [HOTKEYS.GRADE_AGAIN, () => !isLoading && onGradeSelect(Grade.AGAIN)],
-    [HOTKEYS.GRADE_HARD, () => !isLoading && onGradeSelect(Grade.HARD)],
-    [HOTKEYS.GRADE_GOOD, () => !isLoading && onGradeSelect(Grade.GOOD)],
-    [HOTKEYS.GRADE_EASY, () => !isLoading && onGradeSelect(Grade.EASY)],
+    [HOTKEYS.GRADE_AGAIN, () => !isLoading && onGradeSelect(Rating.Again)],
+    [HOTKEYS.GRADE_HARD, () => !isLoading && onGradeSelect(Rating.Hard)],
+    [HOTKEYS.GRADE_GOOD, () => !isLoading && onGradeSelect(Rating.Good)],
+    [HOTKEYS.GRADE_EASY, () => !isLoading && onGradeSelect(Rating.Easy)],
   ];
 
   useHotkeys(hotkeys);
@@ -2449,6 +2449,7 @@ const quizPhaseContent = (
     difficulty: card.difficulty,
     stability: card.stability,
     lastReview: resolveLastReviewMs(card.lastReview),
+    nextReview: card.nextReview,
     lapses: card.lapses,
     repetitions: card.repetitions,
   };
@@ -2726,10 +2727,6 @@ function RemedialOutro({
   const [gradingResult, setGradingResult] =
     React.useState<GradingResult | null>(null);
   const userSettings = useUserSettings();
-  const { gradeWithAgain, isLoading } = useQuizGrading({
-    cardId: card.cardId,
-    onSuccess: onProceed,
-  });
 
   const { gradeAudio } = useVoiceGrading({
     targetText: card.term,
@@ -2793,7 +2790,7 @@ function RemedialOutro({
   const handleIDK = async () => {
     await playTermThenDefinition(card, userSettings.playbackSpeed);
     await playTermThenDefinition(card, userSettings.playbackSpeed);
-    await gradeWithAgain();
+    onProceed();
   };
 
   if (phase === "failure") {
@@ -2839,7 +2836,7 @@ function RemedialOutro({
         color="red"
         variant="outline"
         onClick={handleIDK}
-        disabled={isLoading}
+        disabled={phase === "processing"}
         fullWidth
         size="md"
         maw={400}
@@ -3274,7 +3271,7 @@ const CardReview: React.FC<CardReviewWithRecordingProps> = (props) => {
     await playTermThenDefinition(card, userSettings.playbackSpeed);
     if (isQuizItem) {
       await gradeQuiz.mutateAsync({
-        perceivedDifficulty: Grade.AGAIN,
+        perceivedDifficulty: Rating.Again,
         cardID: card.cardId,
       });
       return;

@@ -183,6 +183,7 @@ async function buildQuizPayload(q: LocalCard & { quizType?: string }) {
     termAudio,
     langCode: "ko",
     lastReview: q.lastReview ?? 0,
+    nextReview: q.nextReview ?? 0,
     imageURL: await maybeGetCardImageUrl(q.imageBlobId),
     stability: q.stability,
     difficulty: q.difficulty,

@@ -1,4 +1,4 @@
-import { Grade } from "femto-fsrs";
+import { Rating, type Grade } from "ts-fsrs";
 import { prismaClient } from "../prisma-client";
 import { Card } from "@prisma/client";
 import { timeUntil } from "@/koala/time-until";
@@ -10,6 +10,7 @@ type CardGradingFields =
   | "id"
   | "lapses"
   | "lastReview"
+  | "nextReview"
   | "repetitions"
   | "stability";
 
@@ -20,7 +21,7 @@ export async function setGrade(
   grade: Grade,
   now = Date.now(),
 ) {
-  const isFail = grade === Grade.AGAIN;
+  const isFail = grade === Rating.Again;
   const data = {
     ...card,
     ...calculateSchedulingData(card, grade, now),
@@ -34,7 +35,7 @@ export async function setGrade(
   const { id, nextReview } = await prismaClient.card.update({
     where: { id: card.id },
     data: {
-      ...(grade === Grade.AGAIN ? { lastFailure: now } : {}),
+      ...(grade === Rating.Again ? { lastFailure: now } : {}),
       difficulty: data.difficulty,
       lapses: data.lapses,
       repetitions: data.repetitions,
