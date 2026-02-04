@@ -4,6 +4,7 @@ import { maybeAddImageToCard } from "../image";
 import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc-procedure";
 import { setGrade } from "./import-cards";
+import { getUserSettings } from "../auth-helpers";
 
 export const gradeQuiz = procedure
   .input(
@@ -45,6 +46,7 @@ export const gradeQuiz = procedure
     if ([Rating.Again, Rating.Hard].includes(grade)) {
       maybeAddImageToCard(card);
     }
-    await setGrade(card, grade);
+    const settings = await getUserSettings(user.id);
+    await setGrade(card, grade, Date.now(), settings.requestedRetention);
     return {};
   });

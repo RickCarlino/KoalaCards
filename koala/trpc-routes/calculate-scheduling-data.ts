@@ -9,14 +9,27 @@ import {
   type Grade,
 } from "ts-fsrs";
 import type { Card } from "@prisma/client";
+import { resolveRequestedRetention } from "@/koala/settings/requested-retention";
 
-const FSRS = fsrs(
-  generatorParameters({
-    request_retention: 0.73,
-    enable_fuzz: true,
-    enable_short_term: false,
-  }),
-);
+const fsrsCache = new Map<number, ReturnType<typeof fsrs>>();
+
+function getFsrs(requestedRetention?: number) {
+  const normalizedRetention =
+    resolveRequestedRetention(requestedRetention);
+  const cached = fsrsCache.get(normalizedRetention);
+  if (cached) {
+    return cached;
+  }
+  const instance = fsrs(
+    generatorParameters({
+      request_retention: normalizedRetention,
+      enable_fuzz: true,
+      enable_short_term: false,
+    }),
+  );
+  fsrsCache.set(normalizedRetention, instance);
+  return instance;
+}
 
 const DAYS = 24 * 60 * 60 * 1000;
 
@@ -80,10 +93,14 @@ function toSchedulingData(card: FsrsCard): SchedulingData {
   };
 }
 
-function scheduleNewCard(grade: Grade, now = Date.now()): SchedulingData {
+function scheduleNewCard(
+  grade: Grade,
+  now = Date.now(),
+  requestedRetention?: number,
+): SchedulingData {
   const nowDate = new Date(now);
   const card = createEmptyCard(nowDate);
-  const result = FSRS.next(card, nowDate, grade);
+  const result = getFsrs(requestedRetention).next(card, nowDate, grade);
 
   return toSchedulingData(result.card);
 }
@@ -92,18 +109,26 @@ export function calculateSchedulingData(
   quiz: PartialCard,
   grade: Grade,
   now = Date.now(),
+  requestedRetention?: number,
 ): SchedulingData {
   if (isNewCard(quiz)) {
-    return scheduleNewCard(grade, now);
+    return scheduleNewCard(grade, now, requestedRetention);
   }
   const nowDate = new Date(now);
   const fsrsCard = toFsrsCardInput(quiz, now);
-  const result = FSRS.next(fsrsCard, nowDate, grade);
+  const result = getFsrs(requestedRetention).next(
+    fsrsCard,
+    nowDate,
+    grade,
+  );
 
   return toSchedulingData(result.card);
 }
 
-export function getGradeButtonText(quiz: PartialCard): [Grade, string][] {
+export function getGradeButtonText(
+  quiz: PartialCard,
+  requestedRetention?: number,
+): [Grade, string][] {
   const now = Date.now();
   const SCALE: Record<Grade, string> = {
     [Rating.Again]: "😵",
@@ -113,7 +138,12 @@ export function getGradeButtonText(quiz: PartialCard): [Grade, string][] {
   };
   return gradeOrder.map((grade) => {
     const emoji = SCALE[grade];
-    const { nextReview } = calculateSchedulingData(quiz, grade, now);
+    const { nextReview } = calculateSchedulingData(
+      quiz,
+      grade,
+      now,
+      requestedRetention,
+    );
     if (!nextReview) {
       return [grade, "❓SOON"];
     }

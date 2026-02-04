@@ -5,6 +5,12 @@ import {
   REVIEW_TAKE_MAX,
   REVIEW_TAKE_MIN,
 } from "@/koala/settings/review-take";
+import {
+  REQUESTED_RETENTION_MAX,
+  REQUESTED_RETENTION_MIN,
+  clampRequestedRetention,
+  resolveRequestedRetention,
+} from "@/koala/settings/requested-retention";
 import { trpc } from "@/koala/trpc-config";
 import { getLessonMeta } from "@/koala/trpc-routes/get-next-quizzes";
 import { AreaChart } from "@mantine/charts";
@@ -251,6 +257,7 @@ type SettingsFormValues = {
   playbackSpeed: number;
   cardsPerDayMax: number;
   reviewTakeCount: number;
+  requestedRetention: number;
   dailyWritingGoal: number;
   playbackPercentage: number;
   responseTimeoutSeconds: number;
@@ -261,6 +268,7 @@ type SettingsNumberKey =
   | "playbackSpeed"
   | "cardsPerDayMax"
   | "reviewTakeCount"
+  | "requestedRetention"
   | "dailyWritingGoal"
   | "playbackPercentage"
   | "responseTimeoutSeconds";
@@ -390,6 +398,31 @@ function SettingsForm({
               required
               size="sm"
             />
+          </SettingsRow>
+
+          <SettingsRow
+            label="Target retention"
+            description="Higher keeps reviews closer together; lower spreads them out."
+            labelFor="requestedRetention"
+          >
+            <Stack gap="xs">
+              <Group justify="flex-end">
+                <Text size="sm" fw={600}>
+                  {Math.round(values.requestedRetention * 100)}%
+                </Text>
+              </Group>
+              <Slider
+                id="requestedRetention"
+                min={REQUESTED_RETENTION_MIN}
+                max={REQUESTED_RETENTION_MAX}
+                step={0.01}
+                value={values.requestedRetention}
+                onChange={(value) =>
+                  onNumberChange(value, "requestedRetention")
+                }
+                label={(value) => `${Math.round(value * 100)}%`}
+              />
+            </Stack>
           </SettingsRow>
 
           <SettingsRow
@@ -719,7 +752,12 @@ function ProgressSection({
 
 export default function UserSettingsPage(props: Props) {
   const { userSettings, stats, cardChartData, writingChartData } = props;
-  const [settings, setSettings] = useState(userSettings);
+  const [settings, setSettings] = useState(() => ({
+    ...userSettings,
+    requestedRetention: resolveRequestedRetention(
+      userSettings.requestedRetention,
+    ),
+  }));
   const editUserSettings = trpc.editUserSettings.useMutation();
 
   const handleNumberChange = (
@@ -731,7 +769,11 @@ export default function UserSettingsPage(props: Props) {
     if (Number.isNaN(parsed)) {
       return;
     }
-    setSettings({ ...settings, [name]: parsed });
+    const nextValue =
+      name === "requestedRetention"
+        ? clampRequestedRetention(parsed)
+        : parsed;
+    setSettings({ ...settings, [name]: nextValue });
   };
 
   const handleWritingFirstChange = (checked: boolean) => {
@@ -768,6 +810,9 @@ export default function UserSettingsPage(props: Props) {
     playbackSpeed: settings.playbackSpeed,
     cardsPerDayMax: settings.cardsPerDayMax,
     reviewTakeCount: settings.reviewTakeCount,
+    requestedRetention: resolveRequestedRetention(
+      settings.requestedRetention,
+    ),
     dailyWritingGoal: settings.dailyWritingGoal ?? 300,
     playbackPercentage: settings.playbackPercentage,
     responseTimeoutSeconds: settings.responseTimeoutSeconds ?? 0,

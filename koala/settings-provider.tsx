@@ -10,6 +10,10 @@ import React, {
   useContext,
 } from "react";
 import { REVIEW_TAKE_DEFAULT } from "@/koala/settings/review-take";
+import {
+  REQUESTED_RETENTION_DEFAULT,
+  resolveRequestedRetention,
+} from "@/koala/settings/requested-retention";
 
 type AppUserSettings = {
   id: number;
@@ -17,6 +21,7 @@ type AppUserSettings = {
   playbackSpeed: number;
   cardsPerDayMax: number;
   reviewTakeCount: number;
+  requestedRetention: number;
   playbackPercentage: number;
   responseTimeoutSeconds: number;
   createdAt: Date;
@@ -25,8 +30,12 @@ type AppUserSettings = {
   writingFirst: boolean;
 };
 
-type AppUserSettingsInput = Omit<AppUserSettings, "reviewTakeCount"> & {
+type AppUserSettingsInput = Omit<
+  AppUserSettings,
+  "reviewTakeCount" | "requestedRetention"
+> & {
   reviewTakeCount?: number;
+  requestedRetention?: number;
 };
 
 interface UserSettingsProviderProps {
@@ -41,6 +50,7 @@ const pickAppUserSettings = (
   playbackSpeed: input.playbackSpeed,
   cardsPerDayMax: input.cardsPerDayMax,
   reviewTakeCount: input.reviewTakeCount ?? REVIEW_TAKE_DEFAULT,
+  requestedRetention: resolveRequestedRetention(input.requestedRetention),
   playbackPercentage: input.playbackPercentage,
   responseTimeoutSeconds: input.responseTimeoutSeconds ?? 0,
   createdAt: input.createdAt,
@@ -55,6 +65,7 @@ const EMPTY: AppUserSettings = {
   playbackSpeed: 1,
   cardsPerDayMax: 42,
   reviewTakeCount: REVIEW_TAKE_DEFAULT,
+  requestedRetention: REQUESTED_RETENTION_DEFAULT,
   playbackPercentage: 0.5,
   responseTimeoutSeconds: 0,
   createdAt: new Date(),

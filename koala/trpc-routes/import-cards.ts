@@ -20,11 +20,12 @@ export async function setGrade(
   card: GradedCard,
   grade: Grade,
   now = Date.now(),
+  requestedRetention?: number,
 ) {
   const isFail = grade === Rating.Again;
   const data = {
     ...card,
-    ...calculateSchedulingData(card, grade, now),
+    ...calculateSchedulingData(card, grade, now, requestedRetention),
     repetitions: (card.repetitions || 0) + 1,
     lastReview: now,
     firstReview: card.firstReview || now,
