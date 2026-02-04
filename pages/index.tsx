@@ -1,5 +1,4 @@
 import { getServersideUser } from "@/koala/get-serverside-user";
-import { prismaClient } from "@/koala/prisma-client";
 import {
   Card,
   Container,
@@ -24,17 +23,9 @@ import Link from "next/link";
 import { GetServerSideProps } from "next/types";
 import * as React from "react";
 
-interface IndexProps {
-  hasCards: boolean;
-  didStudy: boolean;
-  didWrite: boolean;
-}
-
 interface NavItem {
-  path: (props: IndexProps) => string;
+  path: string;
   name: string;
-  show: (props: IndexProps) => boolean;
-  blink: (props: IndexProps) => boolean;
   icon: typeof IconStar;
 }
 
@@ -45,96 +36,63 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       redirect: { destination: "/api/auth/signin", permanent: false },
     };
   }
-  const cardCount = await prismaClient.card.count({
-    where: { userId: dbUser.id },
-  });
-
-  const reviewCount = await prismaClient.card.count({
-    where: { userId: dbUser.id, repetitions: { gt: 0 } },
-  });
-
-  const writingCount = await prismaClient.writingSubmission.count({
-    where: { userId: dbUser.id },
-  });
-
   return {
-    props: {
-      hasCards: cardCount > 0,
-      didStudy: reviewCount > 0,
-      didWrite: writingCount > 0,
-    },
+    props: {},
   };
 };
 
 const navItems: NavItem[] = [
   {
-    path: () => "/review",
+    path: "/review",
     name: "Study Cards",
-    show: (props) => props.hasCards,
-    blink: (props) => props.hasCards && !props.didStudy,
     icon: IconStar,
   },
   {
-    path: () => "/writing/practice",
+    path: "/writing/practice",
     name: "Writing Practice",
-    show: () => true,
-    blink: () => false,
     icon: IconPencil,
   },
   {
-    path: () => "/create",
+    path: "/create",
     name: "Create Cards",
-    show: (_props) => true,
-    blink: (props) => !props.hasCards,
     icon: IconPlus,
   },
   {
-    path: () => "/cards",
+    path: "/cards",
     name: "View Cards",
-    show: (props) => props.hasCards && props.didStudy,
-    blink: () => false,
     icon: IconCards,
   },
   {
-    path: () => "/writing",
+    path: "/writing",
     name: "Writing History",
-    show: (props) => props.didWrite,
-    blink: () => false,
     icon: IconFileText,
   },
   {
-    path: () => "/user",
+    path: "/user",
     name: "Settings",
-    show: (props) => props.hasCards && props.didStudy,
-    blink: () => false,
     icon: IconSettings,
   },
   {
-    path: () => "https://github.com/RickCarlino/KoalaCards",
+    path: "https://github.com/RickCarlino/KoalaCards",
     name: "GitHub",
-    show: (props) => props.hasCards && props.didStudy,
-    blink: () => false,
     icon: IconBrandGithub,
   },
   {
-    path: () => "https://discord.gg/jj7wXhQWJe",
+    path: "https://discord.gg/jj7wXhQWJe",
     name: "Discord",
-    show: (props) => props.hasCards && props.didStudy,
-    blink: () => false,
     icon: IconBrandDiscord,
   },
 ];
 
 type NavCardProps = {
   item: NavItem;
-  href: string;
-  attention: boolean;
-  isExternal: boolean;
 };
 
-function NavCard({ item, href, attention, isExternal }: NavCardProps) {
+function NavCard({ item }: NavCardProps) {
   const theme = useMantineTheme();
   const Icon = item.icon;
+  const href = item.path;
+  const isExternal = href.startsWith("http");
   const rootStyles = {
     cursor: "pointer",
     display: "block",
@@ -146,15 +104,7 @@ function NavCard({ item, href, attention, isExternal }: NavCardProps) {
     },
   };
 
-  const styles = {
-    root: attention
-      ? {
-          ...rootStyles,
-          borderColor: theme.colors.pink[4],
-          boxShadow: theme.shadows.sm,
-        }
-      : rootStyles,
-  };
+  const styles = { root: rootStyles };
 
   if (isExternal) {
     return (
@@ -192,9 +142,7 @@ function NavCard({ item, href, attention, isExternal }: NavCardProps) {
   );
 }
 
-const Index: React.FC<IndexProps> = (props) => {
-  const visibleItems = navItems.filter((item) => item.show(props));
-
+const Index: React.FC = () => {
   return (
     <Container size="sm" py="xl">
       <Stack align="center" gap="xs" mb="xl">
@@ -207,21 +155,9 @@ const Index: React.FC<IndexProps> = (props) => {
       </Stack>
 
       <Stack gap="sm">
-        {visibleItems.map((item) => {
-          const href = item.path(props);
-          const isExternal = href.startsWith("http");
-          const attention = item.blink(props);
-
-          return (
-            <NavCard
-              key={item.name}
-              item={item}
-              href={href}
-              isExternal={isExternal}
-              attention={attention}
-            />
-          );
-        })}
+        {navItems.map((item) => (
+          <NavCard key={item.name} item={item} />
+        ))}
       </Stack>
     </Container>
   );

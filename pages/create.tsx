@@ -58,12 +58,6 @@ export const getServerSideProps: GetServerSideProps<
     orderBy: { createdAt: "desc" },
   });
 
-  if (decks.length === 0) {
-    return {
-      redirect: { destination: "/create-new", permanent: false },
-    } as const;
-  }
-
   return {
     props: {
       decks: decks.map((deck) => ({

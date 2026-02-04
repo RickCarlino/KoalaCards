@@ -556,8 +556,7 @@ function ResultsSummary({
 
 function EmptyState({ hasFilters, onResetFilters }: EmptyStateProps) {
   let title = "No cards yet";
-  let description =
-    "Build your first deck to start studying with Koala Cards.";
+  let description = "Add cards to see them here.";
   let action = (
     <Button component={Link} href="/create">
       Add cards
