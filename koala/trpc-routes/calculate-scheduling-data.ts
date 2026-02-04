@@ -12,7 +12,7 @@ import type { Card } from "@prisma/client";
 
 const FSRS = fsrs(
   generatorParameters({
-    request_retention: 0.72,
+    request_retention: 0.73,
     enable_fuzz: true,
     enable_short_term: false,
   }),
