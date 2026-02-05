@@ -73,6 +73,7 @@ model UserSettings {
   updatedAt          DateTime @updatedAt
   dailyWritingGoal   Int      @default(150)
   writingFirst       Boolean  @default(false) // Always quiz writing before reviewing cards
+  maxLapses          Int      @default(0)
 }
 
 model VerificationToken {
@@ -102,7 +103,7 @@ model Card {
   id          Int      @id @default(autoincrement())
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId      String
-  flagged     Boolean  @default(false)
+  paused      Boolean  @default(false)
   term        String
   definition  String
   // Gender can be "M"ale, "F"emale, or "N"eutral
@@ -125,7 +126,7 @@ model Card {
   @@index([deckId])
   @@index([userId])
   @@index([userId, createdAt])
-  @@index([userId, flagged])
+  @@index([userId, paused])
   @@index([userId, nextReview])
 }
 

@@ -10,7 +10,7 @@ export async function getLessonMeta(userId: string, deckId?: number) {
   let quizzesDue = await prismaClient.card.count({
     where: {
       userId,
-      flagged: { not: true },
+      paused: { not: true },
       ...(deckId ? { deckId } : {}),
       nextReview: { lt: currentDate },
       firstReview: { gt: 0 },
@@ -21,12 +21,12 @@ export async function getLessonMeta(userId: string, deckId?: number) {
     where: {
       userId: userId,
       lastFailure: { not: 0 },
-      flagged: { not: true },
+      paused: { not: true },
     },
   });
 
   const totalCards = await prismaClient.card.count({
-    where: { userId, flagged: false, ...(deckId ? { deckId } : {}) },
+    where: { userId, paused: false, ...(deckId ? { deckId } : {}) },
   });
 
   quizzesDue += reviewsDue;
@@ -34,7 +34,7 @@ export async function getLessonMeta(userId: string, deckId?: number) {
   const newCards = await prismaClient.card.count({
     where: {
       userId,
-      flagged: false,
+      paused: false,
       ...(deckId ? { deckId } : {}),
       repetitions: 0,
       lapses: 0,

@@ -31,7 +31,7 @@ type LocalCard = Pick<
   | "definition"
   | "imageBlobId"
   | "lastFailure"
-  | "flagged"
+  | "paused"
   | "gender"
 >;
 
@@ -53,7 +53,7 @@ async function getDailyLimits(userId: string, now: number) {
   const newLearned = await prismaClient.card.count({
     where: {
       userId,
-      flagged: { not: true },
+      paused: { not: true },
       firstReview: { gte: now - TWO_DAYS_MS },
     },
   });
@@ -72,7 +72,7 @@ async function fetchBucket(
   const baseCard: Prisma.CardWhereInput = {
     userId,
     deckId,
-    flagged: { not: true },
+    paused: { not: true },
   };
 
   if (bucket === NEW_CARD) {
@@ -377,7 +377,7 @@ export async function getLessonsDue(
   return prismaClient.card.count({
     where: {
       deckId,
-      flagged: { not: true },
+      paused: { not: true },
       lastReview: { gt: 0 },
       nextReview: { lte: now },
       lastFailure: 0,
@@ -399,7 +399,7 @@ export async function canStartNewLessons(
     where: {
       userId,
       deckId,
-      flagged: { not: true },
+      paused: { not: true },
       lastReview: 0,
     },
   });

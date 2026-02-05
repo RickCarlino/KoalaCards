@@ -6,7 +6,7 @@ import { trpc } from "./trpc-config";
 
 type Card = {
   id: number;
-  flagged: boolean;
+  paused: boolean;
   term: string;
   definition: string;
   createdAt: string;
@@ -46,14 +46,14 @@ function CardRow({ card, onDelete }: CardRowProps) {
     );
   };
 
-  const [paused, setPaused] = React.useState(card.flagged);
+  const [paused, setPaused] = React.useState(card.paused);
   const [toggling, setToggling] = React.useState(false);
   const togglePaused = async () => {
     try {
       setToggling(true);
       const next = !paused;
       setPaused(next);
-      await edit.mutateAsync({ id: card.id, flagged: next });
+      await edit.mutateAsync({ id: card.id, paused: next });
     } catch (e) {
       console.error(e);
       setPaused((v) => !v);

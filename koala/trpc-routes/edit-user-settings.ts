@@ -29,6 +29,7 @@ export const editUserSettings = procedure
       id: z.optional(z.number()),
       playbackSpeed: z.number().min(0.5).max(2),
       cardsPerDayMax: z.number().min(1),
+      maxLapses: z.number().int().min(0),
       reviewTakeCount: z
         .number()
         .int()
@@ -54,6 +55,7 @@ export const editUserSettings = procedure
     const data: Prisma.UserSettingsUpdateInput = {
       playbackSpeed: input.playbackSpeed,
       cardsPerDayMax: input.cardsPerDayMax,
+      maxLapses: input.maxLapses,
       reviewTakeCount: input.reviewTakeCount,
       requestedRetention: input.requestedRetention,
       playbackPercentage: input.playbackPercentage,

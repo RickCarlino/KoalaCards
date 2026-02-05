@@ -19,7 +19,7 @@ import {
 type OverviewCounts = {
   cardsTotal: number;
   cardsStudied: number;
-  cardsFlagged: number;
+  cardsPaused: number;
   deckCount: number;
   writingCount: number;
   quizResultCount: number;
@@ -101,14 +101,14 @@ export async function getServerSideProps(
   const [
     cardsTotal,
     cardsStudied,
-    cardsFlagged,
+    cardsPaused,
     deckCount,
     writingCount,
     quizResultCount,
   ] = await Promise.all([
     prismaClient.card.count({ where: { userId } }),
     prismaClient.card.count({ where: { userId, repetitions: { gt: 0 } } }),
-    prismaClient.card.count({ where: { userId, flagged: true } }),
+    prismaClient.card.count({ where: { userId, paused: true } }),
     prismaClient.deck.count({ where: { userId } }),
     prismaClient.writingSubmission.count({ where: { userId } }),
     prismaClient.quizResult.count({ where: { userId } }),
@@ -142,7 +142,7 @@ export async function getServerSideProps(
   const counts: OverviewCounts = {
     cardsTotal,
     cardsStudied,
-    cardsFlagged,
+    cardsPaused,
     deckCount,
     writingCount,
     quizResultCount,
@@ -291,8 +291,8 @@ export default function UserOverviewPage({
                   <td>{counts.cardsStudied}</td>
                 </tr>
                 <tr>
-                  <td>Flagged Cards</td>
-                  <td>{counts.cardsFlagged}</td>
+                  <td>Paused Cards</td>
+                  <td>{counts.cardsPaused}</td>
                 </tr>
                 <tr>
                   <td>Decks</td>

@@ -16,7 +16,7 @@ export const archiveCard = procedure
         id: card.id,
       },
       data: {
-        flagged: true,
+        paused: true,
       },
     });
   });

@@ -20,6 +20,7 @@ type AppUserSettings = {
   userId: string;
   playbackSpeed: number;
   cardsPerDayMax: number;
+  maxLapses: number;
   reviewTakeCount: number;
   requestedRetention: number;
   playbackPercentage: number;
@@ -32,10 +33,11 @@ type AppUserSettings = {
 
 type AppUserSettingsInput = Omit<
   AppUserSettings,
-  "reviewTakeCount" | "requestedRetention"
+  "reviewTakeCount" | "requestedRetention" | "maxLapses"
 > & {
   reviewTakeCount?: number;
   requestedRetention?: number;
+  maxLapses?: number;
 };
 
 interface UserSettingsProviderProps {
@@ -49,6 +51,7 @@ const pickAppUserSettings = (
   userId: input.userId,
   playbackSpeed: input.playbackSpeed,
   cardsPerDayMax: input.cardsPerDayMax,
+  maxLapses: input.maxLapses ?? 0,
   reviewTakeCount: input.reviewTakeCount ?? REVIEW_TAKE_DEFAULT,
   requestedRetention: resolveRequestedRetention(input.requestedRetention),
   playbackPercentage: input.playbackPercentage,
@@ -64,6 +67,7 @@ const EMPTY: AppUserSettings = {
   userId: "0",
   playbackSpeed: 1,
   cardsPerDayMax: 42,
+  maxLapses: 0,
   reviewTakeCount: REVIEW_TAKE_DEFAULT,
   requestedRetention: REQUESTED_RETENTION_DEFAULT,
   playbackPercentage: 0.5,

@@ -47,6 +47,12 @@ export const gradeQuiz = procedure
       maybeAddImageToCard(card);
     }
     const settings = await getUserSettings(user.id);
-    await setGrade(card, grade, Date.now(), settings.requestedRetention);
+    await setGrade(
+      card,
+      grade,
+      Date.now(),
+      settings.requestedRetention,
+      settings.maxLapses,
+    );
     return {};
   });

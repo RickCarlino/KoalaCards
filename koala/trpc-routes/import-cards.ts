@@ -16,13 +16,26 @@ type CardGradingFields =
 
 type GradedCard = Pick<Card, CardGradingFields>;
 
+const shouldPauseForLapses = (
+  maxLapses: number | undefined,
+  lapses: number,
+) => {
+  if (!maxLapses || maxLapses <= 0) {
+    return false;
+  }
+  return lapses >= maxLapses;
+};
+
 export async function setGrade(
   card: GradedCard,
   grade: Grade,
   now = Date.now(),
   requestedRetention?: number,
+  maxLapses?: number,
 ) {
   const isFail = grade === Rating.Again;
+  const nextLapses = (card.lapses || 0) + (isFail ? 1 : 0);
+  const pauseForLapses = shouldPauseForLapses(maxLapses, nextLapses);
   const data = {
     ...card,
     ...calculateSchedulingData(card, grade, now, requestedRetention),
@@ -30,7 +43,7 @@ export async function setGrade(
     lastReview: now,
     firstReview: card.firstReview || now,
     lastFailure: isFail ? now : 0,
-    lapses: (card.lapses || 0) + (isFail ? 1 : 0),
+    lapses: nextLapses,
   };
 
   const { id, nextReview } = await prismaClient.card.update({
@@ -44,6 +57,7 @@ export async function setGrade(
       firstReview: data.firstReview,
       lastReview: data.lastReview,
       nextReview: data.nextReview,
+      ...(pauseForLapses ? { paused: true } : {}),
     },
   });
   console.log(`Card ${id} next review: ${timeUntil(nextReview)}`);

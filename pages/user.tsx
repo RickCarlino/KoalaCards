@@ -72,7 +72,7 @@ export async function getServerSideProps(
 
     const BASE_QUERY = {
       userId: userId,
-      flagged: { not: true },
+      paused: { not: true },
     } as const;
 
     const cardsDueNext24Hours = await prismaClient.card.count({
@@ -256,6 +256,7 @@ type Props = UnwrapPromise<
 type SettingsFormValues = {
   playbackSpeed: number;
   cardsPerDayMax: number;
+  maxLapses: number;
   reviewTakeCount: number;
   requestedRetention: number;
   dailyWritingGoal: number;
@@ -267,6 +268,7 @@ type SettingsFormValues = {
 type SettingsNumberKey =
   | "playbackSpeed"
   | "cardsPerDayMax"
+  | "maxLapses"
   | "reviewTakeCount"
   | "requestedRetention"
   | "dailyWritingGoal"
@@ -338,16 +340,261 @@ function SettingsRow({
   );
 }
 
+type SettingsNumberChangeHandler = (
+  value: number | string,
+  name: SettingsNumberKey,
+) => void;
+
 type SettingsFormProps = {
   values: SettingsFormValues;
-  onNumberChange: (
-    value: number | string,
-    name: SettingsNumberKey,
-  ) => void;
+  onNumberChange: SettingsNumberChangeHandler;
   onWritingFirstChange: (checked: boolean) => void;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
   isSaving: boolean;
 };
+
+type SliderSettingsGroupProps = {
+  playbackSpeed: number;
+  requestedRetention: number;
+  onNumberChange: SettingsNumberChangeHandler;
+};
+
+function SliderSettingsGroup({
+  playbackSpeed,
+  requestedRetention,
+  onNumberChange,
+}: SliderSettingsGroupProps) {
+  return (
+    <SettingsGroup
+      title="Sliders"
+      description="Drag to set a value within a range."
+    >
+      <SettingsRow
+        label="Target retention"
+        description="Higher keeps reviews closer together; lower spreads them out."
+        labelFor="requestedRetention"
+      >
+        <Stack gap="xs">
+          <Group justify="flex-end">
+            <Text size="sm" fw={600}>
+              {Math.round(requestedRetention * 100)}%
+            </Text>
+          </Group>
+          <Slider
+            id="requestedRetention"
+            min={REQUESTED_RETENTION_MIN}
+            max={REQUESTED_RETENTION_MAX}
+            step={0.01}
+            value={requestedRetention}
+            onChange={(value) =>
+              onNumberChange(value, "requestedRetention")
+            }
+            label={(value) => `${Math.round(value * 100)}%`}
+          />
+        </Stack>
+      </SettingsRow>
+
+      <SettingsRow
+        label="Audio playback speed"
+        description="Adjust how fast spoken audio plays."
+        labelFor="playbackSpeed"
+      >
+        <Stack gap="xs">
+          <Group justify="flex-end">
+            <Text size="sm" fw={600}>
+              {playbackSpeed.toFixed(2)}x
+            </Text>
+          </Group>
+          <Slider
+            id="playbackSpeed"
+            min={0.5}
+            max={2}
+            step={0.05}
+            value={playbackSpeed}
+            onChange={(value) => onNumberChange(value, "playbackSpeed")}
+            label={(value) => `${value.toFixed(2)}x`}
+          />
+        </Stack>
+      </SettingsRow>
+    </SettingsGroup>
+  );
+}
+
+type NumberSettingsGroupProps = {
+  cardsPerDayMax: number;
+  maxLapses: number;
+  reviewTakeCount: number;
+  dailyWritingGoal: number;
+  responseTimeoutSeconds: number;
+  onNumberChange: SettingsNumberChangeHandler;
+};
+
+function NumberSettingsGroup({
+  cardsPerDayMax,
+  maxLapses,
+  reviewTakeCount,
+  dailyWritingGoal,
+  responseTimeoutSeconds,
+  onNumberChange,
+}: NumberSettingsGroupProps) {
+  return (
+    <SettingsGroup
+      title="Number inputs"
+      description="Type an exact value."
+    >
+      <SettingsRow
+        label="New cards per day target"
+        description="Weekly target is 7x this value; daily new adjusts to meet it."
+        labelFor="cardsPerDayMax"
+      >
+        <NumberInput
+          id="cardsPerDayMax"
+          name="cardsPerDayMax"
+          value={cardsPerDayMax}
+          onChange={(value) => onNumberChange(value, "cardsPerDayMax")}
+          min={1}
+          max={50}
+          required
+          size="sm"
+        />
+      </SettingsRow>
+
+      <SettingsRow
+        label="Cards per review session"
+        description="Cards pulled when you start a deck review."
+        labelFor="reviewTakeCount"
+      >
+        <NumberInput
+          id="reviewTakeCount"
+          name="reviewTakeCount"
+          value={reviewTakeCount}
+          onChange={(value) => onNumberChange(value, "reviewTakeCount")}
+          min={REVIEW_TAKE_MIN}
+          max={REVIEW_TAKE_MAX}
+          step={1}
+          required
+          size="sm"
+        />
+      </SettingsRow>
+
+      <SettingsRow
+        label="Auto-pause after lapses"
+        description="Set to 0 to disable. Cards pause after this many lapses."
+        labelFor="maxLapses"
+      >
+        <NumberInput
+          id="maxLapses"
+          name="maxLapses"
+          value={maxLapses}
+          onChange={(value) => onNumberChange(value, "maxLapses")}
+          min={0}
+          step={1}
+          size="sm"
+        />
+      </SettingsRow>
+
+      <SettingsRow
+        label="Daily writing goal (characters)"
+        description="Your daily writing practice target."
+        labelFor="dailyWritingGoal"
+      >
+        <NumberInput
+          id="dailyWritingGoal"
+          name="dailyWritingGoal"
+          value={dailyWritingGoal}
+          onChange={(value) => onNumberChange(value, "dailyWritingGoal")}
+          min={0}
+          step={50}
+          required
+          size="sm"
+        />
+      </SettingsRow>
+
+      <SettingsRow
+        label="Response timeout (seconds)"
+        description="Set to 0 to disable."
+        labelFor="responseTimeoutSeconds"
+      >
+        <NumberInput
+          id="responseTimeoutSeconds"
+          name="responseTimeoutSeconds"
+          value={responseTimeoutSeconds}
+          onChange={(value) =>
+            onNumberChange(value, "responseTimeoutSeconds")
+          }
+          min={0}
+          step={1}
+          size="sm"
+        />
+      </SettingsRow>
+    </SettingsGroup>
+  );
+}
+
+type ChoiceSettingsGroupProps = {
+  playbackPercentage: number;
+  onNumberChange: SettingsNumberChangeHandler;
+};
+
+function ChoiceSettingsGroup({
+  playbackPercentage,
+  onNumberChange,
+}: ChoiceSettingsGroupProps) {
+  return (
+    <SettingsGroup title="Quick choices" description="Tap a preset value.">
+      <SettingsRow
+        label="Replay your recording"
+        description="How often your recording replays after you answer."
+      >
+        <SegmentedControl
+          fullWidth
+          value={String(playbackPercentage)}
+          onChange={(value) => onNumberChange(value, "playbackPercentage")}
+          data={[
+            { label: "100%", value: "1" },
+            { label: "66%", value: "0.66" },
+            { label: "33%", value: "0.33" },
+            { label: "0%", value: "0" },
+          ]}
+          size="sm"
+          aria-label="Replay your recording"
+        />
+      </SettingsRow>
+    </SettingsGroup>
+  );
+}
+
+type ToggleSettingsGroupProps = {
+  writingFirst: boolean;
+  onWritingFirstChange: (checked: boolean) => void;
+};
+
+function ToggleSettingsGroup({
+  writingFirst,
+  onWritingFirstChange,
+}: ToggleSettingsGroupProps) {
+  return (
+    <SettingsGroup
+      title="Toggles"
+      description="Switches that turn behaviors on or off."
+    >
+      <SettingsRow
+        label="Require daily writing before card review"
+        description="Encourages consistent writing practice."
+        labelFor="writingFirst"
+      >
+        <Switch
+          id="writingFirst"
+          checked={writingFirst}
+          onChange={(event) =>
+            onWritingFirstChange(event.currentTarget.checked)
+          }
+          size="md"
+        />
+      </SettingsRow>
+    </SettingsGroup>
+  );
+}
 
 function SettingsForm({
   values,
@@ -359,182 +606,27 @@ function SettingsForm({
   return (
     <form onSubmit={onSubmit}>
       <Stack gap="xl">
-        <SettingsGroup
-          title="Study pace"
-          description="Daily targets and session size."
-        >
-          <SettingsRow
-            label="New cards per day target"
-            description="Weekly target is 7x this value; daily new adjusts to meet it."
-            labelFor="cardsPerDayMax"
-          >
-            <NumberInput
-              id="cardsPerDayMax"
-              name="cardsPerDayMax"
-              value={values.cardsPerDayMax}
-              onChange={(value) => onNumberChange(value, "cardsPerDayMax")}
-              min={1}
-              max={50}
-              required
-              size="sm"
-            />
-          </SettingsRow>
-
-          <SettingsRow
-            label="Cards per review session"
-            description="Cards pulled when you start a deck review."
-            labelFor="reviewTakeCount"
-          >
-            <NumberInput
-              id="reviewTakeCount"
-              name="reviewTakeCount"
-              value={values.reviewTakeCount}
-              onChange={(value) =>
-                onNumberChange(value, "reviewTakeCount")
-              }
-              min={REVIEW_TAKE_MIN}
-              max={REVIEW_TAKE_MAX}
-              step={1}
-              required
-              size="sm"
-            />
-          </SettingsRow>
-
-          <SettingsRow
-            label="Target retention"
-            description="Higher keeps reviews closer together; lower spreads them out."
-            labelFor="requestedRetention"
-          >
-            <Stack gap="xs">
-              <Group justify="flex-end">
-                <Text size="sm" fw={600}>
-                  {Math.round(values.requestedRetention * 100)}%
-                </Text>
-              </Group>
-              <Slider
-                id="requestedRetention"
-                min={REQUESTED_RETENTION_MIN}
-                max={REQUESTED_RETENTION_MAX}
-                step={0.01}
-                value={values.requestedRetention}
-                onChange={(value) =>
-                  onNumberChange(value, "requestedRetention")
-                }
-                label={(value) => `${Math.round(value * 100)}%`}
-              />
-            </Stack>
-          </SettingsRow>
-
-          <SettingsRow
-            label="Daily writing goal (characters)"
-            description="Your daily writing practice target."
-            labelFor="dailyWritingGoal"
-          >
-            <NumberInput
-              id="dailyWritingGoal"
-              name="dailyWritingGoal"
-              value={values.dailyWritingGoal}
-              onChange={(value) =>
-                onNumberChange(value, "dailyWritingGoal")
-              }
-              min={0}
-              step={50}
-              required
-              size="sm"
-            />
-          </SettingsRow>
-        </SettingsGroup>
-
-        <SettingsGroup
-          title="Audio feedback"
-          description="Playback speed and auto-replay."
-        >
-          <SettingsRow
-            label="Audio playback speed"
-            description="Adjust how fast spoken audio plays."
-          >
-            <Stack gap="xs">
-              <Group justify="flex-end">
-                <Text size="sm" fw={600}>
-                  {values.playbackSpeed.toFixed(2)}x
-                </Text>
-              </Group>
-              <Slider
-                id="playbackSpeed"
-                min={0.5}
-                max={2}
-                step={0.05}
-                value={values.playbackSpeed}
-                onChange={(val) => onNumberChange(val, "playbackSpeed")}
-                label={(value) => `${value.toFixed(2)}x`}
-              />
-            </Stack>
-          </SettingsRow>
-
-          <SettingsRow
-            label="Replay your recording"
-            description="How often your recording replays after you answer."
-          >
-            <SegmentedControl
-              fullWidth
-              value={String(values.playbackPercentage)}
-              onChange={(value) =>
-                onNumberChange(value, "playbackPercentage")
-              }
-              data={[
-                { label: "100%", value: "1" },
-                { label: "66%", value: "0.66" },
-                { label: "33%", value: "0.33" },
-                { label: "0%", value: "0" },
-              ]}
-              size="sm"
-              aria-label="Replay your recording"
-            />
-          </SettingsRow>
-        </SettingsGroup>
-
-        <SettingsGroup
-          title="Response timing"
-          description='Gentle countdowns for speaking and "How would you say" prompts.'
-        >
-          <SettingsRow
-            label="Response timeout (seconds)"
-            description="Set to 0 to disable."
-            labelFor="responseTimeoutSeconds"
-          >
-            <NumberInput
-              id="responseTimeoutSeconds"
-              name="responseTimeoutSeconds"
-              value={values.responseTimeoutSeconds}
-              onChange={(value) =>
-                onNumberChange(value, "responseTimeoutSeconds")
-              }
-              min={0}
-              step={1}
-              size="sm"
-            />
-          </SettingsRow>
-        </SettingsGroup>
-
-        <SettingsGroup
-          title="Writing flow"
-          description="Prioritize writing before review when you need focus."
-        >
-          <SettingsRow
-            label="Require daily writing before card review"
-            description="Encourages consistent writing practice."
-            labelFor="writingFirst"
-          >
-            <Switch
-              id="writingFirst"
-              checked={values.writingFirst}
-              onChange={(event) =>
-                onWritingFirstChange(event.currentTarget.checked)
-              }
-              size="md"
-            />
-          </SettingsRow>
-        </SettingsGroup>
+        <SliderSettingsGroup
+          playbackSpeed={values.playbackSpeed}
+          requestedRetention={values.requestedRetention}
+          onNumberChange={onNumberChange}
+        />
+        <NumberSettingsGroup
+          cardsPerDayMax={values.cardsPerDayMax}
+          maxLapses={values.maxLapses}
+          reviewTakeCount={values.reviewTakeCount}
+          dailyWritingGoal={values.dailyWritingGoal}
+          responseTimeoutSeconds={values.responseTimeoutSeconds}
+          onNumberChange={onNumberChange}
+        />
+        <ChoiceSettingsGroup
+          playbackPercentage={values.playbackPercentage}
+          onNumberChange={onNumberChange}
+        />
+        <ToggleSettingsGroup
+          writingFirst={values.writingFirst}
+          onWritingFirstChange={onWritingFirstChange}
+        />
 
         <Group justify="flex-end">
           <Button type="submit" loading={isSaving} size="sm">
@@ -754,6 +846,7 @@ export default function UserSettingsPage(props: Props) {
   const { userSettings, stats, cardChartData, writingChartData } = props;
   const [settings, setSettings] = useState(() => ({
     ...userSettings,
+    maxLapses: userSettings.maxLapses ?? 0,
     requestedRetention: resolveRequestedRetention(
       userSettings.requestedRetention,
     ),
@@ -809,6 +902,7 @@ export default function UserSettingsPage(props: Props) {
   const formValues: SettingsFormValues = {
     playbackSpeed: settings.playbackSpeed,
     cardsPerDayMax: settings.cardsPerDayMax,
+    maxLapses: settings.maxLapses ?? 0,
     reviewTakeCount: settings.reviewTakeCount,
     requestedRetention: resolveRequestedRetention(
       settings.requestedRetention,
