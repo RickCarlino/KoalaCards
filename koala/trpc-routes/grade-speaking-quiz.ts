@@ -58,10 +58,10 @@ const buildDeckContext = (
 ) => {
   const parts: string[] = [];
   if (deckName) {
-    parts.push(`This came from the deck "${deckName}".`);
+    parts.push(`Deck: "${deckName}".`);
   }
   if (deckDescription) {
-    parts.push(`Deck description: ${deckDescription}.`);
+    parts.push(`Deck guidance: ${deckDescription}.`);
   }
   return parts.join(" ");
 };
@@ -72,19 +72,14 @@ const buildGrammarPrompt = (input: GrammarEvaluationInput): string => {
     input.deckDescription,
   );
   return [
-    "I am learning Korean.",
-    "This is a flashcard app.",
-    `My prompt was: ${input.definition} (${input.term})`,
+    "I am learning Korean. This is a flashcard app.",
+    "Grade my response, which was entered via speech to text.",
     deckContext,
-    `Let's say I am in a situation that warrants the sentence or prompt above.`,
-    `Could one say "${input.userInput}"?`,
-    `Would that be OK?`,
-    `(entered via speech-to-text, I have no control over spacing or punctuation so please focus on the content.)`,
-    "For the sake of this discussion, let's say that formality levels don't need to be taken into consideration.",
-    `Explain in one tweet or less.`,
-    `Correct answers 'just are' correct. No need to explain why it is correct.`,
-    "Your focus is grading and explaining why something is wrong.",
-    "Do not provide alternative suggestions or better ways to answer the question.",
+    `Prompt: ${input.definition}`,
+    `Possible answer: "${input.term}".`,
+    `My answer: "${input.userInput}".`,
+    "Return yes/no with a brief reason. Avoid alternatives unless deck guidance asks.",
+    "Answers must be very concise. Double check your response, and do not nitpick."
   ]
     .filter(Boolean)
     .join(" ");
