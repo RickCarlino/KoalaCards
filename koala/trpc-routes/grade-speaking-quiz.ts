@@ -79,7 +79,7 @@ const buildGrammarPrompt = (input: GrammarEvaluationInput): string => {
     `Possible answer: "${input.term}".`,
     `My answer: "${input.userInput}".`,
     "Return yes/no with a brief reason. Avoid alternatives unless deck guidance asks.",
-    "Answers must be very concise. Double check your response, and do not nitpick."
+    "Answers must be very concise. Double check your response, and do not nitpick.",
   ]
     .filter(Boolean)
     .join(" ");
