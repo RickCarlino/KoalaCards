@@ -68,6 +68,11 @@ const navItems: NavItem[] = [
     icon: IconFileText,
   },
   {
+    path: "/recent",
+    name: "Recent Activity",
+    icon: IconFileText,
+  },
+  {
     path: "/user",
     name: "Settings",
     icon: IconSettings,
