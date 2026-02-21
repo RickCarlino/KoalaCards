@@ -1,12 +1,11 @@
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { prismaClient } from "@/koala/prisma-client";
 import {
-  Badge,
+  Box,
   Container,
-  Group,
+  Divider,
   Paper,
   ScrollArea,
-  SimpleGrid,
   Stack,
   Table,
   Text,
@@ -23,7 +22,6 @@ type WritingSample = {
   id: number;
   prompt: string;
   submission: string;
-  submissionCharacterCount: number;
   createdAt: string;
 };
 
@@ -35,10 +33,12 @@ type OutcomeRow = {
   createdAt: string;
 };
 
+type CorrectOutcomeRow = Omit<OutcomeRow, "userInput">;
+
 type RecentPageProps = {
   writingSamples: WritingSample[];
   wrongOutcomes: OutcomeRow[];
-  correctOutcomes: Omit<OutcomeRow, "userInput">[];
+  correctOutcomes: CorrectOutcomeRow[];
 };
 
 type LatestCardOutcomeRow = {
@@ -48,6 +48,14 @@ type LatestCardOutcomeRow = {
   userInput: string;
   isAcceptable: boolean;
   createdAt: Date;
+};
+
+type OutcomeDisplayRow = {
+  cardId: number;
+  term: string;
+  definition: string;
+  createdAt: string;
+  userInput?: string;
 };
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
@@ -60,13 +68,13 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
 const formatDate = (isoDate: string) =>
   dateFormatter.format(new Date(isoDate));
 
-const getPromptLabel = (prompt: string) => {
+const hasPrompt = (prompt: string) => {
   const trimmedPrompt = prompt.trim();
-  if (!trimmedPrompt || trimmedPrompt === DEFAULT_PROMPT) {
-    return "No prompt provided";
-  }
-  return trimmedPrompt;
+  return Boolean(trimmedPrompt) && trimmedPrompt !== DEFAULT_PROMPT;
 };
+
+const formatItemCount = (count: number) =>
+  `${count} item${count === 1 ? "" : "s"}`;
 
 const toSerializableOutcome = (
   row: LatestCardOutcomeRow,
@@ -97,7 +105,6 @@ export const getServerSideProps: GetServerSideProps<
         id: true,
         prompt: true,
         submission: true,
-        submissionCharacterCount: true,
         createdAt: true,
       },
     }),
@@ -145,7 +152,6 @@ export const getServerSideProps: GetServerSideProps<
     id: row.id,
     prompt: row.prompt,
     submission: row.submission,
-    submissionCharacterCount: row.submissionCharacterCount,
     createdAt: row.createdAt.toISOString(),
   }));
 
@@ -158,192 +164,120 @@ export const getServerSideProps: GetServerSideProps<
   };
 };
 
-function SummaryBanner({
-  writingCount,
-  wrongCount,
-  correctCount,
+function SectionHeading({
+  title,
+  count,
 }: {
-  writingCount: number;
-  wrongCount: number;
-  correctCount: number;
+  title: string;
+  count?: number;
 }) {
   return (
-    <Paper
-      withBorder
-      radius="lg"
-      p="lg"
-      style={{
-        background:
-          "linear-gradient(135deg, rgba(255, 240, 246, 0.95), rgba(255, 250, 252, 1))",
-      }}
-    >
-      <Stack gap="xs">
-        <Title order={2} c="pink.8">
-          Recent Activity
-        </Title>
-        <Text c="gray.7">
-          Last {WRITING_SAMPLE_LIMIT} writing samples, plus deduplicated
-          latest quiz outcomes per card.
+    <Stack gap={2}>
+      <Title order={3} style={{ letterSpacing: "-0.01em" }}>
+        {title}
+      </Title>
+      {typeof count === "number" && (
+        <Text size="sm" c="dimmed">
+          {formatItemCount(count)}
         </Text>
-        <Group gap="xs" mt="xs">
-          <Badge color="pink" variant="light">
-            Writing: {writingCount}
-          </Badge>
-          <Badge color="red" variant="light">
-            Wrong: {wrongCount}
-          </Badge>
-          <Badge color="teal" variant="light">
-            Correct: {correctCount}
-          </Badge>
-        </Group>
-      </Stack>
-    </Paper>
+      )}
+    </Stack>
   );
 }
 
-function WritingSamplesPanel({ samples }: { samples: WritingSample[] }) {
-  const hasSamples = samples.length > 0;
+function WritingSamplesSection({ samples }: { samples: WritingSample[] }) {
+  if (samples.length === 0) {
+    return <Text c="dimmed">No writing samples yet.</Text>;
+  }
 
   return (
-    <Paper withBorder radius="lg" p="lg">
-      <Stack gap="md">
-        <Group justify="space-between" align="center">
-          <Title order={4} c="pink.8">
-            Last {WRITING_SAMPLE_LIMIT} Writing Samples
-          </Title>
-          <Text size="sm" c="dimmed">
-            Pre-correction text
-          </Text>
-        </Group>
+    <Stack gap="md">
+      {samples.map((sample, index) => {
+        const showDivider = index < samples.length - 1;
 
-        {!hasSamples && (
-          <Text c="dimmed">
-            No writing samples yet. Complete a writing review to populate
-            this section.
-          </Text>
-        )}
-
-        {hasSamples &&
-          samples.map((sample) => (
-            <Paper
-              key={sample.id}
-              withBorder
-              radius="md"
-              p="sm"
-              bg="pink.0"
-            >
-              <Stack gap="xs">
-                <Group justify="space-between" align="center">
-                  <Badge color="pink" variant="outline">
-                    {formatDate(sample.createdAt)}
-                  </Badge>
-                  <Badge color="gray" variant="light">
-                    {sample.submissionCharacterCount} chars
-                  </Badge>
-                </Group>
-                <Text fw={600} c="gray.8">
-                  {getPromptLabel(sample.prompt)}
+        return (
+          <Box key={sample.id}>
+            <Stack gap={6}>
+              <Text fw={700}>{formatDate(sample.createdAt)}</Text>
+              {hasPrompt(sample.prompt) && (
+                <Text size="sm" style={{ lineHeight: 1.6 }}>
+                  <Text component="span" fw={700}>
+                    Prompt:
+                  </Text>{" "}
+                  {sample.prompt.trim()}
                 </Text>
-                <ScrollArea h={130} type="auto">
-                  <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
-                    {sample.submission}
-                  </Text>
-                </ScrollArea>
-              </Stack>
-            </Paper>
-          ))}
-      </Stack>
-    </Paper>
+              )}
+              <Text
+                size="sm"
+                style={{ whiteSpace: "pre-wrap", lineHeight: 1.75 }}
+              >
+                {sample.submission}
+              </Text>
+            </Stack>
+            {showDivider && <Divider my="md" />}
+          </Box>
+        );
+      })}
+    </Stack>
   );
 }
 
-function OutcomeTable({
+function OutcomeSection({
   title,
-  subtitle,
   rows,
   includeInputColumn,
   emptyMessage,
-  color,
 }: {
   title: string;
-  subtitle: string;
-  rows: Array<
-    {
-      cardId: number;
-      term: string;
-      definition: string;
-      createdAt: string;
-    } & Partial<Pick<OutcomeRow, "userInput">>
-  >;
+  rows: OutcomeDisplayRow[];
   includeInputColumn: boolean;
   emptyMessage: string;
-  color: "red" | "teal";
 }) {
-  const hasRows = rows.length > 0;
-  const rowSpan = includeInputColumn ? 5 : 4;
+  const columnCount = includeInputColumn ? 5 : 4;
 
   return (
-    <Paper withBorder radius="lg" p="lg">
-      <Stack gap="md">
-        <Group justify="space-between" align="center">
-          <Title order={4} c={`${color}.8`}>
-            {title}
-          </Title>
-          <Badge color={color} variant="light">
-            {rows.length}
-          </Badge>
-        </Group>
-        <Text size="sm" c="dimmed">
-          {subtitle}
-        </Text>
-        <ScrollArea h={500} type="auto">
-          <Table striped highlightOnHover withColumnBorders>
-            <thead>
+    <Stack gap="sm">
+      <SectionHeading title={title} count={rows.length} />
+      <ScrollArea type="auto">
+        <Table
+          withColumnBorders
+          withTableBorder
+          horizontalSpacing="md"
+          verticalSpacing="xs"
+          style={{ minWidth: 720 }}
+        >
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Term</th>
+              <th>Definition</th>
+              {includeInputColumn && <th>My Input</th>}
+              <th>Card ID</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 && (
               <tr>
-                <th>Date</th>
-                <th>Term</th>
-                <th>Definition</th>
-                {includeInputColumn && <th>My Input</th>}
-                <th>Card ID</th>
+                <td colSpan={columnCount}>
+                  <Text size="sm" c="dimmed">
+                    {emptyMessage}
+                  </Text>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {!hasRows && (
-                <tr>
-                  <td colSpan={rowSpan}>
-                    <Text size="sm" c="dimmed">
-                      {emptyMessage}
-                    </Text>
-                  </td>
-                </tr>
-              )}
-              {hasRows &&
-                rows.map((row) => (
-                  <tr key={row.cardId}>
-                    <td>{formatDate(row.createdAt)}</td>
-                    <td>
-                      <Text size="sm">{row.term}</Text>
-                    </td>
-                    <td>
-                      <Text size="sm">{row.definition}</Text>
-                    </td>
-                    {includeInputColumn && (
-                      <td>
-                        <Text size="sm">{row.userInput ?? ""}</Text>
-                      </td>
-                    )}
-                    <td>
-                      <Badge variant="outline" color="gray">
-                        {row.cardId}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </Table>
-        </ScrollArea>
-      </Stack>
-    </Paper>
+            )}
+            {rows.map((row) => (
+              <tr key={row.cardId}>
+                <td>{formatDate(row.createdAt)}</td>
+                <td>{row.term}</td>
+                <td>{row.definition}</td>
+                {includeInputColumn && <td>{row.userInput ?? ""}</td>}
+                <td>{row.cardId}</td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      </ScrollArea>
+    </Stack>
   );
 }
 
@@ -353,33 +287,64 @@ export default function RecentPage({
   correctOutcomes,
 }: RecentPageProps) {
   return (
-    <Container size="xl" py="xl">
-      <Stack gap="lg">
-        <SummaryBanner
-          writingCount={writingSamples.length}
-          wrongCount={wrongOutcomes.length}
-          correctCount={correctOutcomes.length}
-        />
-        <WritingSamplesPanel samples={writingSamples} />
-        <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="lg">
-          <OutcomeTable
-            title={`Last ${OUTCOME_LIMIT} Wrong`}
-            subtitle="Deduplicated by card. Latest result wins."
+    <Container size="lg" py={{ base: "md", sm: "xl" }}>
+      <Paper
+        withBorder
+        radius="lg"
+        p={{ base: "md", sm: "xl" }}
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(255, 248, 251, 0.96), rgba(255, 255, 255, 1))",
+          borderColor: "rgba(221, 170, 190, 0.55)",
+          fontFamily:
+            '"Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif',
+        }}
+      >
+        <Stack gap="xl">
+          <Stack gap={4}>
+            <Title
+              order={2}
+              style={{
+                letterSpacing: "-0.015em",
+                fontSize: "clamp(1.55rem, 2.2vw, 2rem)",
+              }}
+            >
+              Recent Study Activity
+            </Title>
+            <Text c="dimmed" size="sm" style={{ lineHeight: 1.7 }}>
+              Writing samples and quiz outcomes from recent sessions.
+            </Text>
+          </Stack>
+
+          <Divider />
+
+          <Stack gap="sm">
+            <SectionHeading
+              title="Recent Writing Samples"
+              count={writingSamples.length}
+            />
+            <WritingSamplesSection samples={writingSamples} />
+          </Stack>
+
+          <Divider />
+
+          <OutcomeSection
+            title="Recent Wrong Answers"
             rows={wrongOutcomes}
             includeInputColumn
-            emptyMessage="No wrong cards found in recent outcomes."
-            color="red"
+            emptyMessage="No wrong answers found."
           />
-          <OutcomeTable
-            title={`Last ${OUTCOME_LIMIT} Correct`}
-            subtitle="Deduplicated by card. Latest result wins."
+
+          <Divider />
+
+          <OutcomeSection
+            title="Recent Correct Answers"
             rows={correctOutcomes}
             includeInputColumn={false}
-            emptyMessage="No correct cards found in recent outcomes."
-            color="teal"
+            emptyMessage="No correct answers found."
           />
-        </SimpleGrid>
-      </Stack>
+        </Stack>
+      </Paper>
     </Container>
   );
 }
