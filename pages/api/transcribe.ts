@@ -12,15 +12,70 @@ export const config = {
 };
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const MAX_AUDIO_BYTES = 10 * 1024 * 1024;
 
-async function readRawBody(req: NextApiRequest): Promise<Buffer> {
+class PayloadTooLargeError extends Error {
+  constructor() {
+    super("Audio payload too large");
+    this.name = "PayloadTooLargeError";
+  }
+}
+
+async function readRawBody(
+  req: NextApiRequest,
+  maxBytes: number,
+): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
-    req.on("data", (chunk: Buffer | string) =>
-      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)),
-    );
-    req.on("end", () => resolve(Buffer.concat(chunks)));
-    req.on("error", reject);
+    let totalBytes = 0;
+    let settled = false;
+
+    const cleanup = () => {
+      req.off("data", onData);
+      req.off("end", onEnd);
+      req.off("error", onError);
+    };
+
+    const fail = (error: Error) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      cleanup();
+      reject(error);
+    };
+
+    const finish = () => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      cleanup();
+      resolve(Buffer.concat(chunks));
+    };
+
+    const onData = (chunk: Buffer | string) => {
+      const bufferChunk = Buffer.isBuffer(chunk)
+        ? chunk
+        : Buffer.from(chunk);
+      totalBytes += bufferChunk.length;
+
+      if (totalBytes > maxBytes) {
+        fail(new PayloadTooLargeError());
+        req.destroy();
+        return;
+      }
+
+      chunks.push(bufferChunk);
+    };
+
+    const onEnd = () => finish();
+
+    const onError = (error: Error) => fail(error);
+
+    req.on("data", onData);
+    req.on("end", onEnd);
+    req.on("error", onError);
   });
 }
 
@@ -65,7 +120,25 @@ export default async function handler(
     (req.headers["content-type"] as string | undefined) ??
     "application/octet-stream";
 
-  const raw = await readRawBody(req);
+  const contentLength = Number(firstParam(req.headers["content-length"]));
+  if (Number.isFinite(contentLength) && contentLength > MAX_AUDIO_BYTES) {
+    return res.status(413).json({
+      error: `Audio payload too large. Limit is ${MAX_AUDIO_BYTES} bytes.`,
+    });
+  }
+
+  let raw: Buffer;
+  try {
+    raw = await readRawBody(req, MAX_AUDIO_BYTES);
+  } catch (error: unknown) {
+    if (error instanceof PayloadTooLargeError) {
+      return res.status(413).json({
+        error: `Audio payload too large. Limit is ${MAX_AUDIO_BYTES} bytes.`,
+      });
+    }
+    throw error;
+  }
+
   if (raw.length === 0) {
     return res.status(400).json({ error: "Empty audio payload" });
   }

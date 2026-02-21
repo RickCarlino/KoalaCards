@@ -110,6 +110,13 @@ type DefinitionsPanelProps = {
   error: string | null;
 };
 
+type WritingStepControlState = {
+  canChangeMode: boolean;
+  textInputDisabled: boolean;
+  canReview: boolean;
+  canToggleRecording: boolean;
+};
+
 const DEFAULT_PROMPT = "Not set.";
 
 const isSafeReturnTo = (value: string) =>
@@ -184,12 +191,16 @@ const getModeTipText = (practiceMode: PracticeMode) => {
 
 const getRecordTooltip = (
   isRecording: boolean,
+  isStarting: boolean,
   isTranscribing: boolean,
   disabled: boolean,
   isSupported: boolean,
 ) => {
   if (!isSupported) {
     return "This browser does not support microphone recording";
+  }
+  if (isStarting) {
+    return "Waiting for microphone permission...";
   }
   if (isTranscribing) {
     return "Transcribing your response...";
@@ -205,8 +216,12 @@ const getRecordTooltip = (
 
 const getSpeakingStatusText = (
   isRecording: boolean,
+  isStarting: boolean,
   isTranscribing: boolean,
 ) => {
+  if (isStarting) {
+    return "Waiting for microphone permission...";
+  }
   if (isTranscribing) {
     return "Transcribing... this can take a few seconds.";
   }
@@ -214,6 +229,20 @@ const getSpeakingStatusText = (
     return "Recording now. Auto-stop at 60 seconds.";
   }
   return "Tap the microphone, then speak in Korean.";
+};
+
+const getRecordIcon = (isRecording: boolean) => {
+  if (isRecording) {
+    return <IconPlayerStopFilled size={24} />;
+  }
+  return <IconMicrophone size={24} />;
+};
+
+const getRecordingTextColor = (isRecording: boolean) => {
+  if (isRecording) {
+    return "red.7";
+  }
+  return "pink.7";
 };
 
 const formatCountdown = (seconds: number) => {
@@ -239,6 +268,34 @@ const getSpeakingHint = (prompt: string) => {
     return "";
   }
   return prompt;
+};
+
+const getWritingStepControlState = ({
+  hasEssay,
+  loadingReview,
+  isRecording,
+  isStarting,
+  isTranscribing,
+  isSupported,
+}: {
+  hasEssay: boolean;
+  loadingReview: boolean;
+  isRecording: boolean;
+  isStarting: boolean;
+  isTranscribing: boolean;
+  isSupported: boolean;
+}): WritingStepControlState => {
+  const isBusy =
+    loadingReview || isRecording || isStarting || isTranscribing;
+
+  return {
+    canChangeMode: !isBusy,
+    textInputDisabled: isBusy,
+    canReview: hasEssay && !isBusy,
+    canToggleRecording:
+      isRecording ||
+      (!loadingReview && !isStarting && !isTranscribing && isSupported),
+  };
 };
 
 const getPreferredRecorderMimeType = (): string | null => {
@@ -302,8 +359,10 @@ function useSpeechRecorder({
 }: UseSpeechRecorderOptions) {
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const startInFlightRef = useRef(false);
   const stopInFlightRef = useRef(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [remainingSeconds, setRemainingSeconds] = useState(
     MAX_SPEECH_RECORDING_SECONDS,
@@ -403,17 +462,28 @@ function useSpeechRecorder({
   }, [hint, langCode, onTranscript]);
 
   const startRecording = useCallback(async () => {
-    if (!isSupported || disabled || isTranscribing) {
+    if (!isSupported || disabled || isTranscribing || isStarting) {
       return;
     }
-    if (recorderRef.current || stopInFlightRef.current) {
+    if (
+      recorderRef.current ||
+      startInFlightRef.current ||
+      stopInFlightRef.current
+    ) {
       return;
     }
+
+    startInFlightRef.current = true;
+    setIsStarting(true);
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: true,
       });
+      if (recorderRef.current || stopInFlightRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
       const recorderOptions: MediaRecorderOptions = {};
       const preferredMimeType = getPreferredRecorderMimeType();
       if (preferredMimeType) {
@@ -443,16 +513,22 @@ function useSpeechRecorder({
         message,
         color: "red",
       });
+    } finally {
+      startInFlightRef.current = false;
+      setIsStarting(false);
     }
-  }, [disabled, isSupported, isTranscribing]);
+  }, [disabled, isStarting, isSupported, isTranscribing]);
 
   const toggleRecording = useCallback(() => {
+    if (isStarting) {
+      return;
+    }
     if (isRecording) {
       void stopRecording();
       return;
     }
     void startRecording();
-  }, [isRecording, startRecording, stopRecording]);
+  }, [isRecording, isStarting, startRecording, stopRecording]);
 
   useEffect(() => {
     if (!isRecording) {
@@ -494,6 +570,7 @@ function useSpeechRecorder({
   return {
     isSupported,
     isRecording,
+    isStarting,
     isTranscribing,
     remainingSeconds,
     toggleRecording,
@@ -564,6 +641,33 @@ function WritingProgress({
   );
 }
 
+function ReviewControl({
+  loadingReview,
+  reviewLoadingLabel,
+  canReview,
+  onReview,
+}: {
+  loadingReview: boolean;
+  reviewLoadingLabel: string;
+  canReview: boolean;
+  onReview: () => void;
+}) {
+  if (loadingReview) {
+    return (
+      <Group>
+        <Loader size="sm" />
+        <Text c="dimmed">{reviewLoadingLabel}</Text>
+      </Group>
+    );
+  }
+
+  return (
+    <Button onClick={onReview} disabled={!canReview}>
+      Save and Review Feedback
+    </Button>
+  );
+}
+
 function WritingStep({
   prompt,
   onPromptChange,
@@ -582,6 +686,7 @@ function WritingStep({
   const {
     isSupported,
     isRecording,
+    isStarting,
     isTranscribing,
     remainingSeconds,
     toggleRecording,
@@ -592,33 +697,30 @@ function WritingStep({
     onTranscript,
   });
 
-  const canChangeMode = !loadingReview && !isRecording && !isTranscribing;
-  const textInputDisabled = loadingReview || isRecording || isTranscribing;
-  const canReview =
-    essay.trim().length > 0 &&
-    !loadingReview &&
-    !isRecording &&
-    !isTranscribing;
+  const controlState = getWritingStepControlState({
+    hasEssay: essay.trim().length > 0,
+    loadingReview,
+    isRecording,
+    isStarting,
+    isTranscribing,
+    isSupported,
+  });
 
   const recordTooltip = getRecordTooltip(
     isRecording,
+    isStarting,
     isTranscribing,
     loadingReview,
     isSupported,
   );
   const speakingStatus = getSpeakingStatusText(
     isRecording,
+    isStarting,
     isTranscribing,
   );
   const recordingProgress = getRecordingProgressPercent(remainingSeconds);
-  const canToggleRecording =
-    isRecording || (!loadingReview && !isTranscribing && isSupported);
-  const recordIcon = isRecording ? (
-    <IconPlayerStopFilled size={24} />
-  ) : (
-    <IconMicrophone size={24} />
-  );
-  const recordingTextColor = isRecording ? "red.7" : "pink.7";
+  const recordIcon = getRecordIcon(isRecording);
+  const recordingTextColor = getRecordingTextColor(isRecording);
   const reviewLoadingLabel = getReviewLoadingLabel(practiceMode);
 
   const handleModeChange = (value: string) => {
@@ -627,17 +729,6 @@ function WritingStep({
     }
     onPracticeModeChange(value);
   };
-
-  const reviewControl = loadingReview ? (
-    <Group>
-      <Loader size="sm" />
-      <Text c="dimmed">{reviewLoadingLabel}</Text>
-    </Group>
-  ) : (
-    <Button onClick={onReview} disabled={!canReview}>
-      Save and Review Feedback
-    </Button>
-  );
 
   return (
     <Paper withBorder shadow="sm" p="md">
@@ -653,7 +744,7 @@ function WritingStep({
         ]}
         fullWidth
         mb="md"
-        disabled={!canChangeMode}
+        disabled={!controlState.canChangeMode}
         aria-label="Practice mode"
       />
       <Textarea
@@ -663,7 +754,7 @@ function WritingStep({
         minRows={2}
         maxRows={4}
         mb="md"
-        disabled={textInputDisabled}
+        disabled={controlState.textInputDisabled}
       />
       <Text size="sm" c="dimmed" mb="xs">
         {getModeTipText(practiceMode)}
@@ -680,9 +771,11 @@ function WritingStep({
                   radius="xl"
                   color="pink.7"
                   onClick={
-                    canToggleRecording ? toggleRecording : undefined
+                    controlState.canToggleRecording
+                      ? toggleRecording
+                      : undefined
                   }
-                  disabled={!canToggleRecording}
+                  disabled={!controlState.canToggleRecording}
                   aria-label={
                     isRecording ? "Stop recording" : "Start recording"
                   }
@@ -728,7 +821,7 @@ function WritingStep({
         value={essay}
         onChange={(e) => onEssayChange(e.currentTarget.value)}
         mb="xs"
-        disabled={textInputDisabled}
+        disabled={controlState.textInputDisabled}
       />
 
       <WritingProgress
@@ -737,7 +830,12 @@ function WritingStep({
         essayLength={essay.length}
       />
 
-      {reviewControl}
+      <ReviewControl
+        loadingReview={loadingReview}
+        reviewLoadingLabel={reviewLoadingLabel}
+        canReview={controlState.canReview}
+        onReview={onReview}
+      />
     </Paper>
   );
 }
@@ -979,6 +1077,7 @@ export default function WritingPracticePage({
   const [prompt, setPrompt] = useState(DEFAULT_PROMPT);
   const [practiceMode, setPracticeMode] =
     useState<PracticeMode>("writing");
+  const [hasVoiceTranscript, setHasVoiceTranscript] = useState(false);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [loadingReview, setLoadingReview] = useState(false);
   const [selectedWords, setSelectedWords] = useState<
@@ -1026,6 +1125,34 @@ export default function WritingPracticePage({
     clearDefinitionResults();
   }, [clearDefinitionResults]);
 
+  const handleEssayChange = useCallback((nextEssay: string) => {
+    setEssay(nextEssay);
+    if (!nextEssay.trim()) {
+      setHasVoiceTranscript(false);
+    }
+  }, []);
+
+  const handlePracticeModeChange = useCallback(
+    (nextMode: PracticeMode) => {
+      if (
+        nextMode === "writing" &&
+        hasVoiceTranscript &&
+        essay.trim().length > 0
+      ) {
+        notifications.show({
+          title: "Clear transcript to switch",
+          message:
+            "Voice transcripts are graded with speaking rules. Clear the text first if you want typing mode.",
+          color: "yellow",
+        });
+        return;
+      }
+
+      setPracticeMode(nextMode);
+    },
+    [essay, hasVoiceTranscript],
+  );
+
   const handleTranscript = useCallback((transcript: string) => {
     setEssay((previousEssay) => {
       if (!previousEssay.trim()) {
@@ -1033,6 +1160,7 @@ export default function WritingPracticePage({
       }
       return `${previousEssay.trimEnd()} ${transcript}`;
     });
+    setHasVoiceTranscript(true);
     setPracticeMode("speaking");
   }, []);
 
@@ -1044,18 +1172,27 @@ export default function WritingPracticePage({
     setLoadingReview(true);
     setFeedback(null);
     resetSelection();
+    const submissionMode = hasVoiceTranscript ? "speaking" : practiceMode;
     gradeWriting.mutate({
       prompt,
       text: essay,
-      practiceMode,
+      practiceMode: submissionMode,
     });
-  }, [essay, gradeWriting, practiceMode, prompt, resetSelection]);
+  }, [
+    essay,
+    gradeWriting,
+    hasVoiceTranscript,
+    practiceMode,
+    prompt,
+    resetSelection,
+  ]);
 
   const handleWriteMore = useCallback(() => {
     setCurrentStep("writing");
     setPrompt(DEFAULT_PROMPT);
     setEssay("");
     setPracticeMode("writing");
+    setHasVoiceTranscript(false);
     setFeedback(null);
     resetSelection();
   }, [resetSelection]);
@@ -1188,8 +1325,8 @@ export default function WritingPracticePage({
 
       if (remaining > 0) {
         notifications.show({
-          title: "Write More to Continue",
-          message: `Write ${remaining} more characters to unlock review.`,
+          title: "Practice More to Continue",
+          message: `Practice ${remaining} more characters to unlock review.`,
           color: "blue",
         });
         return;
@@ -1218,9 +1355,9 @@ export default function WritingPracticePage({
         prompt={prompt}
         onPromptChange={setPrompt}
         essay={essay}
-        onEssayChange={setEssay}
+        onEssayChange={handleEssayChange}
         practiceMode={practiceMode}
-        onPracticeModeChange={setPracticeMode}
+        onPracticeModeChange={handlePracticeModeChange}
         onTranscript={handleTranscript}
         langCode={langCode}
         loadingReview={loadingReview}
