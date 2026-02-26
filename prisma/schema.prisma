@@ -39,20 +39,22 @@ model Session {
 }
 
 model User {
-  id                 String              @id @default(cuid())
-  name               String?
-  email              String?             @unique
-  emailVerified      DateTime?
-  lastSeen           DateTime?
-  image              String?
-  createdAt          DateTime            @default(now())
-  accounts           Account[]
-  sessions           Session[]
-  userSettings       UserSettings?
-  Card               Card[]
-  Deck               Deck[]
-  writingSubmissions WritingSubmission[] // Added relation to WritingSubmission
-  quizResults        QuizResult[]
+  id                         String                      @id @default(cuid())
+  name                       String?
+  email                      String?                     @unique
+  emailVerified              DateTime?
+  lastSeen                   DateTime?
+  image                      String?
+  createdAt                  DateTime                    @default(now())
+  accounts                   Account[]
+  sessions                   Session[]
+  userSettings               UserSettings?
+  Card                       Card[]
+  Deck                       Deck[]
+  writingSubmissions         WritingSubmission[]         // Added relation to WritingSubmission
+  quizResults                QuizResult[]
+  readerBookmarkletCredential ReaderBookmarkletCredential?
+  readerArticles             ReaderArticle[]
 }
 
 model UserSettings {
@@ -166,4 +168,48 @@ model WritingSubmission {
   @@index([deckId])
   @@index([userId, createdAt]) // For querying daily progress
   @@index([userId, deckId, createdAt])
+}
+
+enum ReaderSourceLanguage {
+  KO
+  EN
+  OTHER
+}
+
+enum ReaderSaveOrigin {
+  DASHBOARD
+  BOOKMARKLET
+}
+
+model ReaderBookmarkletCredential {
+  id              Int      @id @default(autoincrement())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  secretHash      String   @unique @db.VarChar(64)
+  encryptedSecret String   @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model ReaderArticle {
+  id           Int                @id @default(autoincrement())
+  userId       String
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  publicId     String             @unique @default(cuid())
+  requestUrl   String             @db.Text
+  normalizedUrl String            @db.Text
+  title        String             @db.Text
+  description  String             @db.Text
+  sourceLang   ReaderSourceLanguage
+  translated   Boolean            @default(false)
+  saveOrigin   ReaderSaveOrigin   @default(DASHBOARD)
+  contentText  String             @db.Text
+  contentHtml  String             @db.Text
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([publicId])
 }

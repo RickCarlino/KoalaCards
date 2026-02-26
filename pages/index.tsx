@@ -48,6 +48,11 @@ const navItems: NavItem[] = [
     icon: IconStar,
   },
   {
+    path: "/reader",
+    name: "Reader",
+    icon: IconFileText,
+  },
+  {
     path: "/writing/practice",
     name: "Writing Practice",
     icon: IconPencil,
