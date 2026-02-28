@@ -1,164 +1,181 @@
 import { getUserSettingsFromEmail } from "@/koala/auth-helpers";
-import { trpc } from "@/koala/trpc-config";
+import {
+  ReaderPageFrame,
+  ReaderPageHeader,
+  ReaderPanel,
+} from "@/koala/reader/ui/layout";
+import { useReaderDashboardControls } from "@/koala/reader/ui/dashboard/use-reader-dashboard-controls";
+import type {
+  ReaderArticleSummary,
+  ReaderDashboardStats,
+} from "@/koala/reader/ui/dashboard/types";
+import {
+  formatReaderDateTime,
+  readerBodyFont,
+  readerIngestLabel,
+  readerIngestTone,
+  readerLanguageLabel,
+  readerSubtleCardStyle,
+} from "@/koala/reader/ui/theme";
 import {
   Anchor,
+  Badge,
+  Box,
   Button,
-  Container,
   Group,
   Stack,
   Text,
   TextInput,
-  Title,
 } from "@mantine/core";
-import { notifications } from "@mantine/notifications";
 import { GetServerSidePropsContext } from "next";
 import Link from "next/link";
 import { getSession } from "next-auth/react";
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 
-type ReaderArticleSummary = {
-  id: number;
-  publicId: string;
-  title: string;
-  normalizedUrl: string;
-  description: string;
-  sourceLang: "ko" | "en" | "other";
-  translated: boolean;
-  ingestStatus: "pending" | "in_progress" | "ready" | "error";
-  ingestError: string;
-  createdAt: Date;
-};
-
-const pageShellStyle: React.CSSProperties = {
-  borderRadius: 28,
-  border: "1px solid #f0d4e2",
-  background:
-    "linear-gradient(160deg, #fffdfd 0%, #fff8fc 54%, #fff2f8 100%)",
-  boxShadow: "0 18px 34px rgba(176, 97, 136, 0.1)",
-  padding: "clamp(14px, 2vw, 24px)",
-};
-
-const headlineFont =
-  '"Palatino Linotype", "Book Antiqua", Palatino, serif';
-
-function mutationErrorMessage(error: unknown, fallback: string): string {
-  if (error instanceof Error && error.message.trim()) {
-    return error.message;
-  }
-
-  return fallback;
-}
-
-function formatDateTime(value: Date): string {
-  return value.toLocaleString();
-}
-
-function articleStateLabel(article: ReaderArticleSummary): string {
-  if (article.ingestStatus === "pending") {
-    return "Queued";
-  }
-
-  if (article.ingestStatus === "in_progress") {
-    return "Processing";
-  }
-
-  if (article.ingestStatus === "error") {
-    return "Error";
-  }
-
-  return "Ready";
-}
-
-function sourceLanguageLabel(sourceLang: "ko" | "en" | "other"): string {
-  if (sourceLang === "ko") {
-    return "Korean";
-  }
-
-  if (sourceLang === "en") {
-    return "English";
-  }
-
-  return "Other";
-}
-
-function ReaderIntroHeader() {
+function canRefreshArticle(article: ReaderArticleSummary): boolean {
   return (
-    <Group justify="space-between" align="flex-end" wrap="wrap">
-      <Stack gap={3}>
-        <Title order={2} style={{ fontFamily: headlineFont }}>
-          Reader
-        </Title>
-        <Text size="sm" c="dimmed">
-          Save articles by URL and read them in a clean format.
-        </Text>
-      </Stack>
-      <Text size="sm" c="dimmed">
-        You can also use the{" "}
-        <Anchor component={Link} href="/reader/bookmarklet">
-          Koala Bookmarklet
-        </Anchor>{" "}
-        or{" "}
-        <Anchor component={Link} href="/reader/instapaper">
-          Instapaper tools
-        </Anchor>
-        .
-      </Text>
-    </Group>
+    article.ingestStatus === "ready" || article.ingestStatus === "error"
   );
 }
 
-type QuickCaptureBarProps = {
+function buildDashboardStats(
+  articles: ReaderArticleSummary[],
+): ReaderDashboardStats {
+  let queued = 0;
+  let processing = 0;
+  let ready = 0;
+  let errored = 0;
+
+  for (const article of articles) {
+    if (article.ingestStatus === "pending") {
+      queued += 1;
+    }
+
+    if (article.ingestStatus === "in_progress") {
+      processing += 1;
+    }
+
+    if (article.ingestStatus === "ready") {
+      ready += 1;
+    }
+
+    if (article.ingestStatus === "error") {
+      errored += 1;
+    }
+  }
+
+  return {
+    queued,
+    processing,
+    ready,
+    errored,
+  };
+}
+
+type IntegrationsCardProps = {
+  articleCount: number;
+};
+
+function IntegrationsCard({ articleCount }: IntegrationsCardProps) {
+  return (
+    <ReaderPanel>
+      <Group justify="space-between" align="center" wrap="wrap" gap="sm">
+        <Text
+          size="sm"
+          style={{ color: "#6e4e5c", fontFamily: readerBodyFont }}
+        >
+          {articleCount} article(s) on your shelf.
+        </Text>
+        <Group gap="xs">
+          <Button
+            component={Link}
+            href="/reader/bookmarklet"
+            variant="light"
+            color="pink"
+            size="xs"
+          >
+            Bookmarklet
+          </Button>
+          <Button
+            component={Link}
+            href="/reader/instapaper"
+            variant="light"
+            color="pink"
+            size="xs"
+          >
+            Instapaper
+          </Button>
+        </Group>
+      </Group>
+    </ReaderPanel>
+  );
+}
+
+type CaptureCardProps = {
   articleUrl: string;
   isSaving: boolean;
   onArticleUrlChange: (value: string) => void;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
 };
 
-function QuickCaptureBar({
+function CaptureCard({
   articleUrl,
   isSaving,
   onArticleUrlChange,
   onSubmit,
-}: QuickCaptureBarProps) {
+}: CaptureCardProps) {
   return (
-    <Stack gap="xs">
-      <Text fw={700} style={{ fontFamily: headlineFont }}>
-        Save by URL
-      </Text>
-      <form onSubmit={onSubmit}>
-        <Group gap="xs" align="flex-end" wrap="nowrap">
-          <TextInput
-            aria-label="Article URL"
-            placeholder="https://example.com/article"
-            value={articleUrl}
-            onChange={(event) =>
-              onArticleUrlChange(event.currentTarget.value)
-            }
-            required
-            style={{ flex: 1 }}
-          />
-          <Button type="submit" color="pink" loading={isSaving}>
-            Save
-          </Button>
-        </Group>
-      </form>
-    </Stack>
+    <ReaderPanel>
+      <Stack gap="xs">
+        <Text fw={700} size="sm" style={{ color: "#4f3241" }}>
+          Save a New Article
+        </Text>
+        <form onSubmit={onSubmit}>
+          <Group gap="xs" wrap="nowrap" align="flex-end">
+            <TextInput
+              aria-label="Article URL"
+              placeholder="https://example.com/article"
+              value={articleUrl}
+              onChange={(event) =>
+                onArticleUrlChange(event.currentTarget.value)
+              }
+              required
+              style={{ flex: 1 }}
+            />
+            <Button type="submit" color="pink" loading={isSaving}>
+              Save
+            </Button>
+          </Group>
+        </form>
+      </Stack>
+    </ReaderPanel>
   );
 }
 
-type LibraryShelfProps = {
-  articles: ReaderArticleSummary[];
-  isLoading: boolean;
-  isRefreshing: boolean;
-  errorMessage: string | null;
-  deletingPublicId: string | null;
-  refreshingPublicId: string | null;
-  onDeleteArticle: (article: ReaderArticleSummary) => void;
-  onRefreshArticle: (article: ReaderArticleSummary) => void;
-  onRefresh: () => void;
+type StatsStripProps = {
+  stats: ReaderDashboardStats;
 };
 
-type LibraryRowProps = {
+function StatsStrip({ stats }: StatsStripProps) {
+  return (
+    <Group gap="xs" wrap="wrap">
+      <Badge color="yellow" variant="light">
+        Queued {stats.queued}
+      </Badge>
+      <Badge color="grape" variant="light">
+        Processing {stats.processing}
+      </Badge>
+      <Badge color="teal" variant="light">
+        Ready {stats.ready}
+      </Badge>
+      <Badge color="red" variant="light">
+        Error {stats.errored}
+      </Badge>
+    </Group>
+  );
+}
+
+type ArticleRowProps = {
   article: ReaderArticleSummary;
   isDeleting: boolean;
   isRefreshing: boolean;
@@ -167,50 +184,54 @@ type LibraryRowProps = {
   withDivider: boolean;
 };
 
-function canRefreshArticle(article: ReaderArticleSummary): boolean {
-  return (
-    article.ingestStatus === "ready" || article.ingestStatus === "error"
-  );
-}
-
-function LibraryRow({
+function ArticleRow({
   article,
   isDeleting,
   isRefreshing,
   onDelete,
   onRefresh,
   withDivider,
-}: LibraryRowProps) {
-  const statusLabel = articleStateLabel(article);
-  const subtitle =
-    article.ingestStatus === "ready"
-      ? `${sourceLanguageLabel(article.sourceLang)} · ${statusLabel}`
-      : statusLabel;
-  const showRefreshAction = canRefreshArticle(article);
+}: ArticleRowProps) {
+  const statusTone = readerIngestTone(article.ingestStatus);
+  const statusLabel = readerIngestLabel(article.ingestStatus);
+  const canRefresh = canRefreshArticle(article);
+  const subtitleParts = [statusLabel];
+
+  if (article.ingestStatus === "ready") {
+    subtitleParts.unshift(readerLanguageLabel(article.sourceLang));
+  }
 
   return (
     <Stack
-      gap={4}
+      gap={6}
       pt={withDivider ? "sm" : 0}
       mt={withDivider ? "sm" : 0}
-      style={withDivider ? { borderTop: "1px solid #efd9e4" } : undefined}
+      style={withDivider ? { borderTop: "1px solid #efd8e4" } : undefined}
     >
-      <Anchor
-        component={Link}
-        href={`/reader/${article.publicId}`}
-        style={{
-          fontFamily: headlineFont,
-          fontWeight: 600,
-          fontSize: "1rem",
-          lineHeight: 1.35,
-        }}
+      <Group
+        justify="space-between"
+        align="flex-start"
+        wrap="wrap"
+        gap="xs"
       >
-        {article.title}
-      </Anchor>
-      <Group justify="space-between" align="center" wrap="wrap" gap="xs">
-        <Text size="xs" c="dimmed">
-          {subtitle} · {formatDateTime(article.createdAt)}
-        </Text>
+        <Stack gap={3} style={{ maxWidth: "min(72ch, 100%)" }}>
+          <Anchor
+            component={Link}
+            href={`/reader/${article.publicId}`}
+            style={{ fontWeight: 700, color: "#533241", lineHeight: 1.35 }}
+          >
+            {article.title}
+          </Anchor>
+          <Group gap={6} wrap="wrap">
+            <Badge color={statusTone} variant="light" size="sm">
+              {statusLabel}
+            </Badge>
+            <Text size="xs" c="dimmed">
+              {subtitleParts.join(" · ")} ·{" "}
+              {formatReaderDateTime(article.createdAt)}
+            </Text>
+          </Group>
+        </Stack>
         <Group gap={6} align="center">
           <Anchor
             href={article.normalizedUrl}
@@ -220,7 +241,7 @@ function LibraryRow({
           >
             Source ↗
           </Anchor>
-          {showRefreshAction && (
+          {canRefresh && (
             <Button
               variant="subtle"
               color="pink"
@@ -243,12 +264,14 @@ function LibraryRow({
           </Button>
         </Group>
       </Group>
+
       {article.ingestStatus === "error" &&
         article.ingestError.trim().length > 0 && (
           <Text size="sm" c="red" lineClamp={2}>
             {article.ingestError}
           </Text>
         )}
+
       {article.description.trim().length > 0 && (
         <Text size="sm" c="dimmed" lineClamp={1}>
           {article.description}
@@ -258,31 +281,19 @@ function LibraryRow({
   );
 }
 
-function LibraryHeader({
-  isRefreshing,
-  onRefresh,
-}: {
+type LibraryCardProps = {
+  articles: ReaderArticleSummary[];
+  isLoading: boolean;
   isRefreshing: boolean;
+  errorMessage: string | null;
+  deletingPublicId: string | null;
+  refreshingPublicId: string | null;
+  onDeleteArticle: (article: ReaderArticleSummary) => void;
+  onRefreshArticle: (article: ReaderArticleSummary) => void;
   onRefresh: () => void;
-}) {
-  return (
-    <Group justify="space-between" align="center" wrap="wrap" gap="xs">
-      <Text fw={700} style={{ fontFamily: headlineFont }}>
-        Library
-      </Text>
-      <Button
-        variant="subtle"
-        size="xs"
-        onClick={onRefresh}
-        loading={isRefreshing}
-      >
-        Refresh
-      </Button>
-    </Group>
-  );
-}
+};
 
-function LibraryShelf({
+function LibraryCard({
   articles,
   isLoading,
   isRefreshing,
@@ -292,45 +303,40 @@ function LibraryShelf({
   onDeleteArticle,
   onRefreshArticle,
   onRefresh,
-}: LibraryShelfProps) {
+}: LibraryCardProps) {
+  const stats = useMemo(() => buildDashboardStats(articles), [articles]);
+
+  let body: React.ReactNode = null;
+
   if (isLoading) {
-    return (
-      <Stack gap="sm">
-        <LibraryHeader isRefreshing={isRefreshing} onRefresh={onRefresh} />
+    body = (
+      <Text size="sm" c="dimmed">
+        Loading your shelf...
+      </Text>
+    );
+  }
+
+  if (!isLoading && errorMessage) {
+    body = <Text c="red">{errorMessage}</Text>;
+  }
+
+  if (!isLoading && !errorMessage && articles.length === 0) {
+    body = (
+      <Box style={readerSubtleCardStyle}>
         <Text size="sm" c="dimmed">
-          Loading your shelf...
+          Your shelf is empty. Save an article to begin your next study
+          session.
         </Text>
-      </Stack>
+      </Box>
     );
   }
 
-  if (errorMessage) {
-    return (
-      <Stack gap="sm">
-        <LibraryHeader isRefreshing={isRefreshing} onRefresh={onRefresh} />
-        <Text c="red">{errorMessage}</Text>
-      </Stack>
-    );
-  }
-
-  if (articles.length === 0) {
-    return (
-      <Stack gap="sm">
-        <LibraryHeader isRefreshing={isRefreshing} onRefresh={onRefresh} />
-        <Text size="sm" c="dimmed">
-          Your shelf is empty. Save an article to get started.
-        </Text>
-      </Stack>
-    );
-  }
-
-  return (
-    <Stack gap="sm">
-      <LibraryHeader isRefreshing={isRefreshing} onRefresh={onRefresh} />
+  if (!isLoading && !errorMessage && articles.length > 0) {
+    body = (
       <Stack gap={0}>
         {articles.map((article, index) => {
           return (
-            <LibraryRow
+            <ArticleRow
               key={article.id}
               article={article}
               isDeleting={deletingPublicId === article.publicId}
@@ -342,202 +348,58 @@ function LibraryShelf({
           );
         })}
       </Stack>
-    </Stack>
-  );
-}
-
-function useReaderControls() {
-  const [articleUrl, setArticleUrl] = useState("");
-  const [deletingPublicId, setDeletingPublicId] = useState<string | null>(
-    null,
-  );
-  const [refreshingPublicId, setRefreshingPublicId] = useState<
-    string | null
-  >(null);
-
-  const listQuery = trpc.listReaderArticlesRoute.useQuery(
-    { limit: 40 },
-    {
-      refetchOnWindowFocus: false,
-      refetchInterval: (data) => {
-        const hasActiveIngest = (data?.articles ?? []).some((article) => {
-          return (
-            article.ingestStatus === "pending" ||
-            article.ingestStatus === "in_progress"
-          );
-        });
-
-        if (hasActiveIngest) {
-          return 8000;
-        }
-
-        return false;
-      },
-    },
-  );
-
-  const saveArticle = trpc.saveReaderArticleRoute.useMutation();
-  const deleteArticle = trpc.deleteReaderArticleRoute.useMutation();
-  const refreshArticle = trpc.refreshReaderArticleRoute.useMutation();
-
-  const listErrorMessage = useMemo(() => {
-    if (!listQuery.isError) {
-      return null;
-    }
-
-    return mutationErrorMessage(
-      listQuery.error,
-      "Could not load reader articles.",
     );
-  }, [listQuery.error, listQuery.isError]);
+  }
 
-  const handleSaveSubmit = async (
-    event: React.FormEvent<HTMLFormElement>,
-  ) => {
-    event.preventDefault();
-
-    const trimmed = articleUrl.trim();
-    if (!trimmed) {
-      notifications.show({
-        title: "Missing URL",
-        message: "Please paste an article URL.",
-        color: "red",
-      });
-      return;
-    }
-
-    try {
-      const result = await saveArticle.mutateAsync({ url: trimmed });
-      setArticleUrl("");
-      notifications.show({
-        title: "Queued",
-        message: `Article #${result.article.id} queued for processing.`,
-        color: "green",
-      });
-      listQuery.refetch();
-    } catch (error: unknown) {
-      notifications.show({
-        title: "Save failed",
-        message: mutationErrorMessage(error, "Could not save article."),
-        color: "red",
-      });
-    }
-  };
-
-  const handleDeleteArticle = async (
-    article: ReaderArticleSummary,
-  ): Promise<void> => {
-    const shouldDelete = window.confirm(
-      `Delete "${article.title}" from your library?`,
-    );
-
-    if (!shouldDelete) {
-      return;
-    }
-
-    setDeletingPublicId(article.publicId);
-
-    try {
-      await deleteArticle.mutateAsync({ publicId: article.publicId });
-      notifications.show({
-        title: "Deleted",
-        message: "Article removed from your library.",
-        color: "green",
-      });
-      listQuery.refetch();
-    } catch (error: unknown) {
-      notifications.show({
-        title: "Delete failed",
-        message: mutationErrorMessage(error, "Could not delete article."),
-        color: "red",
-      });
-    } finally {
-      setDeletingPublicId((current) => {
-        if (current === article.publicId) {
-          return null;
-        }
-
-        return current;
-      });
-    }
-  };
-
-  const handleRefreshArticle = async (
-    article: ReaderArticleSummary,
-  ): Promise<void> => {
-    setRefreshingPublicId(article.publicId);
-
-    try {
-      await refreshArticle.mutateAsync({ publicId: article.publicId });
-      notifications.show({
-        title: "Queued",
-        message: "Article queued for reprocessing.",
-        color: "green",
-      });
-      listQuery.refetch();
-    } catch (error: unknown) {
-      notifications.show({
-        title: "Refresh failed",
-        message: mutationErrorMessage(
-          error,
-          "Could not refresh this article.",
-        ),
-        color: "red",
-      });
-    } finally {
-      setRefreshingPublicId((current) => {
-        if (current === article.publicId) {
-          return null;
-        }
-
-        return current;
-      });
-    }
-  };
-
-  return {
-    articleUrl,
-    deletingPublicId,
-    refreshingPublicId,
-    isSaving: saveArticle.isLoading,
-    articles: listQuery.data?.articles ?? [],
-    isArticlesLoading: listQuery.isLoading,
-    isArticlesRefreshing: listQuery.isFetching,
-    listErrorMessage,
-    onArticleUrlChange: setArticleUrl,
-    onDeleteArticle: handleDeleteArticle,
-    onRefreshArticle: handleRefreshArticle,
-    onSaveSubmit: handleSaveSubmit,
-    onRefreshArticles: () => listQuery.refetch(),
-  };
+  return (
+    <ReaderPanel>
+      <Group justify="space-between" align="center" wrap="wrap" gap="xs">
+        <Text fw={700} style={{ color: "#4f3241" }}>
+          Library
+        </Text>
+        <Button
+          variant="subtle"
+          size="xs"
+          onClick={onRefresh}
+          loading={isRefreshing}
+        >
+          Refresh
+        </Button>
+      </Group>
+      <StatsStrip stats={stats} />
+      {body}
+    </ReaderPanel>
+  );
 }
 
 export default function ReaderDashboardPage() {
-  const controls = useReaderControls();
+  const controls = useReaderDashboardControls();
 
   return (
-    <Container size="lg" mt="xl" pb="xl">
-      <Stack gap="lg" style={pageShellStyle}>
-        <ReaderIntroHeader />
-        <QuickCaptureBar
-          articleUrl={controls.articleUrl}
-          isSaving={controls.isSaving}
-          onArticleUrlChange={controls.onArticleUrlChange}
-          onSubmit={controls.onSaveSubmit}
-        />
-        <LibraryShelf
-          articles={controls.articles}
-          isLoading={controls.isArticlesLoading}
-          isRefreshing={controls.isArticlesRefreshing}
-          errorMessage={controls.listErrorMessage}
-          deletingPublicId={controls.deletingPublicId}
-          refreshingPublicId={controls.refreshingPublicId}
-          onDeleteArticle={controls.onDeleteArticle}
-          onRefreshArticle={controls.onRefreshArticle}
-          onRefresh={controls.onRefreshArticles}
-        />
-      </Stack>
-    </Container>
+    <ReaderPageFrame>
+      <ReaderPageHeader
+        title="Reader"
+        subtitle="A calm reading shelf for Korean study. Save links, wait for processing, and keep your library tidy."
+      />
+      <IntegrationsCard articleCount={controls.articles.length} />
+      <CaptureCard
+        articleUrl={controls.articleUrl}
+        isSaving={controls.isSaving}
+        onArticleUrlChange={controls.onArticleUrlChange}
+        onSubmit={controls.onSaveSubmit}
+      />
+      <LibraryCard
+        articles={controls.articles}
+        isLoading={controls.isArticlesLoading}
+        isRefreshing={controls.isArticlesRefreshing}
+        errorMessage={controls.listErrorMessage}
+        deletingPublicId={controls.deletingPublicId}
+        refreshingPublicId={controls.refreshingPublicId}
+        onDeleteArticle={controls.onDeleteArticle}
+        onRefreshArticle={controls.onRefreshArticle}
+        onRefresh={controls.onRefreshArticles}
+      />
+    </ReaderPageFrame>
   );
 }
 

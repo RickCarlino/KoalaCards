@@ -1,12 +1,17 @@
 import { prismaClient } from "@/koala/prisma-client";
 import {
-  Anchor,
-  Container,
-  Group,
-  Stack,
-  Text,
-  Title,
-} from "@mantine/core";
+  ReaderPageFrame,
+  ReaderPageHeader,
+  ReaderPanel,
+} from "@/koala/reader/ui/layout";
+import {
+  formatReaderDateTime,
+  readerBodyFont,
+  readerDisplayFont,
+  readerIngestLabel,
+  readerIngestTone,
+} from "@/koala/reader/ui/theme";
+import { Anchor, Badge, Group, Stack, Text } from "@mantine/core";
 import type {
   GetServerSidePropsContext,
   InferGetServerSidePropsType,
@@ -22,23 +27,7 @@ type PublicReaderArticle = {
   contentText: string;
   ingestStatus: "pending" | "in_progress" | "ready" | "error";
   ingestError: string;
-};
-
-const headlineFont =
-  '"Palatino Linotype", "Book Antiqua", Palatino, serif';
-
-const articleHeaderStyle: React.CSSProperties = {
-  borderBottom: "1px solid #f0dce7",
-  paddingBottom: "clamp(10px, 1.5vw, 14px)",
-};
-
-const proseStyle: React.CSSProperties = {
-  maxWidth: "92ch",
-  margin: "0 auto",
-  fontFamily: headlineFont,
-  lineHeight: 1.9,
-  fontSize: "1.08rem",
-  color: "#4f3342",
+  createdAt: Date;
 };
 
 function normalizeMarkdownText(value: string): string {
@@ -62,34 +51,25 @@ function normalizeMarkdownText(value: string): string {
   return paragraphs.join("\n\n");
 }
 
-type MarkdownArticleProps = {
-  markdownText: string;
-};
-
-function MarkdownArticle({ markdownText }: MarkdownArticleProps) {
-  if (!markdownText.trim()) {
-    return (
-      <Text size="sm" c="dimmed">
-        Article text is unavailable.
-      </Text>
-    );
+function pendingMessage(status: "pending" | "in_progress"): string {
+  if (status === "pending") {
+    return "This article is queued for processing.";
   }
 
-  return (
-    <article style={proseStyle}>
-      <ReactMarkdown>{markdownText}</ReactMarkdown>
-    </article>
-  );
+  return "This article is currently being processed.";
 }
 
-type ArticleHeaderProps = {
+type ArticleHeaderCardProps = {
   article: PublicReaderArticle;
 };
 
-function ArticleHeader({ article }: ArticleHeaderProps) {
+function ArticleHeaderCard({ article }: ArticleHeaderCardProps) {
+  const statusLabel = readerIngestLabel(article.ingestStatus);
+  const statusTone = readerIngestTone(article.ingestStatus);
+
   return (
-    <Stack gap="sm" style={articleHeaderStyle}>
-      <Group justify="space-between" align="center" wrap="wrap">
+    <ReaderPanel>
+      <Group justify="space-between" align="center" wrap="wrap" gap="xs">
         <Anchor component={Link} href="/reader" size="sm">
           ← Back to Reader
         </Anchor>
@@ -104,29 +84,36 @@ function ArticleHeader({ article }: ArticleHeaderProps) {
           <IconExternalLink size={14} stroke={1.8} />
         </Anchor>
       </Group>
-      <Title
-        order={1}
-        style={{
-          fontFamily: headlineFont,
-          lineHeight: 1.24,
-          color: "#4a2f3f",
-        }}
-      >
-        {article.title}
-      </Title>
-    </Stack>
+      <Stack gap={6}>
+        <Text
+          style={{
+            fontFamily: readerDisplayFont,
+            fontSize: "clamp(1.35rem, 3vw, 2rem)",
+            color: "#4b2f3f",
+            lineHeight: 1.25,
+            fontWeight: 700,
+          }}
+        >
+          {article.title}
+        </Text>
+        <Group gap={6} wrap="wrap">
+          <Badge color={statusTone} variant="light">
+            {statusLabel}
+          </Badge>
+          <Text
+            size="xs"
+            c="dimmed"
+            style={{ fontFamily: readerBodyFont }}
+          >
+            Added {formatReaderDateTime(article.createdAt)}
+          </Text>
+        </Group>
+      </Stack>
+    </ReaderPanel>
   );
 }
 
-function pendingMessage(status: "pending" | "in_progress"): string {
-  if (status === "pending") {
-    return "This article is queued for processing.";
-  }
-
-  return "This article is currently being processed.";
-}
-
-function ProcessingState({
+function ProcessingCard({
   status,
   ingestError,
 }: {
@@ -139,30 +126,63 @@ function ProcessingState({
 
   if (status === "error") {
     return (
-      <Stack gap="xs">
-        <Text c="red" fw={600}>
-          This article could not be prepared.
-        </Text>
-        {ingestError.trim().length > 0 && (
-          <Text size="sm" c="red">
-            {ingestError}
+      <ReaderPanel>
+        <Stack gap="xs">
+          <Text c="red" fw={700}>
+            This article could not be prepared.
           </Text>
-        )}
-        <Text size="sm" c="dimmed">
-          Go back to Reader and submit the URL again after checking the
-          source.
-        </Text>
-      </Stack>
+          {ingestError.trim().length > 0 && (
+            <Text size="sm" c="red">
+              {ingestError}
+            </Text>
+          )}
+          <Text size="sm" c="dimmed">
+            Go back to Reader and submit the URL again after checking the
+            source.
+          </Text>
+        </Stack>
+      </ReaderPanel>
     );
   }
 
   return (
-    <Stack gap="xs">
-      <Text c="dimmed">{pendingMessage(status)}</Text>
-      <Text size="sm" c="dimmed">
-        This page refreshes every 8 seconds while processing.
-      </Text>
-    </Stack>
+    <ReaderPanel>
+      <Stack gap="xs">
+        <Text c="dimmed">{pendingMessage(status)}</Text>
+        <Text size="sm" c="dimmed">
+          This page refreshes every 8 seconds while processing.
+        </Text>
+      </Stack>
+    </ReaderPanel>
+  );
+}
+
+function ArticleMarkdown({ markdownText }: { markdownText: string }) {
+  if (!markdownText.trim()) {
+    return (
+      <ReaderPanel>
+        <Text size="sm" c="dimmed">
+          Article text is unavailable.
+        </Text>
+      </ReaderPanel>
+    );
+  }
+
+  return (
+    <ReaderPanel>
+      <article
+        style={{
+          maxWidth: "92ch",
+          margin: "0 auto",
+          fontFamily: readerDisplayFont,
+          lineHeight: 1.9,
+          fontSize: "1.08rem",
+          color: "#4f3342",
+        }}
+      >
+        <ReactMarkdown>{markdownText}</ReactMarkdown>
+      </article>
+    </ReaderPanel>
   );
 }
 
@@ -191,19 +211,22 @@ export default function PublicReaderArticlePage({
   const showProcessingState = article.ingestStatus !== "ready";
 
   return (
-    <Container size="lg" mt="sm" pb="xl">
-      <Stack gap="lg">
-        <ArticleHeader article={article} />
-        {showProcessingState ? (
-          <ProcessingState
-            status={article.ingestStatus}
-            ingestError={article.ingestError}
-          />
-        ) : (
-          <MarkdownArticle markdownText={markdownText} />
-        )}
-      </Stack>
-    </Container>
+    <ReaderPageFrame>
+      <ReaderPageHeader
+        title="Reading View"
+        subtitle="Focused, clean prose with Korean-friendly formatting."
+      />
+      <ArticleHeaderCard article={article} />
+      {showProcessingState && (
+        <ProcessingCard
+          status={article.ingestStatus}
+          ingestError={article.ingestError}
+        />
+      )}
+      {!showProcessingState && (
+        <ArticleMarkdown markdownText={markdownText} />
+      )}
+    </ReaderPageFrame>
   );
 }
 
@@ -241,6 +264,7 @@ export async function getServerSideProps(
       contentText: true,
       ingestStatus: true,
       ingestError: true,
+      createdAt: true,
     },
   });
 
@@ -254,6 +278,7 @@ export async function getServerSideProps(
     contentText: article.contentText,
     ingestStatus: mapIngestStatus(article.ingestStatus),
     ingestError: article.ingestError,
+    createdAt: article.createdAt,
   };
 
   return {

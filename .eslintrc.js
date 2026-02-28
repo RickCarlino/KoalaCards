@@ -31,7 +31,7 @@ module.exports = {
     "@typescript-eslint/no-require-imports": "off",
     "@typescript-eslint/no-explicit-any": "warn",
     "react/no-unescaped-entities": "off",
-    complexity: ["warn", { max: 20 }],
+    complexity: ["error", { max: 18 }],
     "no-unused-expressions": "off",
     eqeqeq: ["error", "always"],
     "prefer-const": "error",

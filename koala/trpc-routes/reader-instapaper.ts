@@ -1,5 +1,8 @@
 import { ReaderIngestStatus, ReaderSourceLanguage } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import ReactMarkdown from "react-markdown";
 import { z } from "zod";
 import { prismaClient } from "@/koala/prisma-client";
 import {
@@ -173,6 +176,20 @@ const mapSourceLanguage = (
   return "other";
 };
 
+const isIgnoredInstapaperUrl = (value: string): boolean => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol.toLowerCase() === "instapaper:";
+  } catch {
+    return false;
+  }
+};
+
 const normalizeInstapaperItem = (item: {
   bookmarkId: string;
   url: string;
@@ -315,7 +332,9 @@ const normalizeUnreadBookmarks = (
     description: string;
   }>,
 ): UnreadBookmarkItem[] => {
-  return unread.map((bookmark) => normalizeInstapaperItem(bookmark));
+  return unread
+    .filter((bookmark) => !isIgnoredInstapaperUrl(bookmark.url))
+    .map((bookmark) => normalizeInstapaperItem(bookmark));
 };
 
 const toUniqueNormalizedUrls = (
@@ -460,14 +479,31 @@ const escapeHtml = (value: string): string => {
     .replace(/'/g, "&#39;");
 };
 
+const renderMarkdownToHtml = (value: string): string => {
+  const markdown = value.trim();
+  if (!markdown) {
+    return "";
+  }
+
+  try {
+    return renderToStaticMarkup(
+      createElement(ReactMarkdown, null, markdown),
+    );
+  } catch {
+    return "";
+  }
+};
+
 const buildPrivateInstapaperContent = (input: {
   title: string;
   htmlContent: string;
   textContent: string;
 }): string => {
-  const body = input.htmlContent.trim()
+  const markdownHtml = renderMarkdownToHtml(input.textContent);
+  const fallbackHtml = input.htmlContent.trim()
     ? input.htmlContent.trim()
     : plainTextToHtmlParagraphs(input.textContent);
+  const body = markdownHtml || fallbackHtml;
 
   const heading = `<h1>${escapeHtml(input.title)}</h1>`;
 

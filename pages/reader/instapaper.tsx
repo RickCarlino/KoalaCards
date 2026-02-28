@@ -1,106 +1,38 @@
 import { getUserSettingsFromEmail } from "@/koala/auth-helpers";
-import { trpc } from "@/koala/trpc-config";
+import {
+  ReaderPageFrame,
+  ReaderPageHeader,
+  ReaderPanel,
+} from "@/koala/reader/ui/layout";
+import {
+  formatReaderDateTime,
+  readerBodyFont,
+  readerIngestLabel,
+  readerIngestTone,
+  readerLanguageLabel,
+  readerSubtleCardStyle,
+} from "@/koala/reader/ui/theme";
+import { useInstapaperControls } from "@/koala/reader/ui/instapaper/use-instapaper-controls";
+import type {
+  ImportSummary,
+  InstapaperConnectionStatus,
+  InstapaperUnreadBookmark,
+} from "@/koala/reader/ui/instapaper/types";
 import {
   Anchor,
+  Badge,
   Button,
   Checkbox,
-  Container,
   Group,
   PasswordInput,
   Stack,
   Text,
   TextInput,
-  Title,
 } from "@mantine/core";
-import { notifications } from "@mantine/notifications";
 import { GetServerSidePropsContext } from "next";
 import Link from "next/link";
 import { getSession } from "next-auth/react";
-import React, { useState } from "react";
-
-type ReaderIngestStatus = "pending" | "in_progress" | "ready" | "error";
-type ReaderLanguage = "ko" | "en" | "other";
-
-type InstapaperConnectionStatus = {
-  connected: boolean;
-  username: string | null;
-  updatedAt: Date | null;
-};
-
-type InstapaperLocalArticle = {
-  publicId: string;
-  title: string;
-  ingestStatus: ReaderIngestStatus;
-  sourceLang: ReaderLanguage;
-  translated: boolean;
-  createdAt: Date;
-  instapaperBookmarkId: string | null;
-};
-
-type InstapaperUnreadBookmark = {
-  bookmarkId: string;
-  url: string;
-  title: string;
-  description: string;
-  normalizedUrl: string | null;
-  urlError: string | null;
-  localArticle: InstapaperLocalArticle | null;
-};
-
-type ImportSummary = {
-  imported: number;
-  duplicates: number;
-  invalidUrls: number;
-  failed: number;
-};
-
-const pageShellStyle: React.CSSProperties = {
-  borderRadius: 28,
-  border: "1px solid #f0d4e2",
-  background:
-    "linear-gradient(160deg, #fffdfd 0%, #fff8fc 54%, #fff2f8 100%)",
-  boxShadow: "0 18px 34px rgba(176, 97, 136, 0.1)",
-  padding: "clamp(14px, 2vw, 24px)",
-};
-
-const headlineFont =
-  '"Palatino Linotype", "Book Antiqua", Palatino, serif';
-
-function mutationErrorMessage(error: unknown, fallback: string): string {
-  if (error instanceof Error && error.message.trim()) {
-    return error.message;
-  }
-
-  return fallback;
-}
-
-function ingestStatusLabel(status: ReaderIngestStatus): string {
-  if (status === "pending") {
-    return "Queued";
-  }
-
-  if (status === "in_progress") {
-    return "Processing";
-  }
-
-  if (status === "ready") {
-    return "Ready";
-  }
-
-  return "Error";
-}
-
-function sourceLanguageLabel(language: ReaderLanguage): string {
-  if (language === "ko") {
-    return "Korean";
-  }
-
-  if (language === "en") {
-    return "English";
-  }
-
-  return "Other";
-}
+import React from "react";
 
 function canExportBookmark(bookmark: InstapaperUnreadBookmark): boolean {
   if (!bookmark.localArticle) {
@@ -110,7 +42,21 @@ function canExportBookmark(bookmark: InstapaperUnreadBookmark): boolean {
   return bookmark.localArticle.ingestStatus === "ready";
 }
 
-function rowStatusText(bookmark: InstapaperUnreadBookmark): string {
+function exportableBookmarkCount(
+  bookmarks: InstapaperUnreadBookmark[],
+): number {
+  let count = 0;
+
+  for (const bookmark of bookmarks) {
+    if (canExportBookmark(bookmark)) {
+      count += 1;
+    }
+  }
+
+  return count;
+}
+
+function bookmarkStatusText(bookmark: InstapaperUnreadBookmark): string {
   if (bookmark.urlError) {
     return bookmark.urlError;
   }
@@ -120,154 +66,151 @@ function rowStatusText(bookmark: InstapaperUnreadBookmark): string {
   }
 
   const article = bookmark.localArticle;
-  return `${sourceLanguageLabel(article.sourceLang)} · ${ingestStatusLabel(article.ingestStatus)}`;
+  return `${readerLanguageLabel(article.sourceLang)} · ${readerIngestLabel(article.ingestStatus)}`;
 }
 
-function formatDateTime(value: Date): string {
-  return value.toLocaleString();
-}
-
-function PageHeader() {
-  return (
-    <Group justify="space-between" align="flex-end" wrap="wrap">
-      <Stack gap={3}>
-        <Title order={2} style={{ fontFamily: headlineFont }}>
-          Instapaper
-        </Title>
-        <Text size="sm" c="dimmed">
-          Connect once, then import unread bookmarks and export Korean
-          versions back to Instapaper.
-        </Text>
-      </Stack>
-      <Button component={Link} href="/reader" variant="light" size="sm">
-        Back to Reader
-      </Button>
-    </Group>
-  );
-}
-
-type ConnectFormProps = {
+type ConnectionPanelProps = {
+  connection: InstapaperConnectionStatus | undefined;
+  isConnectionLoading: boolean;
   username: string;
   password: string;
-  loading: boolean;
+  archiveOriginal: boolean;
+  isConnecting: boolean;
+  isDisconnecting: boolean;
+  isLoadingUnread: boolean;
+  isImportingUnread: boolean;
   onUsernameChange: (value: string) => void;
   onPasswordChange: (value: string) => void;
-  onConnect: () => Promise<void>;
-};
-
-function ConnectForm({
-  username,
-  password,
-  loading,
-  onUsernameChange,
-  onPasswordChange,
-  onConnect,
-}: ConnectFormProps) {
-  return (
-    <Stack gap="xs">
-      <Text fw={700} style={{ fontFamily: headlineFont }}>
-        Connect Instapaper
-      </Text>
-      <Text size="sm" c="dimmed">
-        Your password is used once to obtain access tokens, then discarded.
-      </Text>
-      <Group align="flex-end" wrap="wrap">
-        <TextInput
-          label="Username"
-          placeholder="you@example.com"
-          value={username}
-          onChange={(event) => onUsernameChange(event.currentTarget.value)}
-          style={{ flex: "1 1 220px" }}
-        />
-        <PasswordInput
-          label="Password"
-          placeholder="Instapaper password"
-          value={password}
-          onChange={(event) => onPasswordChange(event.currentTarget.value)}
-          style={{ flex: "1 1 220px" }}
-        />
-        <Button color="pink" loading={loading} onClick={onConnect}>
-          Connect
-        </Button>
-      </Group>
-    </Stack>
-  );
-}
-
-type ConnectedPanelProps = {
-  connection: InstapaperConnectionStatus;
-  archiveOriginal: boolean;
-  loadingUnread: boolean;
-  importingUnread: boolean;
-  disconnecting: boolean;
   onArchiveOriginalChange: (value: boolean) => void;
+  onConnect: () => Promise<void>;
+  onDisconnect: () => Promise<void>;
   onLoadUnread: () => Promise<void>;
   onImportUnread: () => Promise<void>;
-  onDisconnect: () => Promise<void>;
 };
 
-function ConnectedPanel({
+function ConnectionPanel({
   connection,
+  isConnectionLoading,
+  username,
+  password,
   archiveOriginal,
-  loadingUnread,
-  importingUnread,
-  disconnecting,
+  isConnecting,
+  isDisconnecting,
+  isLoadingUnread,
+  isImportingUnread,
+  onUsernameChange,
+  onPasswordChange,
   onArchiveOriginalChange,
+  onConnect,
+  onDisconnect,
   onLoadUnread,
   onImportUnread,
-  onDisconnect,
-}: ConnectedPanelProps) {
-  const username = connection.username ?? "(unknown user)";
-  const updatedAtText =
-    connection.updatedAt && connection.connected
-      ? formatDateTime(connection.updatedAt)
-      : "unknown";
+}: ConnectionPanelProps) {
+  if (isConnectionLoading) {
+    return (
+      <ReaderPanel>
+        <Text size="sm" c="dimmed">
+          Checking Instapaper connection...
+        </Text>
+      </ReaderPanel>
+    );
+  }
+
+  if (!connection?.connected) {
+    return (
+      <ReaderPanel>
+        <Stack gap="xs">
+          <Text fw={700} size="sm" style={{ color: "#4f3241" }}>
+            Connect Instapaper
+          </Text>
+          <Text size="sm" c="dimmed">
+            Your password is used only to obtain access tokens. Koala
+            stores encrypted tokens, not your password.
+          </Text>
+          <Group align="flex-end" wrap="wrap" gap="xs">
+            <TextInput
+              label="Username"
+              placeholder="you@example.com"
+              value={username}
+              onChange={(event) =>
+                onUsernameChange(event.currentTarget.value)
+              }
+              style={{ flex: "1 1 220px" }}
+            />
+            <PasswordInput
+              label="Password"
+              placeholder="Instapaper password"
+              value={password}
+              onChange={(event) =>
+                onPasswordChange(event.currentTarget.value)
+              }
+              style={{ flex: "1 1 220px" }}
+            />
+            <Button
+              color="pink"
+              loading={isConnecting}
+              onClick={onConnect}
+            >
+              Connect
+            </Button>
+          </Group>
+        </Stack>
+      </ReaderPanel>
+    );
+  }
+
+  const usernameLabel = connection.username ?? "(unknown user)";
+  const updatedAtLabel = connection.updatedAt
+    ? formatReaderDateTime(connection.updatedAt)
+    : "Unknown";
 
   return (
-    <Stack gap="xs">
-      <Text fw={700} style={{ fontFamily: headlineFont }}>
-        Connected to Instapaper
-      </Text>
-      <Text size="sm" c="dimmed">
-        Connected as {username}. Last updated: {updatedAtText}
-      </Text>
-      <Group gap="xs" align="center" wrap="wrap">
-        <Button
-          color="pink"
-          loading={loadingUnread}
-          onClick={onLoadUnread}
-        >
-          Load Unread
-        </Button>
-        <Button
-          variant="light"
-          color="pink"
-          loading={importingUnread}
-          onClick={onImportUnread}
-        >
-          Import Unread to Koala
-        </Button>
-        <Button
-          variant="subtle"
-          color="red"
-          loading={disconnecting}
-          onClick={onDisconnect}
-        >
-          Disconnect
-        </Button>
-      </Group>
-      <Checkbox
-        label="Archive original Instapaper bookmark after successful export"
-        checked={archiveOriginal}
-        onChange={(event) =>
-          onArchiveOriginalChange(event.currentTarget.checked)
-        }
-      />
-    </Stack>
+    <ReaderPanel>
+      <Stack gap="xs">
+        <Text fw={700} size="sm" style={{ color: "#4f3241" }}>
+          Connected as {usernameLabel}
+        </Text>
+        <Text size="sm" c="dimmed" style={{ fontFamily: readerBodyFont }}>
+          Token updated: {updatedAtLabel}
+        </Text>
+        <Group gap="xs" wrap="wrap">
+          <Button
+            color="pink"
+            loading={isLoadingUnread}
+            onClick={onLoadUnread}
+          >
+            Load Unread
+          </Button>
+          <Button
+            variant="light"
+            color="pink"
+            loading={isImportingUnread}
+            onClick={onImportUnread}
+          >
+            Import Unread to Koala
+          </Button>
+          <Button
+            variant="subtle"
+            color="red"
+            loading={isDisconnecting}
+            onClick={onDisconnect}
+          >
+            Disconnect
+          </Button>
+        </Group>
+        <Checkbox
+          label="Archive original Instapaper bookmark after successful export"
+          checked={archiveOriginal}
+          onChange={(event) =>
+            onArchiveOriginalChange(event.currentTarget.checked)
+          }
+        />
+      </Stack>
+    </ReaderPanel>
   );
 }
 
-function ImportSummaryPanel({
+function ImportSummaryCard({
   summary,
   errors,
 }: {
@@ -279,24 +222,35 @@ function ImportSummaryPanel({
   }
 
   return (
-    <Stack gap={5}>
-      <Text size="sm" fw={600}>
-        Import summary: {summary.imported} imported, {summary.duplicates}{" "}
-        duplicates, {summary.invalidUrls} invalid URL(s), {summary.failed}{" "}
-        failed.
-      </Text>
-      {errors.length > 0 && (
-        <Stack gap={2}>
-          {errors.map((errorMessage, index) => {
-            return (
-              <Text key={`${errorMessage}-${index}`} size="sm" c="red">
-                {errorMessage}
-              </Text>
-            );
-          })}
-        </Stack>
-      )}
-    </Stack>
+    <ReaderPanel>
+      <Stack gap="xs">
+        <Group gap={6} wrap="wrap">
+          <Badge color="teal" variant="light">
+            Imported {summary.imported}
+          </Badge>
+          <Badge color="yellow" variant="light">
+            Duplicates {summary.duplicates}
+          </Badge>
+          <Badge color="gray" variant="light">
+            Invalid URLs {summary.invalidUrls}
+          </Badge>
+          <Badge color="red" variant="light">
+            Failed {summary.failed}
+          </Badge>
+        </Group>
+        {errors.length > 0 && (
+          <Stack gap={4}>
+            {errors.map((errorMessage, index) => {
+              return (
+                <Text key={`${errorMessage}-${index}`} size="sm" c="red">
+                  {errorMessage}
+                </Text>
+              );
+            })}
+          </Stack>
+        )}
+      </Stack>
+    </ReaderPanel>
   );
 }
 
@@ -304,6 +258,7 @@ type BookmarkRowProps = {
   bookmark: InstapaperUnreadBookmark;
   archiveOriginal: boolean;
   exportingPublicId: string | null;
+  disableExport: boolean;
   onExport: (bookmark: InstapaperUnreadBookmark) => Promise<void>;
   withDivider: boolean;
 };
@@ -312,35 +267,54 @@ function BookmarkRow({
   bookmark,
   archiveOriginal,
   exportingPublicId,
+  disableExport,
   onExport,
   withDivider,
 }: BookmarkRowProps) {
   const localArticle = bookmark.localArticle;
-  const statusText = rowStatusText(bookmark);
   const exportable = canExportBookmark(bookmark);
+  const statusText = bookmarkStatusText(bookmark);
+  const statusTone = localArticle
+    ? readerIngestTone(localArticle.ingestStatus)
+    : "gray";
   const isExporting =
     localArticle && exportingPublicId === localArticle.publicId;
 
   return (
     <Stack
-      gap={5}
+      gap={6}
       pt={withDivider ? "sm" : 0}
       mt={withDivider ? "sm" : 0}
-      style={withDivider ? { borderTop: "1px solid #efd9e4" } : undefined}
+      style={withDivider ? { borderTop: "1px solid #efd8e4" } : undefined}
     >
       <Anchor
         href={bookmark.url}
         target="_blank"
         rel="noreferrer"
-        style={{ fontWeight: 600, lineHeight: 1.35 }}
+        style={{ fontWeight: 700, color: "#533241", lineHeight: 1.35 }}
       >
         {bookmark.title}
       </Anchor>
-      <Text size="sm" c={bookmark.urlError ? "red" : "dimmed"}>
-        {statusText}
-      </Text>
+
+      <Group gap={6} wrap="wrap">
+        <Badge color={statusTone} variant="light" size="sm">
+          {statusText}
+        </Badge>
+        {localArticle && (
+          <Text size="xs" c="dimmed">
+            Saved {formatReaderDateTime(localArticle.createdAt)}
+          </Text>
+        )}
+      </Group>
+
+      {bookmark.description.trim().length > 0 && (
+        <Text size="sm" c="dimmed" lineClamp={1}>
+          {bookmark.description}
+        </Text>
+      )}
+
       {localArticle && (
-        <Group gap="xs" wrap="wrap">
+        <Group gap="xs" wrap="wrap" style={readerSubtleCardStyle}>
           <Anchor
             component={Link}
             href={`/reader/${localArticle.publicId}`}
@@ -348,399 +322,156 @@ function BookmarkRow({
           >
             Open in Koala
           </Anchor>
-          <Text size="xs" c="dimmed">
-            Saved {formatDateTime(localArticle.createdAt)}
-          </Text>
-        </Group>
-      )}
-      {bookmark.description.trim().length > 0 && (
-        <Text size="sm" c="dimmed" lineClamp={1}>
-          {bookmark.description}
-        </Text>
-      )}
-      {exportable && localArticle && (
-        <Group gap="xs" align="center" wrap="wrap">
-          <Button
-            size="compact-sm"
-            color="pink"
-            loading={Boolean(isExporting)}
-            onClick={() => onExport(bookmark)}
-          >
-            Export Korean to Instapaper
-          </Button>
-          <Text size="xs" c="dimmed">
-            {archiveOriginal
-              ? "Archives original after export"
-              : "Keeps original unread bookmark"}
-          </Text>
+          {exportable && (
+            <Button
+              size="compact-sm"
+              color="pink"
+              loading={Boolean(isExporting)}
+              disabled={disableExport}
+              onClick={() => onExport(bookmark)}
+            >
+              Export Korean
+            </Button>
+          )}
+          {exportable && (
+            <Text size="xs" c="dimmed">
+              {archiveOriginal
+                ? "Archive original after export"
+                : "Keep original unread bookmark"}
+            </Text>
+          )}
         </Group>
       )}
     </Stack>
   );
 }
 
-function BookmarkList({
-  bookmarks,
-  archiveOriginal,
-  exportingPublicId,
-  onExport,
-}: {
+type BookmarksCardProps = {
   bookmarks: InstapaperUnreadBookmark[];
   archiveOriginal: boolean;
   exportingPublicId: string | null;
+  isExportingAll: boolean;
   onExport: (bookmark: InstapaperUnreadBookmark) => Promise<void>;
-}) {
-  if (bookmarks.length === 0) {
-    return (
-      <Text size="sm" c="dimmed">
-        No unread bookmarks loaded yet.
-      </Text>
-    );
-  }
+  onExportAll: () => Promise<void>;
+};
+
+function BookmarksCard({
+  bookmarks,
+  archiveOriginal,
+  exportingPublicId,
+  isExportingAll,
+  onExport,
+  onExportAll,
+}: BookmarksCardProps) {
+  const exportableCount = exportableBookmarkCount(bookmarks);
+  const exportAllLabel =
+    exportableCount === 1
+      ? "Export 1 Ready Article"
+      : `Export ${exportableCount} Ready Articles`;
 
   return (
-    <Stack gap={0}>
-      {bookmarks.map((bookmark, index) => {
-        return (
-          <BookmarkRow
-            key={bookmark.bookmarkId}
-            bookmark={bookmark}
-            archiveOriginal={archiveOriginal}
-            exportingPublicId={exportingPublicId}
-            onExport={onExport}
-            withDivider={index > 0}
-          />
-        );
-      })}
-    </Stack>
+    <ReaderPanel>
+      <Group justify="space-between" align="center" wrap="wrap">
+        <Group gap="xs" align="center">
+          <Text fw={700} size="sm" style={{ color: "#4f3241" }}>
+            Unread Bookmarks
+          </Text>
+          <Text size="xs" c="dimmed">
+            {bookmarks.length} loaded
+          </Text>
+        </Group>
+        <Button
+          size="compact-sm"
+          color="pink"
+          variant="light"
+          loading={isExportingAll}
+          disabled={exportableCount === 0}
+          onClick={onExportAll}
+        >
+          {exportAllLabel}
+        </Button>
+      </Group>
+
+      {bookmarks.length === 0 && (
+        <Text size="sm" c="dimmed">
+          No unread bookmarks loaded yet.
+        </Text>
+      )}
+
+      {bookmarks.length > 0 && (
+        <Stack gap={0}>
+          {bookmarks.map((bookmark, index) => {
+            return (
+              <BookmarkRow
+                key={bookmark.bookmarkId}
+                bookmark={bookmark}
+                archiveOriginal={archiveOriginal}
+                exportingPublicId={exportingPublicId}
+                disableExport={isExportingAll}
+                onExport={onExport}
+                withDivider={index > 0}
+              />
+            );
+          })}
+        </Stack>
+      )}
+    </ReaderPanel>
   );
-}
-
-function useInstapaperControls() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [archiveOriginal, setArchiveOriginal] = useState(true);
-  const [bookmarks, setBookmarks] = useState<InstapaperUnreadBookmark[]>(
-    [],
-  );
-  const [summary, setSummary] = useState<ImportSummary | null>(null);
-  const [importErrors, setImportErrors] = useState<string[]>([]);
-  const [exportingPublicId, setExportingPublicId] = useState<
-    string | null
-  >(null);
-
-  const connectionQuery = trpc.getReaderInstapaperConnectionRoute.useQuery(
-    {},
-    {
-      refetchOnWindowFocus: false,
-    },
-  );
-  const connectInstapaper =
-    trpc.connectReaderInstapaperRoute.useMutation();
-  const disconnectInstapaper =
-    trpc.disconnectReaderInstapaperRoute.useMutation();
-  const loadUnread = trpc.listReaderInstapaperUnreadRoute.useMutation();
-  const importUnread =
-    trpc.importReaderInstapaperUnreadRoute.useMutation();
-  const exportArticle =
-    trpc.exportReaderArticleToInstapaperRoute.useMutation();
-
-  const isConnected = Boolean(connectionQuery.data?.connected);
-
-  const requireConnection = (): boolean => {
-    if (!isConnected) {
-      notifications.show({
-        title: "Not connected",
-        message:
-          "Connect Instapaper before loading, importing, or exporting.",
-        color: "red",
-      });
-      return false;
-    }
-
-    return true;
-  };
-
-  const connect = async (): Promise<void> => {
-    const trimmedUsername = username.trim();
-
-    if (!trimmedUsername || !password) {
-      notifications.show({
-        title: "Missing credentials",
-        message: "Enter your Instapaper username and password.",
-        color: "red",
-      });
-      return;
-    }
-
-    try {
-      await connectInstapaper.mutateAsync({
-        username: trimmedUsername,
-        password,
-      });
-      setUsername(trimmedUsername);
-      setPassword("");
-      await connectionQuery.refetch();
-      notifications.show({
-        title: "Connected",
-        message: "Instapaper is connected. Password is not stored.",
-        color: "green",
-      });
-    } catch (error: unknown) {
-      notifications.show({
-        title: "Connect failed",
-        message: mutationErrorMessage(
-          error,
-          "Could not connect to Instapaper.",
-        ),
-        color: "red",
-      });
-    }
-  };
-
-  const disconnect = async (): Promise<void> => {
-    try {
-      await disconnectInstapaper.mutateAsync({});
-      setBookmarks([]);
-      setSummary(null);
-      setImportErrors([]);
-      setExportingPublicId(null);
-      await connectionQuery.refetch();
-      notifications.show({
-        title: "Disconnected",
-        message: "Instapaper tokens removed from Koala.",
-        color: "green",
-      });
-    } catch (error: unknown) {
-      notifications.show({
-        title: "Disconnect failed",
-        message: mutationErrorMessage(
-          error,
-          "Could not disconnect Instapaper.",
-        ),
-        color: "red",
-      });
-    }
-  };
-
-  const loadUnreadBookmarks = async (): Promise<void> => {
-    if (!requireConnection()) {
-      return;
-    }
-
-    try {
-      const result = await loadUnread.mutateAsync({});
-      setBookmarks(result.bookmarks);
-      setSummary(null);
-      setImportErrors([]);
-      notifications.show({
-        title: "Unread loaded",
-        message: `${result.bookmarks.length} bookmark(s) loaded from Instapaper.`,
-        color: "green",
-      });
-    } catch (error: unknown) {
-      notifications.show({
-        title: "Load failed",
-        message: mutationErrorMessage(
-          error,
-          "Could not load unread Instapaper bookmarks.",
-        ),
-        color: "red",
-      });
-    }
-  };
-
-  const importUnreadBookmarks = async (): Promise<void> => {
-    if (!requireConnection()) {
-      return;
-    }
-
-    try {
-      const result = await importUnread.mutateAsync({});
-      setSummary(result.summary);
-      setImportErrors(result.errors);
-      setBookmarks(result.bookmarks);
-      notifications.show({
-        title: "Import complete",
-        message: `${result.summary.imported} bookmark(s) queued for Reader ingest.`,
-        color: "green",
-      });
-    } catch (error: unknown) {
-      notifications.show({
-        title: "Import failed",
-        message: mutationErrorMessage(
-          error,
-          "Could not import unread Instapaper bookmarks.",
-        ),
-        color: "red",
-      });
-    }
-  };
-
-  const exportBookmark = async (
-    bookmark: InstapaperUnreadBookmark,
-  ): Promise<void> => {
-    if (!requireConnection()) {
-      return;
-    }
-
-    const localArticle = bookmark.localArticle;
-    if (!localArticle) {
-      notifications.show({
-        title: "No local article",
-        message: "Import this bookmark to Koala before exporting.",
-        color: "red",
-      });
-      return;
-    }
-
-    if (localArticle.ingestStatus !== "ready") {
-      notifications.show({
-        title: "Article not ready",
-        message: "Wait for Reader ingest to complete before exporting.",
-        color: "red",
-      });
-      return;
-    }
-
-    setExportingPublicId(localArticle.publicId);
-
-    try {
-      const result = await exportArticle.mutateAsync({
-        publicId: localArticle.publicId,
-        archiveOriginal,
-        originalBookmarkId: bookmark.bookmarkId,
-      });
-
-      if (result.status === "exported_and_archived") {
-        notifications.show({
-          title: "Exported",
-          message:
-            "Korean article exported and original bookmark archived.",
-          color: "green",
-        });
-      }
-
-      if (result.status === "exported") {
-        notifications.show({
-          title: "Exported",
-          message: "Korean article exported to Instapaper.",
-          color: "green",
-        });
-      }
-
-      if (result.status === "exported_archive_failed") {
-        notifications.show({
-          title: "Partial success",
-          message:
-            result.archiveError ||
-            "Exported successfully, but archive failed.",
-          color: "yellow",
-        });
-      }
-    } catch (error: unknown) {
-      notifications.show({
-        title: "Export failed",
-        message: mutationErrorMessage(
-          error,
-          "Could not export this article to Instapaper.",
-        ),
-        color: "red",
-      });
-    } finally {
-      setExportingPublicId((current) => {
-        if (current === localArticle.publicId) {
-          return null;
-        }
-
-        return current;
-      });
-    }
-  };
-
-  return {
-    username,
-    password,
-    archiveOriginal,
-    bookmarks,
-    summary,
-    importErrors,
-    exportingPublicId,
-    connection: connectionQuery.data,
-    isConnectionLoading: connectionQuery.isLoading,
-    isConnecting: connectInstapaper.isLoading,
-    isDisconnecting: disconnectInstapaper.isLoading,
-    isLoadingUnread: loadUnread.isLoading,
-    isImportingUnread: importUnread.isLoading,
-    onUsernameChange: setUsername,
-    onPasswordChange: setPassword,
-    onArchiveOriginalChange: setArchiveOriginal,
-    onConnect: connect,
-    onDisconnect: disconnect,
-    onLoadUnread: loadUnreadBookmarks,
-    onImportUnread: importUnreadBookmarks,
-    onExportBookmark: exportBookmark,
-  };
 }
 
 export default function ReaderInstapaperPage() {
   const controls = useInstapaperControls();
 
-  const connection = controls.connection;
-  const renderConnectionPanel = () => {
-    if (controls.isConnectionLoading) {
-      return (
-        <Text size="sm" c="dimmed">
-          Checking Instapaper connection...
-        </Text>
-      );
-    }
+  return (
+    <ReaderPageFrame>
+      <ReaderPageHeader
+        title="Instapaper"
+        subtitle="Connect once, import unread bookmarks into your Reader shelf, then export polished Korean versions back to Instapaper."
+        rightSlot={
+          <Button
+            component={Link}
+            href="/reader"
+            variant="light"
+            size="sm"
+          >
+            Back to Reader
+          </Button>
+        }
+      />
 
-    if (connection?.connected) {
-      return (
-        <ConnectedPanel
-          connection={connection}
-          archiveOriginal={controls.archiveOriginal}
-          loadingUnread={controls.isLoadingUnread}
-          importingUnread={controls.isImportingUnread}
-          disconnecting={controls.isDisconnecting}
-          onArchiveOriginalChange={controls.onArchiveOriginalChange}
-          onLoadUnread={controls.onLoadUnread}
-          onImportUnread={controls.onImportUnread}
-          onDisconnect={controls.onDisconnect}
-        />
-      );
-    }
-
-    return (
-      <ConnectForm
+      <ConnectionPanel
+        connection={controls.connection}
+        isConnectionLoading={controls.isConnectionLoading}
         username={controls.username}
         password={controls.password}
-        loading={controls.isConnecting}
+        archiveOriginal={controls.archiveOriginal}
+        isConnecting={controls.isConnecting}
+        isDisconnecting={controls.isDisconnecting}
+        isLoadingUnread={controls.isLoadingUnread}
+        isImportingUnread={controls.isImportingUnread}
         onUsernameChange={controls.onUsernameChange}
         onPasswordChange={controls.onPasswordChange}
+        onArchiveOriginalChange={controls.onArchiveOriginalChange}
         onConnect={controls.onConnect}
+        onDisconnect={controls.onDisconnect}
+        onLoadUnread={controls.onLoadUnread}
+        onImportUnread={controls.onImportUnread}
       />
-    );
-  };
 
-  return (
-    <Container size="lg" mt="xl" pb="xl">
-      <Stack gap="lg" style={pageShellStyle}>
-        <PageHeader />
-        {renderConnectionPanel()}
-        <ImportSummaryPanel
-          summary={controls.summary}
-          errors={controls.importErrors}
-        />
-        <BookmarkList
-          bookmarks={controls.bookmarks}
-          archiveOriginal={controls.archiveOriginal}
-          exportingPublicId={controls.exportingPublicId}
-          onExport={controls.onExportBookmark}
-        />
-      </Stack>
-    </Container>
+      <ImportSummaryCard
+        summary={controls.summary}
+        errors={controls.importErrors}
+      />
+
+      <BookmarksCard
+        bookmarks={controls.bookmarks}
+        archiveOriginal={controls.archiveOriginal}
+        exportingPublicId={controls.exportingPublicId}
+        isExportingAll={controls.isExportingAll}
+        onExport={controls.onExportBookmark}
+        onExportAll={controls.onExportAllBookmarks}
+      />
+    </ReaderPageFrame>
   );
 }
 
