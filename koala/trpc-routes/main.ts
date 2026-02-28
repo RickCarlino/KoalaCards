@@ -27,6 +27,11 @@ import {
   rotateReaderBookmarkletKey,
   saveReaderArticleRoute,
 } from "./reader";
+import {
+  exportReaderArticleToInstapaperRoute,
+  importReaderInstapaperUnreadRoute,
+  listReaderInstapaperUnreadRoute,
+} from "./reader-instapaper";
 import { turbine } from "./turbine";
 import { updateDeck } from "./update-deck";
 
@@ -49,8 +54,11 @@ export const appRouter = router({
   createDeck,
   deleteReaderArticleRoute,
   getReaderBookmarkletConfig,
+  exportReaderArticleToInstapaperRoute,
+  importReaderInstapaperUnreadRoute,
   mergeDecks,
   importDeck,
+  listReaderInstapaperUnreadRoute,
   listReaderArticlesRoute,
   parseCards,
   refreshReaderArticleRoute,

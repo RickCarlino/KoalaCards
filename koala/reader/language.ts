@@ -19,7 +19,7 @@ const tidyMarkdownSchema = z.object({
   markdown: z.string(),
 });
 
-const LENGTH = 10000;
+const LENGTH = 20000;
 const MIN_KOREAN_HANGUL_CHAR_COUNT = 30;
 const MIN_KOREAN_HANGUL_PARAGRAPH_RATIO = 0.35;
 

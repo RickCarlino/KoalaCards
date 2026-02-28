@@ -59,7 +59,7 @@ KoalaCards depends on hosted services in production:
 - Google Cloud Text-to-Speech for term audio and Google Cloud Storage for cached audio and images.
 - Email delivery (for magic links) or Google OAuth for authentication.
 
-Setup details live in `SETUP.md` and `example.env`.
+Setup details live in `SETUP.md`, `example.env`, and `.env.example`.
 
 ## Documentation
 

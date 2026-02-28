@@ -205,6 +205,7 @@ model ReaderArticle {
   userId        String
   user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   publicId      String             @unique @default(cuid())
+  instapaperBookmarkId String?     @db.VarChar(64)
   requestUrl    String             @db.Text
   normalizedUrl String            @db.Text
   title         String             @db.Text
@@ -223,5 +224,6 @@ model ReaderArticle {
 
   @@index([userId, createdAt])
   @@index([publicId])
+  @@index([userId, instapaperBookmarkId])
   @@index([ingestStatus, createdAt])
 }

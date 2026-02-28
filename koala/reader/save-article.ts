@@ -32,6 +32,7 @@ export type ReaderRouteErrorCode =
 const readerArticleSummarySelect = {
   id: true,
   publicId: true,
+  instapaperBookmarkId: true,
   title: true,
   normalizedUrl: true,
   description: true,
@@ -75,6 +76,7 @@ export class ReaderSaveError extends Error {
 export type SavedReaderArticle = {
   id: number;
   publicId: string;
+  instapaperBookmarkId: string | null;
   title: string;
   normalizedUrl: string;
   description: string;
@@ -90,6 +92,7 @@ type QueueReaderArticleInput = {
   requestUrl: string;
   saveOrigin: ReaderSaveOriginValue;
   suggestedTitle?: string;
+  instapaperBookmarkId?: string;
 };
 
 type RefreshReaderArticleInput = {
@@ -256,6 +259,7 @@ const mapSavedArticle = (
   return {
     id: article.id,
     publicId: article.publicId,
+    instapaperBookmarkId: article.instapaperBookmarkId,
     title: article.title,
     normalizedUrl: article.normalizedUrl,
     description: article.description,
@@ -437,10 +441,13 @@ export const queueReaderArticle = async (
 
   const normalizedRequestUrl = normalizeRequestUrl(requestUrl);
   const saveOrigin: ReaderSaveOrigin = input.saveOrigin;
+  const normalizedInstapaperBookmarkId =
+    input.instapaperBookmarkId?.trim() ?? "";
 
   const saved = await prismaClient.readerArticle.create({
     data: {
       userId: input.userId,
+      instapaperBookmarkId: normalizedInstapaperBookmarkId || null,
       requestUrl: normalizedRequestUrl,
       normalizedUrl: normalizedRequestUrl,
       title: queuedTitleFor(normalizedRequestUrl, input.suggestedTitle),

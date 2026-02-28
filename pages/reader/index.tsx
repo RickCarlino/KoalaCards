@@ -96,6 +96,10 @@ function ReaderIntroHeader() {
         You can also use the{" "}
         <Anchor component={Link} href="/reader/bookmarklet">
           Koala Bookmarklet
+        </Anchor>{" "}
+        or{" "}
+        <Anchor component={Link} href="/reader/instapaper">
+          Instapaper tools
         </Anchor>
         .
       </Text>
