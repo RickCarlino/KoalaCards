@@ -68,6 +68,9 @@ export const openaiGenerateStructuredOutput: StructuredGenFn = async (
   const reasoningEffort = usesGpt5
     ? REASONING_EFFORT[options.model ?? DEFAULT_MODEL]
     : undefined;
+  const completionTokenLimit =
+    typeof options.maxTokens === "number" ? options.maxTokens : undefined;
+
   const res = await openai.chat.completions.parse({
     model: modelName,
     messages: options.messages,
@@ -77,7 +80,9 @@ export const openaiGenerateStructuredOutput: StructuredGenFn = async (
           verbosity: "low" as const,
           reasoning_effort:
             reasoningEffort as unknown as ChatCompletionCreateParamsNonStreaming["reasoning_effort"],
-          max_completion_tokens: options.maxTokens ?? 1000,
+          ...(completionTokenLimit !== undefined
+            ? { max_completion_tokens: completionTokenLimit }
+            : {}),
         }
       : {}),
   });

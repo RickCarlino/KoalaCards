@@ -26,6 +26,7 @@ const tidyMarkdownSchema = z.object({
 const EXTRACTION_CHUNK_SIZE = 3200;
 const TRANSLATION_CHUNK_SIZE = 2600;
 const HTML_HINT_LENGTH = 5000;
+const TIDY_INPUT_CHAR_LIMIT = 9000;
 
 const englishLetterCount = (text: string): number => {
   const matches = text.match(/[A-Za-z]/g);
@@ -271,6 +272,8 @@ export const tidyKoreanArticleMarkdown = async (
     return "";
   }
 
+  const truncatedInput = trimmed.slice(0, TIDY_INPUT_CHAR_LIMIT);
+
   const tidyResult = await generateStructuredOutput({
     model: "good",
     schema: tidyMarkdownSchema,
@@ -288,10 +291,9 @@ export const tidyKoreanArticleMarkdown = async (
       },
       {
         role: "user",
-        content: trimmed,
+        content: truncatedInput,
       },
     ],
-    maxTokens: 6000,
   });
 
   const normalized = normalizeMarkdownText(tidyResult.markdown);

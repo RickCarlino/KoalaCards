@@ -2,22 +2,7 @@ import { prismaClient } from "../prisma-client";
 import { createReaderIngestTask } from "./reader-task";
 import { runWorkerLoop } from "./run-loop";
 
-const parsePositiveInt = (
-  value: string | undefined,
-  fallback: number,
-): number => {
-  const parsed = Number.parseInt(value ?? "", 10);
-  if (Number.isNaN(parsed) || parsed < 1) {
-    return fallback;
-  }
-
-  return parsed;
-};
-
-const idleDelayMs = parsePositiveInt(
-  process.env.WORKER_POLL_INTERVAL_MS,
-  8000,
-);
+const idleDelayMs = 800;
 
 const shutdown = async (signal: string): Promise<void> => {
   console.log(`[worker] shutting down (${signal})`);

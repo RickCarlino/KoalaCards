@@ -148,21 +148,33 @@ type LibraryShelfProps = {
   isRefreshing: boolean;
   errorMessage: string | null;
   deletingPublicId: string | null;
+  refreshingPublicId: string | null;
   onDeleteArticle: (article: ReaderArticleSummary) => void;
+  onRefreshArticle: (article: ReaderArticleSummary) => void;
   onRefresh: () => void;
 };
 
 type LibraryRowProps = {
   article: ReaderArticleSummary;
   isDeleting: boolean;
+  isRefreshing: boolean;
   onDelete: () => void;
+  onRefresh: () => void;
   withDivider: boolean;
 };
+
+function canRefreshArticle(article: ReaderArticleSummary): boolean {
+  return (
+    article.ingestStatus === "ready" || article.ingestStatus === "error"
+  );
+}
 
 function LibraryRow({
   article,
   isDeleting,
+  isRefreshing,
   onDelete,
+  onRefresh,
   withDivider,
 }: LibraryRowProps) {
   const statusLabel = articleStateLabel(article);
@@ -170,6 +182,7 @@ function LibraryRow({
     article.ingestStatus === "ready"
       ? `${sourceLanguageLabel(article.sourceLang)} · ${statusLabel}`
       : statusLabel;
+  const showRefreshAction = canRefreshArticle(article);
 
   return (
     <Stack
@@ -203,11 +216,23 @@ function LibraryRow({
           >
             Source ↗
           </Anchor>
+          {showRefreshAction && (
+            <Button
+              variant="subtle"
+              color="pink"
+              size="compact-xs"
+              loading={isRefreshing}
+              onClick={onRefresh}
+            >
+              Refresh
+            </Button>
+          )}
           <Button
             variant="subtle"
             color="red"
             size="compact-xs"
             loading={isDeleting}
+            disabled={isRefreshing}
             onClick={onDelete}
           >
             Delete
@@ -259,7 +284,9 @@ function LibraryShelf({
   isRefreshing,
   errorMessage,
   deletingPublicId,
+  refreshingPublicId,
   onDeleteArticle,
+  onRefreshArticle,
   onRefresh,
 }: LibraryShelfProps) {
   if (isLoading) {
@@ -303,7 +330,9 @@ function LibraryShelf({
               key={article.id}
               article={article}
               isDeleting={deletingPublicId === article.publicId}
+              isRefreshing={refreshingPublicId === article.publicId}
               onDelete={() => onDeleteArticle(article)}
+              onRefresh={() => onRefreshArticle(article)}
               withDivider={index > 0}
             />
           );
@@ -318,6 +347,9 @@ function useReaderControls() {
   const [deletingPublicId, setDeletingPublicId] = useState<string | null>(
     null,
   );
+  const [refreshingPublicId, setRefreshingPublicId] = useState<
+    string | null
+  >(null);
 
   const listQuery = trpc.listReaderArticlesRoute.useQuery(
     { limit: 40 },
@@ -342,6 +374,7 @@ function useReaderControls() {
 
   const saveArticle = trpc.saveReaderArticleRoute.useMutation();
   const deleteArticle = trpc.deleteReaderArticleRoute.useMutation();
+  const refreshArticle = trpc.refreshReaderArticleRoute.useMutation();
 
   const listErrorMessage = useMemo(() => {
     if (!listQuery.isError) {
@@ -425,9 +458,43 @@ function useReaderControls() {
     }
   };
 
+  const handleRefreshArticle = async (
+    article: ReaderArticleSummary,
+  ): Promise<void> => {
+    setRefreshingPublicId(article.publicId);
+
+    try {
+      await refreshArticle.mutateAsync({ publicId: article.publicId });
+      notifications.show({
+        title: "Queued",
+        message: "Article queued for reprocessing.",
+        color: "green",
+      });
+      listQuery.refetch();
+    } catch (error: unknown) {
+      notifications.show({
+        title: "Refresh failed",
+        message: mutationErrorMessage(
+          error,
+          "Could not refresh this article.",
+        ),
+        color: "red",
+      });
+    } finally {
+      setRefreshingPublicId((current) => {
+        if (current === article.publicId) {
+          return null;
+        }
+
+        return current;
+      });
+    }
+  };
+
   return {
     articleUrl,
     deletingPublicId,
+    refreshingPublicId,
     isSaving: saveArticle.isLoading,
     articles: listQuery.data?.articles ?? [],
     isArticlesLoading: listQuery.isLoading,
@@ -435,6 +502,7 @@ function useReaderControls() {
     listErrorMessage,
     onArticleUrlChange: setArticleUrl,
     onDeleteArticle: handleDeleteArticle,
+    onRefreshArticle: handleRefreshArticle,
     onSaveSubmit: handleSaveSubmit,
     onRefreshArticles: () => listQuery.refetch(),
   };
@@ -459,7 +527,9 @@ export default function ReaderDashboardPage() {
           isRefreshing={controls.isArticlesRefreshing}
           errorMessage={controls.listErrorMessage}
           deletingPublicId={controls.deletingPublicId}
+          refreshingPublicId={controls.refreshingPublicId}
           onDeleteArticle={controls.onDeleteArticle}
+          onRefreshArticle={controls.onRefreshArticle}
           onRefresh={controls.onRefreshArticles}
         />
       </Stack>

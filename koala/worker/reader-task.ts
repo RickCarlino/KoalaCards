@@ -1,8 +1,8 @@
 import {
   claimNextQueuedReaderArticle,
+  expireStaleReaderArticles,
   markReaderArticleIngestError,
   processClaimedReaderArticle,
-  requeueStaleReaderArticles,
 } from "../reader/save-article";
 import type { WorkerTask } from "./run-loop";
 
@@ -32,7 +32,7 @@ const readerConcurrency = (): number => {
 };
 
 const staleAfterMinutes = (): number => {
-  return parsePositiveInt(process.env.READER_WORKER_STALE_MINUTES, 20);
+  return parsePositiveInt(process.env.READER_WORKER_STALE_MINUTES, 10);
 };
 
 const hostnameFromUrl = (value: string): string => {
@@ -108,10 +108,11 @@ export const createReaderIngestTask = (): WorkerTask => {
         staleMinutes,
       });
 
-      const requeuedCount = await requeueStaleReaderArticles(staleMinutes);
-      logReaderWorkerInfo("stale-requeue-complete", {
+      const staleErroredCount =
+        await expireStaleReaderArticles(staleMinutes);
+      logReaderWorkerInfo("stale-timeout-complete", {
         cycleId,
-        requeuedCount,
+        staleErroredCount,
       });
 
       let nextSlot = 0;
@@ -244,7 +245,7 @@ export const createReaderIngestTask = (): WorkerTask => {
         processed,
         succeeded,
         failed,
-        requeuedCount,
+        staleErroredCount,
       });
 
       return processed;

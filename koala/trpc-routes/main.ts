@@ -23,6 +23,7 @@ import {
   deleteReaderArticleRoute,
   getReaderBookmarkletConfig,
   listReaderArticlesRoute,
+  refreshReaderArticleRoute,
   rotateReaderBookmarkletKey,
   saveReaderArticleRoute,
 } from "./reader";
@@ -52,6 +53,7 @@ export const appRouter = router({
   importDeck,
   listReaderArticlesRoute,
   parseCards,
+  refreshReaderArticleRoute,
   rotateReaderBookmarkletKey,
   saveReaderArticleRoute,
   archiveCard,

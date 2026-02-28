@@ -92,6 +92,11 @@ type QueueReaderArticleInput = {
   suggestedTitle?: string;
 };
 
+type RefreshReaderArticleInput = {
+  userId: string;
+  publicId: string;
+};
+
 type ProcessedReaderArticle = {
   normalizedUrl: string;
   title: string;
@@ -456,6 +461,53 @@ export const queueReaderArticle = async (
   return mapSavedArticle(saved);
 };
 
+export const refreshReaderArticle = async (
+  input: RefreshReaderArticleInput,
+): Promise<SavedReaderArticle> => {
+  const article = await prismaClient.readerArticle.findUnique({
+    where: { publicId: input.publicId },
+    select: {
+      id: true,
+      userId: true,
+      ingestStatus: true,
+    },
+  });
+
+  if (!article || article.userId !== input.userId) {
+    throw new ReaderSaveError("Article not found.", "BAD_REQUEST", 404);
+  }
+
+  const isAlreadyQueued =
+    article.ingestStatus === "PENDING" ||
+    article.ingestStatus === "IN_PROGRESS";
+
+  if (isAlreadyQueued) {
+    throw new ReaderSaveError(
+      "This article is already queued for processing.",
+      "BAD_REQUEST",
+      400,
+    );
+  }
+
+  const refreshed = await prismaClient.readerArticle.update({
+    where: { id: article.id },
+    data: {
+      ingestStatus: "PENDING",
+      ingestError: "",
+      ingestStartedAt: null,
+      ingestedAt: null,
+      sourceLang: "OTHER",
+      translated: false,
+      description: "",
+      contentText: "",
+      contentHtml: "",
+    },
+    select: readerArticleSummarySelect,
+  });
+
+  return mapSavedArticle(refreshed);
+};
+
 export const claimNextQueuedReaderArticle =
   async (): Promise<ReaderIngestJob | null> => {
     const nextPending = await prismaClient.readerArticle.findFirst({
@@ -510,6 +562,7 @@ export const processClaimedReaderArticle = async (
       contentHtml: processed.contentHtml,
       ingestStatus: "READY",
       ingestError: "",
+      ingestStartedAt: null,
       ingestedAt: new Date(),
     },
     select: readerArticleSummarySelect,
@@ -527,12 +580,13 @@ export const markReaderArticleIngestError = async (
     data: {
       ingestStatus: "ERROR",
       ingestError: clampErrorMessage(normalizeErrorMessage(error)),
+      ingestStartedAt: null,
       ingestedAt: new Date(),
     },
   });
 };
 
-export const requeueStaleReaderArticles = async (
+export const expireStaleReaderArticles = async (
   staleAfterMinutes: number,
 ): Promise<number> => {
   if (staleAfterMinutes <= 0) {
@@ -549,9 +603,12 @@ export const requeueStaleReaderArticles = async (
       },
     },
     data: {
-      ingestStatus: "PENDING",
+      ingestStatus: "ERROR",
       ingestStartedAt: null,
-      ingestError: "",
+      ingestError: clampErrorMessage(
+        `Reader ingest timed out after ${staleAfterMinutes} minutes.`,
+      ),
+      ingestedAt: new Date(),
     },
   });
 

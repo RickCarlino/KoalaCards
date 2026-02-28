@@ -8,6 +8,7 @@ import {
   hashBookmarkletSecret,
 } from "@/koala/reader/secret";
 import {
+  refreshReaderArticle,
   ReaderSaveError,
   queueReaderArticle,
 } from "@/koala/reader/save-article";
@@ -62,6 +63,15 @@ const deleteReaderArticleInputSchema = z.object({
 
 const deleteReaderArticleOutputSchema = z.object({
   status: z.literal("deleted"),
+});
+
+const refreshReaderArticleInputSchema = z.object({
+  publicId: z.string().trim().min(1),
+});
+
+const refreshReaderArticleOutputSchema = z.object({
+  status: z.literal("queued"),
+  article: readerArticleSchema,
 });
 
 const mapSourceLanguage = (
@@ -344,4 +354,25 @@ export const deleteReaderArticleRoute = procedure
     }
 
     return { status: "deleted" };
+  });
+
+export const refreshReaderArticleRoute = procedure
+  .input(refreshReaderArticleInputSchema)
+  .output(refreshReaderArticleOutputSchema)
+  .mutation(async ({ input, ctx }) => {
+    const userId = requireUserId(ctx.user?.id);
+
+    try {
+      const article = await refreshReaderArticle({
+        userId,
+        publicId: input.publicId,
+      });
+
+      return {
+        status: "queued",
+        article: mapSavedArticle(article),
+      };
+    } catch (error) {
+      return mapSaveError(error);
+    }
   });
