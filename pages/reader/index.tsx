@@ -379,7 +379,7 @@ export default function ReaderDashboardPage() {
     <ReaderPageFrame>
       <ReaderPageHeader
         title="Reader"
-        subtitle="A calm reading shelf for Korean study. Save links, wait for processing, and keep your library tidy."
+        subtitle="A reading shelf for Korean study. Save links, wait for processing, and keep your library tidy."
       />
       <IntegrationsCard articleCount={controls.articles.length} />
       <CaptureCard

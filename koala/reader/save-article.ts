@@ -14,7 +14,6 @@ import {
   detectSourceLanguage,
   extractArticleContentFromPage,
   tidyKoreanArticleMarkdown,
-  translateEnglishToKorean,
 } from "@/koala/reader/language";
 
 export type ReaderLanguage = "ko" | "en" | "other";
@@ -302,6 +301,30 @@ const processReaderArticleText = async (
     throw new ReaderSaveError(message, "BAD_REQUEST", 400);
   }
 
+  const detectStartedAtMs = Date.now();
+  const sourceLanguage = await detectSourceLanguage(
+    [snapshot.title, snapshot.description, snapshot.text]
+      .filter((part) => part.trim().length > 0)
+      .join("\n\n"),
+  );
+  logIngestInfo("language-detected", {
+    requestHost,
+    sourceLanguage,
+    detectMs: Date.now() - detectStartedAtMs,
+  });
+
+  if (sourceLanguage !== "ko") {
+    logIngestError("language-unsupported", {
+      requestHost,
+      sourceLanguage,
+    });
+    throw new ReaderSaveError(
+      "Unable to parse article (not Korean?)",
+      "BAD_REQUEST",
+      400,
+    );
+  }
+
   let extractedArticle = "";
   try {
     const extractStartedAtMs = Date.now();
@@ -339,55 +362,8 @@ const processReaderArticleText = async (
     );
   }
 
-  const detectStartedAtMs = Date.now();
-  const sourceLanguage = await detectSourceLanguage(
-    [snapshot.title, snapshot.description, extractedArticle]
-      .filter((part) => part.trim().length > 0)
-      .join("\n\n"),
-  );
-  logIngestInfo("language-detected", {
-    requestHost,
-    sourceLanguage,
-    detectMs: Date.now() - detectStartedAtMs,
-  });
-
-  if (sourceLanguage === "other") {
-    logIngestError("language-unsupported", {
-      requestHost,
-      sourceLanguage,
-    });
-    throw new ReaderSaveError(
-      "Only English or Korean articles are supported right now.",
-      "BAD_REQUEST",
-      400,
-    );
-  }
-
-  let translated = false;
+  const translated = false;
   let koreanText = extractedArticle;
-
-  if (sourceLanguage === "en") {
-    try {
-      const translateStartedAtMs = Date.now();
-      koreanText = await translateEnglishToKorean(extractedArticle);
-      translated = true;
-      logIngestInfo("translation-complete", {
-        requestHost,
-        translateMs: Date.now() - translateStartedAtMs,
-        translatedLength: koreanText.length,
-      });
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Could not translate this article.";
-      logIngestError("translation-failed", {
-        requestHost,
-        errorMessage: message,
-      });
-      throw new ReaderSaveError(message, "INTERNAL_SERVER_ERROR", 500);
-    }
-  }
 
   try {
     const tidyStartedAtMs = Date.now();

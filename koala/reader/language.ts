@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { generateAIText, generateStructuredOutput } from "../ai";
+import { generateStructuredOutput } from "../ai";
 import { containsHangul } from "../utils/hangul";
 
 export type DetectedSourceLanguage = "ko" | "en" | "other";
@@ -10,6 +10,10 @@ type ExtractArticleInput = {
   pageText: string;
   pageHtml: string;
 };
+
+const pageMarkdownSchema = z.object({
+  markdown: z.string(),
+});
 
 const extractedArticleSchema = z.object({
   articleMarkdown: z.string(),
@@ -113,12 +117,10 @@ export const extractArticleContentFromPage = async (
   input: ExtractArticleInput,
 ): Promise<string> => {
   const normalizedPageText = normalizeMarkdownText(input.pageText);
-  if (!normalizedPageText) {
+  const htmlHint = input.pageHtml.slice(0, LENGTH).trim();
+  if (!normalizedPageText && !htmlHint) {
     return "";
   }
-
-  const truncatedPageText = normalizedPageText.slice(0, LENGTH);
-  const htmlHint = input.pageHtml.slice(0, LENGTH).trim();
 
   const userParts: string[] = [
     `Page title: ${input.title || "(none)"}`,
@@ -129,24 +131,20 @@ export const extractArticleContentFromPage = async (
     userParts.push(`HTML context snippet:\n${htmlHint}`);
   }
 
-  userParts.push(`Page text:\n${truncatedPageText}`);
+  if (normalizedPageText) {
+    userParts.push(`Page text:\n${normalizedPageText.slice(0, LENGTH)}`);
+  }
 
-  const extracted = await generateStructuredOutput({
+  const pageMarkdownResult = await generateStructuredOutput({
     model: "fast",
-    schema: extractedArticleSchema,
+    schema: pageMarkdownSchema,
     messages: [
       {
         role: "system",
         content: [
-          "Extract only the main article body from the provided webpage text.",
-          "DO NOT EXTRACT IT IF IT IS NOT PART OF THE ARTICLE BODY.",
-          "A blog name is not an article, a nav bar is not an article, a share prompt is not an article, related links are not an article, a newsletter signup is not an article, etc..",
-          "Keep the original language exactly as-is and keep original ordering.",
-          "Remove navigation labels, related links, comments, ads, newsletter prompts, legal/footer boilerplate, and non-article widgets.",
+          "Convert the provided webpage content into markdown.",
           "Return markdown only.",
-          "Make sure that you put code and other non-spoken content into code fences.",
-          "Seriosuly, do not return things like links to related articles, share prompts, newsletter signups, nav bars, buttons, etc.. Focus on the core article content.",
-          "If the page text has no article body content, return an empty string.",
+          "Use code fences for non-spoken content such as code or preformatted text.",
         ].join(" "),
       },
       {
@@ -157,41 +155,33 @@ export const extractArticleContentFromPage = async (
     maxTokens: LENGTH,
   });
 
-  return normalizeMarkdownText(extracted.articleMarkdown);
-};
-
-export const translateEnglishToKorean = async (
-  englishText: string,
-): Promise<string> => {
-  const trimmed = normalizeMarkdownText(englishText);
-  if (!trimmed) {
+  const pageMarkdown = normalizeMarkdownText(pageMarkdownResult.markdown);
+  if (!pageMarkdown) {
     return "";
   }
 
-  const truncatedInput = trimmed.slice(0, LENGTH);
-
-  const translated = await generateAIText({
+  const extracted = await generateStructuredOutput({
     model: "fast",
+    schema: extractedArticleSchema,
     messages: [
       {
         role: "system",
-        content:
-          "I am learning Korean. Translate this article to Korean so that it is easy to understand and really really natural sounding (don't make it sound like a translation of English). Use words I will understand as an intermediate learner. Preserve Markdown format. I only want a clean Korean translation of the article in markdown format in the output, nothing else.",
+        content: [
+          "Extract the main article body.",
+          "Remove all non-article content, including nav bars, share prompts, related links, newsletter signups, comments, ads, footer/legal boilerplate, and widget text.",
+          "Return markdown only.",
+          "If no article body exists, return an empty string.",
+        ].join(" "),
       },
       {
         role: "user",
-        content: truncatedInput,
+        content: pageMarkdown.slice(0, LENGTH),
       },
     ],
     maxTokens: LENGTH,
   });
 
-  const normalized = normalizeMarkdownText(translated);
-  if (!normalized) {
-    throw new Error("Translation returned empty output.");
-  }
-
-  return normalized;
+  return normalizeMarkdownText(extracted.articleMarkdown);
 };
 
 export const tidyKoreanArticleMarkdown = async (

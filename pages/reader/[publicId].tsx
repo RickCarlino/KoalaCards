@@ -27,7 +27,7 @@ type PublicReaderArticle = {
   contentText: string;
   ingestStatus: "pending" | "in_progress" | "ready" | "error";
   ingestError: string;
-  createdAt: Date;
+  createdAt: string;
 };
 
 function normalizeMarkdownText(value: string): string {
@@ -105,7 +105,7 @@ function ArticleHeaderCard({ article }: ArticleHeaderCardProps) {
             c="dimmed"
             style={{ fontFamily: readerBodyFont }}
           >
-            Added {formatReaderDateTime(article.createdAt)}
+            Added {formatReaderDateTime(new Date(article.createdAt))}
           </Text>
         </Group>
       </Stack>
@@ -278,7 +278,7 @@ export async function getServerSideProps(
     contentText: article.contentText,
     ingestStatus: mapIngestStatus(article.ingestStatus),
     ingestError: article.ingestError,
-    createdAt: article.createdAt,
+    createdAt: article.createdAt.toISOString(),
   };
 
   return {
