@@ -37,38 +37,28 @@ export const runWorkerLoop = async (
   options: WorkerLoopOptions,
 ): Promise<void> => {
   const shouldContinue = true;
-  let iteration = 0;
 
   while (shouldContinue) {
-    iteration += 1;
-    const loopStartedAtMs = Date.now();
     let processedCount = 0;
-
-    console.log("[worker] loop-start", {
-      iteration,
-      taskCount: options.tasks.length,
-    });
 
     for (const task of options.tasks) {
       const taskStartedAtMs = Date.now();
 
       try {
         const processed = await task.runOnce();
-        const taskMs = Date.now() - taskStartedAtMs;
-
-        console.log("[worker] task-complete", {
-          iteration,
-          taskName: task.name,
-          processed,
-          taskMs,
-        });
+        if (processed > 0) {
+          console.log("[worker] task-complete", {
+            taskName: task.name,
+            processed,
+            taskMs: Date.now() - taskStartedAtMs,
+          });
+        }
 
         processedCount += processed;
       } catch (error) {
         const details = parseLoopError(error);
 
         console.error("[worker] task-failed", {
-          iteration,
           taskName: task.name,
           taskMs: Date.now() - taskStartedAtMs,
           errorMessage: details.message,
@@ -77,19 +67,7 @@ export const runWorkerLoop = async (
       }
     }
 
-    const loopMs = Date.now() - loopStartedAtMs;
-
-    console.log("[worker] loop-complete", {
-      iteration,
-      processedCount,
-      loopMs,
-    });
-
     if (processedCount === 0) {
-      console.log("[worker] idle-wait", {
-        iteration,
-        sleepMs: options.idleDelayMs,
-      });
       await wait(options.idleDelayMs);
     }
   }

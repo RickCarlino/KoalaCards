@@ -94,31 +94,22 @@ export const createReaderIngestTask = (): WorkerTask => {
     runOnce: async () => {
       cycleCounter += 1;
       const cycleId = cycleCounter;
-      const cycleStartedAtMs = Date.now();
       const maxPerCycle = readerBatchSize();
       const configuredConcurrency = readerConcurrency();
       const workerCount = Math.min(maxPerCycle, configuredConcurrency);
       const staleMinutes = staleAfterMinutes();
 
-      logReaderWorkerInfo("cycle-start", {
-        cycleId,
-        maxPerCycle,
-        configuredConcurrency,
-        workerCount,
-        staleMinutes,
-      });
-
       const staleErroredCount =
         await expireStaleReaderArticles(staleMinutes);
-      logReaderWorkerInfo("stale-timeout-complete", {
-        cycleId,
-        staleErroredCount,
-      });
+      if (staleErroredCount > 0) {
+        logReaderWorkerInfo("stale-timeout-complete", {
+          cycleId,
+          staleErroredCount,
+        });
+      }
 
       let nextSlot = 0;
       let processed = 0;
-      let succeeded = 0;
-      let failed = 0;
 
       const processSlots = async (workerId: number): Promise<void> => {
         let hasMoreSlots = true;
@@ -129,30 +120,13 @@ export const createReaderIngestTask = (): WorkerTask => {
           hasMoreSlots = slot < maxPerCycle;
 
           if (!hasMoreSlots) {
-            logReaderWorkerInfo("worker-slot-limit-reached", {
-              cycleId,
-              workerId,
-              slot,
-            });
             return;
           }
 
           const claimStartedAtMs = Date.now();
-          logReaderWorkerInfo("job-claim-attempt", {
-            cycleId,
-            workerId,
-            slot,
-          });
-
           const job = await claimNextQueuedReaderArticle();
 
           if (!job) {
-            logReaderWorkerInfo("job-claim-empty", {
-              cycleId,
-              workerId,
-              slot,
-              claimMs: Date.now() - claimStartedAtMs,
-            });
             return;
           }
 
@@ -176,7 +150,6 @@ export const createReaderIngestTask = (): WorkerTask => {
             const processingMs = Date.now() - jobStartedAtMs;
 
             processed += 1;
-            succeeded += 1;
 
             logReaderWorkerInfo("job-processed", {
               cycleId,
@@ -193,7 +166,6 @@ export const createReaderIngestTask = (): WorkerTask => {
             const processingMs = Date.now() - jobStartedAtMs;
 
             processed += 1;
-            failed += 1;
 
             logReaderWorkerError("job-process-error", {
               cycleId,
@@ -236,17 +208,6 @@ export const createReaderIngestTask = (): WorkerTask => {
       });
 
       await Promise.all(workers);
-
-      const cycleMs = Date.now() - cycleStartedAtMs;
-
-      logReaderWorkerInfo("cycle-complete", {
-        cycleId,
-        cycleMs,
-        processed,
-        succeeded,
-        failed,
-        staleErroredCount,
-      });
 
       return processed;
     },
