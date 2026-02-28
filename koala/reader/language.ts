@@ -4,9 +4,28 @@ import { containsHangul } from "../utils/hangul";
 
 export type DetectedSourceLanguage = "ko" | "en" | "other";
 
+type ExtractArticleInput = {
+  title: string;
+  description: string;
+  pageText: string;
+  pageHtml: string;
+};
+
 const languageDetectionSchema = z.object({
   language: z.enum(["ko", "en", "other"]),
 });
+
+const extractedArticleSchema = z.object({
+  articleMarkdown: z.string(),
+});
+
+const tidyMarkdownSchema = z.object({
+  markdown: z.string(),
+});
+
+const EXTRACTION_CHUNK_SIZE = 3200;
+const TRANSLATION_CHUNK_SIZE = 2600;
+const HTML_HINT_LENGTH = 5000;
 
 const englishLetterCount = (text: string): number => {
   const matches = text.match(/[A-Za-z]/g);
@@ -31,6 +50,15 @@ const looksLikeEnglish = (text: string): boolean => {
   }
 
   return letters / visibleChars > 0.45;
+};
+
+const normalizeMarkdownText = (text: string): string => {
+  return text
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 };
 
 export const detectSourceLanguage = async (
@@ -123,15 +151,79 @@ const splitIntoChunks = (text: string, chunkSize: number): string[] => {
   return chunks;
 };
 
+export const extractArticleContentFromPage = async (
+  input: ExtractArticleInput,
+): Promise<string> => {
+  const normalizedPageText = normalizeMarkdownText(input.pageText);
+  if (!normalizedPageText) {
+    return "";
+  }
+
+  const chunks = splitIntoChunks(
+    normalizedPageText,
+    EXTRACTION_CHUNK_SIZE,
+  );
+  const htmlHint = input.pageHtml.slice(0, HTML_HINT_LENGTH).trim();
+  const articleSegments: string[] = [];
+
+  for (const [index, chunk] of chunks.entries()) {
+    const userParts: string[] = [
+      `Page title: ${input.title || "(none)"}`,
+      `Page description: ${input.description || "(none)"}`,
+    ];
+
+    if (index === 0 && htmlHint) {
+      userParts.push(`HTML context snippet:\n${htmlHint}`);
+    }
+
+    userParts.push(
+      `Text chunk ${index + 1} of ${chunks.length}:\n${chunk}`,
+    );
+
+    const extracted = await generateStructuredOutput({
+      model: "good",
+      schema: extractedArticleSchema,
+      messages: [
+        {
+          role: "system",
+          content: [
+            "Extract only the main article body from the provided webpage text chunk.",
+            "Keep the original language exactly as-is and keep original ordering.",
+            "Remove navigation labels, related links, comments, ads, newsletter prompts, legal/footer boilerplate, and non-article widgets.",
+            "Return markdown only.",
+            "Seriosuly, do not return things like links to related articles, share prompts, newsletter signups, nav bars, buttons, etc.. Focus on the core article content.",
+            "If this chunk has no article body content, return an empty string.",
+          ].join(" "),
+        },
+        {
+          role: "user",
+          content: userParts.join("\n\n"),
+        },
+      ],
+      maxTokens: 2200,
+    });
+
+    const normalizedSegment = normalizeMarkdownText(
+      extracted.articleMarkdown,
+    );
+
+    if (normalizedSegment) {
+      articleSegments.push(normalizedSegment);
+    }
+  }
+
+  return normalizeMarkdownText(articleSegments.join("\n\n"));
+};
+
 export const translateEnglishToKorean = async (
   englishText: string,
 ): Promise<string> => {
-  const trimmed = englishText.trim();
+  const trimmed = normalizeMarkdownText(englishText);
   if (!trimmed) {
     return "";
   }
 
-  const chunks = splitIntoChunks(trimmed, 2600);
+  const chunks = splitIntoChunks(trimmed, TRANSLATION_CHUNK_SIZE);
   const translatedChunks: string[] = [];
 
   for (const [index, chunk] of chunks.entries()) {
@@ -141,34 +233,71 @@ export const translateEnglishToKorean = async (
         {
           role: "system",
           content: [
-            "You are an expert English-to-Korean translator.",
-            "Translate every sentence fully into Korean.",
-            "Use simple, easy-to-understand Korean targetting intermediate language learners.",
-            "Do not summarize, shorten, omit, or add content.",
-            "Return only Korean translation.",
-            "Focus on sounding like a native Korean speaker, not a machine translation.",
-            "Strip out artifacts from the source so that the article is clean markdown in Korean.",
-            "If it is not part of the article (nav bar content, ad, 'read more' link, etc.), remove it from the final article.",
-            "We need the whole article, as a translated article, as a markdown article and nothing but the article.",
+            "You are an expert English-to-Korean translator serving the needs of intermediate Korean language learners.",
+            "Translate all English content into Korean.",
+            "Preserve markdown structure and ordering.",
+            "Keep markdown syntax, links, and headings valid.",
+            "Do not summarize or omit content.",
+            "Return only translated markdown.",
+            "Use natural, fluent Korean that a native speaker would use with vocabulary suitable for intermediate learners.",
           ].join(" "),
         },
         {
           role: "user",
           content: [
             `Part ${index + 1} of ${chunks.length}.`,
-            "Translate this text exactly and completely:",
+            "Translate this markdown to Korean:",
             chunk,
           ].join("\n\n"),
         },
       ],
     });
 
-    const normalized = translated.trim();
+    const normalized = normalizeMarkdownText(translated);
     if (!normalized) {
       throw new Error("Translation returned empty output.");
     }
     translatedChunks.push(normalized);
   }
 
-  return translatedChunks.join("\n\n");
+  return normalizeMarkdownText(translatedChunks.join("\n\n"));
+};
+
+export const tidyKoreanArticleMarkdown = async (
+  koreanMarkdown: string,
+): Promise<string> => {
+  const trimmed = normalizeMarkdownText(koreanMarkdown);
+  if (!trimmed) {
+    return "";
+  }
+
+  const tidyResult = await generateStructuredOutput({
+    model: "good",
+    schema: tidyMarkdownSchema,
+    messages: [
+      {
+        role: "system",
+        content: [
+          "You are a Korean copy editor for reading content.",
+          "Clean and format the article as tidy markdown.",
+          "Keep full article meaning and ordering.",
+          "Remove any leftover non-article noise such as share prompts, related links, or widget text.",
+          "Use readable paragraph breaks and headings where appropriate.",
+          "Return only markdown.",
+        ].join(" "),
+      },
+      {
+        role: "user",
+        content: trimmed,
+      },
+    ],
+    maxTokens: 6000,
+  });
+
+  const normalized = normalizeMarkdownText(tidyResult.markdown);
+  if (!normalized) {
+    throw new Error("Markdown cleanup returned empty output.");
+  }
+
+  return normalized;
 };

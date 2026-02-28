@@ -181,6 +181,13 @@ enum ReaderSaveOrigin {
   BOOKMARKLET
 }
 
+enum ReaderIngestStatus {
+  PENDING
+  IN_PROGRESS
+  READY
+  ERROR
+}
+
 model ReaderBookmarkletCredential {
   id              Int      @id @default(autoincrement())
   userId          String   @unique
@@ -194,22 +201,27 @@ model ReaderBookmarkletCredential {
 }
 
 model ReaderArticle {
-  id           Int                @id @default(autoincrement())
-  userId       String
-  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  publicId     String             @unique @default(cuid())
-  requestUrl   String             @db.Text
+  id            Int                @id @default(autoincrement())
+  userId        String
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  publicId      String             @unique @default(cuid())
+  requestUrl    String             @db.Text
   normalizedUrl String            @db.Text
-  title        String             @db.Text
-  description  String             @db.Text
-  sourceLang   ReaderSourceLanguage
-  translated   Boolean            @default(false)
-  saveOrigin   ReaderSaveOrigin   @default(DASHBOARD)
-  contentText  String             @db.Text
-  contentHtml  String             @db.Text
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
+  title         String             @db.Text
+  description   String             @db.Text
+  sourceLang    ReaderSourceLanguage
+  translated    Boolean            @default(false)
+  saveOrigin    ReaderSaveOrigin   @default(DASHBOARD)
+  ingestStatus  ReaderIngestStatus @default(PENDING)
+  ingestError   String             @default("") @db.Text
+  ingestStartedAt DateTime?
+  ingestedAt    DateTime?
+  contentText   String             @db.Text
+  contentHtml   String             @db.Text
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
 
   @@index([userId, createdAt])
   @@index([publicId])
+  @@index([ingestStatus, createdAt])
 }

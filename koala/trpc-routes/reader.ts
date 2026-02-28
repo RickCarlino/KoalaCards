@@ -9,7 +9,10 @@ import {
 } from "@/koala/reader/secret";
 import {
   ReaderSaveError,
-  saveReaderArticle,
+  queueReaderArticle,
+} from "@/koala/reader/save-article";
+import type {
+  ReaderIngestState,
   SavedReaderArticle,
 } from "@/koala/reader/save-article";
 import { procedure } from "../trpc-procedure";
@@ -24,6 +27,8 @@ const readerArticleSchema = z.object({
   description: z.string(),
   sourceLang: readerLanguageSchema,
   translated: z.boolean(),
+  ingestStatus: z.enum(["pending", "in_progress", "ready", "error"]),
+  ingestError: z.string(),
   createdAt: z.date(),
 });
 
@@ -47,7 +52,7 @@ const saveReaderArticleInputSchema = z.object({
 });
 
 const saveReaderArticleOutputSchema = z.object({
-  status: z.literal("saved"),
+  status: z.literal("queued"),
   article: readerArticleSchema,
 });
 
@@ -65,6 +70,24 @@ const mapSourceLanguage = (
   return "other";
 };
 
+const mapIngestStatus = (
+  status: "PENDING" | "IN_PROGRESS" | "READY" | "ERROR",
+): ReaderIngestState => {
+  if (status === "PENDING") {
+    return "pending";
+  }
+
+  if (status === "IN_PROGRESS") {
+    return "in_progress";
+  }
+
+  if (status === "READY") {
+    return "ready";
+  }
+
+  return "error";
+};
+
 const mapSavedArticle = (article: SavedReaderArticle) => {
   return {
     id: article.id,
@@ -74,6 +97,8 @@ const mapSavedArticle = (article: SavedReaderArticle) => {
     description: article.description,
     sourceLang: article.sourceLang,
     translated: article.translated,
+    ingestStatus: article.ingestStatus,
+    ingestError: article.ingestError,
     createdAt: article.createdAt,
   };
 };
@@ -234,14 +259,14 @@ export const saveReaderArticleRoute = procedure
     const userId = requireUserId(ctx.user?.id);
 
     try {
-      const article = await saveReaderArticle({
+      const article = await queueReaderArticle({
         userId,
         requestUrl: input.url,
         saveOrigin: "DASHBOARD",
       });
 
       return {
-        status: "saved",
+        status: "queued",
         article: mapSavedArticle(article),
       };
     } catch (error) {
@@ -268,6 +293,8 @@ export const listReaderArticlesRoute = procedure
         description: true,
         sourceLang: true,
         translated: true,
+        ingestStatus: true,
+        ingestError: true,
         createdAt: true,
       },
     });
@@ -281,6 +308,8 @@ export const listReaderArticlesRoute = procedure
         description: article.description,
         sourceLang: mapSourceLanguage(article.sourceLang),
         translated: article.translated,
+        ingestStatus: mapIngestStatus(article.ingestStatus),
+        ingestError: article.ingestError,
         createdAt: article.createdAt,
       })),
     };

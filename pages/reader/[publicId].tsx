@@ -12,7 +12,7 @@ import type {
   InferGetServerSidePropsType,
 } from "next";
 import Link from "next/link";
-import React from "react";
+import React, { useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { IconExternalLink } from "@tabler/icons-react";
 
@@ -20,6 +20,8 @@ type PublicReaderArticle = {
   title: string;
   normalizedUrl: string;
   contentText: string;
+  ingestStatus: "pending" | "in_progress" | "ready" | "error";
+  ingestError: string;
 };
 
 const headlineFont =
@@ -116,19 +118,111 @@ function ArticleHeader({ article }: ArticleHeaderProps) {
   );
 }
 
+function pendingMessage(status: "pending" | "in_progress"): string {
+  if (status === "pending") {
+    return "This article is queued for processing.";
+  }
+
+  return "This article is currently being processed.";
+}
+
+function ProcessingState({
+  status,
+  ingestError,
+}: {
+  status: PublicReaderArticle["ingestStatus"];
+  ingestError: string;
+}) {
+  if (status === "ready") {
+    return null;
+  }
+
+  if (status === "error") {
+    return (
+      <Stack gap="xs">
+        <Text c="red" fw={600}>
+          This article could not be prepared.
+        </Text>
+        {ingestError.trim().length > 0 && (
+          <Text size="sm" c="red">
+            {ingestError}
+          </Text>
+        )}
+        <Text size="sm" c="dimmed">
+          Go back to Reader and submit the URL again after checking the
+          source.
+        </Text>
+      </Stack>
+    );
+  }
+
+  return (
+    <Stack gap="xs">
+      <Text c="dimmed">{pendingMessage(status)}</Text>
+      <Text size="sm" c="dimmed">
+        This page refreshes every 8 seconds while processing.
+      </Text>
+    </Stack>
+  );
+}
+
 export default function PublicReaderArticlePage({
   article,
 }: InferGetServerSidePropsType<typeof getServerSideProps>) {
   const markdownText = normalizeMarkdownText(article.contentText);
+  const shouldAutoRefresh =
+    article.ingestStatus === "pending" ||
+    article.ingestStatus === "in_progress";
+
+  useEffect(() => {
+    if (!shouldAutoRefresh) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      window.location.reload();
+    }, 8000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [shouldAutoRefresh]);
+
+  const showProcessingState = article.ingestStatus !== "ready";
 
   return (
     <Container size="lg" mt="sm" pb="xl">
       <Stack gap="lg">
         <ArticleHeader article={article} />
-        <MarkdownArticle markdownText={markdownText} />
+        {showProcessingState ? (
+          <ProcessingState
+            status={article.ingestStatus}
+            ingestError={article.ingestError}
+          />
+        ) : (
+          <MarkdownArticle markdownText={markdownText} />
+        )}
       </Stack>
     </Container>
   );
+}
+
+function mapIngestStatus(
+  status: "PENDING" | "IN_PROGRESS" | "READY" | "ERROR",
+): PublicReaderArticle["ingestStatus"] {
+  if (status === "PENDING") {
+    return "pending";
+  }
+
+  if (status === "IN_PROGRESS") {
+    return "in_progress";
+  }
+
+  if (status === "READY") {
+    return "ready";
+  }
+
+  return "error";
 }
 
 export async function getServerSideProps(
@@ -145,6 +239,8 @@ export async function getServerSideProps(
       title: true,
       normalizedUrl: true,
       contentText: true,
+      ingestStatus: true,
+      ingestError: true,
     },
   });
 
@@ -156,6 +252,8 @@ export async function getServerSideProps(
     title: article.title,
     normalizedUrl: article.normalizedUrl,
     contentText: article.contentText,
+    ingestStatus: mapIngestStatus(article.ingestStatus),
+    ingestError: article.ingestError,
   };
 
   return {

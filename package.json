@@ -13,6 +13,7 @@
     "db:migrate:deploy": "npx prisma migrate deploy",
     "start": "npm run db:migrate:deploy && next start",
     "start:no-migrate": "next start",
+    "worker": "npx tsx koala/worker/main.ts",
     "format": "prettier --write pages/ && prettier --write koala/"
   },
   "keywords": [],

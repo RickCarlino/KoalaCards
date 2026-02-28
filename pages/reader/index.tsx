@@ -24,6 +24,8 @@ type ReaderArticleSummary = {
   description: string;
   sourceLang: "ko" | "en" | "other";
   translated: boolean;
+  ingestStatus: "pending" | "in_progress" | "ready" | "error";
+  ingestError: string;
   createdAt: Date;
 };
 
@@ -51,12 +53,20 @@ function formatDateTime(value: Date): string {
   return value.toLocaleString();
 }
 
-function translationStatusLabel(translated: boolean): string {
-  if (translated) {
-    return "Korean ready";
+function articleStateLabel(article: ReaderArticleSummary): string {
+  if (article.ingestStatus === "pending") {
+    return "Queued";
   }
 
-  return "Source only";
+  if (article.ingestStatus === "in_progress") {
+    return "Processing";
+  }
+
+  if (article.ingestStatus === "error") {
+    return "Error";
+  }
+
+  return "Ready";
 }
 
 function sourceLanguageLabel(sourceLang: "ko" | "en" | "other"): string {
@@ -146,6 +156,12 @@ type LibraryRowProps = {
 };
 
 function LibraryRow({ article, withDivider }: LibraryRowProps) {
+  const statusLabel = articleStateLabel(article);
+  const subtitle =
+    article.ingestStatus === "ready"
+      ? `${sourceLanguageLabel(article.sourceLang)} · ${statusLabel}`
+      : statusLabel;
+
   return (
     <Stack
       gap={4}
@@ -167,9 +183,7 @@ function LibraryRow({ article, withDivider }: LibraryRowProps) {
       </Anchor>
       <Group justify="space-between" align="center" wrap="wrap" gap="xs">
         <Text size="xs" c="dimmed">
-          {sourceLanguageLabel(article.sourceLang)} ·{" "}
-          {translationStatusLabel(article.translated)} ·{" "}
-          {formatDateTime(article.createdAt)}
+          {subtitle} · {formatDateTime(article.createdAt)}
         </Text>
         <Anchor
           href={article.normalizedUrl}
@@ -180,6 +194,12 @@ function LibraryRow({ article, withDivider }: LibraryRowProps) {
           Source ↗
         </Anchor>
       </Group>
+      {article.ingestStatus === "error" &&
+        article.ingestError.trim().length > 0 && (
+          <Text size="sm" c="red" lineClamp={2}>
+            {article.ingestError}
+          </Text>
+        )}
       {article.description.trim().length > 0 && (
         <Text size="sm" c="dimmed" lineClamp={1}>
           {article.description}
@@ -274,7 +294,23 @@ function useReaderControls() {
 
   const listQuery = trpc.listReaderArticlesRoute.useQuery(
     { limit: 40 },
-    { refetchOnWindowFocus: false },
+    {
+      refetchOnWindowFocus: false,
+      refetchInterval: (data) => {
+        const hasActiveIngest = (data?.articles ?? []).some((article) => {
+          return (
+            article.ingestStatus === "pending" ||
+            article.ingestStatus === "in_progress"
+          );
+        });
+
+        if (hasActiveIngest) {
+          return 8000;
+        }
+
+        return false;
+      },
+    },
   );
 
   const saveArticle = trpc.saveReaderArticleRoute.useMutation();
@@ -309,8 +345,8 @@ function useReaderControls() {
       const result = await saveArticle.mutateAsync({ url: trimmed });
       setArticleUrl("");
       notifications.show({
-        title: "Saved",
-        message: `Article #${result.article.id} saved.`,
+        title: "Queued",
+        message: `Article #${result.article.id} queued for processing.`,
         color: "green",
       });
       listQuery.refetch();
