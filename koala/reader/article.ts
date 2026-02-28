@@ -1,8 +1,8 @@
 import { lookup } from "dns/promises";
 import { isIP } from "net";
 
-const MAX_TEXT_LENGTH = 120000;
-const MAX_HTML_LENGTH = 240000;
+const MAX_TEXT_LENGTH = 240000;
+const MAX_HTML_LENGTH = 1000000;
 const DESCRIPTION_LENGTH = 500;
 
 type MetaTag = {
