@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prismaClient } from "@/koala/prisma-client";
 import {
   InstapaperApiError,
+  InstapaperSession,
   addPrivateInstapaperBookmark,
   archiveInstapaperBookmark,
   createInstapaperSession,
@@ -17,6 +18,10 @@ import {
   normalizeSourceUrl,
   plainTextToHtmlParagraphs,
 } from "@/koala/reader/article";
+import {
+  decryptReaderSecret,
+  encryptReaderSecret,
+} from "@/koala/reader/secret";
 import { procedure } from "../trpc-procedure";
 
 const readerIngestStatusSchema = z.enum([
@@ -27,9 +32,19 @@ const readerIngestStatusSchema = z.enum([
 ]);
 const readerLanguageSchema = z.enum(["ko", "en", "other"]);
 
-const instapaperCredentialsSchema = z.object({
+const instapaperConnectionSchema = z.object({
+  connected: z.boolean(),
+  username: z.string().nullable(),
+  updatedAt: z.date().nullable(),
+});
+
+const connectInstapaperInputSchema = z.object({
   username: z.string().trim().min(1).max(200),
   password: z.string().min(1).max(500),
+});
+
+const disconnectInstapaperOutputSchema = z.object({
+  status: z.literal("disconnected"),
 });
 
 const localReaderArticleSchema = z.object({
@@ -52,12 +67,12 @@ const unreadBookmarkSchema = z.object({
   localArticle: localReaderArticleSchema.nullable(),
 });
 
-const listUnreadInputSchema = instapaperCredentialsSchema;
+const listUnreadInputSchema = z.object({});
 const listUnreadOutputSchema = z.object({
   bookmarks: z.array(unreadBookmarkSchema),
 });
 
-const importUnreadInputSchema = instapaperCredentialsSchema;
+const importUnreadInputSchema = z.object({});
 const importUnreadOutputSchema = z.object({
   summary: z.object({
     imported: z.number().int().min(0),
@@ -69,7 +84,7 @@ const importUnreadOutputSchema = z.object({
   bookmarks: z.array(unreadBookmarkSchema),
 });
 
-const exportArticleInputSchema = instapaperCredentialsSchema.extend({
+const exportArticleInputSchema = z.object({
   publicId: z.string().trim().min(1),
   archiveOriginal: z.boolean().default(true),
   originalBookmarkId: z.string().trim().optional(),
@@ -85,6 +100,14 @@ const exportArticleOutputSchema = z.object({
   archivedOriginal: z.boolean(),
   archiveError: z.string().nullable(),
 });
+
+type ReaderInstapaperCredentialRecord = {
+  id: number;
+  instapaperUsername: string;
+  encryptedAccessToken: string;
+  encryptedAccessSecret: string;
+  updatedAt: Date;
+};
 
 type LocalReaderArticleRecord = {
   id: number;
@@ -463,19 +486,163 @@ const buildPrivateInstapaperContent = (input: {
   ].join("");
 };
 
-export const listReaderInstapaperUnreadRoute = procedure
-  .input(listUnreadInputSchema)
-  .output(listUnreadOutputSchema)
+const mapConnectionStatus = (
+  credential: ReaderInstapaperCredentialRecord | null,
+) => {
+  if (!credential) {
+    return {
+      connected: false,
+      username: null,
+      updatedAt: null,
+    };
+  }
+
+  return {
+    connected: true,
+    username: credential.instapaperUsername,
+    updatedAt: credential.updatedAt,
+  };
+};
+
+const readStoredInstapaperCredential = async (
+  userId: string,
+): Promise<ReaderInstapaperCredentialRecord | null> => {
+  return prismaClient.readerInstapaperCredential.findUnique({
+    where: { userId },
+    select: {
+      id: true,
+      instapaperUsername: true,
+      encryptedAccessToken: true,
+      encryptedAccessSecret: true,
+      updatedAt: true,
+    },
+  });
+};
+
+const buildStoredInstapaperSession = (
+  credential: ReaderInstapaperCredentialRecord,
+): InstapaperSession => {
+  try {
+    const token = decryptReaderSecret(credential.encryptedAccessToken);
+    const secret = decryptReaderSecret(credential.encryptedAccessSecret);
+
+    return {
+      accessToken: {
+        token,
+        secret,
+      },
+    };
+  } catch {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message:
+        "Instapaper connection is no longer readable. Please reconnect Instapaper.",
+    });
+  }
+};
+
+const requireStoredInstapaperSession = async (
+  userId: string,
+): Promise<InstapaperSession> => {
+  const credential = await readStoredInstapaperCredential(userId);
+
+  if (!credential) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Connect Instapaper first.",
+    });
+  }
+
+  return buildStoredInstapaperSession(credential);
+};
+
+export const getReaderInstapaperConnectionRoute = procedure
+  .input(z.object({}))
+  .output(instapaperConnectionSchema)
+  .query(async ({ ctx }) => {
+    const userId = requireUserId(ctx.user?.id);
+    const credential = await readStoredInstapaperCredential(userId);
+    return mapConnectionStatus(credential);
+  });
+
+export const connectReaderInstapaperRoute = procedure
+  .input(connectInstapaperInputSchema)
+  .output(instapaperConnectionSchema)
   .mutation(async ({ input, ctx }) => {
     const userId = requireUserId(ctx.user?.id);
 
     try {
       const session = await createInstapaperSession(input);
+
+      const connected =
+        await prismaClient.readerInstapaperCredential.upsert({
+          where: { userId },
+          create: {
+            userId,
+            instapaperUsername: input.username.trim(),
+            encryptedAccessToken: encryptReaderSecret(
+              session.accessToken.token,
+            ),
+            encryptedAccessSecret: encryptReaderSecret(
+              session.accessToken.secret,
+            ),
+          },
+          update: {
+            instapaperUsername: input.username.trim(),
+            encryptedAccessToken: encryptReaderSecret(
+              session.accessToken.token,
+            ),
+            encryptedAccessSecret: encryptReaderSecret(
+              session.accessToken.secret,
+            ),
+          },
+          select: {
+            id: true,
+            instapaperUsername: true,
+            encryptedAccessToken: true,
+            encryptedAccessSecret: true,
+            updatedAt: true,
+          },
+        });
+
+      return mapConnectionStatus(connected);
+    } catch (error) {
+      return mapInstapaperError(error);
+    }
+  });
+
+export const disconnectReaderInstapaperRoute = procedure
+  .input(z.object({}))
+  .output(disconnectInstapaperOutputSchema)
+  .mutation(async ({ ctx }) => {
+    const userId = requireUserId(ctx.user?.id);
+
+    await prismaClient.readerInstapaperCredential.deleteMany({
+      where: { userId },
+    });
+
+    return {
+      status: "disconnected",
+    };
+  });
+
+export const listReaderInstapaperUnreadRoute = procedure
+  .input(listUnreadInputSchema)
+  .output(listUnreadOutputSchema)
+  .mutation(async ({ ctx }) => {
+    const userId = requireUserId(ctx.user?.id);
+
+    try {
+      const session = await requireStoredInstapaperSession(userId);
       const unread = await listInstapaperUnreadBookmarks(session);
       const bookmarks = await hydrateUnreadBookmarks(userId, unread);
 
       return { bookmarks };
     } catch (error) {
+      if (error instanceof TRPCError) {
+        throw error;
+      }
+
       return mapInstapaperError(error);
     }
   });
@@ -483,11 +650,11 @@ export const listReaderInstapaperUnreadRoute = procedure
 export const importReaderInstapaperUnreadRoute = procedure
   .input(importUnreadInputSchema)
   .output(importUnreadOutputSchema)
-  .mutation(async ({ input, ctx }) => {
+  .mutation(async ({ ctx }) => {
     const userId = requireUserId(ctx.user?.id);
 
     try {
-      const session = await createInstapaperSession(input);
+      const session = await requireStoredInstapaperSession(userId);
       const unread = await listInstapaperUnreadBookmarks(session);
       const normalized = normalizeUnreadBookmarks(unread);
       const localByUrl = await listArticlesByNormalizedUrl(
@@ -557,6 +724,10 @@ export const importReaderInstapaperUnreadRoute = procedure
         bookmarks,
       };
     } catch (error) {
+      if (error instanceof TRPCError) {
+        throw error;
+      }
+
       if (error instanceof ReaderSaveError) {
         return mapReaderSaveError(error);
       }
@@ -572,7 +743,7 @@ export const exportReaderArticleToInstapaperRoute = procedure
     const userId = requireUserId(ctx.user?.id);
 
     try {
-      const session = await createInstapaperSession(input);
+      const session = await requireStoredInstapaperSession(userId);
       const article = await prismaClient.readerArticle.findFirst({
         where: {
           userId,

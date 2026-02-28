@@ -54,6 +54,7 @@ model User {
   writingSubmissions         WritingSubmission[]         // Added relation to WritingSubmission
   quizResults                QuizResult[]
   readerBookmarkletCredential ReaderBookmarkletCredential?
+  readerInstapaperCredential ReaderInstapaperCredential?
   readerArticles             ReaderArticle[]
 }
 
@@ -196,6 +197,19 @@ model ReaderBookmarkletCredential {
   encryptedSecret String   @db.Text
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model ReaderInstapaperCredential {
+  id                    Int      @id @default(autoincrement())
+  userId                String   @unique
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  instapaperUsername    String   @db.VarChar(200)
+  encryptedAccessToken  String   @db.Text
+  encryptedAccessSecret String   @db.Text
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   @@index([userId])
 }

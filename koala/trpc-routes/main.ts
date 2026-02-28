@@ -28,7 +28,10 @@ import {
   saveReaderArticleRoute,
 } from "./reader";
 import {
+  connectReaderInstapaperRoute,
+  disconnectReaderInstapaperRoute,
   exportReaderArticleToInstapaperRoute,
+  getReaderInstapaperConnectionRoute,
   importReaderInstapaperUnreadRoute,
   listReaderInstapaperUnreadRoute,
 } from "./reader-instapaper";
@@ -52,9 +55,12 @@ export const appRouter = router({
   gradeWriting,
   editQuizResult,
   createDeck,
+  connectReaderInstapaperRoute,
   deleteReaderArticleRoute,
+  disconnectReaderInstapaperRoute,
   getReaderBookmarkletConfig,
   exportReaderArticleToInstapaperRoute,
+  getReaderInstapaperConnectionRoute,
   importReaderInstapaperUnreadRoute,
   mergeDecks,
   importDeck,

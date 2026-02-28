@@ -21,6 +21,12 @@ import React, { useState } from "react";
 type ReaderIngestStatus = "pending" | "in_progress" | "ready" | "error";
 type ReaderLanguage = "ko" | "en" | "other";
 
+type InstapaperConnectionStatus = {
+  connected: boolean;
+  username: string | null;
+  updatedAt: Date | null;
+};
+
 type InstapaperLocalArticle = {
   publicId: string;
   title: string;
@@ -129,8 +135,8 @@ function PageHeader() {
           Instapaper
         </Title>
         <Text size="sm" c="dimmed">
-          Import unread bookmarks, then export Korean article content back
-          to Instapaper.
+          Connect once, then import unread bookmarks and export Korean
+          versions back to Instapaper.
         </Text>
       </Stack>
       <Button component={Link} href="/reader" variant="light" size="sm">
@@ -140,39 +146,30 @@ function PageHeader() {
   );
 }
 
-type CredentialsPanelProps = {
+type ConnectFormProps = {
   username: string;
   password: string;
-  archiveOriginal: boolean;
   loading: boolean;
-  importing: boolean;
   onUsernameChange: (value: string) => void;
   onPasswordChange: (value: string) => void;
-  onArchiveOriginalChange: (value: boolean) => void;
-  onLoadUnread: () => Promise<void>;
-  onImportUnread: () => Promise<void>;
+  onConnect: () => Promise<void>;
 };
 
-function CredentialsPanel({
+function ConnectForm({
   username,
   password,
-  archiveOriginal,
   loading,
-  importing,
   onUsernameChange,
   onPasswordChange,
-  onArchiveOriginalChange,
-  onLoadUnread,
-  onImportUnread,
-}: CredentialsPanelProps) {
+  onConnect,
+}: ConnectFormProps) {
   return (
     <Stack gap="xs">
       <Text fw={700} style={{ fontFamily: headlineFont }}>
-        Instapaper Credentials
+        Connect Instapaper
       </Text>
       <Text size="sm" c="dimmed">
-        Credentials are used for the current action only and are not stored
-        in Koala.
+        Your password is used once to obtain access tokens, then discarded.
       </Text>
       <Group align="flex-end" wrap="wrap">
         <TextInput
@@ -189,18 +186,74 @@ function CredentialsPanel({
           onChange={(event) => onPasswordChange(event.currentTarget.value)}
           style={{ flex: "1 1 220px" }}
         />
+        <Button color="pink" loading={loading} onClick={onConnect}>
+          Connect
+        </Button>
       </Group>
+    </Stack>
+  );
+}
+
+type ConnectedPanelProps = {
+  connection: InstapaperConnectionStatus;
+  archiveOriginal: boolean;
+  loadingUnread: boolean;
+  importingUnread: boolean;
+  disconnecting: boolean;
+  onArchiveOriginalChange: (value: boolean) => void;
+  onLoadUnread: () => Promise<void>;
+  onImportUnread: () => Promise<void>;
+  onDisconnect: () => Promise<void>;
+};
+
+function ConnectedPanel({
+  connection,
+  archiveOriginal,
+  loadingUnread,
+  importingUnread,
+  disconnecting,
+  onArchiveOriginalChange,
+  onLoadUnread,
+  onImportUnread,
+  onDisconnect,
+}: ConnectedPanelProps) {
+  const username = connection.username ?? "(unknown user)";
+  const updatedAtText =
+    connection.updatedAt && connection.connected
+      ? formatDateTime(connection.updatedAt)
+      : "unknown";
+
+  return (
+    <Stack gap="xs">
+      <Text fw={700} style={{ fontFamily: headlineFont }}>
+        Connected to Instapaper
+      </Text>
+      <Text size="sm" c="dimmed">
+        Connected as {username}. Last updated: {updatedAtText}
+      </Text>
       <Group gap="xs" align="center" wrap="wrap">
-        <Button color="pink" loading={loading} onClick={onLoadUnread}>
+        <Button
+          color="pink"
+          loading={loadingUnread}
+          onClick={onLoadUnread}
+        >
           Load Unread
         </Button>
         <Button
           variant="light"
           color="pink"
-          loading={importing}
+          loading={importingUnread}
           onClick={onImportUnread}
         >
           Import Unread to Koala
+        </Button>
+        <Button
+          variant="subtle"
+          color="red"
+          loading={disconnecting}
+          onClick={onDisconnect}
+        >
+          Disconnect
         </Button>
       </Group>
       <Checkbox
@@ -376,22 +429,30 @@ function useInstapaperControls() {
     string | null
   >(null);
 
+  const connectionQuery = trpc.getReaderInstapaperConnectionRoute.useQuery(
+    {},
+    {
+      refetchOnWindowFocus: false,
+    },
+  );
+  const connectInstapaper =
+    trpc.connectReaderInstapaperRoute.useMutation();
+  const disconnectInstapaper =
+    trpc.disconnectReaderInstapaperRoute.useMutation();
   const loadUnread = trpc.listReaderInstapaperUnreadRoute.useMutation();
   const importUnread =
     trpc.importReaderInstapaperUnreadRoute.useMutation();
   const exportArticle =
     trpc.exportReaderArticleToInstapaperRoute.useMutation();
 
-  const credentials = {
-    username: username.trim(),
-    password,
-  };
+  const isConnected = Boolean(connectionQuery.data?.connected);
 
-  const validateCredentials = (): boolean => {
-    if (!credentials.username || !credentials.password) {
+  const requireConnection = (): boolean => {
+    if (!isConnected) {
       notifications.show({
-        title: "Missing credentials",
-        message: "Enter your Instapaper username and password.",
+        title: "Not connected",
+        message:
+          "Connect Instapaper before loading, importing, or exporting.",
         color: "red",
       });
       return false;
@@ -400,13 +461,75 @@ function useInstapaperControls() {
     return true;
   };
 
-  const loadUnreadBookmarks = async (): Promise<void> => {
-    if (!validateCredentials()) {
+  const connect = async (): Promise<void> => {
+    const trimmedUsername = username.trim();
+
+    if (!trimmedUsername || !password) {
+      notifications.show({
+        title: "Missing credentials",
+        message: "Enter your Instapaper username and password.",
+        color: "red",
+      });
       return;
     }
 
     try {
-      const result = await loadUnread.mutateAsync(credentials);
+      await connectInstapaper.mutateAsync({
+        username: trimmedUsername,
+        password,
+      });
+      setUsername(trimmedUsername);
+      setPassword("");
+      await connectionQuery.refetch();
+      notifications.show({
+        title: "Connected",
+        message: "Instapaper is connected. Password is not stored.",
+        color: "green",
+      });
+    } catch (error: unknown) {
+      notifications.show({
+        title: "Connect failed",
+        message: mutationErrorMessage(
+          error,
+          "Could not connect to Instapaper.",
+        ),
+        color: "red",
+      });
+    }
+  };
+
+  const disconnect = async (): Promise<void> => {
+    try {
+      await disconnectInstapaper.mutateAsync({});
+      setBookmarks([]);
+      setSummary(null);
+      setImportErrors([]);
+      setExportingPublicId(null);
+      await connectionQuery.refetch();
+      notifications.show({
+        title: "Disconnected",
+        message: "Instapaper tokens removed from Koala.",
+        color: "green",
+      });
+    } catch (error: unknown) {
+      notifications.show({
+        title: "Disconnect failed",
+        message: mutationErrorMessage(
+          error,
+          "Could not disconnect Instapaper.",
+        ),
+        color: "red",
+      });
+    }
+  };
+
+  const loadUnreadBookmarks = async (): Promise<void> => {
+    if (!requireConnection()) {
+      return;
+    }
+
+    try {
+      const result = await loadUnread.mutateAsync({});
       setBookmarks(result.bookmarks);
       setSummary(null);
       setImportErrors([]);
@@ -428,12 +551,12 @@ function useInstapaperControls() {
   };
 
   const importUnreadBookmarks = async (): Promise<void> => {
-    if (!validateCredentials()) {
+    if (!requireConnection()) {
       return;
     }
 
     try {
-      const result = await importUnread.mutateAsync(credentials);
+      const result = await importUnread.mutateAsync({});
       setSummary(result.summary);
       setImportErrors(result.errors);
       setBookmarks(result.bookmarks);
@@ -457,7 +580,7 @@ function useInstapaperControls() {
   const exportBookmark = async (
     bookmark: InstapaperUnreadBookmark,
   ): Promise<void> => {
-    if (!validateCredentials()) {
+    if (!requireConnection()) {
       return;
     }
 
@@ -484,7 +607,6 @@ function useInstapaperControls() {
 
     try {
       const result = await exportArticle.mutateAsync({
-        ...credentials,
         publicId: localArticle.publicId,
         archiveOriginal,
         originalBookmarkId: bookmark.bookmarkId,
@@ -544,11 +666,17 @@ function useInstapaperControls() {
     summary,
     importErrors,
     exportingPublicId,
+    connection: connectionQuery.data,
+    isConnectionLoading: connectionQuery.isLoading,
+    isConnecting: connectInstapaper.isLoading,
+    isDisconnecting: disconnectInstapaper.isLoading,
     isLoadingUnread: loadUnread.isLoading,
     isImportingUnread: importUnread.isLoading,
     onUsernameChange: setUsername,
     onPasswordChange: setPassword,
     onArchiveOriginalChange: setArchiveOriginal,
+    onConnect: connect,
+    onDisconnect: disconnect,
     onLoadUnread: loadUnreadBookmarks,
     onImportUnread: importUnreadBookmarks,
     onExportBookmark: exportBookmark,
@@ -558,22 +686,49 @@ function useInstapaperControls() {
 export default function ReaderInstapaperPage() {
   const controls = useInstapaperControls();
 
+  const connection = controls.connection;
+  const renderConnectionPanel = () => {
+    if (controls.isConnectionLoading) {
+      return (
+        <Text size="sm" c="dimmed">
+          Checking Instapaper connection...
+        </Text>
+      );
+    }
+
+    if (connection?.connected) {
+      return (
+        <ConnectedPanel
+          connection={connection}
+          archiveOriginal={controls.archiveOriginal}
+          loadingUnread={controls.isLoadingUnread}
+          importingUnread={controls.isImportingUnread}
+          disconnecting={controls.isDisconnecting}
+          onArchiveOriginalChange={controls.onArchiveOriginalChange}
+          onLoadUnread={controls.onLoadUnread}
+          onImportUnread={controls.onImportUnread}
+          onDisconnect={controls.onDisconnect}
+        />
+      );
+    }
+
+    return (
+      <ConnectForm
+        username={controls.username}
+        password={controls.password}
+        loading={controls.isConnecting}
+        onUsernameChange={controls.onUsernameChange}
+        onPasswordChange={controls.onPasswordChange}
+        onConnect={controls.onConnect}
+      />
+    );
+  };
+
   return (
     <Container size="lg" mt="xl" pb="xl">
       <Stack gap="lg" style={pageShellStyle}>
         <PageHeader />
-        <CredentialsPanel
-          username={controls.username}
-          password={controls.password}
-          archiveOriginal={controls.archiveOriginal}
-          loading={controls.isLoadingUnread}
-          importing={controls.isImportingUnread}
-          onUsernameChange={controls.onUsernameChange}
-          onPasswordChange={controls.onPasswordChange}
-          onArchiveOriginalChange={controls.onArchiveOriginalChange}
-          onLoadUnread={controls.onLoadUnread}
-          onImportUnread={controls.onImportUnread}
-        />
+        {renderConnectionPanel()}
         <ImportSummaryPanel
           summary={controls.summary}
           errors={controls.importErrors}
