@@ -40,6 +40,31 @@ type RecentQuiz = {
   isAcceptable: boolean;
 };
 
+function firstQueryParam(
+  value: string | string[] | undefined,
+): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function isDeleteIntent(
+  method: string | undefined,
+  intent: string | string[] | undefined,
+): boolean {
+  if (method !== "POST") {
+    return false;
+  }
+  return firstQueryParam(intent) === "delete";
+}
+
+function resolveDeleteError(
+  error: string | string[] | undefined,
+): string | null {
+  if (firstQueryParam(error) === "self-delete") {
+    return "Admins cannot delete themselves.";
+  }
+  return null;
+}
+
 export async function getServerSideProps(
   context: GetServerSidePropsContext,
 ) {
@@ -65,7 +90,7 @@ export async function getServerSideProps(
     return { notFound: true };
   }
 
-  if (context.req.method === "POST" && context.query.intent === "delete") {
+  if (isDeleteIntent(context.req.method, context.query.intent)) {
     const currentUser = email
       ? await prismaClient.user.findUnique({ where: { email } })
       : null;
@@ -172,10 +197,7 @@ export async function getServerSideProps(
         createdAt: user.createdAt.toISOString(),
         lastSeen: user.lastSeen ? user.lastSeen.toISOString() : null,
       },
-      error:
-        context.query.error === "self-delete"
-          ? "Admins cannot delete themselves."
-          : null,
+      error: resolveDeleteError(context.query.error),
       counts,
       recentWriting,
       recentQuiz,

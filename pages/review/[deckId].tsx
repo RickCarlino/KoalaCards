@@ -1617,6 +1617,84 @@ function replaceCards(action: ReplaceCardAction, state: State): State {
   };
 }
 
+function findCardUUIDForStep(
+  queue: Queue,
+  stepUuid: string,
+): string | undefined {
+  for (const queueType of EVERY_QUEUE_TYPE) {
+    const item = queue[queueType].find(
+      (queueItem) => queueItem.stepUuid === stepUuid,
+    );
+    if (item) {
+      return item.cardUUID;
+    }
+  }
+  return undefined;
+}
+
+function removeStepFromQueue(queue: Queue, stepUuid: string): Queue {
+  const updatedQueue = { ...queue };
+  for (const queueType of EVERY_QUEUE_TYPE) {
+    updatedQueue[queueType] = updatedQueue[queueType].filter(
+      (item) => item.stepUuid !== stepUuid,
+    );
+  }
+  return updatedQueue;
+}
+
+function markCompletedCard(
+  completedCards: Set<string>,
+  cardUUID: string | undefined,
+  queue: Queue,
+): Set<string> {
+  if (!cardUUID) {
+    return completedCards;
+  }
+  const hasMoreItems = Object.values(queue).some((items) =>
+    items.some((item) => item.cardUUID === cardUUID),
+  );
+  if (hasMoreItems) {
+    return completedCards;
+  }
+  return new Set([...completedCards, cardUUID]);
+}
+
+function completeItem(action: CompleteItemAction, state: State): State {
+  const { uuid } = action.payload;
+  const cardUUID = findCardUUIDForStep(state.queue, uuid);
+  const updatedQueue = removeStepFromQueue(state.queue, uuid);
+
+  return {
+    ...state,
+    queue: updatedQueue,
+    currentItem: nextQueueItem(updatedQueue),
+    completedCards: markCompletedCard(
+      state.completedCards,
+      cardUUID,
+      updatedQueue,
+    ),
+  };
+}
+
+function updateCard(action: UpdateCardAction, state: State): State {
+  const target = state.cards[action.payload.cardUUID];
+  if (!target) {
+    return state;
+  }
+
+  return {
+    ...state,
+    cards: {
+      ...state.cards,
+      [action.payload.cardUUID]: {
+        ...target,
+        term: action.payload.term ?? target.term,
+        definition: action.payload.definition ?? target.definition,
+      },
+    },
+  };
+}
+
 function useReview(deckId: number) {
   const mutation = trpc.getNextQuizzes.useMutation();
   const repairCardMutation = trpc.editCard.useMutation();
@@ -1756,39 +1834,7 @@ function reducer(state: State, action: Action): State {
         ]),
       };
     case "COMPLETE_ITEM":
-      const { uuid } = action.payload;
-      const updatedQueue = { ...state.queue };
-
-      let cardUUID: string | undefined;
-      for (const queueType of EVERY_QUEUE_TYPE) {
-        const item = state.queue[queueType].find(
-          (item) => item.stepUuid === uuid,
-        );
-        if (item) {
-          cardUUID = item.cardUUID;
-          break;
-        }
-      }
-
-      for (const queueType of EVERY_QUEUE_TYPE) {
-        updatedQueue[queueType] = updatedQueue[queueType].filter(
-          (item) => item.stepUuid !== uuid,
-        );
-      }
-
-      const hasMoreItems = Object.values(updatedQueue).some((queue) =>
-        queue.some((item) => item.cardUUID === cardUUID),
-      );
-
-      return {
-        ...state,
-        queue: updatedQueue,
-        currentItem: nextQueueItem(updatedQueue),
-        completedCards:
-          !hasMoreItems && cardUUID
-            ? new Set([...state.completedCards, cardUUID])
-            : state.completedCards,
-      };
+      return completeItem(action, state);
     case "GIVE_UP":
       const { cardUUID: giveUpCardUUID } = action.payload;
       const { updatedQueue: giveUpQueue } = removeCardFromQueues(
@@ -1811,21 +1857,7 @@ function reducer(state: State, action: Action): State {
         },
       };
     case "UPDATE_CARD":
-      const target = state.cards[action.payload.cardUUID];
-      if (!target) {
-        return state;
-      }
-      return {
-        ...state,
-        cards: {
-          ...state.cards,
-          [action.payload.cardUUID]: {
-            ...target,
-            term: action.payload.term ?? target.term,
-            definition: action.payload.definition ?? target.definition,
-          },
-        },
-      };
+      return updateCard(action, state);
     default:
       return state;
   }
@@ -3559,6 +3591,70 @@ function parseExample(content: string): ExampleBlock | null {
   };
 }
 
+type ParsedEditField = {
+  key: string;
+  value: string;
+};
+
+function parseEditField(line: string): ParsedEditField | null {
+  const [rawKey, ...rest] = line.split(":");
+  if (!rawKey || rest.length === 0) {
+    return null;
+  }
+
+  const value = rest.join(":").trim();
+  if (!value) {
+    return null;
+  }
+
+  return {
+    key: rawKey.trim().toLowerCase(),
+    value,
+  };
+}
+
+function parseCardId(value: string): number | null {
+  const parsedId = Number.parseInt(value, 10);
+  if (Number.isFinite(parsedId)) {
+    return parsedId;
+  }
+  return null;
+}
+
+function hasEditData(edit: CardEditBlock): boolean {
+  return Boolean(edit.cardId || edit.term || edit.definition || edit.note);
+}
+
+const EDIT_FIELD_HANDLERS: Record<
+  string,
+  (edit: CardEditBlock, value: string) => void
+> = {
+  cardid: (edit, value) => {
+    const parsedId = parseCardId(value);
+    if (parsedId !== null) {
+      edit.cardId = parsedId;
+    }
+  },
+  id: (edit, value) => {
+    const parsedId = parseCardId(value);
+    if (parsedId !== null) {
+      edit.cardId = parsedId;
+    }
+  },
+  term: (edit, value) => {
+    edit.term = value;
+  },
+  definition: (edit, value) => {
+    edit.definition = value;
+  },
+  note: (edit, value) => {
+    edit.note = value;
+  },
+  reason: (edit, value) => {
+    edit.note = value;
+  },
+};
+
 function parseEdit(content: string): CardEditBlock | null {
   const lines = content
     .split(/\r?\n/)
@@ -3571,42 +3667,17 @@ function parseEdit(content: string): CardEditBlock | null {
 
   const edit: CardEditBlock = {};
   for (const line of lines) {
-    const [rawKey, ...rest] = line.split(":");
-    if (!rawKey || rest.length === 0) {
+    const field = parseEditField(line);
+    if (!field) {
       continue;
     }
-    const key = rawKey.trim().toLowerCase();
-    const value = rest.join(":").trim();
-    if (!value) {
-      continue;
-    }
-    if (key === "cardid" || key === "id") {
-      const parsedId = Number.parseInt(value, 10);
-      if (Number.isFinite(parsedId)) {
-        edit.cardId = parsedId;
-      }
-      continue;
-    }
-    if (key === "term") {
-      edit.term = value;
-      continue;
-    }
-    if (key === "definition") {
-      edit.definition = value;
-      continue;
-    }
-    if (key === "note" || key === "reason") {
-      edit.note = value;
+    const handler = EDIT_FIELD_HANDLERS[field.key];
+    if (handler) {
+      handler(edit, field.value);
     }
   }
 
-  if (
-    !edit.cardId &&
-    !edit.term &&
-    !edit.definition &&
-    !edit.note &&
-    lines.length >= 2
-  ) {
+  if (!hasEditData(edit) && lines.length >= 2) {
     return {
       term: lines[0],
       definition: lines.slice(1).join(" "),
