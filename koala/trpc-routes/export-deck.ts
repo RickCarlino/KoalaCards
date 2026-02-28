@@ -37,7 +37,7 @@ export const exportDeck = procedure
     const { Card: cards } = deck;
 
     return {
-      version: 1,
+      version: 2,
       exportedAt: new Date().toISOString(),
       cards: cards.map(
         ({
@@ -47,7 +47,7 @@ export const exportDeck = procedure
           term,
           definition,
           gender,
-          flagged,
+          paused,
           imageBlobId,
           stability,
           difficulty,
@@ -62,7 +62,7 @@ export const exportDeck = procedure
           term,
           definition,
           gender: normalizeGender(gender),
-          flagged,
+          paused,
           imageBlobId,
           stability,
           difficulty,

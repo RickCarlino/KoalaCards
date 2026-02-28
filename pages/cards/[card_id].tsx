@@ -37,7 +37,7 @@ type CardView = {
   deckId: number;
   term: string;
   definition: string;
-  flagged: boolean;
+  paused: boolean;
   langCode: string;
   gender: string;
   imageURL: string | null;
@@ -102,12 +102,12 @@ function CardEditor({ card }: CardPageProps) {
   const form = useForm<{
     term: string;
     definition: string;
-    flagged: boolean;
+    paused: boolean;
   }>({
     initialValues: {
       term: card.term,
       definition: card.definition,
-      flagged: card.flagged,
+      paused: card.paused,
     },
   });
 
@@ -117,7 +117,7 @@ function CardEditor({ card }: CardPageProps) {
   const handleSave = async (values: {
     term: string;
     definition: string;
-    flagged: boolean;
+    paused: boolean;
   }) => {
     await updateMutation.mutateAsync({ id: card.id, ...values });
     router.back();
@@ -149,7 +149,7 @@ function CardEditor({ card }: CardPageProps) {
               {card.langCode.toUpperCase()}
             </Badge>
             <Badge variant="outline">Gender: {card.gender}</Badge>
-            {card.flagged && (
+            {card.paused && (
               <Badge color="red" leftSection={<IconFlag size={14} />}>
                 Paused
               </Badge>
@@ -177,7 +177,7 @@ function CardEditor({ card }: CardPageProps) {
                   />
                   <Checkbox
                     label="Pause reviews of this card"
-                    {...form.getInputProps("flagged", {
+                    {...form.getInputProps("paused", {
                       type: "checkbox",
                     })}
                   />
@@ -360,7 +360,7 @@ export const getServerSideProps: GetServerSideProps<
         deckId,
         term: card.term,
         definition: card.definition,
-        flagged: card.flagged,
+        paused: card.paused,
         langCode: "ko",
         gender: card.gender,
         imageURL,

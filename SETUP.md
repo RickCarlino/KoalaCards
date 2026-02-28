@@ -348,6 +348,18 @@ With all configurations in place, you can now run **KoalaCards** using Docker Co
    docker-compose exec app npx prisma migrate deploy
    ```
 
+   For hosted environments (for example Northflank), prefer running migrations in a separate deploy/release step:
+
+   ```bash
+   npm run db:migrate:deploy
+   ```
+
+   Then run the app with:
+
+   ```bash
+   npm run start:no-migrate
+   ```
+
 5. **Access Prisma Studio (Optional):**
 
    Prisma Studio provides a visual interface to interact with your database.

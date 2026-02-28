@@ -19,6 +19,12 @@ import { gradeWriting } from "./grade-writing";
 import { importDeck } from "./import-deck";
 import { mergeDecks } from "./merge-decks";
 import { parseCards } from "./parse-cards";
+import {
+  getReaderBookmarkletConfig,
+  listReaderArticlesRoute,
+  rotateReaderBookmarkletKey,
+  saveReaderArticleRoute,
+} from "./reader";
 import { turbine } from "./turbine";
 import { updateDeck } from "./update-deck";
 
@@ -39,9 +45,13 @@ export const appRouter = router({
   gradeWriting,
   editQuizResult,
   createDeck,
+  getReaderBookmarkletConfig,
   mergeDecks,
   importDeck,
+  listReaderArticlesRoute,
   parseCards,
+  rotateReaderBookmarkletKey,
+  saveReaderArticleRoute,
   archiveCard,
   turbine,
   updateDeck,

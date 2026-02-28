@@ -9,7 +9,7 @@ export const deletePausedCards = procedure
     const userId = (await getUserSettings(ctx.user?.id)).user.id;
     const cards = await prismaClient.card.findMany({
       where: {
-        flagged: true,
+        paused: true,
         userId,
       },
     });

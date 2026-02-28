@@ -16,6 +16,8 @@ const EssayResponseSchema = z.object({
 });
 
 type EssayResponse = z.infer<typeof EssayResponseSchema>;
+const PracticeModeSchema = z.enum(["writing", "speaking"]);
+type PracticeMode = z.infer<typeof PracticeModeSchema>;
 
 const ESSAY_GRADING_PROMPT = String.raw`
 You are a Korean language instructor. Grade the student's Korean writing for correctness, not style.
@@ -32,16 +34,45 @@ Return JSON only:
   "feedback": ["<one concise English note per real correction>"]
 }`;
 
+const SPEAKING_GRADING_PROMPT = String.raw`
+You are a Korean language instructor. Grade the student's Korean speaking practice from an automatic speech transcription.
+
+- The input is transcribed speech, so do not penalize spacing, punctuation, capitalization, filler artifacts, or minor transcription noise. Do not mention spacing/punctuation issues in feedback.
+- Focus only on objective language issues: grammar, conjugation, required particles, agreement, or clearly wrong word choice/collocation.
+- Keep the student's meaning, tone/register, and sentence order; never add or remove sentences.
+- Feedback bullets: English only, include only substantive grammar/word-choice/collocation fixes. Keep bullets short; max 6.
+
+Return JSON only:
+{
+  "fullCorrection": "<corrected Korean text>",
+  "feedback": ["<one concise English note per real correction>"]
+}`;
+
+const getGradingPrompt = (practiceMode: PracticeMode): string => {
+  if (practiceMode === "speaking") {
+    return SPEAKING_GRADING_PROMPT;
+  }
+  return ESSAY_GRADING_PROMPT;
+};
+
+const getSubmissionSource = (practiceMode: PracticeMode): string => {
+  if (practiceMode === "speaking") {
+    return "Speech transcription";
+  }
+  return "Typed writing";
+};
+
 const inputSchema = z.object({
   text: z.string().min(1).max(2000),
   prompt: z.string(),
+  practiceMode: PracticeModeSchema.default("writing"),
 });
 
 export const gradeWriting = procedure
   .input(inputSchema)
   .output(EssayResponseSchema)
   .mutation(async ({ input, ctx }): Promise<EssayResponse> => {
-    const { text, prompt } = input;
+    const { text, prompt, practiceMode } = input;
     const userId = ctx.user?.id;
 
     if (!userId) {
@@ -55,11 +86,12 @@ export const gradeWriting = procedure
       model: "good",
       schema: ApiResponseSchema,
       messages: [
-        { role: "system", content: ESSAY_GRADING_PROMPT },
+        { role: "system", content: getGradingPrompt(practiceMode) },
         {
           role: "user",
           content: [
             `Language: Korean`,
+            `Submission source: ${getSubmissionSource(practiceMode)}`,
             prompt ? `Prompt context: ${prompt}` : null,
             `Text to analyze:\n${text.trim()}`,
           ]

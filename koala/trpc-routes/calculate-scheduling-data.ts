@@ -1,18 +1,44 @@
-import { createDeck, Grade } from "femto-fsrs";
+import {
+  createEmptyCard,
+  fsrs,
+  generatorParameters,
+  Rating,
+  State,
+  type Card as FsrsCard,
+  type CardInput,
+  type Grade,
+} from "ts-fsrs";
 import type { Card } from "@prisma/client";
+import { resolveRequestedRetention } from "@/koala/settings/requested-retention";
 
-const FSRS = createDeck({ requestedRetentionRate: 0.71 });
+const fsrsCache = new Map<number, ReturnType<typeof fsrs>>();
+
+function getFsrs(requestedRetention?: number) {
+  const normalizedRetention =
+    resolveRequestedRetention(requestedRetention);
+  const cached = fsrsCache.get(normalizedRetention);
+  if (cached) {
+    return cached;
+  }
+  const instance = fsrs(
+    generatorParameters({
+      request_retention: normalizedRetention,
+      enable_fuzz: true,
+      enable_short_term: false,
+    }),
+  );
+  fsrsCache.set(normalizedRetention, instance);
+  return instance;
+}
 
 const DAYS = 24 * 60 * 60 * 1000;
 
-type PartialCardKeys =
-  | "difficulty"
-  | "stability"
-  | "lastReview"
-  | "lapses"
-  | "repetitions";
-
-type PartialCard = Pick<Card, PartialCardKeys>;
+type PartialCard = Pick<
+  Card,
+  "difficulty" | "stability" | "lastReview" | "lapses" | "repetitions"
+> & {
+  nextReview?: number;
+};
 
 type SchedulingData = {
   difficulty: number;
@@ -20,55 +46,104 @@ type SchedulingData = {
   nextReview: number;
 };
 
-function fuzzNumber(num: number) {
-  const pct = num * 0.3;
-  const fuzzFactor = (Math.random() * 2 - 1) * pct;
+const gradeOrder: Grade[] = [
+  Rating.Again,
+  Rating.Hard,
+  Rating.Good,
+  Rating.Easy,
+];
 
-  return num + fuzzFactor;
+function isNewCard(quiz: PartialCard) {
+  return quiz.lapses + quiz.repetitions === 0;
 }
 
-function scheduleNewCard(grade: Grade, now = Date.now()): SchedulingData {
-  const x = FSRS.newCard(grade);
+function toFsrsCardInput(quiz: PartialCard, now: number): CardInput {
+  const lastReview = quiz.lastReview || 0;
+  const nextReview = quiz.nextReview || 0;
+  const lapses = Math.max(0, Math.floor(quiz.lapses || 0));
+  const repetitions = Math.max(0, Math.floor(quiz.repetitions || 0));
+  const hasHistory = repetitions + lapses > 0 && lastReview > 0;
+  const elapsedDays = lastReview
+    ? Math.max(0, (now - lastReview) / DAYS)
+    : 0;
+  const scheduledDays =
+    lastReview && nextReview
+      ? Math.max(0, (nextReview - lastReview) / DAYS)
+      : 0;
 
   return {
-    difficulty: x.D,
-    stability: x.S,
-    nextReview: now + fuzzNumber(x.I * DAYS),
+    due: nextReview || now,
+    stability: quiz.stability,
+    difficulty: quiz.difficulty,
+    elapsed_days: elapsedDays,
+    scheduled_days: scheduledDays,
+    reps: repetitions,
+    lapses,
+    state: hasHistory ? State.Review : State.New,
+    last_review: lastReview || now,
+    learning_steps: 0,
   };
+}
+
+function toSchedulingData(card: FsrsCard): SchedulingData {
+  return {
+    difficulty: card.difficulty,
+    stability: card.stability,
+    nextReview: card.due.getTime(),
+  };
+}
+
+function scheduleNewCard(
+  grade: Grade,
+  now = Date.now(),
+  requestedRetention?: number,
+): SchedulingData {
+  const nowDate = new Date(now);
+  const card = createEmptyCard(nowDate);
+  const result = getFsrs(requestedRetention).next(card, nowDate, grade);
+
+  return toSchedulingData(result.card);
 }
 
 export function calculateSchedulingData(
   quiz: PartialCard,
   grade: Grade,
   now = Date.now(),
+  requestedRetention?: number,
 ): SchedulingData {
-  if (quiz.lapses + quiz.repetitions === 0) {
-    return scheduleNewCard(grade, now);
+  if (isNewCard(quiz)) {
+    return scheduleNewCard(grade, now, requestedRetention);
   }
-  const fsrsCard = {
-    D: quiz.difficulty,
-    S: quiz.stability,
-  };
-  const past = (now - quiz.lastReview) / DAYS;
-  const result = FSRS.gradeCard(fsrsCard, past, grade);
-  return {
-    difficulty: result.D,
-    stability: result.S,
-    nextReview: now + fuzzNumber(result.I * DAYS),
-  };
+  const nowDate = new Date(now);
+  const fsrsCard = toFsrsCardInput(quiz, now);
+  const result = getFsrs(requestedRetention).next(
+    fsrsCard,
+    nowDate,
+    grade,
+  );
+
+  return toSchedulingData(result.card);
 }
 
-export function getGradeButtonText(quiz: PartialCard): [Grade, string][] {
+export function getGradeButtonText(
+  quiz: PartialCard,
+  requestedRetention?: number,
+): [Grade, string][] {
   const now = Date.now();
   const SCALE: Record<Grade, string> = {
-    [Grade.AGAIN]: "😵",
-    [Grade.HARD]: "😐",
-    [Grade.GOOD]: "😊",
-    [Grade.EASY]: "😎",
+    [Rating.Again]: "😵",
+    [Rating.Hard]: "😐",
+    [Rating.Good]: "😊",
+    [Rating.Easy]: "😎",
   };
-  return [Grade.AGAIN, Grade.HARD, Grade.GOOD, Grade.EASY].map((grade) => {
+  return gradeOrder.map((grade) => {
     const emoji = SCALE[grade];
-    const { nextReview } = calculateSchedulingData(quiz, grade, now);
+    const { nextReview } = calculateSchedulingData(
+      quiz,
+      grade,
+      now,
+      requestedRetention,
+    );
     if (!nextReview) {
       return [grade, "❓SOON"];
     }

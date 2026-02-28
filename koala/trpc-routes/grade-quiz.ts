@@ -1,9 +1,10 @@
-import { Grade } from "femto-fsrs";
+import { Grades, Rating } from "ts-fsrs";
 import { z } from "zod";
 import { maybeAddImageToCard } from "../image";
 import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc-procedure";
 import { setGrade } from "./import-cards";
+import { getUserSettings } from "../auth-helpers";
 
 export const gradeQuiz = procedure
   .input(
@@ -22,7 +23,15 @@ export const gradeQuiz = procedure
       };
     }
 
-    const grade = x.input.perceivedDifficulty as Grade;
+    const grade = Grades.find(
+      (candidate) => candidate === x.input.perceivedDifficulty,
+    );
+    if (!grade) {
+      return {
+        rejectionText: "Invalid grade",
+        result: "error",
+      };
+    }
     const card = await prismaClient.card.findFirst({
       where: { id: x.input.cardID, userId: user.id },
     });
@@ -34,9 +43,16 @@ export const gradeQuiz = procedure
       };
     }
 
-    if ([Grade.AGAIN, Grade.HARD].includes(grade)) {
+    if ([Rating.Again, Rating.Hard].includes(grade)) {
       maybeAddImageToCard(card);
     }
-    await setGrade(card, grade);
+    const settings = await getUserSettings(user.id);
+    await setGrade(
+      card,
+      grade,
+      Date.now(),
+      settings.requestedRetention,
+      settings.maxLapses,
+    );
     return {};
   });

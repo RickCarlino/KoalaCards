@@ -17,7 +17,7 @@ const fetchUserDecks = (userId: string) =>
 
 const newCardCount = async (deckId: number) => {
   return prismaClient.card.count({
-    where: { deckId, flagged: { not: true }, lastReview: 0 },
+    where: { deckId, paused: { not: true }, lastReview: 0 },
   });
 };
 

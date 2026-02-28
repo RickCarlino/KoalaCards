@@ -3,6 +3,7 @@ import { VisualDiff } from "@/koala/review/lesson-steps/visual-diff";
 import { LangCode } from "@/koala/shared-types";
 import { trpc } from "@/koala/trpc-config";
 import {
+  ActionIcon,
   Alert,
   Box,
   Button,
@@ -11,18 +12,25 @@ import {
   Loader,
   Paper,
   Progress,
+  RingProgress,
+  SegmentedControl,
   Stack,
   Text,
   Textarea,
+  Tooltip,
   Title,
   useMantineTheme,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { IconCheck } from "@tabler/icons-react";
+import {
+  IconCheck,
+  IconMicrophone,
+  IconPlayerStopFilled,
+} from "@tabler/icons-react";
 import { GetServerSideProps } from "next";
 import { useRouter } from "next/router";
 import { alphabetical } from "radash";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type WritingPracticeProps = {
   returnTo: string | null;
@@ -41,12 +49,17 @@ type Definition = {
 };
 
 type Step = "writing" | "feedback";
+type PracticeMode = "writing" | "speaking";
 
 type WritingStepProps = {
   prompt: string;
   onPromptChange: (value: string) => void;
   essay: string;
   onEssayChange: (value: string) => void;
+  practiceMode: PracticeMode;
+  onPracticeModeChange: (value: PracticeMode) => void;
+  onTranscript: (text: string) => void;
+  langCode: LangCode;
   loadingReview: boolean;
   onReview: () => void;
   progress: number;
@@ -97,6 +110,13 @@ type DefinitionsPanelProps = {
   error: string | null;
 };
 
+type WritingStepControlState = {
+  canChangeMode: boolean;
+  textInputDisabled: boolean;
+  canReview: boolean;
+  canToggleRecording: boolean;
+};
+
 const DEFAULT_PROMPT = "Not set.";
 
 const isSafeReturnTo = (value: string) =>
@@ -142,6 +162,420 @@ const buildContextText = (
 
 const getRemainingGoalCharacters = (progress: number, goal: number) =>
   Math.max(goal - progress, 0);
+
+const MAX_SPEECH_RECORDING_SECONDS = 60;
+
+const isPracticeMode = (value: string): value is PracticeMode =>
+  value === "writing" || value === "speaking";
+
+const getEssayPlaceholder = (practiceMode: PracticeMode) => {
+  if (practiceMode === "speaking") {
+    return "Your transcript appears here. You can edit it before grading.";
+  }
+  return "Write your essay here...";
+};
+
+const getReviewLoadingLabel = (practiceMode: PracticeMode) => {
+  if (practiceMode === "speaking") {
+    return "Analyzing your speaking transcript...";
+  }
+  return "Analyzing your writing...";
+};
+
+const getModeTipText = (practiceMode: PracticeMode) => {
+  if (practiceMode === "speaking") {
+    return "TIP: Speak naturally in Korean, then edit the transcript before grading if needed.";
+  }
+  return "TIP: Don't know a word? Surround the word you want to use in question marks and it will be replaced with an appropriate word when graded. Example: ?apple?를 먹어요.";
+};
+
+const getRecordTooltip = (
+  isRecording: boolean,
+  isStarting: boolean,
+  isTranscribing: boolean,
+  disabled: boolean,
+  isSupported: boolean,
+) => {
+  if (!isSupported) {
+    return "This browser does not support microphone recording";
+  }
+  if (isStarting) {
+    return "Waiting for microphone permission...";
+  }
+  if (isTranscribing) {
+    return "Transcribing your response...";
+  }
+  if (disabled) {
+    return "Recording unavailable while feedback is loading";
+  }
+  if (isRecording) {
+    return "Stop recording";
+  }
+  return "Start recording (60s max)";
+};
+
+const getSpeakingStatusText = (
+  isRecording: boolean,
+  isStarting: boolean,
+  isTranscribing: boolean,
+) => {
+  if (isStarting) {
+    return "Waiting for microphone permission...";
+  }
+  if (isTranscribing) {
+    return "Transcribing... this can take a few seconds.";
+  }
+  if (isRecording) {
+    return "Recording now. Auto-stop at 60 seconds.";
+  }
+  return "Tap the microphone, then speak in Korean.";
+};
+
+const getRecordIcon = (isRecording: boolean) => {
+  if (isRecording) {
+    return <IconPlayerStopFilled size={24} />;
+  }
+  return <IconMicrophone size={24} />;
+};
+
+const getRecordingTextColor = (isRecording: boolean) => {
+  if (isRecording) {
+    return "red.7";
+  }
+  return "pink.7";
+};
+
+const formatCountdown = (seconds: number) => {
+  const clamped = Math.max(0, Math.ceil(seconds));
+  const minutes = Math.floor(clamped / 60);
+  const remainder = clamped % 60;
+  if (minutes > 0) {
+    return `${minutes}:${remainder.toString().padStart(2, "0")}`;
+  }
+  return `${clamped}s`;
+};
+
+const getRecordingProgressPercent = (remainingSeconds: number) => {
+  const clamped = Math.max(
+    0,
+    Math.min(MAX_SPEECH_RECORDING_SECONDS, remainingSeconds),
+  );
+  return (clamped / MAX_SPEECH_RECORDING_SECONDS) * 100;
+};
+
+const getSpeakingHint = (prompt: string) => {
+  if (!prompt.trim() || prompt === DEFAULT_PROMPT) {
+    return "";
+  }
+  return prompt;
+};
+
+const getWritingStepControlState = ({
+  hasEssay,
+  loadingReview,
+  isRecording,
+  isStarting,
+  isTranscribing,
+  isSupported,
+}: {
+  hasEssay: boolean;
+  loadingReview: boolean;
+  isRecording: boolean;
+  isStarting: boolean;
+  isTranscribing: boolean;
+  isSupported: boolean;
+}): WritingStepControlState => {
+  const isBusy =
+    loadingReview || isRecording || isStarting || isTranscribing;
+
+  return {
+    canChangeMode: !isBusy,
+    textInputDisabled: isBusy,
+    canReview: hasEssay && !isBusy,
+    canToggleRecording:
+      isRecording ||
+      (!loadingReview && !isStarting && !isTranscribing && isSupported),
+  };
+};
+
+const getPreferredRecorderMimeType = (): string | null => {
+  if (
+    typeof window === "undefined" ||
+    typeof MediaRecorder === "undefined"
+  ) {
+    return null;
+  }
+
+  const webmType = "audio/webm;codecs=opus";
+  const mp4Type = "audio/mp4";
+
+  if (MediaRecorder.isTypeSupported(webmType)) {
+    return webmType;
+  }
+
+  if (MediaRecorder.isTypeSupported(mp4Type)) {
+    return mp4Type;
+  }
+
+  return "";
+};
+
+async function transcribeBlob(
+  blob: Blob,
+  language: LangCode,
+  hint: string,
+): Promise<string> {
+  const hintParam = hint ? `&hint=${encodeURIComponent(hint)}` : "";
+  const response = await fetch(
+    `/api/transcribe?language=${encodeURIComponent(language)}${hintParam}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": blob.type || "application/octet-stream" },
+      body: blob,
+    },
+  );
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || `HTTP ${response.status}`);
+  }
+
+  const payload: { text?: string } = await response.json();
+  return payload.text ?? "";
+}
+
+type UseSpeechRecorderOptions = {
+  disabled: boolean;
+  langCode: LangCode;
+  hint: string;
+  onTranscript: (text: string) => void;
+};
+
+function useSpeechRecorder({
+  disabled,
+  langCode,
+  hint,
+  onTranscript,
+}: UseSpeechRecorderOptions) {
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const startInFlightRef = useRef(false);
+  const stopInFlightRef = useRef(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [remainingSeconds, setRemainingSeconds] = useState(
+    MAX_SPEECH_RECORDING_SECONDS,
+  );
+
+  const isSupported = useMemo(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+    if (typeof MediaRecorder === "undefined") {
+      return false;
+    }
+    return Boolean(navigator.mediaDevices?.getUserMedia);
+  }, []);
+
+  const stopRecording = useCallback(async () => {
+    if (stopInFlightRef.current) {
+      return;
+    }
+    const recorder = recorderRef.current;
+    if (!recorder) {
+      return;
+    }
+
+    stopInFlightRef.current = true;
+    setIsRecording(false);
+    setIsTranscribing(true);
+
+    try {
+      const blob = await new Promise<Blob>((resolve) => {
+        let done = false;
+        const finish = () => {
+          if (done) {
+            return;
+          }
+          done = true;
+          const nextBlob = new Blob(chunksRef.current, {
+            type: recorder.mimeType,
+          });
+          chunksRef.current = [];
+          recorder.stream.getTracks().forEach((track) => track.stop());
+          recorderRef.current = null;
+          resolve(nextBlob);
+        };
+
+        recorder.onstop = finish;
+        if (typeof recorder.requestData === "function") {
+          recorder.requestData();
+        }
+        if (recorder.state === "inactive") {
+          finish();
+          return;
+        }
+        recorder.stop();
+      });
+
+      if (blob.size === 0) {
+        notifications.show({
+          title: "No audio captured",
+          message: "Try recording again.",
+          color: "yellow",
+        });
+        return;
+      }
+
+      const transcript = (
+        await transcribeBlob(blob, langCode, hint)
+      ).trim();
+      if (!transcript) {
+        notifications.show({
+          title: "No speech detected",
+          message: "Try speaking a little louder and record again.",
+          color: "yellow",
+        });
+        return;
+      }
+
+      onTranscript(transcript);
+      notifications.show({
+        title: "Transcript added",
+        message: "Review and edit it before grading if needed.",
+        color: "green",
+      });
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Transcription failed.";
+      notifications.show({
+        title: "Microphone error",
+        message,
+        color: "red",
+      });
+    } finally {
+      stopInFlightRef.current = false;
+      setIsTranscribing(false);
+      setRemainingSeconds(MAX_SPEECH_RECORDING_SECONDS);
+    }
+  }, [hint, langCode, onTranscript]);
+
+  const startRecording = useCallback(async () => {
+    if (!isSupported || disabled || isTranscribing || isStarting) {
+      return;
+    }
+    if (
+      recorderRef.current ||
+      startInFlightRef.current ||
+      stopInFlightRef.current
+    ) {
+      return;
+    }
+
+    startInFlightRef.current = true;
+    setIsStarting(true);
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+      });
+      if (recorderRef.current || stopInFlightRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+      const recorderOptions: MediaRecorderOptions = {};
+      const preferredMimeType = getPreferredRecorderMimeType();
+      if (preferredMimeType) {
+        recorderOptions.mimeType = preferredMimeType;
+      }
+      recorderOptions.audioBitsPerSecond = 16_000;
+
+      const recorder = new MediaRecorder(stream, recorderOptions);
+      chunksRef.current = [];
+      recorder.ondataavailable = (event: BlobEvent) => {
+        if (event.data && event.data.size > 0) {
+          chunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.start(250);
+      recorderRef.current = recorder;
+      setRemainingSeconds(MAX_SPEECH_RECORDING_SECONDS);
+      setIsRecording(true);
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Unable to access microphone.";
+      notifications.show({
+        title: "Microphone error",
+        message,
+        color: "red",
+      });
+    } finally {
+      startInFlightRef.current = false;
+      setIsStarting(false);
+    }
+  }, [disabled, isStarting, isSupported, isTranscribing]);
+
+  const toggleRecording = useCallback(() => {
+    if (isStarting) {
+      return;
+    }
+    if (isRecording) {
+      void stopRecording();
+      return;
+    }
+    void startRecording();
+  }, [isRecording, isStarting, startRecording, stopRecording]);
+
+  useEffect(() => {
+    if (!isRecording) {
+      setRemainingSeconds(MAX_SPEECH_RECORDING_SECONDS);
+      return;
+    }
+
+    const endTime = Date.now() + MAX_SPEECH_RECORDING_SECONDS * 1000;
+    const intervalId = window.setInterval(() => {
+      const remaining = Math.max(
+        0,
+        Math.ceil((endTime - Date.now()) / 1000),
+      );
+      setRemainingSeconds(remaining);
+      if (remaining <= 0) {
+        void stopRecording();
+      }
+    }, 200);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [isRecording, stopRecording]);
+
+  useEffect(() => {
+    return () => {
+      const recorder = recorderRef.current;
+      if (!recorder) {
+        return;
+      }
+      if (recorder.state !== "inactive") {
+        recorder.stop();
+      }
+      recorder.stream.getTracks().forEach((track) => track.stop());
+      recorderRef.current = null;
+    };
+  }, []);
+
+  return {
+    isSupported,
+    isRecording,
+    isStarting,
+    isTranscribing,
+    remainingSeconds,
+    toggleRecording,
+  };
+}
 
 export const getServerSideProps: GetServerSideProps<
   WritingPracticeProps
@@ -207,34 +641,112 @@ function WritingProgress({
   );
 }
 
+function ReviewControl({
+  loadingReview,
+  reviewLoadingLabel,
+  canReview,
+  onReview,
+}: {
+  loadingReview: boolean;
+  reviewLoadingLabel: string;
+  canReview: boolean;
+  onReview: () => void;
+}) {
+  if (loadingReview) {
+    return (
+      <Group>
+        <Loader size="sm" />
+        <Text c="dimmed">{reviewLoadingLabel}</Text>
+      </Group>
+    );
+  }
+
+  return (
+    <Button onClick={onReview} disabled={!canReview}>
+      Save and Review Feedback
+    </Button>
+  );
+}
+
 function WritingStep({
   prompt,
   onPromptChange,
   essay,
   onEssayChange,
+  practiceMode,
+  onPracticeModeChange,
+  onTranscript,
+  langCode,
   loadingReview,
   onReview,
   progress,
   goal,
 }: WritingStepProps) {
-  const canReview = essay.trim().length > 0;
+  const speakingHint = getSpeakingHint(prompt);
+  const {
+    isSupported,
+    isRecording,
+    isStarting,
+    isTranscribing,
+    remainingSeconds,
+    toggleRecording,
+  } = useSpeechRecorder({
+    disabled: loadingReview,
+    langCode,
+    hint: speakingHint,
+    onTranscript,
+  });
 
-  const reviewControl = loadingReview ? (
-    <Group>
-      <Loader size="sm" />
-      <Text c="dimmed">Analyzing your writing...</Text>
-    </Group>
-  ) : (
-    <Button onClick={onReview} disabled={!canReview}>
-      Save and Review Feedback
-    </Button>
+  const controlState = getWritingStepControlState({
+    hasEssay: essay.trim().length > 0,
+    loadingReview,
+    isRecording,
+    isStarting,
+    isTranscribing,
+    isSupported,
+  });
+
+  const recordTooltip = getRecordTooltip(
+    isRecording,
+    isStarting,
+    isTranscribing,
+    loadingReview,
+    isSupported,
   );
+  const speakingStatus = getSpeakingStatusText(
+    isRecording,
+    isStarting,
+    isTranscribing,
+  );
+  const recordingProgress = getRecordingProgressPercent(remainingSeconds);
+  const recordIcon = getRecordIcon(isRecording);
+  const recordingTextColor = getRecordingTextColor(isRecording);
+  const reviewLoadingLabel = getReviewLoadingLabel(practiceMode);
+
+  const handleModeChange = (value: string) => {
+    if (!isPracticeMode(value)) {
+      return;
+    }
+    onPracticeModeChange(value);
+  };
 
   return (
     <Paper withBorder shadow="sm" p="md">
       <Title order={4} mb="xs">
         Essay Title or Prompt
       </Title>
+      <SegmentedControl
+        value={practiceMode}
+        onChange={handleModeChange}
+        data={[
+          { label: "Typing", value: "writing" },
+          { label: "Speaking", value: "speaking" },
+        ]}
+        fullWidth
+        mb="md"
+        disabled={!controlState.canChangeMode}
+        aria-label="Practice mode"
+      />
       <Textarea
         value={prompt}
         onChange={(e) => onPromptChange(e.currentTarget.value)}
@@ -242,23 +754,74 @@ function WritingStep({
         minRows={2}
         maxRows={4}
         mb="md"
-        disabled={loadingReview}
+        disabled={controlState.textInputDisabled}
       />
       <Text size="sm" c="dimmed" mb="xs">
-        TIP: Don't know a word? Surround the word you want to use in
-        question marks and it will be replaced with an appropriate word
-        when graded. Example: ?apple?를 먹어요.
+        {getModeTipText(practiceMode)}
       </Text>
 
+      {practiceMode === "speaking" && (
+        <Paper withBorder radius="md" p="sm" mb="md" bg="pink.0">
+          <Group justify="space-between" align="center" wrap="nowrap">
+            <Group gap="sm" wrap="nowrap">
+              <Tooltip label={recordTooltip}>
+                <ActionIcon
+                  variant={isRecording ? "filled" : "outline"}
+                  size={50}
+                  radius="xl"
+                  color="pink.7"
+                  onClick={
+                    controlState.canToggleRecording
+                      ? toggleRecording
+                      : undefined
+                  }
+                  disabled={!controlState.canToggleRecording}
+                  aria-label={
+                    isRecording ? "Stop recording" : "Start recording"
+                  }
+                >
+                  {recordIcon}
+                </ActionIcon>
+              </Tooltip>
+              <Stack gap={2}>
+                <Text size="sm" fw={600}>
+                  Speaking input
+                </Text>
+                <Text size="xs" c="dimmed">
+                  {speakingStatus}
+                </Text>
+              </Stack>
+            </Group>
+            <Group gap="xs" wrap="nowrap">
+              <RingProgress
+                size={34}
+                thickness={4}
+                roundCaps
+                sections={[{ value: recordingProgress, color: "red.5" }]}
+                rootColor="pink.1"
+              />
+              <Text
+                size="sm"
+                fw={700}
+                c={recordingTextColor}
+                style={{ fontVariantNumeric: "tabular-nums" }}
+              >
+                {formatCountdown(remainingSeconds)}
+              </Text>
+            </Group>
+          </Group>
+        </Paper>
+      )}
+
       <Textarea
-        placeholder="Write your essay here..."
+        placeholder={getEssayPlaceholder(practiceMode)}
         autosize
         minRows={6}
         maxRows={12}
         value={essay}
         onChange={(e) => onEssayChange(e.currentTarget.value)}
         mb="xs"
-        disabled={loadingReview}
+        disabled={controlState.textInputDisabled}
       />
 
       <WritingProgress
@@ -267,7 +830,12 @@ function WritingStep({
         essayLength={essay.length}
       />
 
-      {reviewControl}
+      <ReviewControl
+        loadingReview={loadingReview}
+        reviewLoadingLabel={reviewLoadingLabel}
+        canReview={controlState.canReview}
+        onReview={onReview}
+      />
     </Paper>
   );
 }
@@ -507,6 +1075,9 @@ export default function WritingPracticePage({
   const [currentStep, setCurrentStep] = useState<Step>("writing");
   const [essay, setEssay] = useState("");
   const [prompt, setPrompt] = useState(DEFAULT_PROMPT);
+  const [practiceMode, setPracticeMode] =
+    useState<PracticeMode>("writing");
+  const [hasVoiceTranscript, setHasVoiceTranscript] = useState(false);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [loadingReview, setLoadingReview] = useState(false);
   const [selectedWords, setSelectedWords] = useState<
@@ -554,6 +1125,45 @@ export default function WritingPracticePage({
     clearDefinitionResults();
   }, [clearDefinitionResults]);
 
+  const handleEssayChange = useCallback((nextEssay: string) => {
+    setEssay(nextEssay);
+    if (!nextEssay.trim()) {
+      setHasVoiceTranscript(false);
+    }
+  }, []);
+
+  const handlePracticeModeChange = useCallback(
+    (nextMode: PracticeMode) => {
+      if (
+        nextMode === "writing" &&
+        hasVoiceTranscript &&
+        essay.trim().length > 0
+      ) {
+        notifications.show({
+          title: "Clear transcript to switch",
+          message:
+            "Voice transcripts are graded with speaking rules. Clear the text first if you want typing mode.",
+          color: "yellow",
+        });
+        return;
+      }
+
+      setPracticeMode(nextMode);
+    },
+    [essay, hasVoiceTranscript],
+  );
+
+  const handleTranscript = useCallback((transcript: string) => {
+    setEssay((previousEssay) => {
+      if (!previousEssay.trim()) {
+        return transcript;
+      }
+      return `${previousEssay.trimEnd()} ${transcript}`;
+    });
+    setHasVoiceTranscript(true);
+    setPracticeMode("speaking");
+  }, []);
+
   const handleReview = useCallback(() => {
     if (!essay.trim()) {
       return;
@@ -562,16 +1172,27 @@ export default function WritingPracticePage({
     setLoadingReview(true);
     setFeedback(null);
     resetSelection();
+    const submissionMode = hasVoiceTranscript ? "speaking" : practiceMode;
     gradeWriting.mutate({
       prompt,
       text: essay,
+      practiceMode: submissionMode,
     });
-  }, [essay, gradeWriting, prompt, resetSelection]);
+  }, [
+    essay,
+    gradeWriting,
+    hasVoiceTranscript,
+    practiceMode,
+    prompt,
+    resetSelection,
+  ]);
 
   const handleWriteMore = useCallback(() => {
     setCurrentStep("writing");
     setPrompt(DEFAULT_PROMPT);
     setEssay("");
+    setPracticeMode("writing");
+    setHasVoiceTranscript(false);
     setFeedback(null);
     resetSelection();
   }, [resetSelection]);
@@ -704,8 +1325,8 @@ export default function WritingPracticePage({
 
       if (remaining > 0) {
         notifications.show({
-          title: "Write More to Continue",
-          message: `Write ${remaining} more characters to unlock review.`,
+          title: "Practice More to Continue",
+          message: `Practice ${remaining} more characters to unlock review.`,
           color: "blue",
         });
         return;
@@ -734,7 +1355,11 @@ export default function WritingPracticePage({
         prompt={prompt}
         onPromptChange={setPrompt}
         essay={essay}
-        onEssayChange={setEssay}
+        onEssayChange={handleEssayChange}
+        practiceMode={practiceMode}
+        onPracticeModeChange={handlePracticeModeChange}
+        onTranscript={handleTranscript}
+        langCode={langCode}
         loadingReview={loadingReview}
         onReview={handleReview}
         progress={writingProgressData?.progress ?? 0}

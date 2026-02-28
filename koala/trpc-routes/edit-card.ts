@@ -9,7 +9,7 @@ export const editCard = procedure
       id: z.number(),
       definition: z.optional(z.string()),
       term: z.optional(z.string()),
-      flagged: z.optional(z.boolean()),
+      paused: z.optional(z.boolean()),
       repetitions: z.optional(z.number()),
       interval: z.optional(z.number()),
       ease: z.optional(z.number()),
@@ -30,7 +30,7 @@ export const editCard = procedure
     const data = {
       ...card,
       ...input,
-      flagged: input.flagged ?? false,
+      paused: input.paused ?? card.paused,
     };
     await prismaClient.card.update({ where: { id: card.id }, data });
   });

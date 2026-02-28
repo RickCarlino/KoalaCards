@@ -8,6 +8,7 @@ import type {
   State,
 } from "@/koala/types/create-types";
 import { getLangName } from "@/koala/get-lang-name";
+import { containsHangul } from "@/koala/utils/hangul";
 import {
   Button,
   Container,
@@ -34,6 +35,15 @@ import React from "react";
 
 type Mode = "vibe" | "wordlist" | "csv";
 
+const CSV_SWAP_SAMPLE_SIZE = 100;
+const MIN_TERM_HANGUL_ROW_RATIO = 0.35;
+const MIN_HANGUL_RATIO_GAP_TO_SWAP = 0.15;
+
+type ParsedCsvColumns = {
+  firstValue: string;
+  secondValue: string;
+};
+
 function handleError(error: unknown) {
   console.error(error);
   notifications.show({
@@ -57,12 +67,6 @@ export const getServerSideProps: GetServerSideProps<
     where: { userId: dbUser.id },
     orderBy: { createdAt: "desc" },
   });
-
-  if (decks.length === 0) {
-    return {
-      redirect: { destination: "/create-new", permanent: false },
-    } as const;
-  }
 
   return {
     props: {
@@ -145,9 +149,21 @@ export default function CreateUnified(props: LanguageInputPageProps) {
       .filter(Boolean)
       .slice(0, 1500);
   }, [state.rawInput]);
-  const parsedRows = React.useMemo(
-    () => lines.map((line) => parseCsvLine(line, separator)),
+  const parsedColumns = React.useMemo(
+    () => lines.map((line) => parseCsvColumns(line, separator)),
     [lines, separator],
+  );
+  const autoSwapCsvColumns = React.useMemo(
+    () =>
+      shouldSwapCsvColumns(parsedColumns.slice(0, CSV_SWAP_SAMPLE_SIZE)),
+    [parsedColumns],
+  );
+  const parsedRows = React.useMemo(
+    () =>
+      parsedColumns.map((columns) =>
+        toCsvRow(columns, autoSwapCsvColumns),
+      ),
+    [parsedColumns, autoSwapCsvColumns],
   );
 
   const handleSubmitVibe = async () => {
@@ -333,6 +349,7 @@ export default function CreateUnified(props: LanguageInputPageProps) {
             setSeparator={setSeparator}
             linesCount={lines.length}
             parsedRows={parsedRows}
+            autoSwapCsvColumns={autoSwapCsvColumns}
             deckLangName={getLangName(state.deckLang)}
             onVibe={handleSubmitVibe}
             onWordlist={handleProcessWordlist}
@@ -360,11 +377,59 @@ export default function CreateUnified(props: LanguageInputPageProps) {
   );
 }
 
-function parseCsvLine(line: string, separator: string) {
+function parseCsvColumns(
+  line: string,
+  separator: string,
+): ParsedCsvColumns {
   const parts = line.split(separator);
-  const term = parts[0]?.trim() ?? "";
-  const definition = parts.slice(1).join(separator).trim();
-  return { term, definition };
+  return {
+    firstValue: parts[0]?.trim() ?? "",
+    secondValue: parts.slice(1).join(separator).trim(),
+  };
+}
+
+function toCsvRow(columns: ParsedCsvColumns, swapColumns: boolean) {
+  if (swapColumns) {
+    return {
+      term: columns.secondValue,
+      definition: columns.firstValue,
+    };
+  }
+  return {
+    term: columns.firstValue,
+    definition: columns.secondValue,
+  };
+}
+
+function shouldSwapCsvColumns(rows: ParsedCsvColumns[]) {
+  const rowsWithBothValues = rows.filter(
+    (row) => row.firstValue && row.secondValue,
+  );
+  if (!rowsWithBothValues.length) {
+    return false;
+  }
+  const firstColumnHangulRatio = getHangulRowRatio(
+    rowsWithBothValues,
+    "firstValue",
+  );
+  const secondColumnHangulRatio = getHangulRowRatio(
+    rowsWithBothValues,
+    "secondValue",
+  );
+  const firstColumnLooksNonKorean =
+    firstColumnHangulRatio < MIN_TERM_HANGUL_ROW_RATIO;
+  const secondColumnLooksMoreKorean =
+    secondColumnHangulRatio >=
+    firstColumnHangulRatio + MIN_HANGUL_RATIO_GAP_TO_SWAP;
+  return firstColumnLooksNonKorean && secondColumnLooksMoreKorean;
+}
+
+function getHangulRowRatio(
+  rows: ParsedCsvColumns[],
+  key: keyof ParsedCsvColumns,
+) {
+  const hangulRows = rows.filter((row) => containsHangul(row[key])).length;
+  return hangulRows / rows.length;
 }
 
 function makeDeckOptions(decks: LanguageInputPageProps["decks"]) {
@@ -444,6 +509,7 @@ type ContentSectionProps = {
   setSeparator: (sep: string) => void;
   linesCount: number;
   parsedRows: { term: string; definition: string }[];
+  autoSwapCsvColumns: boolean;
   deckLangName: string;
   onVibe: () => void;
   onWordlist: () => void;
@@ -460,6 +526,7 @@ function ContentSection(props: ContentSectionProps) {
     setSeparator,
     linesCount,
     parsedRows,
+    autoSwapCsvColumns,
     deckLangName,
     onVibe,
     onWordlist,
@@ -477,6 +544,7 @@ function ContentSection(props: ContentSectionProps) {
     setSeparator,
     linesCount,
     parsedRows,
+    autoSwapCsvColumns,
     onVibe,
     onWordlist,
     onCsv,
@@ -511,6 +579,7 @@ type ContentBodyParams = {
   setSeparator: (sep: string) => void;
   linesCount: number;
   parsedRows: { term: string; definition: string }[];
+  autoSwapCsvColumns: boolean;
   onVibe: () => void;
   onWordlist: () => void;
   onCsv: () => void;
@@ -527,6 +596,7 @@ function getContentBody(params: ContentBodyParams) {
     setSeparator,
     linesCount,
     parsedRows,
+    autoSwapCsvColumns,
     onVibe,
     onWordlist,
     onCsv,
@@ -562,6 +632,7 @@ function getContentBody(params: ContentBodyParams) {
           setRawInput={setRawInput}
           linesCount={linesCount}
           parsedRows={parsedRows}
+          autoSwapCsvColumns={autoSwapCsvColumns}
           onParse={onCsv}
         />
       );
@@ -633,6 +704,7 @@ function CsvContent(props: {
   setRawInput: (text: string) => void;
   linesCount: number;
   parsedRows: { term: string; definition: string }[];
+  autoSwapCsvColumns: boolean;
   onParse: () => void;
 }) {
   const {
@@ -643,6 +715,7 @@ function CsvContent(props: {
     setRawInput,
     linesCount,
     parsedRows,
+    autoSwapCsvColumns,
     onParse,
   } = props;
   return (
@@ -651,6 +724,12 @@ function CsvContent(props: {
         Each line: term{separator}definition. First value is term, the rest
         is definition.
       </Text>
+      {autoSwapCsvColumns ? (
+        <Text size="xs" c={themeColors.gray[7]} mb="xs">
+          Detected flipped columns from the first {CSV_SWAP_SAMPLE_SIZE}{" "}
+          rows. Preview is auto-swapped.
+        </Text>
+      ) : null}
       <Group align="flex-end" gap="md" mb="sm">
         <TextInput
           label="Separator"

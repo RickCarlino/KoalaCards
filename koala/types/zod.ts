@@ -19,6 +19,7 @@ const Quiz = z.object({
   termAudio: z.string(),
   langCode: z.string(),
   lastReview: z.number(),
+  nextReview: z.number(),
   imageURL: z.string().optional(),
   stability: z.number(),
   difficulty: z.number(),

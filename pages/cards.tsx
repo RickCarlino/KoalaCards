@@ -24,7 +24,7 @@ import Link from "next/link";
 
 type CardRecord = {
   id: number;
-  flagged: boolean;
+  paused: boolean;
   term: string;
   definition: string;
   createdAt: string;
@@ -59,7 +59,7 @@ const SORT_OPTIONS = [
   { label: "Definition", value: "definition" },
   { label: "Difficulty", value: "difficulty" },
   { label: "Stability", value: "stability" },
-  { label: "Paused", value: "flagged" },
+  { label: "Paused", value: "paused" },
   { label: "Term", value: "term" },
   { label: "Last Review", value: "lastReview" },
   { label: "Next Review", value: "nextReview" },
@@ -182,7 +182,7 @@ async function fetchCards(
 ) {
   const where = {
     userId,
-    ...(paused ? { flagged: true } : {}),
+    ...(paused ? { paused: true } : {}),
     ...(deckId !== null ? { deckId } : {}),
     ...(q
       ? {
@@ -207,7 +207,7 @@ async function fetchCards(
 
   const cards = cardsData.map((c) => ({
     id: c.id,
-    flagged: c.flagged,
+    paused: c.paused,
     term: c.term,
     definition: c.definition,
     createdAt: c.createdAt.toISOString(),
@@ -556,8 +556,7 @@ function ResultsSummary({
 
 function EmptyState({ hasFilters, onResetFilters }: EmptyStateProps) {
   let title = "No cards yet";
-  let description =
-    "Build your first deck to start studying with Koala Cards.";
+  let description = "Add cards to see them here.";
   let action = (
     <Button component={Link} href="/create">
       Add cards
@@ -638,7 +637,7 @@ export default function Edit({
   deckId,
   decks,
 }: EditProps) {
-  const deleteFlagged = trpc.deletePausedCards.useMutation();
+  const deletePaused = trpc.deletePausedCards.useMutation();
   const router = useRouter();
 
   const [currentSortBy, setCurrentSortBy] = useState(sortBy);
@@ -666,7 +665,7 @@ export default function Edit({
 
   const handleDeletePaused = async () => {
     if (confirm("Are you sure you want to delete all paused cards?")) {
-      await deleteFlagged.mutateAsync({});
+      await deletePaused.mutateAsync({});
       location.reload();
     }
   };
@@ -737,7 +736,7 @@ export default function Edit({
 
               <MaintenancePanel
                 onDeletePaused={handleDeletePaused}
-                isDeleting={deleteFlagged.isLoading}
+                isDeleting={deletePaused.isLoading}
               />
             </Stack>
           </Grid.Col>

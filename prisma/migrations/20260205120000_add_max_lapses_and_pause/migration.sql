@@ -1,0 +1,3 @@
+ALTER TABLE "UserSettings" ADD COLUMN "maxLapses" INTEGER NOT NULL DEFAULT 0;
+
+ALTER TABLE "Card" RENAME COLUMN "flagged" TO "paused";

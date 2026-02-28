@@ -9,7 +9,7 @@ type PreparedCardInput = {
   term: string;
   definition: string;
   gender: "M" | "F" | "N";
-  flagged: boolean;
+  paused: boolean;
   imageBlobId: string | null;
   stability: number;
   difficulty: number;
@@ -42,6 +42,13 @@ const toGender = (value?: string): "M" | "F" | "N" => {
     return value;
   }
   return "N";
+};
+
+const resolvePaused = (card: DeckExportCard): boolean => {
+  if ("paused" in card) {
+    return card.paused;
+  }
+  return card.flagged;
 };
 
 const parseDate = (value: string) => {
@@ -79,7 +86,7 @@ const normalizeCard = async (
     term,
     definition,
     gender: toGender(card.gender),
-    flagged: Boolean(card.flagged),
+    paused: resolvePaused(card),
     imageBlobId,
     stability: toNumber(card.stability, 0),
     difficulty: toNumber(card.difficulty, 0),
@@ -161,7 +168,7 @@ export const importDeck = procedure.input(importDeckInput).mutation(
           term: card.term,
           definition: card.definition,
           gender: card.gender,
-          flagged: card.flagged,
+          paused: card.paused,
           imageBlobId: card.imageBlobId,
           stability: card.stability,
           difficulty: card.difficulty,

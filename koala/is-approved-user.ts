@@ -17,7 +17,7 @@ async function deleteInactiveUser(id: string, email: string | null) {
   }
   const cards = await prismaClient.card.findMany({
     where: {
-      flagged: true,
+      paused: true,
       userId: id,
     },
   });

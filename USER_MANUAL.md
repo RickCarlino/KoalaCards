@@ -3,7 +3,6 @@
 ## Outline
 - Overview and Access
 - Navigation Basics
-- Create Your First Deck (auto-generated)
 - Add Cards to a Deck (manual or bulk)
 - Deck Hub (/review)
 - Studying Cards (/review/[deckId])
@@ -24,25 +23,19 @@
 - All learning content and generators currently target Korean.
 
 ## Navigation Basics
-- The home page (`/`) redirects you to sign in if you are not authenticated. After login, it shows quick actions that adapt to your progress (create cards when empty, study when you have due items, etc.).
+- The home page (`/`) redirects you to sign in if you are not authenticated. After login, it shows quick actions for study, writing, creation, and settings.
 - The top bar shows a logo on the home page and a back arrow elsewhere. Clicking it returns you to `/`.
 - Common entry points:
   - Study: `/review`
-  - Card creation: `/create` (or `/create-new` for your first deck)
+  - Card creation: `/create`
   - Card browser: `/cards`
   - Writing: `/writing`
   - Settings: `/user`
-
-## Create Your First Deck (auto-generated)
-- Visit `/create-new` if you have no decks; the app sends you there automatically when needed.
-- Choose a level (Beginner, Intermediate, Advanced) and enter a topic of interest. The topic field auto-suggests ideas until you focus it.
-- Click **Go!** to create a deck named “My First Koala Deck,” auto-generate 15 Korean example-sentence cards for the chosen level/topic, and jump straight into studying that deck.
 
 ## Add Cards to a Deck (manual or bulk)
 - Go to `/create` to add cards to an existing deck or create another.
 - Deck selection:
   - Pick **Existing** and choose a deck, or switch to **New** and enter a deck name.
-  - If you arrive here with no decks, you are redirected to `/create-new`.
 - Three input modes (choose via the segmented control):
   - **Free Form**: Type an instruction like “Make 25 Korean example sentences about travel.” Click **Generate** to have cards auto-created.
   - **Word list**: Paste one word per line and click **Enrich** to fetch definitions/translations.

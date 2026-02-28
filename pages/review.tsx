@@ -481,9 +481,13 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
     return <NoDecksMessage />;
   }
 
-  const sortedDecks = [...decks].sort(
-    (a, b) => b.quizzesDue - a.quizzesDue,
-  );
+  const sortedDecks = [...decks].sort((a, b) => {
+    const dueDifference = b.quizzesDue - a.quizzesDue;
+    if (dueDifference !== 0) {
+      return dueDifference;
+    }
+    return b.newQuizzes - a.newQuizzes;
+  });
 
   return (
     <Container size="lg" py="md">

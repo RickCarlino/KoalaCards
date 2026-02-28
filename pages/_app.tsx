@@ -24,6 +24,8 @@ function App(props: AppProps) {
   }
 
   const theme = buildKoalaTheme(montserrat.style.fontFamily);
+  const isPublicReaderArticle =
+    props.router.pathname === "/reader/[publicId]";
 
   if (
     props.router.pathname.startsWith("/review/") ||
@@ -61,12 +63,21 @@ function App(props: AppProps) {
       </Head>
       <SessionProvider session={props.pageProps.session}>
         <MantineProvider defaultColorScheme="light" theme={theme}>
-          <UserSettingsProvider>
-            <Notifications />
-            <TopBarWithNoSSR>
-              <props.Component {...props.pageProps} />
-            </TopBarWithNoSSR>
-          </UserSettingsProvider>
+          {isPublicReaderArticle ? (
+            <>
+              <Notifications />
+              <TopBarWithNoSSR>
+                <props.Component {...props.pageProps} />
+              </TopBarWithNoSSR>
+            </>
+          ) : (
+            <UserSettingsProvider>
+              <Notifications />
+              <TopBarWithNoSSR>
+                <props.Component {...props.pageProps} />
+              </TopBarWithNoSSR>
+            </UserSettingsProvider>
+          )}
         </MantineProvider>
       </SessionProvider>
     </>

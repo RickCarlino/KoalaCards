@@ -35,7 +35,7 @@ The app focuses exclusively on Korean to allow for the best prompts possible.
 
 ## Current feature set
 
-- Review sessions with new, remedial, and routine cards scheduled by FSRS (via `femto-fsrs`).
+- Review sessions with new, remedial, and routine cards scheduled by FSRS (via `ts-fsrs`).
 - Speaking quizzes that record audio, transcribe responses, and grade answers using an LLM. Grading results are stored for later review.
 - Writing practice with user-defined prompts, AI corrections, and diff views. Daily writing goals are trackable.
 - Study assistant chat that references recent cards and can suggest or create new cards.

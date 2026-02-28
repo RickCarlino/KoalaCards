@@ -8,6 +8,10 @@ import {
   REVIEW_TAKE_MAX,
   REVIEW_TAKE_MIN,
 } from "@/koala/settings/review-take";
+import {
+  REQUESTED_RETENTION_MAX,
+  REQUESTED_RETENTION_MIN,
+} from "@/koala/settings/requested-retention";
 
 const assignIfDefined = <T, K extends keyof T>(
   target: T,
@@ -25,11 +29,16 @@ export const editUserSettings = procedure
       id: z.optional(z.number()),
       playbackSpeed: z.number().min(0.5).max(2),
       cardsPerDayMax: z.number().min(1),
+      maxLapses: z.number().int().min(0),
       reviewTakeCount: z
         .number()
         .int()
         .min(REVIEW_TAKE_MIN)
         .max(REVIEW_TAKE_MAX),
+      requestedRetention: z
+        .number()
+        .min(REQUESTED_RETENTION_MIN)
+        .max(REQUESTED_RETENTION_MAX),
       playbackPercentage: z.number().min(0).max(1),
       responseTimeoutSeconds: z.number().int().min(0).optional(),
       dailyWritingGoal: z.number().int().min(1).optional(),
@@ -46,7 +55,9 @@ export const editUserSettings = procedure
     const data: Prisma.UserSettingsUpdateInput = {
       playbackSpeed: input.playbackSpeed,
       cardsPerDayMax: input.cardsPerDayMax,
+      maxLapses: input.maxLapses,
       reviewTakeCount: input.reviewTakeCount,
+      requestedRetention: input.requestedRetention,
       playbackPercentage: input.playbackPercentage,
       updatedAt: new Date(),
     };
