@@ -34,7 +34,11 @@ process.on("SIGTERM", () => {
 });
 
 const start = async (): Promise<void> => {
-  console.log(`[worker] starting with poll interval ${idleDelayMs}ms`);
+  console.log("[worker] starting", {
+    pollIntervalMs: idleDelayMs,
+    nodeEnv: process.env.NODE_ENV ?? "unknown",
+    pid: process.pid,
+  });
 
   await runWorkerLoop({
     tasks: [createReaderIngestTask()],

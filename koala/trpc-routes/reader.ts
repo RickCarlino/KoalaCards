@@ -56,6 +56,14 @@ const saveReaderArticleOutputSchema = z.object({
   article: readerArticleSchema,
 });
 
+const deleteReaderArticleInputSchema = z.object({
+  publicId: z.string().trim().min(1),
+});
+
+const deleteReaderArticleOutputSchema = z.object({
+  status: z.literal("deleted"),
+});
+
 const mapSourceLanguage = (
   sourceLang: "KO" | "EN" | "OTHER",
 ): "ko" | "en" | "other" => {
@@ -313,4 +321,27 @@ export const listReaderArticlesRoute = procedure
         createdAt: article.createdAt,
       })),
     };
+  });
+
+export const deleteReaderArticleRoute = procedure
+  .input(deleteReaderArticleInputSchema)
+  .output(deleteReaderArticleOutputSchema)
+  .mutation(async ({ input, ctx }) => {
+    const userId = requireUserId(ctx.user?.id);
+
+    const deleted = await prismaClient.readerArticle.deleteMany({
+      where: {
+        userId,
+        publicId: input.publicId,
+      },
+    });
+
+    if (deleted.count === 0) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Article not found.",
+      });
+    }
+
+    return { status: "deleted" };
   });

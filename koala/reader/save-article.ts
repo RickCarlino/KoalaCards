@@ -211,6 +211,28 @@ const clampErrorMessage = (message: string): string => {
   return normalized.slice(0, READER_ERROR_LENGTH_LIMIT);
 };
 
+const hostFromUrl = (value: string): string => {
+  try {
+    return new URL(value).hostname;
+  } catch {
+    return "unknown";
+  }
+};
+
+const logIngestInfo = (
+  message: string,
+  details: Record<string, unknown>,
+): void => {
+  console.log(`[reader-ingest] ${message}`, details);
+};
+
+const logIngestError = (
+  message: string,
+  details: Record<string, unknown>,
+): void => {
+  console.error(`[reader-ingest] ${message}`, details);
+};
+
 const normalizeRequestUrl = (rawUrl: string): string => {
   try {
     return normalizeSourceUrl(rawUrl);
@@ -244,32 +266,63 @@ const processReaderArticleText = async (
   requestUrl: string,
   suggestedTitle?: string,
 ): Promise<ProcessedReaderArticle> => {
+  const totalStartedAtMs = Date.now();
+  const requestHost = hostFromUrl(requestUrl);
+
+  logIngestInfo("process-start", {
+    requestHost,
+  });
+
   let snapshot;
   try {
+    const fetchStartedAtMs = Date.now();
     snapshot = await fetchArticleSnapshot(requestUrl);
+    logIngestInfo("fetch-complete", {
+      requestHost,
+      fetchMs: Date.now() - fetchStartedAtMs,
+      pageTextLength: snapshot.text.length,
+      pageHtmlLength: snapshot.htmlContent.length,
+    });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Could not fetch article.";
+    logIngestError("fetch-failed", {
+      requestHost,
+      errorMessage: message,
+    });
     throw new ReaderSaveError(message, "BAD_REQUEST", 400);
   }
 
   let extractedArticle = "";
   try {
+    const extractStartedAtMs = Date.now();
     extractedArticle = await extractArticleContentFromPage({
       title: snapshot.title,
       description: snapshot.description,
       pageText: snapshot.text,
       pageHtml: snapshot.htmlContent,
     });
+    logIngestInfo("extract-complete", {
+      requestHost,
+      extractMs: Date.now() - extractStartedAtMs,
+      extractedLength: extractedArticle.length,
+    });
   } catch (error) {
     const message =
       error instanceof Error
         ? error.message
         : "Could not isolate article content.";
+    logIngestError("extract-failed", {
+      requestHost,
+      errorMessage: message,
+    });
     throw new ReaderSaveError(message, "INTERNAL_SERVER_ERROR", 500);
   }
 
   if (!extractedArticle.trim()) {
+    logIngestError("extract-empty", {
+      requestHost,
+    });
     throw new ReaderSaveError(
       "Could not isolate main article content from this page.",
       "BAD_REQUEST",
@@ -277,13 +330,23 @@ const processReaderArticleText = async (
     );
   }
 
+  const detectStartedAtMs = Date.now();
   const sourceLanguage = await detectSourceLanguage(
     [snapshot.title, snapshot.description, extractedArticle]
       .filter((part) => part.trim().length > 0)
       .join("\n\n"),
   );
+  logIngestInfo("language-detected", {
+    requestHost,
+    sourceLanguage,
+    detectMs: Date.now() - detectStartedAtMs,
+  });
 
   if (sourceLanguage === "other") {
+    logIngestError("language-unsupported", {
+      requestHost,
+      sourceLanguage,
+    });
     throw new ReaderSaveError(
       "Only English or Korean articles are supported right now.",
       "BAD_REQUEST",
@@ -296,26 +359,53 @@ const processReaderArticleText = async (
 
   if (sourceLanguage === "en") {
     try {
+      const translateStartedAtMs = Date.now();
       koreanText = await translateEnglishToKorean(extractedArticle);
       translated = true;
+      logIngestInfo("translation-complete", {
+        requestHost,
+        translateMs: Date.now() - translateStartedAtMs,
+        translatedLength: koreanText.length,
+      });
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
           : "Could not translate this article.";
+      logIngestError("translation-failed", {
+        requestHost,
+        errorMessage: message,
+      });
       throw new ReaderSaveError(message, "INTERNAL_SERVER_ERROR", 500);
     }
   }
 
   try {
+    const tidyStartedAtMs = Date.now();
     koreanText = await tidyKoreanArticleMarkdown(koreanText);
+    logIngestInfo("tidy-complete", {
+      requestHost,
+      tidyMs: Date.now() - tidyStartedAtMs,
+      tidyLength: koreanText.length,
+    });
   } catch (error) {
     const message =
       error instanceof Error
         ? error.message
         : "Could not format this article.";
+    logIngestError("tidy-failed", {
+      requestHost,
+      errorMessage: message,
+    });
     throw new ReaderSaveError(message, "INTERNAL_SERVER_ERROR", 500);
   }
+
+  logIngestInfo("process-complete", {
+    requestHost,
+    sourceLanguage,
+    translated,
+    totalMs: Date.now() - totalStartedAtMs,
+  });
 
   return {
     normalizedUrl: snapshot.normalizedUrl,

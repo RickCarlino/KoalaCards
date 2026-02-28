@@ -20,6 +20,7 @@ import { importDeck } from "./import-deck";
 import { mergeDecks } from "./merge-decks";
 import { parseCards } from "./parse-cards";
 import {
+  deleteReaderArticleRoute,
   getReaderBookmarkletConfig,
   listReaderArticlesRoute,
   rotateReaderBookmarkletKey,
@@ -45,6 +46,7 @@ export const appRouter = router({
   gradeWriting,
   editQuizResult,
   createDeck,
+  deleteReaderArticleRoute,
   getReaderBookmarkletConfig,
   mergeDecks,
   importDeck,
