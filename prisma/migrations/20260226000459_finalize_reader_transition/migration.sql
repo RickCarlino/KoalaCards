@@ -64,5 +64,15 @@ CREATE INDEX IF NOT EXISTS "WritingSubmission_userId_deckId_createdAt_idx" ON "W
 ALTER TABLE "Card" ADD CONSTRAINT "Card_deckId_fkey" FOREIGN KEY ("deckId") REFERENCES "Deck"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+UPDATE "QuizResult" q
+SET "userId" = NULL
+WHERE q."userId" IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1
+    FROM "User" u
+    WHERE u."id" = q."userId"
+  );
+
+-- AddForeignKey
 ALTER TABLE "QuizResult" DROP CONSTRAINT IF EXISTS "QuizResult_userId_fkey";
 ALTER TABLE "QuizResult" ADD CONSTRAINT "QuizResult_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
