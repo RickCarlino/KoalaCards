@@ -23,20 +23,20 @@ import {
   Box,
   Button,
   Group,
+  SegmentedControl,
   Stack,
   Text,
   TextInput,
+  Textarea,
 } from "@mantine/core";
 import { GetServerSidePropsContext } from "next";
 import Link from "next/link";
 import { getSession } from "next-auth/react";
-import React, { useMemo } from "react";
+import { useRouter } from "next/router";
+import React, { useMemo, useState } from "react";
 
-function canRefreshArticle(article: ReaderArticleSummary): boolean {
-  return (
-    article.ingestStatus === "ready" || article.ingestStatus === "error"
-  );
-}
+type AddSourceMode = "url" | "raw";
+type AddSourceSelection = AddSourceMode | "instapaper";
 
 function buildDashboardStats(
   articles: ReaderArticleSummary[],
@@ -72,65 +72,62 @@ function buildDashboardStats(
   };
 }
 
-type IntegrationsCardProps = {
-  articleCount: number;
-};
+function readerInputLabel(
+  inputKind: ReaderArticleSummary["inputKind"],
+): string {
+  if (inputKind === "raw") {
+    return "Raw text";
+  }
 
-function IntegrationsCard({ articleCount }: IntegrationsCardProps) {
-  return (
-    <ReaderPanel>
-      <Group justify="space-between" align="center" wrap="wrap" gap="sm">
-        <Text
-          size="sm"
-          style={{ color: "#6e4e5c", fontFamily: readerBodyFont }}
-        >
-          {articleCount} article(s) on your shelf.
-        </Text>
-        <Group gap="xs">
-          <Button
-            component={Link}
-            href="/reader/bookmarklet"
-            variant="light"
-            color="pink"
-            size="xs"
-          >
-            Bookmarklet
-          </Button>
-          <Button
-            component={Link}
-            href="/reader/instapaper"
-            variant="light"
-            color="pink"
-            size="xs"
-          >
-            Instapaper
-          </Button>
-        </Group>
-      </Group>
-    </ReaderPanel>
-  );
+  return "URL";
 }
 
-type CaptureCardProps = {
+function readerInputTone(
+  inputKind: ReaderArticleSummary["inputKind"],
+): "gray" | "pink" {
+  if (inputKind === "raw") {
+    return "gray";
+  }
+
+  return "pink";
+}
+
+type AddFromCardProps = {
+  mode: AddSourceMode;
+  onModeChange: (nextMode: AddSourceSelection) => void;
   articleUrl: string;
-  isSaving: boolean;
+  rawTitle: string;
+  rawText: string;
+  isSavingUrl: boolean;
+  isSavingRaw: boolean;
   onArticleUrlChange: (value: string) => void;
-  onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
+  onRawTitleChange: (value: string) => void;
+  onRawTextChange: (value: string) => void;
+  onSaveUrlSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
+  onSaveRawTextSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
 };
 
-function CaptureCard({
+function AddFromCard({
+  mode,
+  onModeChange,
   articleUrl,
-  isSaving,
+  rawTitle,
+  rawText,
+  isSavingUrl,
+  isSavingRaw,
   onArticleUrlChange,
-  onSubmit,
-}: CaptureCardProps) {
-  return (
-    <ReaderPanel>
-      <Stack gap="xs">
-        <Text fw={700} size="sm" style={{ color: "#4f3241" }}>
-          Save a New Article
-        </Text>
-        <form onSubmit={onSubmit}>
+  onRawTitleChange,
+  onRawTextChange,
+  onSaveUrlSubmit,
+  onSaveRawTextSubmit,
+}: AddFromCardProps) {
+  const modePanels: Record<AddSourceMode, React.ReactNode> = {
+    url: (
+      <form onSubmit={onSaveUrlSubmit}>
+        <Stack gap="xs">
+          <Text size="sm" c="dimmed">
+            Save a URL and let Reader fetch and prepare it.
+          </Text>
           <Group gap="xs" wrap="nowrap" align="flex-end">
             <TextInput
               aria-label="Article URL"
@@ -142,11 +139,88 @@ function CaptureCard({
               required
               style={{ flex: 1 }}
             />
-            <Button type="submit" color="pink" loading={isSaving}>
-              Save
+            <Button type="submit" color="pink" loading={isSavingUrl}>
+              Queue URL
             </Button>
           </Group>
-        </form>
+          <Group gap={6}>
+            <Anchor component={Link} href="/reader/bookmarklet" size="xs">
+              Bookmarklet setup
+            </Anchor>
+          </Group>
+        </Stack>
+      </form>
+    ),
+    raw: (
+      <form onSubmit={onSaveRawTextSubmit}>
+        <Stack gap="xs">
+          <Text size="sm" c="dimmed">
+            Paste plain text. Reader stores it as-is and makes it ready
+            immediately.
+          </Text>
+          <TextInput
+            aria-label="Optional title"
+            placeholder="Optional title"
+            value={rawTitle}
+            onChange={(event) =>
+              onRawTitleChange(event.currentTarget.value)
+            }
+            maxLength={400}
+          />
+          <Textarea
+            aria-label="Raw text"
+            placeholder="Paste raw text here..."
+            autosize
+            minRows={8}
+            maxRows={16}
+            value={rawText}
+            onChange={(event) =>
+              onRawTextChange(event.currentTarget.value)
+            }
+            required
+          />
+          <Group justify="space-between" align="center" wrap="wrap">
+            <Text size="xs" c="dimmed">
+              HTML is never rendered. This is plain text only.
+            </Text>
+            <Button type="submit" color="pink" loading={isSavingRaw}>
+              Save Text
+            </Button>
+          </Group>
+        </Stack>
+      </form>
+    ),
+  };
+
+  return (
+    <ReaderPanel>
+      <Stack gap="sm">
+        <Group justify="space-between" align="center" wrap="wrap" gap="xs">
+          <Text fw={700} style={{ color: "#4f3241" }}>
+            Add From
+          </Text>
+          <Text
+            size="xs"
+            c="dimmed"
+            style={{ fontFamily: readerBodyFont }}
+          >
+            URL, raw text, or Instapaper
+          </Text>
+        </Group>
+        <SegmentedControl
+          value={mode}
+          onChange={(nextMode) =>
+            onModeChange(nextMode as AddSourceSelection)
+          }
+          data={[
+            { label: "URL", value: "url" },
+            { label: "Raw", value: "raw" },
+            { label: "Instapaper", value: "instapaper" },
+          ]}
+          radius="xl"
+          color="pink"
+        />
+        {modePanels[mode]}
       </Stack>
     </ReaderPanel>
   );
@@ -178,27 +252,22 @@ function StatsStrip({ stats }: StatsStripProps) {
 type ArticleRowProps = {
   article: ReaderArticleSummary;
   isDeleting: boolean;
-  isRefreshing: boolean;
   onDelete: () => void;
-  onRefresh: () => void;
   withDivider: boolean;
 };
 
 function ArticleRow({
   article,
   isDeleting,
-  isRefreshing,
   onDelete,
-  onRefresh,
   withDivider,
 }: ArticleRowProps) {
   const statusTone = readerIngestTone(article.ingestStatus);
   const statusLabel = readerIngestLabel(article.ingestStatus);
-  const canRefresh = canRefreshArticle(article);
-  const subtitleParts = [statusLabel];
+  const subtitleParts = [readerInputLabel(article.inputKind), statusLabel];
 
   if (article.ingestStatus === "ready") {
-    subtitleParts.unshift(readerLanguageLabel(article.sourceLang));
+    subtitleParts.push(readerLanguageLabel(article.sourceLang));
   }
 
   return (
@@ -226,6 +295,13 @@ function ArticleRow({
             <Badge color={statusTone} variant="light" size="sm">
               {statusLabel}
             </Badge>
+            <Badge
+              color={readerInputTone(article.inputKind)}
+              variant="light"
+              size="sm"
+            >
+              {readerInputLabel(article.inputKind)}
+            </Badge>
             <Text size="xs" c="dimmed">
               {subtitleParts.join(" · ")} ·{" "}
               {formatReaderDateTime(article.createdAt)}
@@ -233,31 +309,21 @@ function ArticleRow({
           </Group>
         </Stack>
         <Group gap={6} align="center">
-          <Anchor
-            href={article.normalizedUrl}
-            target="_blank"
-            rel="noreferrer"
-            size="xs"
-          >
-            Source ↗
-          </Anchor>
-          {canRefresh && (
-            <Button
-              variant="subtle"
-              color="pink"
-              size="compact-xs"
-              loading={isRefreshing}
-              onClick={onRefresh}
+          {article.normalizedUrl && (
+            <Anchor
+              href={article.normalizedUrl}
+              target="_blank"
+              rel="noreferrer"
+              size="xs"
             >
-              Refresh
-            </Button>
+              Source ↗
+            </Anchor>
           )}
           <Button
             variant="subtle"
             color="red"
             size="compact-xs"
             loading={isDeleting}
-            disabled={isRefreshing}
             onClick={onDelete}
           >
             Delete
@@ -287,9 +353,7 @@ type LibraryCardProps = {
   isRefreshing: boolean;
   errorMessage: string | null;
   deletingPublicId: string | null;
-  refreshingPublicId: string | null;
   onDeleteArticle: (article: ReaderArticleSummary) => void;
-  onRefreshArticle: (article: ReaderArticleSummary) => void;
   onRefresh: () => void;
 };
 
@@ -299,9 +363,7 @@ function LibraryCard({
   isRefreshing,
   errorMessage,
   deletingPublicId,
-  refreshingPublicId,
   onDeleteArticle,
-  onRefreshArticle,
   onRefresh,
 }: LibraryCardProps) {
   const stats = useMemo(() => buildDashboardStats(articles), [articles]);
@@ -324,8 +386,8 @@ function LibraryCard({
     body = (
       <Box style={readerSubtleCardStyle}>
         <Text size="sm" c="dimmed">
-          Your shelf is empty. Save an article to begin your next study
-          session.
+          Your shelf is empty. Add from URL, raw text, or Instapaper to
+          begin.
         </Text>
       </Box>
     );
@@ -340,9 +402,7 @@ function LibraryCard({
               key={article.id}
               article={article}
               isDeleting={deletingPublicId === article.publicId}
-              isRefreshing={refreshingPublicId === article.publicId}
               onDelete={() => onDeleteArticle(article)}
-              onRefresh={() => onRefreshArticle(article)}
               withDivider={index > 0}
             />
           );
@@ -363,7 +423,7 @@ function LibraryCard({
           onClick={onRefresh}
           loading={isRefreshing}
         >
-          Refresh
+          Refresh List
         </Button>
       </Group>
       <StatsStrip stats={stats} />
@@ -373,20 +433,38 @@ function LibraryCard({
 }
 
 export default function ReaderDashboardPage() {
+  const router = useRouter();
   const controls = useReaderDashboardControls();
+  const [addSourceMode, setAddSourceMode] = useState<AddSourceMode>("url");
+
+  const handleAddSourceModeChange = (nextMode: AddSourceSelection) => {
+    if (nextMode === "instapaper") {
+      void router.push("/reader/instapaper");
+      return;
+    }
+
+    setAddSourceMode(nextMode);
+  };
 
   return (
     <ReaderPageFrame>
       <ReaderPageHeader
         title="Reader"
-        subtitle="A reading shelf for Korean study. Save links, wait for processing, and keep your library tidy."
+        subtitle="One shelf for imported study content. Add from URL, raw text, or Instapaper."
       />
-      <IntegrationsCard articleCount={controls.articles.length} />
-      <CaptureCard
+      <AddFromCard
+        mode={addSourceMode}
+        onModeChange={handleAddSourceModeChange}
         articleUrl={controls.articleUrl}
-        isSaving={controls.isSaving}
+        rawTitle={controls.rawTitle}
+        rawText={controls.rawText}
+        isSavingUrl={controls.isSavingUrl}
+        isSavingRaw={controls.isSavingRaw}
         onArticleUrlChange={controls.onArticleUrlChange}
-        onSubmit={controls.onSaveSubmit}
+        onRawTitleChange={controls.onRawTitleChange}
+        onRawTextChange={controls.onRawTextChange}
+        onSaveUrlSubmit={controls.onSaveUrlSubmit}
+        onSaveRawTextSubmit={controls.onSaveRawTextSubmit}
       />
       <LibraryCard
         articles={controls.articles}
@@ -394,9 +472,7 @@ export default function ReaderDashboardPage() {
         isRefreshing={controls.isArticlesRefreshing}
         errorMessage={controls.listErrorMessage}
         deletingPublicId={controls.deletingPublicId}
-        refreshingPublicId={controls.refreshingPublicId}
         onDeleteArticle={controls.onDeleteArticle}
-        onRefreshArticle={controls.onRefreshArticle}
         onRefresh={controls.onRefreshArticles}
       />
     </ReaderPageFrame>

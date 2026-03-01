@@ -1,6 +1,7 @@
 import {
   Prisma,
   ReaderIngestStatus,
+  ReaderInputKind,
   ReaderSaveOrigin,
   ReaderSourceLanguage,
 } from "@prisma/client";
@@ -23,6 +24,7 @@ export type ReaderIngestState =
   | "ready"
   | "error";
 export type ReaderSaveOriginValue = "DASHBOARD" | "BOOKMARKLET";
+export type ReaderInputKindValue = "url" | "raw";
 export type ReaderRouteErrorCode =
   | "BAD_REQUEST"
   | "FORBIDDEN"
@@ -34,6 +36,7 @@ const readerArticleSummarySelect = {
   instapaperBookmarkId: true,
   title: true,
   normalizedUrl: true,
+  inputKind: true,
   description: true,
   sourceLang: true,
   translated: true,
@@ -45,6 +48,7 @@ const readerArticleSummarySelect = {
 const readerIngestJobSelect = {
   id: true,
   requestUrl: true,
+  inputKind: true,
   title: true,
 } satisfies Prisma.ReaderArticleSelect;
 
@@ -77,7 +81,8 @@ export type SavedReaderArticle = {
   publicId: string;
   instapaperBookmarkId: string | null;
   title: string;
-  normalizedUrl: string;
+  normalizedUrl: string | null;
+  inputKind: ReaderInputKindValue;
   description: string;
   sourceLang: ReaderLanguage;
   translated: boolean;
@@ -92,6 +97,12 @@ type QueueReaderArticleInput = {
   saveOrigin: ReaderSaveOriginValue;
   suggestedTitle?: string;
   instapaperBookmarkId?: string;
+};
+
+type SaveReaderRawTextInput = {
+  userId: string;
+  title?: string;
+  text: string;
 };
 
 type RefreshReaderArticleInput = {
@@ -110,6 +121,7 @@ type ProcessedReaderArticle = {
 };
 
 const READER_ERROR_LENGTH_LIMIT = 1800;
+const READER_RAW_TEXT_LENGTH_LIMIT = 240000;
 
 const toReaderSourceLanguage = (
   value: ReaderLanguage,
@@ -157,12 +169,51 @@ const fromReaderIngestStatus = (
   return "error";
 };
 
+const fromReaderInputKind = (
+  value: ReaderInputKind,
+): ReaderInputKindValue => {
+  if (value === "RAW") {
+    return "raw";
+  }
+
+  return "url";
+};
+
 const normalizeSuggestedTitle = (title?: string): string => {
   if (!title) {
     return "";
   }
 
   return title.trim().slice(0, 400);
+};
+
+const normalizeRawTextInput = (value: string): string => {
+  if (!value.trim()) {
+    throw new ReaderSaveError(
+      "Please paste some text.",
+      "BAD_REQUEST",
+      400,
+    );
+  }
+
+  if (value.length > READER_RAW_TEXT_LENGTH_LIMIT) {
+    throw new ReaderSaveError(
+      `Raw text is too long. Limit is ${READER_RAW_TEXT_LENGTH_LIMIT.toLocaleString()} characters.`,
+      "BAD_REQUEST",
+      400,
+    );
+  }
+
+  return value;
+};
+
+const titleForRawText = (title?: string): string => {
+  const normalized = normalizeSuggestedTitle(title);
+  if (normalized) {
+    return normalized;
+  }
+
+  return "Untitled text";
 };
 
 const queuedTitleFor = (
@@ -261,6 +312,7 @@ const mapSavedArticle = (
     instapaperBookmarkId: article.instapaperBookmarkId,
     title: article.title,
     normalizedUrl: article.normalizedUrl,
+    inputKind: fromReaderInputKind(article.inputKind),
     description: article.description,
     sourceLang: fromReaderSourceLanguage(article.sourceLang),
     translated: article.translated,
@@ -426,6 +478,7 @@ export const queueReaderArticle = async (
       instapaperBookmarkId: normalizedInstapaperBookmarkId || null,
       requestUrl: normalizedRequestUrl,
       normalizedUrl: normalizedRequestUrl,
+      inputKind: "URL",
       title: queuedTitleFor(normalizedRequestUrl, input.suggestedTitle),
       description: "",
       sourceLang: "OTHER",
@@ -444,6 +497,37 @@ export const queueReaderArticle = async (
   return mapSavedArticle(saved);
 };
 
+export const saveReaderRawTextArticle = async (
+  input: SaveReaderRawTextInput,
+): Promise<SavedReaderArticle> => {
+  const rawText = normalizeRawTextInput(input.text);
+  const title = titleForRawText(input.title);
+
+  const saved = await prismaClient.readerArticle.create({
+    data: {
+      userId: input.userId,
+      instapaperBookmarkId: null,
+      requestUrl: null,
+      normalizedUrl: null,
+      inputKind: "RAW",
+      title,
+      description: "",
+      sourceLang: "OTHER",
+      translated: false,
+      saveOrigin: "DASHBOARD",
+      ingestStatus: "READY",
+      ingestError: "",
+      ingestStartedAt: null,
+      ingestedAt: new Date(),
+      contentText: rawText,
+      contentHtml: "",
+    },
+    select: readerArticleSummarySelect,
+  });
+
+  return mapSavedArticle(saved);
+};
+
 export const refreshReaderArticle = async (
   input: RefreshReaderArticleInput,
 ): Promise<SavedReaderArticle> => {
@@ -452,12 +536,26 @@ export const refreshReaderArticle = async (
     select: {
       id: true,
       userId: true,
+      inputKind: true,
       ingestStatus: true,
+      publicId: true,
+      instapaperBookmarkId: true,
+      title: true,
+      normalizedUrl: true,
+      description: true,
+      sourceLang: true,
+      translated: true,
+      ingestError: true,
+      createdAt: true,
     },
   });
 
   if (!article || article.userId !== input.userId) {
     throw new ReaderSaveError("Article not found.", "BAD_REQUEST", 404);
+  }
+
+  if (article.inputKind === "RAW") {
+    return mapSavedArticle(article);
   }
 
   const isAlreadyQueued =
@@ -494,7 +592,10 @@ export const refreshReaderArticle = async (
 export const claimNextQueuedReaderArticle =
   async (): Promise<ReaderIngestJob | null> => {
     const nextPending = await prismaClient.readerArticle.findFirst({
-      where: { ingestStatus: "PENDING" },
+      where: {
+        ingestStatus: "PENDING",
+        inputKind: "URL",
+      },
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
       select: { id: true },
     });
@@ -528,6 +629,22 @@ export const claimNextQueuedReaderArticle =
 export const processClaimedReaderArticle = async (
   job: ReaderIngestJob,
 ): Promise<SavedReaderArticle> => {
+  if (job.inputKind !== "URL") {
+    throw new ReaderSaveError(
+      "Only URL imports can be queued for ingest.",
+      "BAD_REQUEST",
+      400,
+    );
+  }
+
+  if (!job.requestUrl?.trim()) {
+    throw new ReaderSaveError(
+      "Queued URL import is missing a request URL.",
+      "BAD_REQUEST",
+      400,
+    );
+  }
+
   const processed = await processReaderArticleText(
     job.requestUrl,
     job.title,

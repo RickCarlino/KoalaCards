@@ -2,7 +2,8 @@ export type ReaderArticleSummary = {
   id: number;
   publicId: string;
   title: string;
-  normalizedUrl: string;
+  normalizedUrl: string | null;
+  inputKind: "url" | "raw";
   description: string;
   sourceLang: "ko" | "en" | "other";
   translated: boolean;

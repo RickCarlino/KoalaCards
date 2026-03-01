@@ -26,6 +26,7 @@ import {
   refreshReaderArticleRoute,
   rotateReaderBookmarkletKey,
   saveReaderArticleRoute,
+  saveReaderRawTextRoute,
 } from "./reader";
 import {
   connectReaderInstapaperRoute,
@@ -70,6 +71,7 @@ export const appRouter = router({
   refreshReaderArticleRoute,
   rotateReaderBookmarkletKey,
   saveReaderArticleRoute,
+  saveReaderRawTextRoute,
   archiveCard,
   turbine,
   updateDeck,

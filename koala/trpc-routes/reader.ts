@@ -11,8 +11,10 @@ import {
   refreshReaderArticle,
   ReaderSaveError,
   queueReaderArticle,
+  saveReaderRawTextArticle,
 } from "@/koala/reader/save-article";
 import type {
+  ReaderInputKindValue,
   ReaderIngestState,
   SavedReaderArticle,
 } from "@/koala/reader/save-article";
@@ -24,7 +26,8 @@ const readerArticleSchema = z.object({
   id: z.number(),
   publicId: z.string(),
   title: z.string(),
-  normalizedUrl: z.string(),
+  normalizedUrl: z.string().nullable(),
+  inputKind: z.enum(["url", "raw"]),
   description: z.string(),
   sourceLang: readerLanguageSchema,
   translated: z.boolean(),
@@ -57,6 +60,16 @@ const saveReaderArticleOutputSchema = z.object({
   article: readerArticleSchema,
 });
 
+const saveReaderRawTextInputSchema = z.object({
+  title: z.string().trim().max(400).optional(),
+  text: z.string().min(1).max(240000),
+});
+
+const saveReaderRawTextOutputSchema = z.object({
+  status: z.literal("ready"),
+  article: readerArticleSchema,
+});
+
 const deleteReaderArticleInputSchema = z.object({
   publicId: z.string().trim().min(1),
 });
@@ -70,7 +83,7 @@ const refreshReaderArticleInputSchema = z.object({
 });
 
 const refreshReaderArticleOutputSchema = z.object({
-  status: z.literal("queued"),
+  status: z.enum(["queued", "noop"]),
   article: readerArticleSchema,
 });
 
@@ -106,12 +119,21 @@ const mapIngestStatus = (
   return "error";
 };
 
+const mapInputKind = (inputKind: "URL" | "RAW"): ReaderInputKindValue => {
+  if (inputKind === "RAW") {
+    return "raw";
+  }
+
+  return "url";
+};
+
 const mapSavedArticle = (article: SavedReaderArticle) => {
   return {
     id: article.id,
     publicId: article.publicId,
     title: article.title,
     normalizedUrl: article.normalizedUrl,
+    inputKind: article.inputKind,
     description: article.description,
     sourceLang: article.sourceLang,
     translated: article.translated,
@@ -292,6 +314,28 @@ export const saveReaderArticleRoute = procedure
     }
   });
 
+export const saveReaderRawTextRoute = procedure
+  .input(saveReaderRawTextInputSchema)
+  .output(saveReaderRawTextOutputSchema)
+  .mutation(async ({ input, ctx }) => {
+    const userId = requireUserId(ctx.user?.id);
+
+    try {
+      const article = await saveReaderRawTextArticle({
+        userId,
+        title: input.title,
+        text: input.text,
+      });
+
+      return {
+        status: "ready",
+        article: mapSavedArticle(article),
+      };
+    } catch (error) {
+      return mapSaveError(error);
+    }
+  });
+
 export const listReaderArticlesRoute = procedure
   .input(listReaderArticlesInputSchema)
   .output(listReaderArticlesOutputSchema)
@@ -308,6 +352,7 @@ export const listReaderArticlesRoute = procedure
         publicId: true,
         title: true,
         normalizedUrl: true,
+        inputKind: true,
         description: true,
         sourceLang: true,
         translated: true,
@@ -323,6 +368,7 @@ export const listReaderArticlesRoute = procedure
         publicId: article.publicId,
         title: article.title,
         normalizedUrl: article.normalizedUrl,
+        inputKind: mapInputKind(article.inputKind),
         description: article.description,
         sourceLang: mapSourceLanguage(article.sourceLang),
         translated: article.translated,
@@ -369,7 +415,7 @@ export const refreshReaderArticleRoute = procedure
       });
 
       return {
-        status: "queued",
+        status: article.inputKind === "raw" ? "noop" : "queued",
         article: mapSavedArticle(article),
       };
     } catch (error) {

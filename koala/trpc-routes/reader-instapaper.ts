@@ -116,7 +116,7 @@ type LocalReaderArticleRecord = {
   id: number;
   publicId: string;
   title: string;
-  normalizedUrl: string;
+  normalizedUrl: string | null;
   ingestStatus: ReaderIngestStatus;
   sourceLang: ReaderSourceLanguage;
   translated: boolean;
@@ -310,6 +310,10 @@ const listArticlesByNormalizedUrl = async (
   const grouped = new Map<string, LocalReaderArticleRecord[]>();
 
   for (const record of records) {
+    if (!record.normalizedUrl) {
+      continue;
+    }
+
     const existing = grouped.get(record.normalizedUrl) ?? [];
     existing.push(record);
     grouped.set(record.normalizedUrl, existing);
@@ -808,6 +812,13 @@ export const exportReaderArticleToInstapaperRoute = procedure
           code: "BAD_REQUEST",
           message:
             "This article is still processing. Export after it reaches Ready.",
+        });
+      }
+
+      if (!article.normalizedUrl) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "This article does not have a source URL to export.",
         });
       }
 

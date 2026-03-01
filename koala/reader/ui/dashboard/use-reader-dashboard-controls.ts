@@ -13,12 +13,11 @@ function mutationErrorMessage(error: unknown, fallback: string): string {
 
 export function useReaderDashboardControls() {
   const [articleUrl, setArticleUrl] = useState("");
+  const [rawTitle, setRawTitle] = useState("");
+  const [rawText, setRawText] = useState("");
   const [deletingPublicId, setDeletingPublicId] = useState<string | null>(
     null,
   );
-  const [refreshingPublicId, setRefreshingPublicId] = useState<
-    string | null
-  >(null);
 
   const listQuery = trpc.listReaderArticlesRoute.useQuery(
     { limit: 40 },
@@ -41,9 +40,9 @@ export function useReaderDashboardControls() {
     },
   );
 
-  const saveArticle = trpc.saveReaderArticleRoute.useMutation();
+  const saveUrlArticle = trpc.saveReaderArticleRoute.useMutation();
+  const saveRawTextArticle = trpc.saveReaderRawTextRoute.useMutation();
   const deleteArticle = trpc.deleteReaderArticleRoute.useMutation();
-  const refreshArticle = trpc.refreshReaderArticleRoute.useMutation();
 
   const listErrorMessage = useMemo(() => {
     if (!listQuery.isError) {
@@ -56,7 +55,7 @@ export function useReaderDashboardControls() {
     );
   }, [listQuery.error, listQuery.isError]);
 
-  const handleSaveSubmit = async (
+  const handleSaveUrlSubmit = async (
     event: React.FormEvent<HTMLFormElement>,
   ) => {
     event.preventDefault();
@@ -72,7 +71,7 @@ export function useReaderDashboardControls() {
     }
 
     try {
-      const result = await saveArticle.mutateAsync({ url: trimmed });
+      const result = await saveUrlArticle.mutateAsync({ url: trimmed });
       setArticleUrl("");
       notifications.show({
         title: "Queued",
@@ -83,7 +82,46 @@ export function useReaderDashboardControls() {
     } catch (error: unknown) {
       notifications.show({
         title: "Save failed",
-        message: mutationErrorMessage(error, "Could not save article."),
+        message: mutationErrorMessage(
+          error,
+          "Could not save article URL.",
+        ),
+        color: "red",
+      });
+    }
+  };
+
+  const handleSaveRawTextSubmit = async (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
+
+    if (!rawText.trim()) {
+      notifications.show({
+        title: "Missing text",
+        message: "Please paste text to save.",
+        color: "red",
+      });
+      return;
+    }
+
+    try {
+      const result = await saveRawTextArticle.mutateAsync({
+        title: rawTitle.trim() || undefined,
+        text: rawText,
+      });
+      setRawTitle("");
+      setRawText("");
+      notifications.show({
+        title: "Saved",
+        message: `Text #${result.article.id} is ready in your library.`,
+        color: "green",
+      });
+      listQuery.refetch();
+    } catch (error: unknown) {
+      notifications.show({
+        title: "Save failed",
+        message: mutationErrorMessage(error, "Could not save raw text."),
         color: "red",
       });
     }
@@ -127,52 +165,23 @@ export function useReaderDashboardControls() {
     }
   };
 
-  const handleRefreshArticle = async (
-    article: ReaderArticleSummary,
-  ): Promise<void> => {
-    setRefreshingPublicId(article.publicId);
-
-    try {
-      await refreshArticle.mutateAsync({ publicId: article.publicId });
-      notifications.show({
-        title: "Queued",
-        message: "Article queued for reprocessing.",
-        color: "green",
-      });
-      listQuery.refetch();
-    } catch (error: unknown) {
-      notifications.show({
-        title: "Refresh failed",
-        message: mutationErrorMessage(
-          error,
-          "Could not refresh this article.",
-        ),
-        color: "red",
-      });
-    } finally {
-      setRefreshingPublicId((current) => {
-        if (current === article.publicId) {
-          return null;
-        }
-
-        return current;
-      });
-    }
-  };
-
   return {
     articleUrl,
+    rawTitle,
+    rawText,
     deletingPublicId,
-    refreshingPublicId,
-    isSaving: saveArticle.isLoading,
+    isSavingUrl: saveUrlArticle.isLoading,
+    isSavingRaw: saveRawTextArticle.isLoading,
     articles: listQuery.data?.articles ?? [],
     isArticlesLoading: listQuery.isLoading,
     isArticlesRefreshing: listQuery.isFetching,
     listErrorMessage,
     onArticleUrlChange: setArticleUrl,
+    onRawTitleChange: setRawTitle,
+    onRawTextChange: setRawText,
     onDeleteArticle: handleDeleteArticle,
-    onRefreshArticle: handleRefreshArticle,
-    onSaveSubmit: handleSaveSubmit,
+    onSaveUrlSubmit: handleSaveUrlSubmit,
+    onSaveRawTextSubmit: handleSaveRawTextSubmit,
     onRefreshArticles: () => listQuery.refetch(),
   };
 }

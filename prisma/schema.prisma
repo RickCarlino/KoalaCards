@@ -189,6 +189,11 @@ enum ReaderIngestStatus {
   ERROR
 }
 
+enum ReaderInputKind {
+  URL
+  RAW
+}
+
 model ReaderBookmarkletCredential {
   id              Int      @id @default(autoincrement())
   userId          String   @unique
@@ -220,8 +225,9 @@ model ReaderArticle {
   user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   publicId      String             @unique @default(cuid())
   instapaperBookmarkId String?     @db.VarChar(64)
-  requestUrl    String             @db.Text
-  normalizedUrl String            @db.Text
+  requestUrl    String?            @db.Text
+  normalizedUrl String?            @db.Text
+  inputKind     ReaderInputKind    @default(URL)
   title         String             @db.Text
   description   String             @db.Text
   sourceLang    ReaderSourceLanguage

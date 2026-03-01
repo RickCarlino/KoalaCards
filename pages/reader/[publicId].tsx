@@ -19,11 +19,15 @@ import type {
 import Link from "next/link";
 import React, { useEffect } from "react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { IconExternalLink } from "@tabler/icons-react";
+
+type ReaderInputKind = "url" | "raw";
 
 type PublicReaderArticle = {
   title: string;
-  normalizedUrl: string;
+  normalizedUrl: string | null;
+  inputKind: ReaderInputKind;
   contentText: string;
   ingestStatus: "pending" | "in_progress" | "ready" | "error";
   ingestError: string;
@@ -59,6 +63,14 @@ function pendingMessage(status: "pending" | "in_progress"): string {
   return "This article is currently being processed.";
 }
 
+function inputKindLabel(inputKind: ReaderInputKind): string {
+  if (inputKind === "raw") {
+    return "Raw text";
+  }
+
+  return "URL";
+}
+
 type ArticleHeaderCardProps = {
   article: PublicReaderArticle;
 };
@@ -73,16 +85,22 @@ function ArticleHeaderCard({ article }: ArticleHeaderCardProps) {
         <Anchor component={Link} href="/reader" size="sm">
           ← Back to Reader
         </Anchor>
-        <Anchor
-          href={article.normalizedUrl}
-          target="_blank"
-          rel="noreferrer"
-          size="sm"
-          style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
-        >
-          Source
-          <IconExternalLink size={14} stroke={1.8} />
-        </Anchor>
+        {article.normalizedUrl && (
+          <Anchor
+            href={article.normalizedUrl}
+            target="_blank"
+            rel="noreferrer"
+            size="sm"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+            }}
+          >
+            Source
+            <IconExternalLink size={14} stroke={1.8} />
+          </Anchor>
+        )}
       </Group>
       <Stack gap={6}>
         <Text
@@ -99,6 +117,12 @@ function ArticleHeaderCard({ article }: ArticleHeaderCardProps) {
         <Group gap={6} wrap="wrap">
           <Badge color={statusTone} variant="light">
             {statusLabel}
+          </Badge>
+          <Badge
+            color={article.inputKind === "raw" ? "gray" : "pink"}
+            variant="light"
+          >
+            {inputKindLabel(article.inputKind)}
           </Badge>
           <Text
             size="xs"
@@ -137,8 +161,7 @@ function ProcessingCard({
             </Text>
           )}
           <Text size="sm" c="dimmed">
-            Go back to Reader and submit the URL again after checking the
-            source.
+            Go back to Reader and add it again from your preferred source.
           </Text>
         </Stack>
       </ReaderPanel>
@@ -157,7 +180,7 @@ function ProcessingCard({
   );
 }
 
-function ArticleMarkdown({ markdownText }: { markdownText: string }) {
+function UrlArticleBody({ markdownText }: { markdownText: string }) {
   if (!markdownText.trim()) {
     return (
       <ReaderPanel>
@@ -180,7 +203,40 @@ function ArticleMarkdown({ markdownText }: { markdownText: string }) {
           color: "#4f3342",
         }}
       >
-        <ReactMarkdown>{markdownText}</ReactMarkdown>
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          {markdownText}
+        </ReactMarkdown>
+      </article>
+    </ReaderPanel>
+  );
+}
+
+function RawArticleBody({ rawText }: { rawText: string }) {
+  if (!rawText.trim()) {
+    return (
+      <ReaderPanel>
+        <Text size="sm" c="dimmed">
+          Text is unavailable.
+        </Text>
+      </ReaderPanel>
+    );
+  }
+
+  return (
+    <ReaderPanel>
+      <article
+        style={{
+          maxWidth: "92ch",
+          margin: "0 auto",
+          fontFamily: readerDisplayFont,
+          lineHeight: 1.9,
+          fontSize: "1.08rem",
+          color: "#4f3342",
+        }}
+      >
+        <ReactMarkdown skipHtml remarkPlugins={[remarkGfm]}>
+          {rawText}
+        </ReactMarkdown>
       </article>
     </ReaderPanel>
   );
@@ -190,6 +246,7 @@ export default function PublicReaderArticlePage({
   article,
 }: InferGetServerSidePropsType<typeof getServerSideProps>) {
   const markdownText = normalizeMarkdownText(article.contentText);
+  const rawText = article.contentText;
   const shouldAutoRefresh =
     article.ingestStatus === "pending" ||
     article.ingestStatus === "in_progress";
@@ -214,7 +271,7 @@ export default function PublicReaderArticlePage({
     <ReaderPageFrame>
       <ReaderPageHeader
         title="Reading View"
-        subtitle="Focused, clean prose with Korean-friendly formatting."
+        subtitle="Focused reading with source-aware rendering."
       />
       <ArticleHeaderCard article={article} />
       {showProcessingState && (
@@ -223,8 +280,11 @@ export default function PublicReaderArticlePage({
           ingestError={article.ingestError}
         />
       )}
-      {!showProcessingState && (
-        <ArticleMarkdown markdownText={markdownText} />
+      {!showProcessingState && article.inputKind === "url" && (
+        <UrlArticleBody markdownText={markdownText} />
+      )}
+      {!showProcessingState && article.inputKind === "raw" && (
+        <RawArticleBody rawText={rawText} />
       )}
     </ReaderPageFrame>
   );
@@ -248,6 +308,14 @@ function mapIngestStatus(
   return "error";
 }
 
+function mapInputKind(value: "URL" | "RAW"): ReaderInputKind {
+  if (value === "RAW") {
+    return "raw";
+  }
+
+  return "url";
+}
+
 export async function getServerSideProps(
   context: GetServerSidePropsContext,
 ) {
@@ -261,6 +329,7 @@ export async function getServerSideProps(
     select: {
       title: true,
       normalizedUrl: true,
+      inputKind: true,
       contentText: true,
       ingestStatus: true,
       ingestError: true,
@@ -275,6 +344,7 @@ export async function getServerSideProps(
   const payload: PublicReaderArticle = {
     title: article.title,
     normalizedUrl: article.normalizedUrl,
+    inputKind: mapInputKind(article.inputKind),
     contentText: article.contentText,
     ingestStatus: mapIngestStatus(article.ingestStatus),
     ingestError: article.ingestError,

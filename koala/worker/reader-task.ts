@@ -35,7 +35,11 @@ const staleAfterMinutes = (): number => {
   return parsePositiveInt(process.env.READER_WORKER_STALE_MINUTES, 10);
 };
 
-const hostnameFromUrl = (value: string): string => {
+const hostnameFromUrl = (value: string | null): string => {
+  if (!value) {
+    return "unknown";
+  }
+
   try {
     return new URL(value).hostname;
   } catch {
