@@ -8,6 +8,7 @@ import {
   formatReaderDateTime,
   readerBodyFont,
   readerDisplayFont,
+  readerHeadingColor,
   readerIngestLabel,
   readerIngestTone,
 } from "@/koala/reader/ui/theme";
@@ -71,6 +72,15 @@ function inputKindLabel(inputKind: ReaderInputKind): string {
   return "URL";
 }
 
+const readerArticleBodyStyle = {
+  maxWidth: "90ch",
+  margin: "0 auto",
+  fontFamily: readerDisplayFont,
+  lineHeight: 1.85,
+  fontSize: "1.07rem",
+  color: "#4f3342",
+};
+
 type ArticleHeaderCardProps = {
   article: PublicReaderArticle;
 };
@@ -81,7 +91,7 @@ function ArticleHeaderCard({ article }: ArticleHeaderCardProps) {
 
   return (
     <ReaderPanel>
-      <Group justify="space-between" align="center" wrap="wrap" gap="xs">
+      <Group justify="space-between" align="center" wrap="wrap" gap="sm">
         <Anchor component={Link} href="/reader" size="sm">
           ← Back to Reader
         </Anchor>
@@ -94,7 +104,7 @@ function ArticleHeaderCard({ article }: ArticleHeaderCardProps) {
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: 4,
+              gap: 5,
             }}
           >
             Source
@@ -102,12 +112,12 @@ function ArticleHeaderCard({ article }: ArticleHeaderCardProps) {
           </Anchor>
         )}
       </Group>
-      <Stack gap={6}>
+      <Stack gap={8}>
         <Text
           style={{
             fontFamily: readerDisplayFont,
             fontSize: "clamp(1.35rem, 3vw, 2rem)",
-            color: "#4b2f3f",
+            color: readerHeadingColor,
             lineHeight: 1.25,
             fontWeight: 700,
           }}
@@ -151,41 +161,47 @@ function ProcessingCard({
   if (status === "error") {
     return (
       <ReaderPanel>
-        <Stack gap="xs">
-          <Text c="red" fw={700}>
-            This article could not be prepared.
+        <Text c="red" fw={700}>
+          This article could not be prepared.
+        </Text>
+        {ingestError.trim().length > 0 && (
+          <Text size="sm" c="red">
+            {ingestError}
           </Text>
-          {ingestError.trim().length > 0 && (
-            <Text size="sm" c="red">
-              {ingestError}
-            </Text>
-          )}
-          <Text size="sm" c="dimmed">
-            Go back to Reader and add it again from your preferred source.
-          </Text>
-        </Stack>
+        )}
+        <Text size="sm" c="dimmed">
+          Go back to Reader and add it again from your preferred source.
+        </Text>
       </ReaderPanel>
     );
   }
 
   return (
     <ReaderPanel>
-      <Stack gap="xs">
-        <Text c="dimmed">{pendingMessage(status)}</Text>
-        <Text size="sm" c="dimmed">
-          This page refreshes every 8 seconds while processing.
-        </Text>
-      </Stack>
+      <Text c="dimmed">{pendingMessage(status)}</Text>
+      <Text size="sm" c="dimmed">
+        This page refreshes every 8 seconds while processing.
+      </Text>
     </ReaderPanel>
   );
 }
 
-function UrlArticleBody({ markdownText }: { markdownText: string }) {
-  if (!markdownText.trim()) {
+type ReaderArticleBodyProps = {
+  contentText: string;
+  emptyMessage: string;
+  skipHtml?: boolean;
+};
+
+function ReaderArticleBody({
+  contentText,
+  emptyMessage,
+  skipHtml = false,
+}: ReaderArticleBodyProps) {
+  if (!contentText.trim()) {
     return (
       <ReaderPanel>
         <Text size="sm" c="dimmed">
-          Article text is unavailable.
+          {emptyMessage}
         </Text>
       </ReaderPanel>
     );
@@ -193,52 +209,35 @@ function UrlArticleBody({ markdownText }: { markdownText: string }) {
 
   return (
     <ReaderPanel>
-      <article
-        style={{
-          maxWidth: "92ch",
-          margin: "0 auto",
-          fontFamily: readerDisplayFont,
-          lineHeight: 1.9,
-          fontSize: "1.08rem",
-          color: "#4f3342",
-        }}
-      >
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-          {markdownText}
+      <article style={readerArticleBodyStyle}>
+        <ReactMarkdown skipHtml={skipHtml} remarkPlugins={[remarkGfm]}>
+          {contentText}
         </ReactMarkdown>
       </article>
     </ReaderPanel>
   );
 }
 
-function RawArticleBody({ rawText }: { rawText: string }) {
-  if (!rawText.trim()) {
+function renderReadyArticleBody(
+  inputKind: ReaderInputKind,
+  markdownText: string,
+  rawText: string,
+): React.ReactNode {
+  if (inputKind === "url") {
     return (
-      <ReaderPanel>
-        <Text size="sm" c="dimmed">
-          Text is unavailable.
-        </Text>
-      </ReaderPanel>
+      <ReaderArticleBody
+        contentText={markdownText}
+        emptyMessage="Article text is unavailable."
+      />
     );
   }
 
   return (
-    <ReaderPanel>
-      <article
-        style={{
-          maxWidth: "92ch",
-          margin: "0 auto",
-          fontFamily: readerDisplayFont,
-          lineHeight: 1.9,
-          fontSize: "1.08rem",
-          color: "#4f3342",
-        }}
-      >
-        <ReactMarkdown skipHtml remarkPlugins={[remarkGfm]}>
-          {rawText}
-        </ReactMarkdown>
-      </article>
-    </ReaderPanel>
+    <ReaderArticleBody
+      contentText={rawText}
+      emptyMessage="Text is unavailable."
+      skipHtml
+    />
   );
 }
 
@@ -280,12 +279,8 @@ export default function PublicReaderArticlePage({
           ingestError={article.ingestError}
         />
       )}
-      {!showProcessingState && article.inputKind === "url" && (
-        <UrlArticleBody markdownText={markdownText} />
-      )}
-      {!showProcessingState && article.inputKind === "raw" && (
-        <RawArticleBody rawText={rawText} />
-      )}
+      {!showProcessingState &&
+        renderReadyArticleBody(article.inputKind, markdownText, rawText)}
     </ReaderPageFrame>
   );
 }

@@ -3,8 +3,12 @@ import {
   ReaderPageFrame,
   ReaderPageHeader,
   ReaderPanel,
+  ReaderPanelHeader,
 } from "@/koala/reader/ui/layout";
-import { readerSubtleCardStyle } from "@/koala/reader/ui/theme";
+import {
+  readerHeadingColor,
+  readerListRowStyle,
+} from "@/koala/reader/ui/theme";
 import { trpc } from "@/koala/trpc-config";
 import { Button, Group, Stack, Text } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
@@ -29,18 +33,22 @@ function BookmarkletSteps() {
   ];
 
   return (
-    <Stack gap="xs">
+    <Stack gap={0}>
       {steps.map((step, index) => {
         return (
           <Group
             key={step}
-            gap="xs"
+            gap="sm"
             align="flex-start"
             wrap="nowrap"
-            style={readerSubtleCardStyle}
+            style={readerListRowStyle(index > 0)}
           >
-            <Text fw={700} c="pink.7">
-              {index + 1}
+            <Text
+              fw={700}
+              size="sm"
+              style={{ color: readerHeadingColor, minWidth: 18 }}
+            >
+              {index + 1}.
             </Text>
             <Text size="sm" c="dimmed">
               {step}
@@ -98,10 +106,18 @@ export default function ReaderBookmarkletPage() {
       />
 
       <ReaderPanel>
+        <ReaderPanelHeader
+          title="Setup Steps"
+          subtitle="Install once, then save pages with one click."
+        />
         <BookmarkletSteps />
       </ReaderPanel>
 
       <ReaderPanel>
+        <ReaderPanelHeader
+          title="Install Bookmark"
+          subtitle="Drag this button into your browser bookmarks bar."
+        />
         {setupQuery.isLoading && (
           <Text size="sm" c="dimmed">
             Preparing bookmarklet...

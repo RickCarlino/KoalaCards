@@ -3,6 +3,7 @@ import {
   ReaderPageFrame,
   ReaderPageHeader,
   ReaderPanel,
+  ReaderPanelHeader,
 } from "@/koala/reader/ui/layout";
 import { useReaderDashboardControls } from "@/koala/reader/ui/dashboard/use-reader-dashboard-controls";
 import type {
@@ -11,10 +12,10 @@ import type {
 } from "@/koala/reader/ui/dashboard/types";
 import {
   formatReaderDateTime,
-  readerBodyFont,
+  readerHeadingColor,
   readerIngestLabel,
   readerIngestTone,
-  readerLanguageLabel,
+  readerListRowStyle,
   readerSubtleCardStyle,
 } from "@/koala/reader/ui/theme";
 import {
@@ -37,6 +38,16 @@ import React, { useMemo, useState } from "react";
 
 type AddSourceMode = "url" | "raw";
 type AddSourceSelection = AddSourceMode | "instapaper";
+
+function parseAddSourceSelection(
+  value: string,
+): AddSourceSelection | null {
+  if (value === "url" || value === "raw" || value === "instapaper") {
+    return value;
+  }
+
+  return null;
+}
 
 function buildDashboardStats(
   articles: ReaderArticleSummary[],
@@ -124,11 +135,11 @@ function AddFromCard({
   const modePanels: Record<AddSourceMode, React.ReactNode> = {
     url: (
       <form onSubmit={onSaveUrlSubmit}>
-        <Stack gap="xs">
+        <Stack gap="sm">
           <Text size="sm" c="dimmed">
             Save a URL and let Reader fetch and prepare it.
           </Text>
-          <Group gap="xs" wrap="nowrap" align="flex-end">
+          <Group gap="xs" wrap="wrap" align="flex-end">
             <TextInput
               aria-label="Article URL"
               placeholder="https://example.com/article"
@@ -137,14 +148,19 @@ function AddFromCard({
                 onArticleUrlChange(event.currentTarget.value)
               }
               required
-              style={{ flex: 1 }}
+              style={{ flex: "1 1 320px" }}
             />
-            <Button type="submit" color="pink" loading={isSavingUrl}>
+            <Button
+              type="submit"
+              color="pink"
+              loading={isSavingUrl}
+              style={{ minWidth: 112 }}
+            >
               Queue URL
             </Button>
           </Group>
           <Group gap={6}>
-            <Anchor component={Link} href="/reader/bookmarklet" size="xs">
+            <Anchor component={Link} href="/reader/bookmarklet" size="sm">
               Bookmarklet setup
             </Anchor>
           </Group>
@@ -153,7 +169,7 @@ function AddFromCard({
     ),
     raw: (
       <form onSubmit={onSaveRawTextSubmit}>
-        <Stack gap="xs">
+        <Stack gap="sm">
           <Text size="sm" c="dimmed">
             Paste plain text. Reader stores it as-is and makes it ready
             immediately.
@@ -183,7 +199,12 @@ function AddFromCard({
             <Text size="xs" c="dimmed">
               HTML is never rendered. This is plain text only.
             </Text>
-            <Button type="submit" color="pink" loading={isSavingRaw}>
+            <Button
+              type="submit"
+              color="pink"
+              loading={isSavingRaw}
+              style={{ minWidth: 100 }}
+            >
               Save Text
             </Button>
           </Group>
@@ -194,34 +215,27 @@ function AddFromCard({
 
   return (
     <ReaderPanel>
-      <Stack gap="sm">
-        <Group justify="space-between" align="center" wrap="wrap" gap="xs">
-          <Text fw={700} style={{ color: "#4f3241" }}>
-            Add From
-          </Text>
-          <Text
-            size="xs"
-            c="dimmed"
-            style={{ fontFamily: readerBodyFont }}
-          >
-            URL, raw text, or Instapaper
-          </Text>
-        </Group>
-        <SegmentedControl
-          value={mode}
-          onChange={(nextMode) =>
-            onModeChange(nextMode as AddSourceSelection)
+      <ReaderPanelHeader
+        title="Add From"
+        subtitle="URL, raw text, or Instapaper"
+      />
+      <SegmentedControl
+        value={mode}
+        onChange={(nextMode) => {
+          const parsedMode = parseAddSourceSelection(nextMode);
+          if (parsedMode) {
+            onModeChange(parsedMode);
           }
-          data={[
-            { label: "URL", value: "url" },
-            { label: "Raw", value: "raw" },
-            { label: "Instapaper", value: "instapaper" },
-          ]}
-          radius="xl"
-          color="pink"
-        />
-        {modePanels[mode]}
-      </Stack>
+        }}
+        data={[
+          { label: "URL", value: "url" },
+          { label: "Raw", value: "raw" },
+          { label: "Instapaper", value: "instapaper" },
+        ]}
+        radius="xl"
+        color="pink"
+      />
+      {modePanels[mode]}
     </ReaderPanel>
   );
 }
@@ -266,28 +280,26 @@ function ArticleRow({
   const statusLabel = readerIngestLabel(article.ingestStatus);
   const subtitleParts = [readerInputLabel(article.inputKind), statusLabel];
 
-  if (article.ingestStatus === "ready") {
-    subtitleParts.push(readerLanguageLabel(article.sourceLang));
-  }
-
   return (
-    <Stack
-      gap={6}
-      pt={withDivider ? "sm" : 0}
-      mt={withDivider ? "sm" : 0}
-      style={withDivider ? { borderTop: "1px solid #efd8e4" } : undefined}
-    >
+    <Stack style={readerListRowStyle(withDivider)}>
       <Group
         justify="space-between"
         align="flex-start"
         wrap="wrap"
-        gap="xs"
+        gap="sm"
       >
-        <Stack gap={3} style={{ maxWidth: "min(72ch, 100%)" }}>
+        <Stack
+          gap={4}
+          style={{ maxWidth: "min(72ch, 100%)", flex: "1 1 340px" }}
+        >
           <Anchor
             component={Link}
             href={`/reader/${article.publicId}`}
-            style={{ fontWeight: 700, color: "#533241", lineHeight: 1.35 }}
+            style={{
+              fontWeight: 700,
+              color: readerHeadingColor,
+              lineHeight: 1.35,
+            }}
           >
             {article.title}
           </Anchor>
@@ -308,7 +320,7 @@ function ArticleRow({
             </Text>
           </Group>
         </Stack>
-        <Group gap={6} align="center">
+        <Group gap={6} align="center" wrap="wrap">
           {article.normalizedUrl && (
             <Anchor
               href={article.normalizedUrl}
@@ -413,19 +425,21 @@ function LibraryCard({
 
   return (
     <ReaderPanel>
-      <Group justify="space-between" align="center" wrap="wrap" gap="xs">
-        <Text fw={700} style={{ color: "#4f3241" }}>
-          Library
-        </Text>
-        <Button
-          variant="subtle"
-          size="xs"
-          onClick={onRefresh}
-          loading={isRefreshing}
-        >
-          Refresh List
-        </Button>
-      </Group>
+      <ReaderPanelHeader
+        title="Library"
+        subtitle="Recent saves and ingest status."
+        rightSlot={
+          <Button
+            variant="subtle"
+            size="xs"
+            color="pink"
+            onClick={onRefresh}
+            loading={isRefreshing}
+          >
+            Refresh List
+          </Button>
+        }
+      />
       <StatsStrip stats={stats} />
       {body}
     </ReaderPanel>

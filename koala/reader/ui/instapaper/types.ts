@@ -4,8 +4,6 @@ export type ReaderIngestStatus =
   | "ready"
   | "error";
 
-export type ReaderLanguage = "ko" | "en" | "other";
-
 export type InstapaperConnectionStatus = {
   connected: boolean;
   username: string | null;
@@ -16,8 +14,6 @@ export type InstapaperLocalArticle = {
   publicId: string;
   title: string;
   ingestStatus: ReaderIngestStatus;
-  sourceLang: ReaderLanguage;
-  translated: boolean;
   createdAt: Date;
   instapaperBookmarkId: string | null;
 };

@@ -161,7 +161,6 @@ export const createReaderIngestTask = (): WorkerTask => {
               slot,
               jobId: job.id,
               processingMs,
-              translated: saved.translated,
               ingestStatus: saved.ingestStatus,
               normalizedHost: hostnameFromUrl(saved.normalizedUrl),
             });

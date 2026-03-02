@@ -5,7 +5,13 @@ import {
   readerDecorStyle,
   readerDisplayFont,
   readerFrameStyle,
+  readerHeadingColor,
+  readerPageContainerStyle,
+  readerPageSectionGap,
+  readerPanelGap,
   readerPanelStyle,
+  readerPanelSubtitleStyle,
+  readerPanelTitleStyle,
 } from "./theme";
 
 type ReaderPageFrameProps = {
@@ -18,8 +24,8 @@ export function ReaderPageFrame({
   size = "lg",
 }: ReaderPageFrameProps) {
   return (
-    <Container size={size} mt="xl" pb="xl">
-      <Stack gap="lg" style={readerFrameStyle}>
+    <Container size={size} style={readerPageContainerStyle}>
+      <Stack gap={readerPageSectionGap} style={readerFrameStyle}>
         <Box style={readerDecorStyle} />
         {children}
       </Stack>
@@ -39,14 +45,16 @@ export function ReaderPageHeader({
   rightSlot,
 }: ReaderPageHeaderProps) {
   return (
-    <Group justify="space-between" align="flex-end" wrap="wrap" gap="sm">
-      <Stack gap={4}>
+    <Group justify="space-between" align="flex-start" wrap="wrap" gap="sm">
+      <Stack gap={4} style={{ flex: "1 1 440px", minWidth: 0 }}>
         <Title
           order={2}
           style={{
             fontFamily: readerDisplayFont,
-            color: "#4b2f3f",
+            color: readerHeadingColor,
             letterSpacing: "0.01em",
+            lineHeight: 1.15,
+            fontSize: "clamp(1.35rem, 2.7vw, 2rem)",
           }}
         >
           {title}
@@ -54,9 +62,10 @@ export function ReaderPageHeader({
         <Text
           size="sm"
           style={{
-            color: "#7c5a69",
+            ...readerPanelSubtitleStyle,
             fontFamily: readerBodyFont,
             maxWidth: 620,
+            lineHeight: 1.5,
           }}
         >
           {subtitle}
@@ -69,8 +78,44 @@ export function ReaderPageHeader({
 
 type ReaderPanelProps = {
   children: React.ReactNode;
+  gap?: number | string;
 };
 
-export function ReaderPanel({ children }: ReaderPanelProps) {
-  return <Stack style={readerPanelStyle}>{children}</Stack>;
+export function ReaderPanel({
+  children,
+  gap = readerPanelGap,
+}: ReaderPanelProps) {
+  return (
+    <Stack gap={gap} style={readerPanelStyle}>
+      {children}
+    </Stack>
+  );
+}
+
+type ReaderPanelHeaderProps = {
+  title: string;
+  subtitle?: string;
+  rightSlot?: React.ReactNode;
+};
+
+export function ReaderPanelHeader({
+  title,
+  subtitle,
+  rightSlot,
+}: ReaderPanelHeaderProps) {
+  return (
+    <Group justify="space-between" align="flex-start" wrap="wrap" gap="xs">
+      <Stack gap={3} style={{ flex: "1 1 240px", minWidth: 0 }}>
+        <Text size="sm" style={readerPanelTitleStyle}>
+          {title}
+        </Text>
+        {subtitle && (
+          <Text size="xs" style={readerPanelSubtitleStyle}>
+            {subtitle}
+          </Text>
+        )}
+      </Stack>
+      {rightSlot}
+    </Group>
+  );
 }

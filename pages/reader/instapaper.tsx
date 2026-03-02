@@ -3,14 +3,14 @@ import {
   ReaderPageFrame,
   ReaderPageHeader,
   ReaderPanel,
+  ReaderPanelHeader,
 } from "@/koala/reader/ui/layout";
 import {
   formatReaderDateTime,
-  readerBodyFont,
+  readerHeadingColor,
   readerIngestLabel,
   readerIngestTone,
-  readerLanguageLabel,
-  readerSubtleCardStyle,
+  readerListRowStyle,
 } from "@/koala/reader/ui/theme";
 import { useInstapaperControls } from "@/koala/reader/ui/instapaper/use-instapaper-controls";
 import type {
@@ -66,7 +66,7 @@ function bookmarkStatusText(bookmark: InstapaperUnreadBookmark): string {
   }
 
   const article = bookmark.localArticle;
-  return `${readerLanguageLabel(article.sourceLang)} · ${readerIngestLabel(article.ingestStatus)}`;
+  return readerIngestLabel(article.ingestStatus);
 }
 
 type ConnectionPanelProps = {
@@ -119,42 +119,38 @@ function ConnectionPanel({
   if (!connection?.connected) {
     return (
       <ReaderPanel>
-        <Stack gap="xs">
-          <Text fw={700} size="sm" style={{ color: "#4f3241" }}>
-            Connect Instapaper
-          </Text>
-          <Text size="sm" c="dimmed">
-            Your password is used only to obtain access tokens. Koala
-            stores encrypted tokens, not your password.
-          </Text>
-          <Group align="flex-end" wrap="wrap" gap="xs">
-            <TextInput
-              label="Username"
-              placeholder="you@example.com"
-              value={username}
-              onChange={(event) =>
-                onUsernameChange(event.currentTarget.value)
-              }
-              style={{ flex: "1 1 220px" }}
-            />
-            <PasswordInput
-              label="Password"
-              placeholder="Instapaper password"
-              value={password}
-              onChange={(event) =>
-                onPasswordChange(event.currentTarget.value)
-              }
-              style={{ flex: "1 1 220px" }}
-            />
-            <Button
-              color="pink"
-              loading={isConnecting}
-              onClick={onConnect}
-            >
-              Connect
-            </Button>
-          </Group>
-        </Stack>
+        <ReaderPanelHeader
+          title="Connect Instapaper"
+          subtitle="Your password is used only to obtain access tokens. Koala stores encrypted tokens, not your password."
+        />
+        <Group align="flex-end" wrap="wrap" gap="xs">
+          <TextInput
+            label="Username"
+            placeholder="you@example.com"
+            value={username}
+            onChange={(event) =>
+              onUsernameChange(event.currentTarget.value)
+            }
+            style={{ flex: "1 1 220px" }}
+          />
+          <PasswordInput
+            label="Password"
+            placeholder="Instapaper password"
+            value={password}
+            onChange={(event) =>
+              onPasswordChange(event.currentTarget.value)
+            }
+            style={{ flex: "1 1 220px" }}
+          />
+          <Button
+            color="pink"
+            loading={isConnecting}
+            onClick={onConnect}
+            style={{ minWidth: 108 }}
+          >
+            Connect
+          </Button>
+        </Group>
       </ReaderPanel>
     );
   }
@@ -166,46 +162,42 @@ function ConnectionPanel({
 
   return (
     <ReaderPanel>
-      <Stack gap="xs">
-        <Text fw={700} size="sm" style={{ color: "#4f3241" }}>
-          Connected as {usernameLabel}
-        </Text>
-        <Text size="sm" c="dimmed" style={{ fontFamily: readerBodyFont }}>
-          Token updated: {updatedAtLabel}
-        </Text>
-        <Group gap="xs" wrap="wrap">
-          <Button
-            color="pink"
-            loading={isLoadingUnread}
-            onClick={onLoadUnread}
-          >
-            Load Unread
-          </Button>
-          <Button
-            variant="light"
-            color="pink"
-            loading={isImportingUnread}
-            onClick={onImportUnread}
-          >
-            Import Unread to Koala
-          </Button>
-          <Button
-            variant="subtle"
-            color="red"
-            loading={isDisconnecting}
-            onClick={onDisconnect}
-          >
-            Disconnect
-          </Button>
-        </Group>
-        <Checkbox
-          label="Archive original Instapaper bookmark after successful export"
-          checked={archiveOriginal}
-          onChange={(event) =>
-            onArchiveOriginalChange(event.currentTarget.checked)
-          }
-        />
-      </Stack>
+      <ReaderPanelHeader
+        title={`Connected as ${usernameLabel}`}
+        subtitle={`Token updated: ${updatedAtLabel}`}
+      />
+      <Group gap="xs" wrap="wrap">
+        <Button
+          color="pink"
+          loading={isLoadingUnread}
+          onClick={onLoadUnread}
+        >
+          Load Unread
+        </Button>
+        <Button
+          variant="light"
+          color="pink"
+          loading={isImportingUnread}
+          onClick={onImportUnread}
+        >
+          Import Unread to Koala
+        </Button>
+        <Button
+          variant="subtle"
+          color="red"
+          loading={isDisconnecting}
+          onClick={onDisconnect}
+        >
+          Disconnect
+        </Button>
+      </Group>
+      <Checkbox
+        label="Archive original Instapaper bookmark after successful export"
+        checked={archiveOriginal}
+        onChange={(event) =>
+          onArchiveOriginalChange(event.currentTarget.checked)
+        }
+      />
     </ReaderPanel>
   );
 }
@@ -223,33 +215,32 @@ function ImportSummaryCard({
 
   return (
     <ReaderPanel>
-      <Stack gap="xs">
-        <Group gap={6} wrap="wrap">
-          <Badge color="teal" variant="light">
-            Imported {summary.imported}
-          </Badge>
-          <Badge color="yellow" variant="light">
-            Duplicates {summary.duplicates}
-          </Badge>
-          <Badge color="gray" variant="light">
-            Invalid URLs {summary.invalidUrls}
-          </Badge>
-          <Badge color="red" variant="light">
-            Failed {summary.failed}
-          </Badge>
-        </Group>
-        {errors.length > 0 && (
-          <Stack gap={4}>
-            {errors.map((errorMessage, index) => {
-              return (
-                <Text key={`${errorMessage}-${index}`} size="sm" c="red">
-                  {errorMessage}
-                </Text>
-              );
-            })}
-          </Stack>
-        )}
-      </Stack>
+      <ReaderPanelHeader title="Last Import Summary" />
+      <Group gap={6} wrap="wrap">
+        <Badge color="teal" variant="light">
+          Imported {summary.imported}
+        </Badge>
+        <Badge color="yellow" variant="light">
+          Duplicates {summary.duplicates}
+        </Badge>
+        <Badge color="gray" variant="light">
+          Invalid URLs {summary.invalidUrls}
+        </Badge>
+        <Badge color="red" variant="light">
+          Failed {summary.failed}
+        </Badge>
+      </Group>
+      {errors.length > 0 && (
+        <Stack gap={4}>
+          {errors.map((errorMessage, index) => {
+            return (
+              <Text key={`${errorMessage}-${index}`} size="sm" c="red">
+                {errorMessage}
+              </Text>
+            );
+          })}
+        </Stack>
+      )}
     </ReaderPanel>
   );
 }
@@ -281,17 +272,16 @@ function BookmarkRow({
     localArticle && exportingPublicId === localArticle.publicId;
 
   return (
-    <Stack
-      gap={6}
-      pt={withDivider ? "sm" : 0}
-      mt={withDivider ? "sm" : 0}
-      style={withDivider ? { borderTop: "1px solid #efd8e4" } : undefined}
-    >
+    <Stack style={readerListRowStyle(withDivider)}>
       <Anchor
         href={bookmark.url}
         target="_blank"
         rel="noreferrer"
-        style={{ fontWeight: 700, color: "#533241", lineHeight: 1.35 }}
+        style={{
+          fontWeight: 700,
+          color: readerHeadingColor,
+          lineHeight: 1.35,
+        }}
       >
         {bookmark.title}
       </Anchor>
@@ -314,7 +304,7 @@ function BookmarkRow({
       )}
 
       {localArticle && (
-        <Group gap="xs" wrap="wrap" style={readerSubtleCardStyle}>
+        <Group gap="xs" wrap="wrap">
           <Anchor
             component={Link}
             href={`/reader/${localArticle.publicId}`}
@@ -371,26 +361,22 @@ function BookmarksCard({
 
   return (
     <ReaderPanel>
-      <Group justify="space-between" align="center" wrap="wrap">
-        <Group gap="xs" align="center">
-          <Text fw={700} size="sm" style={{ color: "#4f3241" }}>
-            Unread Bookmarks
-          </Text>
-          <Text size="xs" c="dimmed">
-            {bookmarks.length} loaded
-          </Text>
-        </Group>
-        <Button
-          size="compact-sm"
-          color="pink"
-          variant="light"
-          loading={isExportingAll}
-          disabled={exportableCount === 0}
-          onClick={onExportAll}
-        >
-          {exportAllLabel}
-        </Button>
-      </Group>
+      <ReaderPanelHeader
+        title="Unread Bookmarks"
+        subtitle={`${bookmarks.length} loaded`}
+        rightSlot={
+          <Button
+            size="compact-sm"
+            color="pink"
+            variant="light"
+            loading={isExportingAll}
+            disabled={exportableCount === 0}
+            onClick={onExportAll}
+          >
+            {exportAllLabel}
+          </Button>
+        }
+      />
 
       {bookmarks.length === 0 && (
         <Text size="sm" c="dimmed">

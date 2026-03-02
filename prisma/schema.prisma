@@ -171,12 +171,6 @@ model WritingSubmission {
   @@index([userId, deckId, createdAt])
 }
 
-enum ReaderSourceLanguage {
-  KO
-  EN
-  OTHER
-}
-
 enum ReaderSaveOrigin {
   DASHBOARD
   BOOKMARKLET
@@ -230,8 +224,6 @@ model ReaderArticle {
   inputKind     ReaderInputKind    @default(URL)
   title         String             @db.Text
   description   String             @db.Text
-  sourceLang    ReaderSourceLanguage
-  translated    Boolean            @default(false)
   saveOrigin    ReaderSaveOrigin   @default(DASHBOARD)
   ingestStatus  ReaderIngestStatus @default(PENDING)
   ingestError   String             @default("") @db.Text

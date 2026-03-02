@@ -20,8 +20,6 @@ import type {
 } from "@/koala/reader/save-article";
 import { procedure } from "../trpc-procedure";
 
-const readerLanguageSchema = z.enum(["ko", "en", "other"]);
-
 const readerArticleSchema = z.object({
   id: z.number(),
   publicId: z.string(),
@@ -29,8 +27,6 @@ const readerArticleSchema = z.object({
   normalizedUrl: z.string().nullable(),
   inputKind: z.enum(["url", "raw"]),
   description: z.string(),
-  sourceLang: readerLanguageSchema,
-  translated: z.boolean(),
   ingestStatus: z.enum(["pending", "in_progress", "ready", "error"]),
   ingestError: z.string(),
   createdAt: z.date(),
@@ -87,20 +83,6 @@ const refreshReaderArticleOutputSchema = z.object({
   article: readerArticleSchema,
 });
 
-const mapSourceLanguage = (
-  sourceLang: "KO" | "EN" | "OTHER",
-): "ko" | "en" | "other" => {
-  if (sourceLang === "KO") {
-    return "ko";
-  }
-
-  if (sourceLang === "EN") {
-    return "en";
-  }
-
-  return "other";
-};
-
 const mapIngestStatus = (
   status: "PENDING" | "IN_PROGRESS" | "READY" | "ERROR",
 ): ReaderIngestState => {
@@ -135,8 +117,6 @@ const mapSavedArticle = (article: SavedReaderArticle) => {
     normalizedUrl: article.normalizedUrl,
     inputKind: article.inputKind,
     description: article.description,
-    sourceLang: article.sourceLang,
-    translated: article.translated,
     ingestStatus: article.ingestStatus,
     ingestError: article.ingestError,
     createdAt: article.createdAt,
@@ -354,8 +334,6 @@ export const listReaderArticlesRoute = procedure
         normalizedUrl: true,
         inputKind: true,
         description: true,
-        sourceLang: true,
-        translated: true,
         ingestStatus: true,
         ingestError: true,
         createdAt: true,
@@ -370,8 +348,6 @@ export const listReaderArticlesRoute = procedure
         normalizedUrl: article.normalizedUrl,
         inputKind: mapInputKind(article.inputKind),
         description: article.description,
-        sourceLang: mapSourceLanguage(article.sourceLang),
-        translated: article.translated,
         ingestStatus: mapIngestStatus(article.ingestStatus),
         ingestError: article.ingestError,
         createdAt: article.createdAt,

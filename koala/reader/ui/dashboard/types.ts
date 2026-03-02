@@ -5,8 +5,6 @@ export type ReaderArticleSummary = {
   normalizedUrl: string | null;
   inputKind: "url" | "raw";
   description: string;
-  sourceLang: "ko" | "en" | "other";
-  translated: boolean;
   ingestStatus: "pending" | "in_progress" | "ready" | "error";
   ingestError: string;
   createdAt: Date;

@@ -3,7 +3,6 @@ import {
   ReaderIngestStatus,
   ReaderInputKind,
   ReaderSaveOrigin,
-  ReaderSourceLanguage,
 } from "@prisma/client";
 import { prismaClient } from "@/koala/prisma-client";
 import {
@@ -17,7 +16,6 @@ import {
   tidyKoreanArticleMarkdown,
 } from "@/koala/reader/language";
 
-export type ReaderLanguage = "ko" | "en" | "other";
 export type ReaderIngestState =
   | "pending"
   | "in_progress"
@@ -38,8 +36,6 @@ const readerArticleSummarySelect = {
   normalizedUrl: true,
   inputKind: true,
   description: true,
-  sourceLang: true,
-  translated: true,
   ingestStatus: true,
   ingestError: true,
   createdAt: true,
@@ -84,8 +80,6 @@ export type SavedReaderArticle = {
   normalizedUrl: string | null;
   inputKind: ReaderInputKindValue;
   description: string;
-  sourceLang: ReaderLanguage;
-  translated: boolean;
   ingestStatus: ReaderIngestState;
   ingestError: string;
   createdAt: Date;
@@ -114,42 +108,12 @@ type ProcessedReaderArticle = {
   normalizedUrl: string;
   title: string;
   description: string;
-  sourceLang: ReaderLanguage;
-  translated: boolean;
   contentText: string;
   contentHtml: string;
 };
 
 const READER_ERROR_LENGTH_LIMIT = 1800;
 const READER_RAW_TEXT_LENGTH_LIMIT = 240000;
-
-const toReaderSourceLanguage = (
-  value: ReaderLanguage,
-): ReaderSourceLanguage => {
-  if (value === "ko") {
-    return "KO";
-  }
-
-  if (value === "en") {
-    return "EN";
-  }
-
-  return "OTHER";
-};
-
-const fromReaderSourceLanguage = (
-  value: ReaderSourceLanguage,
-): ReaderLanguage => {
-  if (value === "KO") {
-    return "ko";
-  }
-
-  if (value === "EN") {
-    return "en";
-  }
-
-  return "other";
-};
 
 const fromReaderIngestStatus = (
   value: ReaderIngestStatus,
@@ -314,8 +278,6 @@ const mapSavedArticle = (
     normalizedUrl: article.normalizedUrl,
     inputKind: fromReaderInputKind(article.inputKind),
     description: article.description,
-    sourceLang: fromReaderSourceLanguage(article.sourceLang),
-    translated: article.translated,
     ingestStatus: fromReaderIngestStatus(article.ingestStatus),
     ingestError: article.ingestError,
     createdAt: article.createdAt,
@@ -414,7 +376,6 @@ const processReaderArticleText = async (
     );
   }
 
-  const translated = false;
   let koreanText = extractedArticle;
 
   try {
@@ -440,7 +401,6 @@ const processReaderArticleText = async (
   logIngestInfo("process-complete", {
     requestHost,
     sourceLanguage,
-    translated,
     totalMs: Date.now() - totalStartedAtMs,
   });
 
@@ -448,8 +408,6 @@ const processReaderArticleText = async (
     normalizedUrl: snapshot.normalizedUrl,
     title: chooseSavedTitle(snapshot.title, suggestedTitle),
     description: snapshot.description,
-    sourceLang: sourceLanguage,
-    translated,
     contentText: koreanText,
     contentHtml: plainTextToHtmlParagraphs(koreanText),
   };
@@ -481,8 +439,6 @@ export const queueReaderArticle = async (
       inputKind: "URL",
       title: queuedTitleFor(normalizedRequestUrl, input.suggestedTitle),
       description: "",
-      sourceLang: "OTHER",
-      translated: false,
       saveOrigin,
       ingestStatus: "PENDING",
       ingestError: "",
@@ -512,8 +468,6 @@ export const saveReaderRawTextArticle = async (
       inputKind: "RAW",
       title,
       description: "",
-      sourceLang: "OTHER",
-      translated: false,
       saveOrigin: "DASHBOARD",
       ingestStatus: "READY",
       ingestError: "",
@@ -543,8 +497,6 @@ export const refreshReaderArticle = async (
       title: true,
       normalizedUrl: true,
       description: true,
-      sourceLang: true,
-      translated: true,
       ingestError: true,
       createdAt: true,
     },
@@ -577,8 +529,6 @@ export const refreshReaderArticle = async (
       ingestError: "",
       ingestStartedAt: null,
       ingestedAt: null,
-      sourceLang: "OTHER",
-      translated: false,
       description: "",
       contentText: "",
       contentHtml: "",
@@ -656,8 +606,6 @@ export const processClaimedReaderArticle = async (
       normalizedUrl: processed.normalizedUrl,
       title: processed.title,
       description: processed.description,
-      sourceLang: toReaderSourceLanguage(processed.sourceLang),
-      translated: processed.translated,
       contentText: processed.contentText,
       contentHtml: processed.contentHtml,
       ingestStatus: "READY",

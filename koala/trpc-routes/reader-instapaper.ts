@@ -1,4 +1,4 @@
-import { ReaderIngestStatus, ReaderSourceLanguage } from "@prisma/client";
+import { ReaderIngestStatus } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -33,7 +33,6 @@ const readerIngestStatusSchema = z.enum([
   "ready",
   "error",
 ]);
-const readerLanguageSchema = z.enum(["ko", "en", "other"]);
 
 const instapaperConnectionSchema = z.object({
   connected: z.boolean(),
@@ -54,8 +53,6 @@ const localReaderArticleSchema = z.object({
   publicId: z.string(),
   title: z.string(),
   ingestStatus: readerIngestStatusSchema,
-  sourceLang: readerLanguageSchema,
-  translated: z.boolean(),
   createdAt: z.date(),
   instapaperBookmarkId: z.string().nullable(),
 });
@@ -118,8 +115,6 @@ type LocalReaderArticleRecord = {
   title: string;
   normalizedUrl: string | null;
   ingestStatus: ReaderIngestStatus;
-  sourceLang: ReaderSourceLanguage;
-  translated: boolean;
   createdAt: Date;
   instapaperBookmarkId: string | null;
 };
@@ -160,20 +155,6 @@ const mapIngestStatus = (
   }
 
   return "error";
-};
-
-const mapSourceLanguage = (
-  sourceLang: ReaderSourceLanguage,
-): "ko" | "en" | "other" => {
-  if (sourceLang === "KO") {
-    return "ko";
-  }
-
-  if (sourceLang === "EN") {
-    return "en";
-  }
-
-  return "other";
 };
 
 const isIgnoredInstapaperUrl = (value: string): boolean => {
@@ -300,8 +281,6 @@ const listArticlesByNormalizedUrl = async (
       title: true,
       normalizedUrl: true,
       ingestStatus: true,
-      sourceLang: true,
-      translated: true,
       createdAt: true,
       instapaperBookmarkId: true,
     },
@@ -360,8 +339,6 @@ const mapLocalReaderArticle = (record: LocalReaderArticleRecord) => {
     publicId: record.publicId,
     title: record.title,
     ingestStatus: mapIngestStatus(record.ingestStatus),
-    sourceLang: mapSourceLanguage(record.sourceLang),
-    translated: record.translated,
     createdAt: record.createdAt,
     instapaperBookmarkId: record.instapaperBookmarkId,
   };
