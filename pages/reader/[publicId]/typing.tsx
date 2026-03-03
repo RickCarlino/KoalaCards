@@ -9,16 +9,14 @@ import {
   readerBodyFont,
   readerDisplayFont,
   readerHeadingColor,
-  readerIngestLabel,
-  readerIngestTone,
 } from "@/koala/reader/ui/theme";
 import {
   Anchor,
-  Badge,
   Button,
   Group,
   Progress,
   Stack,
+  Switch,
   Text,
   Textarea,
 } from "@mantine/core";
@@ -60,9 +58,6 @@ type PromptWindow = {
 };
 
 type TypingMetrics = {
-  correctChars: number;
-  mistakes: number;
-  accuracy: number;
   wordsPerMinute: number;
   progress: number;
 };
@@ -144,9 +139,56 @@ function collapseWhitespace(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
 
+function splitLineIntoSentences(line: string): string[] {
+  const matches = line.match(/[^.!?。！？]+[.!?。！？]?/g);
+  if (!matches) {
+    return [];
+  }
+
+  return matches
+    .map((sentence) => sentence.trim())
+    .filter((sentence) => sentence.length > 0);
+}
+
+function splitPromptChunks(value: string): string[] {
+  const lines = value.split("\n");
+  const chunks: string[] = [];
+
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+    if (!trimmedLine) {
+      continue;
+    }
+
+    const sentences = splitLineIntoSentences(trimmedLine);
+    if (sentences.length > 0) {
+      chunks.push(...sentences);
+      continue;
+    }
+
+    chunks.push(trimmedLine);
+  }
+
+  return chunks;
+}
+
+function shuffleTextChunks(chunks: string[]): string[] {
+  const shuffled = [...chunks];
+
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    const current = shuffled[index];
+    shuffled[index] = shuffled[swapIndex];
+    shuffled[swapIndex] = current;
+  }
+
+  return shuffled;
+}
+
 function buildTypingPrompt(
   contentText: string,
   inputKind: ReaderInputKind,
+  shuffleSentences: boolean,
 ): string {
   const normalized = normalizeLineBreaks(contentText);
   if (!normalized) {
@@ -155,7 +197,15 @@ function buildTypingPrompt(
 
   const unformattedText =
     inputKind === "url" ? stripMarkdownSyntax(normalized) : normalized;
-  const promptText = collapseWhitespace(unformattedText);
+  const chunks = splitPromptChunks(unformattedText);
+  if (chunks.length === 0) {
+    return "";
+  }
+
+  const promptChunks = shuffleSentences
+    ? shuffleTextChunks(chunks)
+    : chunks;
+  const promptText = collapseWhitespace(promptChunks.join(" "));
 
   return promptText.slice(0, PROMPT_MAX_CHARACTERS);
 }
@@ -178,37 +228,18 @@ function countCorrectChars(prompt: string, typed: string): number {
 }
 
 function resolveTypingStatus(
-  startedAt: number | null,
-  finishedAt: number | null,
   typedChars: number,
   promptChars: number,
 ): TypingStatus {
-  if (finishedAt) {
-    return "finished";
-  }
-
-  if (!startedAt || typedChars === 0 || promptChars === 0) {
+  if (typedChars === 0 || promptChars === 0) {
     return "idle";
   }
 
+  if (typedChars >= promptChars) {
+    return "finished";
+  }
+
   return "in_progress";
-}
-
-function computeElapsedMs(
-  status: TypingStatus,
-  startedAt: number | null,
-  finishedAt: number | null,
-  nowMs: number,
-): number {
-  if (!startedAt || status === "idle") {
-    return 0;
-  }
-
-  if (status === "finished" && finishedAt) {
-    return Math.max(finishedAt - startedAt, 1);
-  }
-
-  return Math.max(nowMs - startedAt, 1);
 }
 
 function formatTimer(elapsedMs: number): string {
@@ -233,17 +264,11 @@ function calculateTypingMetrics(
   elapsedMs: number,
 ): TypingMetrics {
   const correctChars = countCorrectChars(promptText, typedText);
-  const mistakes = Math.max(typedText.length - correctChars, 0);
-  const accuracyBase = typedText.length > 0 ? typedText.length : 1;
-  const accuracy = toPercent(correctChars, accuracyBase);
   const minutes = elapsedMs / 60000;
   const wordsPerMinute = minutes > 0 ? correctChars / 5 / minutes : 0;
   const progress = toPercent(typedText.length, promptText.length);
 
   return {
-    correctChars,
-    mistakes,
-    accuracy,
     wordsPerMinute,
     progress,
   };
@@ -331,250 +356,213 @@ function tokenStyle(state: PromptTokenState): React.CSSProperties {
   };
 }
 
-function statusTitle(status: TypingStatus): string {
-  if (status === "finished") {
-    return "Run complete";
+function typingFocusLabel(
+  typingStatus: TypingStatus,
+  isInputFocused: boolean,
+): string {
+  if (typingStatus === "finished") {
+    return "Completed";
   }
 
-  if (status === "in_progress") {
-    return "Typing now";
+  if (typingStatus === "in_progress" && isInputFocused) {
+    return "Focused";
   }
 
-  return "Ready to begin";
+  if (typingStatus === "in_progress") {
+    return "Paused";
+  }
+
+  return "Ready";
 }
 
-type TypingHeaderCardProps = {
+function typingFocusColor(
+  typingStatus: TypingStatus,
+  isInputFocused: boolean,
+): string {
+  if (typingStatus === "finished") {
+    return "#6f4a74";
+  }
+
+  if (typingStatus === "in_progress" && isInputFocused) {
+    return "#2f8b63";
+  }
+
+  if (typingStatus === "in_progress") {
+    return "#ab6a20";
+  }
+
+  return "#795564";
+}
+
+type TypingStagePanelProps = {
   article: PublicReaderArticle;
-  status: TypingStatus;
+  value: string;
+  disabled: boolean;
+  shuffleSentences: boolean;
+  elapsedMs: number;
+  metrics: TypingMetrics;
+  typedChars: number;
+  promptChars: number;
+  typingStatus: TypingStatus;
+  isInputFocused: boolean;
+  promptWindow: PromptWindow;
+  onChange: (nextValue: string) => void;
+  onShuffleSentencesChange: (nextValue: boolean) => void;
+  onRestart: () => void;
+  onFocus: () => void;
+  onBlur: () => void;
+  inputRef: React.RefObject<HTMLTextAreaElement>;
 };
 
-function TypingHeaderCard({ article, status }: TypingHeaderCardProps) {
-  const ingestLabel = readerIngestLabel(article.ingestStatus);
-  const ingestTone = readerIngestTone(article.ingestStatus);
+function TypingStagePanel({
+  article,
+  value,
+  disabled,
+  shuffleSentences,
+  elapsedMs,
+  metrics,
+  typedChars,
+  promptChars,
+  typingStatus,
+  isInputFocused,
+  promptWindow,
+  onChange,
+  onShuffleSentencesChange,
+  onRestart,
+  onFocus,
+  onBlur,
+  inputRef,
+}: TypingStagePanelProps) {
+  const progress = Math.min(Math.max(metrics.progress, 0), 100);
+  const hasStarted = typedChars > 0;
+  const focusLabel = typingFocusLabel(typingStatus, isInputFocused);
+  const focusColor = typingFocusColor(typingStatus, isInputFocused);
 
   return (
     <ReaderPanel>
       <Group justify="space-between" align="center" wrap="wrap" gap="sm">
-        <Group gap="sm" wrap="wrap">
-          <Anchor
-            component={Link}
-            href={`/reader/${article.publicId}`}
-            size="sm"
+        <Anchor
+          component={Link}
+          href={`/reader/${article.publicId}`}
+          size="sm"
+        >
+          ← Back to article
+        </Anchor>
+        <Group gap="xs" wrap="wrap">
+          <Text
+            size="xs"
+            style={{ fontFamily: readerBodyFont, color: "#7b5d6a" }}
           >
-            ← Reading view
-          </Anchor>
-          <Anchor component={Link} href="/reader" size="sm">
-            Reader Home
-          </Anchor>
+            Added {formatReaderDateTime(new Date(article.createdAt))}
+          </Text>
+          {article.normalizedUrl && (
+            <Anchor
+              href={article.normalizedUrl}
+              target="_blank"
+              rel="noreferrer"
+              size="xs"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+              }}
+            >
+              Source
+              <IconExternalLink size={13} stroke={1.8} />
+            </Anchor>
+          )}
         </Group>
-        {article.normalizedUrl && (
-          <Anchor
-            href={article.normalizedUrl}
-            target="_blank"
-            rel="noreferrer"
-            size="sm"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-            }}
-          >
-            Source
-            <IconExternalLink size={14} stroke={1.8} />
-          </Anchor>
-        )}
       </Group>
-      <Stack gap={8}>
+      <Stack gap={10}>
         <Text
           style={{
             fontFamily: readerDisplayFont,
             color: readerHeadingColor,
             fontWeight: 700,
             lineHeight: 1.25,
-            fontSize: "clamp(1.35rem, 3vw, 1.9rem)",
+            fontSize: "clamp(1.25rem, 2.5vw, 1.7rem)",
           }}
         >
           {article.title}
         </Text>
-        <Group gap={6} wrap="wrap">
-          <Badge variant="light" color={ingestTone}>
-            {ingestLabel}
-          </Badge>
-          <Badge variant="light" color="pink">
-            {statusTitle(status)}
-          </Badge>
-          <Text
-            size="xs"
-            c="dimmed"
-            style={{ fontFamily: readerBodyFont }}
-          >
-            Added {formatReaderDateTime(new Date(article.createdAt))}
-          </Text>
-        </Group>
-      </Stack>
-    </ReaderPanel>
-  );
-}
-
-type TypingStatsPanelProps = {
-  elapsedMs: number;
-  metrics: TypingMetrics;
-  typedChars: number;
-  promptChars: number;
-};
-
-function TypingStatsPanel({
-  elapsedMs,
-  metrics,
-  typedChars,
-  promptChars,
-}: TypingStatsPanelProps) {
-  const progress = Math.min(Math.max(metrics.progress, 0), 100);
-
-  return (
-    <ReaderPanel>
-      <Group
-        justify="space-between"
-        align="flex-start"
-        wrap="wrap"
-        gap="md"
-      >
-        <Group gap="xs" wrap="wrap">
-          <Badge size="lg" variant="light" color="teal">
-            {metrics.wordsPerMinute.toFixed(1)} WPM
-          </Badge>
-          <Badge size="lg" variant="light" color="grape">
-            {metrics.accuracy.toFixed(1)}% accuracy
-          </Badge>
-          <Badge size="lg" variant="light" color="pink">
-            {formatTimer(elapsedMs)}
-          </Badge>
-        </Group>
-        <Text
-          size="sm"
-          style={{
-            fontFamily: readerBodyFont,
-            color: "#684b58",
-          }}
-        >
-          {typedChars} / {promptChars} chars · {metrics.correctChars}{" "}
-          correct · {metrics.mistakes} mistakes
-        </Text>
-      </Group>
-      <Progress
-        value={progress}
-        color="grape"
-        radius="xl"
-        size="md"
-        aria-label="Typing progress"
-      />
-    </ReaderPanel>
-  );
-}
-
-type TypingPromptPanelProps = {
-  promptWindow: PromptWindow;
-};
-
-function TypingPromptPanel({ promptWindow }: TypingPromptPanelProps) {
-  if (promptWindow.tokens.length === 0) {
-    return (
-      <ReaderPanel>
-        <Text size="sm" c="dimmed">
-          There is no prepared text available for typing.
-        </Text>
-      </ReaderPanel>
-    );
-  }
-
-  return (
-    <ReaderPanel>
-      <Stack gap={8}>
-        <Text
-          size="sm"
-          style={{
-            fontFamily: readerBodyFont,
-            color: "#73505f",
-          }}
-        >
-          Match the highlighted passage exactly, including punctuation.
-        </Text>
-        <div style={typingPromptContainerStyle} aria-live="polite">
-          <Text component="div" style={typingPromptTextStyle}>
-            {promptWindow.hasPrefix && (
-              <Text component="span" c="dimmed">
-                …{" "}
-              </Text>
-            )}
-            {promptWindow.tokens.map((token) => (
-              <Text
-                key={token.id}
-                component="span"
-                style={tokenStyle(token.state)}
-              >
-                {token.value}
-              </Text>
-            ))}
-            {promptWindow.hasSuffix && (
-              <Text component="span" c="dimmed">
-                {" "}
-                …
-              </Text>
-            )}
-          </Text>
-        </div>
-      </Stack>
-    </ReaderPanel>
-  );
-}
-
-type TypingInputPanelProps = {
-  value: string;
-  disabled: boolean;
-  onChange: (nextValue: string) => void;
-  onRestart: () => void;
-  inputRef: React.RefObject<HTMLTextAreaElement>;
-};
-
-function TypingInputPanel({
-  value,
-  disabled,
-  onChange,
-  onRestart,
-  inputRef,
-}: TypingInputPanelProps) {
-  return (
-    <ReaderPanel>
-      <Group justify="space-between" align="flex-end" wrap="wrap" gap="sm">
-        <Stack gap={2}>
+        <Group justify="space-between" align="center" wrap="wrap" gap="xs">
           <Text
             size="sm"
-            style={{ fontFamily: readerBodyFont, color: "#6b4f5d" }}
+            style={{
+              fontFamily: readerBodyFont,
+              fontWeight: 700,
+              color: focusColor,
+            }}
           >
-            Type in this box to start. Backspace and edits are allowed.
+            {focusLabel}
           </Text>
-        </Stack>
-        <Button variant="light" color="pink" onClick={onRestart}>
-          Restart run
-        </Button>
-      </Group>
+          {hasStarted && (
+            <Text
+              size="sm"
+              style={{ fontFamily: readerBodyFont, color: "#6f5160" }}
+            >
+              {formatTimer(elapsedMs)} · {typedChars}/{promptChars} chars ·{" "}
+              {metrics.wordsPerMinute.toFixed(1)} WPM
+            </Text>
+          )}
+        </Group>
+        <Progress
+          value={progress}
+          color="grape"
+          radius="xl"
+          size="sm"
+          aria-label="Typing progress"
+        />
+      </Stack>
+      <Text
+        size="sm"
+        style={{ fontFamily: readerBodyFont, color: "#6f4e5d" }}
+      >
+        Read each phrase for meaning, then type it exactly.
+      </Text>
+      <div style={typingPromptContainerStyle} aria-live="polite">
+        <Text component="div" style={typingPromptTextStyle}>
+          {promptWindow.hasPrefix && (
+            <Text component="span" c="dimmed">
+              …{" "}
+            </Text>
+          )}
+          {promptWindow.tokens.map((token) => (
+            <Text
+              key={token.id}
+              component="span"
+              style={tokenStyle(token.state)}
+            >
+              {token.value}
+            </Text>
+          ))}
+          {promptWindow.hasSuffix && (
+            <Text component="span" c="dimmed">
+              {" "}
+              …
+            </Text>
+          )}
+        </Text>
+      </div>
       <Textarea
         ref={inputRef}
-        label="Typing input"
+        label="Type the passage"
         autosize
-        minRows={5}
-        maxRows={10}
+        minRows={6}
+        maxRows={12}
         value={value}
         onChange={(event) => onChange(event.currentTarget.value)}
         disabled={disabled}
+        onFocus={onFocus}
+        onBlur={onBlur}
         spellCheck={false}
         autoCapitalize="off"
         autoCorrect="off"
-        placeholder="Start typing the passage here..."
+        placeholder="Start typing here..."
         styles={{
           input: {
             fontFamily: readerBodyFont,
-            lineHeight: 1.75,
+            lineHeight: 1.8,
             fontSize: "1rem",
           },
           label: {
@@ -583,6 +571,26 @@ function TypingInputPanel({
           },
         }}
       />
+      <Group justify="space-between" align="center" wrap="wrap" gap="sm">
+        <Switch
+          checked={shuffleSentences}
+          onChange={(event) =>
+            onShuffleSentencesChange(event.currentTarget.checked)
+          }
+          label="Shuffle sentences"
+          size="md"
+          color="grape"
+          styles={{
+            label: {
+              fontFamily: readerBodyFont,
+              color: "#6f4e5d",
+            },
+          }}
+        />
+        <Button variant="light" color="pink" onClick={onRestart}>
+          Restart
+        </Button>
+      </Group>
     </ReaderPanel>
   );
 }
@@ -590,9 +598,13 @@ function TypingInputPanel({
 function ProcessingPanel({
   status,
   ingestError,
+  publicId,
+  normalizedUrl,
 }: {
   status: PublicReaderArticle["ingestStatus"];
   ingestError: string;
+  publicId: string;
+  normalizedUrl: string | null;
 }) {
   if (status === "error") {
     return (
@@ -605,9 +617,24 @@ function ProcessingPanel({
             {ingestError}
           </Text>
         )}
-        <Text size="sm" c="dimmed">
-          Open the source article and try adding it again.
-        </Text>
+        <Group gap="sm" wrap="wrap">
+          <Anchor component={Link} href={`/reader/${publicId}`} size="sm">
+            Open reading view
+          </Anchor>
+          <Anchor component={Link} href="/reader" size="sm">
+            Back to Reader
+          </Anchor>
+          {normalizedUrl && (
+            <Anchor
+              href={normalizedUrl}
+              target="_blank"
+              rel="noreferrer"
+              size="sm"
+            >
+              Open source
+            </Anchor>
+          )}
+        </Group>
       </ReaderPanel>
     );
   }
@@ -616,10 +643,14 @@ function ProcessingPanel({
     return (
       <ReaderPanel>
         <Text c="dimmed">{pendingMessage(status)}</Text>
-        <Text size="sm" c="dimmed">
-          Refresh in a few seconds and start typing once this is marked
-          ready.
-        </Text>
+        <Group gap="sm" wrap="wrap">
+          <Anchor component={Link} href={`/reader/${publicId}`} size="sm">
+            Open reading view
+          </Anchor>
+          <Anchor component={Link} href="/reader" size="sm">
+            Back to Reader
+          </Anchor>
+        </Group>
       </ReaderPanel>
     );
   }
@@ -628,34 +659,75 @@ function ProcessingPanel({
 }
 
 type CompletionPanelProps = {
+  publicId: string;
+  reflectionText: string;
+  onReflectionChange: (nextValue: string) => void;
   onRestart: () => void;
 };
 
-function CompletionPanel({ onRestart }: CompletionPanelProps) {
+function CompletionPanel({
+  publicId,
+  reflectionText,
+  onReflectionChange,
+  onRestart,
+}: CompletionPanelProps) {
+  const reflectionWordCount = reflectionText.trim().length
+    ? reflectionText.trim().split(/\s+/).length
+    : 0;
+
   return (
     <ReaderPanel>
+      <Text
+        style={{
+          fontFamily: readerDisplayFont,
+          color: readerHeadingColor,
+          fontWeight: 700,
+          fontSize: "1.1rem",
+        }}
+      >
+        Comprehension Check
+      </Text>
+      <Text
+        size="sm"
+        style={{ fontFamily: readerBodyFont, color: "#735160" }}
+      >
+        Without looking back, write a one-sentence summary of what you
+        typed.
+      </Text>
+      <Textarea
+        label="Your takeaway"
+        value={reflectionText}
+        onChange={(event) => onReflectionChange(event.currentTarget.value)}
+        minRows={3}
+        autosize
+        placeholder="This passage is mainly about..."
+        styles={{
+          input: {
+            fontFamily: readerBodyFont,
+            lineHeight: 1.7,
+            fontSize: "0.98rem",
+          },
+          label: {
+            fontFamily: readerBodyFont,
+            color: readerHeadingColor,
+          },
+        }}
+      />
       <Group justify="space-between" align="center" wrap="wrap" gap="sm">
-        <Stack gap={2}>
-          <Text
-            style={{
-              fontFamily: readerDisplayFont,
-              color: readerHeadingColor,
-              fontWeight: 700,
-              fontSize: "1.1rem",
-            }}
-          >
-            Complete
-          </Text>
-          <Text
-            size="sm"
-            style={{ fontFamily: readerBodyFont, color: "#735160" }}
-          >
-            Nice run. Restart to practice the same passage again.
-          </Text>
-        </Stack>
-        <Button onClick={onRestart} color="grape" variant="filled">
-          Type again
-        </Button>
+        <Text
+          size="xs"
+          style={{ fontFamily: readerBodyFont, color: "#7a5968" }}
+        >
+          {reflectionWordCount} words
+        </Text>
+        <Group gap="sm" wrap="wrap">
+          <Anchor component={Link} href={`/reader/${publicId}`} size="sm">
+            Back to article
+          </Anchor>
+          <Button onClick={onRestart} color="grape" variant="filled">
+            Type again
+          </Button>
+        </Group>
       </Group>
     </ReaderPanel>
   );
@@ -664,47 +736,33 @@ function CompletionPanel({ onRestart }: CompletionPanelProps) {
 export default function ReaderTypingPage({
   article,
 }: InferGetServerSidePropsType<typeof getServerSideProps>) {
+  const [shuffleSentences, setShuffleSentences] = useState(false);
+  const [shuffleNonce, setShuffleNonce] = useState(0);
   const promptText = useMemo(
-    () => buildTypingPrompt(article.contentText, article.inputKind),
-    [article.contentText, article.inputKind],
+    () =>
+      buildTypingPrompt(
+        article.contentText,
+        article.inputKind,
+        shuffleSentences,
+      ),
+    [
+      article.contentText,
+      article.inputKind,
+      shuffleSentences,
+      shuffleNonce,
+    ],
   );
   const [typedText, setTypedText] = useState("");
-  const [startedAt, setStartedAt] = useState<number | null>(null);
-  const [finishedAt, setFinishedAt] = useState<number | null>(null);
-  const [nowMs, setNowMs] = useState(Date.now());
+  const [reflectionText, setReflectionText] = useState("");
+  const [elapsedMs, setElapsedMs] = useState(0);
+  const [isInputFocused, setIsInputFocused] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const typingStatus = resolveTypingStatus(
-    startedAt,
-    finishedAt,
     typedText.length,
     promptText.length,
   );
 
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
-
-  useEffect(() => {
-    if (typingStatus !== "in_progress") {
-      return;
-    }
-
-    const intervalId = window.setInterval(() => {
-      setNowMs(Date.now());
-    }, 250);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, [typingStatus]);
-
-  const elapsedMs = computeElapsedMs(
-    typingStatus,
-    startedAt,
-    finishedAt,
-    nowMs,
-  );
   const metrics = useMemo(
     () => calculateTypingMetrics(promptText, typedText, elapsedMs),
     [promptText, typedText, elapsedMs],
@@ -719,82 +777,144 @@ export default function ReaderTypingPage({
   const canType = isReady && hasPrompt;
   const inputDisabled = !canType || typingStatus === "finished";
 
+  useEffect(() => {
+    if (typingStatus !== "in_progress" || !isInputFocused) {
+      return;
+    }
+
+    let lastTickAt = Date.now();
+    const intervalId = window.setInterval(() => {
+      const now = Date.now();
+      const deltaMs = now - lastTickAt;
+      lastTickAt = now;
+      setElapsedMs((previous) => previous + deltaMs);
+    }, 200);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [typingStatus, isInputFocused]);
+
+  useEffect(() => {
+    if (!canType) {
+      return;
+    }
+
+    inputRef.current?.focus();
+  }, [canType]);
+
   const handleInputChange = (nextValue: string) => {
     if (!canType) {
       return;
     }
 
     const nextTyped = sanitizeTypedText(nextValue, promptText.length);
-    const hasInput = nextTyped.length > 0;
-    if (!hasInput) {
-      setTypedText("");
-      setStartedAt(null);
-      setFinishedAt(null);
-      return;
-    }
-
-    if (!startedAt) {
-      setStartedAt(Date.now());
-    }
-
     setTypedText(nextTyped);
-    const reachedEnd = nextTyped.length >= promptText.length;
-    if (reachedEnd && !finishedAt) {
-      setFinishedAt(Date.now());
+
+    if (nextTyped.length === 0) {
+      setElapsedMs(0);
+      setReflectionText("");
       return;
     }
 
-    if (!reachedEnd && finishedAt) {
-      setFinishedAt(null);
+    if (
+      nextTyped.length < promptText.length &&
+      reflectionText.length > 0
+    ) {
+      setReflectionText("");
     }
   };
 
   const handleRestart = () => {
     setTypedText("");
-    setStartedAt(null);
-    setFinishedAt(null);
-    setNowMs(Date.now());
+    setReflectionText("");
+    setElapsedMs(0);
+    if (shuffleSentences) {
+      setShuffleNonce((previous) => previous + 1);
+    }
     inputRef.current?.focus();
+  };
+
+  const handleShuffleSentencesChange = (nextValue: boolean) => {
+    setShuffleSentences(nextValue);
+    if (nextValue) {
+      setShuffleNonce((previous) => previous + 1);
+    }
+    setTypedText("");
+    setReflectionText("");
+    setElapsedMs(0);
+    setIsInputFocused(false);
+    inputRef.current?.focus();
+  };
+
+  const handleInputFocus = () => {
+    setIsInputFocused(true);
+  };
+
+  const handleInputBlur = () => {
+    setIsInputFocused(false);
   };
 
   return (
     <ReaderPageFrame>
       <ReaderPageHeader
-        title="Typing Practice"
-        subtitle="Prototype mode: race through this article passage and watch your speed, accuracy, and progress."
+        title="Comprehension Typing"
+        subtitle="Understand each phrase, then type it exactly. Speed is secondary."
       />
-      <TypingHeaderCard article={article} status={typingStatus} />
       {!isReady && (
         <ProcessingPanel
           status={article.ingestStatus}
           ingestError={article.ingestError}
+          publicId={article.publicId}
+          normalizedUrl={article.normalizedUrl}
         />
       )}
       {isReady && !hasPrompt && (
         <ReaderPanel>
-          <Text size="sm" c="dimmed">
+          <Text
+            size="sm"
+            c="dimmed"
+            style={{ fontFamily: readerBodyFont }}
+          >
             No text is available for typing in this article.
           </Text>
+          <Anchor
+            component={Link}
+            href={`/reader/${article.publicId}`}
+            size="sm"
+          >
+            Back to article
+          </Anchor>
         </ReaderPanel>
       )}
       {canType && (
         <>
-          <TypingStatsPanel
+          <TypingStagePanel
+            article={article}
+            value={typedText}
+            disabled={inputDisabled}
+            shuffleSentences={shuffleSentences}
             elapsedMs={elapsedMs}
             metrics={metrics}
             typedChars={typedText.length}
             promptChars={promptText.length}
-          />
-          <TypingPromptPanel promptWindow={promptWindow} />
-          <TypingInputPanel
-            value={typedText}
-            disabled={inputDisabled}
+            typingStatus={typingStatus}
+            isInputFocused={isInputFocused}
+            promptWindow={promptWindow}
             onChange={handleInputChange}
+            onShuffleSentencesChange={handleShuffleSentencesChange}
             onRestart={handleRestart}
+            onFocus={handleInputFocus}
+            onBlur={handleInputBlur}
             inputRef={inputRef}
           />
           {typingStatus === "finished" && (
-            <CompletionPanel onRestart={handleRestart} />
+            <CompletionPanel
+              publicId={article.publicId}
+              reflectionText={reflectionText}
+              onReflectionChange={setReflectionText}
+              onRestart={handleRestart}
+            />
           )}
         </>
       )}
