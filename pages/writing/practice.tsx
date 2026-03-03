@@ -125,6 +125,24 @@ const isSafeReturnTo = (value: string) =>
 const normalizeToken = (token: string) =>
   token.replace(/[.,!?;:]$/, "").toLowerCase();
 
+const appendTranscriptToEssay = (
+  previousEssay: string,
+  transcript: string,
+) => {
+  const nextTranscript = transcript.trim();
+  if (!nextTranscript) {
+    return previousEssay;
+  }
+
+  if (!previousEssay.trim()) {
+    return nextTranscript;
+  }
+
+  const needsSeparator = !/\s$/.test(previousEssay);
+  const separator = needsSeparator ? " " : "";
+  return `${previousEssay}${separator}${nextTranscript}`;
+};
+
 const shouldShowLemma = (definition: Definition) => {
   if (!definition.lemma) {
     return false;
@@ -1154,12 +1172,9 @@ export default function WritingPracticePage({
   );
 
   const handleTranscript = useCallback((transcript: string) => {
-    setEssay((previousEssay) => {
-      if (!previousEssay.trim()) {
-        return transcript;
-      }
-      return `${previousEssay.trimEnd()} ${transcript}`;
-    });
+    setEssay((previousEssay) =>
+      appendTranscriptToEssay(previousEssay, transcript),
+    );
     setHasVoiceTranscript(true);
     setPracticeMode("speaking");
   }, []);
