@@ -183,6 +183,12 @@ const getRemainingGoalCharacters = (progress: number, goal: number) =>
 
 const MAX_SPEECH_RECORDING_SECONDS = 60;
 
+const MICROPHONE_CAPTURE_CONSTRAINTS = {
+  autoGainControl: false,
+  echoCancellation: false,
+  noiseSuppression: false,
+} satisfies MediaTrackConstraints;
+
 const isPracticeMode = (value: string): value is PracticeMode =>
   value === "writing" || value === "speaking";
 
@@ -338,6 +344,12 @@ const getPreferredRecorderMimeType = (): string | null => {
   return "";
 };
 
+const hasLiveAudioTrack = (stream: MediaStream | null): boolean =>
+  Boolean(
+    stream?.active &&
+      stream.getAudioTracks().some((track) => track.readyState === "live"),
+  );
+
 async function transcribeBlob(
   blob: Blob,
   language: LangCode,
@@ -376,6 +388,7 @@ function useSpeechRecorder({
   onTranscript,
 }: UseSpeechRecorderOptions) {
   const recorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const startInFlightRef = useRef(false);
   const stopInFlightRef = useRef(false);
@@ -421,7 +434,6 @@ function useSpeechRecorder({
             type: recorder.mimeType,
           });
           chunksRef.current = [];
-          recorder.stream.getTracks().forEach((track) => track.stop());
           recorderRef.current = null;
           resolve(nextBlob);
         };
@@ -479,6 +491,22 @@ function useSpeechRecorder({
     }
   }, [hint, langCode, onTranscript]);
 
+  const getRecordingStream =
+    useCallback(async (): Promise<MediaStream> => {
+      const stream = streamRef.current;
+      if (stream && hasLiveAudioTrack(stream)) {
+        return stream;
+      }
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+      const nextStream = await navigator.mediaDevices.getUserMedia({
+        audio: MICROPHONE_CAPTURE_CONSTRAINTS,
+      });
+      streamRef.current = nextStream;
+      return nextStream;
+    }, []);
+
   const startRecording = useCallback(async () => {
     if (!isSupported || disabled || isTranscribing || isStarting) {
       return;
@@ -495,11 +523,8 @@ function useSpeechRecorder({
     setIsStarting(true);
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-      });
+      const stream = await getRecordingStream();
       if (recorderRef.current || stopInFlightRef.current) {
-        stream.getTracks().forEach((track) => track.stop());
         return;
       }
       const recorderOptions: MediaRecorderOptions = {};
@@ -535,7 +560,13 @@ function useSpeechRecorder({
       startInFlightRef.current = false;
       setIsStarting(false);
     }
-  }, [disabled, isStarting, isSupported, isTranscribing]);
+  }, [
+    disabled,
+    getRecordingStream,
+    isStarting,
+    isSupported,
+    isTranscribing,
+  ]);
 
   const toggleRecording = useCallback(() => {
     if (isStarting) {
@@ -580,8 +611,13 @@ function useSpeechRecorder({
       if (recorder.state !== "inactive") {
         recorder.stop();
       }
-      recorder.stream.getTracks().forEach((track) => track.stop());
       recorderRef.current = null;
+      const stream = streamRef.current;
+      if (!stream) {
+        return;
+      }
+      stream.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
     };
   }, []);
 

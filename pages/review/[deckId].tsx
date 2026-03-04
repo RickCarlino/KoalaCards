@@ -214,6 +214,12 @@ interface TranscriptionResult {
   isMatch?: boolean;
 }
 
+const MICROPHONE_CAPTURE_CONSTRAINTS = {
+  autoGainControl: false,
+  echoCancellation: false,
+  noiseSuppression: false,
+} satisfies MediaTrackConstraints;
+
 interface UseVoiceGradingOptions {
   targetText: string;
   langCode: LangCode;
@@ -1080,9 +1086,8 @@ async function playBeep(options: BeepOptions = {}): Promise<void> {
 }
 
 function useMediaRecorder(): RecorderControls {
-  const [recorder, setRecorder] = React.useState<MediaRecorder | null>(
-    null,
-  );
+  const recorderRef = React.useRef<MediaRecorder | null>(null);
+  const streamRef = React.useRef<MediaStream | null>(null);
   const chunksRef = React.useRef<Blob[]>([]);
   const [isRecording, setIsRecording] = React.useState<boolean>(false);
   const [mimeType, setMimeType] = React.useState<string | null>(null);
@@ -1108,18 +1113,35 @@ function useMediaRecorder(): RecorderControls {
 
   React.useEffect(() => {
     return () => {
+      const recorder = recorderRef.current;
       if (recorder && recorder.state !== "inactive") {
         recorder.stop();
       }
+      recorderRef.current = null;
+      const stream = streamRef.current;
+      if (!stream) {
+        return;
+      }
+      stream.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
     };
-  }, [recorder]);
+  }, []);
 
   async function start(startOptions?: {
     playBeep?: boolean;
   }): Promise<void> {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: true,
-    });
+    let stream = streamRef.current;
+    const hasLiveTrack =
+      stream?.active === true &&
+      stream.getAudioTracks().some((track) => track.readyState === "live");
+
+    if (!stream || !hasLiveTrack) {
+      stream?.getTracks().forEach((track) => track.stop());
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: MICROPHONE_CAPTURE_CONSTRAINTS,
+      });
+      streamRef.current = stream;
+    }
 
     const options: MediaRecorderOptions = {};
     if (preferredMime) {
@@ -1144,28 +1166,38 @@ function useMediaRecorder(): RecorderControls {
     };
 
     rec.start(250);
-    setRecorder(rec);
+    recorderRef.current = rec;
     setIsRecording(true);
   }
 
   function stop(): Promise<Blob> {
     return new Promise((resolve) => {
-      const current = recorder;
+      const current = recorderRef.current;
       if (!current) {
         return resolve(new Blob());
       }
       beepArmedRef.current = false;
-      current.onstop = () => {
+      let done = false;
+      const finish = () => {
+        if (done) {
+          return;
+        }
+        done = true;
         const blob = new Blob(chunksRef.current, {
           type: current.mimeType,
         });
         chunksRef.current = [];
-        current.stream.getTracks().forEach((t) => t.stop());
+        recorderRef.current = null;
         setIsRecording(false);
         resolve(blob);
       };
+      current.onstop = finish;
       if (typeof current.requestData === "function") {
         current.requestData();
+      }
+      if (current.state === "inactive") {
+        finish();
+        return;
       }
       current.stop();
     });
