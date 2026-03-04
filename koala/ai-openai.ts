@@ -21,8 +21,8 @@ type ModelKind = TextModel | ImageModelIdentifier;
 
 const registry: Record<ModelKind, string> = {
   fast: "gpt-5-nano",
-  cheap: "gpt-5-mini",
-  good: "gpt-5-mini",
+  cheap: "gpt-5.3-chat-latest",
+  good: "gpt-5.3-chat-latest",
   imageDefault: "gpt-image-1-mini",
 };
 
@@ -31,7 +31,7 @@ type ReasoningMap = Record<TextModel, ReasoningEffortLevel>;
 
 const REASONING_EFFORT: ReasoningMap = {
   fast: "low",
-  cheap: "low",
+  cheap: "medium",
   good: "medium",
 };
 
