@@ -84,6 +84,11 @@ const readerListRowWithDividerStyle: CSSProperties = {
   borderTop: "1px solid #efd8e4",
 };
 
+const readerDateTimeFormatter = new Intl.DateTimeFormat(undefined, {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+
 export function readerListRowStyle(withDivider: boolean): CSSProperties {
   if (withDivider) {
     return readerListRowWithDividerStyle;
@@ -93,7 +98,7 @@ export function readerListRowStyle(withDivider: boolean): CSSProperties {
 }
 
 export function formatReaderDateTime(value: Date): string {
-  return value.toLocaleString();
+  return readerDateTimeFormatter.format(value);
 }
 
 export function readerIngestLabel(status: ReaderUiIngestStatus): string {
