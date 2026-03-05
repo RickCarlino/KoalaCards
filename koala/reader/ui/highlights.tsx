@@ -48,17 +48,59 @@ type SelectionActionBubbleProps = {
   onExplain: () => void;
 };
 
-function compactContextSummary(highlight: ReaderArticleHighlight): string {
-  const joined =
-    `${highlight.contextBefore}${highlight.selectedText}${highlight.contextAfter}`
-      .replace(/\s+/g, " ")
-      .trim();
+type ContextSummaryParts = {
+  before: string;
+  match: string;
+  after: string;
+};
 
-  if (joined.length <= 200) {
-    return joined;
+function normalizeContextChunk(value: string): string {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function compactContextSummary(
+  highlight: ReaderArticleHighlight,
+): ContextSummaryParts {
+  const maxTotalLength = 200;
+  const match = normalizeContextChunk(highlight.selectedText);
+  if (!match) {
+    return {
+      before: "",
+      match: "",
+      after: "",
+    };
   }
 
-  return `${joined.slice(0, 197)}...`;
+  if (match.length >= maxTotalLength) {
+    return {
+      before: "",
+      match: `${match.slice(0, maxTotalLength - 3)}...`,
+      after: "",
+    };
+  }
+
+  let before = normalizeContextChunk(highlight.contextBefore);
+  let after = normalizeContextChunk(highlight.contextAfter);
+
+  const availableContext = maxTotalLength - match.length;
+  const beforeLimit = Math.floor(availableContext / 2);
+  const afterLimit = availableContext - beforeLimit;
+
+  if (before.length > beforeLimit) {
+    const tailLength = Math.max(0, beforeLimit - 3);
+    before = tailLength > 0 ? `...${before.slice(-tailLength)}` : "";
+  }
+
+  if (after.length > afterLimit) {
+    const headLength = Math.max(0, afterLimit - 3);
+    after = headLength > 0 ? `${after.slice(0, headLength)}...` : "";
+  }
+
+  return {
+    before,
+    match,
+    after,
+  };
 }
 
 function formatHighlightTimestamp(value: Date): string {
@@ -249,6 +291,10 @@ function HighlightHistoryRow({
 }: HighlightHistoryRowProps) {
   const [showExplanation, setShowExplanation] = React.useState(false);
   const contextSummary = compactContextSummary(highlight);
+  const hasContextSummary =
+    contextSummary.before.length > 0 ||
+    contextSummary.match.length > 0 ||
+    contextSummary.after.length > 0;
   const timestamp = formatHighlightTimestamp(highlight.createdAt);
   const metaLine = buildHighlightMetaLine(highlight, timestamp);
 
@@ -301,9 +347,18 @@ function HighlightHistoryRow({
       <Text size="xs" c="dimmed" style={{ fontFamily: readerBodyFont }}>
         {metaLine}
       </Text>
-      {contextSummary.length > 0 && (
+      {hasContextSummary && (
         <Text size="xs" c="dimmed" style={{ fontFamily: readerBodyFont }}>
-          {contextSummary}
+          {contextSummary.before}
+          <Text
+            component="span"
+            fw={700}
+            c="#5b3f4d"
+            style={{ fontFamily: readerBodyFont }}
+          >
+            {contextSummary.match}
+          </Text>
+          {contextSummary.after}
         </Text>
       )}
       {highlight.status === "error" &&

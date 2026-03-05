@@ -108,24 +108,7 @@ const readerToolsBodyFillStyle = {
 };
 
 function normalizeMarkdownText(value: string): string {
-  const normalized = value.replace(/\r\n/g, "\n").trim();
-  if (!normalized) {
-    return "";
-  }
-
-  const paragraphs = normalized
-    .split(/\n{2,}/)
-    .map((paragraph) => {
-      const lines = paragraph
-        .split(/\n+/)
-        .map((line) => line.trim())
-        .filter((line) => line.length > 0);
-
-      return lines.join(" ");
-    })
-    .filter((paragraph) => paragraph.length > 0);
-
-  return paragraphs.join("\n\n");
+  return value.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
 }
 
 function normalizeComparableText(value: string): string {

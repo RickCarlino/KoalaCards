@@ -1,26 +1,14 @@
 import { getUserSettingsFromEmail } from "@/koala/auth-helpers";
-import {
-  ReaderPageFrame,
-  ReaderPageHeader,
-  ReaderPanel,
-  ReaderPanelHeader,
-} from "@/koala/reader/ui/layout";
 import { useReaderDashboardControls } from "@/koala/reader/ui/dashboard/use-reader-dashboard-controls";
-import type {
-  ReaderArticleSummary,
-  ReaderDashboardStats,
-} from "@/koala/reader/ui/dashboard/types";
+import type { ReaderArticleSummary } from "@/koala/reader/ui/dashboard/types";
 import {
   formatReaderDateTime,
   readerHeadingColor,
   readerIngestLabel,
-  readerIngestTone,
   readerListRowStyle,
-  readerSubtleCardStyle,
 } from "@/koala/reader/ui/theme";
 import {
   Anchor,
-  Badge,
   Box,
   Button,
   Group,
@@ -30,28 +18,42 @@ import {
   TextInput,
   Textarea,
 } from "@mantine/core";
-import { GetServerSidePropsContext } from "next";
+import type { GetServerSidePropsContext } from "next";
 import Link from "next/link";
 import { getSession } from "next-auth/react";
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 
 type AddSourceMode = "url" | "raw";
-type LibraryFilterMode = "all" | "active" | "ready" | "error";
 
 const RAW_TEXT_LENGTH_LIMIT = 240000;
 const RAW_TEXT_WARNING_THRESHOLD = 220000;
+
+const readerPageStyle: React.CSSProperties = {
+  width: "100%",
+  paddingInline: "clamp(10px, 2.2vw, 28px)",
+  paddingTop: "clamp(10px, 1.5vw, 18px)",
+  paddingBottom: "clamp(16px, 2.6vw, 30px)",
+};
+
+const readerHeaderRowStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 12,
+  flexWrap: "wrap",
+};
 
 const readerDashboardLayoutStyle: React.CSSProperties = {
   display: "flex",
   flexWrap: "wrap",
   alignItems: "flex-start",
-  gap: "clamp(12px, 1.8vw, 20px)",
+  gap: "clamp(10px, 1.4vw, 16px)",
 };
 
 const readerAddColumnStyle: React.CSSProperties = {
-  flex: "1 1 330px",
+  flex: "1 1 300px",
   minWidth: 0,
-  maxWidth: 440,
+  maxWidth: 360,
 };
 
 const readerLibraryColumnStyle: React.CSSProperties = {
@@ -59,10 +61,11 @@ const readerLibraryColumnStyle: React.CSSProperties = {
   minWidth: 0,
 };
 
-const readerStatTileStyle: React.CSSProperties = {
-  ...readerSubtleCardStyle,
-  minWidth: 94,
-  padding: "8px 12px",
+const readerSurfaceStyle: React.CSSProperties = {
+  borderRadius: 14,
+  border: "1px solid #efd8e4",
+  background: "rgba(255, 255, 255, 0.96)",
+  padding: "10px 12px",
 };
 
 function parseAddSourceMode(value: string): AddSourceMode | null {
@@ -73,82 +76,12 @@ function parseAddSourceMode(value: string): AddSourceMode | null {
   return null;
 }
 
-function buildDashboardStats(
-  articles: ReaderArticleSummary[],
-): ReaderDashboardStats {
-  let queued = 0;
-  let processing = 0;
-  let ready = 0;
-  let errored = 0;
-
-  for (const article of articles) {
-    if (article.ingestStatus === "pending") {
-      queued += 1;
-    }
-
-    if (article.ingestStatus === "in_progress") {
-      processing += 1;
-    }
-
-    if (article.ingestStatus === "ready") {
-      ready += 1;
-    }
-
-    if (article.ingestStatus === "error") {
-      errored += 1;
-    }
-  }
-
-  return {
-    queued,
-    processing,
-    ready,
-    errored,
-  };
-}
-
-function isActiveStatus(
-  status: ReaderArticleSummary["ingestStatus"],
-): boolean {
-  return status === "pending" || status === "in_progress";
-}
-
-function shouldIncludeArticle(
-  article: ReaderArticleSummary,
-  mode: LibraryFilterMode,
-): boolean {
-  if (mode === "all") {
-    return true;
-  }
-
-  if (mode === "active") {
-    return isActiveStatus(article.ingestStatus);
-  }
-
-  if (mode === "ready") {
-    return article.ingestStatus === "ready";
-  }
-
-  return article.ingestStatus === "error";
-}
-
-function filteredEmptyMessage(
-  mode: LibraryFilterMode,
-  hasAnyArticles: boolean,
-): string {
+function filteredEmptyMessage(hasAnyArticles: boolean): string {
   if (!hasAnyArticles) {
-    return "Your shelf is empty. Add from URL or plain text to begin.";
+    return "No articles.";
   }
 
-  if (mode === "active") {
-    return "No queued or processing articles right now.";
-  }
-
-  if (mode === "ready") {
-    return "Nothing is ready yet. Try refreshing in a moment.";
-  }
-
-  return "No ingest errors. Your queue looks healthy.";
+  return "No results.";
 }
 
 type ReaderShortcutsProps = {
@@ -159,11 +92,11 @@ function ReaderShortcuts({ includeBookmarklet }: ReaderShortcutsProps) {
   return (
     <Group gap="sm" wrap="wrap">
       <Anchor component={Link} href="/reader/instapaper" size="sm">
-        Instapaper Sync
+        Instapaper
       </Anchor>
       {includeBookmarklet && (
         <Anchor component={Link} href="/reader/bookmarklet" size="sm">
-          Bookmarklet Setup
+          Bookmarklet
         </Anchor>
       )}
     </Group>
@@ -185,31 +118,27 @@ function UrlAddForm({
 }: UrlAddFormProps) {
   return (
     <form onSubmit={onSaveUrlSubmit}>
-      <Stack gap="sm">
-        <Text size="sm" c="dimmed">
-          Save a webpage URL. Reader queues fetch + cleanup automatically.
-        </Text>
-        <Group gap="xs" wrap="wrap" align="flex-end">
-          <TextInput
-            aria-label="Article URL"
-            placeholder="https://example.com/article"
-            value={articleUrl}
-            onChange={(event) =>
-              onArticleUrlChange(event.currentTarget.value)
-            }
-            required
-            style={{ flex: "1 1 320px" }}
-          />
-          <Button
-            type="submit"
-            color="pink"
-            loading={isSavingUrl}
-            style={{ minWidth: 112 }}
-          >
-            Queue URL
-          </Button>
-        </Group>
-      </Stack>
+      <Group gap="xs" wrap="wrap" align="flex-end">
+        <TextInput
+          aria-label="Article URL"
+          placeholder="https://example.com/article"
+          value={articleUrl}
+          onChange={(event) =>
+            onArticleUrlChange(event.currentTarget.value)
+          }
+          required
+          style={{ flex: "1 1 220px" }}
+        />
+        <Button
+          type="submit"
+          size="sm"
+          color="pink"
+          loading={isSavingUrl}
+          style={{ minWidth: 94 }}
+        >
+          Add
+        </Button>
+      </Group>
     </form>
   );
 }
@@ -237,24 +166,20 @@ function RawTextAddForm({
 
   return (
     <form onSubmit={onSaveRawTextSubmit}>
-      <Stack gap="sm">
-        <Text size="sm" c="dimmed">
-          Paste plain text notes or transcripts. Text saves are ready
-          instantly.
-        </Text>
+      <Stack gap="xs">
         <TextInput
           aria-label="Optional title"
-          placeholder="Optional title"
+          placeholder="Title (optional)"
           value={rawTitle}
           onChange={(event) => onRawTitleChange(event.currentTarget.value)}
           maxLength={400}
         />
         <Textarea
           aria-label="Raw text"
-          placeholder="Paste raw text here..."
+          placeholder="Paste text..."
           autosize
           minRows={8}
-          maxRows={18}
+          maxRows={16}
           value={rawText}
           onChange={(event) => onRawTextChange(event.currentTarget.value)}
           required
@@ -262,15 +187,16 @@ function RawTextAddForm({
         <Group justify="space-between" align="center" wrap="wrap">
           <Text size="xs" c={rawTextTone}>
             {rawTextLength.toLocaleString()} /{" "}
-            {RAW_TEXT_LENGTH_LIMIT.toLocaleString()} characters
+            {RAW_TEXT_LENGTH_LIMIT.toLocaleString()}
           </Text>
           <Button
             type="submit"
+            size="sm"
             color="pink"
             loading={isSavingRaw}
-            style={{ minWidth: 100 }}
+            style={{ minWidth: 94 }}
           >
-            Save Text
+            Add
           </Button>
         </Group>
       </Stack>
@@ -308,135 +234,45 @@ function AddFromCard({
   onSaveRawTextSubmit,
 }: AddFromCardProps) {
   return (
-    <ReaderPanel>
-      <ReaderPanelHeader
-        title="Add to Shelf"
-        subtitle="Choose one source and save it in seconds."
-      />
-      <SegmentedControl
-        value={mode}
-        onChange={(nextMode) => {
-          const parsedMode = parseAddSourceMode(nextMode);
-          if (parsedMode) {
-            onModeChange(parsedMode);
-          }
-        }}
-        data={[
-          { label: "Web URL", value: "url" },
-          { label: "Plain Text", value: "raw" },
-        ]}
-        radius="xl"
-        color="pink"
-      />
-      {mode === "url" && (
-        <UrlAddForm
-          articleUrl={articleUrl}
-          isSavingUrl={isSavingUrl}
-          onArticleUrlChange={onArticleUrlChange}
-          onSaveUrlSubmit={onSaveUrlSubmit}
+    <Box style={readerSurfaceStyle}>
+      <Stack gap="sm">
+        <SegmentedControl
+          value={mode}
+          onChange={(nextMode) => {
+            const parsedMode = parseAddSourceMode(nextMode);
+            if (parsedMode) {
+              onModeChange(parsedMode);
+            }
+          }}
+          data={[
+            { label: "URL", value: "url" },
+            { label: "Text", value: "raw" },
+          ]}
+          radius="md"
+          size="xs"
+          color="pink"
+          fullWidth
         />
-      )}
-      {mode === "raw" && (
-        <RawTextAddForm
-          rawTitle={rawTitle}
-          rawText={rawText}
-          isSavingRaw={isSavingRaw}
-          onRawTitleChange={onRawTitleChange}
-          onRawTextChange={onRawTextChange}
-          onSaveRawTextSubmit={onSaveRawTextSubmit}
-        />
-      )}
-    </ReaderPanel>
-  );
-}
-
-type StatsStripProps = {
-  stats: ReaderDashboardStats;
-};
-
-function StatsStrip({ stats }: StatsStripProps) {
-  const total =
-    stats.queued + stats.processing + stats.ready + stats.errored;
-
-  const readyRatio =
-    total === 0 ? 0 : Math.round((stats.ready / total) * 100);
-
-  const tiles = [
-    { label: "Queued", value: stats.queued, color: "yellow" },
-    { label: "Processing", value: stats.processing, color: "grape" },
-    { label: "Ready", value: stats.ready, color: "teal" },
-    { label: "Errors", value: stats.errored, color: "red" },
-  ] as const;
-
-  return (
-    <Stack gap={8}>
-      <Group gap="xs" wrap="wrap">
-        {tiles.map((tile) => {
-          return (
-            <Box key={tile.label} style={readerStatTileStyle}>
-              <Text fw={700} size="md" c={tile.color}>
-                {tile.value}
-              </Text>
-              <Text size="xs" c="dimmed">
-                {tile.label}
-              </Text>
-            </Box>
-          );
-        })}
-      </Group>
-      <Text size="xs" c="dimmed">
-        Shelf readiness: {readyRatio}% ready
-      </Text>
-    </Stack>
-  );
-}
-
-type LibraryFiltersProps = {
-  mode: LibraryFilterMode;
-  stats: ReaderDashboardStats;
-  totalCount: number;
-  onModeChange: (nextMode: LibraryFilterMode) => void;
-};
-
-function LibraryFilters({
-  mode,
-  stats,
-  totalCount,
-  onModeChange,
-}: LibraryFiltersProps) {
-  const options: {
-    mode: LibraryFilterMode;
-    label: string;
-    count: number;
-  }[] = [
-    { mode: "all", label: "All", count: totalCount },
-    {
-      mode: "active",
-      label: "Active",
-      count: stats.queued + stats.processing,
-    },
-    { mode: "ready", label: "Ready", count: stats.ready },
-    { mode: "error", label: "Errors", count: stats.errored },
-  ];
-
-  return (
-    <Group gap={6} wrap="wrap">
-      {options.map((option) => {
-        const selected = option.mode === mode;
-
-        return (
-          <Button
-            key={option.mode}
-            size="compact-sm"
-            variant={selected ? "filled" : "light"}
-            color="pink"
-            onClick={() => onModeChange(option.mode)}
-          >
-            {option.label} ({option.count})
-          </Button>
-        );
-      })}
-    </Group>
+        {mode === "url" && (
+          <UrlAddForm
+            articleUrl={articleUrl}
+            isSavingUrl={isSavingUrl}
+            onArticleUrlChange={onArticleUrlChange}
+            onSaveUrlSubmit={onSaveUrlSubmit}
+          />
+        )}
+        {mode === "raw" && (
+          <RawTextAddForm
+            rawTitle={rawTitle}
+            rawText={rawText}
+            isSavingRaw={isSavingRaw}
+            onRawTitleChange={onRawTitleChange}
+            onRawTextChange={onRawTextChange}
+            onSaveRawTextSubmit={onSaveRawTextSubmit}
+          />
+        )}
+      </Stack>
+    </Box>
   );
 }
 
@@ -453,21 +289,15 @@ function ArticleRow({
   onDelete,
   withDivider,
 }: ArticleRowProps) {
-  const statusTone = readerIngestTone(article.ingestStatus);
-  const statusLabel = readerIngestLabel(article.ingestStatus);
-
   return (
     <Stack style={readerListRowStyle(withDivider)}>
       <Group
         justify="space-between"
         align="flex-start"
         wrap="wrap"
-        gap="sm"
+        gap="xs"
       >
-        <Stack
-          gap={4}
-          style={{ maxWidth: "min(76ch, 100%)", flex: "1 1 340px" }}
-        >
+        <Stack gap={3} style={{ minWidth: 0, flex: "1 1 320px" }}>
           <Anchor
             component={Link}
             href={`/reader/${article.publicId}`}
@@ -479,33 +309,23 @@ function ArticleRow({
           >
             {article.title}
           </Anchor>
-          <Group gap={6} wrap="wrap">
-            <Badge color={statusTone} variant="light" size="sm">
-              {statusLabel}
-            </Badge>
-            <Text size="xs" c="dimmed">
-              Added {formatReaderDateTime(article.createdAt)}
+          <Text size="xs" c="dimmed">
+            {readerIngestLabel(article.ingestStatus)} ·{" "}
+            {formatReaderDateTime(article.createdAt)}
+          </Text>
+          {article.ingestStatus === "error" &&
+            article.ingestError.trim().length > 0 && (
+              <Text size="sm" c="red" lineClamp={2}>
+                {article.ingestError}
+              </Text>
+            )}
+          {article.description.trim().length > 0 && (
+            <Text size="sm" c="dimmed" lineClamp={2}>
+              {article.description}
             </Text>
-          </Group>
+          )}
         </Stack>
         <Group gap={8} align="center" wrap="wrap">
-          <Anchor
-            component={Link}
-            href={`/reader/${article.publicId}`}
-            size="xs"
-          >
-            Open
-          </Anchor>
-          {article.normalizedUrl && (
-            <Anchor
-              href={article.normalizedUrl}
-              target="_blank"
-              rel="noreferrer"
-              size="xs"
-            >
-              Source ↗
-            </Anchor>
-          )}
           <Button
             variant="subtle"
             color="red"
@@ -517,19 +337,6 @@ function ArticleRow({
           </Button>
         </Group>
       </Group>
-
-      {article.ingestStatus === "error" &&
-        article.ingestError.trim().length > 0 && (
-          <Text size="sm" c="red" lineClamp={2}>
-            {article.ingestError}
-          </Text>
-        )}
-
-      {article.description.trim().length > 0 && (
-        <Text size="sm" c="dimmed" lineClamp={2}>
-          {article.description}
-        </Text>
-      )}
     </Stack>
   );
 }
@@ -537,9 +344,8 @@ function ArticleRow({
 type LibraryBodyProps = {
   isLoading: boolean;
   errorMessage: string | null;
-  filteredArticles: ReaderArticleSummary[];
+  articles: ReaderArticleSummary[];
   hasAnyArticles: boolean;
-  filterMode: LibraryFilterMode;
   deletingPublicId: string | null;
   onDeleteArticle: (article: ReaderArticleSummary) => void;
 };
@@ -547,16 +353,15 @@ type LibraryBodyProps = {
 function LibraryBody({
   isLoading,
   errorMessage,
-  filteredArticles,
+  articles,
   hasAnyArticles,
-  filterMode,
   deletingPublicId,
   onDeleteArticle,
 }: LibraryBodyProps) {
   if (isLoading) {
     return (
       <Text size="sm" c="dimmed">
-        Loading your shelf...
+        Loading...
       </Text>
     );
   }
@@ -565,19 +370,17 @@ function LibraryBody({
     return <Text c="red">{errorMessage}</Text>;
   }
 
-  if (filteredArticles.length === 0) {
+  if (articles.length === 0) {
     return (
-      <Box style={readerSubtleCardStyle}>
-        <Text size="sm" c="dimmed">
-          {filteredEmptyMessage(filterMode, hasAnyArticles)}
-        </Text>
-      </Box>
+      <Text size="sm" c="dimmed">
+        {filteredEmptyMessage(hasAnyArticles)}
+      </Text>
     );
   }
 
   return (
     <Stack gap={0}>
-      {filteredArticles.map((article, index) => {
+      {articles.map((article, index) => {
         return (
           <ArticleRow
             key={article.id}
@@ -611,50 +414,33 @@ function LibraryCard({
   onDeleteArticle,
   onRefresh,
 }: LibraryCardProps) {
-  const [filterMode, setFilterMode] = useState<LibraryFilterMode>("all");
-
-  const stats = useMemo(() => buildDashboardStats(articles), [articles]);
-
-  const filteredArticles = useMemo(() => {
-    return articles.filter((article) => {
-      return shouldIncludeArticle(article, filterMode);
-    });
-  }, [articles, filterMode]);
-
   return (
-    <ReaderPanel>
-      <ReaderPanelHeader
-        title="Library"
-        subtitle="Review ingest status, then open articles when ready."
-        rightSlot={
+    <Box style={readerSurfaceStyle}>
+      <Stack gap="sm">
+        <Group justify="space-between" align="center" wrap="wrap">
+          <Text size="sm" fw={700} c={readerHeadingColor}>
+            Library
+          </Text>
           <Button
             variant="subtle"
-            size="xs"
+            size="compact-sm"
             color="pink"
             onClick={onRefresh}
             loading={isRefreshing}
           >
             Refresh
           </Button>
-        }
-      />
-      <StatsStrip stats={stats} />
-      <LibraryFilters
-        mode={filterMode}
-        stats={stats}
-        totalCount={articles.length}
-        onModeChange={setFilterMode}
-      />
-      <LibraryBody
-        isLoading={isLoading}
-        errorMessage={errorMessage}
-        filteredArticles={filteredArticles}
-        hasAnyArticles={articles.length > 0}
-        filterMode={filterMode}
-        deletingPublicId={deletingPublicId}
-        onDeleteArticle={onDeleteArticle}
-      />
-    </ReaderPanel>
+        </Group>
+        <LibraryBody
+          isLoading={isLoading}
+          errorMessage={errorMessage}
+          articles={articles}
+          hasAnyArticles={articles.length > 0}
+          deletingPublicId={deletingPublicId}
+          onDeleteArticle={onDeleteArticle}
+        />
+      </Stack>
+    </Box>
   );
 }
 
@@ -663,30 +449,33 @@ export default function ReaderDashboardPage() {
   const [addSourceMode, setAddSourceMode] = useState<AddSourceMode>("url");
 
   return (
-    <ReaderPageFrame>
-      <ReaderPageHeader
-        title="Reader"
-        subtitle="Capture content, let Reader prepare it, then open when ready."
-        rightSlot={<ReaderShortcuts includeBookmarklet={false} />}
-      />
+    <Box style={readerPageStyle}>
+      <Box style={readerHeaderRowStyle}>
+        <Text size="xl" fw={700} c={readerHeadingColor}>
+          Reader
+        </Text>
+      </Box>
 
       <Box style={readerDashboardLayoutStyle}>
-        <Stack gap="md" style={readerAddColumnStyle}>
-          <AddFromCard
-            mode={addSourceMode}
-            onModeChange={setAddSourceMode}
-            articleUrl={controls.articleUrl}
-            rawTitle={controls.rawTitle}
-            rawText={controls.rawText}
-            isSavingUrl={controls.isSavingUrl}
-            isSavingRaw={controls.isSavingRaw}
-            onArticleUrlChange={controls.onArticleUrlChange}
-            onRawTitleChange={controls.onRawTitleChange}
-            onRawTextChange={controls.onRawTextChange}
-            onSaveUrlSubmit={controls.onSaveUrlSubmit}
-            onSaveRawTextSubmit={controls.onSaveRawTextSubmit}
-          />
-        </Stack>
+        <Box style={readerAddColumnStyle}>
+          <Stack gap="xs">
+            <AddFromCard
+              mode={addSourceMode}
+              onModeChange={setAddSourceMode}
+              articleUrl={controls.articleUrl}
+              rawTitle={controls.rawTitle}
+              rawText={controls.rawText}
+              isSavingUrl={controls.isSavingUrl}
+              isSavingRaw={controls.isSavingRaw}
+              onArticleUrlChange={controls.onArticleUrlChange}
+              onRawTitleChange={controls.onRawTitleChange}
+              onRawTextChange={controls.onRawTextChange}
+              onSaveUrlSubmit={controls.onSaveUrlSubmit}
+              onSaveRawTextSubmit={controls.onSaveRawTextSubmit}
+            />
+            <ReaderShortcuts includeBookmarklet={false} />
+          </Stack>
+        </Box>
 
         <Box style={readerLibraryColumnStyle}>
           <LibraryCard
@@ -700,7 +489,7 @@ export default function ReaderDashboardPage() {
           />
         </Box>
       </Box>
-    </ReaderPageFrame>
+    </Box>
   );
 }
 
