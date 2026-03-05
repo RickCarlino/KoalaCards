@@ -107,26 +107,6 @@ function buildDashboardStats(
   };
 }
 
-function readerInputLabel(
-  inputKind: ReaderArticleSummary["inputKind"],
-): string {
-  if (inputKind === "raw") {
-    return "Raw text";
-  }
-
-  return "URL";
-}
-
-function readerInputTone(
-  inputKind: ReaderArticleSummary["inputKind"],
-): "gray" | "pink" {
-  if (inputKind === "raw") {
-    return "gray";
-  }
-
-  return "pink";
-}
-
 function isActiveStatus(
   status: ReaderArticleSummary["ingestStatus"],
 ): boolean {
@@ -259,7 +239,7 @@ function RawTextAddForm({
     <form onSubmit={onSaveRawTextSubmit}>
       <Stack gap="sm">
         <Text size="sm" c="dimmed">
-          Paste plain text notes or transcripts. Raw saves are ready
+          Paste plain text notes or transcripts. Text saves are ready
           instantly.
         </Text>
         <TextInput
@@ -502,13 +482,6 @@ function ArticleRow({
           <Group gap={6} wrap="wrap">
             <Badge color={statusTone} variant="light" size="sm">
               {statusLabel}
-            </Badge>
-            <Badge
-              color={readerInputTone(article.inputKind)}
-              variant="light"
-              size="sm"
-            >
-              {readerInputLabel(article.inputKind)}
             </Badge>
             <Text size="xs" c="dimmed">
               Added {formatReaderDateTime(article.createdAt)}

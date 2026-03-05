@@ -64,14 +64,6 @@ function pendingMessage(status: "pending" | "in_progress"): string {
   return "This article is currently being processed.";
 }
 
-function inputKindLabel(inputKind: ReaderInputKind): string {
-  if (inputKind === "raw") {
-    return "Raw text";
-  }
-
-  return "URL";
-}
-
 const readerArticleBodyStyle = {
   maxWidth: "90ch",
   margin: "0 auto",
@@ -127,12 +119,6 @@ function ArticleHeaderCard({ article }: ArticleHeaderCardProps) {
         <Group gap={6} wrap="wrap">
           <Badge color={statusTone} variant="light">
             {statusLabel}
-          </Badge>
-          <Badge
-            color={article.inputKind === "raw" ? "gray" : "pink"}
-            variant="light"
-          >
-            {inputKindLabel(article.inputKind)}
           </Badge>
           <Text
             size="xs"
