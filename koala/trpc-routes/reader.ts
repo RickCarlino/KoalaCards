@@ -83,6 +83,46 @@ const refreshReaderArticleOutputSchema = z.object({
   article: readerArticleSchema,
 });
 
+const listReaderArticleHighlightsInputSchema = z.object({
+  publicId: z.string().trim().min(1),
+});
+
+const deleteReaderArticleHighlightInputSchema = z.object({
+  publicId: z.string().trim().min(1),
+  highlightId: z.number().int().positive(),
+});
+
+const deleteReaderArticleHighlightOutputSchema = z.object({
+  status: z.literal("deleted"),
+});
+
+const readerHighlightOccurrenceSchema = z.object({
+  index: z.number().int().min(0),
+  startOffset: z.number().int().min(0),
+  endOffset: z.number().int().min(0),
+  before: z.string(),
+  match: z.string(),
+  after: z.string(),
+});
+
+const readerArticleHighlightSchema = z.object({
+  id: z.number().int(),
+  selectedText: z.string(),
+  selectedOccurrenceIndex: z.number().int().min(0),
+  occurrenceCount: z.number().int().min(0),
+  status: z.enum(["in_progress", "ready", "error"]),
+  explanationMarkdown: z.string(),
+  errorMessage: z.string(),
+  contextBefore: z.string(),
+  contextAfter: z.string(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+const listReaderArticleHighlightsOutputSchema = z.object({
+  highlights: z.array(readerArticleHighlightSchema),
+});
+
 const mapIngestStatus = (
   status: "PENDING" | "IN_PROGRESS" | "READY" | "ERROR",
 ): ReaderIngestState => {
@@ -107,6 +147,31 @@ const mapInputKind = (inputKind: "URL" | "RAW"): ReaderInputKindValue => {
   }
 
   return "url";
+};
+
+const mapHighlightStatus = (
+  status: "IN_PROGRESS" | "READY" | "ERROR",
+): "in_progress" | "ready" | "error" => {
+  if (status === "IN_PROGRESS") {
+    return "in_progress";
+  }
+
+  if (status === "READY") {
+    return "ready";
+  }
+
+  return "error";
+};
+
+const parseHighlightOccurrences = (
+  value: unknown,
+): z.infer<typeof readerHighlightOccurrenceSchema>[] => {
+  const parsed = z.array(readerHighlightOccurrenceSchema).safeParse(value);
+  if (!parsed.success) {
+    return [];
+  }
+
+  return parsed.data;
 };
 
 const mapSavedArticle = (article: SavedReaderArticle) => {
@@ -397,4 +462,118 @@ export const refreshReaderArticleRoute = procedure
     } catch (error) {
       return mapSaveError(error);
     }
+  });
+
+export const listReaderArticleHighlightsRoute = procedure
+  .input(listReaderArticleHighlightsInputSchema)
+  .output(listReaderArticleHighlightsOutputSchema)
+  .query(async ({ input, ctx }) => {
+    const userId = requireUserId(ctx.user?.id);
+
+    const article = await prismaClient.readerArticle.findUnique({
+      where: { publicId: input.publicId },
+      select: { id: true, userId: true },
+    });
+
+    if (!article) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Article not found.",
+      });
+    }
+
+    if (article.userId !== userId) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Article not owned by current user.",
+      });
+    }
+
+    const highlights = await prismaClient.readerArticleHighlight.findMany({
+      where: {
+        userId,
+        articleId: article.id,
+      },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        selectedText: true,
+        selectedOccurrenceIndex: true,
+        occurrenceCount: true,
+        occurrencesJson: true,
+        status: true,
+        explanationMarkdown: true,
+        errorMessage: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    return {
+      highlights: highlights.map((highlight) => {
+        const occurrences = parseHighlightOccurrences(
+          highlight.occurrencesJson,
+        );
+        const currentOccurrence =
+          occurrences[highlight.selectedOccurrenceIndex] ?? null;
+
+        return {
+          id: highlight.id,
+          selectedText: highlight.selectedText,
+          selectedOccurrenceIndex: highlight.selectedOccurrenceIndex,
+          occurrenceCount: highlight.occurrenceCount,
+          status: mapHighlightStatus(highlight.status),
+          explanationMarkdown: highlight.explanationMarkdown,
+          errorMessage: highlight.errorMessage,
+          contextBefore: currentOccurrence?.before ?? "",
+          contextAfter: currentOccurrence?.after ?? "",
+          createdAt: highlight.createdAt,
+          updatedAt: highlight.updatedAt,
+        };
+      }),
+    };
+  });
+
+export const deleteReaderArticleHighlightRoute = procedure
+  .input(deleteReaderArticleHighlightInputSchema)
+  .output(deleteReaderArticleHighlightOutputSchema)
+  .mutation(async ({ input, ctx }) => {
+    const userId = requireUserId(ctx.user?.id);
+
+    const article = await prismaClient.readerArticle.findUnique({
+      where: { publicId: input.publicId },
+      select: { id: true, userId: true },
+    });
+
+    if (!article) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Article not found.",
+      });
+    }
+
+    if (article.userId !== userId) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Article not owned by current user.",
+      });
+    }
+
+    const deletedHighlight =
+      await prismaClient.readerArticleHighlight.deleteMany({
+        where: {
+          id: input.highlightId,
+          userId,
+          articleId: article.id,
+        },
+      });
+
+    if (deletedHighlight.count === 0) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Highlight not found.",
+      });
+    }
+
+    return { status: "deleted" };
   });

@@ -20,8 +20,10 @@ import { importDeck } from "./import-deck";
 import { mergeDecks } from "./merge-decks";
 import { parseCards } from "./parse-cards";
 import {
+  deleteReaderArticleHighlightRoute,
   deleteReaderArticleRoute,
   getReaderBookmarkletConfig,
+  listReaderArticleHighlightsRoute,
   listReaderArticlesRoute,
   refreshReaderArticleRoute,
   rotateReaderBookmarkletKey,
@@ -57,6 +59,7 @@ export const appRouter = router({
   editQuizResult,
   createDeck,
   connectReaderInstapaperRoute,
+  deleteReaderArticleHighlightRoute,
   deleteReaderArticleRoute,
   disconnectReaderInstapaperRoute,
   getReaderBookmarkletConfig,
@@ -65,6 +68,7 @@ export const appRouter = router({
   importReaderInstapaperUnreadRoute,
   mergeDecks,
   importDeck,
+  listReaderArticleHighlightsRoute,
   listReaderInstapaperUnreadRoute,
   listReaderArticlesRoute,
   parseCards,

@@ -56,6 +56,7 @@ model User {
   readerBookmarkletCredential ReaderBookmarkletCredential?
   readerInstapaperCredential ReaderInstapaperCredential?
   readerArticles             ReaderArticle[]
+  readerArticleHighlights    ReaderArticleHighlight[]
 }
 
 model UserSettings {
@@ -187,6 +188,12 @@ enum ReaderInputKind {
   RAW
 }
 
+enum ReaderHighlightStatus {
+  IN_PROGRESS
+  READY
+  ERROR
+}
+
 model ReaderBookmarkletCredential {
   id              Int      @id @default(autoincrement())
   userId          String   @unique
@@ -232,9 +239,34 @@ model ReaderArticle {
   contentHtml   String             @db.Text
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
+  highlights    ReaderArticleHighlight[]
 
   @@index([userId, createdAt])
   @@index([publicId])
   @@index([userId, instapaperBookmarkId])
   @@index([ingestStatus, createdAt])
+}
+
+model ReaderArticleHighlight {
+  id                      Int                   @id @default(autoincrement())
+  userId                  String
+  user                    User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  articleId               Int
+  article                 ReaderArticle         @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  selectedText            String                @db.Text
+  selectedTextHash        String                @db.VarChar(64)
+  selectedOccurrenceIndex Int
+  occurrenceCount         Int
+  occurrencesJson         Json
+  articleContentHash      String                @db.VarChar(64)
+  promptVersion           Int                   @default(1)
+  status                  ReaderHighlightStatus @default(IN_PROGRESS)
+  explanationMarkdown     String                @default("") @db.Text
+  errorMessage            String                @default("") @db.Text
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+
+  @@index([userId, articleId, createdAt])
+  @@index([articleId, createdAt])
+  @@unique([userId, articleId, selectedTextHash, selectedOccurrenceIndex, articleContentHash, promptVersion])
 }
