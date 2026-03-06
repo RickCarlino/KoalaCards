@@ -154,6 +154,9 @@ export function ReaderSplitWorkspace({
   const secondaryColumnStyle: React.CSSProperties = {
     minWidth: 0,
   };
+  const secondaryContentStyle: React.CSSProperties = {
+    minWidth: 0,
+  };
 
   if (stickySecondary) {
     secondaryColumnStyle.position = "sticky";
@@ -166,8 +169,14 @@ export function ReaderSplitWorkspace({
       <Grid.Col span={{ base: 12, md: 7, lg: 8 }}>
         <Box style={{ minWidth: 0 }}>{primary}</Box>
       </Grid.Col>
-      <Grid.Col span={{ base: 12, md: 5, lg: 4 }}>
-        <Stack gap="clamp(10px, 1.2vw, 14px)" style={secondaryColumnStyle}>
+      <Grid.Col
+        span={{ base: 12, md: 5, lg: 4 }}
+        style={secondaryColumnStyle}
+      >
+        <Stack
+          gap="clamp(10px, 1.2vw, 14px)"
+          style={secondaryContentStyle}
+        >
           {secondary}
         </Stack>
       </Grid.Col>

@@ -217,8 +217,17 @@ export function ExplainSelectionCard({
   isDeletingHighlight = false,
   fillAvailableHeight = false,
 }: ExplainSelectionCardProps) {
+  const hasStreamText = streamText.trim().length > 0;
+  const hasStreamError = streamError.trim().length > 0;
+  const showEmptyState =
+    !isExplaining && !hasStreamError && !hasStreamText;
+
   return (
     <Stack gap="sm" style={helperPanelStyle(fillAvailableHeight)}>
+      <ReaderPanelHeader
+        title="Word Helper"
+        subtitle="Select a word or phrase in the article, then choose Explain."
+      />
       {isExplaining && (
         <Group gap="xs" align="center" role="status" aria-live="polite">
           <Loader size="xs" color="grape" />
@@ -231,7 +240,7 @@ export function ExplainSelectionCard({
           </Text>
         </Group>
       )}
-      {streamError.trim().length > 0 && (
+      {hasStreamError && (
         <Text
           size="sm"
           c="red"
@@ -241,7 +250,13 @@ export function ExplainSelectionCard({
           {streamError}
         </Text>
       )}
-      {streamText.trim().length > 0 && (
+      {showEmptyState && (
+        <Text size="sm" c="dimmed" style={{ fontFamily: readerBodyFont }}>
+          The explanation will appear here and stay in view while you keep
+          reading.
+        </Text>
+      )}
+      {hasStreamText && (
         <Box
           role="status"
           aria-live="polite"

@@ -79,26 +79,52 @@ type HelperDraft = {
 };
 
 const SELECTION_CONTEXT_RADIUS = 60;
+const readerWorkspacePaddingTop = "clamp(10px, 1.5vw, 18px)";
+const readerWorkspacePaddingBottom = "clamp(16px, 2.6vw, 30px)";
+const readerToolsTopOffset =
+  "calc(var(--app-shell-header-offset, 60px) + 12px)";
+const readerToolsViewportSafetyMargin = "5svh";
+const readerToolsViewportHeight = `calc(100svh - ${readerToolsTopOffset} - ${readerWorkspacePaddingBottom})`;
+const readerToolsViewportHeightWithMargin = `calc(${readerToolsViewportHeight} - ${readerToolsViewportSafetyMargin})`;
 const readerWorkspaceStyle = {
   width: "100%",
   paddingInline: "clamp(10px, 2.2vw, 28px)",
-  paddingTop: "clamp(10px, 1.5vw, 18px)",
-  paddingBottom: "clamp(16px, 2.6vw, 30px)",
+  paddingTop: readerWorkspacePaddingTop,
+  paddingBottom: readerWorkspacePaddingBottom,
 };
 const readerToolsRailStyle = {
-  minHeight: "calc(100dvh - 110px)",
+  width: "100%",
+  height: readerToolsViewportHeightWithMargin,
+  maxHeight: readerToolsViewportHeightWithMargin,
+  minHeight: 0,
   display: "flex",
   flexDirection: "column" as const,
-  gap: 8,
+  minWidth: 0,
+  overflow: "hidden" as const,
+};
+const readerToolsPanelStyle = {
+  height: "100%",
+  minHeight: 0,
+  display: "flex",
+  flexDirection: "column" as const,
+  overflow: "hidden" as const,
+  boxSizing: "border-box" as const,
+  maxWidth: "100%",
 };
 const readerToolsSwitchStyle = {
   padding: 0,
+  flex: "0 0 auto",
 };
 const readerToolsContentStyle = {
   minHeight: 0,
   flex: "1 1 auto",
   display: "flex",
   flexDirection: "column" as const,
+};
+const readerToolsScrollableContentStyle = {
+  ...readerToolsContentStyle,
+  overflowY: "auto" as const,
+  paddingRight: 4,
 };
 const readerToolsBodyFillStyle = {
   minHeight: 0,
@@ -952,57 +978,62 @@ function OwnerHighlightTools({
         isExplaining={isExplaining}
         onExplain={explainSelection}
       />
-      <Stack gap={6} style={readerToolsRailStyle}>
-        <Box style={readerToolsSwitchStyle}>
-          <SegmentedControl
-            value={activeView}
-            onChange={(nextValue) => {
-              setActiveView(parseHighlightToolsView(nextValue));
-            }}
-            data={viewOptions}
-            fullWidth
-            size="xs"
-            radius="md"
-            color="grape"
-          />
-        </Box>
-        <Box
-          style={
-            fillToolsBody
-              ? { ...readerToolsContentStyle, ...readerToolsBodyFillStyle }
-              : readerToolsContentStyle
-          }
-        >
-          {activeView === "helper" && (
-            <ExplainSelectionCard
-              isExplaining={isExplaining}
-              streamError={streamError}
-              streamText={streamText}
-              onDeleteHighlight={deleteActiveHighlight}
-              canDeleteHighlight={canDeleteActiveHighlight}
-              isDeletingHighlight={isDeletingActiveHighlight}
-              fillAvailableHeight
-            />
-          )}
-          {activeView === "saved" && (
-            <HighlightsHistoryCard
-              highlights={highlights}
-              isLoading={highlightsQuery.isLoading}
-              errorMessage={queryErrorMessage}
-              deletingHighlightId={deletingHighlightId}
-              onDeleteHighlight={(highlightId) => {
-                void deleteHighlight(highlightId);
+      <Box style={readerToolsRailStyle}>
+        <ReaderPanel gap={6} style={readerToolsPanelStyle}>
+          <Box style={readerToolsSwitchStyle}>
+            <SegmentedControl
+              value={activeView}
+              onChange={(nextValue) => {
+                setActiveView(parseHighlightToolsView(nextValue));
               }}
+              data={viewOptions}
+              fullWidth
+              size="xs"
+              radius="md"
+              color="grape"
             />
-          )}
-          {activeView === "info" && (
-            <HighlightInfoCard
-              createdAt={createdAt}
-              sourceUrl={sourceUrl}
-            />
-          )}
-        </Box>
-      </Stack>
+          </Box>
+          <Box
+            style={
+              fillToolsBody
+                ? {
+                    ...readerToolsContentStyle,
+                    ...readerToolsBodyFillStyle,
+                  }
+                : readerToolsScrollableContentStyle
+            }
+          >
+            {activeView === "helper" && (
+              <ExplainSelectionCard
+                isExplaining={isExplaining}
+                streamError={streamError}
+                streamText={streamText}
+                onDeleteHighlight={deleteActiveHighlight}
+                canDeleteHighlight={canDeleteActiveHighlight}
+                isDeletingHighlight={isDeletingActiveHighlight}
+                fillAvailableHeight
+              />
+            )}
+            {activeView === "saved" && (
+              <HighlightsHistoryCard
+                highlights={highlights}
+                isLoading={highlightsQuery.isLoading}
+                errorMessage={queryErrorMessage}
+                deletingHighlightId={deletingHighlightId}
+                onDeleteHighlight={(highlightId) => {
+                  void deleteHighlight(highlightId);
+                }}
+              />
+            )}
+            {activeView === "info" && (
+              <HighlightInfoCard
+                createdAt={createdAt}
+                sourceUrl={sourceUrl}
+              />
+            )}
+          </Box>
+        </ReaderPanel>
+      </Box>
     </>
   );
 }
@@ -1125,7 +1156,7 @@ export default function PublicReaderArticlePage({
               primary={articleBody}
               secondary={ownerTools}
               stickySecondary={article.viewerIsOwner}
-              secondaryTopOffset="92px"
+              secondaryTopOffset={readerToolsTopOffset}
             />
           )}
         </Stack>
