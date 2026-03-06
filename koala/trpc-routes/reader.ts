@@ -1,4 +1,5 @@
 import { TRPCError } from "@trpc/server";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prismaClient } from "@/koala/prisma-client";
 import {
@@ -96,6 +97,36 @@ const deleteReaderArticleHighlightOutputSchema = z.object({
   status: z.literal("deleted"),
 });
 
+const importReaderHighlightsToDeckInputSchema = z.object({
+  publicId: z.string().trim().min(1),
+  deckId: z.number().int().positive(),
+  highlightIds: z.array(z.number().int().positive()).min(1).max(200),
+});
+
+const importReaderHighlightResultStatusSchema = z.enum([
+  "created",
+  "duplicate",
+  "already_imported",
+  "not_ready",
+  "missing",
+]);
+
+const importReaderHighlightResultSchema = z.object({
+  highlightId: z.number().int().positive(),
+  status: importReaderHighlightResultStatusSchema,
+});
+
+const importReaderHighlightsToDeckOutputSchema = z.object({
+  results: z.array(importReaderHighlightResultSchema),
+  summary: z.object({
+    created: z.number().int().min(0),
+    duplicate: z.number().int().min(0),
+    alreadyImported: z.number().int().min(0),
+    notReady: z.number().int().min(0),
+    missing: z.number().int().min(0),
+  }),
+});
+
 const readerHighlightOccurrenceSchema = z.object({
   index: z.number().int().min(0),
   startOffset: z.number().int().min(0),
@@ -118,6 +149,8 @@ const readerArticleHighlightSchema = z.object({
   errorMessage: z.string(),
   contextBefore: z.string(),
   contextAfter: z.string(),
+  importedCardId: z.number().int().nullable(),
+  importedAt: z.date().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
@@ -176,6 +209,31 @@ const parseHighlightOccurrences = (
 
   return parsed.data;
 };
+
+type ReaderHighlightImportCandidate = {
+  status: "IN_PROGRESS" | "READY" | "ERROR";
+  term: string;
+  definition: string;
+  importedCardId: number | null;
+};
+
+function isReadyHighlightForImport(
+  highlight: ReaderHighlightImportCandidate,
+): boolean {
+  if (highlight.importedCardId !== null) {
+    return false;
+  }
+
+  if (highlight.status !== "READY") {
+    return false;
+  }
+
+  if (highlight.term.trim().length === 0) {
+    return false;
+  }
+
+  return highlight.definition.trim().length > 0;
+}
 
 const mapSavedArticle = (article: SavedReaderArticle) => {
   return {
@@ -510,6 +568,8 @@ export const listReaderArticleHighlightsRoute = procedure
         generalMeaning: true,
         meaningInContext: true,
         errorMessage: true,
+        importedCardId: true,
+        importedAt: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -536,10 +596,181 @@ export const listReaderArticleHighlightsRoute = procedure
           errorMessage: highlight.errorMessage,
           contextBefore: currentOccurrence?.before ?? "",
           contextAfter: currentOccurrence?.after ?? "",
+          importedCardId: highlight.importedCardId,
+          importedAt: highlight.importedAt,
           createdAt: highlight.createdAt,
           updatedAt: highlight.updatedAt,
         };
       }),
+    };
+  });
+
+export const importReaderHighlightsToDeckRoute = procedure
+  .input(importReaderHighlightsToDeckInputSchema)
+  .output(importReaderHighlightsToDeckOutputSchema)
+  .mutation(async ({ input, ctx }) => {
+    const userId = requireUserId(ctx.user?.id);
+
+    const article = await prismaClient.readerArticle.findUnique({
+      where: { publicId: input.publicId },
+      select: { id: true, userId: true },
+    });
+
+    if (!article) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Article not found.",
+      });
+    }
+
+    if (article.userId !== userId) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Article not owned by current user.",
+      });
+    }
+
+    const deck = await prismaClient.deck.findUnique({
+      where: {
+        id: input.deckId,
+        userId,
+      },
+      select: { id: true },
+    });
+
+    if (!deck) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Deck not found.",
+      });
+    }
+
+    const uniqueHighlightIds = Array.from(new Set(input.highlightIds));
+    const highlights = await prismaClient.readerArticleHighlight.findMany({
+      where: {
+        id: { in: uniqueHighlightIds },
+        userId,
+        articleId: article.id,
+      },
+      select: {
+        id: true,
+        status: true,
+        term: true,
+        definition: true,
+        importedCardId: true,
+      },
+    });
+
+    const highlightById = new Map(
+      highlights.map((highlight) => [highlight.id, highlight]),
+    );
+
+    const readyTerms = Array.from(
+      new Set(
+        highlights
+          .filter((highlight) => isReadyHighlightForImport(highlight))
+          .map((highlight) => highlight.term),
+      ),
+    );
+
+    const existingCards =
+      readyTerms.length > 0
+        ? await prismaClient.card.findMany({
+            where: {
+              userId,
+              term: { in: readyTerms },
+            },
+            select: { id: true, term: true },
+          })
+        : [];
+
+    const existingCardByTerm = new Map(
+      existingCards.map((card) => [card.term, card.id]),
+    );
+
+    const results: z.infer<typeof importReaderHighlightResultSchema>[] =
+      [];
+    const summary = {
+      created: 0,
+      duplicate: 0,
+      alreadyImported: 0,
+      notReady: 0,
+      missing: 0,
+    };
+
+    for (const highlightId of uniqueHighlightIds) {
+      const highlight = highlightById.get(highlightId);
+
+      if (!highlight) {
+        summary.missing += 1;
+        results.push({ highlightId, status: "missing" });
+        continue;
+      }
+
+      if (highlight.importedCardId !== null) {
+        summary.alreadyImported += 1;
+        results.push({ highlightId, status: "already_imported" });
+        continue;
+      }
+
+      if (!isReadyHighlightForImport(highlight)) {
+        summary.notReady += 1;
+        results.push({ highlightId, status: "not_ready" });
+        continue;
+      }
+
+      if (existingCardByTerm.has(highlight.term)) {
+        summary.duplicate += 1;
+        results.push({ highlightId, status: "duplicate" });
+        continue;
+      }
+
+      try {
+        const card = await prismaClient.card.create({
+          data: {
+            userId,
+            term: highlight.term,
+            definition: highlight.definition,
+            deckId: deck.id,
+            stability: 0,
+            difficulty: 0,
+            firstReview: 0,
+            lastReview: 0,
+            nextReview: 0,
+            lapses: 0,
+            repetitions: 0,
+          },
+          select: { id: true },
+        });
+
+        await prismaClient.readerArticleHighlight.update({
+          where: { id: highlightId },
+          data: {
+            importedCardId: card.id,
+            importedAt: new Date(),
+          },
+        });
+
+        existingCardByTerm.set(highlight.term, card.id);
+        summary.created += 1;
+        results.push({ highlightId, status: "created" });
+      } catch (error) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === "P2002"
+        ) {
+          summary.duplicate += 1;
+          results.push({ highlightId, status: "duplicate" });
+          continue;
+        }
+
+        throw error;
+      }
+    }
+
+    return {
+      results,
+      summary,
     };
   });
 

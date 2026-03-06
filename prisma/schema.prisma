@@ -122,6 +122,7 @@ model Card {
   nextReview  Float    @default(0)
   lapses      Float    @default(0)
   repetitions Float    @default(0)
+  importedReaderHighlights ReaderArticleHighlight[] @relation("ImportedHighlightCard")
 
   @@unique([userId, term])
   @@index([deckId])
@@ -264,10 +265,14 @@ model ReaderArticleHighlight {
   generalMeaning          String                @default("") @db.Text
   meaningInContext        String                @default("") @db.Text
   errorMessage            String                @default("") @db.Text
+  importedCardId          Int?
+  importedCard            Card?                 @relation("ImportedHighlightCard", fields: [importedCardId], references: [id], onDelete: SetNull)
+  importedAt              DateTime?
   createdAt               DateTime              @default(now())
   updatedAt               DateTime              @updatedAt
 
   @@index([userId, articleId, createdAt])
   @@index([articleId, createdAt])
+  @@index([importedCardId])
   @@unique([userId, articleId, selectedTextHash, selectedOccurrenceIndex, articleContentHash, promptVersion])
 }

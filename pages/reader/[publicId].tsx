@@ -15,6 +15,7 @@ import {
   ExplainSelectionCard,
   HighlightsHistoryCard,
   SelectionActionBubble,
+  type HighlightImportResultStatus,
   type ReaderHighlightAnalysis,
   type ReaderArticleHighlight,
 } from "@/koala/reader/ui/highlights";
@@ -24,10 +25,12 @@ import {
   readerDisplayFont,
 } from "@/koala/reader/ui/theme";
 import { trpc } from "@/koala/trpc-config";
+import { notifications } from "@mantine/notifications";
 import {
   Anchor,
   Box,
   Group,
+  Select,
   SegmentedControl,
   Stack,
   Text,
@@ -55,6 +58,10 @@ type PublicReaderArticle = {
   ingestError: string;
   createdAt: string;
   viewerIsOwner: boolean;
+  decks: Array<{
+    id: number;
+    name: string;
+  }>;
 };
 
 type ReaderSelectionDraft = {
@@ -227,15 +234,6 @@ function countOverlappingOccurrences(
   }
 
   return count;
-}
-
-function hasExpandedSelection(): boolean {
-  const selection = window.getSelection();
-  if (!selection) {
-    return false;
-  }
-
-  return selection.rangeCount > 0 && !selection.isCollapsed;
 }
 
 function clampToViewport(
@@ -603,28 +601,232 @@ type OwnerHighlightToolsProps = {
   articleRef: React.RefObject<HTMLElement>;
   createdAt: string;
   sourceUrl: string | null;
+  decks: PublicReaderArticle["decks"];
 };
 
-type HighlightToolsView = "helper" | "saved" | "info";
+type HighlightToolsView = "helper" | "saved" | "extras";
 
 function parseHighlightToolsView(value: string): HighlightToolsView {
   if (value === "saved") {
     return "saved";
   }
 
-  if (value === "info") {
-    return "info";
+  if (value === "extras") {
+    return "extras";
   }
 
   return "helper";
 }
 
+function importStatusLabel(status: HighlightImportResultStatus): string {
+  if (status === "created") {
+    return "Added to deck";
+  }
+
+  if (status === "duplicate") {
+    return "Duplicate term";
+  }
+
+  if (status === "already_imported") {
+    return "Already added";
+  }
+
+  if (status === "not_ready") {
+    return "Not ready";
+  }
+
+  return "Not found";
+}
+
+function importStatusColor(status: HighlightImportResultStatus): string {
+  if (status === "created") {
+    return "green";
+  }
+
+  if (status === "duplicate" || status === "already_imported") {
+    return "gray";
+  }
+
+  if (status === "not_ready") {
+    return "yellow";
+  }
+
+  return "gray";
+}
+
+function canAddHighlightToDeck(
+  activeHighlight: ReaderArticleHighlight | null,
+  selectedDeckId: string | null,
+): boolean {
+  if (!activeHighlight) {
+    return false;
+  }
+
+  if (activeHighlight.status !== "ready") {
+    return false;
+  }
+
+  if (activeHighlight.importedCardId !== null) {
+    return false;
+  }
+
+  return selectedDeckId !== null;
+}
+
+function canImportSelectedHighlights(options: {
+  selectedDeckId: string | null;
+  importableHighlightCount: number;
+  isImportingSelected: boolean;
+  isMutationLoading: boolean;
+}): boolean {
+  if (options.selectedDeckId === null) {
+    return false;
+  }
+
+  if (options.importableHighlightCount === 0) {
+    return false;
+  }
+
+  if (options.isImportingSelected) {
+    return false;
+  }
+
+  return !options.isMutationLoading;
+}
+
+function addToDeckHandlerOrUndefined(
+  activeHighlight: ReaderArticleHighlight | null,
+  handler: () => Promise<void>,
+): (() => void) | undefined {
+  if (!activeHighlight) {
+    return undefined;
+  }
+
+  return () => {
+    void handler();
+  };
+}
+
+type ReaderHighlightImportSummary = {
+  created: number;
+  duplicate: number;
+  alreadyImported: number;
+  notReady: number;
+  missing: number;
+};
+
+type ReaderHighlightImportResult = {
+  results: Array<{
+    highlightId: number;
+    status: HighlightImportResultStatus;
+  }>;
+  summary: ReaderHighlightImportSummary;
+};
+
+type ReaderHighlightImportInput = {
+  publicId: string;
+  selectedDeckId: string | null;
+  highlightIds: number[];
+  mutateAsync: (input: {
+    publicId: string;
+    deckId: number;
+    highlightIds: number[];
+  }) => Promise<ReaderHighlightImportResult>;
+};
+
+function parseDeckId(value: string | null): number | null {
+  if (!value) {
+    return null;
+  }
+
+  const parsedDeckId = Number(value);
+  if (!Number.isFinite(parsedDeckId)) {
+    return null;
+  }
+
+  return parsedDeckId;
+}
+
+function mergeImportStatuses(
+  previous: Record<number, HighlightImportResultStatus>,
+  results: ReaderHighlightImportResult["results"],
+): Record<number, HighlightImportResultStatus> {
+  const next = { ...previous };
+  for (const result of results) {
+    next[result.highlightId] = result.status;
+  }
+  return next;
+}
+
+function toggleSelectedHighlights(
+  previous: number[],
+  highlightId: number,
+  isSelected: boolean,
+): number[] {
+  if (isSelected) {
+    if (previous.includes(highlightId)) {
+      return previous;
+    }
+
+    return [...previous, highlightId];
+  }
+
+  return previous.filter((id) => id !== highlightId);
+}
+
+function importSummaryMessage(
+  summary: ReaderHighlightImportSummary,
+): string {
+  const messageParts: string[] = [];
+  if (summary.created > 0) {
+    messageParts.push(`${summary.created} added`);
+  }
+  if (summary.duplicate > 0) {
+    messageParts.push(`${summary.duplicate} duplicate`);
+  }
+  if (summary.alreadyImported > 0) {
+    messageParts.push(`${summary.alreadyImported} already added`);
+  }
+  if (summary.notReady > 0) {
+    messageParts.push(`${summary.notReady} not ready`);
+  }
+  if (summary.missing > 0) {
+    messageParts.push(`${summary.missing} missing`);
+  }
+  if (messageParts.length === 0) {
+    return "No changes";
+  }
+
+  return messageParts.join(" · ");
+}
+
+async function importHighlightsForDeck(
+  input: ReaderHighlightImportInput,
+): Promise<ReaderHighlightImportResult | null> {
+  if (input.highlightIds.length === 0) {
+    return null;
+  }
+
+  const deckId = parseDeckId(input.selectedDeckId);
+  if (deckId === null) {
+    return null;
+  }
+
+  return input.mutateAsync({
+    publicId: input.publicId,
+    deckId,
+    highlightIds: input.highlightIds,
+  });
+}
+
 type HighlightInfoCardProps = {
+  publicId: string;
   createdAt: string;
   sourceUrl: string | null;
 };
 
 function HighlightInfoCard({
+  publicId,
   createdAt,
   sourceUrl,
 }: HighlightInfoCardProps) {
@@ -667,6 +869,9 @@ function HighlightInfoCard({
           </Text>
         )}
       </Stack>
+      <Anchor href={`/reader/${publicId}/typing`} size="sm">
+        Typing practice
+      </Anchor>
     </Stack>
   );
 }
@@ -676,6 +881,7 @@ function OwnerHighlightTools({
   articleRef,
   createdAt,
   sourceUrl,
+  decks,
 }: OwnerHighlightToolsProps) {
   const [selectionDraft, setSelectionDraft] =
     useState<ReaderSelectionDraft | null>(null);
@@ -691,6 +897,17 @@ function OwnerHighlightTools({
   const [deletingHighlightId, setDeletingHighlightId] = useState<
     number | null
   >(null);
+  const [selectedDeckId, setSelectedDeckId] = useState<string | null>(
+    null,
+  );
+  const [selectedHighlightIds, setSelectedHighlightIds] = useState<
+    number[]
+  >([]);
+  const [importStatusByHighlightId, setImportStatusByHighlightId] =
+    useState<Record<number, HighlightImportResultStatus>>({});
+  const [isImportingSelected, setIsImportingSelected] = useState(false);
+  const [isImportingActiveHighlight, setIsImportingActiveHighlight] =
+    useState(false);
   const [activeView, setActiveView] =
     useState<HighlightToolsView>("helper");
   const explainAbortRef = useRef<AbortController | null>(null);
@@ -701,6 +918,10 @@ function OwnerHighlightTools({
   );
   const deleteHighlightMutation =
     trpc.deleteReaderArticleHighlightRoute.useMutation({
+      retry: false,
+    });
+  const importHighlightsMutation =
+    trpc.importReaderHighlightsToDeckRoute.useMutation({
       retry: false,
     });
 
@@ -722,9 +943,7 @@ function OwnerHighlightTools({
         return;
       }
 
-      if (hasExpandedSelection()) {
-        setSelectionDraft(null);
-      }
+      setSelectionDraft(null);
     };
 
     document.addEventListener("selectionchange", updateSelection);
@@ -788,6 +1007,14 @@ function OwnerHighlightTools({
       await deleteHighlightMutation.mutateAsync({
         publicId,
         highlightId,
+      });
+      setSelectedHighlightIds((previous) => {
+        return previous.filter((id) => id !== highlightId);
+      });
+      setImportStatusByHighlightId((previous) => {
+        const next = { ...previous };
+        delete next[highlightId];
+        return next;
       });
       await highlightsQuery.refetch();
 
@@ -897,6 +1124,174 @@ function OwnerHighlightTools({
   const highlights = useMemo<ReaderArticleHighlight[]>(() => {
     return highlightsQuery.data?.highlights ?? [];
   }, [highlightsQuery.data]);
+  const importableHighlightIds = useMemo(() => {
+    return highlights
+      .filter((highlight) => {
+        return (
+          highlight.status === "ready" && highlight.importedCardId === null
+        );
+      })
+      .map((highlight) => highlight.id);
+  }, [highlights]);
+  const deckOptions = useMemo(() => {
+    return decks.map((deck) => ({
+      value: String(deck.id),
+      label: deck.name,
+    }));
+  }, [decks]);
+
+  useEffect(() => {
+    const selectableIds = new Set(importableHighlightIds);
+
+    setSelectedHighlightIds((previous) => {
+      return previous.filter((highlightId) => {
+        return selectableIds.has(highlightId);
+      });
+    });
+  }, [importableHighlightIds]);
+
+  useEffect(() => {
+    if (selectedDeckId !== null) {
+      return;
+    }
+
+    if (deckOptions.length === 0) {
+      return;
+    }
+
+    setSelectedDeckId(deckOptions[0].value);
+  }, [deckOptions, selectedDeckId]);
+
+  const importHighlightIds = async (highlightIds: number[]) => {
+    const result = await importHighlightsForDeck({
+      mutateAsync: importHighlightsMutation.mutateAsync,
+      publicId,
+      selectedDeckId,
+      highlightIds,
+    });
+    if (!result) {
+      return null;
+    }
+
+    setImportStatusByHighlightId((previous) => {
+      return mergeImportStatuses(previous, result.results);
+    });
+    await highlightsQuery.refetch();
+    return result;
+  };
+
+  const importSelectedHighlights = async () => {
+    setIsImportingSelected(true);
+    try {
+      const highlightIds =
+        selectedHighlightIds.length > 0
+          ? selectedHighlightIds
+          : importableHighlightIds;
+      const result = await importHighlightIds(highlightIds);
+      if (!result) {
+        return;
+      }
+
+      notifications.show({
+        title: "Import complete",
+        message: importSummaryMessage(result.summary),
+        color: result.summary.created > 0 ? "green" : "gray",
+      });
+      setSelectedHighlightIds([]);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Import failed.";
+      notifications.show({
+        title: "Import failed",
+        message,
+        color: "red",
+      });
+    } finally {
+      setIsImportingSelected(false);
+    }
+  };
+
+  const matchedHighlightFromDraft = useMemo(() => {
+    if (!activeHelperDraft) {
+      return null;
+    }
+
+    const matchedHighlightId = findMatchingHighlightId(
+      highlights,
+      activeHelperDraft,
+    );
+    if (matchedHighlightId === null) {
+      return null;
+    }
+
+    return (
+      highlights.find(
+        (highlight) => highlight.id === matchedHighlightId,
+      ) ?? null
+    );
+  }, [activeHelperDraft, highlights]);
+
+  const activeHighlight = useMemo(() => {
+    if (activeHighlightId !== null) {
+      const selectedHighlight = highlights.find((highlight) => {
+        return highlight.id === activeHighlightId;
+      });
+
+      if (selectedHighlight) {
+        return selectedHighlight;
+      }
+    }
+
+    return matchedHighlightFromDraft;
+  }, [activeHighlightId, highlights, matchedHighlightFromDraft]);
+
+  const addActiveHighlightToDeck = async () => {
+    setIsImportingActiveHighlight(true);
+    try {
+      const result = await importHighlightIds(
+        activeHighlight ? [activeHighlight.id] : [],
+      );
+      if (!result) {
+        return;
+      }
+
+      const status = result.results[0]?.status;
+      if (!status) {
+        return;
+      }
+
+      notifications.show({
+        title: "Import",
+        message: importStatusLabel(status),
+        color: importStatusColor(status),
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Import failed.";
+      notifications.show({
+        title: "Import failed",
+        message,
+        color: "red",
+      });
+    } finally {
+      setIsImportingActiveHighlight(false);
+    }
+  };
+
+  const canAddActiveHighlight = canAddHighlightToDeck(
+    activeHighlight,
+    selectedDeckId,
+  );
+  const canImportSelected = canImportSelectedHighlights({
+    selectedDeckId,
+    importableHighlightCount: importableHighlightIds.length,
+    isImportingSelected,
+    isMutationLoading: importHighlightsMutation.isLoading,
+  });
+  const onAddToDeck = addToDeckHandlerOrUndefined(
+    activeHighlight,
+    addActiveHighlightToDeck,
+  );
 
   const savedHighlightsForRender = useMemo<
     SavedArticleHighlightForRender[]
@@ -1001,7 +1396,7 @@ function OwnerHighlightTools({
     return [
       { label: "Word Helper", value: "helper" },
       { label: `Saved (${highlights.length})`, value: "saved" },
-      { label: "Info", value: "info" },
+      { label: "Extras", value: "extras" },
     ];
   }, [highlights.length]);
 
@@ -1032,6 +1427,26 @@ function OwnerHighlightTools({
       <Box style={readerToolsRailStyle}>
         <ReaderPanel gap={6} style={readerToolsPanelStyle}>
           <Box style={readerToolsSwitchStyle}>
+            {deckOptions.length > 0 && (
+              <Select
+                label="Deck"
+                placeholder="Select deck"
+                data={deckOptions}
+                value={selectedDeckId}
+                onChange={setSelectedDeckId}
+                size="xs"
+                mb={8}
+              />
+            )}
+            {deckOptions.length === 0 && (
+              <Text
+                size="xs"
+                c="dimmed"
+                style={{ fontFamily: readerBodyFont, marginBottom: 8 }}
+              >
+                No decks available.
+              </Text>
+            )}
             <SegmentedControl
               value={activeView}
               onChange={(nextValue) => {
@@ -1059,6 +1474,9 @@ function OwnerHighlightTools({
                 isExplaining={isExplaining}
                 streamError={streamError}
                 analysis={activeAnalysis}
+                onAddToDeck={onAddToDeck}
+                canAddToDeck={canAddActiveHighlight}
+                isAddingToDeck={isImportingActiveHighlight}
                 onDeleteHighlight={deleteActiveHighlight}
                 canDeleteHighlight={canDeleteActiveHighlight}
                 isDeletingHighlight={isDeletingActiveHighlight}
@@ -1071,13 +1489,30 @@ function OwnerHighlightTools({
                 isLoading={highlightsQuery.isLoading}
                 errorMessage={queryErrorMessage}
                 deletingHighlightId={deletingHighlightId}
+                selectedHighlightIds={selectedHighlightIds}
+                onToggleHighlightSelection={(highlightId, isSelected) => {
+                  setSelectedHighlightIds((previous) => {
+                    return toggleSelectedHighlights(
+                      previous,
+                      highlightId,
+                      isSelected,
+                    );
+                  });
+                }}
+                onImportSelected={() => {
+                  void importSelectedHighlights();
+                }}
+                canImportSelected={canImportSelected}
+                isImportingSelected={isImportingSelected}
+                importStatusByHighlightId={importStatusByHighlightId}
                 onDeleteHighlight={(highlightId) => {
                   void deleteHighlight(highlightId);
                 }}
               />
             )}
-            {activeView === "info" && (
+            {activeView === "extras" && (
               <HighlightInfoCard
+                publicId={publicId}
                 createdAt={createdAt}
                 sourceUrl={sourceUrl}
               />
@@ -1158,6 +1593,7 @@ export default function PublicReaderArticlePage({
       articleRef={articleRef}
       createdAt={article.createdAt}
       sourceUrl={article.normalizedUrl}
+      decks={article.decks}
     />
   ) : null;
 
@@ -1264,6 +1700,7 @@ export async function getServerSideProps(
         createdAt: true,
         user: {
           select: {
+            id: true,
             email: true,
           },
         },
@@ -1282,6 +1719,16 @@ export async function getServerSideProps(
     Boolean(viewerEmail) &&
     Boolean(ownerEmail) &&
     viewerEmail === ownerEmail;
+  const decks = viewerIsOwner
+    ? await prismaClient.deck.findMany({
+        where: { userId: article.user.id },
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          name: true,
+        },
+      })
+    : [];
 
   const payload: PublicReaderArticle = {
     publicId: article.publicId,
@@ -1293,6 +1740,7 @@ export async function getServerSideProps(
     ingestError: article.ingestError,
     createdAt: article.createdAt.toISOString(),
     viewerIsOwner,
+    decks,
   };
 
   return {

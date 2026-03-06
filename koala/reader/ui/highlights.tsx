@@ -1,7 +1,9 @@
 import {
   ActionIcon,
+  Badge,
   Box,
   Button,
+  Checkbox,
   Group,
   Loader,
   Stack,
@@ -11,7 +13,6 @@ import { IconX } from "@tabler/icons-react";
 import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { ReaderPanelHeader } from "./layout";
 import { readerBodyFont } from "./theme";
 
 export type ReaderHighlightStatus = "in_progress" | "ready" | "error";
@@ -23,6 +24,13 @@ export type ReaderHighlightAnalysis = {
   meaningInContext: string;
 };
 
+export type HighlightImportResultStatus =
+  | "created"
+  | "duplicate"
+  | "already_imported"
+  | "not_ready"
+  | "missing";
+
 export type ReaderArticleHighlight = ReaderHighlightAnalysis & {
   id: number;
   selectedText: string;
@@ -32,6 +40,8 @@ export type ReaderArticleHighlight = ReaderHighlightAnalysis & {
   errorMessage: string;
   contextBefore: string;
   contextAfter: string;
+  importedCardId: number | null;
+  importedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -43,6 +53,9 @@ type ExplainSelectionCardProps = {
   onDeleteHighlight?: () => void;
   canDeleteHighlight?: boolean;
   isDeletingHighlight?: boolean;
+  onAddToDeck?: () => void;
+  canAddToDeck?: boolean;
+  isAddingToDeck?: boolean;
   fillAvailableHeight?: boolean;
 };
 
@@ -195,6 +208,116 @@ function formatAnalysisAsExplanation(
   ].join("\n");
 }
 
+function renderExplainLoading(
+  isExplaining: boolean,
+): React.ReactNode | null {
+  if (!isExplaining) {
+    return null;
+  }
+
+  return (
+    <Group gap="xs" align="center" role="status" aria-live="polite">
+      <Loader size="xs" color="grape" />
+    </Group>
+  );
+}
+
+function renderExplainError(streamError: string): React.ReactNode | null {
+  if (streamError.trim().length === 0) {
+    return null;
+  }
+
+  return (
+    <Text
+      size="sm"
+      c="red"
+      role="alert"
+      style={{ fontFamily: readerBodyFont }}
+    >
+      {streamError}
+    </Text>
+  );
+}
+
+function renderExplainAnalysis(options: {
+  analysis: ReaderHighlightAnalysis | null;
+  fillAvailableHeight: boolean;
+}): React.ReactNode | null {
+  if (!options.analysis || !hasAnalysis(options.analysis)) {
+    return null;
+  }
+
+  return (
+    <Box
+      role="status"
+      aria-live="polite"
+      style={helperStreamStyle(options.fillAvailableHeight)}
+    >
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+        {formatAnalysisAsExplanation(options.analysis)}
+      </ReactMarkdown>
+    </Box>
+  );
+}
+
+function renderExplainActions(options: {
+  onAddToDeck?: () => void;
+  canAddToDeck: boolean;
+  isExplaining: boolean;
+  isDeletingHighlight: boolean;
+  isAddingToDeck: boolean;
+  canDeleteHighlight: boolean;
+  onDeleteHighlight?: () => void;
+}): React.ReactNode | null {
+  const showAddAction = Boolean(options.onAddToDeck);
+  const showDeleteAction = Boolean(options.onDeleteHighlight);
+
+  if (!showAddAction && !showDeleteAction) {
+    return null;
+  }
+
+  return (
+    <Group justify="flex-end">
+      {showAddAction && options.onAddToDeck && (
+        <Button
+          size="compact-sm"
+          variant="light"
+          color="grape"
+          onClick={options.onAddToDeck}
+          disabled={
+            !options.canAddToDeck ||
+            options.isExplaining ||
+            options.isDeletingHighlight
+          }
+          loading={options.isAddingToDeck}
+        >
+          Add to deck
+        </Button>
+      )}
+      {showDeleteAction && options.onDeleteHighlight && (
+        <ActionIcon
+          size="sm"
+          variant="subtle"
+          color="gray"
+          onClick={options.onDeleteHighlight}
+          disabled={
+            !options.canDeleteHighlight ||
+            options.isDeletingHighlight ||
+            options.isExplaining
+          }
+          aria-label="Delete highlight"
+        >
+          {options.isDeletingHighlight ? (
+            <Loader size={12} />
+          ) : (
+            <IconX size={14} stroke={1.8} />
+          )}
+        </ActionIcon>
+      )}
+    </Group>
+  );
+}
+
 export function SelectionActionBubble({
   isVisible,
   top,
@@ -245,71 +368,25 @@ export function ExplainSelectionCard({
   onDeleteHighlight,
   canDeleteHighlight = false,
   isDeletingHighlight = false,
+  onAddToDeck,
+  canAddToDeck = false,
+  isAddingToDeck = false,
   fillAvailableHeight = false,
 }: ExplainSelectionCardProps) {
-  const hasStreamError = streamError.trim().length > 0;
-  const showEmptyState =
-    !isExplaining && !hasStreamError && !hasAnalysis(analysis);
-
   return (
     <Stack gap="sm" style={helperPanelStyle(fillAvailableHeight)}>
-      <ReaderPanelHeader
-        title="Word Helper"
-        subtitle="Select a word or phrase in the article, then choose Explain."
-      />
-      {isExplaining && (
-        <Group gap="xs" align="center" role="status" aria-live="polite">
-          <Loader size="xs" color="grape" />
-          <Text
-            size="sm"
-            c="dimmed"
-            style={{ fontFamily: readerBodyFont }}
-          >
-            Loading...
-          </Text>
-        </Group>
-      )}
-      {hasStreamError && (
-        <Text
-          size="sm"
-          c="red"
-          role="alert"
-          style={{ fontFamily: readerBodyFont }}
-        >
-          {streamError}
-        </Text>
-      )}
-      {showEmptyState && (
-        <Text size="sm" c="dimmed" style={{ fontFamily: readerBodyFont }}>
-          The explanation will appear here and stay in view while you keep
-          reading.
-        </Text>
-      )}
-      {hasAnalysis(analysis) && analysis && (
-        <Box
-          role="status"
-          aria-live="polite"
-          style={helperStreamStyle(fillAvailableHeight)}
-        >
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-            {formatAnalysisAsExplanation(analysis)}
-          </ReactMarkdown>
-        </Box>
-      )}
-      {canDeleteHighlight && onDeleteHighlight && (
-        <Group justify="flex-end">
-          <Button
-            size="compact-sm"
-            variant="subtle"
-            color="gray"
-            onClick={onDeleteHighlight}
-            disabled={isDeletingHighlight || isExplaining}
-            loading={isDeletingHighlight}
-          >
-            Remove
-          </Button>
-        </Group>
-      )}
+      {renderExplainActions({
+        onAddToDeck,
+        canAddToDeck,
+        isExplaining,
+        isDeletingHighlight,
+        isAddingToDeck,
+        canDeleteHighlight,
+        onDeleteHighlight,
+      })}
+      {renderExplainLoading(isExplaining)}
+      {renderExplainError(streamError)}
+      {renderExplainAnalysis({ analysis, fillAvailableHeight })}
     </Stack>
   );
 }
@@ -319,18 +396,69 @@ type HighlightsHistoryCardProps = {
   isLoading: boolean;
   errorMessage: string;
   deletingHighlightId: number | null;
+  selectedHighlightIds: number[];
+  onToggleHighlightSelection: (
+    highlightId: number,
+    isSelected: boolean,
+  ) => void;
+  onImportSelected: () => void;
+  canImportSelected: boolean;
+  isImportingSelected: boolean;
+  importStatusByHighlightId: Record<number, HighlightImportResultStatus>;
   onDeleteHighlight: (highlightId: number) => void;
 };
 
 type HighlightHistoryRowProps = {
   highlight: ReaderArticleHighlight;
   isDeleting: boolean;
+  isSelected: boolean;
+  onToggleSelected: (next: boolean) => void;
+  importStatus: HighlightImportResultStatus | null;
   onDeleteHighlight: (highlightId: number) => void;
 };
+
+type HighlightBadgeMeta = {
+  label: string;
+  color: string;
+};
+
+function resolveHighlightBadgeMeta(
+  highlight: ReaderArticleHighlight,
+  importStatus: HighlightImportResultStatus | null,
+): HighlightBadgeMeta | null {
+  if (highlight.importedCardId !== null) {
+    return { label: "Added", color: "teal" };
+  }
+
+  if (importStatus === "created" || importStatus === "already_imported") {
+    return { label: "Added", color: "teal" };
+  }
+
+  if (importStatus === "duplicate") {
+    return { label: "Duplicate", color: "gray" };
+  }
+
+  if (importStatus === "not_ready") {
+    return { label: "Not ready", color: "yellow" };
+  }
+
+  if (highlight.status === "in_progress") {
+    return { label: "Pending", color: "yellow" };
+  }
+
+  if (highlight.status === "error") {
+    return { label: "Error", color: "red" };
+  }
+
+  return null;
+}
 
 function HighlightHistoryRow({
   highlight,
   isDeleting,
+  isSelected,
+  onToggleSelected,
+  importStatus,
   onDeleteHighlight,
 }: HighlightHistoryRowProps) {
   const [showExplanation, setShowExplanation] = React.useState(false);
@@ -349,6 +477,9 @@ function HighlightHistoryRow({
   };
   const highlightHasAnalysis =
     highlight.status === "ready" && hasAnalysis(analysis);
+  const canSelect =
+    highlight.status === "ready" && highlight.importedCardId === null;
+  const badgeMeta = resolveHighlightBadgeMeta(highlight, importStatus);
 
   let toggleLabel = "Show explanation";
   if (showExplanation) {
@@ -364,17 +495,45 @@ function HighlightHistoryRow({
       }}
     >
       <Group justify="space-between" align="flex-start" wrap="nowrap">
-        <Text
-          fw={700}
+        <Group
+          align="flex-start"
+          gap={8}
+          wrap="nowrap"
           style={{
-            fontFamily: readerBodyFont,
-            color: "#5b3f4d",
             minWidth: 0,
             flex: "1 1 auto",
           }}
         >
-          {highlight.selectedText}
-        </Text>
+          <Checkbox
+            checked={isSelected}
+            onChange={(event) => {
+              onToggleSelected(event.currentTarget.checked);
+            }}
+            disabled={!canSelect}
+            mt={2}
+            aria-label={`Select highlight ${highlight.selectedText}`}
+          />
+          <Stack gap={2} style={{ minWidth: 0, flex: "1 1 auto" }}>
+            <Group gap={6} wrap="wrap">
+              <Text
+                fw={700}
+                style={{
+                  fontFamily: readerBodyFont,
+                  color: "#5b3f4d",
+                  minWidth: 0,
+                  flex: "1 1 auto",
+                }}
+              >
+                {highlight.selectedText}
+              </Text>
+              {badgeMeta && (
+                <Badge size="xs" variant="light" color={badgeMeta.color}>
+                  {badgeMeta.label}
+                </Badge>
+              )}
+            </Group>
+          </Stack>
+        </Group>
         <ActionIcon
           size="sm"
           variant="subtle"
@@ -450,6 +609,12 @@ export function HighlightsHistoryCard({
   isLoading,
   errorMessage,
   deletingHighlightId,
+  selectedHighlightIds,
+  onToggleHighlightSelection,
+  onImportSelected,
+  canImportSelected,
+  isImportingSelected,
+  importStatusByHighlightId,
   onDeleteHighlight,
 }: HighlightsHistoryCardProps) {
   const [showAll, setShowAll] = React.useState(false);
@@ -464,7 +629,6 @@ export function HighlightsHistoryCard({
 
   return (
     <Stack gap="sm">
-      <ReaderPanelHeader title="Saved Highlights" />
       {isLoading && (
         <Group gap="xs" align="center" role="status" aria-live="polite">
           <Loader size="xs" color="grape" />
@@ -500,12 +664,30 @@ export function HighlightsHistoryCard({
         )}
       {!isLoading && highlights.length > 0 && (
         <Stack gap="sm">
+          <Group>
+            <Button
+              size="compact-sm"
+              color="grape"
+              onClick={onImportSelected}
+              disabled={!canImportSelected}
+              loading={isImportingSelected}
+            >
+              Import
+            </Button>
+          </Group>
           {visibleHighlights.map((highlight) => {
             return (
               <HighlightHistoryRow
                 key={highlight.id}
                 highlight={highlight}
                 isDeleting={deletingHighlightId === highlight.id}
+                isSelected={selectedHighlightIds.includes(highlight.id)}
+                onToggleSelected={(next) => {
+                  onToggleHighlightSelection(highlight.id, next);
+                }}
+                importStatus={
+                  importStatusByHighlightId[highlight.id] ?? null
+                }
                 onDeleteHighlight={onDeleteHighlight}
               />
             );

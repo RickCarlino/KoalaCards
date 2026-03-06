@@ -1,7 +1,4 @@
-import {
-  buildOccurrenceContexts,
-  selectOccurrenceIndex,
-} from "./highlight-context";
+import { findOccurrenceOffsets } from "./highlight-context";
 
 export type SavedArticleHighlightForRender = {
   id: number;
@@ -16,24 +13,6 @@ export type ArticleHighlightRange = {
   startOffset: number;
   endOffset: number;
 };
-
-const RENDER_CONTEXT_RADIUS = 80;
-
-function clampIndex(value: number, length: number): number {
-  if (length <= 0) {
-    return -1;
-  }
-
-  if (value < 0) {
-    return 0;
-  }
-
-  if (value >= length) {
-    return length - 1;
-  }
-
-  return value;
-}
 
 function isNonEmptyRange(range: {
   startOffset: number;
@@ -94,43 +73,43 @@ export function buildSavedArticleHighlightRanges(options: {
   }
 
   const ranges: ArticleHighlightRange[] = [];
+  const seenSelectedTexts = new Set<string>();
+  const offsetsBySelectedText = new Map<
+    string,
+    Array<{ startOffset: number; endOffset: number }>
+  >();
 
   for (const highlight of highlights) {
-    const occurrences = buildOccurrenceContexts(
-      articleText,
-      highlight.selectedText,
-      RENDER_CONTEXT_RADIUS,
-    );
-    if (occurrences.length === 0) {
+    const selectedText = highlight.selectedText.trim();
+    if (!selectedText) {
       continue;
     }
 
-    const resolvedIndex = selectOccurrenceIndex({
-      occurrences,
-      contextBefore: highlight.contextBefore,
-      contextAfter: highlight.contextAfter,
-      occurrenceHint: highlight.selectedOccurrenceIndex,
-    });
-    const fallbackIndex = clampIndex(
-      highlight.selectedOccurrenceIndex,
-      occurrences.length,
-    );
+    if (seenSelectedTexts.has(selectedText)) {
+      continue;
+    }
+    seenSelectedTexts.add(selectedText);
 
-    const selectedOccurrence =
-      occurrences[resolvedIndex] ?? occurrences[fallbackIndex];
-    if (!selectedOccurrence) {
+    const offsets =
+      offsetsBySelectedText.get(selectedText) ??
+      findOccurrenceOffsets(articleText, selectedText);
+    offsetsBySelectedText.set(selectedText, offsets);
+
+    if (offsets.length === 0) {
       continue;
     }
 
-    if (!isNonEmptyRange(selectedOccurrence)) {
-      continue;
-    }
+    for (const offset of offsets) {
+      if (!isNonEmptyRange(offset)) {
+        continue;
+      }
 
-    ranges.push({
-      highlightId: highlight.id,
-      startOffset: selectedOccurrence.startOffset,
-      endOffset: selectedOccurrence.endOffset,
-    });
+      ranges.push({
+        highlightId: highlight.id,
+        startOffset: offset.startOffset,
+        endOffset: offset.endOffset,
+      });
+    }
   }
 
   const deduped = dedupeRanges(ranges);
