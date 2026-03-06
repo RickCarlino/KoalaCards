@@ -7,22 +7,28 @@ import {
   Stack,
   Text,
 } from "@mantine/core";
+import { IconX } from "@tabler/icons-react";
 import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { IconX } from "@tabler/icons-react";
 import { ReaderPanelHeader } from "./layout";
 import { readerBodyFont } from "./theme";
 
 export type ReaderHighlightStatus = "in_progress" | "ready" | "error";
 
-export type ReaderArticleHighlight = {
+export type ReaderHighlightAnalysis = {
+  term: string;
+  definition: string;
+  generalMeaning: string;
+  meaningInContext: string;
+};
+
+export type ReaderArticleHighlight = ReaderHighlightAnalysis & {
   id: number;
   selectedText: string;
   selectedOccurrenceIndex: number;
   occurrenceCount: number;
   status: ReaderHighlightStatus;
-  explanationMarkdown: string;
   errorMessage: string;
   contextBefore: string;
   contextAfter: string;
@@ -33,7 +39,7 @@ export type ReaderArticleHighlight = {
 type ExplainSelectionCardProps = {
   isExplaining: boolean;
   streamError: string;
-  streamText: string;
+  analysis: ReaderHighlightAnalysis | null;
   onDeleteHighlight?: () => void;
   canDeleteHighlight?: boolean;
   isDeletingHighlight?: boolean;
@@ -165,6 +171,30 @@ function helperStreamStyle(
   };
 }
 
+function hasAnalysis(analysis: ReaderHighlightAnalysis | null): boolean {
+  if (!analysis) {
+    return false;
+  }
+
+  return (
+    analysis.definition.trim().length > 0 &&
+    analysis.generalMeaning.trim().length > 0 &&
+    analysis.meaningInContext.trim().length > 0
+  );
+}
+
+function formatAnalysisAsExplanation(
+  analysis: ReaderHighlightAnalysis,
+): string {
+  return [
+    `${analysis.term}: ${analysis.definition}`,
+    "",
+    analysis.generalMeaning,
+    "",
+    analysis.meaningInContext,
+  ].join("\n");
+}
+
 export function SelectionActionBubble({
   isVisible,
   top,
@@ -211,16 +241,15 @@ export function SelectionActionBubble({
 export function ExplainSelectionCard({
   isExplaining,
   streamError,
-  streamText,
+  analysis,
   onDeleteHighlight,
   canDeleteHighlight = false,
   isDeletingHighlight = false,
   fillAvailableHeight = false,
 }: ExplainSelectionCardProps) {
-  const hasStreamText = streamText.trim().length > 0;
   const hasStreamError = streamError.trim().length > 0;
   const showEmptyState =
-    !isExplaining && !hasStreamError && !hasStreamText;
+    !isExplaining && !hasStreamError && !hasAnalysis(analysis);
 
   return (
     <Stack gap="sm" style={helperPanelStyle(fillAvailableHeight)}>
@@ -236,7 +265,7 @@ export function ExplainSelectionCard({
             c="dimmed"
             style={{ fontFamily: readerBodyFont }}
           >
-            Streaming explanation...
+            Loading...
           </Text>
         </Group>
       )}
@@ -256,14 +285,14 @@ export function ExplainSelectionCard({
           reading.
         </Text>
       )}
-      {hasStreamText && (
+      {hasAnalysis(analysis) && analysis && (
         <Box
           role="status"
           aria-live="polite"
           style={helperStreamStyle(fillAvailableHeight)}
         >
           <ReactMarkdown remarkPlugins={[remarkGfm]}>
-            {streamText}
+            {formatAnalysisAsExplanation(analysis)}
           </ReactMarkdown>
         </Box>
       )}
@@ -312,10 +341,14 @@ function HighlightHistoryRow({
     contextSummary.after.length > 0;
   const timestamp = formatHighlightTimestamp(highlight.createdAt);
   const metaLine = buildHighlightMetaLine(highlight, timestamp);
-
-  const hasExplanation =
-    highlight.status === "ready" &&
-    highlight.explanationMarkdown.trim().length > 0;
+  const analysis: ReaderHighlightAnalysis = {
+    term: highlight.term,
+    definition: highlight.definition,
+    generalMeaning: highlight.generalMeaning,
+    meaningInContext: highlight.meaningInContext,
+  };
+  const highlightHasAnalysis =
+    highlight.status === "ready" && hasAnalysis(analysis);
 
   let toggleLabel = "Show explanation";
   if (showExplanation) {
@@ -382,7 +415,7 @@ function HighlightHistoryRow({
             {highlight.errorMessage}
           </Text>
         )}
-      {hasExplanation && (
+      {highlightHasAnalysis && (
         <Group gap="xs" justify="space-between">
           <Button
             size="compact-xs"
@@ -396,7 +429,7 @@ function HighlightHistoryRow({
           </Button>
         </Group>
       )}
-      {hasExplanation && showExplanation && (
+      {highlightHasAnalysis && showExplanation && (
         <Box
           style={{
             borderLeft: "2px solid #ecd8e2",
@@ -404,7 +437,7 @@ function HighlightHistoryRow({
           }}
         >
           <ReactMarkdown remarkPlugins={[remarkGfm]}>
-            {highlight.explanationMarkdown}
+            {formatAnalysisAsExplanation(analysis)}
           </ReactMarkdown>
         </Box>
       )}

@@ -39,7 +39,6 @@ type CardView = {
   definition: string;
   paused: boolean;
   langCode: string;
-  gender: string;
   imageURL: string | null;
   repetitions: number;
   lapses: number;
@@ -148,7 +147,6 @@ function CardEditor({ card }: CardPageProps) {
             <Badge color="pink" variant="light">
               {card.langCode.toUpperCase()}
             </Badge>
-            <Badge variant="outline">Gender: {card.gender}</Badge>
             {card.paused && (
               <Badge color="red" leftSection={<IconFlag size={14} />}>
                 Paused
@@ -308,14 +306,6 @@ function CardEditor({ card }: CardPageProps) {
                     {card.langCode.toUpperCase()}
                   </Text>
                 </Group>
-                <Group gap="xs">
-                  <Text c="dimmed" size="sm">
-                    Gender:
-                  </Text>
-                  <Text size="sm" fw={500}>
-                    {card.gender}
-                  </Text>
-                </Group>
               </Stack>
             </Paper>
           </Grid.Col>
@@ -362,7 +352,6 @@ export const getServerSideProps: GetServerSideProps<
         definition: card.definition,
         paused: card.paused,
         langCode: "ko",
-        gender: card.gender,
         imageURL,
         repetitions: card.repetitions ?? 0,
         lapses: card.lapses ?? 0,

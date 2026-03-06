@@ -28,7 +28,6 @@ type CardRecord = {
   term: string;
   definition: string;
   createdAt: string;
-  gender: string;
   repetitions: number;
   lapses: number;
   lastReview: number;
@@ -211,7 +210,6 @@ async function fetchCards(
     term: c.term,
     definition: c.definition,
     createdAt: c.createdAt.toISOString(),
-    gender: c.gender,
     repetitions: c.repetitions ?? 0,
     lapses: c.lapses ?? 0,
     lastReview: c.lastReview ?? 0,

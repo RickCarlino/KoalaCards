@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-export type Gender = "M" | "F" | "N";
 export type LangCode = "ko";
 export type LessonType = "speaking" | "new" | "remedial";
 export type QuizResult = "error" | "fail" | "pass";

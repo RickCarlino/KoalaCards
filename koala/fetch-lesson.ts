@@ -32,7 +32,6 @@ type LocalCard = Pick<
   | "imageBlobId"
   | "lastFailure"
   | "paused"
-  | "gender"
 >;
 
 const NEW_CARD = "N" as const;

@@ -109,8 +109,6 @@ model Card {
   paused      Boolean  @default(false)
   term        String
   definition  String
-  // Gender can be "M"ale, "F"emale, or "N"eutral
-  gender      String   @default("N")
   createdAt   DateTime @default(now())
   imageBlobId String?
   deckId      Int
@@ -261,7 +259,10 @@ model ReaderArticleHighlight {
   articleContentHash      String                @db.VarChar(64)
   promptVersion           Int                   @default(1)
   status                  ReaderHighlightStatus @default(IN_PROGRESS)
-  explanationMarkdown     String                @default("") @db.Text
+  term                    String                @default("") @db.Text
+  definition              String                @default("") @db.Text
+  generalMeaning          String                @default("") @db.Text
+  meaningInContext        String                @default("") @db.Text
   errorMessage            String                @default("") @db.Text
   createdAt               DateTime              @default(now())
   updatedAt               DateTime              @updatedAt

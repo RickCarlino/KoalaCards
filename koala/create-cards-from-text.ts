@@ -1,11 +1,9 @@
 import { generateStructuredOutput } from "./ai";
-import { Gender } from "./shared-types";
 import { z } from "zod";
 
 interface Card {
   definition: string;
   term: string;
-  gender: Gender;
 }
 
 const SYSTEM_PROMPT = `
@@ -23,9 +21,9 @@ const SYSTEM_PROMPT = `
   EXAMPLE OUTPUT:
     {
       "cards": [
-        {"term": 저는 간호사예요.", "definition": "I am a nurse."gender": "F"},
-        {"term": 저는 의사예요.", "definition": "I am a doctor., "gender": "M"},
-        {"term": 오늘 날씨가 좋네요.", "definition": "The weather is nice today., "gender": "N"}
+        {"term": "저는 간호사예요.", "definition": "I am a nurse."},
+        {"term": "저는 의사예요.", "definition": "I am a doctor."},
+        {"term": "오늘 날씨가 좋네요.", "definition": "The weather is nice today."}
       ]
     }
 
@@ -34,10 +32,8 @@ const SYSTEM_PROMPT = `
   You need to convert a variety of inputs into a structured
   format for a language learning flashcard app. The inputs
   could be in any format, and you must include
-  the term, its English definition, and the appropriate gender
-  for text-to-speech (TTS) voice, based on grammatical gender
-  or the context of the term. The output should be in JSON,
-  following the schema above. Ensure the term is in the
+  the term and its English definition. The output should be in
+  JSON, following the schema above. Ensure the term is in the
   target language and the definition in English, without
   altering their content.
 
@@ -48,7 +44,6 @@ const CardSchema = z.object({
     z.object({
       term: z.string(),
       definition: z.string(),
-      gender: z.enum(["M", "F", "N"]),
     }),
   ),
 });

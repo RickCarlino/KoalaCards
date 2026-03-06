@@ -24,7 +24,10 @@ Keep page concerns in `pages/` and reusable/business logic in `koala/`.
 
 ## Commit & Pull Request Guidelines
 - Do not commit to git unless instructed to do so.
+- Do not stage or unstage stuff
+- You may read git for info, but do not modify anything.
 - Commits and pull requests are for humans.
+
 
 ## Security & Configuration Tips
 - Never commit secrets; use `.env` and keep `.env.example` in sync.

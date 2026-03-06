@@ -386,7 +386,6 @@ type AssistantRole = "user" | "assistant";
 type Suggestion = {
   phrase: string;
   translation: string;
-  gender: "M" | "F" | "N";
 };
 
 type AssistantEditProposal = {
@@ -4526,7 +4525,6 @@ function useAssistantChat({
   }): Suggestion => ({
     phrase: example.phrase,
     translation: example.translation,
-    gender: "N",
   });
 
   const createEditProposal = React.useCallback(
@@ -4636,7 +4634,6 @@ function useAssistantChat({
           {
             term: suggestion.phrase,
             definition: suggestion.translation,
-            gender: suggestion.gender,
           },
         ],
       });

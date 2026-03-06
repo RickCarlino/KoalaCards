@@ -15,6 +15,7 @@ import {
   ExplainSelectionCard,
   HighlightsHistoryCard,
   SelectionActionBubble,
+  type ReaderHighlightAnalysis,
   type ReaderArticleHighlight,
 } from "@/koala/reader/ui/highlights";
 import {
@@ -66,7 +67,7 @@ type ReaderSelectionDraft = {
 };
 
 type StreamHandlers = {
-  onChunk: (chunk: string) => void;
+  onAnalysis: (analysis: ReaderHighlightAnalysis) => void;
   onDone: () => void;
   onError: (message: string) => void;
 };
@@ -281,6 +282,29 @@ function helperDraftFromHighlight(
   };
 }
 
+function analysisFromHighlight(
+  highlight: ReaderArticleHighlight,
+): ReaderHighlightAnalysis | null {
+  if (highlight.status !== "ready") {
+    return null;
+  }
+
+  if (
+    highlight.definition.trim().length === 0 ||
+    highlight.generalMeaning.trim().length === 0 ||
+    highlight.meaningInContext.trim().length === 0
+  ) {
+    return null;
+  }
+
+  return {
+    term: highlight.term,
+    definition: highlight.definition,
+    generalMeaning: highlight.generalMeaning,
+    meaningInContext: highlight.meaningInContext,
+  };
+}
+
 function shouldFillToolsBody(view: HighlightToolsView): boolean {
   return view === "helper";
 }
@@ -398,35 +422,11 @@ async function readSseStream(
     buffer = chunks.pop() ?? "";
 
     for (const chunk of chunks) {
-      let eventName: string | null = null;
-      const dataLines: string[] = [];
-
-      for (const line of chunk.split("\n")) {
-        if (line.startsWith("event:")) {
-          eventName = line.slice(6).trim();
-          continue;
-        }
-
-        if (line.startsWith("data:")) {
-          dataLines.push(line.slice(5).replace(/^ /, ""));
-        }
-      }
-
-      const payload = dataLines.join("\n");
-
-      if (eventName === "done") {
+      const shouldStop = handleSseChunk(chunk, handlers);
+      if (shouldStop) {
         handlers.onDone();
         finished = true;
         break;
-      }
-
-      if (eventName === "error") {
-        handlers.onError(payload || "Streaming failed.");
-        continue;
-      }
-
-      if (payload.length > 0) {
-        handlers.onChunk(payload);
       }
     }
   }
@@ -434,6 +434,56 @@ async function readSseStream(
   if (!finished) {
     handlers.onDone();
   }
+}
+
+function parseSseChunk(chunk: string): {
+  eventName: string | null;
+  payload: string;
+} {
+  let eventName: string | null = null;
+  const dataLines: string[] = [];
+
+  for (const line of chunk.split("\n")) {
+    if (line.startsWith("event:")) {
+      eventName = line.slice(6).trim();
+      continue;
+    }
+
+    if (line.startsWith("data:")) {
+      dataLines.push(line.slice(5).replace(/^ /, ""));
+    }
+  }
+
+  return {
+    eventName,
+    payload: dataLines.join("\n"),
+  };
+}
+
+function handleSseChunk(chunk: string, handlers: StreamHandlers): boolean {
+  const { eventName, payload } = parseSseChunk(chunk);
+
+  if (eventName === "done") {
+    return true;
+  }
+
+  if (eventName === "error") {
+    handlers.onError(payload || "Streaming failed.");
+    return false;
+  }
+
+  if (eventName !== "analysis" || payload.length === 0) {
+    return false;
+  }
+
+  try {
+    const parsed = JSON.parse(payload) as ReaderHighlightAnalysis;
+    handlers.onAnalysis(parsed);
+  } catch {
+    handlers.onError("Unable to read structured analysis.");
+  }
+
+  return false;
 }
 
 const readerArticleBodyStyle = {
@@ -634,7 +684,8 @@ function OwnerHighlightTools({
   const [activeHighlightId, setActiveHighlightId] = useState<
     number | null
   >(null);
-  const [streamText, setStreamText] = useState("");
+  const [activeAnalysis, setActiveAnalysis] =
+    useState<ReaderHighlightAnalysis | null>(null);
   const [streamError, setStreamError] = useState("");
   const [isExplaining, setIsExplaining] = useState(false);
   const [deletingHighlightId, setDeletingHighlightId] = useState<
@@ -659,6 +710,7 @@ function OwnerHighlightTools({
       if (!articleElement) {
         setSelectionDraft(null);
         setActiveHighlightId(null);
+        setActiveAnalysis(null);
         return;
       }
 
@@ -745,7 +797,7 @@ function OwnerHighlightTools({
 
       setActiveHighlightId(null);
       setHelperDraftOverride(null);
-      setStreamText("");
+      setActiveAnalysis(null);
       setStreamError("");
     } catch (error) {
       const message =
@@ -767,7 +819,7 @@ function OwnerHighlightTools({
     explainAbortRef.current?.abort();
     explainAbortRef.current = controller;
 
-    setStreamText("");
+    setActiveAnalysis(null);
     setStreamError("");
     setIsExplaining(true);
 
@@ -797,8 +849,8 @@ function OwnerHighlightTools({
 
       const reader = response.body.getReader();
       await readSseStream(reader, {
-        onChunk: (chunk) => {
-          setStreamText((previous) => previous + chunk);
+        onAnalysis: (analysis) => {
+          setActiveAnalysis(analysis);
         },
         onDone: () => {
           setIsExplaining(false);
@@ -822,7 +874,13 @@ function OwnerHighlightTools({
         return;
       }
 
+      const matchedHighlight = nextHighlights.find((highlight) => {
+        return highlight.id === matchedHighlightId;
+      });
       setActiveHighlightId(matchedHighlightId);
+      if (matchedHighlight) {
+        setActiveAnalysis(analysisFromHighlight(matchedHighlight));
+      }
     } catch (error) {
       const aborted = controller.signal.aborted;
       if (!aborted) {
@@ -921,14 +979,7 @@ function OwnerHighlightTools({
       setActiveHighlightId(clickedHighlight.id);
       setActiveView("helper");
 
-      if (
-        clickedHighlight.status === "ready" &&
-        clickedHighlight.explanationMarkdown.trim().length > 0
-      ) {
-        setStreamText(clickedHighlight.explanationMarkdown);
-      } else {
-        setStreamText("");
-      }
+      setActiveAnalysis(analysisFromHighlight(clickedHighlight));
 
       if (
         clickedHighlight.status === "error" &&
@@ -1007,7 +1058,7 @@ function OwnerHighlightTools({
               <ExplainSelectionCard
                 isExplaining={isExplaining}
                 streamError={streamError}
-                streamText={streamText}
+                analysis={activeAnalysis}
                 onDeleteHighlight={deleteActiveHighlight}
                 canDeleteHighlight={canDeleteActiveHighlight}
                 isDeletingHighlight={isDeletingActiveHighlight}

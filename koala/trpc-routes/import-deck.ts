@@ -8,7 +8,6 @@ import { DeckExportCard, deckExportSchema } from "../types/deck-export";
 type PreparedCardInput = {
   term: string;
   definition: string;
-  gender: "M" | "F" | "N";
   paused: boolean;
   imageBlobId: string | null;
   stability: number;
@@ -35,13 +34,6 @@ const toNumber = (value: number, fallback: number): number => {
     return value;
   }
   return fallback;
-};
-
-const toGender = (value?: string): "M" | "F" | "N" => {
-  if (value === "M" || value === "F" || value === "N") {
-    return value;
-  }
-  return "N";
 };
 
 const resolvePaused = (card: DeckExportCard): boolean => {
@@ -85,7 +77,6 @@ const normalizeCard = async (
   const prepared: PreparedCardInput = {
     term,
     definition,
-    gender: toGender(card.gender),
     paused: resolvePaused(card),
     imageBlobId,
     stability: toNumber(card.stability, 0),
@@ -167,7 +158,6 @@ export const importDeck = procedure.input(importDeckInput).mutation(
           deckId: deck.id,
           term: card.term,
           definition: card.definition,
-          gender: card.gender,
           paused: card.paused,
           imageBlobId: card.imageBlobId,
           stability: card.stability,

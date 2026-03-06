@@ -10,7 +10,6 @@ type Card = {
   term: string;
   definition: string;
   createdAt: string;
-  gender: string;
   repetitions: number;
   lapses: number;
   lastReview: number;

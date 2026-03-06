@@ -1,4 +1,4 @@
-import { generateAIText } from "@/koala/ai";
+import { generateStructuredOutput } from "@/koala/ai";
 import { prismaClient } from "@/koala/prisma-client";
 import {
   buildOccurrenceContexts,
@@ -7,11 +7,13 @@ import {
 } from "@/koala/reader/highlight-context";
 import {
   buildReaderHighlightPrompt,
-  normalizeReaderHighlightOutput,
+  normalizeReaderHighlightAnalysis,
+  readerHighlightModelOutputSchema,
   READER_HIGHLIGHT_CONTEXT_RADIUS,
   READER_HIGHLIGHT_MAX_PROMPT_OCCURRENCES,
   READER_HIGHLIGHT_PROMPT_VERSION,
   sha256Hex,
+  type ReaderHighlightAnalysis,
 } from "@/koala/reader/highlight-explain";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getServerSession } from "next-auth";
@@ -32,7 +34,10 @@ type CachedHighlightRecord = {
   id: number;
   status: "IN_PROGRESS" | "READY" | "ERROR";
   selectedText: string;
-  explanationMarkdown: string;
+  term: string;
+  definition: string;
+  generalMeaning: string;
+  meaningInContext: string;
 };
 
 type OwnedArticleRecord = {
@@ -88,20 +93,16 @@ function streamError(
   streamDone(res, isClosed);
 }
 
-function chunkText(value: string, chunkSize: number): string[] {
-  if (!value) {
-    return [];
+function streamAnalysis(
+  res: NextApiResponse,
+  isClosed: boolean,
+  analysis: ReaderHighlightAnalysis,
+): void {
+  if (isClosed) {
+    return;
   }
 
-  const chunks: string[] = [];
-  let cursor = 0;
-
-  while (cursor < value.length) {
-    chunks.push(value.slice(cursor, cursor + chunkSize));
-    cursor += chunkSize;
-  }
-
-  return chunks;
+  writeSSE(res, JSON.stringify(analysis), "analysis");
 }
 
 function normalizeArticleText(value: string): string {
@@ -228,7 +229,10 @@ async function loadCachedHighlight(options: {
       id: true,
       status: true,
       selectedText: true,
-      explanationMarkdown: true,
+      term: true,
+      definition: true,
+      generalMeaning: true,
+      meaningInContext: true,
     },
   });
 }
@@ -273,7 +277,10 @@ async function upsertHighlight(options: {
       articleContentHash: options.articleContentHash,
       promptVersion: READER_HIGHLIGHT_PROMPT_VERSION,
       status: "IN_PROGRESS",
-      explanationMarkdown: "",
+      term: "",
+      definition: "",
+      generalMeaning: "",
+      meaningInContext: "",
       errorMessage: "",
     },
     update: {
@@ -282,7 +289,10 @@ async function upsertHighlight(options: {
       occurrenceCount: options.occurrenceCount,
       occurrencesJson: options.occurrencesJson,
       status: "IN_PROGRESS",
-      explanationMarkdown: "",
+      term: "",
+      definition: "",
+      generalMeaning: "",
+      meaningInContext: "",
       errorMessage: "",
     },
     select: { id: true },
@@ -293,13 +303,16 @@ async function upsertHighlight(options: {
 
 async function markHighlightReady(
   highlightId: number,
-  explanationMarkdown: string,
+  analysis: ReaderHighlightAnalysis,
 ): Promise<void> {
   await prismaClient.readerArticleHighlight.update({
     where: { id: highlightId },
     data: {
       status: "READY",
-      explanationMarkdown,
+      term: analysis.term,
+      definition: analysis.definition,
+      generalMeaning: analysis.generalMeaning,
+      meaningInContext: analysis.meaningInContext,
       errorMessage: "",
     },
   });
@@ -405,31 +418,38 @@ async function resolveExplainRequest(
   };
 }
 
+function hasReadyAnalysis(record: {
+  status: "IN_PROGRESS" | "READY" | "ERROR";
+  definition: string;
+  generalMeaning: string;
+  meaningInContext: string;
+}) {
+  return (
+    record.status === "READY" &&
+    record.definition.trim().length > 0 &&
+    record.generalMeaning.trim().length > 0 &&
+    record.meaningInContext.trim().length > 0
+  );
+}
+
 function streamCachedResponse(options: {
   res: NextApiResponse;
   isClosed: () => boolean;
   cached: CachedHighlightRecord;
 }): boolean {
-  const hasCachedAnswer =
-    options.cached.status === "READY" &&
-    options.cached.explanationMarkdown.trim().length > 0;
-  if (!hasCachedAnswer) {
+  if (!hasReadyAnalysis(options.cached)) {
     return false;
   }
 
-  const normalizedOutput = normalizeReaderHighlightOutput({
+  const normalizedAnalysis = normalizeReaderHighlightAnalysis({
     selectedText: options.cached.selectedText,
-    output: options.cached.explanationMarkdown,
+    analysis: {
+      definition: options.cached.definition,
+      generalMeaning: options.cached.generalMeaning,
+      meaningInContext: options.cached.meaningInContext,
+    },
   });
-  const chunks = chunkText(normalizedOutput, 220);
-  for (const chunk of chunks) {
-    if (options.isClosed()) {
-      return true;
-    }
-
-    writeSSE(options.res, chunk);
-  }
-
+  streamAnalysis(options.res, options.isClosed(), normalizedAnalysis);
   streamDone(options.res, options.isClosed());
   return true;
 }
@@ -478,11 +498,10 @@ async function streamGeneratedResponse(options: {
     occurrences: promptOccurrences,
   });
 
-  let fullExplanation = "";
-
   try {
-    const generated = await generateAIText({
+    const generated = await generateStructuredOutput({
       model: "good",
+      schema: readerHighlightModelOutputSchema,
       messages: [
         {
           role: "system",
@@ -495,20 +514,13 @@ async function streamGeneratedResponse(options: {
         },
       ],
     });
-    const normalizedOutput = normalizeReaderHighlightOutput({
+    const normalizedAnalysis = normalizeReaderHighlightAnalysis({
       selectedText,
-      output: generated,
+      analysis: generated,
     });
 
-    const responseChunks = chunkText(normalizedOutput, 220);
-    for (const chunk of responseChunks) {
-      fullExplanation += chunk;
-      if (!isClosed()) {
-        writeSSE(res, chunk);
-      }
-    }
-
-    await markHighlightReady(highlightId, fullExplanation);
+    await markHighlightReady(highlightId, normalizedAnalysis);
+    streamAnalysis(res, isClosed(), normalizedAnalysis);
     streamDone(res, isClosed());
   } catch (error) {
     const errorMessage = trimErrorMessage(error);
