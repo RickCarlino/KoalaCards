@@ -47,6 +47,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 type ReaderInputKind = "url" | "raw";
+type ReaderCodeLineMode = "scroll" | "wrap";
 
 type PublicReaderArticle = {
   publicId: string;
@@ -150,6 +151,14 @@ function normalizeComparableText(value: string): string {
     .toLowerCase()
     .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim();
+}
+
+function contentLikelyHasCodeBlocks(value: string): boolean {
+  if (value.includes("```") || value.includes("~~~")) {
+    return true;
+  }
+
+  return /\n {4}\S/.test(value);
 }
 
 function removeLeadingBlankLines(lines: string[]): string[] {
@@ -566,6 +575,7 @@ type ReaderArticleBodyProps = {
   contentText: string;
   emptyMessage: string;
   skipHtml?: boolean;
+  wrapCodeBlocks?: boolean;
   articleRef?: React.RefObject<HTMLElement>;
 };
 
@@ -573,6 +583,7 @@ function ReaderArticleBody({
   contentText,
   emptyMessage,
   skipHtml = false,
+  wrapCodeBlocks = false,
   articleRef,
 }: ReaderArticleBodyProps) {
   if (!contentText.trim()) {
@@ -587,7 +598,12 @@ function ReaderArticleBody({
 
   return (
     <Box>
-      <article style={readerArticleBodyStyle} ref={articleRef}>
+      <article
+        style={readerArticleBodyStyle}
+        ref={articleRef}
+        data-reader-article="content"
+        data-code-wrap={wrapCodeBlocks ? "on" : "off"}
+      >
         <ReactMarkdown skipHtml={skipHtml} remarkPlugins={[remarkGfm]}>
           {contentText}
         </ReactMarkdown>
@@ -991,14 +1007,23 @@ function OwnerHighlightTools({
 
   const activeHelperDraft = helperDraftOverride ?? selectionDraft;
 
-  const deleteHighlight = async (highlightId: number) => {
+  const deleteHighlight = async (
+    highlightId: number,
+    options?: { clearHelperStateOnSuccess?: boolean },
+  ) => {
     if (deletingHighlightId !== null) {
       return;
     }
 
+    const clearHelperStateOnSuccess =
+      options?.clearHelperStateOnSuccess ?? false;
+
     setDeletingHighlightId(highlightId);
 
-    if (isExplaining && activeHighlightId === highlightId) {
+    if (
+      isExplaining &&
+      (activeHighlightId === highlightId || clearHelperStateOnSuccess)
+    ) {
       explainAbortRef.current?.abort();
       setIsExplaining(false);
     }
@@ -1018,7 +1043,9 @@ function OwnerHighlightTools({
       });
       await highlightsQuery.refetch();
 
-      if (activeHighlightId !== highlightId) {
+      const shouldClearHelperState =
+        clearHelperStateOnSuccess || activeHighlightId === highlightId;
+      if (!shouldClearHelperState) {
         return;
       }
 
@@ -1402,17 +1429,20 @@ function OwnerHighlightTools({
 
   const queryErrorMessage = highlightsQuery.error?.message ?? "";
   const fillToolsBody = shouldFillToolsBody(activeView);
-  const canDeleteActiveHighlight = activeHighlightId !== null;
+  const activeHighlightIdForActions = activeHighlight?.id ?? null;
+  const canDeleteActiveHighlight = activeHighlightIdForActions !== null;
   const isDeletingActiveHighlight =
-    activeHighlightId !== null &&
-    deletingHighlightId === activeHighlightId;
+    activeHighlightIdForActions !== null &&
+    deletingHighlightId === activeHighlightIdForActions;
 
   const deleteActiveHighlight = () => {
-    if (activeHighlightId === null) {
+    if (activeHighlightIdForActions === null) {
       return;
     }
 
-    void deleteHighlight(activeHighlightId);
+    void deleteHighlight(activeHighlightIdForActions, {
+      clearHelperStateOnSuccess: true,
+    });
   };
 
   return (
@@ -1529,6 +1559,7 @@ function renderReadyArticleBody(
   markdownText: string,
   rawText: string,
   articleTitle: string,
+  wrapCodeBlocks: boolean,
   articleRef?: React.RefObject<HTMLElement>,
 ): React.ReactNode {
   if (inputKind === "url") {
@@ -1540,6 +1571,7 @@ function renderReadyArticleBody(
       <ReaderArticleBody
         contentText={contentText}
         emptyMessage="Article text is unavailable."
+        wrapCodeBlocks={wrapCodeBlocks}
         articleRef={articleRef}
       />
     );
@@ -1550,9 +1582,18 @@ function renderReadyArticleBody(
       contentText={rawText}
       emptyMessage="Text is unavailable."
       skipHtml
+      wrapCodeBlocks={wrapCodeBlocks}
       articleRef={articleRef}
     />
   );
+}
+
+function parseReaderCodeLineMode(value: string): ReaderCodeLineMode {
+  if (value === "wrap") {
+    return "wrap";
+  }
+
+  return "scroll";
 }
 
 export default function PublicReaderArticlePage({
@@ -1560,6 +1601,8 @@ export default function PublicReaderArticlePage({
 }: InferGetServerSidePropsType<typeof getServerSideProps>) {
   const markdownText = normalizeMarkdownText(article.contentText);
   const rawText = article.contentText;
+  const [codeLineMode, setCodeLineMode] =
+    useState<ReaderCodeLineMode>("scroll");
   const shouldAutoRefresh =
     article.ingestStatus === "pending" ||
     article.ingestStatus === "in_progress";
@@ -1580,11 +1623,16 @@ export default function PublicReaderArticlePage({
   }, [shouldAutoRefresh]);
 
   const showProcessingState = article.ingestStatus !== "ready";
+  const wrapCodeBlocks = codeLineMode === "wrap";
+  const showCodeLineModeControl =
+    !showProcessingState &&
+    contentLikelyHasCodeBlocks(article.contentText);
   const articleBody = renderReadyArticleBody(
     article.inputKind,
     markdownText,
     rawText,
     article.title,
+    wrapCodeBlocks,
     article.viewerIsOwner ? articleRef : undefined,
   );
   const ownerTools = article.viewerIsOwner ? (
@@ -1629,9 +1677,83 @@ export default function PublicReaderArticlePage({
             );
             box-shadow: inset 0 -1px 0 rgba(164, 81, 120, 0.35);
           }
+          article[data-reader-article="content"] pre {
+            margin: 1.05rem 0;
+            padding: 0.92rem 1rem;
+            border-radius: 14px;
+            border: 1px solid #ead4df;
+            background: linear-gradient(
+              180deg,
+              rgba(255, 252, 254, 0.98) 0%,
+              rgba(253, 245, 250, 0.98) 100%
+            );
+            box-shadow:
+              inset 0 1px 0 rgba(255, 255, 255, 0.72),
+              0 5px 15px rgba(176, 110, 143, 0.09);
+            max-width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            overscroll-behavior-x: contain;
+          }
+          article[data-reader-article="content"] pre code {
+            display: block;
+            width: max-content;
+            min-width: 100%;
+            font-size: 0.88rem;
+            line-height: 1.58;
+            font-family:
+              "JetBrains Mono", "SFMono-Regular", Menlo, Monaco, Consolas,
+              "Liberation Mono", monospace;
+          }
+          article[data-reader-article="content"][data-code-wrap="on"] pre {
+            overflow-x: hidden;
+          }
+          article[data-reader-article="content"][data-code-wrap="on"]
+            pre
+            code {
+            width: 100%;
+            min-width: 0;
+            white-space: pre-wrap;
+            word-break: break-word;
+          }
+          article[data-reader-article="content"] :not(pre) > code {
+            border-radius: 7px;
+            border: 1px solid #efd5e2;
+            background: rgba(253, 244, 250, 0.95);
+            padding: 0.1em 0.36em;
+            font-size: 0.88em;
+            font-family:
+              "JetBrains Mono", "SFMono-Regular", Menlo, Monaco, Consolas,
+              "Liberation Mono", monospace;
+          }
         `}</style>
         <Stack gap="clamp(10px, 1.6vw, 18px)">
           {!article.viewerIsOwner && <ArticleMetaRow article={article} />}
+          {showCodeLineModeControl && (
+            <Group justify="space-between" align="center" wrap="wrap">
+              <Text
+                size="xs"
+                c="dimmed"
+                style={{ fontFamily: readerBodyFont }}
+              >
+                Code lines
+              </Text>
+              <SegmentedControl
+                aria-label="Code line display mode"
+                value={codeLineMode}
+                onChange={(nextMode) => {
+                  setCodeLineMode(parseReaderCodeLineMode(nextMode));
+                }}
+                data={[
+                  { label: "Scroll long lines", value: "scroll" },
+                  { label: "Wrap long lines", value: "wrap" },
+                ]}
+                size="xs"
+                radius="xl"
+                color="grape"
+              />
+            </Group>
+          )}
           {showProcessingState && (
             <ProcessingCard
               status={article.ingestStatus}
