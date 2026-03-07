@@ -29,15 +29,20 @@ type AppUserSettings = {
   updatedAt: Date;
   dailyWritingGoal: number;
   writingFirst: boolean;
+  dueCardsEmailNotifications: boolean;
 };
 
 type AppUserSettingsInput = Omit<
   AppUserSettings,
-  "reviewTakeCount" | "requestedRetention" | "maxLapses"
+  | "reviewTakeCount"
+  | "requestedRetention"
+  | "maxLapses"
+  | "dueCardsEmailNotifications"
 > & {
   reviewTakeCount?: number;
   requestedRetention?: number;
   maxLapses?: number;
+  dueCardsEmailNotifications?: boolean;
 };
 
 interface UserSettingsProviderProps {
@@ -60,6 +65,7 @@ const pickAppUserSettings = (
   updatedAt: input.updatedAt,
   dailyWritingGoal: input.dailyWritingGoal,
   writingFirst: input.writingFirst,
+  dueCardsEmailNotifications: Boolean(input.dueCardsEmailNotifications),
 });
 
 const EMPTY: AppUserSettings = {
@@ -76,6 +82,7 @@ const EMPTY: AppUserSettings = {
   updatedAt: new Date(),
   dailyWritingGoal: 300,
   writingFirst: false,
+  dueCardsEmailNotifications: false,
 };
 
 const UserSettingsContext = createContext<AppUserSettings>(EMPTY);

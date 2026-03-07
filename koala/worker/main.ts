@@ -1,4 +1,5 @@
 import { prismaClient } from "../prisma-client";
+import { createDueCardsEmailTask } from "./due-cards-email-task";
 import { createReaderIngestTask } from "./reader-task";
 import { runWorkerLoop } from "./run-loop";
 
@@ -26,7 +27,7 @@ const start = async (): Promise<void> => {
   });
 
   await runWorkerLoop({
-    tasks: [createReaderIngestTask()],
+    tasks: [createReaderIngestTask(), createDueCardsEmailTask()],
     idleDelayMs,
   });
 };

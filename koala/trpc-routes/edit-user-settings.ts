@@ -43,6 +43,7 @@ export const editUserSettings = procedure
       responseTimeoutSeconds: z.number().int().min(0).optional(),
       dailyWritingGoal: z.number().int().min(1).optional(),
       writingFirst: z.boolean().optional(),
+      dueCardsEmailNotifications: z.boolean().optional(),
       updatedAt: z.date(),
     }),
   )
@@ -69,6 +70,11 @@ export const editUserSettings = procedure
     );
     assignIfDefined(data, "dailyWritingGoal", input.dailyWritingGoal);
     assignIfDefined(data, "writingFirst", input.writingFirst);
+    assignIfDefined(
+      data,
+      "dueCardsEmailNotifications",
+      input.dueCardsEmailNotifications,
+    );
 
     const updatedSettings = await prismaClient.userSettings.update({
       where: {

@@ -307,6 +307,7 @@ type SettingsFormValues = {
   playbackPercentage: number;
   responseTimeoutSeconds: number;
   writingFirst: boolean;
+  dueCardsEmailNotifications: boolean;
 };
 
 type SettingsNumberKey =
@@ -393,6 +394,7 @@ type SettingsFormProps = {
   values: SettingsFormValues;
   onNumberChange: SettingsNumberChangeHandler;
   onWritingFirstChange: (checked: boolean) => void;
+  onDueCardsEmailNotificationsChange: (checked: boolean) => void;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
   isSaving: boolean;
 };
@@ -611,11 +613,15 @@ function ChoiceSettingsGroup({
 type ToggleSettingsGroupProps = {
   writingFirst: boolean;
   onWritingFirstChange: (checked: boolean) => void;
+  dueCardsEmailNotifications: boolean;
+  onDueCardsEmailNotificationsChange: (checked: boolean) => void;
 };
 
 function ToggleSettingsGroup({
   writingFirst,
   onWritingFirstChange,
+  dueCardsEmailNotifications,
+  onDueCardsEmailNotificationsChange,
 }: ToggleSettingsGroupProps) {
   return (
     <SettingsGroup
@@ -636,6 +642,20 @@ function ToggleSettingsGroup({
           size="md"
         />
       </SettingsRow>
+      <SettingsRow
+        label="Email me when more than 20 cards are due"
+        description="Sends at most one reminder every 24 hours."
+        labelFor="dueCardsEmailNotifications"
+      >
+        <Switch
+          id="dueCardsEmailNotifications"
+          checked={dueCardsEmailNotifications}
+          onChange={(event) =>
+            onDueCardsEmailNotificationsChange(event.currentTarget.checked)
+          }
+          size="md"
+        />
+      </SettingsRow>
     </SettingsGroup>
   );
 }
@@ -644,6 +664,7 @@ function SettingsForm({
   values,
   onNumberChange,
   onWritingFirstChange,
+  onDueCardsEmailNotificationsChange,
   onSubmit,
   isSaving,
 }: SettingsFormProps) {
@@ -670,6 +691,10 @@ function SettingsForm({
         <ToggleSettingsGroup
           writingFirst={values.writingFirst}
           onWritingFirstChange={onWritingFirstChange}
+          dueCardsEmailNotifications={values.dueCardsEmailNotifications}
+          onDueCardsEmailNotificationsChange={
+            onDueCardsEmailNotificationsChange
+          }
         />
 
         <Group justify="flex-end">
@@ -908,6 +933,9 @@ export default function UserSettingsPage(props: Props) {
     requestedRetention: resolveRequestedRetention(
       userSettings.requestedRetention,
     ),
+    dueCardsEmailNotifications: Boolean(
+      userSettings.dueCardsEmailNotifications,
+    ),
   }));
   const editUserSettings = trpc.editUserSettings.useMutation();
 
@@ -929,6 +957,13 @@ export default function UserSettingsPage(props: Props) {
 
   const handleWritingFirstChange = (checked: boolean) => {
     setSettings({ ...settings, writingFirst: checked });
+  };
+
+  const handleDueCardsEmailNotificationsChange = (checked: boolean) => {
+    setSettings({
+      ...settings,
+      dueCardsEmailNotifications: checked,
+    });
   };
 
   const handleSignOut = () => {
@@ -969,6 +1004,9 @@ export default function UserSettingsPage(props: Props) {
     playbackPercentage: settings.playbackPercentage,
     responseTimeoutSeconds: settings.responseTimeoutSeconds ?? 0,
     writingFirst: Boolean(settings.writingFirst),
+    dueCardsEmailNotifications: Boolean(
+      settings.dueCardsEmailNotifications,
+    ),
   };
 
   return (
@@ -994,6 +1032,9 @@ export default function UserSettingsPage(props: Props) {
                 values={formValues}
                 onNumberChange={handleNumberChange}
                 onWritingFirstChange={handleWritingFirstChange}
+                onDueCardsEmailNotificationsChange={
+                  handleDueCardsEmailNotificationsChange
+                }
                 onSubmit={handleSubmit}
                 isSaving={editUserSettings.isLoading}
               />

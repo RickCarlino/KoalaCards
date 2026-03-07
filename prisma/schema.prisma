@@ -78,6 +78,8 @@ model UserSettings {
   dailyWritingGoal   Int      @default(150)
   writingFirst       Boolean  @default(false) // Always quiz writing before reviewing cards
   maxLapses          Int      @default(0)
+  dueCardsEmailNotifications Boolean @default(false)
+  dueCardsEmailNotificationSentAt DateTime?
 }
 
 model VerificationToken {
