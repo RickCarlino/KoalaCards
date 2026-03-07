@@ -160,7 +160,7 @@ const Index: React.FC = () => {
           Welcome to Koala Cards
         </Title>
         <Text size="md" c="gray.7" ta="center">
-          Your language learning marsupial companion.
+          Korean study cards, writing, and reading in one place.
         </Text>
       </Stack>
 

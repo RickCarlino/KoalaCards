@@ -412,12 +412,12 @@ function SliderSettingsGroup({
 }: SliderSettingsGroupProps) {
   return (
     <SettingsGroup
-      title="Sliders"
-      description="Drag to set a value within a range."
+      title="Review Targets"
+      description="Adjust retention and playback settings."
     >
       <SettingsRow
         label="Target retention"
-        description="Higher keeps reviews closer together; lower spreads them out."
+        description="Higher values review cards more often."
         labelFor="requestedRetention"
       >
         <Stack gap="xs">
@@ -485,12 +485,12 @@ function NumberSettingsGroup({
 }: NumberSettingsGroupProps) {
   return (
     <SettingsGroup
-      title="Number inputs"
-      description="Type an exact value."
+      title="Study Limits"
+      description="Set your daily and session limits."
     >
       <SettingsRow
-        label="New cards per day target"
-        description="Weekly target is 7x this value; daily new adjusts to meet it."
+        label="New cards per day"
+        description="Used to pace how many new cards you learn each week."
         labelFor="cardsPerDayMax"
       >
         <NumberInput
@@ -507,7 +507,7 @@ function NumberSettingsGroup({
 
       <SettingsRow
         label="Cards per review session"
-        description="Cards pulled when you start a deck review."
+        description="How many cards to load when you start a session."
         labelFor="reviewTakeCount"
       >
         <NumberInput
@@ -525,7 +525,7 @@ function NumberSettingsGroup({
 
       <SettingsRow
         label="Auto-pause after lapses"
-        description="Set to 0 to disable. Cards pause after this many lapses."
+        description="Set to 0 to disable."
         labelFor="maxLapses"
       >
         <NumberInput
@@ -558,7 +558,7 @@ function NumberSettingsGroup({
 
       <SettingsRow
         label="Response timeout (seconds)"
-        description="Set to 0 to disable."
+        description="How long to wait before timing out. Set to 0 to disable."
         labelFor="responseTimeoutSeconds"
       >
         <NumberInput
@@ -587,10 +587,13 @@ function ChoiceSettingsGroup({
   onNumberChange,
 }: ChoiceSettingsGroupProps) {
   return (
-    <SettingsGroup title="Quick choices" description="Tap a preset value.">
+    <SettingsGroup
+      title="Audio Replay"
+      description="Choose how often your recording plays back."
+    >
       <SettingsRow
         label="Replay your recording"
-        description="How often your recording replays after you answer."
+        description="Playback rate after each response."
       >
         <SegmentedControl
           fullWidth
@@ -625,12 +628,12 @@ function ToggleSettingsGroup({
 }: ToggleSettingsGroupProps) {
   return (
     <SettingsGroup
-      title="Toggles"
-      description="Switches that turn behaviors on or off."
+      title="Study Rules"
+      description="Turn optional behaviors on or off."
     >
       <SettingsRow
         label="Require daily writing before card review"
-        description="Encourages consistent writing practice."
+        description="Finish your writing goal before review sessions unlock."
         labelFor="writingFirst"
       >
         <Switch
@@ -803,7 +806,7 @@ const QUICK_STATS_LABELS: Array<[string, string]> = [
   ["newCardsLastWeek", "New cards studied this week"],
   ["uniqueCardsLast24Hours", "Cards studied last 24 hours"],
   ["uniqueCardsLastWeek", "Cards studied this week"],
-  ["globalUsers", "Active Koala users"],
+  ["globalUsers", "Total Koala users"],
 ];
 
 type QuickStatsCardProps = {
@@ -818,8 +821,8 @@ function QuickStatsCard({ stats }: QuickStatsCardProps) {
 
   return (
     <SectionCard
-      title="Quick Stats"
-      description="Snapshot across all decks."
+      title="Study Snapshot"
+      description="Current stats across your decks."
     >
       <Stack gap="sm">
         {rows.map((row) => (
@@ -983,9 +986,13 @@ export default function UserSettingsPage(props: Props) {
           location.reload();
         },
         (error: unknown) => {
+          const message =
+            error instanceof Error && error.message.trim().length > 0
+              ? error.message
+              : "Unable to save settings.";
           notifications.show({
-            title: "Error",
-            message: `Error: ${JSON.stringify(error).slice(0, 100)}`,
+            title: "Save failed",
+            message,
             color: "red",
           });
         },
@@ -1015,7 +1022,7 @@ export default function UserSettingsPage(props: Props) {
         <Stack gap={4}>
           <Title order={2}>Settings</Title>
           <Text size="sm" c="dimmed">
-            Adjust your study pace, audio feedback, and writing flow.
+            Update your review pace, writing rules, and audio behavior.
           </Text>
         </Stack>
 
@@ -1026,7 +1033,7 @@ export default function UserSettingsPage(props: Props) {
             <SectionCard
               title="Preferences"
               titleOrder={3}
-              description="Daily pace, review size, and audio feedback."
+              description="Review pacing, writing rules, and playback options."
             >
               <SettingsForm
                 values={formValues}

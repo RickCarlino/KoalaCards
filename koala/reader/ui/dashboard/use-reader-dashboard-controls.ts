@@ -72,7 +72,7 @@ export function useReaderDashboardControls() {
 
     return mutationErrorMessage(
       listQuery.error,
-      "Could not load reader articles.",
+      "Couldn't load your Reader library.",
     );
   }, [listQuery.error, listQuery.isError]);
 
@@ -110,11 +110,11 @@ export function useReaderDashboardControls() {
     }
 
     try {
-      const result = await saveUrlArticle.mutateAsync({ url: trimmed });
+      await saveUrlArticle.mutateAsync({ url: trimmed });
       setArticleUrl("");
       notifications.show({
-        title: "Queued",
-        message: `Article #${result.article.id} queued for processing.`,
+        title: "Saved to Reader",
+        message: "We are preparing this article now.",
         color: "green",
       });
       listQuery.refetch();
@@ -123,7 +123,7 @@ export function useReaderDashboardControls() {
         title: "Save failed",
         message: mutationErrorMessage(
           error,
-          "Could not save article URL.",
+          "Couldn't save that URL.",
         ),
         color: "red",
       });
@@ -145,22 +145,22 @@ export function useReaderDashboardControls() {
     }
 
     try {
-      const result = await saveRawTextArticle.mutateAsync({
+      await saveRawTextArticle.mutateAsync({
         title: rawTitle.trim() || undefined,
         text: rawText,
       });
       setRawTitle("");
       setRawText("");
       notifications.show({
-        title: "Saved",
-        message: `Text #${result.article.id} is ready in your library.`,
+        title: "Added to Reader",
+        message: "Text saved to your library.",
         color: "green",
       });
       listQuery.refetch();
     } catch (error: unknown) {
       notifications.show({
         title: "Save failed",
-        message: mutationErrorMessage(error, "Could not save raw text."),
+        message: mutationErrorMessage(error, "Couldn't save this text."),
         color: "red",
       });
     }
@@ -190,7 +190,10 @@ export function useReaderDashboardControls() {
     } catch (error: unknown) {
       notifications.show({
         title: "Delete failed",
-        message: mutationErrorMessage(error, "Could not delete article."),
+        message: mutationErrorMessage(
+          error,
+          "Couldn't delete this article.",
+        ),
         color: "red",
       });
     } finally {
@@ -218,8 +221,8 @@ export function useReaderDashboardControls() {
       notifications.show({
         title: markAsRead ? "Marked as read" : "Marked as unread",
         message: markAsRead
-          ? "Article moved out of default view."
-          : "Article returned to unread view.",
+          ? "Moved to Read."
+          : "Moved back to Unread.",
         color: "green",
       });
       listQuery.refetch();
@@ -228,7 +231,7 @@ export function useReaderDashboardControls() {
         title: "Update failed",
         message: mutationErrorMessage(
           error,
-          "Could not update read state.",
+          "Couldn't update read status.",
         ),
         color: "red",
       });

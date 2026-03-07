@@ -62,7 +62,7 @@ function bookmarkStatusText(bookmark: InstapaperUnreadBookmark): string {
   }
 
   if (!bookmark.localArticle) {
-    return "Not imported into Koala yet.";
+    return "Not in Reader yet.";
   }
 
   const article = bookmark.localArticle;
@@ -110,7 +110,7 @@ function ConnectionPanel({
     return (
       <ReaderPanel>
         <Text size="sm" c="dimmed">
-          Checking Instapaper connection...
+          Checking Instapaper...
         </Text>
       </ReaderPanel>
     );
@@ -121,7 +121,7 @@ function ConnectionPanel({
       <ReaderPanel>
         <ReaderPanelHeader
           title="Connect Instapaper"
-          subtitle="Your password is used only to obtain access tokens. Koala stores encrypted tokens, not your password."
+          subtitle="Your password is only used to connect your account. Koala stores encrypted access tokens."
         />
         <Group align="flex-end" wrap="wrap" gap="xs">
           <TextInput
@@ -164,7 +164,7 @@ function ConnectionPanel({
     <ReaderPanel>
       <ReaderPanelHeader
         title={`Connected as ${usernameLabel}`}
-        subtitle={`Token updated: ${updatedAtLabel}`}
+        subtitle={`Last updated: ${updatedAtLabel}`}
       />
       <Group gap="xs" wrap="wrap">
         <Button
@@ -180,7 +180,7 @@ function ConnectionPanel({
           loading={isImportingUnread}
           onClick={onImportUnread}
         >
-          Import Unread to Koala
+          Import to Reader
         </Button>
         <Button
           variant="subtle"
@@ -320,7 +320,7 @@ function BookmarkRow({
               disabled={disableExport}
               onClick={() => onExport(bookmark)}
             >
-              Export Korean
+              Export to Instapaper
             </Button>
           )}
           {exportable && (
@@ -412,7 +412,7 @@ export default function ReaderInstapaperPage() {
     <ReaderPageFrame>
       <ReaderPageHeader
         title="Instapaper"
-        subtitle="Connect once, import unread bookmarks into your Reader shelf, then export polished Korean versions back to Instapaper."
+        subtitle="Import unread bookmarks into Reader, then export saved Korean articles back to Instapaper."
         rightSlot={
           <Button
             component={Link}

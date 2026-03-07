@@ -112,10 +112,10 @@ function mapInputKind(value: "URL" | "RAW"): ReaderInputKind {
 
 function pendingMessage(status: "pending" | "in_progress"): string {
   if (status === "pending") {
-    return "This article is queued for processing.";
+    return "This article is in line to be prepared.";
   }
 
-  return "This article is currently being processed.";
+  return "This article is being prepared now.";
 }
 
 function normalizeLineBreaks(value: string): string {

@@ -31,14 +31,14 @@ const frequencyListsData: LanguageData[] = [
       {
         title: "Subtitles-Based Frequency List (Movies/TV)",
         description:
-          "A list generated from a corpus of Spanish movie and television subtitles (~27.4 million words). This frequency list ranks the most common Spanish words appearing in subtitles. Subtitles corpora tend to reflect everyday conversational language.",
+          "Most common Spanish words from movie and TV subtitles. Useful for everyday conversational vocabulary.",
         url: "https://en.wiktionary.org/wiki/Wiktionary:Frequency_lists/Spanish/Subtitles10K",
         source: "OpenSubtitles-based corpus (27.4M words, compiled 2008)",
       },
       {
         title: "Mixed-Web Spanish Frequency List",
         description:
-          "A comprehensive list of Spanish word frequencies based on a Leipzig Corpora collection of Spanish texts (combining 1 million sentences from Wikipedia 2021 and news articles up to 2022).",
+          "Large Spanish frequency list from mixed web sources, including Wikipedia and news.",
         url: "https://en.wiktionary.org/wiki/Wiktionary:Frequency_lists/Spanish/Mixed_730K",
         source: "Leipzig Corpora (Wikipedia + News, 2021–2022)",
       },
@@ -50,7 +50,7 @@ const frequencyListsData: LanguageData[] = [
       {
         title: "OpenSubtitles Frequency List (French)",
         description:
-          "A frequency list of the top French words derived from the OpenSubtitles corpus. This list covers the 20,000 most frequent French words found in movie and TV subtitles.",
+          "Top French words from subtitle data.",
         url: "https://en.wiktionary.org/wiki/Wiktionary:Frequency_lists/French/OpenSubtitles_Top_20K",
         source: "OpenSubtitles corpus (20K words)",
       },
@@ -62,7 +62,7 @@ const frequencyListsData: LanguageData[] = [
       {
         title: "Mixed Web Corpus Frequency List (German)",
         description:
-          "A very extensive list of German word frequencies (covering ~2.4 million unique word forms) compiled from a variety of web sources (2014–2021).",
+          "Large German frequency list from mixed web corpora.",
         url: "https://en.wiktionary.org/wiki/Wiktionary:Frequency_lists/German/Mixed_web_3M",
         source: "Leipzig Corpora (2011–2021 web data)",
       },
@@ -74,14 +74,14 @@ const frequencyListsData: LanguageData[] = [
       {
         title: "OpenSubtitles Frequency List (Italian, 50k Words)",
         description:
-          "A list of the 50,000 most frequent Italian words based on the OpenSubtitles corpus. It encompasses a huge collection of film and TV subtitles in Italian, thereby highlighting very common spoken/dialogue vocabulary.",
+          "Top 50,000 Italian words from subtitle data, with broad spoken coverage.",
         url: "https://en.wiktionary.org/wiki/Wiktionary:Frequency_lists/Italian",
         source: "OpenSubtitles corpus (Italian)",
       },
       {
         title: "Italian Subtitles Core List (Top 1,000)",
         description:
-          "For a quick view, Wiktionary also provides the top 1,000 Italian words from subtitles, derived from a 5.6 million-word subtitle corpus (movies/TV, compiled in 2008).",
+          "Quick-start list of the top 1,000 Italian subtitle words.",
         url: "https://en.wiktionary.org/wiki/Wiktionary:Frequency_lists/Italian1000",
         source: "Italian subtitles corpus (5.6M words, 2008)",
       },
@@ -93,7 +93,7 @@ const frequencyListsData: LanguageData[] = [
       {
         title: "Web Corpus Frequency List (Russian)",
         description:
-          "A comprehensive list of Russian word frequencies compiled from various web sources (2014–2021). It includes about 2.4 million distinct word forms, ranked by frequency, covering contemporary internet usage in Russian.",
+          "Large Russian frequency list built from mixed web corpora.",
         url: "https://en.wiktionary.org/wiki/Wiktionary:Frequency_lists/Russian",
         source: "Leipzig Web Corpus (Russian, 2014–21)",
       },
@@ -105,7 +105,7 @@ const frequencyListsData: LanguageData[] = [
       {
         title: "Modern Standard Arabic 1,000 Word List (TalkInArabic)",
         description:
-          "TalkInArabic.com provides a frequency list of the first 1,000 most frequently used words in Modern Standard Arabic (MSA), presented in a table with meanings.",
+          "Top 1,000 Modern Standard Arabic words with meanings.",
         url: "https://talkinarabic.com/arabic-words/",
         source: "TalkInArabic.com",
       },
@@ -117,7 +117,7 @@ const frequencyListsData: LanguageData[] = [
       {
         title: "European & Brazilian Portuguese Frequency Lists",
         description:
-          "Lists of the top 5,000 words in European and Brazilian Portuguese drawn from the OpenSubtitles corpus. They reflect common vocabulary as used in media subtitles.",
+          "Top 5,000 words for European and Brazilian Portuguese from subtitle data.",
         url: "https://en.wiktionary.org/wiki/Wiktionary:Frequency_lists/Portuguese",
         source: "OpenSubtitles corpus (Portuguese)",
       },
@@ -130,14 +130,14 @@ const frequencyListsData: LanguageData[] = [
         title:
           "National Institute of Korean Language (NIKL) Frequency List",
         description:
-          "A list of the most common Korean words based on a large corpus compiled by NIKL. Wiktionary hosts a 5,800-word frequency list that was generated from an official NIKL file.",
+          "Common Korean words from a National Institute of Korean Language corpus.",
         url: "https://en.wiktionary.org/wiki/Wiktionary:Frequency_lists/Korean_5800",
         source: "NIKL corpus (5,800 words)",
       },
       {
         title: "Basic Korean Vocabulary List",
         description:
-          'An official "Basic Korean Vocabulary" list (한국어 학습용 어휘목록) of 5,897 entries, which is aimed at learners but derived from frequency and usability criteria.',
+          'Official learner-focused Korean vocabulary list (한국어 학습용 어휘목록, 5,897 entries).',
         url: "https://en.wiktionary.org/wiki/Wiktionary:Frequency_lists/Korean",
         source: "Korean vocabulary list (5,897 words)",
       },
@@ -174,8 +174,7 @@ const FrequencyListsPage = () => {
           Language Frequency Lists
         </Title>
         <Text size="lg" c="dimmed" maw={600} mx="auto">
-          A collection of word frequency lists for various languages to
-          help you build your vocabulary
+          Reference links for high-frequency vocabulary lists.
         </Text>
         <Divider my="lg" />
       </Box>
@@ -233,9 +232,7 @@ const FrequencyListsPage = () => {
         }}
       >
         <Text ta="center" size="sm">
-          These frequency lists are derived from large language corpora and
-          are valuable for language learners interested in the most
-          commonly used words in each target language.
+          Use these lists to pick high-utility words for new cards.
         </Text>
       </Box>
 

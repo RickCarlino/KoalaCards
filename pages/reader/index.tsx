@@ -92,18 +92,18 @@ function filteredEmptyMessage(options: {
   readFilter: ReaderReadFilter;
 }): string {
   if (!options.hasAnyArticles) {
-    return "No articles.";
+    return "No saved articles yet.";
   }
 
   if (options.readFilter === "unread") {
-    return "No unread articles. Switch to Read or All.";
+    return "No unread articles. Try Read or All.";
   }
 
   if (options.readFilter === "read") {
     return "No read articles yet.";
   }
 
-  return "No results.";
+  return "No matching articles.";
 }
 
 type ReaderShortcutsProps = {
@@ -198,7 +198,7 @@ function RawTextAddForm({
         />
         <Textarea
           aria-label="Raw text"
-          placeholder="Paste text..."
+          placeholder="Paste Korean text..."
           autosize
           minRows={8}
           maxRows={16}
@@ -409,7 +409,7 @@ function LibraryBody({
   if (isLoading) {
     return (
       <Text size="sm" c="dimmed">
-        Loading...
+        Loading articles...
       </Text>
     );
   }

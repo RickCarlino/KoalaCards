@@ -244,10 +244,10 @@ function stripLeadingTitleFromMarkdown(
 
 function pendingMessage(status: "pending" | "in_progress"): string {
   if (status === "pending") {
-    return "This article is queued for processing.";
+    return "This article is in line to be prepared.";
   }
 
-  return "This article is currently being processed.";
+  return "This article is being prepared now.";
 }
 
 function countOverlappingOccurrences(
@@ -678,7 +678,7 @@ function ProcessingCard({
           </Text>
         )}
         <Text size="sm" c="dimmed">
-          Go back to Reader and add it again from your preferred source.
+          Go back to Reader and try adding it again.
         </Text>
       </ReaderPanel>
     );
@@ -688,7 +688,7 @@ function ProcessingCard({
     <ReaderPanel>
       <Text c="dimmed">{pendingMessage(status)}</Text>
       <Text size="sm" c="dimmed">
-        This page refreshes every 8 seconds while processing.
+        This page refreshes every few seconds.
       </Text>
     </ReaderPanel>
   );
@@ -1597,9 +1597,9 @@ function OwnerHighlightTools({
 
   const viewOptions = useMemo(() => {
     return [
-      { label: "Word Helper", value: "helper" },
+      { label: "Word Help", value: "helper" },
       { label: `Saved (${highlights.length})`, value: "saved" },
-      { label: "Extras", value: "extras" },
+      { label: "Article Info", value: "extras" },
     ];
   }, [highlights.length]);
 
@@ -1650,7 +1650,7 @@ function OwnerHighlightTools({
                 c="dimmed"
                 style={{ fontFamily: readerBodyFont, marginBottom: 8 }}
               >
-                No decks available.
+                Create a deck to save highlights.
               </Text>
             )}
             <SegmentedControl

@@ -130,7 +130,7 @@ const ineligibleExportNotice = (
 
   return {
     title: "Article not ready",
-    message: "Wait for Reader ingest to complete before exporting.",
+    message: "Wait until the article is ready, then export.",
   };
 };
 
@@ -201,7 +201,7 @@ export function useInstapaperControls() {
       await connectionQuery.refetch();
       notifications.show({
         title: "Connected",
-        message: "Instapaper is connected. Password is not stored.",
+        message: "Instapaper connected.",
         color: "green",
       });
     } catch (error: unknown) {
@@ -227,7 +227,7 @@ export function useInstapaperControls() {
       await connectionQuery.refetch();
       notifications.show({
         title: "Disconnected",
-        message: "Instapaper tokens removed from Koala.",
+        message: "Instapaper connection removed.",
         color: "green",
       });
     } catch (error: unknown) {
@@ -262,7 +262,7 @@ export function useInstapaperControls() {
         title: "Load failed",
         message: mutationErrorMessage(
           error,
-          "Could not load unread Instapaper bookmarks.",
+          "Couldn't load unread Instapaper bookmarks.",
         ),
         color: "red",
       });
@@ -281,7 +281,7 @@ export function useInstapaperControls() {
       setBookmarks(result.bookmarks);
       notifications.show({
         title: "Import complete",
-        message: `${result.summary.imported} bookmark(s) queued for Reader ingest.`,
+        message: `${result.summary.imported} bookmark(s) added to Reader.`,
         color: "green",
       });
     } catch (error: unknown) {
@@ -289,7 +289,7 @@ export function useInstapaperControls() {
         title: "Import failed",
         message: mutationErrorMessage(
           error,
-          "Could not import unread Instapaper bookmarks.",
+          "Couldn't import unread Instapaper bookmarks.",
         ),
         color: "red",
       });
@@ -332,8 +332,7 @@ export function useInstapaperControls() {
       if (notify && result.status === "exported_and_archived") {
         notifications.show({
           title: "Exported",
-          message:
-            "Korean article exported and original bookmark archived.",
+          message: "Article exported and original bookmark archived.",
           color: "green",
         });
       }
@@ -341,7 +340,7 @@ export function useInstapaperControls() {
       if (notify && result.status === "exported") {
         notifications.show({
           title: "Exported",
-          message: "Korean article exported to Instapaper.",
+          message: "Article exported to Instapaper.",
           color: "green",
         });
       }
@@ -351,7 +350,7 @@ export function useInstapaperControls() {
           title: "Partial success",
           message:
             result.archiveError ||
-            "Exported successfully, but archive failed.",
+            "Exported, but archiving the original bookmark failed.",
           color: "yellow",
         });
       }
@@ -430,7 +429,7 @@ export function useInstapaperControls() {
     if (eligibleBookmarks.length === 0) {
       notifications.show({
         title: "Nothing to export",
-        message: "No Ready imported articles are available to export.",
+        message: "No ready articles are available to export.",
         color: "yellow",
       });
       return;

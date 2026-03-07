@@ -73,7 +73,7 @@ export default function ReaderBookmarkletPage() {
       setupQuery.refetch();
       notifications.show({
         title: "Bookmarklet reset",
-        message: "A new bookmarklet key was issued.",
+        message: "Created a new bookmark key.",
         color: "green",
       });
     } catch (error: unknown) {
@@ -92,7 +92,7 @@ export default function ReaderBookmarkletPage() {
     <ReaderPageFrame size="sm">
       <ReaderPageHeader
         title="Bookmarklet"
-        subtitle="Instantly save the page you are currently reading without copying URLs."
+        subtitle="Save the page you are reading in one click."
         rightSlot={
           <Button
             component={Link}
@@ -115,12 +115,12 @@ export default function ReaderBookmarkletPage() {
 
       <ReaderPanel>
         <ReaderPanelHeader
-          title="Install Bookmark"
+          title="Install Bookmarklet"
           subtitle="Drag this button into your browser bookmarks bar."
         />
         {setupQuery.isLoading && (
           <Text size="sm" c="dimmed">
-            Preparing bookmarklet...
+            Building bookmarklet...
           </Text>
         )}
 
@@ -139,7 +139,7 @@ export default function ReaderBookmarkletPage() {
               loading={rotateKey.isLoading}
               onClick={handleReset}
             >
-              Reset Key
+              Regenerate Key
             </Button>
           </Group>
         )}

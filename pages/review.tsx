@@ -453,10 +453,10 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
       <Container size="md" py="xl">
         <Stack align="center" gap="xs" mb="xl">
           <Title order={2} c="pink.7" ta="center">
-            Welcome to Koala Cards 🌸
+            Ready to start?
           </Title>
           <Text size="md" c="gray.7" ta="center">
-            Start your learning journey by adding some cards.
+            Add cards to create your first study deck.
           </Text>
         </Stack>
         <Card withBorder p="xl" radius="md">
@@ -469,7 +469,7 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
               variant="light"
               size="md"
             >
-              Add Your First Cards
+              Add Your First Deck
             </Button>
           </Stack>
         </Card>
@@ -496,7 +496,7 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
           Your Decks
         </Title>
         <Text size="md" c="gray.7">
-          Choose a deck to start studying
+          Pick a deck to begin your session.
         </Text>
       </Stack>
 

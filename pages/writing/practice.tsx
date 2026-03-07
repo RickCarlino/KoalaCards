@@ -208,9 +208,9 @@ const getReviewLoadingLabel = (practiceMode: PracticeMode) => {
 
 const getModeTipText = (practiceMode: PracticeMode) => {
   if (practiceMode === "speaking") {
-    return "TIP: Speak naturally in Korean, then edit the transcript before grading if needed.";
+    return "Speak naturally in Korean, then edit the transcript before grading if needed.";
   }
-  return "TIP: Don't know a word? Surround the word you want to use in question marks and it will be replaced with an appropriate word when graded. Example: ?apple?를 먹어요.";
+  return "Need a word you do not know yet? Wrap it in question marks and Koala will replace it during grading (example: ?apple?를 먹어요).";
 };
 
 const getRecordTooltip = (
@@ -717,7 +717,7 @@ function ReviewControl({
 
   return (
     <Button onClick={onReview} disabled={!canReview}>
-      Save and Review Feedback
+      Get Feedback
     </Button>
   );
 }
@@ -1194,9 +1194,9 @@ export default function WritingPracticePage({
         essay.trim().length > 0
       ) {
         notifications.show({
-          title: "Clear transcript to switch",
+          title: "Clear transcript first",
           message:
-            "Voice transcripts are graded with speaking rules. Clear the text first if you want typing mode.",
+            "This text came from speaking mode. Clear it first if you want to switch to typing mode.",
           color: "yellow",
         });
         return;
