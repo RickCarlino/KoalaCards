@@ -30,6 +30,7 @@ const readerArticleSchema = z.object({
   description: z.string(),
   ingestStatus: z.enum(["pending", "in_progress", "ready", "error"]),
   ingestError: z.string(),
+  readAt: z.date().nullable(),
   createdAt: z.date(),
 });
 
@@ -81,6 +82,16 @@ const refreshReaderArticleInputSchema = z.object({
 
 const refreshReaderArticleOutputSchema = z.object({
   status: z.enum(["queued", "noop"]),
+  article: readerArticleSchema,
+});
+
+const setReaderArticleReadStateInputSchema = z.object({
+  publicId: z.string().trim().min(1),
+  read: z.boolean(),
+});
+
+const setReaderArticleReadStateOutputSchema = z.object({
+  status: z.literal("updated"),
   article: readerArticleSchema,
 });
 
@@ -245,6 +256,7 @@ const mapSavedArticle = (article: SavedReaderArticle) => {
     description: article.description,
     ingestStatus: article.ingestStatus,
     ingestError: article.ingestError,
+    readAt: article.readAt,
     createdAt: article.createdAt,
   };
 };
@@ -462,6 +474,7 @@ export const listReaderArticlesRoute = procedure
         description: true,
         ingestStatus: true,
         ingestError: true,
+        readAt: true,
         createdAt: true,
       },
     });
@@ -476,6 +489,7 @@ export const listReaderArticlesRoute = procedure
         description: article.description,
         ingestStatus: mapIngestStatus(article.ingestStatus),
         ingestError: article.ingestError,
+        readAt: article.readAt,
         createdAt: article.createdAt,
       })),
     };
@@ -523,6 +537,67 @@ export const refreshReaderArticleRoute = procedure
     } catch (error) {
       return mapSaveError(error);
     }
+  });
+
+export const setReaderArticleReadStateRoute = procedure
+  .input(setReaderArticleReadStateInputSchema)
+  .output(setReaderArticleReadStateOutputSchema)
+  .mutation(async ({ input, ctx }) => {
+    const userId = requireUserId(ctx.user?.id);
+
+    const article = await prismaClient.readerArticle.findUnique({
+      where: { publicId: input.publicId },
+      select: { id: true, userId: true },
+    });
+
+    if (!article) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Article not found.",
+      });
+    }
+
+    if (article.userId !== userId) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Article not owned by current user.",
+      });
+    }
+
+    const updated = await prismaClient.readerArticle.update({
+      where: { id: article.id },
+      data: {
+        readAt: input.read ? new Date() : null,
+      },
+      select: {
+        id: true,
+        publicId: true,
+        title: true,
+        normalizedUrl: true,
+        inputKind: true,
+        description: true,
+        ingestStatus: true,
+        ingestError: true,
+        readAt: true,
+        createdAt: true,
+      },
+    });
+
+    return {
+      status: "updated",
+      article: {
+        id: updated.id,
+        publicId: updated.publicId,
+        title: updated.title,
+        normalizedUrl: updated.normalizedUrl,
+        inputKind: mapInputKind(updated.inputKind),
+        description: updated.description,
+        ingestStatus: mapIngestStatus(updated.ingestStatus),
+        ingestError: updated.ingestError,
+        readAt: updated.readAt,
+        createdAt: updated.createdAt,
+      },
+    };
   });
 
 export const listReaderArticleHighlightsRoute = procedure

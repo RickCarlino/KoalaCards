@@ -42,11 +42,48 @@ import React, { useState } from "react";
 const ONE_DAY = 24 * 60 * 60 * 1000;
 const ONE_WEEK = 7 * ONE_DAY;
 
+type ChartDataPoint = { date: string; count: number };
+
 function formatDate(date: Date): string {
   const year = date.getFullYear();
   const month = (date.getMonth() + 1).toString().padStart(2, "0");
   const day = date.getDate().toString().padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function buildCumulativeChartDataFromSortedDates(options: {
+  startDate: Date;
+  endDate: Date;
+  sortedDates: Date[];
+}): ChartDataPoint[] {
+  const { startDate, endDate, sortedDates } = options;
+  const chartData: ChartDataPoint[] = [];
+  let cumulativeCount = 0;
+  let dateIndex = 0;
+  const currentDate = new Date(startDate);
+
+  while (currentDate <= endDate) {
+    const dateString = formatDate(currentDate);
+    const currentDayEnd = new Date(currentDate);
+    currentDayEnd.setHours(23, 59, 59, 999);
+
+    while (
+      dateIndex < sortedDates.length &&
+      sortedDates[dateIndex] <= currentDayEnd
+    ) {
+      cumulativeCount += 1;
+      dateIndex += 1;
+    }
+
+    chartData.push({
+      date: dateString,
+      count: cumulativeCount,
+    });
+
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+
+  return chartData;
 }
 
 export async function getServerSideProps(
@@ -136,36 +173,15 @@ export async function getServerSideProps(
       }
     }
 
-    const cumulativeChartData: ChartDataPoint[] = [];
-    let cumulativeCount = 0;
-
     const sortedLearnedDates = Object.values(firstLearnedDates).sort(
       (a, b) => a.getTime() - b.getTime(),
     );
-    let learnedDateIndex = 0;
     const endDate = new Date();
-    let currentDate = new Date(threeMonthsAgo);
-
-    while (currentDate <= endDate) {
-      const dateString = formatDate(currentDate);
-      const currentDayEnd = new Date(currentDate);
-      currentDayEnd.setHours(23, 59, 59, 999);
-
-      while (
-        learnedDateIndex < sortedLearnedDates.length &&
-        sortedLearnedDates[learnedDateIndex] <= currentDayEnd
-      ) {
-        cumulativeCount++;
-        learnedDateIndex++;
-      }
-
-      cumulativeChartData.push({
-        date: dateString,
-        count: cumulativeCount,
-      });
-
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
+    const cardChartData = buildCumulativeChartDataFromSortedDates({
+      startDate: threeMonthsAgo,
+      endDate,
+      sortedDates: sortedLearnedDates,
+    });
 
     const writingSubmissions =
       await prismaClient.writingSubmission.findMany({
@@ -202,7 +218,7 @@ export async function getServerSideProps(
     const cumulativeWritingData: ChartDataPoint[] = [];
     let cumulativeWritingCount = 0;
 
-    currentDate = new Date(threeMonthsAgo);
+    const currentDate = new Date(threeMonthsAgo);
     while (currentDate <= endDate) {
       const dateString = formatDate(currentDate);
       cumulativeWritingCount += dailyWritingData[dateString] || 0;
@@ -215,8 +231,31 @@ export async function getServerSideProps(
       currentDate.setDate(currentDate.getDate() + 1);
     }
 
-    const cardChartData = cumulativeChartData;
     const writingChartData = cumulativeWritingData;
+    const readArticles = await prismaClient.readerArticle.findMany({
+      where: {
+        userId,
+        readAt: {
+          not: null,
+          gte: threeMonthsAgo,
+        },
+      },
+      select: {
+        readAt: true,
+      },
+      orderBy: {
+        readAt: "asc",
+      },
+    });
+
+    const sortedReadDates = readArticles
+      .map((article) => article.readAt)
+      .filter((readAt): readAt is Date => readAt !== null);
+    const readerChartData = buildCumulativeChartDataFromSortedDates({
+      startDate: threeMonthsAgo,
+      endDate,
+      sortedDates: sortedReadDates,
+    });
 
     const weeklyTarget = userSettings.cardsPerDayMax * 7;
     const statistics = {
@@ -229,10 +268,15 @@ export async function getServerSideProps(
       globalUsers: await prismaClient.user.count(),
     };
 
-    return { statistics, cardChartData, writingChartData };
+    return {
+      statistics,
+      cardChartData,
+      writingChartData,
+      readerChartData,
+    };
   }
 
-  const { statistics, cardChartData, writingChartData } =
+  const { statistics, cardChartData, writingChartData, readerChartData } =
     await getUserCardStatistics(userId);
 
   return {
@@ -241,16 +285,16 @@ export async function getServerSideProps(
       stats: statistics,
       cardChartData: cardChartData,
       writingChartData: writingChartData,
+      readerChartData: readerChartData,
     },
   };
 }
-
-type ChartDataPoint = { date: string; count: number };
 type Props = UnwrapPromise<
   ReturnType<typeof getServerSideProps>
 >["props"] & {
   cardChartData: ChartDataPoint[];
   writingChartData: ChartDataPoint[];
+  readerChartData: ChartDataPoint[];
 };
 
 type SettingsFormValues = {
@@ -810,11 +854,13 @@ function ProgressChart({
 type ProgressSectionProps = {
   cardChartData: ChartDataPoint[];
   writingChartData: ChartDataPoint[];
+  readerChartData: ChartDataPoint[];
 };
 
 function ProgressSection({
   cardChartData,
   writingChartData,
+  readerChartData,
 }: ProgressSectionProps) {
   return (
     <Stack gap="md">
@@ -837,13 +883,25 @@ function ProgressSection({
           series={{ name: "count", color: "pink", label: "Total" }}
           yAxisLabel="Characters Written"
         />
+        <ProgressChart
+          title="Reader Progress"
+          data={readerChartData}
+          series={{ name: "count", color: "teal", label: "Total Read" }}
+          yAxisLabel="Articles Read"
+        />
       </SimpleGrid>
     </Stack>
   );
 }
 
 export default function UserSettingsPage(props: Props) {
-  const { userSettings, stats, cardChartData, writingChartData } = props;
+  const {
+    userSettings,
+    stats,
+    cardChartData,
+    writingChartData,
+    readerChartData,
+  } = props;
   const [settings, setSettings] = useState(() => ({
     ...userSettings,
     maxLapses: userSettings.maxLapses ?? 0,
@@ -950,6 +1008,7 @@ export default function UserSettingsPage(props: Props) {
         <ProgressSection
           cardChartData={cardChartData}
           writingChartData={writingChartData}
+          readerChartData={readerChartData}
         />
       </Stack>
     </Container>

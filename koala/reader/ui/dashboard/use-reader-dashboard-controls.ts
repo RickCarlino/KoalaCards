@@ -1,7 +1,7 @@
 import { notifications } from "@mantine/notifications";
 import React, { useMemo, useState } from "react";
 import { trpc } from "@/koala/trpc-config";
-import type { ReaderArticleSummary } from "./types";
+import type { ReaderArticleSummary, ReaderReadFilter } from "./types";
 
 function mutationErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message.trim()) {
@@ -11,16 +11,35 @@ function mutationErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
+function articleMatchesReadFilter(
+  article: ReaderArticleSummary,
+  readFilter: ReaderReadFilter,
+): boolean {
+  if (readFilter === "all") {
+    return true;
+  }
+
+  if (readFilter === "read") {
+    return article.readAt !== null;
+  }
+
+  return article.readAt === null;
+}
+
 export function useReaderDashboardControls() {
   const [articleUrl, setArticleUrl] = useState("");
   const [rawTitle, setRawTitle] = useState("");
   const [rawText, setRawText] = useState("");
+  const [readFilter, setReadFilter] = useState<ReaderReadFilter>("unread");
   const [deletingPublicId, setDeletingPublicId] = useState<string | null>(
     null,
   );
+  const [updatingReadPublicId, setUpdatingReadPublicId] = useState<
+    string | null
+  >(null);
 
   const listQuery = trpc.listReaderArticlesRoute.useQuery(
-    { limit: 40 },
+    { limit: 200 },
     {
       refetchOnWindowFocus: false,
       refetchInterval: (data) => {
@@ -43,6 +62,8 @@ export function useReaderDashboardControls() {
   const saveUrlArticle = trpc.saveReaderArticleRoute.useMutation();
   const saveRawTextArticle = trpc.saveReaderRawTextRoute.useMutation();
   const deleteArticle = trpc.deleteReaderArticleRoute.useMutation();
+  const setReaderArticleReadState =
+    trpc.setReaderArticleReadStateRoute.useMutation();
 
   const listErrorMessage = useMemo(() => {
     if (!listQuery.isError) {
@@ -54,6 +75,24 @@ export function useReaderDashboardControls() {
       "Could not load reader articles.",
     );
   }, [listQuery.error, listQuery.isError]);
+
+  const allArticles = useMemo<ReaderArticleSummary[]>(() => {
+    return listQuery.data?.articles ?? [];
+  }, [listQuery.data]);
+
+  const articles = useMemo(() => {
+    return allArticles.filter((article) => {
+      return articleMatchesReadFilter(article, readFilter);
+    });
+  }, [allArticles, readFilter]);
+
+  const readArticlesCount = useMemo(() => {
+    return allArticles.filter((article) => article.readAt !== null).length;
+  }, [allArticles]);
+
+  const unreadArticlesCount = useMemo(() => {
+    return allArticles.length - readArticlesCount;
+  }, [allArticles.length, readArticlesCount]);
 
   const handleSaveUrlSubmit = async (
     event: React.FormEvent<HTMLFormElement>,
@@ -165,21 +204,67 @@ export function useReaderDashboardControls() {
     }
   };
 
+  const handleToggleReadState = async (
+    article: ReaderArticleSummary,
+  ): Promise<void> => {
+    const markAsRead = article.readAt === null;
+    setUpdatingReadPublicId(article.publicId);
+
+    try {
+      await setReaderArticleReadState.mutateAsync({
+        publicId: article.publicId,
+        read: markAsRead,
+      });
+      notifications.show({
+        title: markAsRead ? "Marked as read" : "Marked as unread",
+        message: markAsRead
+          ? "Article moved out of default view."
+          : "Article returned to unread view.",
+        color: "green",
+      });
+      listQuery.refetch();
+    } catch (error: unknown) {
+      notifications.show({
+        title: "Update failed",
+        message: mutationErrorMessage(
+          error,
+          "Could not update read state.",
+        ),
+        color: "red",
+      });
+    } finally {
+      setUpdatingReadPublicId((current) => {
+        if (current === article.publicId) {
+          return null;
+        }
+
+        return current;
+      });
+    }
+  };
+
   return {
     articleUrl,
     rawTitle,
     rawText,
+    readFilter,
     deletingPublicId,
+    updatingReadPublicId,
     isSavingUrl: saveUrlArticle.isLoading,
     isSavingRaw: saveRawTextArticle.isLoading,
-    articles: listQuery.data?.articles ?? [],
+    articles,
+    allArticlesCount: allArticles.length,
+    readArticlesCount,
+    unreadArticlesCount,
     isArticlesLoading: listQuery.isLoading,
     isArticlesRefreshing: listQuery.isFetching,
     listErrorMessage,
     onArticleUrlChange: setArticleUrl,
     onRawTitleChange: setRawTitle,
     onRawTextChange: setRawText,
+    onReadFilterChange: setReadFilter,
     onDeleteArticle: handleDeleteArticle,
+    onToggleReadState: handleToggleReadState,
     onSaveUrlSubmit: handleSaveUrlSubmit,
     onSaveRawTextSubmit: handleSaveRawTextSubmit,
     onRefreshArticles: () => listQuery.refetch(),

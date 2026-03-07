@@ -28,6 +28,7 @@ import {
   listReaderArticlesRoute,
   refreshReaderArticleRoute,
   rotateReaderBookmarkletKey,
+  setReaderArticleReadStateRoute,
   saveReaderArticleRoute,
   saveReaderRawTextRoute,
 } from "./reader";
@@ -76,6 +77,7 @@ export const appRouter = router({
   parseCards,
   refreshReaderArticleRoute,
   rotateReaderBookmarkletKey,
+  setReaderArticleReadStateRoute,
   saveReaderArticleRoute,
   saveReaderRawTextRoute,
   archiveCard,

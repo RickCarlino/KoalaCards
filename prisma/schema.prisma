@@ -236,11 +236,13 @@ model ReaderArticle {
   ingestedAt    DateTime?
   contentText   String             @db.Text
   contentHtml   String             @db.Text
+  readAt        DateTime?
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
   highlights    ReaderArticleHighlight[]
 
   @@index([userId, createdAt])
+  @@index([userId, readAt])
   @@index([publicId])
   @@index([userId, instapaperBookmarkId])
   @@index([ingestStatus, createdAt])

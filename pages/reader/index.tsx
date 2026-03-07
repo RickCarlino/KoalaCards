@@ -1,6 +1,9 @@
 import { getUserSettingsFromEmail } from "@/koala/auth-helpers";
 import { useReaderDashboardControls } from "@/koala/reader/ui/dashboard/use-reader-dashboard-controls";
-import type { ReaderArticleSummary } from "@/koala/reader/ui/dashboard/types";
+import type {
+  ReaderArticleSummary,
+  ReaderReadFilter,
+} from "@/koala/reader/ui/dashboard/types";
 import {
   formatReaderDateTime,
   readerHeadingColor,
@@ -76,9 +79,28 @@ function parseAddSourceMode(value: string): AddSourceMode | null {
   return null;
 }
 
-function filteredEmptyMessage(hasAnyArticles: boolean): string {
-  if (!hasAnyArticles) {
+function parseReadFilter(value: string): ReaderReadFilter | null {
+  if (value === "unread" || value === "read" || value === "all") {
+    return value;
+  }
+
+  return null;
+}
+
+function filteredEmptyMessage(options: {
+  hasAnyArticles: boolean;
+  readFilter: ReaderReadFilter;
+}): string {
+  if (!options.hasAnyArticles) {
     return "No articles.";
+  }
+
+  if (options.readFilter === "unread") {
+    return "No unread articles. Switch to Read or All.";
+  }
+
+  if (options.readFilter === "read") {
+    return "No read articles yet.";
   }
 
   return "No results.";
@@ -279,16 +301,22 @@ function AddFromCard({
 type ArticleRowProps = {
   article: ReaderArticleSummary;
   isDeleting: boolean;
+  isUpdatingRead: boolean;
   onDelete: () => void;
+  onToggleRead: () => void;
   withDivider: boolean;
 };
 
 function ArticleRow({
   article,
   isDeleting,
+  isUpdatingRead,
   onDelete,
+  onToggleRead,
   withDivider,
 }: ArticleRowProps) {
+  const isRead = article.readAt !== null;
+
   return (
     <Stack style={readerListRowStyle(withDivider)}>
       <Group
@@ -313,6 +341,11 @@ function ArticleRow({
             {readerIngestLabel(article.ingestStatus)} ·{" "}
             {formatReaderDateTime(article.createdAt)}
           </Text>
+          {isRead && article.readAt && (
+            <Text size="xs" c="dimmed">
+              Read {formatReaderDateTime(article.readAt)}
+            </Text>
+          )}
           {article.ingestStatus === "error" &&
             article.ingestError.trim().length > 0 && (
               <Text size="sm" c="red" lineClamp={2}>
@@ -326,6 +359,15 @@ function ArticleRow({
           )}
         </Stack>
         <Group gap={8} align="center" wrap="wrap">
+          <Button
+            variant="subtle"
+            color={isRead ? "gray" : "teal"}
+            size="compact-xs"
+            loading={isUpdatingRead}
+            onClick={onToggleRead}
+          >
+            {isRead ? "Mark unread" : "Mark read"}
+          </Button>
           <Button
             variant="subtle"
             color="red"
@@ -344,19 +386,25 @@ function ArticleRow({
 type LibraryBodyProps = {
   isLoading: boolean;
   errorMessage: string | null;
+  readFilter: ReaderReadFilter;
   articles: ReaderArticleSummary[];
   hasAnyArticles: boolean;
   deletingPublicId: string | null;
+  updatingReadPublicId: string | null;
   onDeleteArticle: (article: ReaderArticleSummary) => void;
+  onToggleReadState: (article: ReaderArticleSummary) => void;
 };
 
 function LibraryBody({
   isLoading,
   errorMessage,
+  readFilter,
   articles,
   hasAnyArticles,
   deletingPublicId,
+  updatingReadPublicId,
   onDeleteArticle,
+  onToggleReadState,
 }: LibraryBodyProps) {
   if (isLoading) {
     return (
@@ -373,7 +421,7 @@ function LibraryBody({
   if (articles.length === 0) {
     return (
       <Text size="sm" c="dimmed">
-        {filteredEmptyMessage(hasAnyArticles)}
+        {filteredEmptyMessage({ hasAnyArticles, readFilter })}
       </Text>
     );
   }
@@ -386,7 +434,9 @@ function LibraryBody({
             key={article.id}
             article={article}
             isDeleting={deletingPublicId === article.publicId}
+            isUpdatingRead={updatingReadPublicId === article.publicId}
             onDelete={() => onDeleteArticle(article)}
+            onToggleRead={() => onToggleReadState(article)}
             withDivider={index > 0}
           />
         );
@@ -400,8 +450,15 @@ type LibraryCardProps = {
   isLoading: boolean;
   isRefreshing: boolean;
   errorMessage: string | null;
+  readFilter: ReaderReadFilter;
+  allArticlesCount: number;
+  readArticlesCount: number;
+  unreadArticlesCount: number;
   deletingPublicId: string | null;
+  updatingReadPublicId: string | null;
+  onReadFilterChange: (next: ReaderReadFilter) => void;
   onDeleteArticle: (article: ReaderArticleSummary) => void;
+  onToggleReadState: (article: ReaderArticleSummary) => void;
   onRefresh: () => void;
 };
 
@@ -410,34 +467,67 @@ function LibraryCard({
   isLoading,
   isRefreshing,
   errorMessage,
+  readFilter,
+  allArticlesCount,
+  readArticlesCount,
+  unreadArticlesCount,
   deletingPublicId,
+  updatingReadPublicId,
+  onReadFilterChange,
   onDeleteArticle,
+  onToggleReadState,
   onRefresh,
 }: LibraryCardProps) {
   return (
     <Box style={readerSurfaceStyle}>
       <Stack gap="sm">
-        <Group justify="space-between" align="center" wrap="wrap">
-          <Text size="sm" fw={700} c={readerHeadingColor}>
-            Library
-          </Text>
-          <Button
-            variant="subtle"
-            size="compact-sm"
+        <Stack gap="xs">
+          <Group justify="space-between" align="center" wrap="wrap">
+            <Text size="sm" fw={700} c={readerHeadingColor}>
+              Library
+            </Text>
+            <Button
+              variant="subtle"
+              size="compact-sm"
+              color="pink"
+              onClick={onRefresh}
+              loading={isRefreshing}
+            >
+              Refresh
+            </Button>
+          </Group>
+          <SegmentedControl
+            value={readFilter}
+            onChange={(value) => {
+              const nextFilter = parseReadFilter(value);
+              if (nextFilter) {
+                onReadFilterChange(nextFilter);
+              }
+            }}
+            data={[
+              {
+                label: `Unread (${unreadArticlesCount})`,
+                value: "unread",
+              },
+              { label: `Read (${readArticlesCount})`, value: "read" },
+              { label: `All (${allArticlesCount})`, value: "all" },
+            ]}
+            size="xs"
+            radius="md"
             color="pink"
-            onClick={onRefresh}
-            loading={isRefreshing}
-          >
-            Refresh
-          </Button>
-        </Group>
+            fullWidth
+          />
+        </Stack>
         <LibraryBody
           isLoading={isLoading}
           errorMessage={errorMessage}
+          readFilter={readFilter}
           articles={articles}
-          hasAnyArticles={articles.length > 0}
+          hasAnyArticles={allArticlesCount > 0}
           deletingPublicId={deletingPublicId}
+          updatingReadPublicId={updatingReadPublicId}
           onDeleteArticle={onDeleteArticle}
+          onToggleReadState={onToggleReadState}
         />
       </Stack>
     </Box>
@@ -483,8 +573,15 @@ export default function ReaderDashboardPage() {
             isLoading={controls.isArticlesLoading}
             isRefreshing={controls.isArticlesRefreshing}
             errorMessage={controls.listErrorMessage}
+            readFilter={controls.readFilter}
+            allArticlesCount={controls.allArticlesCount}
+            readArticlesCount={controls.readArticlesCount}
+            unreadArticlesCount={controls.unreadArticlesCount}
             deletingPublicId={controls.deletingPublicId}
+            updatingReadPublicId={controls.updatingReadPublicId}
+            onReadFilterChange={controls.onReadFilterChange}
             onDeleteArticle={controls.onDeleteArticle}
+            onToggleReadState={controls.onToggleReadState}
             onRefresh={controls.onRefreshArticles}
           />
         </Box>

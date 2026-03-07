@@ -7,6 +7,7 @@ export type ReaderArticleSummary = {
   description: string;
   ingestStatus: "pending" | "in_progress" | "ready" | "error";
   ingestError: string;
+  readAt: Date | null;
   createdAt: Date;
 };
 
@@ -16,3 +17,5 @@ export type ReaderDashboardStats = {
   ready: number;
   errored: number;
 };
+
+export type ReaderReadFilter = "unread" | "read" | "all";
