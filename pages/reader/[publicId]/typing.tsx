@@ -365,7 +365,7 @@ function typingFocusLabel(
   }
 
   if (typingStatus === "in_progress" && isInputFocused) {
-    return "Focused";
+    return "Typing";
   }
 
   if (typingStatus === "in_progress") {

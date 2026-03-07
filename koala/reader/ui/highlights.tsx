@@ -404,6 +404,9 @@ type HighlightsHistoryCardProps = {
   onImportSelected: () => void;
   canImportSelected: boolean;
   isImportingSelected: boolean;
+  onToggleSelectAll: () => void;
+  canSelectAll: boolean;
+  allImportableSelected: boolean;
   importStatusByHighlightId: Record<number, HighlightImportResultStatus>;
   onDeleteHighlight: (highlightId: number) => void;
 };
@@ -614,6 +617,9 @@ export function HighlightsHistoryCard({
   onImportSelected,
   canImportSelected,
   isImportingSelected,
+  onToggleSelectAll,
+  canSelectAll,
+  allImportableSelected,
   importStatusByHighlightId,
   onDeleteHighlight,
 }: HighlightsHistoryCardProps) {
@@ -673,6 +679,15 @@ export function HighlightsHistoryCard({
               loading={isImportingSelected}
             >
               Import
+            </Button>
+            <Button
+              size="compact-sm"
+              variant="subtle"
+              color="grape"
+              onClick={onToggleSelectAll}
+              disabled={!canSelectAll}
+            >
+              {allImportableSelected ? "Clear all" : "Select all"}
             </Button>
           </Group>
           {visibleHighlights.map((highlight) => {

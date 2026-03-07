@@ -153,6 +153,35 @@ function normalizeComparableText(value: string): string {
     .trim();
 }
 
+function normalizeInlineWhitespace(value: string): string {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function commonPrefixLength(left: string, right: string): number {
+  const maxLength = Math.min(left.length, right.length);
+  let matched = 0;
+
+  while (matched < maxLength && left[matched] === right[matched]) {
+    matched += 1;
+  }
+
+  return matched;
+}
+
+function commonSuffixLength(left: string, right: string): number {
+  const maxLength = Math.min(left.length, right.length);
+  let matched = 0;
+
+  while (
+    matched < maxLength &&
+    left[left.length - 1 - matched] === right[right.length - 1 - matched]
+  ) {
+    matched += 1;
+  }
+
+  return matched;
+}
+
 function contentLikelyHasCodeBlocks(value: string): boolean {
   if (value.includes("```") || value.includes("~~~")) {
     return true;
@@ -316,38 +345,132 @@ function shouldFillToolsBody(view: HighlightToolsView): boolean {
   return view === "helper";
 }
 
-function highlightMatchesDraft(
+function highlightContextScore(
   highlight: ReaderArticleHighlight,
   draft: HelperDraft,
-): boolean {
-  if (highlight.selectedText !== draft.selectedText) {
+): number {
+  const normalizedHighlightBefore = normalizeInlineWhitespace(
+    highlight.contextBefore,
+  );
+  const normalizedHighlightAfter = normalizeInlineWhitespace(
+    highlight.contextAfter,
+  );
+  const normalizedDraftBefore = normalizeInlineWhitespace(
+    draft.contextBefore,
+  );
+  const normalizedDraftAfter = normalizeInlineWhitespace(
+    draft.contextAfter,
+  );
+
+  const beforeScore = commonSuffixLength(
+    normalizedHighlightBefore,
+    normalizedDraftBefore,
+  );
+  const afterScore = commonPrefixLength(
+    normalizedHighlightAfter,
+    normalizedDraftAfter,
+  );
+
+  return beforeScore + afterScore;
+}
+
+function distanceFromOccurrenceHint(
+  highlight: ReaderArticleHighlight,
+  draft: HelperDraft,
+): number {
+  return Math.abs(
+    highlight.selectedOccurrenceIndex - draft.occurrenceHint,
+  );
+}
+
+function shouldReplaceBestCandidate(options: {
+  candidate: ReaderArticleHighlight;
+  candidateScore: number;
+  bestCandidate: ReaderArticleHighlight | null;
+  bestScore: number;
+  draft: HelperDraft;
+}): boolean {
+  const { candidate, candidateScore, bestCandidate, bestScore, draft } =
+    options;
+
+  if (!bestCandidate) {
+    return true;
+  }
+
+  if (candidateScore > bestScore) {
+    return true;
+  }
+
+  if (candidateScore < bestScore) {
     return false;
   }
 
-  if (highlight.selectedOccurrenceIndex !== draft.occurrenceHint) {
+  const candidateDistance = distanceFromOccurrenceHint(candidate, draft);
+  const bestDistance = distanceFromOccurrenceHint(bestCandidate, draft);
+  if (candidateDistance < bestDistance) {
+    return true;
+  }
+
+  if (candidateDistance > bestDistance) {
     return false;
   }
 
-  if (highlight.contextBefore !== draft.contextBefore) {
-    return false;
-  }
-
-  return highlight.contextAfter === draft.contextAfter;
+  return candidate.createdAt > bestCandidate.createdAt;
 }
 
 function findMatchingHighlightId(
   highlights: ReaderArticleHighlight[],
   draft: HelperDraft,
 ): number | null {
-  const match = highlights.find((highlight) =>
-    highlightMatchesDraft(highlight, draft),
+  const normalizedDraftText = normalizeInlineWhitespace(
+    draft.selectedText,
   );
-
-  if (!match) {
+  if (normalizedDraftText.length === 0) {
     return null;
   }
 
-  return match.id;
+  const candidates = highlights.filter((highlight) => {
+    return (
+      normalizeInlineWhitespace(highlight.selectedText) ===
+      normalizedDraftText
+    );
+  });
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  if (candidates.length === 1) {
+    return candidates[0].id;
+  }
+
+  const hintMatch = candidates.find((highlight) => {
+    return highlight.selectedOccurrenceIndex === draft.occurrenceHint;
+  });
+
+  let bestCandidate: ReaderArticleHighlight | null = null;
+  let bestScore = -1;
+
+  for (const candidate of candidates) {
+    const candidateScore = highlightContextScore(candidate, draft);
+    if (
+      shouldReplaceBestCandidate({
+        candidate,
+        candidateScore,
+        bestCandidate,
+        bestScore,
+        draft,
+      })
+    ) {
+      bestCandidate = candidate;
+      bestScore = candidateScore;
+    }
+  }
+
+  if (bestScore === 0 && hintMatch) {
+    return hintMatch.id;
+  }
+
+  return bestCandidate?.id ?? hintMatch?.id ?? null;
 }
 
 function buildSelectionDraft(
@@ -788,6 +911,46 @@ function toggleSelectedHighlights(
   }
 
   return previous.filter((id) => id !== highlightId);
+}
+
+function toggleAllSelectedHighlights(
+  previous: number[],
+  importableHighlightIds: number[],
+): number[] {
+  if (importableHighlightIds.length === 0) {
+    return [];
+  }
+
+  if (previous.length === importableHighlightIds.length) {
+    return [];
+  }
+
+  return [...importableHighlightIds];
+}
+
+function areAllImportableHighlightsSelected(options: {
+  selectedHighlightIds: number[];
+  importableHighlightIds: number[];
+}): boolean {
+  if (options.importableHighlightIds.length === 0) {
+    return false;
+  }
+
+  return (
+    options.selectedHighlightIds.length ===
+    options.importableHighlightIds.length
+  );
+}
+
+function canSelectAllHighlights(options: {
+  importableHighlightIds: number[];
+  isImportingSelected: boolean;
+}): boolean {
+  if (options.isImportingSelected) {
+    return false;
+  }
+
+  return options.importableHighlightIds.length > 0;
 }
 
 function importSummaryMessage(
@@ -1315,10 +1478,23 @@ function OwnerHighlightTools({
     isImportingSelected,
     isMutationLoading: importHighlightsMutation.isLoading,
   });
+  const allImportableSelected = areAllImportableHighlightsSelected({
+    selectedHighlightIds,
+    importableHighlightIds,
+  });
+  const canSelectAll = canSelectAllHighlights({
+    importableHighlightIds,
+    isImportingSelected,
+  });
   const onAddToDeck = addToDeckHandlerOrUndefined(
     activeHighlight,
     addActiveHighlightToDeck,
   );
+  const toggleSelectAllHighlights = () => {
+    setSelectedHighlightIds((previous) => {
+      return toggleAllSelectedHighlights(previous, importableHighlightIds);
+    });
+  };
 
   const savedHighlightsForRender = useMemo<
     SavedArticleHighlightForRender[]
@@ -1534,6 +1710,9 @@ function OwnerHighlightTools({
                 }}
                 canImportSelected={canImportSelected}
                 isImportingSelected={isImportingSelected}
+                onToggleSelectAll={toggleSelectAllHighlights}
+                canSelectAll={canSelectAll}
+                allImportableSelected={allImportableSelected}
                 importStatusByHighlightId={importStatusByHighlightId}
                 onDeleteHighlight={(highlightId) => {
                   void deleteHighlight(highlightId);
