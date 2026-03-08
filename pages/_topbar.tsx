@@ -21,7 +21,7 @@ const exactRouteTitles: Record<string, string> = {
   "/review": "Review",
   "/create": "Create",
   "/cards": "Cards",
-  "/reader": "Reader",
+  "/reader": "Reading",
   "/writing": "Writing",
   "/recent": "Recent",
   "/user": "Settings",
@@ -32,7 +32,7 @@ const exactRouteTitles: Record<string, string> = {
 const prefixRouteTitles: Array<[string, string]> = [
   ["/review/", "Study Session"],
   ["/cards/", "Cards"],
-  ["/reader/", "Reader"],
+  ["/reader/", "Reading"],
   ["/writing/", "Writing"],
   ["/user/", "Settings"],
   ["/link/", "Admin"],
@@ -58,7 +58,7 @@ function resolveSectionTitle(pathname: string): string {
 const TopBar = ({ children }: TopBarProps) => {
   const theme = useMantineTheme();
   const router = useRouter();
-  const [pageTitle, setPageTitle] = React.useState("Reader");
+  const [pageTitle, setPageTitle] = React.useState("Reading");
   const sectionTitle = resolveSectionTitle(router.pathname);
 
   const isHome = router.pathname === "/";
@@ -80,7 +80,7 @@ const TopBar = ({ children }: TopBarProps) => {
         return;
       }
 
-      setPageTitle("Reader");
+      setPageTitle("Reading");
     };
 
     updateTitle();

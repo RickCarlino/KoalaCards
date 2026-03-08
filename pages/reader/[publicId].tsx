@@ -683,7 +683,7 @@ function ProcessingCard({
           </Text>
         )}
         <Text size="sm" c="dimmed">
-          Go back to Reader and try adding it again.
+          Go back to Reading and try adding it again.
         </Text>
       </ReaderPanel>
     );

@@ -634,7 +634,7 @@ function ProcessingPanel({
             Open reading view
           </Anchor>
           <Anchor component={Link} href="/reader" size="sm">
-            Back to Reader
+            Back to Reading
           </Anchor>
           {normalizedUrl && (
             <Anchor
@@ -660,7 +660,7 @@ function ProcessingPanel({
             Open reading view
           </Anchor>
           <Anchor component={Link} href="/reader" size="sm">
-            Back to Reader
+            Back to Reading
           </Anchor>
         </Group>
       </ReaderPanel>

@@ -28,6 +28,7 @@ import {
   IconPlayerStopFilled,
 } from "@tabler/icons-react";
 import { GetServerSideProps } from "next";
+import Link from "next/link";
 import { useRouter } from "next/router";
 import { alphabetical } from "radash";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -1442,9 +1443,17 @@ export default function WritingPracticePage({
 
   return (
     <Container size="sm" py="md">
-      <Title order={2} mb="md">
-        Writing Practice
-      </Title>
+      <Group justify="space-between" align="center" mb="md" wrap="wrap">
+        <Title order={2}>Writing</Title>
+        <Button
+          component={Link}
+          href="/writing"
+          variant="light"
+          color="pink"
+        >
+          Writing History
+        </Button>
+      </Group>
 
       {stepContent[currentStep]}
     </Container>

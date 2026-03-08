@@ -546,7 +546,7 @@ export default function ReaderDashboardPage() {
     <Box style={readerPageStyle}>
       <Box style={readerHeaderRowStyle}>
         <Text size="xl" fw={700} c={readerHeadingColor}>
-          Reader
+          Reading
         </Text>
       </Box>
 

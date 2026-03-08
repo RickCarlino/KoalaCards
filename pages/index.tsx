@@ -13,10 +13,10 @@ import {
   Title,
 } from "@mantine/core";
 import {
-  IconCards,
+  IconClock,
   IconFileText,
   IconPencil,
-  IconPlus,
+  IconSettings,
   IconSparkles,
   IconStar,
 } from "@tabler/icons-react";
@@ -43,30 +43,27 @@ type UtilityLink = {
 const quickActions: HomeAction[] = [
   {
     href: "/reader",
-    label: "Reader",
+    label: "Reading",
     icon: IconFileText,
   },
   {
-    href: "/create",
-    label: "Add Cards",
-    icon: IconPlus,
-  },
-  {
-    href: "/cards",
-    label: "View Cards",
-    icon: IconCards,
-  },
-  {
     href: "/writing/practice",
-    label: "Writing Practice",
+    label: "Writing",
     icon: IconPencil,
+  },
+  {
+    href: "/user",
+    label: "Settings",
+    icon: IconSettings,
+  },
+  {
+    href: "/recent",
+    label: "Recent Activity",
+    icon: IconClock,
   },
 ];
 
 const utilityLinks: UtilityLink[] = [
-  { href: "/user", label: "Settings" },
-  { href: "/writing", label: "Writing History" },
-  { href: "/recent", label: "Recent Activity" },
   {
     href: "https://github.com/RickCarlino/KoalaCards",
     label: "GitHub",
@@ -196,14 +193,14 @@ function PrimaryActionPanel({ hasAnyCards }: PrimaryActionPanelProps) {
       <Stack gap="sm">
         <Group gap="xs" wrap="nowrap">
           <IconFileText size={18} />
-          <Text fw={700}>Start With Reader</Text>
+          <Text fw={700}>Start With Reading</Text>
         </Group>
         <Text size="sm" c="gray.7">
           Save Korean text first, then turn highlights into cards.
         </Text>
         <Group>
           <Button component={Link} href="/reader" color="pink">
-            Open Reader
+            Open Reading
           </Button>
           <Button
             component={Link}
