@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -6,12 +6,10 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0"
     />
-    <title>Koala Cards - Korean Spaced Repetition</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
+    <title>Koala Cards | Korean Study App</title>
+    <meta
+      name="description"
+      content="Koala Cards is a Korean study app with spaced repetition cards, speaking checks, writing feedback, and a built-in reader."
     />
     <style>
       :root {
@@ -19,455 +17,860 @@
         --pink-1: #ffdeeb;
         --pink-2: #fcc2d7;
         --pink-3: #faa2c1;
+        --pink-4: #f783ac;
         --pink-5: #f06595;
+        --pink-6: #e64980;
         --pink-7: #d6336c;
-        --ink-900: #212529;
-        --ink-700: #495057;
-        --ink-500: #868e96;
-        --paper: rgba(255, 255, 255, 0.82);
-        --border: #ffdeeb;
-        --shadow-sm: 0 2px 8px rgba(230, 73, 128, 0.1);
-        --shadow-md: 0 14px 28px rgba(230, 73, 128, 0.12);
+        --pink-8: #c2255c;
+        --pink-9: #a61e4d;
+        --berry-0: #351427;
+        --berry-1: #54213b;
+        --berry-2: #7a3458;
+        --cream: #fffafc;
+        --paper: #fff6fa;
+        --ink: #2f1825;
+        --muted: #694456;
+        --line: rgba(166, 30, 77, 0.16);
+        --shadow-soft: 0 16px 44px rgba(71, 21, 45, 0.12);
+        --shadow-float: 0 20px 70px rgba(68, 15, 41, 0.18);
+        --radius-s: 12px;
+        --radius-m: 18px;
+        --radius-l: 28px;
       }
 
       * {
         box-sizing: border-box;
       }
 
+      html,
       body {
-        font-family: "Montserrat", sans-serif;
         margin: 0;
-        color: var(--ink-900);
+        padding: 0;
+      }
+
+      body {
+        font-family:
+          "Avenir Next",
+          "Segoe UI",
+          "Trebuchet MS",
+          sans-serif;
+        color: var(--ink);
         background:
           radial-gradient(
-              900px 500px at 6% -10%,
-              rgba(255, 222, 235, 0.7) 0%,
-              rgba(255, 222, 235, 0) 60%
-            ),
+            60rem 36rem at 8% -8%,
+            rgba(246, 101, 149, 0.22),
+            transparent 64%
+          ),
           radial-gradient(
-              700px 420px at 96% 0%,
-              rgba(252, 194, 215, 0.6) 0%,
-              rgba(252, 194, 215, 0) 60%
-            ),
-          linear-gradient(180deg, #fff0f6 0%, #fff6fb 32%, #ffffff 100%);
-        line-height: 1.6;
+            62rem 36rem at 92% -10%,
+            rgba(198, 37, 92, 0.18),
+            transparent 68%
+          ),
+          linear-gradient(180deg, var(--paper), var(--cream));
+        min-height: 100vh;
+        line-height: 1.52;
+        overflow-x: hidden;
       }
 
-      a {
-        color: var(--pink-7);
-        text-decoration: none;
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: -2;
+        opacity: 0.5;
+        background-image:
+          linear-gradient(to right, rgba(194, 37, 92, 0.05) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(194, 37, 92, 0.05) 1px, transparent 1px);
+        background-size: 34px 34px;
       }
 
-      a:hover {
-        color: var(--pink-5);
+      body::after {
+        content: "";
+        position: fixed;
+        width: 48vmax;
+        height: 48vmax;
+        right: -15vmax;
+        top: -18vmax;
+        z-index: -1;
+        border-radius: 42% 58% 41% 59% / 53% 42% 58% 47%;
+        background: linear-gradient(
+          135deg,
+          rgba(198, 37, 92, 0.18),
+          rgba(246, 101, 149, 0.08)
+        );
+        filter: blur(2px);
+        animation: drift 16s ease-in-out infinite alternate;
       }
 
-      .page {
-        max-width: 1040px;
+      @keyframes drift {
+        0% {
+          transform: translate3d(0, 0, 0) rotate(0deg);
+        }
+        100% {
+          transform: translate3d(-2.2rem, 1.2rem, 0) rotate(8deg);
+        }
+      }
+
+      .shell {
+        width: min(1120px, 92vw);
         margin: 0 auto;
-        padding: 28px 20px 60px;
       }
 
-      .site-header {
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        backdrop-filter: blur(8px);
+        background: color-mix(in srgb, var(--cream) 82%, white 18%);
+        border-bottom: 1px solid rgba(194, 37, 92, 0.14);
+      }
+
+      .topbar-inner {
+        min-height: 74px;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 16px;
-        padding: 18px 22px;
-        border-radius: 16px;
-        border: 1px solid var(--border);
-        background: var(--paper);
-        backdrop-filter: saturate(180%) blur(8px);
-        box-shadow: var(--shadow-sm);
+        gap: 18px;
       }
 
       .brand {
-        display: flex;
+        display: inline-flex;
         align-items: center;
-        gap: 16px;
-      }
-
-      .brand-name {
-        font-size: 1.25rem;
+        gap: 10px;
+        color: var(--berry-0);
+        text-decoration: none;
         font-weight: 700;
         letter-spacing: 0.01em;
       }
 
-      .brand-tagline {
-        color: var(--ink-700);
-        font-size: 0.95rem;
+      .top-links {
+        display: inline-flex;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
       }
 
-      .status-chip {
-        padding: 6px 12px;
-        border-radius: 999px;
-        background: var(--pink-0);
-        color: var(--pink-7);
-        border: 1px solid var(--pink-1);
-        font-size: 0.85rem;
+      .top-links a {
+        text-decoration: none;
+        color: var(--muted);
+        font-size: 0.92rem;
         font-weight: 600;
       }
 
-      main {
-        margin-top: 24px;
+      .top-links a:hover {
+        color: var(--pink-8);
       }
 
-      section {
-        margin-bottom: 26px;
-        padding: 28px;
-        border-radius: 18px;
-        border: 1px solid var(--border);
-        background: var(--paper);
-        box-shadow: var(--shadow-sm);
+      .btn {
+        border: 0;
+        border-radius: 999px;
+        padding: 11px 18px;
+        font: inherit;
+        font-size: 0.92rem;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: transform 180ms ease, box-shadow 180ms ease;
       }
 
-      h2 {
-        margin-top: 0;
-        font-size: 1.7rem;
-        color: var(--ink-900);
+      .btn:hover {
+        transform: translateY(-1px);
       }
 
-      .hero-section {
-        background: linear-gradient(
-          135deg,
-          rgba(255, 240, 246, 0.95) 0%,
-          rgba(255, 255, 255, 0.95) 45%,
-          rgba(255, 240, 246, 0.8) 100%
-        );
-        border: 1px solid var(--pink-1);
+      .btn-primary {
+        color: #fff;
+        background: linear-gradient(140deg, var(--pink-7), var(--pink-9));
+        box-shadow: 0 10px 30px rgba(166, 30, 77, 0.3);
+      }
+
+      .btn-soft {
+        color: var(--berry-1);
+        background: linear-gradient(140deg, #ffe4ef, #ffd5e7);
+        border: 1px solid rgba(166, 30, 77, 0.22);
+      }
+
+      .hero {
+        padding-block: clamp(36px, 8vw, 88px) clamp(34px, 7vw, 68px);
       }
 
       .hero-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-        gap: 26px;
+        grid-template-columns: 1.2fr 0.9fr;
+        gap: clamp(20px, 4vw, 42px);
         align-items: start;
       }
 
-      .hero-copy p {
-        margin: 0 0 16px;
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0 0 14px 0;
+        padding: 6px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(166, 30, 77, 0.2);
+        background: rgba(255, 222, 235, 0.65);
+        color: var(--berry-1);
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
       }
 
-      .hero-actions {
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        font-family:
+          "Iowan Old Style",
+          "Palatino Linotype",
+          "Book Antiqua",
+          Georgia,
+          serif;
+        color: var(--berry-0);
+      }
+
+      h1 {
+        font-size: clamp(2.2rem, 5.2vw, 4rem);
+        line-height: 1.04;
+        letter-spacing: -0.02em;
+      }
+
+      .hero-copy {
+        margin-top: 16px;
+        max-width: 56ch;
+        color: var(--muted);
+        font-size: clamp(1rem, 1.5vw, 1.14rem);
+      }
+
+      .cta-row {
+        margin-top: 24px;
         display: flex;
         flex-wrap: wrap;
         gap: 10px;
       }
 
-      .button {
-        display: inline-block;
-        padding: 12px 22px;
-        border-radius: 10px;
-        font-weight: 600;
-        border: 1px solid transparent;
-        transition: transform 150ms ease, box-shadow 150ms ease;
+      .mini-proof {
+        margin-top: 22px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
       }
 
-      .button-primary {
-        background: var(--pink-5);
-        color: #ffffff;
-        box-shadow: var(--shadow-sm);
-      }
-
-      .button-secondary {
-        background: #ffffff;
-        color: var(--pink-7);
-        border-color: var(--pink-2);
-      }
-
-      .button:hover {
-        transform: translateY(-1px);
-        box-shadow: var(--shadow-md);
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        padding: 7px 12px;
+        font-size: 0.84rem;
+        color: var(--berry-1);
+        background: rgba(255, 255, 255, 0.72);
       }
 
       .hero-panel {
-        padding: 18px 20px;
-        border-radius: 14px;
-        border: 1px solid var(--pink-2);
-        background: rgba(255, 255, 255, 0.9);
+        border-radius: var(--radius-l);
+        background:
+          linear-gradient(160deg, rgba(255, 255, 255, 0.94), rgba(255, 236, 244, 0.9));
+        border: 1px solid rgba(166, 30, 77, 0.2);
+        box-shadow: var(--shadow-float);
+        padding: clamp(16px, 2.2vw, 24px);
+        position: relative;
+        overflow: hidden;
       }
 
-      .hero-panel h3 {
-        margin-top: 0;
-        font-size: 1rem;
+      .hero-panel::before {
+        content: "";
+        position: absolute;
+        width: 180px;
+        height: 180px;
+        top: -62px;
+        right: -64px;
+        border-radius: 50%;
+        background: radial-gradient(
+          circle,
+          rgba(246, 101, 149, 0.34),
+          rgba(246, 101, 149, 0) 70%
+        );
+      }
+
+      .panel-kicker {
+        font-size: 0.76rem;
         text-transform: uppercase;
         letter-spacing: 0.08em;
-        color: var(--pink-7);
+        color: var(--pink-8);
+        font-weight: 800;
       }
 
-      .hero-panel ul {
+      .loop-list {
+        margin: 14px 0 0 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 9px;
+      }
+
+      .loop-list li {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        align-items: center;
+        gap: 10px;
+        color: var(--berry-1);
+      }
+
+      .step-dot {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        color: #fff;
+        font-size: 0.78rem;
+        font-weight: 800;
+        background: linear-gradient(140deg, var(--pink-6), var(--pink-8));
+      }
+
+      section {
+        padding-block: clamp(28px, 6vw, 58px);
+      }
+
+      .section-head {
+        margin-bottom: 20px;
+      }
+
+      h2 {
+        font-size: clamp(1.5rem, 3.4vw, 2.5rem);
+        line-height: 1.08;
+      }
+
+      .section-lead {
+        margin-top: 10px;
+        color: var(--muted);
+        max-width: 66ch;
+      }
+
+      .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .feature {
+        border: 1px solid rgba(166, 30, 77, 0.16);
+        background: rgba(255, 255, 255, 0.86);
+        box-shadow: var(--shadow-soft);
+        border-radius: var(--radius-m);
+        padding: clamp(14px, 2vw, 20px);
+        min-height: 230px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        transition: transform 200ms ease, border-color 200ms ease;
+      }
+
+      .feature:hover {
+        transform: translateY(-2px);
+        border-color: rgba(166, 30, 77, 0.28);
+      }
+
+      .feature h3 {
+        font-size: clamp(1.25rem, 2.1vw, 1.62rem);
+      }
+
+      .feature p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .feature ul {
         margin: 0;
         padding-left: 18px;
-        color: var(--ink-700);
+        color: var(--berry-1);
       }
 
-      .youtube-container {
-        position: relative;
-        padding-bottom: 56.25%;
-        height: 0;
-        overflow: hidden;
-        max-width: 100%;
-        margin-top: 18px;
-        border-radius: 14px;
-        border: 1px solid var(--pink-1);
+      .feature--review {
+        grid-column: span 5;
       }
 
-      .youtube-container iframe {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
+      .feature--writing {
+        grid-column: span 7;
       }
 
-      .features-grid {
+      .feature--reader {
+        grid-column: span 12;
+      }
+
+      .mode-switch {
+        display: inline-flex;
+        gap: 6px;
+        padding: 4px;
+        border-radius: 999px;
+        border: 1px solid rgba(166, 30, 77, 0.16);
+        background: rgba(255, 240, 246, 0.75);
+        width: fit-content;
+      }
+
+      .mode-switch button {
+        border: 0;
+        border-radius: 999px;
+        padding: 8px 12px;
+        font: inherit;
+        font-size: 0.84rem;
+        font-weight: 700;
+        background: transparent;
+        color: var(--berry-1);
+        cursor: pointer;
+      }
+
+      .mode-switch button.active {
+        background: linear-gradient(140deg, var(--pink-6), var(--pink-8));
+        color: #fff;
+      }
+
+      .mode-preview {
+        margin-top: 6px;
+        border-radius: var(--radius-s);
+        border: 1px dashed rgba(166, 30, 77, 0.26);
+        padding: 11px 12px;
+        background: rgba(255, 246, 250, 0.75);
+        color: var(--berry-1);
+        min-height: 68px;
+      }
+
+      .timeline {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-        gap: 18px;
-        margin-top: 16px;
+        gap: 10px;
       }
 
-      .feature-card {
-        background: rgba(255, 255, 255, 0.88);
-        border-radius: 14px;
-        border: 1px solid var(--pink-1);
-        padding: 18px;
-        box-shadow: var(--shadow-sm);
+      .flow-step {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 12px;
+        border-radius: var(--radius-m);
+        padding: 14px 14px 14px 12px;
+        border: 1px solid rgba(166, 30, 77, 0.16);
+        background: rgba(255, 255, 255, 0.8);
       }
 
-      .feature-card h3 {
-        margin-top: 0;
-        font-size: 1.1rem;
-        color: var(--ink-900);
+      .flow-step strong {
+        color: var(--berry-0);
       }
 
-      .muted {
-        color: var(--ink-500);
+      .flow-step p {
+        margin: 3px 0 0;
+        color: var(--muted);
+      }
+
+      .settings-band {
+        border-radius: var(--radius-l);
+        border: 1px solid rgba(166, 30, 77, 0.2);
+        box-shadow: var(--shadow-soft);
+        padding: clamp(16px, 2vw, 24px);
+        background:
+          linear-gradient(
+            180deg,
+            rgba(255, 255, 255, 0.92),
+            rgba(255, 238, 245, 0.85)
+          );
+      }
+
+      .settings-grid {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 14px;
+        align-items: start;
+      }
+
+      .pillars {
+        display: grid;
+        gap: 8px;
+      }
+
+      .pillar {
+        border: 1px solid rgba(166, 30, 77, 0.16);
+        border-radius: var(--radius-s);
+        padding: 10px 12px;
+        background: rgba(255, 255, 255, 0.7);
+      }
+
+      .pillar strong {
+        color: var(--berry-0);
+      }
+
+      .pillar p {
+        margin: 3px 0 0;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      .snapshot {
+        border-radius: var(--radius-s);
+        border: 1px solid rgba(166, 30, 77, 0.2);
+        background: rgba(255, 255, 255, 0.82);
+        padding: 12px;
+      }
+
+      .snapshot h3 {
+        font-size: 1.15rem;
+        margin-bottom: 10px;
+      }
+
+      .stats {
+        display: grid;
+        gap: 7px;
+      }
+
+      .stats div {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        color: var(--berry-1);
+        font-size: 0.92rem;
+      }
+
+      .stats span:last-child {
+        font-weight: 700;
+        color: var(--berry-0);
+      }
+
+      .closing {
+        padding-bottom: clamp(44px, 8vw, 82px);
+      }
+
+      .closing-box {
+        border-radius: var(--radius-l);
+        border: 1px solid rgba(166, 30, 77, 0.24);
+        background:
+          linear-gradient(140deg, rgba(216, 51, 108, 0.9), rgba(166, 30, 77, 0.94));
+        color: #fff;
+        box-shadow: var(--shadow-float);
+        padding: clamp(18px, 2.8vw, 30px);
+      }
+
+      .closing-box h2 {
+        color: #fff;
+      }
+
+      .closing-box p {
+        margin: 10px 0 0;
+        max-width: 54ch;
+        color: rgba(255, 255, 255, 0.9);
+      }
+
+      .closing-actions {
+        margin-top: 18px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .closing .btn-soft {
+        background: rgba(255, 255, 255, 0.12);
+        border-color: rgba(255, 255, 255, 0.36);
+        color: #fff;
       }
 
       .reveal {
         opacity: 0;
-        transform: translateY(10px);
-        animation: reveal 600ms ease forwards;
-        animation-delay: var(--delay, 0ms);
+        transform: translateY(16px);
       }
 
-      @keyframes reveal {
-        to {
-          opacity: 1;
-          transform: translateY(0);
+      .reveal.is-visible {
+        opacity: 1;
+        transform: none;
+        transition:
+          opacity 520ms ease,
+          transform 520ms ease;
+      }
+
+      footer {
+        border-top: 1px solid rgba(166, 30, 77, 0.14);
+        padding: 16px 0 22px;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .footer-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      @media (max-width: 960px) {
+        .hero-grid {
+          grid-template-columns: 1fr;
         }
-      }
 
-      .site-footer {
-        margin-top: 28px;
-        text-align: center;
-        color: var(--ink-700);
-        font-size: 0.95rem;
+        .feature--review,
+        .feature--writing,
+        .feature--reader {
+          grid-column: span 12;
+        }
+
+        .settings-grid {
+          grid-template-columns: 1fr;
+        }
       }
 
       @media (max-width: 720px) {
-        .site-header {
-          flex-direction: column;
-          align-items: flex-start;
+        .top-links {
+          display: none;
         }
 
-        .status-chip {
-          align-self: flex-start;
+        .topbar-inner {
+          min-height: 66px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation: none !important;
+          transition: none !important;
+          scroll-behavior: auto !important;
         }
       }
     </style>
   </head>
   <body>
-    <div class="page">
-      <header class="site-header reveal" style="--delay: 0ms">
-        <div class="brand">
-          <div>
-            <div class="brand-name">Koala Cards</div>
-            <div class="brand-tagline">
-              Korean spaced repetition with speaking and writing practice
+    <header class="topbar">
+      <div class="shell topbar-inner">
+        <a class="brand" href="/">
+          <span>Koala Cards</span>
+        </a>
+        <nav class="top-links">
+          <a href="#features">Features</a>
+          <a href="#flow">Daily Flow</a>
+        </nav>
+        <a class="btn btn-primary" href="https://app.koala.cards/">Open App</a>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="shell hero-grid">
+          <div class="reveal" data-reveal>
+            <p class="eyebrow">Korean Spaced Repetition System</p>
+            <h1>Cards, writing, speaking, and reading for Korean learners.</h1>
+            <p class="hero-copy">
+              Koala Cards combines card review, speaking quizzes, writing feedback,
+              and reading highlights. You can move from new input to saved cards
+              without switching tools.
+            </p>
+            <div class="cta-row">
+              <a class="btn btn-primary" href="https://app.koala.cards/">Open App</a>
+              <a class="btn btn-soft" href="#features">View Features</a>
             </div>
+            <div class="mini-proof">
+              <span class="chip">FSRS scheduling</span>
+              <span class="chip">Speaking checks</span>
+              <span class="chip">Writing feedback</span>
+              <span class="chip">Reader highlight import</span>
+            </div>
+          </div>
+          <aside class="hero-panel reveal" data-reveal>
+            <p class="panel-kicker">Typical Session</p>
+            <ul class="loop-list">
+              <li>
+                <span class="step-dot">1</span>
+                <span>Review due cards and new cards in one session.</span>
+              </li>
+              <li>
+                <span class="step-dot">2</span>
+                <span>Do writing practice by typing or speaking, then review corrections.</span>
+              </li>
+              <li>
+                <span class="step-dot">3</span>
+                <span>Read Korean content and save useful highlights to a deck.</span>
+              </li>
+              <li>
+                <span class="step-dot">4</span>
+                <span>Check progress and continue the next session.</span>
+              </li>
+            </ul>
+          </aside>
+        </div>
+      </section>
+
+      <section id="features">
+        <div class="shell">
+          <header class="section-head reveal" data-reveal>
+            <h2>Core Features</h2>
+            <p class="section-lead">
+              Koala Cards has three main areas: review, writing, and reader. They
+              are designed to work together in a normal day-to-day study routine.
+            </p>
+          </header>
+
+          <div class="feature-grid">
+            <article class="feature feature--review reveal" data-reveal>
+              <h3>Card Review</h3>
+              <p>
+                Deck sessions mix due cards, new cards, and remedial cards. Speaking
+                answers are recorded and graded, and you can score difficulty with
+                AGAIN / HARD / GOOD / EASY.
+              </p>
+              <ul>
+                <li>Pause, archive, edit, or skip cards mid-session</li>
+                <li>Hotkeys for grading, recording, playback, and card actions</li>
+                <li>Study Assistant can explain and propose card edits</li>
+              </ul>
+            </article>
+
+            <article class="feature feature--writing reveal" data-reveal>
+              <h3>Writing Practice</h3>
+              <p>
+                Practice in typing or speaking mode, then get corrected text and
+                concise feedback. Click unknown words to define them in context and
+                create cards directly from those words.
+              </p>
+              <div class="mode-switch" role="tablist" aria-label="Writing mode preview">
+                <button
+                  type="button"
+                  class="active"
+                  data-mode="typing"
+                  aria-selected="true"
+                >
+                  Typing
+                </button>
+                <button type="button" data-mode="speaking" aria-selected="false">
+                  Speaking
+                </button>
+              </div>
+              <div class="mode-preview" id="mode-preview">
+                Write your response, review corrections, then select unknown words
+                to create new cards.
+              </div>
+            </article>
+
+            <article class="feature feature--reader reveal" data-reveal>
+              <h3>Reader and Highlights</h3>
+              <p>
+                Save an article URL or paste raw text. Highlight phrases to generate
+                term definitions, general meaning, and meaning in context. Import
+                those highlights to your deck in one click or in bulk.
+              </p>
+              <ul>
+                <li>Unread/read library workflow with ingest status tracking</li>
+                <li>Article-level typing practice mode for comprehension</li>
+                <li>Instapaper integration</li>
+              </ul>
+            </article>
           </div>
         </div>
-        <div class="status-chip">Maintenance mode</div>
-      </header>
+      </section>
 
-      <main>
-        <section class="hero-section reveal" style="--delay: 80ms">
-          <div class="hero-grid">
-            <div class="hero-copy">
-              <h2>Korean study with consistent feedback</h2>
-              <p>
-                Koala Cards is a Korean-only spaced repetition system for
-                English speakers. It focuses on speaking and writing with
-                automatic grading, scheduling, and review workflows that
-                prioritize retention.
-              </p>
-              <p class="muted">
-                The project is in maintenance mode: bug fixes and
-                security updates only.
-              </p>
-              <div class="hero-actions">
-                <a href="https://app.koala.cards/" class="button button-primary"
-                  >Start Learning</a
-                >
-                <a
-                  href="https://github.com/RickCarlino/KoalaCards"
-                  class="button button-secondary"
-                  >View on GitHub</a
-                >
+      <section id="flow">
+        <div class="shell">
+          <header class="section-head reveal" data-reveal>
+            <h2>Basic workflow</h2>
+            <p class="section-lead">
+              A typical session can be kept simple:
+            </p>
+          </header>
+          <div class="timeline">
+            <article class="flow-step reveal" data-reveal>
+              <span class="step-dot">1</span>
+              <div>
+                <strong>Review</strong>
+                <p>Pick a deck and clear your due cards first.</p>
               </div>
-            </div>
-            <div class="hero-panel">
-              <h3>At a glance</h3>
-              <ul>
-                <li>Speaking quizzes with STT and LLM grading</li>
-                <li>Writing practice with corrections and diff views</li>
-                <li>FSRS scheduling for new, remedial, and due cards</li>
-                <li>Deck tools: create, merge, import/export</li>
-                <li>Optional study assistant and AI-generated media</li>
-              </ul>
-            </div>
+            </article>
+            <article class="flow-step reveal" data-reveal>
+              <span class="step-dot">2</span>
+              <div>
+                <strong>Write</strong>
+                <p>Type or speak, collect corrections, and save unknown words.</p>
+              </div>
+            </article>
+            <article class="flow-step reveal" data-reveal>
+              <span class="step-dot">3</span>
+              <div>
+                <strong>Read</strong>
+                <p>Highlight useful phrases and import them into a deck.</p>
+              </div>
+            </article>
+            <article class="flow-step reveal" data-reveal>
+              <span class="step-dot">4</span>
+              <div>
+                <strong>Check progress</strong>
+                <p>Review card, writing, and reading charts over the last 90 days.</p>
+              </div>
+            </article>
           </div>
-        </section>
+        </div>
+      </section>
 
-        <section class="reveal" style="--delay: 140ms">
-          <h2>Watch Koala Cards in Action</h2>
-          <p>Short demo recorded in June 2025:</p>
-          <div class="youtube-container">
-            <iframe
-              src="https://www.youtube.com/embed/OWjfC7ia1c8"
-              title="Koala Cards Demo Video"
-              frameborder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              referrerpolicy="strict-origin-when-cross-origin"
-              allowfullscreen
-            ></iframe>
-          </div>
-        </section>
+    </main>
 
-        <section class="reveal" style="--delay: 200ms">
-          <h2>Current Capabilities</h2>
-          <p>
-            Koala Cards is built for repeatable practice and measurable
-            improvement, with a focus on Korean.
-          </p>
-          <div class="features-grid">
-            <div class="feature-card" style="--delay: 220ms">
-              <h3>Speaking quizzes</h3>
-              <p>
-                Record responses, transcribe them, and receive automated
-                feedback against the expected Korean phrase.
-              </p>
-            </div>
-            <div class="feature-card" style="--delay: 240ms">
-              <h3>Writing feedback</h3>
-              <p>
-                Submit writing and get corrections, diffs, and word-level
-                definitions tied to the prompt and context.
-              </p>
-            </div>
-            <div class="feature-card" style="--delay: 260ms">
-              <h3>Deck and card management</h3>
-              <p>
-                Create, edit, merge, pause, import, and export
-                decks with bulk creation options.
-              </p>
-            </div>
-            <div class="feature-card" style="--delay: 280ms">
-              <h3>Study assistant</h3>
-              <p>
-                Review recent cards, request explanations, or draft new
-                example cards during study sessions.
-              </p>
-            </div>
-            <div class="feature-card" style="--delay: 300ms">
-              <h3>Audio support</h3>
-              <p>
-                Term and definition audio are generated via text-to-
-                speech, with playback controls and timing options.
-              </p>
-            </div>
-            <div class="feature-card" style="--delay: 320ms">
-              <h3>Progress tracking</h3>
-              <p>
-                Track review progress, writing goals, and quiz outcomes
-                through dashboards and export tools.
-              </p>
-            </div>
-          </div>
-        </section>
+    <footer>
+      <div class="shell footer-row">
+        <span>Koala Cards</span>
+        <span>Korean study with cards, writing, speaking, and reading.</span>
+      </div>
+    </footer>
 
-        <section class="reveal" style="--delay: 260ms">
-          <h2>How It Works</h2>
-          <ol>
-            <li>
-              <strong>Create a deck</strong> with free-form generation,
-              word lists, CSV import, or the first-deck generator.
-            </li>
-            <li>
-              <strong>Study by speaking</strong> and let the app transcribe
-              and grade each response.
-            </li>
-            <li>
-              <strong>Practice writing</strong> to receive corrections and
-              explanations tied to your decks.
-            </li>
-            <li>
-              <strong>Repeat on schedule</strong> as the system prioritizes
-              new, due, and remedial cards.
-            </li>
-          </ol>
-        </section>
+    <script>
+      (function () {
+        const modePreview = document.getElementById("mode-preview");
+        const modeButtons = Array.from(
+          document.querySelectorAll("[data-mode]"),
+        );
+        const modeCopy = {
+          typing:
+            "Write your response, review corrections, then select unknown words to create cards.",
+          speaking:
+            "Record your response (up to 60s), review the transcript, and submit it for speaking feedback.",
+        };
 
-        <section class="reveal" style="--delay: 300ms">
-          <h2>Language Support</h2>
-          <p>Koala Cards is intentionally focused on Korean (ko) only.</p>
-        </section>
+        modeButtons.forEach((button) => {
+          button.addEventListener("click", () => {
+            const mode = button.getAttribute("data-mode");
+            if (!mode || !modePreview) {
+              return;
+            }
 
-        <section class="reveal" style="--delay: 340ms">
-          <h2>For Developers</h2>
-          <p>
-            Koala Cards is open source and built with Next.js, TypeScript,
-            tRPC, Prisma, and Mantine. It relies on OpenAI for grading and
-            speech services, and Google Cloud for text-to-speech and
-            storage. See the repository for setup details.
-          </p>
-          <a
-            href="https://github.com/RickCarlino/KoalaCards"
-            class="button button-secondary"
-            >View on GitHub</a
-          >
-        </section>
+            modeButtons.forEach((btn) => {
+              btn.classList.remove("active");
+              btn.setAttribute("aria-selected", "false");
+            });
+            button.classList.add("active");
+            button.setAttribute("aria-selected", "true");
+            modePreview.textContent = modeCopy[mode] || "";
+          });
+        });
 
-        <section class="reveal" style="--delay: 380ms">
-          <h2>Want to Help?</h2>
-          <p>Koala Cards is in maintenance mode. Helpful contributions:</p>
-          <ul>
-            <li>Bug reports and fixes</li>
-            <li>Security reviews and patches</li>
-            <li>Documentation corrections</li>
-            <li>Operational feedback from self-hosted deployments</li>
-          </ul>
-          <p>
-            Questions or issues?
-            <a href="https://github.com/RickCarlino/KoalaCards/issues"
-              >Open a GitHub issue</a
-            >
-          </p>
-        </section>
-      </main>
+        const revealEls = Array.from(document.querySelectorAll("[data-reveal]"));
+        if (!("IntersectionObserver" in window)) {
+          revealEls.forEach((el) => el.classList.add("is-visible"));
+          return;
+        }
 
-      <footer class="site-footer">
-        <p>Made by Rick Carlino</p>
-        <p>
-          <a href="https://www.patreon.com/rickcarlino"
-            >Support the project</a
-          >
-          | <a href="https://github.com/RickCarlino/KoalaCards">GitHub</a> |
-          <a href="https://app.koala.cards/">Try the App</a>
-        </p>
-      </footer>
-    </div>
+        const observer = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (!entry.isIntersecting) {
+                return;
+              }
+              entry.target.classList.add("is-visible");
+              observer.unobserve(entry.target);
+            });
+          },
+          { threshold: 0.14, rootMargin: "0px 0px -24px 0px" },
+        );
+
+        revealEls.forEach((el, index) => {
+          el.classList.add("reveal");
+          el.style.transitionDelay = `${Math.min(index * 28, 220)}ms`;
+          observer.observe(el);
+        });
+      })();
+    </script>
   </body>
 </html>
