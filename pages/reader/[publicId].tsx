@@ -1081,6 +1081,9 @@ function HighlightInfoCard({
       <Anchor href={`/reader/${publicId}/typing`} size="sm">
         Typing practice
       </Anchor>
+      <Anchor href={`/reader/${publicId}/comprehension`} size="sm">
+        Comprehension Questions
+      </Anchor>
     </Stack>
   );
 }

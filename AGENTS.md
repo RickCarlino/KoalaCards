@@ -19,6 +19,14 @@ Keep page concerns in `pages/` and reusable/business logic in `koala/`.
 - Linting: ESLint + `eslint-plugin-no-else-if`; avoid `else if`.
 - React components use `PascalCase`.
 - Functions and variables use `camelCase`.
+- We have a special AI wrapper library for making LLM calls.
+
+## User-Facing Copy
+- Everything that user reads must be meaningful to using the app.
+- Less copy is better. You do not need to explain how every asppect of the app works.
+- Never talk about implementation details on user-facing UIs
+- Any time you update user-facing text, load
+  the copy-clarity skill guidance
 
 ## Testing Guidelines
 - There is no automated test suite configured in this repository. Don't write tests.
