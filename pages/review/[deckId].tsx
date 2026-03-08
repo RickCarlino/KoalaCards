@@ -3180,7 +3180,7 @@ const ControlBar: React.FC<ControlBarProps> = (props) => {
     <Stack gap="xs">
       {pct !== undefined && (
         <Group gap="xs" align="center" justify="space-between">
-          <Text size="xs" c="pink.7">
+          <Text size="xs" c="pink.8">
             {Math.round(pct)}%
           </Text>
           <Box flex={1}>

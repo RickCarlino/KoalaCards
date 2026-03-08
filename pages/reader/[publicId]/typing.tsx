@@ -6,9 +6,18 @@ import {
 } from "@/koala/reader/ui/layout";
 import {
   formatReaderDateTime,
+  readerAccentColor,
+  readerAccentStrongColor,
   readerBodyFont,
   readerDisplayFont,
+  readerErrorColor,
   readerHeadingColor,
+  readerMutedColor,
+  readerPanelBorderColor,
+  readerSuccessColor,
+  readerSurfaceBackgroundColor,
+  readerSurfaceShadow,
+  readerWarningColor,
 } from "@/koala/reader/ui/theme";
 import {
   Anchor,
@@ -68,15 +77,15 @@ const PROMPT_WINDOW_AFTER = 300;
 
 const typingPromptContainerStyle: React.CSSProperties = {
   borderRadius: 16,
-  border: "1px solid #efdae6",
-  background:
-    "linear-gradient(150deg, rgba(255, 253, 255, 0.97) 0%, rgba(255, 244, 250, 0.88) 100%)",
+  border: `1px solid ${readerPanelBorderColor}`,
+  backgroundColor: readerSurfaceBackgroundColor,
+  boxShadow: readerSurfaceShadow,
   padding: "clamp(12px, 1.6vw, 18px)",
 };
 
 const typingPromptTextStyle: React.CSSProperties = {
   fontFamily: readerDisplayFont,
-  color: "#4f3342",
+  color: readerHeadingColor,
   lineHeight: 1.95,
   letterSpacing: "0.01em",
   fontSize: "clamp(1rem, 1.2vw, 1.08rem)",
@@ -328,7 +337,7 @@ function buildPromptWindow(
 function tokenStyle(state: PromptTokenState): React.CSSProperties {
   if (state === "correct") {
     return {
-      color: "#2e8f63",
+      color: readerSuccessColor,
       backgroundColor: "rgba(144, 230, 187, 0.2)",
       borderRadius: 4,
     };
@@ -336,7 +345,7 @@ function tokenStyle(state: PromptTokenState): React.CSSProperties {
 
   if (state === "incorrect") {
     return {
-      color: "#c54268",
+      color: readerErrorColor,
       backgroundColor: "rgba(251, 177, 200, 0.32)",
       borderRadius: 4,
     };
@@ -344,15 +353,15 @@ function tokenStyle(state: PromptTokenState): React.CSSProperties {
 
   if (state === "current") {
     return {
-      color: "#4f3241",
+      color: readerHeadingColor,
       backgroundColor: "rgba(255, 214, 233, 0.55)",
       borderRadius: 4,
-      boxShadow: "inset 0 -2px 0 #c54268",
+      boxShadow: `inset 0 -2px 0 ${readerAccentColor}`,
     };
   }
 
   return {
-    color: "#8e6f7d",
+    color: readerMutedColor,
   };
 }
 
@@ -380,18 +389,18 @@ function typingFocusColor(
   isInputFocused: boolean,
 ): string {
   if (typingStatus === "finished") {
-    return "#6f4a74";
+    return readerAccentStrongColor;
   }
 
   if (typingStatus === "in_progress" && isInputFocused) {
-    return "#2f8b63";
+    return readerSuccessColor;
   }
 
   if (typingStatus === "in_progress") {
-    return "#ab6a20";
+    return readerWarningColor;
   }
 
-  return "#795564";
+  return readerMutedColor;
 }
 
 type TypingStagePanelProps = {
@@ -451,7 +460,7 @@ function TypingStagePanel({
         <Group gap="xs" wrap="wrap">
           <Text
             size="xs"
-            style={{ fontFamily: readerBodyFont, color: "#7b5d6a" }}
+            style={{ fontFamily: readerBodyFont, color: readerMutedColor }}
           >
             Added {formatReaderDateTime(new Date(article.createdAt))}
           </Text>
@@ -499,7 +508,10 @@ function TypingStagePanel({
           {hasStarted && (
             <Text
               size="sm"
-              style={{ fontFamily: readerBodyFont, color: "#6f5160" }}
+              style={{
+                fontFamily: readerBodyFont,
+                color: readerMutedColor,
+              }}
             >
               {formatTimer(elapsedMs)} · {typedChars}/{promptChars} chars ·{" "}
               {metrics.wordsPerMinute.toFixed(1)} WPM
@@ -516,7 +528,7 @@ function TypingStagePanel({
       </Stack>
       <Text
         size="sm"
-        style={{ fontFamily: readerBodyFont, color: "#6f4e5d" }}
+        style={{ fontFamily: readerBodyFont, color: readerMutedColor }}
       >
         Read each phrase for meaning, then type it exactly.
       </Text>
@@ -583,7 +595,7 @@ function TypingStagePanel({
           styles={{
             label: {
               fontFamily: readerBodyFont,
-              color: "#6f4e5d",
+              color: readerMutedColor,
             },
           }}
         />
@@ -689,7 +701,7 @@ function CompletionPanel({
       </Text>
       <Text
         size="sm"
-        style={{ fontFamily: readerBodyFont, color: "#735160" }}
+        style={{ fontFamily: readerBodyFont, color: readerMutedColor }}
       >
         Without looking back, write a one-sentence summary of what you
         typed.
@@ -716,7 +728,7 @@ function CompletionPanel({
       <Group justify="space-between" align="center" wrap="wrap" gap="sm">
         <Text
           size="xs"
-          style={{ fontFamily: readerBodyFont, color: "#7a5968" }}
+          style={{ fontFamily: readerBodyFont, color: readerMutedColor }}
         >
           {reflectionWordCount} words
         </Text>

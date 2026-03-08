@@ -65,6 +65,7 @@ const EMAIL_SERVER_OPTIONS: Partial<EmailUserConfig> = {
 
 const clientId = process.env.GOOGLE_CLIENT_ID;
 const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+const DEFAULT_DECK_NAME = "My Koala Deck";
 
 export const authOptions: AuthOptions = {
   adapter: PrismaAdapter(prismaClient),
@@ -76,6 +77,28 @@ export const authOptions: AuthOptions = {
         })
       : EmailProvider(EMAIL_SERVER_OPTIONS),
   ],
+  events: {
+    async createUser(message) {
+      const userId = message.user.id;
+      if (!userId) {
+        return errorReport("createUser event missing user ID");
+      }
+
+      await prismaClient.deck.upsert({
+        where: {
+          name_userId: {
+            name: DEFAULT_DECK_NAME,
+            userId,
+          },
+        },
+        update: {},
+        create: {
+          name: DEFAULT_DECK_NAME,
+          userId,
+        },
+      });
+    },
+  },
 };
 
 export default NextAuth(authOptions);

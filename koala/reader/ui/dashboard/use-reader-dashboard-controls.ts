@@ -121,10 +121,7 @@ export function useReaderDashboardControls() {
     } catch (error: unknown) {
       notifications.show({
         title: "Save failed",
-        message: mutationErrorMessage(
-          error,
-          "Couldn't save that URL.",
-        ),
+        message: mutationErrorMessage(error, "Couldn't save that URL."),
         color: "red",
       });
     }
@@ -220,9 +217,7 @@ export function useReaderDashboardControls() {
       });
       notifications.show({
         title: markAsRead ? "Marked as read" : "Marked as unread",
-        message: markAsRead
-          ? "Moved to Read."
-          : "Moved back to Unread.",
+        message: markAsRead ? "Moved to Read." : "Moved back to Unread.",
         color: "green",
       });
       listQuery.refetch();

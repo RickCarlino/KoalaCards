@@ -339,7 +339,7 @@ function EmptyState({ hasFilters }: EmptyStateProps) {
   return (
     <Card withBorder p="lg">
       <Stack align="center" gap="sm">
-        <Title order={3} c="pink.7" ta="center">
+        <Title order={3} c="pink.8" ta="center">
           {title}
         </Title>
         <Text size="sm" c="gray.7" ta="center">
@@ -451,7 +451,7 @@ export default function WritingHistoryPage({
         mb="md"
       >
         <Stack gap={2}>
-          <Title order={2} c="pink.7">
+          <Title order={2} c="pink.8">
             Writing History
           </Title>
           <Text size="sm" c="gray.7">

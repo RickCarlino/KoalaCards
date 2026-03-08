@@ -6,6 +6,9 @@ import type {
 } from "@/koala/reader/ui/dashboard/types";
 import {
   formatReaderDateTime,
+  readerPanelBorderColor,
+  readerSurfaceBackgroundColor,
+  readerSurfaceShadow,
   readerHeadingColor,
   readerIngestLabel,
   readerListRowStyle,
@@ -65,9 +68,10 @@ const readerLibraryColumnStyle: React.CSSProperties = {
 };
 
 const readerSurfaceStyle: React.CSSProperties = {
-  borderRadius: 14,
-  border: "1px solid #efd8e4",
-  background: "rgba(255, 255, 255, 0.96)",
+  borderRadius: 12,
+  border: `1px solid ${readerPanelBorderColor}`,
+  backgroundColor: readerSurfaceBackgroundColor,
+  boxShadow: readerSurfaceShadow,
   padding: "10px 12px",
 };
 

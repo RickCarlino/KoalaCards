@@ -13,7 +13,14 @@ import { IconX } from "@tabler/icons-react";
 import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { readerBodyFont } from "./theme";
+import {
+  readerBodyFont,
+  readerDividerColor,
+  readerFloatingBackgroundColor,
+  readerFloatingBorderColor,
+  readerFloatingShadow,
+  readerHeadingColor,
+} from "./theme";
 
 export type ReaderHighlightStatus = "in_progress" | "ready" | "error";
 
@@ -163,7 +170,7 @@ function helperStreamStyle(
   fillAvailableHeight: boolean,
 ): React.CSSProperties {
   const baseStyle: React.CSSProperties = {
-    borderLeft: "2px solid #ead3de",
+    borderLeft: `2px solid ${readerDividerColor}`,
     paddingLeft: 10,
     paddingRight: 4,
     paddingBottom: 4,
@@ -338,9 +345,9 @@ export function SelectionActionBubble({
         transform: "translate(-50%, calc(-100% - 10px))",
         zIndex: 500,
         borderRadius: 999,
-        border: "1px solid #e8bfd3",
-        background: "rgba(255, 252, 254, 0.98)",
-        boxShadow: "0 12px 26px rgba(162, 93, 125, 0.2)",
+        border: `1px solid ${readerFloatingBorderColor}`,
+        background: readerFloatingBackgroundColor,
+        boxShadow: readerFloatingShadow,
         padding: 6,
       }}
     >
@@ -493,7 +500,7 @@ function HighlightHistoryRow({
     <Stack
       gap={4}
       style={{
-        borderBottom: "1px solid #efdbe5",
+        borderBottom: `1px solid ${readerDividerColor}`,
         paddingBottom: 7,
       }}
     >
@@ -522,7 +529,7 @@ function HighlightHistoryRow({
                 fw={700}
                 style={{
                   fontFamily: readerBodyFont,
-                  color: "#5b3f4d",
+                  color: readerHeadingColor,
                   minWidth: 0,
                   flex: "1 1 auto",
                 }}
@@ -563,7 +570,7 @@ function HighlightHistoryRow({
           <Text
             component="span"
             fw={700}
-            c="#5b3f4d"
+            c={readerHeadingColor}
             style={{ fontFamily: readerBodyFont }}
           >
             {contextSummary.match}
@@ -594,7 +601,7 @@ function HighlightHistoryRow({
       {highlightHasAnalysis && showExplanation && (
         <Box
           style={{
-            borderLeft: "2px solid #ecd8e2",
+            borderLeft: `2px solid ${readerDividerColor}`,
             paddingLeft: 10,
           }}
         >

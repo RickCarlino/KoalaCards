@@ -6,58 +6,61 @@ export type ReaderUiIngestStatus =
   | "ready"
   | "error";
 
-export const readerDisplayFont =
-  '"Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, serif';
-
-export const readerBodyFont = '"Trebuchet MS", "Segoe UI", sans-serif';
-export const readerHeadingColor = "#4f3241";
-export const readerMutedColor = "#745462";
-export const readerPageSectionGap = "clamp(14px, 2vw, 22px)";
+export const readerDisplayFont = "inherit";
+export const readerBodyFont = "inherit";
+export const readerHeadingColor = "#2f2630";
+export const readerMutedColor = "#5d4d58";
+export const readerAccentColor = "#b84b73";
+export const readerAccentStrongColor = "#a83e66";
+export const readerSuccessColor = "#2e8f63";
+export const readerWarningColor = "#ab6a20";
+export const readerErrorColor = "#c54268";
+export const readerSurfaceBackgroundColor = "#ffffff";
+export const readerSubtleBackgroundColor = "#fff7fb";
+export const readerFrameBorderColor = "#efcedf";
+export const readerPanelBorderColor = "#efd3e2";
+export const readerDividerColor = "#efd8e4";
+export const readerSurfaceShadow = "0 1px 3px rgba(0, 0, 0, 0.04)";
+export const readerFrameShadow = "0 2px 6px rgba(0, 0, 0, 0.05)";
+export const readerFloatingBorderColor = "#e8bfd3";
+export const readerFloatingBackgroundColor = "rgba(255, 252, 254, 0.98)";
+export const readerFloatingShadow = "0 12px 26px rgba(162, 93, 125, 0.2)";
+export const readerPageSectionGap = "clamp(12px, 1.8vw, 18px)";
 export const readerPanelGap = "clamp(10px, 1.2vw, 14px)";
 
 export const readerPageContainerStyle: CSSProperties = {
-  marginTop: "clamp(10px, 2.4vw, 32px)",
-  marginBottom: "clamp(20px, 3.4vw, 44px)",
-  paddingInline: "clamp(10px, 2.8vw, 26px)",
+  marginTop: "clamp(10px, 2.4vw, 24px)",
+  marginBottom: "clamp(18px, 3vw, 32px)",
+  paddingInline: "clamp(10px, 2.6vw, 22px)",
 };
 
 export const readerFrameStyle: CSSProperties = {
   position: "relative",
-  borderRadius: 28,
-  border: "1px solid #efcedf",
-  background:
-    "radial-gradient(circle at 10% -5%, rgba(252, 223, 238, 0.72) 0%, rgba(255, 250, 253, 0.97) 42%, rgba(255, 246, 251, 0.95) 100%)",
-  boxShadow: "0 20px 42px rgba(186, 118, 149, 0.13)",
-  padding: "clamp(14px, 2vw, 24px)",
+  borderRadius: 16,
+  border: `1px solid ${readerFrameBorderColor}`,
+  backgroundColor: readerSurfaceBackgroundColor,
+  boxShadow: readerFrameShadow,
+  padding: "clamp(12px, 1.8vw, 20px)",
   overflow: "hidden",
 };
 
 export const readerPanelStyle: CSSProperties = {
-  borderRadius: 20,
-  border: "1px solid #efd3e2",
-  background:
-    "linear-gradient(170deg, rgba(255, 255, 255, 0.97) 0%, rgba(255, 247, 251, 0.95) 100%)",
-  boxShadow: "0 8px 20px rgba(182, 111, 144, 0.11)",
-  padding: "clamp(12px, 1.7vw, 20px)",
+  borderRadius: 12,
+  border: `1px solid ${readerPanelBorderColor}`,
+  backgroundColor: readerSurfaceBackgroundColor,
+  boxShadow: readerSurfaceShadow,
+  padding: "clamp(10px, 1.5vw, 16px)",
 };
 
 export const readerSubtleCardStyle: CSSProperties = {
-  borderRadius: 18,
-  border: "1px solid #f1dce8",
-  background: "rgba(255, 252, 254, 0.9)",
-  padding: "clamp(10px, 1.4vw, 15px)",
+  borderRadius: 10,
+  border: `1px solid ${readerDividerColor}`,
+  backgroundColor: readerSubtleBackgroundColor,
+  padding: "clamp(10px, 1.4vw, 14px)",
 };
 
 export const readerDecorStyle: CSSProperties = {
-  position: "absolute",
-  width: 180,
-  height: 180,
-  borderRadius: "50%",
-  background:
-    "radial-gradient(circle, rgba(249, 202, 226, 0.42) 0%, rgba(249, 202, 226, 0) 70%)",
-  top: -90,
-  right: -70,
-  pointerEvents: "none",
+  display: "none",
 };
 
 export const readerPanelTitleStyle: CSSProperties = {
@@ -81,7 +84,7 @@ const readerListRowWithDividerStyle: CSSProperties = {
   ...readerListRowBaseStyle,
   marginTop: "clamp(8px, 1vw, 12px)",
   paddingTop: "clamp(12px, 1.3vw, 16px)",
-  borderTop: "1px solid #efd8e4",
+  borderTop: `1px solid ${readerDividerColor}`,
 };
 
 const readerDateTimeFormatter = new Intl.DateTimeFormat(undefined, {

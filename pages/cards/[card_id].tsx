@@ -184,7 +184,8 @@ function CardEditor({ card }: CardPageProps) {
                     <Button type="submit">Save Changes</Button>
                     <Group gap="sm">
                       <Button
-                        variant="default"
+                        variant="light"
+                        color="gray"
                         onClick={() => router.back()}
                       >
                         Back

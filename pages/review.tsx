@@ -452,7 +452,7 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
     return (
       <Container size="md" py="xl">
         <Stack align="center" gap="xs" mb="xl">
-          <Title order={2} c="pink.7" ta="center">
+          <Title order={2} c="pink.8" ta="center">
             Ready to start?
           </Title>
           <Text size="md" c="gray.7" ta="center">
@@ -492,7 +492,7 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
   return (
     <Container size="lg" py="md">
       <Stack gap="xs" mb="lg">
-        <Title order={2} c="pink.7">
+        <Title order={2} c="pink.8">
           Your Decks
         </Title>
         <Text size="md" c="gray.7">

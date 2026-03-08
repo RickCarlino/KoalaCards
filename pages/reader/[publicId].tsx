@@ -23,6 +23,11 @@ import {
   formatReaderDateTime,
   readerBodyFont,
   readerDisplayFont,
+  readerDividerColor,
+  readerHeadingColor,
+  readerPanelBorderColor,
+  readerSubtleBackgroundColor,
+  readerFrameShadow,
 } from "@/koala/reader/ui/theme";
 import { trpc } from "@/koala/trpc-config";
 import { notifications } from "@mantine/notifications";
@@ -622,7 +627,7 @@ const readerArticleBodyStyle = {
   fontFamily: readerDisplayFont,
   lineHeight: 1.85,
   fontSize: "1.07rem",
-  color: "#4f3342",
+  color: readerHeadingColor,
 };
 
 type ArticleMetaRowProps = {
@@ -1832,13 +1837,9 @@ export default function PublicReaderArticlePage({
       <Box style={readerWorkspaceStyle}>
         <style jsx global>{`
           article mark[data-reader-highlight="saved"] {
-            background: linear-gradient(
-              180deg,
-              rgba(250, 201, 223, 0.9),
-              rgba(244, 176, 205, 0.72)
-            );
+            background: rgba(248, 205, 225, 0.62);
             border-radius: 0.26em;
-            box-shadow: inset 0 -1px 0 rgba(177, 96, 134, 0.24);
+            box-shadow: inset 0 -1px 0 rgba(177, 96, 134, 0.2);
             color: inherit;
             padding: 0 0.08em;
             cursor: pointer;
@@ -1849,26 +1850,16 @@ export default function PublicReaderArticlePage({
               box-shadow 120ms ease;
           }
           article mark[data-reader-highlight="saved"]:hover {
-            background: linear-gradient(
-              180deg,
-              rgba(247, 184, 211, 0.95),
-              rgba(236, 160, 194, 0.85)
-            );
+            background: rgba(243, 176, 206, 0.7);
             box-shadow: inset 0 -1px 0 rgba(164, 81, 120, 0.35);
           }
           article[data-reader-article="content"] pre {
             margin: 1.05rem 0;
             padding: 0.92rem 1rem;
             border-radius: 14px;
-            border: 1px solid #ead4df;
-            background: linear-gradient(
-              180deg,
-              rgba(255, 252, 254, 0.98) 0%,
-              rgba(253, 245, 250, 0.98) 100%
-            );
-            box-shadow:
-              inset 0 1px 0 rgba(255, 255, 255, 0.72),
-              0 5px 15px rgba(176, 110, 143, 0.09);
+            border: 1px solid ${readerPanelBorderColor};
+            background: ${readerSubtleBackgroundColor};
+            box-shadow: ${readerFrameShadow};
             max-width: 100%;
             overflow-x: auto;
             overflow-y: hidden;
@@ -1897,7 +1888,7 @@ export default function PublicReaderArticlePage({
           }
           article[data-reader-article="content"] :not(pre) > code {
             border-radius: 7px;
-            border: 1px solid #efd5e2;
+            border: 1px solid ${readerDividerColor};
             background: rgba(253, 244, 250, 0.95);
             padding: 0.1em 0.36em;
             font-size: 0.88em;
