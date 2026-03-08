@@ -214,6 +214,12 @@ interface TranscriptionResult {
   isMatch?: boolean;
 }
 
+const MICROPHONE_CAPTURE_CONSTRAINTS = {
+  autoGainControl: false,
+  echoCancellation: false,
+  noiseSuppression: false,
+} satisfies MediaTrackConstraints;
+
 interface UseVoiceGradingOptions {
   targetText: string;
   langCode: LangCode;
@@ -380,7 +386,6 @@ type AssistantRole = "user" | "assistant";
 type Suggestion = {
   phrase: string;
   translation: string;
-  gender: "M" | "F" | "N";
 };
 
 type AssistantEditProposal = {
@@ -1080,9 +1085,8 @@ async function playBeep(options: BeepOptions = {}): Promise<void> {
 }
 
 function useMediaRecorder(): RecorderControls {
-  const [recorder, setRecorder] = React.useState<MediaRecorder | null>(
-    null,
-  );
+  const recorderRef = React.useRef<MediaRecorder | null>(null);
+  const streamRef = React.useRef<MediaStream | null>(null);
   const chunksRef = React.useRef<Blob[]>([]);
   const [isRecording, setIsRecording] = React.useState<boolean>(false);
   const [mimeType, setMimeType] = React.useState<string | null>(null);
@@ -1108,18 +1112,35 @@ function useMediaRecorder(): RecorderControls {
 
   React.useEffect(() => {
     return () => {
+      const recorder = recorderRef.current;
       if (recorder && recorder.state !== "inactive") {
         recorder.stop();
       }
+      recorderRef.current = null;
+      const stream = streamRef.current;
+      if (!stream) {
+        return;
+      }
+      stream.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
     };
-  }, [recorder]);
+  }, []);
 
   async function start(startOptions?: {
     playBeep?: boolean;
   }): Promise<void> {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: true,
-    });
+    let stream = streamRef.current;
+    const hasLiveTrack =
+      stream?.active === true &&
+      stream.getAudioTracks().some((track) => track.readyState === "live");
+
+    if (!stream || !hasLiveTrack) {
+      stream?.getTracks().forEach((track) => track.stop());
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: MICROPHONE_CAPTURE_CONSTRAINTS,
+      });
+      streamRef.current = stream;
+    }
 
     const options: MediaRecorderOptions = {};
     if (preferredMime) {
@@ -1144,28 +1165,38 @@ function useMediaRecorder(): RecorderControls {
     };
 
     rec.start(250);
-    setRecorder(rec);
+    recorderRef.current = rec;
     setIsRecording(true);
   }
 
   function stop(): Promise<Blob> {
     return new Promise((resolve) => {
-      const current = recorder;
+      const current = recorderRef.current;
       if (!current) {
         return resolve(new Blob());
       }
       beepArmedRef.current = false;
-      current.onstop = () => {
+      let done = false;
+      const finish = () => {
+        if (done) {
+          return;
+        }
+        done = true;
         const blob = new Blob(chunksRef.current, {
           type: current.mimeType,
         });
         chunksRef.current = [];
-        current.stream.getTracks().forEach((t) => t.stop());
+        recorderRef.current = null;
         setIsRecording(false);
         resolve(blob);
       };
+      current.onstop = finish;
       if (typeof current.requestData === "function") {
         current.requestData();
+      }
+      if (current.state === "inactive") {
+        finish();
+        return;
       }
       current.stop();
     });
@@ -1617,6 +1648,84 @@ function replaceCards(action: ReplaceCardAction, state: State): State {
   };
 }
 
+function findCardUUIDForStep(
+  queue: Queue,
+  stepUuid: string,
+): string | undefined {
+  for (const queueType of EVERY_QUEUE_TYPE) {
+    const item = queue[queueType].find(
+      (queueItem) => queueItem.stepUuid === stepUuid,
+    );
+    if (item) {
+      return item.cardUUID;
+    }
+  }
+  return undefined;
+}
+
+function removeStepFromQueue(queue: Queue, stepUuid: string): Queue {
+  const updatedQueue = { ...queue };
+  for (const queueType of EVERY_QUEUE_TYPE) {
+    updatedQueue[queueType] = updatedQueue[queueType].filter(
+      (item) => item.stepUuid !== stepUuid,
+    );
+  }
+  return updatedQueue;
+}
+
+function markCompletedCard(
+  completedCards: Set<string>,
+  cardUUID: string | undefined,
+  queue: Queue,
+): Set<string> {
+  if (!cardUUID) {
+    return completedCards;
+  }
+  const hasMoreItems = Object.values(queue).some((items) =>
+    items.some((item) => item.cardUUID === cardUUID),
+  );
+  if (hasMoreItems) {
+    return completedCards;
+  }
+  return new Set([...completedCards, cardUUID]);
+}
+
+function completeItem(action: CompleteItemAction, state: State): State {
+  const { uuid } = action.payload;
+  const cardUUID = findCardUUIDForStep(state.queue, uuid);
+  const updatedQueue = removeStepFromQueue(state.queue, uuid);
+
+  return {
+    ...state,
+    queue: updatedQueue,
+    currentItem: nextQueueItem(updatedQueue),
+    completedCards: markCompletedCard(
+      state.completedCards,
+      cardUUID,
+      updatedQueue,
+    ),
+  };
+}
+
+function updateCard(action: UpdateCardAction, state: State): State {
+  const target = state.cards[action.payload.cardUUID];
+  if (!target) {
+    return state;
+  }
+
+  return {
+    ...state,
+    cards: {
+      ...state.cards,
+      [action.payload.cardUUID]: {
+        ...target,
+        term: action.payload.term ?? target.term,
+        definition: action.payload.definition ?? target.definition,
+      },
+    },
+  };
+}
+
 function useReview(deckId: number) {
   const mutation = trpc.getNextQuizzes.useMutation();
   const repairCardMutation = trpc.editCard.useMutation();
@@ -1756,39 +1865,7 @@ function reducer(state: State, action: Action): State {
         ]),
       };
     case "COMPLETE_ITEM":
-      const { uuid } = action.payload;
-      const updatedQueue = { ...state.queue };
-
-      let cardUUID: string | undefined;
-      for (const queueType of EVERY_QUEUE_TYPE) {
-        const item = state.queue[queueType].find(
-          (item) => item.stepUuid === uuid,
-        );
-        if (item) {
-          cardUUID = item.cardUUID;
-          break;
-        }
-      }
-
-      for (const queueType of EVERY_QUEUE_TYPE) {
-        updatedQueue[queueType] = updatedQueue[queueType].filter(
-          (item) => item.stepUuid !== uuid,
-        );
-      }
-
-      const hasMoreItems = Object.values(updatedQueue).some((queue) =>
-        queue.some((item) => item.cardUUID === cardUUID),
-      );
-
-      return {
-        ...state,
-        queue: updatedQueue,
-        currentItem: nextQueueItem(updatedQueue),
-        completedCards:
-          !hasMoreItems && cardUUID
-            ? new Set([...state.completedCards, cardUUID])
-            : state.completedCards,
-      };
+      return completeItem(action, state);
     case "GIVE_UP":
       const { cardUUID: giveUpCardUUID } = action.payload;
       const { updatedQueue: giveUpQueue } = removeCardFromQueues(
@@ -1811,21 +1888,7 @@ function reducer(state: State, action: Action): State {
         },
       };
     case "UPDATE_CARD":
-      const target = state.cards[action.payload.cardUUID];
-      if (!target) {
-        return state;
-      }
-      return {
-        ...state,
-        cards: {
-          ...state.cards,
-          [action.payload.cardUUID]: {
-            ...target,
-            term: action.payload.term ?? target.term,
-            definition: action.payload.definition ?? target.definition,
-          },
-        },
-      };
+      return updateCard(action, state);
     default:
       return state;
   }
@@ -3117,7 +3180,7 @@ const ControlBar: React.FC<ControlBarProps> = (props) => {
     <Stack gap="xs">
       {pct !== undefined && (
         <Group gap="xs" align="center" justify="space-between">
-          <Text size="xs" c="pink.7">
+          <Text size="xs" c="pink.8">
             {Math.round(pct)}%
           </Text>
           <Box flex={1}>
@@ -3559,6 +3622,70 @@ function parseExample(content: string): ExampleBlock | null {
   };
 }
 
+type ParsedEditField = {
+  key: string;
+  value: string;
+};
+
+function parseEditField(line: string): ParsedEditField | null {
+  const [rawKey, ...rest] = line.split(":");
+  if (!rawKey || rest.length === 0) {
+    return null;
+  }
+
+  const value = rest.join(":").trim();
+  if (!value) {
+    return null;
+  }
+
+  return {
+    key: rawKey.trim().toLowerCase(),
+    value,
+  };
+}
+
+function parseCardId(value: string): number | null {
+  const parsedId = Number.parseInt(value, 10);
+  if (Number.isFinite(parsedId)) {
+    return parsedId;
+  }
+  return null;
+}
+
+function hasEditData(edit: CardEditBlock): boolean {
+  return Boolean(edit.cardId || edit.term || edit.definition || edit.note);
+}
+
+const EDIT_FIELD_HANDLERS: Record<
+  string,
+  (edit: CardEditBlock, value: string) => void
+> = {
+  cardid: (edit, value) => {
+    const parsedId = parseCardId(value);
+    if (parsedId !== null) {
+      edit.cardId = parsedId;
+    }
+  },
+  id: (edit, value) => {
+    const parsedId = parseCardId(value);
+    if (parsedId !== null) {
+      edit.cardId = parsedId;
+    }
+  },
+  term: (edit, value) => {
+    edit.term = value;
+  },
+  definition: (edit, value) => {
+    edit.definition = value;
+  },
+  note: (edit, value) => {
+    edit.note = value;
+  },
+  reason: (edit, value) => {
+    edit.note = value;
+  },
+};
+
 function parseEdit(content: string): CardEditBlock | null {
   const lines = content
     .split(/\r?\n/)
@@ -3571,42 +3698,17 @@ function parseEdit(content: string): CardEditBlock | null {
 
   const edit: CardEditBlock = {};
   for (const line of lines) {
-    const [rawKey, ...rest] = line.split(":");
-    if (!rawKey || rest.length === 0) {
+    const field = parseEditField(line);
+    if (!field) {
       continue;
     }
-    const key = rawKey.trim().toLowerCase();
-    const value = rest.join(":").trim();
-    if (!value) {
-      continue;
-    }
-    if (key === "cardid" || key === "id") {
-      const parsedId = Number.parseInt(value, 10);
-      if (Number.isFinite(parsedId)) {
-        edit.cardId = parsedId;
-      }
-      continue;
-    }
-    if (key === "term") {
-      edit.term = value;
-      continue;
-    }
-    if (key === "definition") {
-      edit.definition = value;
-      continue;
-    }
-    if (key === "note" || key === "reason") {
-      edit.note = value;
+    const handler = EDIT_FIELD_HANDLERS[field.key];
+    if (handler) {
+      handler(edit, field.value);
     }
   }
 
-  if (
-    !edit.cardId &&
-    !edit.term &&
-    !edit.definition &&
-    !edit.note &&
-    lines.length >= 2
-  ) {
+  if (!hasEditData(edit) && lines.length >= 2) {
     return {
       term: lines[0],
       definition: lines.slice(1).join(" "),
@@ -4423,7 +4525,6 @@ function useAssistantChat({
   }): Suggestion => ({
     phrase: example.phrase,
     translation: example.translation,
-    gender: "N",
   });
 
   const createEditProposal = React.useCallback(
@@ -4533,7 +4634,6 @@ function useAssistantChat({
           {
             term: suggestion.phrase,
             definition: suggestion.translation,
-            gender: suggestion.gender,
           },
         ],
       });

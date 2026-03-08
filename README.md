@@ -4,72 +4,85 @@
   <img width="33%" src="./logo.png" alt="KoalaCards logo"/>
 </p>
 
-<p align="center">
-  <a href="https://www.youtube.com/watch?v=OWjfC7ia1c8">
-    <img width="33%" src="https://img.youtube.com/vi/OWjfC7ia1c8/0.jpg" alt="KoalaCards demo video thumbnail"/>
-  </a>
-</p>
+KoalaCards is a Korean study app that combines spaced repetition cards, speaking checks, writing feedback, and reading workflows in one place.
 
-<p align="center">
-  <a href="https://codeclimate.com/github/RickCarlino/KoalaCards/maintainability"><img src="https://api.codeclimate.com/v1/badges/b7666624c14bf8dcfb9b/maintainability" alt="Code Climate maintainability"/></a>
-  <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"/>
-</p>
+## What The App Does
 
-<p align="center">
-  <a href="https://youtu.be/OWjfC7ia1c8">
-    Demo video (June 2025)
-    <br/>
-    <img src="./screenshot.png" alt="KoalaCards UI screenshot"/>
-  </a>
-</p>
+### Study Cards
+- Deck-based review sessions with FSRS scheduling.
+- Review queues include new cards, due cards, and remedial cards.
+- Speaking answers are recorded, transcribed, and graded.
+- Built-in assistant panel can explain cards and suggest edits while you study.
 
-## Status
+### Writing Practice
+- Practice by typing or speaking.
+- AI grading returns corrected text plus concise feedback.
+- Diff view shows exactly what changed.
+- Click unknown words to get definitions, then open card creation with those words prefilled.
+- Writing history is searchable and tied to decks.
 
-KoalaCards is complete! It meets my daily learning needs and is now in maintenance mode. The project accepts bug fixes and security updates only; no new features are planned.
+### Reader
+- Save Korean content from a URL or pasted raw text.
+- Background ingest extracts and cleans article content.
+- Highlight text in an article to get:
+  - a flashcard-friendly definition,
+  - general meaning,
+  - and meaning in context.
+- Import highlight results directly into a deck as cards.
+- Mark articles read/unread and use typing practice mode per article.
+- Instapaper integration can import unread bookmarks into Reader and export processed articles back.
 
-## Overview
+### Decks And Cards
+- Create cards from:
+  - free-form text (`/create?mode=vibe`),
+  - word lists (`/create?mode=wordlist`),
+  - CSV/text pairs (`/create?mode=csv`).
+- Live preview and inline editing before save.
+- Deck operations: create, rename, describe, merge, delete.
+- Card operations: edit, pause/unpause, delete.
+- Deck JSON import/export preserves scheduling fields.
 
-KoalaCards is a spaced repetition system for English speakers learning Korean. It emphasizes speaking and writing practice with automatic grading and feedback powered by OpenAI models.
+### Settings And Progress
+- Tune review pace (`cardsPerDayMax`, `reviewTakeCount`, target retention).
+- Configure audio playback and response timing.
+- Optional writing-first flow can require daily writing progress before review.
+- Optional due-card reminder emails.
+- Dashboard charts track card learning, writing volume, and reading progress.
 
-The app focuses exclusively on Korean to allow for the best prompts possible.
+## Runtime Model
 
-## Current feature set
+- `app` service: Next.js web app + tRPC API.
+- `worker` service: background jobs for Reader ingest queue and due-card reminder emails.
+- `db` service: PostgreSQL via Prisma.
 
-- Review sessions with new, remedial, and routine cards scheduled by FSRS (via `ts-fsrs`).
-- Speaking quizzes that record audio, transcribe responses, and grade answers using an LLM. Grading results are stored for later review.
-- Writing practice with user-defined prompts, AI corrections, and diff views. Daily writing goals are trackable.
-- Study assistant chat that references recent cards and can suggest or create new cards.
-- Card creation workflows: free-form generation, word list enrichment, CSV parsing.
-- Deck and card management: edit, pause, merge, import/export.
-- Optional AI-generated images for cards.
+If the worker is not running, Reader URL ingest and due-card reminder emails do not progress.
 
-## Architecture and stack
+## Stack
 
-- Next.js (pages router) with React and TypeScript
-- tRPC for API procedures
-- Prisma with PostgreSQL
-- Mantine for UI
-- NextAuth for email magic links or Google OAuth
+- Next.js (Pages Router) + React + TypeScript
+- Mantine UI
+- tRPC
+- Prisma + PostgreSQL
+- NextAuth (email magic links or Google OAuth)
+- OpenAI APIs (grading, parsing, assistant, transcription, TTS, reader language workflows)
+- Google Cloud Storage (card images and generated audio artifacts)
 
-## External services
+## Local Run (Docker)
 
-KoalaCards depends on hosted services in production:
+1. Copy env file: `cp .env.example .env`
+2. Fill in required env vars in `.env`.
+3. Start everything: `./run-dev.sh`
+4. Open `http://localhost:3000`
 
-- OpenAI API for LLM grading, study assistant chat, card parsing/generation, speech-to-text, and definition text-to-speech.
-- Google Cloud Text-to-Speech for term audio and Google Cloud Storage for cached audio and images.
-- Email delivery (for magic links) or Google OAuth for authentication.
+The compose setup runs app, worker, and database together.
 
-Setup details live in `SETUP.md` and `example.env`.
+## Developer Notes
 
-## Documentation
-
-- `SETUP.md` for environment setup and infrastructure requirements.
-- `USER_MANUAL.md` for end-user workflows and route-level behavior.
-
-## Contributing
-
-Maintenance mode applies. Please focus contributions on bug fixes, security updates, or documentation corrections. For feature requests, open an issue to discuss scope.
+- Main setup reference: `SETUP.md`
+- Env reference: `.env.example`
+- Prisma schema: `prisma/schema.prisma`
+- Before finishing changes, run: `./tidy.sh`
 
 ## License
 
-MIT. See `LICENSE`.
+MIT (`LICENSE`).

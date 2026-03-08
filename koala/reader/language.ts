@@ -1,12 +1,31 @@
 import { z } from "zod";
-import { generateAIText, generateStructuredOutput } from "../ai";
+import { generateStructuredOutput } from "../ai";
 import { containsHangul } from "../utils/hangul";
 
 export type DetectedSourceLanguage = "ko" | "en" | "other";
 
-const languageDetectionSchema = z.object({
-  language: z.enum(["ko", "en", "other"]),
+type ExtractArticleInput = {
+  title: string;
+  description: string;
+  pageText: string;
+  pageHtml: string;
+};
+
+const pageMarkdownSchema = z.object({
+  markdown: z.string(),
 });
+
+const extractedArticleSchema = z.object({
+  articleMarkdown: z.string(),
+});
+
+const tidyMarkdownSchema = z.object({
+  markdown: z.string(),
+});
+
+const LENGTH = 20000;
+const MIN_KOREAN_HANGUL_CHAR_COUNT = 30;
+const MIN_KOREAN_HANGUL_PARAGRAPH_RATIO = 0.35;
 
 const englishLetterCount = (text: string): number => {
   const matches = text.match(/[A-Za-z]/g);
@@ -16,6 +35,39 @@ const englishLetterCount = (text: string): number => {
 const visibleCharacterCount = (text: string): number => {
   const matches = text.match(/[^\s]/g);
   return matches ? matches.length : 0;
+};
+
+const hangulCharacterCount = (text: string): number => {
+  const matches = text.match(/[ㄱ-ㅎㅏ-ㅣ가-힣]/g);
+  return matches ? matches.length : 0;
+};
+
+const hangulParagraphRatio = (text: string): number => {
+  const paragraphs = text
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.trim())
+    .filter((paragraph) => paragraph.length > 0);
+
+  if (paragraphs.length === 0) {
+    return 0;
+  }
+
+  const hangulParagraphs = paragraphs.filter((paragraph) => {
+    return containsHangul(paragraph);
+  }).length;
+
+  return hangulParagraphs / paragraphs.length;
+};
+
+const looksLikeKorean = (text: string): boolean => {
+  const hangulChars = hangulCharacterCount(text);
+  if (hangulChars < MIN_KOREAN_HANGUL_CHAR_COUNT) {
+    return false;
+  }
+
+  return hangulParagraphRatio(text) >= MIN_KOREAN_HANGUL_PARAGRAPH_RATIO;
 };
 
 const looksLikeEnglish = (text: string): boolean => {
@@ -33,6 +85,15 @@ const looksLikeEnglish = (text: string): boolean => {
   return letters / visibleChars > 0.45;
 };
 
+const normalizeMarkdownText = (text: string): string => {
+  return text
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+};
+
 export const detectSourceLanguage = async (
   text: string,
 ): Promise<DetectedSourceLanguage> => {
@@ -41,7 +102,7 @@ export const detectSourceLanguage = async (
     return "other";
   }
 
-  if (containsHangul(trimmed)) {
+  if (looksLikeKorean(trimmed)) {
     return "ko";
   }
 
@@ -49,126 +110,117 @@ export const detectSourceLanguage = async (
     return "en";
   }
 
-  const sample = trimmed.slice(0, 2500);
-
-  try {
-    const detection = await generateStructuredOutput({
-      model: "cheap",
-      schema: languageDetectionSchema,
-      messages: [
-        {
-          role: "system",
-          content:
-            "Identify the language of the text. Return ko for Korean, en for English, and other for anything else.",
-        },
-        {
-          role: "user",
-          content: sample,
-        },
-      ],
-      maxTokens: 120,
-    });
-
-    return detection.language;
-  } catch {
-    return "other";
-  }
+  return "other";
 };
 
-const splitIntoChunks = (text: string, chunkSize: number): string[] => {
-  const paragraphs = text
-    .replace(/\r\n/g, "\n")
-    .replace(/\r/g, "\n")
-    .split(/\n{2,}/)
-    .map((paragraph) => paragraph.trim())
-    .filter((paragraph) => paragraph.length > 0);
-
-  if (paragraphs.length === 0) {
-    return [text.trim()];
-  }
-
-  const chunks: string[] = [];
-  let current = "";
-
-  for (const paragraph of paragraphs) {
-    if (paragraph.length > chunkSize) {
-      if (current) {
-        chunks.push(current.trim());
-        current = "";
-      }
-
-      let start = 0;
-      while (start < paragraph.length) {
-        chunks.push(paragraph.slice(start, start + chunkSize).trim());
-        start += chunkSize;
-      }
-      continue;
-    }
-
-    const candidate = current ? `${current}\n\n${paragraph}` : paragraph;
-
-    if (candidate.length > chunkSize && current) {
-      chunks.push(current.trim());
-      current = paragraph;
-      continue;
-    }
-
-    current = candidate;
-  }
-
-  if (current.trim()) {
-    chunks.push(current.trim());
-  }
-
-  return chunks;
-};
-
-export const translateEnglishToKorean = async (
-  englishText: string,
+export const extractArticleContentFromPage = async (
+  input: ExtractArticleInput,
 ): Promise<string> => {
-  const trimmed = englishText.trim();
+  const normalizedPageText = normalizeMarkdownText(input.pageText);
+  const htmlHint = input.pageHtml.slice(0, LENGTH).trim();
+  if (!normalizedPageText && !htmlHint) {
+    return "";
+  }
+
+  const userParts: string[] = [
+    `Page title: ${input.title || "(none)"}`,
+    `Page description: ${input.description || "(none)"}`,
+  ];
+
+  if (htmlHint) {
+    userParts.push(`HTML context snippet:\n${htmlHint}`);
+  }
+
+  if (normalizedPageText) {
+    userParts.push(`Page text:\n${normalizedPageText.slice(0, LENGTH)}`);
+  }
+
+  const pageMarkdownResult = await generateStructuredOutput({
+    model: "fast",
+    schema: pageMarkdownSchema,
+    messages: [
+      {
+        role: "system",
+        content: [
+          "Convert the provided webpage content into markdown.",
+          "Return markdown only.",
+          "Use code fences for non-spoken content such as code or preformatted text.",
+        ].join(" "),
+      },
+      {
+        role: "user",
+        content: userParts.join("\n\n"),
+      },
+    ],
+    maxTokens: LENGTH,
+  });
+
+  const pageMarkdown = normalizeMarkdownText(pageMarkdownResult.markdown);
+  if (!pageMarkdown) {
+    return "";
+  }
+
+  const extracted = await generateStructuredOutput({
+    model: "fast",
+    schema: extractedArticleSchema,
+    messages: [
+      {
+        role: "system",
+        content: [
+          "Extract the main article body.",
+          "Remove all non-article content, including nav bars, share prompts, related links, newsletter signups, comments, ads, footer/legal boilerplate, and widget text.",
+          "Return markdown only.",
+          "If no article body exists, return an empty string.",
+        ].join(" "),
+      },
+      {
+        role: "user",
+        content: pageMarkdown.slice(0, LENGTH),
+      },
+    ],
+    maxTokens: LENGTH,
+  });
+
+  return normalizeMarkdownText(extracted.articleMarkdown);
+};
+
+export const tidyKoreanArticleMarkdown = async (
+  koreanMarkdown: string,
+): Promise<string> => {
+  const trimmed = normalizeMarkdownText(koreanMarkdown);
   if (!trimmed) {
     return "";
   }
 
-  const chunks = splitIntoChunks(trimmed, 2600);
-  const translatedChunks: string[] = [];
+  const truncatedInput = trimmed.slice(0, LENGTH);
 
-  for (const [index, chunk] of chunks.entries()) {
-    const translated = await generateAIText({
-      model: "good",
-      messages: [
-        {
-          role: "system",
-          content: [
-            "You are an expert English-to-Korean translator.",
-            "Translate every sentence fully into Korean.",
-            "Use simple, easy-to-understand Korean targetting intermediate language learners.",
-            "Do not summarize, shorten, omit, or add content.",
-            "Return only Korean translation.",
-            "Focus on sounding like a native Korean speaker, not a machine translation.",
-            "Strip out artifacts from the source so that the article is clean markdown in Korean.",
-            "If it is not part of the article (nav bar content, ad, 'read more' link, etc.), remove it from the final article.",
-            "We need the whole article, as a translated article, as a markdown article and nothing but the article.",
-          ].join(" "),
-        },
-        {
-          role: "user",
-          content: [
-            `Part ${index + 1} of ${chunks.length}.`,
-            "Translate this text exactly and completely:",
-            chunk,
-          ].join("\n\n"),
-        },
-      ],
-    });
+  const tidyResult = await generateStructuredOutput({
+    model: "fast",
+    schema: tidyMarkdownSchema,
+    messages: [
+      {
+        role: "system",
+        content: [
+          "You are a Korean copy editor for reading content.",
+          "Clean and format the article as tidy markdown.",
+          "Keep full article meaning and ordering.",
+          "Remove any leftover non-article noise such as share prompts, related links, or widget text.",
+          "Use readable paragraph breaks and headings where appropriate.",
+          "Return only markdown.",
+        ].join(" "),
+      },
+      {
+        role: "user",
+        content: truncatedInput,
+      },
+    ],
+    maxTokens: LENGTH,
+  });
 
-    const normalized = translated.trim();
-    if (!normalized) {
-      throw new Error("Translation returned empty output.");
-    }
-    translatedChunks.push(normalized);
+  const normalized = normalizeMarkdownText(tidyResult.markdown);
+  if (!normalized) {
+    throw new Error("Markdown cleanup returned empty output.");
   }
 
-  return translatedChunks.join("\n\n");
+  return normalized;
 };

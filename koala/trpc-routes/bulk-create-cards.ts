@@ -14,7 +14,6 @@ const inputSchema = z.object({
       z.object({
         term: z.string().max(200),
         definition: z.string().max(200),
-        gender: z.union([z.literal("M"), z.literal("F"), z.literal("N")]),
       }),
     )
     .max(3000),
@@ -70,7 +69,7 @@ export const bulkCreateCards = procedure
     const { id: deckId } = deck;
     let processed = 0;
 
-    for (const { term, definition, gender } of input.input) {
+    for (const { term, definition } of input.input) {
       const duplicate = await prismaClient.card.findFirst({
         where: { userId, term },
       });
@@ -90,7 +89,6 @@ export const bulkCreateCards = procedure
           term,
           definition,
           deckId,
-          gender,
           stability: 0,
           difficulty: 0,
           firstReview: 0,

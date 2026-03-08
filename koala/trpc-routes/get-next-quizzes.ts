@@ -1,4 +1,5 @@
 import { getLessons } from "@/koala/fetch-lesson";
+import { getDueCardsCount } from "@/koala/due-cards";
 import { getUserSettings } from "../auth-helpers";
 import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc-procedure";
@@ -7,29 +8,11 @@ import { QuizInput, QuizList } from "../types/zod";
 export async function getLessonMeta(userId: string, deckId?: number) {
   const currentDate = new Date().getTime();
 
-  let quizzesDue = await prismaClient.card.count({
-    where: {
-      userId,
-      paused: { not: true },
-      ...(deckId ? { deckId } : {}),
-      nextReview: { lt: currentDate },
-      firstReview: { gt: 0 },
-    },
-  });
-
-  const reviewsDue = await prismaClient.card.count({
-    where: {
-      userId: userId,
-      lastFailure: { not: 0 },
-      paused: { not: true },
-    },
-  });
+  const quizzesDue = await getDueCardsCount(userId, currentDate, deckId);
 
   const totalCards = await prismaClient.card.count({
     where: { userId, paused: false, ...(deckId ? { deckId } : {}) },
   });
-
-  quizzesDue += reviewsDue;
 
   const newCards = await prismaClient.card.count({
     where: {

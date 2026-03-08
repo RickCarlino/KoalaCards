@@ -210,10 +210,7 @@ export default function CreateUnified(props: LanguageInputPageProps) {
         words,
         langCode: state.deckLang,
       });
-      const processed = result.map((r) => ({
-        ...r,
-        gender: "N" as const,
-      }));
+      const processed = result;
       dispatch({ type: "SET_PROCESSED_CARDS", processedCards: processed });
       notifications.show({
         title: "Processed",
@@ -230,7 +227,7 @@ export default function CreateUnified(props: LanguageInputPageProps) {
   const handleProcessCsv = () => {
     const processed = parsedRows
       .filter((r) => r.term && r.definition)
-      .map((r) => ({ ...r, gender: "N" as const }));
+      .map((r) => ({ ...r }));
     if (!processed.length) {
       notifications.show({
         title: "No valid rows",
@@ -269,7 +266,6 @@ export default function CreateUnified(props: LanguageInputPageProps) {
           input: {
             term: string;
             definition: string;
-            gender: "M" | "F" | "N";
           }[];
         },
       );

@@ -1,9 +1,8 @@
-import { Gender, LangCode } from "@/koala/shared-types";
+import { LangCode } from "@/koala/shared-types";
 
 interface ProcessedCard {
   term: string;
   definition: string;
-  gender: Gender;
 }
 
 interface Deck {

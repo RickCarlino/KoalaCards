@@ -11,7 +11,6 @@ const EditableFieldsSchema = z
     userInput: z.string().optional(),
     definition: z.string().optional(),
     eventType: z.string().optional(),
-    langCode: z.string().optional(),
     helpfulness: z.number().int().min(-1).max(1).optional(),
   })
   .strict()

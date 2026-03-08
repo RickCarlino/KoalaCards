@@ -1,36 +1,36 @@
-## Code Quality & Complexity Rules
+# Repository Guidelines
 
-- Avoid Boolean soups. Replace complex predicates with well-named helpers.
-- Avoid unnecessary `as` casts. If used, keep them local, justified, and safe.
-- Conditional UI: extract components for distinct states (e.g., Existing vs New forms) instead of inline JSX blocks.
-- Define helper types near usage or in `koala/types/` when shared.
-- Eliminate duplication. Factor repeated UI or logic into pure functions or tiny components.
-- No nested ternaries.
-- Never use nested ternaries. If/else or small helpers are required instead.
-- Keep components small: aim for <150 lines per component. Extract subcomponents early.
-- Keep prop surfaces tight. Pass only what’s used.
-- Keep render selection flat. Use a map/object for mode → component instead of big conditionals when possible.
-- Never use `any`. Favor precise types and discriminated unions.
-- No comment-driven code. Code should be self-explanatory; prefer clear names over comments.
-- Prefer early returns over nested conditionals. Avoid nesting beyond 2 levels in JSX and logic.
-- Prefer pure functions for parsing/transforming data. Keep side effects (I/O, mutations, notifications) at edges.
+## Project Structure & Module Organization
+- `pages/`: Next.js Pages Router routes and page-level UI (`pages/api/` for API handlers).
+- `koala/`: Core app logic and shared modules (reader flows, auth helpers, worker, settings, tRPC routes).
+- `prisma/`: Prisma schema and migrations (`schema.prisma`, `migrations/`).
+- `public/`: Static assets served by Next.js.
+- Root config: `next.config.js`, `tsconfig.json`, `.eslintrc.js`, `.prettierrc`.
 
-Run tidy.sh when you are done and make sure it passes.
+Keep page concerns in `pages/` and reusable/business logic in `koala/`.
 
-## Design Context
+## Build and Development Commands
+- This is a containerized setup. We run commands in docker compose as much as possible. Do not assume my local env has the correct vars or tools installed. It does not. Everything runs in the container, including instructions you give me.
+- Due-card reminder emails are checked by the `worker` service (`koala/worker/`).
 
-### Users
-Desktop-first English speakers learning Korean, with mobile-responsive access. Primary jobs: vocabulary retention and habit building through consistent study.
+## Coding Style & Naming Conventions
+- ALWAYS RUN ./tidy.sh WHEN YOU ARE DONE!!!
+- Formatting: 2 spaces, semicolons, double quotes, trailing commas (`.prettierrc`).
+- Linting: ESLint + `eslint-plugin-no-else-if`; avoid `else if`.
+- React components use `PascalCase`.
+- Functions and variables use `camelCase`.
 
-### Brand Personality
-Cute, calm, koala. Emotional goals: calm, focused, cute, feminine.
+## Testing Guidelines
+- There is no automated test suite configured in this repository. Don't write tests.
 
-### Aesthetic Direction
-Light-mode, pastel-pink, soft glass/paper surfaces with gentle gradients and friendly polish. Open to refinement within the same visual space. Anti-reference: Duolingo. No external reference sites provided.
+## Commit & Pull Request Guidelines
+- Do not commit to git unless instructed to do so.
+- Do not stage or unstage stuff
+- You may read git for info, but do not modify anything.
+- Commits and pull requests are for humans.
 
-### Design Principles
-1. Prioritize calm focus: reduce visual noise and emphasize steady progress cues.
-2. Keep it cute and feminine without becoming childish or gamified.
-3. Reinforce habit loops with friendly, gentle encouragement and clear next actions.
-4. Maintain the pastel-pink palette and soft translucency, refining for clarity and legibility.
-5. Desktop-first layouts that adapt gracefully to mobile without losing key actions.
+
+## Security & Configuration Tips
+- Never commit secrets; use `.env` and keep `.env.example` in sync.
+- Validate auth/data ownership on server paths (`getServerSideProps`, API routes, tRPC procedures).
+- Prefer Prisma `select` to limit serialized data exposure.

@@ -54,7 +54,9 @@ model User {
   writingSubmissions         WritingSubmission[]         // Added relation to WritingSubmission
   quizResults                QuizResult[]
   readerBookmarkletCredential ReaderBookmarkletCredential?
+  readerInstapaperCredential ReaderInstapaperCredential?
   readerArticles             ReaderArticle[]
+  readerArticleHighlights    ReaderArticleHighlight[]
 }
 
 model UserSettings {
@@ -76,6 +78,8 @@ model UserSettings {
   dailyWritingGoal   Int      @default(150)
   writingFirst       Boolean  @default(false) // Always quiz writing before reviewing cards
   maxLapses          Int      @default(0)
+  dueCardsEmailNotifications Boolean @default(false)
+  dueCardsEmailNotificationSentAt DateTime?
 }
 
 model VerificationToken {
@@ -93,7 +97,6 @@ model Deck {
   userId             String
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   Card               Card[]
-  parentDeckId       Int?
   createdAt          DateTime            @default(now())
   writingSubmissions WritingSubmission[] // Added relation to WritingSubmission
 
@@ -108,8 +111,6 @@ model Card {
   paused      Boolean  @default(false)
   term        String
   definition  String
-  // Gender can be "M"ale, "F"emale, or "N"eutral
-  gender      String   @default("N")
   createdAt   DateTime @default(now())
   imageBlobId String?
   deckId      Int
@@ -123,6 +124,7 @@ model Card {
   nextReview  Float    @default(0)
   lapses      Float    @default(0)
   repetitions Float    @default(0)
+  importedReaderHighlights ReaderArticleHighlight[] @relation("ImportedHighlightCard")
 
   @@unique([userId, term])
   @@index([deckId])
@@ -170,15 +172,27 @@ model WritingSubmission {
   @@index([userId, deckId, createdAt])
 }
 
-enum ReaderSourceLanguage {
-  KO
-  EN
-  OTHER
-}
-
 enum ReaderSaveOrigin {
   DASHBOARD
   BOOKMARKLET
+}
+
+enum ReaderIngestStatus {
+  PENDING
+  IN_PROGRESS
+  READY
+  ERROR
+}
+
+enum ReaderInputKind {
+  URL
+  RAW
+}
+
+enum ReaderHighlightStatus {
+  IN_PROGRESS
+  READY
+  ERROR
 }
 
 model ReaderBookmarkletCredential {
@@ -193,23 +207,76 @@ model ReaderBookmarkletCredential {
   @@index([userId])
 }
 
+model ReaderInstapaperCredential {
+  id                    Int      @id @default(autoincrement())
+  userId                String   @unique
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  instapaperUsername    String   @db.VarChar(200)
+  encryptedAccessToken  String   @db.Text
+  encryptedAccessSecret String   @db.Text
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([userId])
+}
+
 model ReaderArticle {
-  id           Int                @id @default(autoincrement())
-  userId       String
-  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  publicId     String             @unique @default(cuid())
-  requestUrl   String             @db.Text
-  normalizedUrl String            @db.Text
-  title        String             @db.Text
-  description  String             @db.Text
-  sourceLang   ReaderSourceLanguage
-  translated   Boolean            @default(false)
-  saveOrigin   ReaderSaveOrigin   @default(DASHBOARD)
-  contentText  String             @db.Text
-  contentHtml  String             @db.Text
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
+  id            Int                @id @default(autoincrement())
+  userId        String
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  publicId      String             @unique @default(cuid())
+  instapaperBookmarkId String?     @db.VarChar(64)
+  requestUrl    String?            @db.Text
+  normalizedUrl String?            @db.Text
+  inputKind     ReaderInputKind    @default(URL)
+  title         String             @db.Text
+  description   String             @db.Text
+  saveOrigin    ReaderSaveOrigin   @default(DASHBOARD)
+  ingestStatus  ReaderIngestStatus @default(PENDING)
+  ingestError   String             @default("") @db.Text
+  ingestStartedAt DateTime?
+  ingestedAt    DateTime?
+  contentText   String             @db.Text
+  contentHtml   String             @db.Text
+  readAt        DateTime?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  highlights    ReaderArticleHighlight[]
 
   @@index([userId, createdAt])
+  @@index([userId, readAt])
   @@index([publicId])
+  @@index([userId, instapaperBookmarkId])
+  @@index([ingestStatus, createdAt])
+}
+
+model ReaderArticleHighlight {
+  id                      Int                   @id @default(autoincrement())
+  userId                  String
+  user                    User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  articleId               Int
+  article                 ReaderArticle         @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  selectedText            String                @db.Text
+  selectedTextHash        String                @db.VarChar(64)
+  selectedOccurrenceIndex Int
+  occurrenceCount         Int
+  occurrencesJson         Json
+  articleContentHash      String                @db.VarChar(64)
+  promptVersion           Int                   @default(1)
+  status                  ReaderHighlightStatus @default(IN_PROGRESS)
+  term                    String                @default("") @db.Text
+  definition              String                @default("") @db.Text
+  generalMeaning          String                @default("") @db.Text
+  meaningInContext        String                @default("") @db.Text
+  errorMessage            String                @default("") @db.Text
+  importedCardId          Int?
+  importedCard            Card?                 @relation("ImportedHighlightCard", fields: [importedCardId], references: [id], onDelete: SetNull)
+  importedAt              DateTime?
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+
+  @@index([userId, articleId, createdAt])
+  @@index([articleId, createdAt])
+  @@index([importedCardId])
+  @@unique([userId, articleId, selectedTextHash, selectedOccurrenceIndex, articleContentHash, promptVersion])
 }

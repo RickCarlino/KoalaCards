@@ -1,30 +1,21 @@
 import { getUserSettingsFromEmail } from "@/koala/auth-helpers";
-import { trpc } from "@/koala/trpc-config";
 import {
-  Button,
-  Container,
-  Group,
-  Stack,
-  Text,
-  Title,
-} from "@mantine/core";
+  ReaderPageFrame,
+  ReaderPageHeader,
+  ReaderPanel,
+  ReaderPanelHeader,
+} from "@/koala/reader/ui/layout";
+import {
+  readerHeadingColor,
+  readerListRowStyle,
+} from "@/koala/reader/ui/theme";
+import { trpc } from "@/koala/trpc-config";
+import { Button, Group, Stack, Text } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { GetServerSidePropsContext } from "next";
 import Link from "next/link";
 import { getSession } from "next-auth/react";
 import React from "react";
-
-const pageShellStyle: React.CSSProperties = {
-  borderRadius: 24,
-  border: "1px solid #f0d4e2",
-  background:
-    "linear-gradient(160deg, #fffdfd 0%, #fff8fc 54%, #fff2f8 100%)",
-  boxShadow: "0 16px 30px rgba(176, 97, 136, 0.09)",
-  padding: "clamp(14px, 2vw, 24px)",
-};
-
-const headlineFont =
-  '"Palatino Linotype", "Book Antiqua", Palatino, serif';
 
 function mutationErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message.trim()) {
@@ -32,6 +23,41 @@ function mutationErrorMessage(error: unknown, fallback: string): string {
   }
 
   return fallback;
+}
+
+function BookmarkletSteps() {
+  const steps = [
+    "Drag the Koala Reader button to your bookmarks bar.",
+    "Open the article page you want to save.",
+    "Click the bookmark to send the page into Reader.",
+  ];
+
+  return (
+    <Stack gap={0}>
+      {steps.map((step, index) => {
+        return (
+          <Group
+            key={step}
+            gap="sm"
+            align="flex-start"
+            wrap="nowrap"
+            style={readerListRowStyle(index > 0)}
+          >
+            <Text
+              fw={700}
+              size="sm"
+              style={{ color: readerHeadingColor, minWidth: 18 }}
+            >
+              {index + 1}.
+            </Text>
+            <Text size="sm" c="dimmed">
+              {step}
+            </Text>
+          </Group>
+        );
+      })}
+    </Stack>
+  );
 }
 
 export default function ReaderBookmarkletPage() {
@@ -47,7 +73,7 @@ export default function ReaderBookmarkletPage() {
       setupQuery.refetch();
       notifications.show({
         title: "Bookmarklet reset",
-        message: "New bookmarklet issued.",
+        message: "Created a new bookmark key.",
         color: "green",
       });
     } catch (error: unknown) {
@@ -63,18 +89,11 @@ export default function ReaderBookmarkletPage() {
   };
 
   return (
-    <Container size="sm" mt="xl" pb="xl">
-      <Stack gap="lg" style={pageShellStyle}>
-        <Group justify="space-between" align="flex-end" wrap="wrap">
-          <Stack gap={3}>
-            <Title order={2} style={{ fontFamily: headlineFont }}>
-              Bookmarklet
-            </Title>
-            <Text size="sm" c="dimmed">
-              A bookmarklet is a bookmark that runs on your current tab to
-              save an article instantly.
-            </Text>
-          </Stack>
+    <ReaderPageFrame size="sm">
+      <ReaderPageHeader
+        title="Bookmarklet"
+        subtitle="Save the page you are reading in one click."
+        rightSlot={
           <Button
             component={Link}
             href="/reader"
@@ -83,23 +102,29 @@ export default function ReaderBookmarkletPage() {
           >
             Back to Reader
           </Button>
-        </Group>
+        }
+      />
 
-        <Stack gap={4}>
-          <Text size="sm">
-            1. Drag the button below to your bookmarks bar.
-          </Text>
-          <Text size="sm">2. Open any article page you want to save.</Text>
-          <Text size="sm">
-            3. Click the bookmark to send it to Reader.
-          </Text>
-        </Stack>
+      <ReaderPanel>
+        <ReaderPanelHeader
+          title="Setup Steps"
+          subtitle="Install once, then save pages with one click."
+        />
+        <BookmarkletSteps />
+      </ReaderPanel>
 
-        {setupQuery.isLoading ? (
+      <ReaderPanel>
+        <ReaderPanelHeader
+          title="Install Bookmarklet"
+          subtitle="Drag this button into your browser bookmarks bar."
+        />
+        {setupQuery.isLoading && (
           <Text size="sm" c="dimmed">
-            Preparing bookmarklet...
+            Building bookmarklet...
           </Text>
-        ) : (
+        )}
+
+        {!setupQuery.isLoading && (
           <Group gap="xs" wrap="wrap">
             <Button
               component="a"
@@ -114,12 +139,12 @@ export default function ReaderBookmarkletPage() {
               loading={rotateKey.isLoading}
               onClick={handleReset}
             >
-              Reset
+              Regenerate Key
             </Button>
           </Group>
         )}
-      </Stack>
-    </Container>
+      </ReaderPanel>
+    </ReaderPageFrame>
   );
 }
 

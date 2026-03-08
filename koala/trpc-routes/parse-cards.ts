@@ -16,7 +16,6 @@ export const parseCards = procedure
         z.object({
           definition: z.string(),
           term: z.string(),
-          gender: z.enum(["M", "F", "N"]),
         }),
       ),
     }),

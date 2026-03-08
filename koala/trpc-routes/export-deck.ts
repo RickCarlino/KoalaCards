@@ -4,13 +4,6 @@ import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc-procedure";
 import { DeckExport } from "../types/deck-export";
 
-const normalizeGender = (value?: string | null) => {
-  if (value === "M" || value === "F" || value === "N") {
-    return value;
-  }
-  return "N";
-};
-
 export const exportDeck = procedure
   .input(z.object({ deckId: z.number() }))
   .mutation(async ({ input, ctx }): Promise<DeckExport> => {
@@ -37,7 +30,7 @@ export const exportDeck = procedure
     const { Card: cards } = deck;
 
     return {
-      version: 2,
+      version: 3,
       exportedAt: new Date().toISOString(),
       cards: cards.map(
         ({
@@ -46,7 +39,6 @@ export const exportDeck = procedure
           id: _id,
           term,
           definition,
-          gender,
           paused,
           imageBlobId,
           stability,
@@ -61,7 +53,6 @@ export const exportDeck = procedure
         }) => ({
           term,
           definition,
-          gender: normalizeGender(gender),
           paused,
           imageBlobId,
           stability,

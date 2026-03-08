@@ -31,69 +31,10 @@ const BodySchema = z.object({
     })
     .optional(),
 });
+type StreamRequestBody = z.infer<typeof BodySchema>;
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-function writeSSE(res: NextApiResponse, data: string, event?: string) {
-  if (event) {
-    res.write(`event: ${event}\n`);
-  }
-  const lines = data.split("\n");
-  for (const line of lines) {
-    res.write(`data: ${line}\n`);
-  }
-  res.write("\n");
-}
-
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse,
-) {
-  if (req.method !== "POST") {
-    res.setHeader("Allow", "POST");
-    return res.status(405).end("Method Not Allowed");
-  }
-
-  const session = await getServerSession(req, res, authOptions);
-  const email = session?.user?.email;
-  if (!email) {
-    return res.status(401).end("Unauthorized");
-  }
-
-  const dbUser = await prismaClient.user.findUnique({ where: { email } });
-  if (!dbUser) {
-    return res.status(401).end("Unauthorized");
-  }
-
-  if (!process.env.OPENAI_API_KEY) {
-    return res.status(500).end("Missing OPENAI_API_KEY");
-  }
-
-  const parsed = BodySchema.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).end("Invalid body");
-  }
-  const { deckId, messages, contextLog, currentCard } = parsed.data;
-
-  const deck = await prismaClient.deck.findUnique({
-    where: { id: deckId, userId: dbUser.id },
-  });
-  if (!deck) {
-    return res.status(404).end("Deck not found");
-  }
-
-  res.writeHead(200, {
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache, no-transform",
-    Connection: "keep-alive",
-  });
-
-  let closed = false;
-  req.on("close", () => {
-    closed = true;
-  });
-
-  const system = `You are a Korean-learning study assistant.
+const SYSTEM_PROMPT = `You are a Korean-learning study assistant.
 Optimize output for fast reading and practice.
 
 FLASHCARD SUGGESTIONS (“+” button)
@@ -154,33 +95,153 @@ TRANSLATIONS / PHRASES
 * Use idiomatic grammar, correct particles, and fully conjugated verbs in polite speech.
 `;
 
+function writeSSE(res: NextApiResponse, data: string, event?: string) {
+  if (event) {
+    res.write(`event: ${event}\n`);
+  }
+  const lines = data.split("\n");
+  for (const line of lines) {
+    res.write(`data: ${line}\n`);
+  }
+  res.write("\n");
+}
+
+function requirePostMethod(
+  req: NextApiRequest,
+  res: NextApiResponse,
+): boolean {
+  if (req.method === "POST") {
+    return true;
+  }
+  res.setHeader("Allow", "POST");
+  res.status(405).end("Method Not Allowed");
+  return false;
+}
+
+function requireOpenAiApiKey(res: NextApiResponse): boolean {
+  if (process.env.OPENAI_API_KEY) {
+    return true;
+  }
+  res.status(500).end("Missing OPENAI_API_KEY");
+  return false;
+}
+
+function parseStreamRequestBody(
+  body: unknown,
+  res: NextApiResponse,
+): StreamRequestBody | null {
+  const parsed = BodySchema.safeParse(body);
+  if (parsed.success) {
+    return parsed.data;
+  }
+  res.status(400).end("Invalid body");
+  return null;
+}
+
+async function requireUserId(
+  req: NextApiRequest,
+  res: NextApiResponse,
+): Promise<string | null> {
+  const session = await getServerSession(req, res, authOptions);
+  const email = session?.user?.email;
+  if (!email) {
+    res.status(401).end("Unauthorized");
+    return null;
+  }
+
+  const dbUser = await prismaClient.user.findUnique({ where: { email } });
+  if (!dbUser) {
+    res.status(401).end("Unauthorized");
+    return null;
+  }
+
+  return dbUser.id;
+}
+
+async function requireDeckAccess(
+  deckId: number,
+  userId: string,
+  res: NextApiResponse,
+): Promise<boolean> {
+  const deck = await prismaClient.deck.findUnique({
+    where: { id: deckId, userId },
+  });
+  if (deck) {
+    return true;
+  }
+  res.status(404).end("Deck not found");
+  return false;
+}
+
+function buildContextMessages(
+  contextLog: string[] | undefined,
+  currentCard: StreamRequestBody["currentCard"],
+): CompletionMessage[] {
+  const messages: CompletionMessage[] = [];
   const activityLogLines =
     contextLog?.map((line) => line.trim()).filter(Boolean) ?? [];
-
   const recentActivityLines = activityLogLines.slice(-30).reverse();
-  const activityLogMessage: CompletionMessage | null =
-    recentActivityLines.length > 0
-      ? {
-          role: "system",
-          content: `Recent activity log (newest first):\n${recentActivityLines
-            .map((line) => `- ${line}`)
-            .join("\n")}`,
-        }
-      : null;
 
-  const currentCardMessage: CompletionMessage | null = currentCard
-    ? {
-        role: "system",
-        content: `Current card in view:\n- CardID: ${currentCard.cardId}\n- Term: ${currentCard.term}\n- Definition: ${currentCard.definition}`,
-      }
-    : null;
+  if (currentCard) {
+    messages.push({
+      role: "system",
+      content: `Current card in view:\n- CardID: ${currentCard.cardId}\n- Term: ${currentCard.term}\n- Definition: ${currentCard.definition}`,
+    });
+  }
 
+  if (recentActivityLines.length > 0) {
+    messages.push({
+      role: "system",
+      content: `Recent activity log (newest first):\n${recentActivityLines
+        .map((line) => `- ${line}`)
+        .join("\n")}`,
+    });
+  }
+
+  return messages;
+}
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+) {
+  if (!requirePostMethod(req, res)) {
+    return;
+  }
+
+  const userId = await requireUserId(req, res);
+  if (userId === null || !requireOpenAiApiKey(res)) {
+    return;
+  }
+
+  const requestBody = parseStreamRequestBody(req.body, res);
+  if (!requestBody) {
+    return;
+  }
+  const { deckId, messages, contextLog, currentCard } = requestBody;
+
+  const hasDeckAccess = await requireDeckAccess(deckId, userId, res);
+  if (!hasDeckAccess) {
+    return;
+  }
+
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache, no-transform",
+    Connection: "keep-alive",
+  });
+
+  let closed = false;
+  req.on("close", () => {
+    closed = true;
+  });
+
+  const contextMessages = buildContextMessages(contextLog, currentCard);
   const stream = await openai.chat.completions.create({
     model: "gpt-5.1-chat-latest",
     messages: [
-      { role: "system", content: system },
-      ...(currentCardMessage ? [currentCardMessage] : []),
-      ...(activityLogMessage ? [activityLogMessage] : []),
+      { role: "system", content: SYSTEM_PROMPT },
+      ...contextMessages,
       ...messages,
     ],
     stream: true,

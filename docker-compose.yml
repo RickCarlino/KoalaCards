@@ -20,6 +20,24 @@ services:
     networks:
       - koala-network
 
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: npm run worker
+    entrypoint: ./entrypoint.sh
+    volumes:
+      - .:/app
+      - ./node_modules:/app/node_modules
+    env_file:
+      - .env
+    environment:
+      POSTGRES_URI: postgres://prisma:your_password@db:5432/prisma
+    depends_on:
+      - db
+    networks:
+      - koala-network
+
   db:
     image: postgres:17
     restart: unless-stopped

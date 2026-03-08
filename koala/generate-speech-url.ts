@@ -4,40 +4,30 @@ import textToSpeech, {
 } from "@google-cloud/text-to-speech";
 import { createHash } from "crypto";
 import { draw } from "radash";
-import { Gender } from "./shared-types";
 import { storageProvider } from "./storage";
 import { stripEmojis } from "./utils/emoji";
 
 type AudioLessonParams = {
   text: string;
   langCode: string;
-  gender: Gender;
   speed?: number;
 };
 
-type VoicesTable = Record<string, Record<Gender, string[]>>;
+type VoicesTable = Record<string, string[]>;
 
 const Voices: VoicesTable = {
-  en: {
-    F: ["en-US-Wavenet-C"],
-    M: ["en-US-Wavenet-A", "en-US-Wavenet-B", "en-US-Wavenet-D"],
-    N: [
-      "en-US-Wavenet-A",
-      "en-US-Wavenet-B",
-      "en-US-Wavenet-C",
-      "en-US-Wavenet-D",
-    ],
-  },
-  ko: {
-    F: ["ko-KR-Wavenet-A", "ko-KR-Wavenet-B"],
-    M: ["ko-KR-Wavenet-C", "ko-KR-Wavenet-D"],
-    N: [
-      "ko-KR-Wavenet-A",
-      "ko-KR-Wavenet-B",
-      "ko-KR-Wavenet-C",
-      "ko-KR-Wavenet-D",
-    ],
-  },
+  en: [
+    "en-US-Wavenet-A",
+    "en-US-Wavenet-B",
+    "en-US-Wavenet-C",
+    "en-US-Wavenet-D",
+  ],
+  ko: [
+    "ko-KR-Wavenet-A",
+    "ko-KR-Wavenet-B",
+    "ko-KR-Wavenet-C",
+    "ko-KR-Wavenet-D",
+  ],
 };
 
 let CLIENT: TextToSpeechClient;
@@ -51,13 +41,12 @@ if (creds) {
   CLIENT = new textToSpeech.TextToSpeechClient();
 }
 
-const randomVoice = (langCode: string, gender: Gender) => {
-  const l1 = Voices[langCode] || Voices.ko;
-  const l2 = l1[gender] || l1.N;
-  return draw(l2) || l2[0];
+const randomVoice = (langCode: string) => {
+  const voices = Voices[langCode] || Voices.ko;
+  return draw(voices) || voices[0];
 };
 
-const VERSION = "v2";
+const VERSION = "v3";
 
 const callTTS = async (voice: string, params: AudioLessonParams) => {
   const p = params.text.includes("<speak>")
@@ -75,9 +64,7 @@ const callTTS = async (voice: string, params: AudioLessonParams) => {
         languageCode: params.langCode,
         name: voice,
         ssmlGender:
-          protos.google.cloud.texttospeech.v1.SsmlVoiceGender[
-            params.gender as keyof typeof protos.google.cloud.texttospeech.v1.SsmlVoiceGender
-          ],
+          protos.google.cloud.texttospeech.v1.SsmlVoiceGender.NEUTRAL,
       },
       audioConfig,
     };
@@ -87,8 +74,8 @@ const callTTS = async (voice: string, params: AudioLessonParams) => {
   return response;
 };
 
-const hashURL = (text: string, langCode: string, gender: string) => {
-  const hashInput = `${text}|${langCode}|${gender}`;
+const hashURL = (text: string, langCode: string) => {
+  const hashInput = `${text}|${langCode}`;
   const md5Hash = createHash("md5").update(hashInput).digest();
   const base64UrlHash =
     VERSION +
@@ -105,7 +92,7 @@ export async function generateSpeechURL(
   params: AudioLessonParams,
 ): Promise<string> {
   const cleanText = stripEmojis(params.text);
-  const base64UrlHash = hashURL(cleanText, params.langCode, params.gender);
+  const base64UrlHash = hashURL(cleanText, params.langCode);
   const fileName = `lesson-audio/${base64UrlHash}.mp3`;
   const [exists] = await storageProvider.fileExists(fileName);
 
@@ -114,7 +101,7 @@ export async function generateSpeechURL(
   }
 
   const lang = params.langCode.slice(0, 2).toLocaleLowerCase();
-  const voice = randomVoice(lang, params.gender);
+  const voice = randomVoice(lang);
   const response = await callTTS(voice, { ...params, text: cleanText });
 
   await storageProvider.saveBuffer(

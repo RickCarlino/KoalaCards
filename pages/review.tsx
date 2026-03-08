@@ -26,6 +26,7 @@ import {
 } from "@mantine/core";
 import {
   IconCheck,
+  IconCards,
   IconGitMerge,
   IconPencil,
   IconPlus,
@@ -452,25 +453,37 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
     return (
       <Container size="md" py="xl">
         <Stack align="center" gap="xs" mb="xl">
-          <Title order={2} c="pink.7" ta="center">
-            Welcome to Koala Cards 🌸
+          <Title order={2} c="pink.8" ta="center">
+            Ready to start?
           </Title>
           <Text size="md" c="gray.7" ta="center">
-            Start your learning journey by adding some cards.
+            Add cards to create your first study deck.
           </Text>
         </Stack>
         <Card withBorder p="xl" radius="md">
           <Stack align="center" gap="md">
-            <Button
-              component={Link}
-              href="/create"
-              leftSection={<IconPlus size={18} />}
-              color="pink"
-              variant="light"
-              size="md"
-            >
-              Add Your First Cards
-            </Button>
+            <Group gap="sm" wrap="wrap" justify="center">
+              <Button
+                component={Link}
+                href="/create"
+                leftSection={<IconPlus size={18} />}
+                color="pink"
+                variant="light"
+                size="md"
+              >
+                Add Cards
+              </Button>
+              <Button
+                component={Link}
+                href="/cards"
+                leftSection={<IconCards size={18} />}
+                color="pink"
+                variant="light"
+                size="md"
+              >
+                View Cards
+              </Button>
+            </Group>
           </Stack>
         </Card>
       </Container>
@@ -491,14 +504,36 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
 
   return (
     <Container size="lg" py="md">
-      <Stack gap="xs" mb="lg">
-        <Title order={2} c="pink.7">
-          Your Decks
-        </Title>
-        <Text size="md" c="gray.7">
-          Choose a deck to start studying
-        </Text>
-      </Stack>
+      <Group justify="space-between" align="flex-end" wrap="wrap" mb="lg">
+        <Stack gap="xs">
+          <Title order={2} c="pink.8">
+            Your Decks
+          </Title>
+          <Text size="md" c="gray.7">
+            Pick a deck to begin your session.
+          </Text>
+        </Stack>
+        <Group gap="sm">
+          <Button
+            component={Link}
+            href="/create"
+            leftSection={<IconPlus size={16} />}
+            color="pink"
+            variant="light"
+          >
+            Add Cards
+          </Button>
+          <Button
+            component={Link}
+            href="/cards"
+            leftSection={<IconCards size={16} />}
+            color="pink"
+            variant="light"
+          >
+            View Cards
+          </Button>
+        </Group>
+      </Group>
 
       {selectedDeckIds.length >= 2 && (
         <Card withBorder p="sm" mb="md">

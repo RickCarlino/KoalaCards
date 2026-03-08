@@ -4,6 +4,7 @@
 .DS_Store
 .env
 .env*
+!.env.example
 .env*.local
 .pnp.js
 .pnpm-debug.log*

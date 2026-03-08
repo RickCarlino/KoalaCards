@@ -42,11 +42,48 @@ import React, { useState } from "react";
 const ONE_DAY = 24 * 60 * 60 * 1000;
 const ONE_WEEK = 7 * ONE_DAY;
 
+type ChartDataPoint = { date: string; count: number };
+
 function formatDate(date: Date): string {
   const year = date.getFullYear();
   const month = (date.getMonth() + 1).toString().padStart(2, "0");
   const day = date.getDate().toString().padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function buildCumulativeChartDataFromSortedDates(options: {
+  startDate: Date;
+  endDate: Date;
+  sortedDates: Date[];
+}): ChartDataPoint[] {
+  const { startDate, endDate, sortedDates } = options;
+  const chartData: ChartDataPoint[] = [];
+  let cumulativeCount = 0;
+  let dateIndex = 0;
+  const currentDate = new Date(startDate);
+
+  while (currentDate <= endDate) {
+    const dateString = formatDate(currentDate);
+    const currentDayEnd = new Date(currentDate);
+    currentDayEnd.setHours(23, 59, 59, 999);
+
+    while (
+      dateIndex < sortedDates.length &&
+      sortedDates[dateIndex] <= currentDayEnd
+    ) {
+      cumulativeCount += 1;
+      dateIndex += 1;
+    }
+
+    chartData.push({
+      date: dateString,
+      count: cumulativeCount,
+    });
+
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+
+  return chartData;
 }
 
 export async function getServerSideProps(
@@ -136,36 +173,15 @@ export async function getServerSideProps(
       }
     }
 
-    const cumulativeChartData: ChartDataPoint[] = [];
-    let cumulativeCount = 0;
-
     const sortedLearnedDates = Object.values(firstLearnedDates).sort(
       (a, b) => a.getTime() - b.getTime(),
     );
-    let learnedDateIndex = 0;
     const endDate = new Date();
-    let currentDate = new Date(threeMonthsAgo);
-
-    while (currentDate <= endDate) {
-      const dateString = formatDate(currentDate);
-      const currentDayEnd = new Date(currentDate);
-      currentDayEnd.setHours(23, 59, 59, 999);
-
-      while (
-        learnedDateIndex < sortedLearnedDates.length &&
-        sortedLearnedDates[learnedDateIndex] <= currentDayEnd
-      ) {
-        cumulativeCount++;
-        learnedDateIndex++;
-      }
-
-      cumulativeChartData.push({
-        date: dateString,
-        count: cumulativeCount,
-      });
-
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
+    const cardChartData = buildCumulativeChartDataFromSortedDates({
+      startDate: threeMonthsAgo,
+      endDate,
+      sortedDates: sortedLearnedDates,
+    });
 
     const writingSubmissions =
       await prismaClient.writingSubmission.findMany({
@@ -202,7 +218,7 @@ export async function getServerSideProps(
     const cumulativeWritingData: ChartDataPoint[] = [];
     let cumulativeWritingCount = 0;
 
-    currentDate = new Date(threeMonthsAgo);
+    const currentDate = new Date(threeMonthsAgo);
     while (currentDate <= endDate) {
       const dateString = formatDate(currentDate);
       cumulativeWritingCount += dailyWritingData[dateString] || 0;
@@ -215,8 +231,31 @@ export async function getServerSideProps(
       currentDate.setDate(currentDate.getDate() + 1);
     }
 
-    const cardChartData = cumulativeChartData;
     const writingChartData = cumulativeWritingData;
+    const readArticles = await prismaClient.readerArticle.findMany({
+      where: {
+        userId,
+        readAt: {
+          not: null,
+          gte: threeMonthsAgo,
+        },
+      },
+      select: {
+        readAt: true,
+      },
+      orderBy: {
+        readAt: "asc",
+      },
+    });
+
+    const sortedReadDates = readArticles
+      .map((article) => article.readAt)
+      .filter((readAt): readAt is Date => readAt !== null);
+    const readerChartData = buildCumulativeChartDataFromSortedDates({
+      startDate: threeMonthsAgo,
+      endDate,
+      sortedDates: sortedReadDates,
+    });
 
     const weeklyTarget = userSettings.cardsPerDayMax * 7;
     const statistics = {
@@ -229,10 +268,15 @@ export async function getServerSideProps(
       globalUsers: await prismaClient.user.count(),
     };
 
-    return { statistics, cardChartData, writingChartData };
+    return {
+      statistics,
+      cardChartData,
+      writingChartData,
+      readerChartData,
+    };
   }
 
-  const { statistics, cardChartData, writingChartData } =
+  const { statistics, cardChartData, writingChartData, readerChartData } =
     await getUserCardStatistics(userId);
 
   return {
@@ -241,16 +285,16 @@ export async function getServerSideProps(
       stats: statistics,
       cardChartData: cardChartData,
       writingChartData: writingChartData,
+      readerChartData: readerChartData,
     },
   };
 }
-
-type ChartDataPoint = { date: string; count: number };
 type Props = UnwrapPromise<
   ReturnType<typeof getServerSideProps>
 >["props"] & {
   cardChartData: ChartDataPoint[];
   writingChartData: ChartDataPoint[];
+  readerChartData: ChartDataPoint[];
 };
 
 type SettingsFormValues = {
@@ -263,6 +307,7 @@ type SettingsFormValues = {
   playbackPercentage: number;
   responseTimeoutSeconds: number;
   writingFirst: boolean;
+  dueCardsEmailNotifications: boolean;
 };
 
 type SettingsNumberKey =
@@ -349,6 +394,7 @@ type SettingsFormProps = {
   values: SettingsFormValues;
   onNumberChange: SettingsNumberChangeHandler;
   onWritingFirstChange: (checked: boolean) => void;
+  onDueCardsEmailNotificationsChange: (checked: boolean) => void;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
   isSaving: boolean;
 };
@@ -366,12 +412,12 @@ function SliderSettingsGroup({
 }: SliderSettingsGroupProps) {
   return (
     <SettingsGroup
-      title="Sliders"
-      description="Drag to set a value within a range."
+      title="Review Targets"
+      description="Adjust retention and playback settings."
     >
       <SettingsRow
         label="Target retention"
-        description="Higher keeps reviews closer together; lower spreads them out."
+        description="Higher values review cards more often."
         labelFor="requestedRetention"
       >
         <Stack gap="xs">
@@ -439,12 +485,12 @@ function NumberSettingsGroup({
 }: NumberSettingsGroupProps) {
   return (
     <SettingsGroup
-      title="Number inputs"
-      description="Type an exact value."
+      title="Study Limits"
+      description="Set your daily and session limits."
     >
       <SettingsRow
-        label="New cards per day target"
-        description="Weekly target is 7x this value; daily new adjusts to meet it."
+        label="New cards per day"
+        description="Used to pace how many new cards you learn each week."
         labelFor="cardsPerDayMax"
       >
         <NumberInput
@@ -461,7 +507,7 @@ function NumberSettingsGroup({
 
       <SettingsRow
         label="Cards per review session"
-        description="Cards pulled when you start a deck review."
+        description="How many cards to load when you start a session."
         labelFor="reviewTakeCount"
       >
         <NumberInput
@@ -479,7 +525,7 @@ function NumberSettingsGroup({
 
       <SettingsRow
         label="Auto-pause after lapses"
-        description="Set to 0 to disable. Cards pause after this many lapses."
+        description="Set to 0 to disable."
         labelFor="maxLapses"
       >
         <NumberInput
@@ -512,7 +558,7 @@ function NumberSettingsGroup({
 
       <SettingsRow
         label="Response timeout (seconds)"
-        description="Set to 0 to disable."
+        description="How long to wait before timing out. Set to 0 to disable."
         labelFor="responseTimeoutSeconds"
       >
         <NumberInput
@@ -541,10 +587,13 @@ function ChoiceSettingsGroup({
   onNumberChange,
 }: ChoiceSettingsGroupProps) {
   return (
-    <SettingsGroup title="Quick choices" description="Tap a preset value.">
+    <SettingsGroup
+      title="Audio Replay"
+      description="Choose how often your recording plays back."
+    >
       <SettingsRow
         label="Replay your recording"
-        description="How often your recording replays after you answer."
+        description="Playback rate after each response."
       >
         <SegmentedControl
           fullWidth
@@ -567,20 +616,24 @@ function ChoiceSettingsGroup({
 type ToggleSettingsGroupProps = {
   writingFirst: boolean;
   onWritingFirstChange: (checked: boolean) => void;
+  dueCardsEmailNotifications: boolean;
+  onDueCardsEmailNotificationsChange: (checked: boolean) => void;
 };
 
 function ToggleSettingsGroup({
   writingFirst,
   onWritingFirstChange,
+  dueCardsEmailNotifications,
+  onDueCardsEmailNotificationsChange,
 }: ToggleSettingsGroupProps) {
   return (
     <SettingsGroup
-      title="Toggles"
-      description="Switches that turn behaviors on or off."
+      title="Study Rules"
+      description="Turn optional behaviors on or off."
     >
       <SettingsRow
         label="Require daily writing before card review"
-        description="Encourages consistent writing practice."
+        description="Finish your writing goal before review sessions unlock."
         labelFor="writingFirst"
       >
         <Switch
@@ -588,6 +641,20 @@ function ToggleSettingsGroup({
           checked={writingFirst}
           onChange={(event) =>
             onWritingFirstChange(event.currentTarget.checked)
+          }
+          size="md"
+        />
+      </SettingsRow>
+      <SettingsRow
+        label="Email me when more than 20 cards are due"
+        description="Sends at most one reminder every 24 hours."
+        labelFor="dueCardsEmailNotifications"
+      >
+        <Switch
+          id="dueCardsEmailNotifications"
+          checked={dueCardsEmailNotifications}
+          onChange={(event) =>
+            onDueCardsEmailNotificationsChange(event.currentTarget.checked)
           }
           size="md"
         />
@@ -600,6 +667,7 @@ function SettingsForm({
   values,
   onNumberChange,
   onWritingFirstChange,
+  onDueCardsEmailNotificationsChange,
   onSubmit,
   isSaving,
 }: SettingsFormProps) {
@@ -626,6 +694,10 @@ function SettingsForm({
         <ToggleSettingsGroup
           writingFirst={values.writingFirst}
           onWritingFirstChange={onWritingFirstChange}
+          dueCardsEmailNotifications={values.dueCardsEmailNotifications}
+          onDueCardsEmailNotificationsChange={
+            onDueCardsEmailNotificationsChange
+          }
         />
 
         <Group justify="flex-end">
@@ -734,7 +806,7 @@ const QUICK_STATS_LABELS: Array<[string, string]> = [
   ["newCardsLastWeek", "New cards studied this week"],
   ["uniqueCardsLast24Hours", "Cards studied last 24 hours"],
   ["uniqueCardsLastWeek", "Cards studied this week"],
-  ["globalUsers", "Active Koala users"],
+  ["globalUsers", "Total Koala users"],
 ];
 
 type QuickStatsCardProps = {
@@ -749,8 +821,8 @@ function QuickStatsCard({ stats }: QuickStatsCardProps) {
 
   return (
     <SectionCard
-      title="Quick Stats"
-      description="Snapshot across all decks."
+      title="Study Snapshot"
+      description="Current stats across your decks."
     >
       <Stack gap="sm">
         {rows.map((row) => (
@@ -810,11 +882,13 @@ function ProgressChart({
 type ProgressSectionProps = {
   cardChartData: ChartDataPoint[];
   writingChartData: ChartDataPoint[];
+  readerChartData: ChartDataPoint[];
 };
 
 function ProgressSection({
   cardChartData,
   writingChartData,
+  readerChartData,
 }: ProgressSectionProps) {
   return (
     <Stack gap="md">
@@ -837,18 +911,33 @@ function ProgressSection({
           series={{ name: "count", color: "pink", label: "Total" }}
           yAxisLabel="Characters Written"
         />
+        <ProgressChart
+          title="Reader Progress"
+          data={readerChartData}
+          series={{ name: "count", color: "teal", label: "Total Read" }}
+          yAxisLabel="Articles Read"
+        />
       </SimpleGrid>
     </Stack>
   );
 }
 
 export default function UserSettingsPage(props: Props) {
-  const { userSettings, stats, cardChartData, writingChartData } = props;
+  const {
+    userSettings,
+    stats,
+    cardChartData,
+    writingChartData,
+    readerChartData,
+  } = props;
   const [settings, setSettings] = useState(() => ({
     ...userSettings,
     maxLapses: userSettings.maxLapses ?? 0,
     requestedRetention: resolveRequestedRetention(
       userSettings.requestedRetention,
+    ),
+    dueCardsEmailNotifications: Boolean(
+      userSettings.dueCardsEmailNotifications,
     ),
   }));
   const editUserSettings = trpc.editUserSettings.useMutation();
@@ -873,6 +962,13 @@ export default function UserSettingsPage(props: Props) {
     setSettings({ ...settings, writingFirst: checked });
   };
 
+  const handleDueCardsEmailNotificationsChange = (checked: boolean) => {
+    setSettings({
+      ...settings,
+      dueCardsEmailNotifications: checked,
+    });
+  };
+
   const handleSignOut = () => {
     signOut();
     location.assign("/");
@@ -890,9 +986,13 @@ export default function UserSettingsPage(props: Props) {
           location.reload();
         },
         (error: unknown) => {
+          const message =
+            error instanceof Error && error.message.trim().length > 0
+              ? error.message
+              : "Unable to save settings.";
           notifications.show({
-            title: "Error",
-            message: `Error: ${JSON.stringify(error).slice(0, 100)}`,
+            title: "Save failed",
+            message,
             color: "red",
           });
         },
@@ -911,6 +1011,9 @@ export default function UserSettingsPage(props: Props) {
     playbackPercentage: settings.playbackPercentage,
     responseTimeoutSeconds: settings.responseTimeoutSeconds ?? 0,
     writingFirst: Boolean(settings.writingFirst),
+    dueCardsEmailNotifications: Boolean(
+      settings.dueCardsEmailNotifications,
+    ),
   };
 
   return (
@@ -919,7 +1022,7 @@ export default function UserSettingsPage(props: Props) {
         <Stack gap={4}>
           <Title order={2}>Settings</Title>
           <Text size="sm" c="dimmed">
-            Adjust your study pace, audio feedback, and writing flow.
+            Update your review pace, writing rules, and audio behavior.
           </Text>
         </Stack>
 
@@ -930,12 +1033,15 @@ export default function UserSettingsPage(props: Props) {
             <SectionCard
               title="Preferences"
               titleOrder={3}
-              description="Daily pace, review size, and audio feedback."
+              description="Review pacing, writing rules, and playback options."
             >
               <SettingsForm
                 values={formValues}
                 onNumberChange={handleNumberChange}
                 onWritingFirstChange={handleWritingFirstChange}
+                onDueCardsEmailNotificationsChange={
+                  handleDueCardsEmailNotificationsChange
+                }
                 onSubmit={handleSubmit}
                 isSaving={editUserSettings.isLoading}
               />
@@ -950,6 +1056,7 @@ export default function UserSettingsPage(props: Props) {
         <ProgressSection
           cardChartData={cardChartData}
           writingChartData={writingChartData}
+          readerChartData={readerChartData}
         />
       </Stack>
     </Container>

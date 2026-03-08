@@ -8,7 +8,7 @@ import {
 } from "./generate-definition-speech-url";
 
 type TermAudioParams = {
-  card: Pick<Card, "term" | "gender">;
+  card: Pick<Card, "term">;
 };
 
 const TERM_ONLY = `<speak>{{term}}</speak>`;
@@ -22,14 +22,10 @@ export async function generateTermAudio(params: TermAudioParams) {
       filePrefix: "lesson-audio",
     });
   }
-  const gender =
-    (["M", "F", "N"] as const).find((g) => g === params.card.gender) ||
-    "N";
   return await generateSpeechURL({
     text: template(TERM_ONLY, {
       term: cleanTerm,
     }),
-    gender,
     langCode: "ko",
   });
 }

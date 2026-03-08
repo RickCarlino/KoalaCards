@@ -65,11 +65,11 @@ export function buildKoalaTheme(fontFamily: string) {
       xl: rem(20),
     },
     shadows: {
-      xs: "0 1px 2px rgba(0,0,0,0.04), 0 1px 1px rgba(0,0,0,0.02)",
-      sm: "0 2px 6px rgba(0,0,0,0.06)",
-      md: "0 8px 20px rgba(0,0,0,0.08)",
-      lg: "0 12px 32px rgba(0,0,0,0.10)",
-      xl: "0 20px 48px rgba(0,0,0,0.12)",
+      xs: "0 1px 2px rgba(0,0,0,0.03)",
+      sm: "0 1px 3px rgba(0,0,0,0.05)",
+      md: "0 4px 10px rgba(0,0,0,0.06)",
+      lg: "0 8px 20px rgba(0,0,0,0.08)",
+      xl: "0 14px 28px rgba(0,0,0,0.1)",
     },
     components: {
       Button: {
@@ -79,15 +79,10 @@ export function buildKoalaTheme(fontFamily: string) {
         },
         styles: (theme: MantineTheme) => ({
           root: {
-            boxShadow: theme.shadows.sm,
             transition:
-              "transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease",
+              "box-shadow 150ms ease, background-color 150ms ease, border-color 150ms ease",
             "&:hover": {
-              transform: "translateY(-1px)",
-              boxShadow: theme.shadows.md,
-            },
-            "&:active": {
-              transform: "translateY(0)",
+              boxShadow: theme.shadows.sm,
             },
           },
         }),
@@ -101,14 +96,9 @@ export function buildKoalaTheme(fontFamily: string) {
         styles: (theme: MantineTheme) => ({
           root: {
             transition:
-              "transform 120ms ease, box-shadow 150ms ease, background-color 150ms ease",
-            boxShadow: theme.shadows.xs,
+              "box-shadow 150ms ease, background-color 150ms ease, border-color 150ms ease",
             "&:hover": {
-              transform: "translateY(-1px)",
               boxShadow: theme.shadows.sm,
-            },
-            "&:active": {
-              transform: "translateY(0)",
             },
           },
         }),
@@ -122,13 +112,8 @@ export function buildKoalaTheme(fontFamily: string) {
         styles: (theme: MantineTheme) => ({
           root: {
             borderColor: theme.colors.pink[2],
-            background: "rgba(255,255,255,0.78)",
-            backdropFilter: "saturate(180%) blur(6px)",
-            transition: "transform 150ms ease, box-shadow 200ms ease",
-            "&:hover": {
-              transform: "translateY(-1px)",
-              boxShadow: theme.shadows.md,
-            },
+            backgroundColor: theme.white,
+            transition: "box-shadow 160ms ease, border-color 160ms ease",
           },
         }),
       },
@@ -141,9 +126,8 @@ export function buildKoalaTheme(fontFamily: string) {
         styles: (theme: MantineTheme) => ({
           root: {
             borderColor: theme.colors.pink[2],
-            background: "rgba(255,255,255,0.78)",
-            backdropFilter: "saturate(180%) blur(6px)",
-            transition: "transform 150ms ease, box-shadow 200ms ease",
+            backgroundColor: theme.white,
+            transition: "box-shadow 160ms ease, border-color 160ms ease",
           },
         }),
       },
@@ -153,14 +137,14 @@ export function buildKoalaTheme(fontFamily: string) {
         },
         styles: (theme: MantineTheme) => ({
           input: {
-            backgroundColor: "rgba(255, 240, 246, 0.35)",
+            backgroundColor: theme.white,
             borderColor: theme.colors.pink[1],
             transition:
               "box-shadow 150ms ease, border-color 150ms ease, background-color 150ms ease",
             "&:focus": {
               borderColor: theme.colors.pink[5],
               boxShadow: `0 0 0 3px ${theme.colors.pink[0]}`,
-              backgroundColor: "rgba(255, 240, 246, 0.5)",
+              backgroundColor: theme.white,
             },
           },
         }),
@@ -171,14 +155,14 @@ export function buildKoalaTheme(fontFamily: string) {
         },
         styles: (theme: MantineTheme) => ({
           input: {
-            backgroundColor: "rgba(255, 240, 246, 0.35)",
+            backgroundColor: theme.white,
             borderColor: theme.colors.pink[1],
             transition:
               "box-shadow 150ms ease, border-color 150ms ease, background-color 150ms ease",
             "&:focus": {
               borderColor: theme.colors.pink[5],
               boxShadow: `0 0 0 3px ${theme.colors.pink[0]}`,
-              backgroundColor: "rgba(255, 240, 246, 0.5)",
+              backgroundColor: theme.white,
             },
           },
         }),
@@ -227,19 +211,16 @@ export function buildKoalaTheme(fontFamily: string) {
       AppShell: {
         styles: (theme: MantineTheme) => ({
           header: {
-            backgroundColor: "rgba(255, 240, 246, 0.9)",
-            backdropFilter: "saturate(180%) blur(8px)",
+            backgroundColor: theme.colors.pink[0],
             borderBottom: `1px solid ${theme.colors.pink[2]}`,
             boxShadow: theme.shadows.xs,
           },
           main: {
-            background:
-              "linear-gradient(180deg, rgba(255,240,246,0.35) 0%, rgba(255,255,255,1) 30%)",
+            backgroundColor: theme.colors.pink[0],
           },
           footer: {
             borderTop: `1px solid ${theme.colors.pink[2]}`,
-            backgroundColor: "rgba(255,255,255,0.9)",
-            backdropFilter: "saturate(180%) blur(6px)",
+            backgroundColor: theme.white,
           },
         }),
       },

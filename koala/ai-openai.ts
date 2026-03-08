@@ -20,20 +20,22 @@ const DEFAULT_IMAGE_SIZE = "1024x1024" as const;
 type ModelKind = TextModel | ImageModelIdentifier;
 
 const registry: Record<ModelKind, string> = {
-  fast: "gpt-5-mini",
-  cheap: "gpt-5-mini",
-  good: "gpt-5-mini",
+  fast: "gpt-5-nano",
+  cheap: "gpt-5.3-chat-latest",
+  good: "gpt-5.3-chat-latest",
   imageDefault: "gpt-image-1-mini",
 };
 
-type ReasoningEffortLevel = Exclude<ReasoningEffort, null> | "none";
+type ReasoningEffortLevel = Exclude<ReasoningEffort, null>;
 type ReasoningMap = Record<TextModel, ReasoningEffortLevel>;
 
 const REASONING_EFFORT: ReasoningMap = {
-  fast: "minimal",
-  cheap: "low",
+  fast: "low",
+  cheap: "medium",
   good: "medium",
 };
+
+type CompletionParams = Partial<ChatCompletionCreateParamsNonStreaming>;
 
 function getModelString(
   identifier:
@@ -52,10 +54,102 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const contentOf = (r: ChatCompletion): string =>
   r.choices?.[0]?.message?.content?.toString() ?? "";
 
+const isGpt5Model = (modelName: string): boolean => {
+  return modelName.startsWith("gpt-5");
+};
+
+const completionTokenLimitFrom = (
+  maxTokens: number | undefined,
+): number | undefined => {
+  if (typeof maxTokens !== "number") {
+    return undefined;
+  }
+
+  return maxTokens;
+};
+
+const reasoningEffortFor = (
+  modelName: string,
+  model: LanguageModelIdentifier,
+): ReasoningEffortLevel | undefined => {
+  if (!isGpt5Model(modelName)) {
+    return undefined;
+  }
+
+  return REASONING_EFFORT[model];
+};
+
+const buildTextCompletionParams = (options: {
+  model: LanguageModelIdentifier;
+  modelName: string;
+  maxTokens: number | undefined;
+}): CompletionParams => {
+  const params: CompletionParams = {};
+  const reasoningEffort = reasoningEffortFor(
+    options.modelName,
+    options.model,
+  );
+  const completionTokenLimit = completionTokenLimitFrom(options.maxTokens);
+
+  if (reasoningEffort) {
+    params.reasoning_effort = reasoningEffort;
+  }
+
+  if (reasoningEffort === "low") {
+    params.verbosity = "low";
+  }
+
+  if (completionTokenLimit !== undefined) {
+    params.max_completion_tokens = completionTokenLimit;
+  }
+
+  return params;
+};
+
+const buildStructuredCompletionParams = (options: {
+  model: LanguageModelIdentifier;
+  modelName: string;
+  maxTokens: number | undefined;
+}): CompletionParams => {
+  const params: CompletionParams = {};
+  const reasoningEffort = reasoningEffortFor(
+    options.modelName,
+    options.model,
+  );
+  const completionTokenLimit = completionTokenLimitFrom(options.maxTokens);
+
+  if (!isGpt5Model(options.modelName)) {
+    return params;
+  }
+
+  if (reasoningEffort) {
+    params.reasoning_effort = reasoningEffort;
+  }
+
+  if (reasoningEffort === "low") {
+    params.verbosity = "low";
+  }
+
+  if (completionTokenLimit !== undefined) {
+    params.max_completion_tokens = completionTokenLimit;
+  }
+
+  return params;
+};
+
 export const openaiGenerateText: LanguageGenFn = async (options) => {
+  const model = options.model ?? DEFAULT_MODEL;
+  const modelName = getModelString(model);
+  const completionParams = buildTextCompletionParams({
+    model,
+    modelName,
+    maxTokens: options.maxTokens,
+  });
+
   const result = await openai.chat.completions.create({
-    model: getModelString(options.model ?? DEFAULT_MODEL),
+    model: modelName,
     messages: options.messages,
+    ...completionParams,
   });
   return contentOf(result);
 };
@@ -63,23 +157,19 @@ export const openaiGenerateText: LanguageGenFn = async (options) => {
 export const openaiGenerateStructuredOutput: StructuredGenFn = async (
   options,
 ) => {
-  const modelName = getModelString(options.model ?? DEFAULT_MODEL);
-  const usesGpt5 = modelName.startsWith("gpt-5");
-  const reasoningEffort = usesGpt5
-    ? REASONING_EFFORT[options.model ?? DEFAULT_MODEL]
-    : undefined;
+  const model = options.model ?? DEFAULT_MODEL;
+  const modelName = getModelString(model);
+  const completionParams = buildStructuredCompletionParams({
+    model,
+    modelName,
+    maxTokens: options.maxTokens,
+  });
+
   const res = await openai.chat.completions.parse({
     model: modelName,
     messages: options.messages,
     response_format: zodResponseFormat(options.schema, "result"),
-    ...(usesGpt5
-      ? {
-          verbosity: "low" as const,
-          reasoning_effort:
-            reasoningEffort as unknown as ChatCompletionCreateParamsNonStreaming["reasoning_effort"],
-          max_completion_tokens: options.maxTokens ?? 1000,
-        }
-      : {}),
+    ...completionParams,
   });
   return res.choices?.[0]?.message?.parsed;
 };

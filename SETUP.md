@@ -189,7 +189,14 @@ Environment variables are crucial for configuring the application. Follow these 
 
    # Google Cloud Configuration
    GOOGLE_APPLICATION_CREDENTIALS=./path-to-your-gcs-credentials.json
+
+   # Optional Reader integration: Instapaper
+   INSTAPAPER_CONSUMER_KEY=your_instapaper_consumer_key
+   INSTAPAPER_CONSUMER_SECRET=your_instapaper_consumer_secret
    ```
+
+   `INSTAPAPER_CONSUMER_KEY` and `INSTAPAPER_CONSUMER_SECRET` are optional.
+   If they are not set, only `/reader/instapaper` actions are disabled.
 
    > **Security Tip:** Never commit your `.env` file to version control. Ensure it's listed in your `.gitignore`.
 

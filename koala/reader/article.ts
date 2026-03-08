@@ -1,8 +1,8 @@
 import { lookup } from "dns/promises";
 import { isIP } from "net";
 
-const MAX_TEXT_LENGTH = 120000;
-const MAX_HTML_LENGTH = 240000;
+const MAX_TEXT_LENGTH = 240000;
+const MAX_HTML_LENGTH = 1000000;
 const DESCRIPTION_LENGTH = 500;
 
 type MetaTag = {
@@ -38,41 +38,42 @@ const isLocalHostname = (hostname: string): boolean => {
   return lowered.endsWith(".localhost");
 };
 
-const isPrivateIpv4Address = (ip: string): boolean => {
+const parseIpv4Octets = (
+  ip: string,
+): [number, number, number, number] | null => {
   const octets = ip.split(".").map((part) => Number(part));
-  if (
-    octets.length !== 4 ||
-    octets.some((part) => !Number.isInteger(part))
-  ) {
-    return true;
+  if (octets.length !== 4) {
+    return null;
   }
-
-  const [first, second] = octets;
+  if (octets.some((part) => !Number.isInteger(part))) {
+    return null;
+  }
   if (octets.some((part) => part < 0 || part > 255)) {
+    return null;
+  }
+  const [first, second, third, fourth] = octets;
+  return [first, second, third, fourth];
+};
+
+const isPrivateIpv4Prefix = (first: number, second: number): boolean => {
+  return (
+    first === 10 ||
+    first === 127 ||
+    first === 0 ||
+    (first === 169 && second === 254) ||
+    (first === 172 && second >= 16 && second <= 31) ||
+    (first === 192 && second === 168) ||
+    (first === 100 && second >= 64 && second <= 127)
+  );
+};
+
+const isPrivateIpv4Address = (ip: string): boolean => {
+  const octets = parseIpv4Octets(ip);
+  if (!octets) {
     return true;
   }
-
-  if (first === 10 || first === 127 || first === 0) {
-    return true;
-  }
-
-  if (first === 169 && second === 254) {
-    return true;
-  }
-
-  if (first === 172 && second >= 16 && second <= 31) {
-    return true;
-  }
-
-  if (first === 192 && second === 168) {
-    return true;
-  }
-
-  if (first === 100 && second >= 64 && second <= 127) {
-    return true;
-  }
-
-  return false;
+  const [first, second] = octets;
+  return isPrivateIpv4Prefix(first, second);
 };
 
 const isPrivateIpv6Address = (ip: string): boolean => {

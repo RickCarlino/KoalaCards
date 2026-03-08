@@ -36,10 +36,19 @@ export const mergeDecks = procedure
       });
     }
 
+    const sourceDeck = decks.find((deck) => deck.id === input.deckIds[0]);
+    if (!sourceDeck) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Could not resolve source deck for merge.",
+      });
+    }
+
     const result = await prismaClient.$transaction(async (tx) => {
       const newDeck = await tx.deck.create({
         data: {
           name: input.newDeckName,
+          description: sourceDeck.description,
           userId,
         },
       });

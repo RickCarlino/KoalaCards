@@ -3,7 +3,7 @@ import { prismaClient } from "@/koala/prisma-client";
 import { hashBookmarkletSecret } from "@/koala/reader/secret";
 import {
   ReaderSaveError,
-  saveReaderArticle,
+  queueReaderArticle,
 } from "@/koala/reader/save-article";
 
 const firstParam = (value: string | string[] | undefined): string => {
@@ -132,14 +132,14 @@ export default async function handler(
   }
 
   try {
-    const savedArticle = await saveReaderArticle({
+    const queuedArticle = await queueReaderArticle({
       userId: credential.userId,
       requestUrl: articleUrl,
       saveOrigin: "BOOKMARKLET",
       suggestedTitle,
     });
 
-    res.redirect(302, `/reader/${savedArticle.publicId}?added=1`);
+    res.redirect(302, `/reader/${queuedArticle.publicId}?added=1`);
     return;
   } catch (error) {
     if (error instanceof ReaderSaveError) {

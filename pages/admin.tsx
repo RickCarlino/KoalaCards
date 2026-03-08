@@ -72,7 +72,7 @@ export async function getServerSideProps(
   const userData = users.map((u) => {
     return {
       id: u.id,
-      email: u.email ?? "(no email??)",
+      email: u.email ?? "(no email)",
       lastSeen: u.lastSeen?.toISOString() ?? null,
       createdAt: u.createdAt?.toISOString() ?? null,
       daysSinceLastSeen: daysSince(u.lastSeen),

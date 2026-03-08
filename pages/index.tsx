@@ -1,173 +1,250 @@
 import { getServersideUser } from "@/koala/get-serverside-user";
+import { prismaClient } from "@/koala/prisma-client";
 import {
-  Card,
+  Anchor,
+  Button,
   Container,
+  Divider,
   Group,
+  Paper,
+  SimpleGrid,
   Stack,
   Text,
-  ThemeIcon,
   Title,
-  useMantineTheme,
 } from "@mantine/core";
 import {
-  IconBrandDiscord,
-  IconBrandGithub,
-  IconCards,
+  IconClock,
   IconFileText,
   IconPencil,
-  IconPlus,
   IconSettings,
+  IconSparkles,
   IconStar,
 } from "@tabler/icons-react";
 import Link from "next/link";
 import { GetServerSideProps } from "next/types";
 import * as React from "react";
 
-interface NavItem {
-  path: string;
-  name: string;
-  icon: typeof IconStar;
-}
+type HomePageProps = {
+  hasAnyCards: boolean;
+};
 
-export const getServerSideProps: GetServerSideProps = async (context) => {
+type HomeAction = {
+  href: string;
+  label: string;
+  icon: typeof IconStar;
+};
+
+type UtilityLink = {
+  href: string;
+  label: string;
+  external?: boolean;
+};
+
+const quickActions: HomeAction[] = [
+  {
+    href: "/reader",
+    label: "Reading",
+    icon: IconFileText,
+  },
+  {
+    href: "/writing/practice",
+    label: "Writing",
+    icon: IconPencil,
+  },
+  {
+    href: "/user",
+    label: "Settings",
+    icon: IconSettings,
+  },
+  {
+    href: "/recent",
+    label: "Recent Activity",
+    icon: IconClock,
+  },
+];
+
+const utilityLinks: UtilityLink[] = [
+  {
+    href: "https://github.com/RickCarlino/KoalaCards",
+    label: "GitHub",
+    external: true,
+  },
+  {
+    href: "https://discord.gg/jj7wXhQWJe",
+    label: "Discord",
+    external: true,
+  },
+];
+
+export const getServerSideProps: GetServerSideProps<
+  HomePageProps
+> = async (context) => {
   const dbUser = await getServersideUser(context);
   if (!dbUser) {
     return {
       redirect: { destination: "/api/auth/signin", permanent: false },
     };
   }
+
+  const cardCount = await prismaClient.card.count({
+    where: { userId: dbUser.id },
+  });
+
   return {
-    props: {},
-  };
-};
-
-const navItems: NavItem[] = [
-  {
-    path: "/review",
-    name: "Study Cards",
-    icon: IconStar,
-  },
-  {
-    path: "/reader",
-    name: "Reader",
-    icon: IconFileText,
-  },
-  {
-    path: "/writing/practice",
-    name: "Writing Practice",
-    icon: IconPencil,
-  },
-  {
-    path: "/create",
-    name: "Create Cards",
-    icon: IconPlus,
-  },
-  {
-    path: "/cards",
-    name: "View Cards",
-    icon: IconCards,
-  },
-  {
-    path: "/writing",
-    name: "Writing History",
-    icon: IconFileText,
-  },
-  {
-    path: "/recent",
-    name: "Recent Activity",
-    icon: IconFileText,
-  },
-  {
-    path: "/user",
-    name: "Settings",
-    icon: IconSettings,
-  },
-  {
-    path: "https://github.com/RickCarlino/KoalaCards",
-    name: "GitHub",
-    icon: IconBrandGithub,
-  },
-  {
-    path: "https://discord.gg/jj7wXhQWJe",
-    name: "Discord",
-    icon: IconBrandDiscord,
-  },
-];
-
-type NavCardProps = {
-  item: NavItem;
-};
-
-function NavCard({ item }: NavCardProps) {
-  const theme = useMantineTheme();
-  const Icon = item.icon;
-  const href = item.path;
-  const isExternal = href.startsWith("http");
-  const rootStyles = {
-    cursor: "pointer",
-    display: "block",
-    textDecoration: "none",
-    color: "inherit",
-    "&:focus-visible": {
-      outline: `2px solid ${theme.colors.pink[5]}`,
-      outlineOffset: 2,
+    props: {
+      hasAnyCards: cardCount > 0,
     },
   };
+};
 
-  const styles = { root: rootStyles };
+type UtilityLinksProps = {
+  links: UtilityLink[];
+};
 
-  if (isExternal) {
+function UtilityLinks({ links }: UtilityLinksProps) {
+  return (
+    <Group gap="xs" wrap="wrap">
+      {links.map((link) => {
+        if (link.external) {
+          return (
+            <Anchor
+              key={link.label}
+              href={link.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              size="sm"
+            >
+              {link.label}
+            </Anchor>
+          );
+        }
+
+        return (
+          <Anchor
+            key={link.label}
+            component={Link}
+            href={link.href}
+            size="sm"
+          >
+            {link.label}
+          </Anchor>
+        );
+      })}
+    </Group>
+  );
+}
+
+type QuickActionButtonsProps = {
+  actions: HomeAction[];
+};
+
+function QuickActionButtons({ actions }: QuickActionButtonsProps) {
+  return (
+    <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
+      {actions.map((action) => {
+        const Icon = action.icon;
+        return (
+          <Button
+            key={action.label}
+            component={Link}
+            href={action.href}
+            variant="light"
+            color="pink"
+            justify="flex-start"
+            leftSection={<Icon size={16} />}
+            fullWidth
+          >
+            {action.label}
+          </Button>
+        );
+      })}
+    </SimpleGrid>
+  );
+}
+
+type PrimaryActionPanelProps = {
+  hasAnyCards: boolean;
+};
+
+function PrimaryActionPanel({ hasAnyCards }: PrimaryActionPanelProps) {
+  if (hasAnyCards) {
     return (
-      <Card
-        component="a"
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        styles={styles}
-        p="sm"
-      >
-        <Group gap="sm" wrap="nowrap">
-          <ThemeIcon variant="light" color="pink" radius="md" size="md">
-            <Icon size={18} stroke={1.5} />
-          </ThemeIcon>
-          <Text size="sm" fw={600} c="pink.7">
-            {item.name}
+      <Paper withBorder p="lg" radius="md">
+        <Stack gap="sm">
+          <Group gap="xs" wrap="nowrap">
+            <IconStar size={18} />
+            <Text fw={700}>Continue Studying</Text>
+          </Group>
+          <Text size="sm" c="gray.7">
+            Jump back into review and keep your deck moving forward.
           </Text>
-        </Group>
-      </Card>
+          <Group>
+            <Button component={Link} href="/review" color="pink">
+              Study Cards
+            </Button>
+          </Group>
+        </Stack>
+      </Paper>
     );
   }
 
   return (
-    <Card component={Link} href={href} styles={styles} p="sm">
-      <Group gap="sm" wrap="nowrap">
-        <ThemeIcon variant="light" color="pink" radius="md" size="md">
-          <Icon size={18} stroke={1.5} />
-        </ThemeIcon>
-        <Text size="sm" fw={600} c="pink.7">
-          {item.name}
+    <Paper withBorder p="lg" radius="md">
+      <Stack gap="sm">
+        <Group gap="xs" wrap="nowrap">
+          <IconFileText size={18} />
+          <Text fw={700}>Start With Reading</Text>
+        </Group>
+        <Text size="sm" c="gray.7">
+          Save Korean text first, then turn highlights into cards.
         </Text>
-      </Group>
-    </Card>
+        <Group>
+          <Button component={Link} href="/reader" color="pink">
+            Open Reading
+          </Button>
+          <Button
+            component={Link}
+            href="/create"
+            variant="subtle"
+            color="pink"
+            leftSection={<IconSparkles size={14} />}
+          >
+            Or create cards directly
+          </Button>
+        </Group>
+      </Stack>
+    </Paper>
   );
 }
 
-const Index: React.FC = () => {
+const Index: React.FC<HomePageProps> = ({ hasAnyCards }) => {
   return (
-    <Container size="sm" py="xl">
-      <Stack align="center" gap="xs" mb="xl">
-        <Title order={1} c="pink.7" ta="center">
-          Welcome to Koala Cards
-        </Title>
-        <Text size="md" c="gray.7" ta="center">
-          Your language learning marsupial companion.
-        </Text>
-      </Stack>
+    <Container size="md" py="xl">
+      <Stack gap="lg">
+        <Stack gap="xs">
+          <Title order={1}>Koala Cards</Title>
+          <Text size="sm" c="gray.7">
+            A focused study tool for cards, writing, and reading.
+          </Text>
+        </Stack>
 
-      <Stack gap="sm">
-        {navItems.map((item) => (
-          <NavCard key={item.name} item={item} />
-        ))}
+        <PrimaryActionPanel hasAnyCards={hasAnyCards} />
+
+        <Stack gap="xs">
+          <Text size="sm" fw={700}>
+            Quick Actions
+          </Text>
+          <QuickActionButtons actions={quickActions} />
+        </Stack>
+
+        <Divider />
+
+        <Stack gap={4}>
+          <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
+            More
+          </Text>
+          <UtilityLinks links={utilityLinks} />
+        </Stack>
       </Stack>
     </Container>
   );

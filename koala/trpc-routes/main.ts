@@ -20,11 +20,26 @@ import { importDeck } from "./import-deck";
 import { mergeDecks } from "./merge-decks";
 import { parseCards } from "./parse-cards";
 import {
+  deleteReaderArticleHighlightRoute,
+  deleteReaderArticleRoute,
   getReaderBookmarkletConfig,
+  importReaderHighlightsToDeckRoute,
+  listReaderArticleHighlightsRoute,
   listReaderArticlesRoute,
+  refreshReaderArticleRoute,
   rotateReaderBookmarkletKey,
+  setReaderArticleReadStateRoute,
   saveReaderArticleRoute,
+  saveReaderRawTextRoute,
 } from "./reader";
+import {
+  connectReaderInstapaperRoute,
+  disconnectReaderInstapaperRoute,
+  exportReaderArticleToInstapaperRoute,
+  getReaderInstapaperConnectionRoute,
+  importReaderInstapaperUnreadRoute,
+  listReaderInstapaperUnreadRoute,
+} from "./reader-instapaper";
 import { turbine } from "./turbine";
 import { updateDeck } from "./update-deck";
 
@@ -45,13 +60,26 @@ export const appRouter = router({
   gradeWriting,
   editQuizResult,
   createDeck,
+  connectReaderInstapaperRoute,
+  deleteReaderArticleHighlightRoute,
+  deleteReaderArticleRoute,
+  disconnectReaderInstapaperRoute,
   getReaderBookmarkletConfig,
+  exportReaderArticleToInstapaperRoute,
+  getReaderInstapaperConnectionRoute,
+  importReaderHighlightsToDeckRoute,
+  importReaderInstapaperUnreadRoute,
   mergeDecks,
   importDeck,
+  listReaderArticleHighlightsRoute,
+  listReaderInstapaperUnreadRoute,
   listReaderArticlesRoute,
   parseCards,
+  refreshReaderArticleRoute,
   rotateReaderBookmarkletKey,
+  setReaderArticleReadStateRoute,
   saveReaderArticleRoute,
+  saveReaderRawTextRoute,
   archiveCard,
   turbine,
   updateDeck,

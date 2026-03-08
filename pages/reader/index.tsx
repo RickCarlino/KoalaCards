@@ -1,363 +1,596 @@
 import { getUserSettingsFromEmail } from "@/koala/auth-helpers";
-import { trpc } from "@/koala/trpc-config";
+import { useReaderDashboardControls } from "@/koala/reader/ui/dashboard/use-reader-dashboard-controls";
+import type {
+  ReaderArticleSummary,
+  ReaderReadFilter,
+} from "@/koala/reader/ui/dashboard/types";
+import {
+  formatReaderDateTime,
+  readerPanelBorderColor,
+  readerSurfaceBackgroundColor,
+  readerSurfaceShadow,
+  readerHeadingColor,
+  readerIngestLabel,
+  readerListRowStyle,
+} from "@/koala/reader/ui/theme";
 import {
   Anchor,
+  Box,
   Button,
-  Container,
   Group,
+  SegmentedControl,
   Stack,
   Text,
   TextInput,
-  Title,
+  Textarea,
 } from "@mantine/core";
-import { notifications } from "@mantine/notifications";
-import { GetServerSidePropsContext } from "next";
+import type { GetServerSidePropsContext } from "next";
 import Link from "next/link";
 import { getSession } from "next-auth/react";
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 
-type ReaderArticleSummary = {
-  id: number;
-  publicId: string;
-  title: string;
-  normalizedUrl: string;
-  description: string;
-  sourceLang: "ko" | "en" | "other";
-  translated: boolean;
-  createdAt: Date;
+type AddSourceMode = "url" | "raw";
+
+const RAW_TEXT_LENGTH_LIMIT = 240000;
+const RAW_TEXT_WARNING_THRESHOLD = 220000;
+
+const readerPageStyle: React.CSSProperties = {
+  width: "100%",
+  paddingInline: "clamp(10px, 2.2vw, 28px)",
+  paddingTop: "clamp(10px, 1.5vw, 18px)",
+  paddingBottom: "clamp(16px, 2.6vw, 30px)",
 };
 
-const pageShellStyle: React.CSSProperties = {
-  borderRadius: 28,
-  border: "1px solid #f0d4e2",
-  background:
-    "linear-gradient(160deg, #fffdfd 0%, #fff8fc 54%, #fff2f8 100%)",
-  boxShadow: "0 18px 34px rgba(176, 97, 136, 0.1)",
-  padding: "clamp(14px, 2vw, 24px)",
+const readerHeaderRowStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 12,
+  flexWrap: "wrap",
 };
 
-const headlineFont =
-  '"Palatino Linotype", "Book Antiqua", Palatino, serif';
+const readerDashboardLayoutStyle: React.CSSProperties = {
+  display: "flex",
+  flexWrap: "wrap",
+  alignItems: "flex-start",
+  gap: "clamp(10px, 1.4vw, 16px)",
+};
 
-function mutationErrorMessage(error: unknown, fallback: string): string {
-  if (error instanceof Error && error.message.trim()) {
-    return error.message;
+const readerAddColumnStyle: React.CSSProperties = {
+  flex: "1 1 300px",
+  minWidth: 0,
+  maxWidth: 360,
+};
+
+const readerLibraryColumnStyle: React.CSSProperties = {
+  flex: "2 1 560px",
+  minWidth: 0,
+};
+
+const readerSurfaceStyle: React.CSSProperties = {
+  borderRadius: 12,
+  border: `1px solid ${readerPanelBorderColor}`,
+  backgroundColor: readerSurfaceBackgroundColor,
+  boxShadow: readerSurfaceShadow,
+  padding: "10px 12px",
+};
+
+function parseAddSourceMode(value: string): AddSourceMode | null {
+  if (value === "url" || value === "raw") {
+    return value;
   }
 
-  return fallback;
+  return null;
 }
 
-function formatDateTime(value: Date): string {
-  return value.toLocaleString();
-}
-
-function translationStatusLabel(translated: boolean): string {
-  if (translated) {
-    return "Korean ready";
+function parseReadFilter(value: string): ReaderReadFilter | null {
+  if (value === "unread" || value === "read" || value === "all") {
+    return value;
   }
 
-  return "Source only";
+  return null;
 }
 
-function sourceLanguageLabel(sourceLang: "ko" | "en" | "other"): string {
-  if (sourceLang === "ko") {
-    return "Korean";
+function filteredEmptyMessage(options: {
+  hasAnyArticles: boolean;
+  readFilter: ReaderReadFilter;
+}): string {
+  if (!options.hasAnyArticles) {
+    return "No saved articles yet.";
   }
 
-  if (sourceLang === "en") {
-    return "English";
+  if (options.readFilter === "unread") {
+    return "No unread articles. Try Read or All.";
   }
 
-  return "Other";
+  if (options.readFilter === "read") {
+    return "No read articles yet.";
+  }
+
+  return "No matching articles.";
 }
 
-function ReaderIntroHeader() {
+type ReaderShortcutsProps = {
+  includeBookmarklet: boolean;
+};
+
+function ReaderShortcuts({ includeBookmarklet }: ReaderShortcutsProps) {
   return (
-    <Group justify="space-between" align="flex-end" wrap="wrap">
-      <Stack gap={3}>
-        <Title order={2} style={{ fontFamily: headlineFont }}>
-          Reader
-        </Title>
-        <Text size="sm" c="dimmed">
-          Save articles by URL and read them in a clean format.
-        </Text>
-      </Stack>
-      <Text size="sm" c="dimmed">
-        You can also use the{" "}
-        <Anchor component={Link} href="/reader/bookmarklet">
-          Koala Bookmarklet
+    <Group gap="sm" wrap="wrap">
+      <Anchor component={Link} href="/reader/instapaper" size="sm">
+        Instapaper
+      </Anchor>
+      {includeBookmarklet && (
+        <Anchor component={Link} href="/reader/bookmarklet" size="sm">
+          Bookmarklet
         </Anchor>
-        .
-      </Text>
+      )}
     </Group>
   );
 }
 
-type QuickCaptureBarProps = {
+type UrlAddFormProps = {
   articleUrl: string;
-  isSaving: boolean;
+  isSavingUrl: boolean;
   onArticleUrlChange: (value: string) => void;
-  onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
+  onSaveUrlSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
 };
 
-function QuickCaptureBar({
+function UrlAddForm({
   articleUrl,
-  isSaving,
+  isSavingUrl,
   onArticleUrlChange,
-  onSubmit,
-}: QuickCaptureBarProps) {
+  onSaveUrlSubmit,
+}: UrlAddFormProps) {
   return (
-    <Stack gap="xs">
-      <Text fw={700} style={{ fontFamily: headlineFont }}>
-        Save by URL
-      </Text>
-      <form onSubmit={onSubmit}>
-        <Group gap="xs" align="flex-end" wrap="nowrap">
-          <TextInput
-            aria-label="Article URL"
-            placeholder="https://example.com/article"
-            value={articleUrl}
-            onChange={(event) =>
-              onArticleUrlChange(event.currentTarget.value)
-            }
-            required
-            style={{ flex: 1 }}
-          />
-          <Button type="submit" color="pink" loading={isSaving}>
-            Save
-          </Button>
-        </Group>
-      </form>
-    </Stack>
+    <form onSubmit={onSaveUrlSubmit}>
+      <Group gap="xs" wrap="wrap" align="flex-end">
+        <TextInput
+          aria-label="Article URL"
+          placeholder="https://example.com/article"
+          value={articleUrl}
+          onChange={(event) =>
+            onArticleUrlChange(event.currentTarget.value)
+          }
+          required
+          style={{ flex: "1 1 220px" }}
+        />
+        <Button
+          type="submit"
+          size="sm"
+          color="pink"
+          loading={isSavingUrl}
+          style={{ minWidth: 94 }}
+        >
+          Add
+        </Button>
+      </Group>
+    </form>
   );
 }
 
-type LibraryShelfProps = {
-  articles: ReaderArticleSummary[];
-  isLoading: boolean;
-  isRefreshing: boolean;
-  errorMessage: string | null;
-  onRefresh: () => void;
+type RawTextAddFormProps = {
+  rawTitle: string;
+  rawText: string;
+  isSavingRaw: boolean;
+  onRawTitleChange: (value: string) => void;
+  onRawTextChange: (value: string) => void;
+  onSaveRawTextSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
 };
 
-type LibraryRowProps = {
+function RawTextAddForm({
+  rawTitle,
+  rawText,
+  isSavingRaw,
+  onRawTitleChange,
+  onRawTextChange,
+  onSaveRawTextSubmit,
+}: RawTextAddFormProps) {
+  const rawTextLength = rawText.length;
+  const rawTextTone =
+    rawTextLength > RAW_TEXT_WARNING_THRESHOLD ? "orange" : "dimmed";
+
+  return (
+    <form onSubmit={onSaveRawTextSubmit}>
+      <Stack gap="xs">
+        <TextInput
+          aria-label="Optional title"
+          placeholder="Title (optional)"
+          value={rawTitle}
+          onChange={(event) => onRawTitleChange(event.currentTarget.value)}
+          maxLength={400}
+        />
+        <Textarea
+          aria-label="Raw text"
+          placeholder="Paste Korean text..."
+          autosize
+          minRows={8}
+          maxRows={16}
+          value={rawText}
+          onChange={(event) => onRawTextChange(event.currentTarget.value)}
+          required
+        />
+        <Group justify="space-between" align="center" wrap="wrap">
+          <Text size="xs" c={rawTextTone}>
+            {rawTextLength.toLocaleString()} /{" "}
+            {RAW_TEXT_LENGTH_LIMIT.toLocaleString()}
+          </Text>
+          <Button
+            type="submit"
+            size="sm"
+            color="pink"
+            loading={isSavingRaw}
+            style={{ minWidth: 94 }}
+          >
+            Add
+          </Button>
+        </Group>
+      </Stack>
+    </form>
+  );
+}
+
+type AddFromCardProps = {
+  mode: AddSourceMode;
+  onModeChange: (nextMode: AddSourceMode) => void;
+  articleUrl: string;
+  rawTitle: string;
+  rawText: string;
+  isSavingUrl: boolean;
+  isSavingRaw: boolean;
+  onArticleUrlChange: (value: string) => void;
+  onRawTitleChange: (value: string) => void;
+  onRawTextChange: (value: string) => void;
+  onSaveUrlSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
+  onSaveRawTextSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
+};
+
+function AddFromCard({
+  mode,
+  onModeChange,
+  articleUrl,
+  rawTitle,
+  rawText,
+  isSavingUrl,
+  isSavingRaw,
+  onArticleUrlChange,
+  onRawTitleChange,
+  onRawTextChange,
+  onSaveUrlSubmit,
+  onSaveRawTextSubmit,
+}: AddFromCardProps) {
+  return (
+    <Box style={readerSurfaceStyle}>
+      <Stack gap="sm">
+        <SegmentedControl
+          value={mode}
+          onChange={(nextMode) => {
+            const parsedMode = parseAddSourceMode(nextMode);
+            if (parsedMode) {
+              onModeChange(parsedMode);
+            }
+          }}
+          data={[
+            { label: "URL", value: "url" },
+            { label: "Text", value: "raw" },
+          ]}
+          radius="md"
+          size="xs"
+          color="pink"
+          fullWidth
+        />
+        {mode === "url" && (
+          <UrlAddForm
+            articleUrl={articleUrl}
+            isSavingUrl={isSavingUrl}
+            onArticleUrlChange={onArticleUrlChange}
+            onSaveUrlSubmit={onSaveUrlSubmit}
+          />
+        )}
+        {mode === "raw" && (
+          <RawTextAddForm
+            rawTitle={rawTitle}
+            rawText={rawText}
+            isSavingRaw={isSavingRaw}
+            onRawTitleChange={onRawTitleChange}
+            onRawTextChange={onRawTextChange}
+            onSaveRawTextSubmit={onSaveRawTextSubmit}
+          />
+        )}
+      </Stack>
+    </Box>
+  );
+}
+
+type ArticleRowProps = {
   article: ReaderArticleSummary;
+  isDeleting: boolean;
+  isUpdatingRead: boolean;
+  onDelete: () => void;
+  onToggleRead: () => void;
   withDivider: boolean;
 };
 
-function LibraryRow({ article, withDivider }: LibraryRowProps) {
+function ArticleRow({
+  article,
+  isDeleting,
+  isUpdatingRead,
+  onDelete,
+  onToggleRead,
+  withDivider,
+}: ArticleRowProps) {
+  const isRead = article.readAt !== null;
+
   return (
-    <Stack
-      gap={4}
-      pt={withDivider ? "sm" : 0}
-      mt={withDivider ? "sm" : 0}
-      style={withDivider ? { borderTop: "1px solid #efd9e4" } : undefined}
-    >
-      <Anchor
-        component={Link}
-        href={`/reader/${article.publicId}`}
-        style={{
-          fontFamily: headlineFont,
-          fontWeight: 600,
-          fontSize: "1rem",
-          lineHeight: 1.35,
-        }}
+    <Stack style={readerListRowStyle(withDivider)}>
+      <Group
+        justify="space-between"
+        align="flex-start"
+        wrap="wrap"
+        gap="xs"
       >
-        {article.title}
-      </Anchor>
-      <Group justify="space-between" align="center" wrap="wrap" gap="xs">
-        <Text size="xs" c="dimmed">
-          {sourceLanguageLabel(article.sourceLang)} ·{" "}
-          {translationStatusLabel(article.translated)} ·{" "}
-          {formatDateTime(article.createdAt)}
-        </Text>
-        <Anchor
-          href={article.normalizedUrl}
-          target="_blank"
-          rel="noreferrer"
-          size="xs"
-        >
-          Source ↗
-        </Anchor>
+        <Stack gap={3} style={{ minWidth: 0, flex: "1 1 320px" }}>
+          <Anchor
+            component={Link}
+            href={`/reader/${article.publicId}`}
+            style={{
+              fontWeight: 700,
+              color: readerHeadingColor,
+              lineHeight: 1.35,
+            }}
+          >
+            {article.title}
+          </Anchor>
+          <Text size="xs" c="dimmed">
+            {readerIngestLabel(article.ingestStatus)} ·{" "}
+            {formatReaderDateTime(article.createdAt)}
+          </Text>
+          {isRead && article.readAt && (
+            <Text size="xs" c="dimmed">
+              Read {formatReaderDateTime(article.readAt)}
+            </Text>
+          )}
+          {article.ingestStatus === "error" &&
+            article.ingestError.trim().length > 0 && (
+              <Text size="sm" c="red" lineClamp={2}>
+                {article.ingestError}
+              </Text>
+            )}
+          {article.description.trim().length > 0 && (
+            <Text size="sm" c="dimmed" lineClamp={2}>
+              {article.description}
+            </Text>
+          )}
+        </Stack>
+        <Group gap={8} align="center" wrap="wrap">
+          <Button
+            variant="subtle"
+            color={isRead ? "gray" : "teal"}
+            size="compact-xs"
+            loading={isUpdatingRead}
+            onClick={onToggleRead}
+          >
+            {isRead ? "Mark unread" : "Mark read"}
+          </Button>
+          <Button
+            variant="subtle"
+            color="red"
+            size="compact-xs"
+            loading={isDeleting}
+            onClick={onDelete}
+          >
+            Delete
+          </Button>
+        </Group>
       </Group>
-      {article.description.trim().length > 0 && (
-        <Text size="sm" c="dimmed" lineClamp={1}>
-          {article.description}
-        </Text>
-      )}
     </Stack>
   );
 }
 
-function LibraryHeader({
-  isRefreshing,
-  onRefresh,
-}: {
-  isRefreshing: boolean;
-  onRefresh: () => void;
-}) {
-  return (
-    <Group justify="space-between" align="center" wrap="wrap" gap="xs">
-      <Text fw={700} style={{ fontFamily: headlineFont }}>
-        Library
-      </Text>
-      <Button
-        variant="subtle"
-        size="xs"
-        onClick={onRefresh}
-        loading={isRefreshing}
-      >
-        Refresh
-      </Button>
-    </Group>
-  );
-}
+type LibraryBodyProps = {
+  isLoading: boolean;
+  errorMessage: string | null;
+  readFilter: ReaderReadFilter;
+  articles: ReaderArticleSummary[];
+  hasAnyArticles: boolean;
+  deletingPublicId: string | null;
+  updatingReadPublicId: string | null;
+  onDeleteArticle: (article: ReaderArticleSummary) => void;
+  onToggleReadState: (article: ReaderArticleSummary) => void;
+};
 
-function LibraryShelf({
-  articles,
+function LibraryBody({
   isLoading,
-  isRefreshing,
   errorMessage,
-  onRefresh,
-}: LibraryShelfProps) {
+  readFilter,
+  articles,
+  hasAnyArticles,
+  deletingPublicId,
+  updatingReadPublicId,
+  onDeleteArticle,
+  onToggleReadState,
+}: LibraryBodyProps) {
   if (isLoading) {
     return (
-      <Stack gap="sm">
-        <LibraryHeader isRefreshing={isRefreshing} onRefresh={onRefresh} />
-        <Text size="sm" c="dimmed">
-          Loading your shelf...
-        </Text>
-      </Stack>
+      <Text size="sm" c="dimmed">
+        Loading articles...
+      </Text>
     );
   }
 
   if (errorMessage) {
-    return (
-      <Stack gap="sm">
-        <LibraryHeader isRefreshing={isRefreshing} onRefresh={onRefresh} />
-        <Text c="red">{errorMessage}</Text>
-      </Stack>
-    );
+    return <Text c="red">{errorMessage}</Text>;
   }
 
   if (articles.length === 0) {
     return (
-      <Stack gap="sm">
-        <LibraryHeader isRefreshing={isRefreshing} onRefresh={onRefresh} />
-        <Text size="sm" c="dimmed">
-          Your shelf is empty. Save an article to get started.
-        </Text>
-      </Stack>
+      <Text size="sm" c="dimmed">
+        {filteredEmptyMessage({ hasAnyArticles, readFilter })}
+      </Text>
     );
   }
 
   return (
-    <Stack gap="sm">
-      <LibraryHeader isRefreshing={isRefreshing} onRefresh={onRefresh} />
-      <Stack gap={0}>
-        {articles.map((article, index) => {
-          return (
-            <LibraryRow
-              key={article.id}
-              article={article}
-              withDivider={index > 0}
-            />
-          );
-        })}
-      </Stack>
+    <Stack gap={0}>
+      {articles.map((article, index) => {
+        return (
+          <ArticleRow
+            key={article.id}
+            article={article}
+            isDeleting={deletingPublicId === article.publicId}
+            isUpdatingRead={updatingReadPublicId === article.publicId}
+            onDelete={() => onDeleteArticle(article)}
+            onToggleRead={() => onToggleReadState(article)}
+            withDivider={index > 0}
+          />
+        );
+      })}
     </Stack>
   );
 }
 
-function useReaderControls() {
-  const [articleUrl, setArticleUrl] = useState("");
+type LibraryCardProps = {
+  articles: ReaderArticleSummary[];
+  isLoading: boolean;
+  isRefreshing: boolean;
+  errorMessage: string | null;
+  readFilter: ReaderReadFilter;
+  allArticlesCount: number;
+  readArticlesCount: number;
+  unreadArticlesCount: number;
+  deletingPublicId: string | null;
+  updatingReadPublicId: string | null;
+  onReadFilterChange: (next: ReaderReadFilter) => void;
+  onDeleteArticle: (article: ReaderArticleSummary) => void;
+  onToggleReadState: (article: ReaderArticleSummary) => void;
+  onRefresh: () => void;
+};
 
-  const listQuery = trpc.listReaderArticlesRoute.useQuery(
-    { limit: 40 },
-    { refetchOnWindowFocus: false },
+function LibraryCard({
+  articles,
+  isLoading,
+  isRefreshing,
+  errorMessage,
+  readFilter,
+  allArticlesCount,
+  readArticlesCount,
+  unreadArticlesCount,
+  deletingPublicId,
+  updatingReadPublicId,
+  onReadFilterChange,
+  onDeleteArticle,
+  onToggleReadState,
+  onRefresh,
+}: LibraryCardProps) {
+  return (
+    <Box style={readerSurfaceStyle}>
+      <Stack gap="sm">
+        <Stack gap="xs">
+          <Group justify="space-between" align="center" wrap="wrap">
+            <Text size="sm" fw={700} c={readerHeadingColor}>
+              Library
+            </Text>
+            <Button
+              variant="subtle"
+              size="compact-sm"
+              color="pink"
+              onClick={onRefresh}
+              loading={isRefreshing}
+            >
+              Refresh
+            </Button>
+          </Group>
+          <SegmentedControl
+            value={readFilter}
+            onChange={(value) => {
+              const nextFilter = parseReadFilter(value);
+              if (nextFilter) {
+                onReadFilterChange(nextFilter);
+              }
+            }}
+            data={[
+              {
+                label: `Unread (${unreadArticlesCount})`,
+                value: "unread",
+              },
+              { label: `Read (${readArticlesCount})`, value: "read" },
+              { label: `All (${allArticlesCount})`, value: "all" },
+            ]}
+            size="xs"
+            radius="md"
+            color="pink"
+            fullWidth
+          />
+        </Stack>
+        <LibraryBody
+          isLoading={isLoading}
+          errorMessage={errorMessage}
+          readFilter={readFilter}
+          articles={articles}
+          hasAnyArticles={allArticlesCount > 0}
+          deletingPublicId={deletingPublicId}
+          updatingReadPublicId={updatingReadPublicId}
+          onDeleteArticle={onDeleteArticle}
+          onToggleReadState={onToggleReadState}
+        />
+      </Stack>
+    </Box>
   );
-
-  const saveArticle = trpc.saveReaderArticleRoute.useMutation();
-
-  const listErrorMessage = useMemo(() => {
-    if (!listQuery.isError) {
-      return null;
-    }
-
-    return mutationErrorMessage(
-      listQuery.error,
-      "Could not load reader articles.",
-    );
-  }, [listQuery.error, listQuery.isError]);
-
-  const handleSaveSubmit = async (
-    event: React.FormEvent<HTMLFormElement>,
-  ) => {
-    event.preventDefault();
-
-    const trimmed = articleUrl.trim();
-    if (!trimmed) {
-      notifications.show({
-        title: "Missing URL",
-        message: "Please paste an article URL.",
-        color: "red",
-      });
-      return;
-    }
-
-    try {
-      const result = await saveArticle.mutateAsync({ url: trimmed });
-      setArticleUrl("");
-      notifications.show({
-        title: "Saved",
-        message: `Article #${result.article.id} saved.`,
-        color: "green",
-      });
-      listQuery.refetch();
-    } catch (error: unknown) {
-      notifications.show({
-        title: "Save failed",
-        message: mutationErrorMessage(error, "Could not save article."),
-        color: "red",
-      });
-    }
-  };
-
-  return {
-    articleUrl,
-    isSaving: saveArticle.isLoading,
-    articles: listQuery.data?.articles ?? [],
-    isArticlesLoading: listQuery.isLoading,
-    isArticlesRefreshing: listQuery.isFetching,
-    listErrorMessage,
-    onArticleUrlChange: setArticleUrl,
-    onSaveSubmit: handleSaveSubmit,
-    onRefreshArticles: () => listQuery.refetch(),
-  };
 }
 
 export default function ReaderDashboardPage() {
-  const controls = useReaderControls();
+  const controls = useReaderDashboardControls();
+  const [addSourceMode, setAddSourceMode] = useState<AddSourceMode>("url");
 
   return (
-    <Container size="lg" mt="xl" pb="xl">
-      <Stack gap="lg" style={pageShellStyle}>
-        <ReaderIntroHeader />
-        <QuickCaptureBar
-          articleUrl={controls.articleUrl}
-          isSaving={controls.isSaving}
-          onArticleUrlChange={controls.onArticleUrlChange}
-          onSubmit={controls.onSaveSubmit}
-        />
-        <LibraryShelf
-          articles={controls.articles}
-          isLoading={controls.isArticlesLoading}
-          isRefreshing={controls.isArticlesRefreshing}
-          errorMessage={controls.listErrorMessage}
-          onRefresh={controls.onRefreshArticles}
-        />
-      </Stack>
-    </Container>
+    <Box style={readerPageStyle}>
+      <Box style={readerHeaderRowStyle}>
+        <Text size="xl" fw={700} c={readerHeadingColor}>
+          Reading
+        </Text>
+      </Box>
+
+      <Box style={readerDashboardLayoutStyle}>
+        <Box style={readerAddColumnStyle}>
+          <Stack gap="xs">
+            <AddFromCard
+              mode={addSourceMode}
+              onModeChange={setAddSourceMode}
+              articleUrl={controls.articleUrl}
+              rawTitle={controls.rawTitle}
+              rawText={controls.rawText}
+              isSavingUrl={controls.isSavingUrl}
+              isSavingRaw={controls.isSavingRaw}
+              onArticleUrlChange={controls.onArticleUrlChange}
+              onRawTitleChange={controls.onRawTitleChange}
+              onRawTextChange={controls.onRawTextChange}
+              onSaveUrlSubmit={controls.onSaveUrlSubmit}
+              onSaveRawTextSubmit={controls.onSaveRawTextSubmit}
+            />
+            <ReaderShortcuts includeBookmarklet={false} />
+          </Stack>
+        </Box>
+
+        <Box style={readerLibraryColumnStyle}>
+          <LibraryCard
+            articles={controls.articles}
+            isLoading={controls.isArticlesLoading}
+            isRefreshing={controls.isArticlesRefreshing}
+            errorMessage={controls.listErrorMessage}
+            readFilter={controls.readFilter}
+            allArticlesCount={controls.allArticlesCount}
+            readArticlesCount={controls.readArticlesCount}
+            unreadArticlesCount={controls.unreadArticlesCount}
+            deletingPublicId={controls.deletingPublicId}
+            updatingReadPublicId={controls.updatingReadPublicId}
+            onReadFilterChange={controls.onReadFilterChange}
+            onDeleteArticle={controls.onDeleteArticle}
+            onToggleReadState={controls.onToggleReadState}
+            onRefresh={controls.onRefreshArticles}
+          />
+        </Box>
+      </Box>
+    </Box>
   );
 }
 

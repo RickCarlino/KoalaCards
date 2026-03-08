@@ -9,6 +9,8 @@ done
 npm install
 # Run migrations
 npx prisma migrate deploy
+# Keep Prisma client in sync with the checked-out schema.
+npx prisma generate
 
 # Start the application (defined in the `command` field in `docker-compose.yml`)
 exec "$@"

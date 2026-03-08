@@ -28,6 +28,7 @@ import {
   IconPlayerStopFilled,
 } from "@tabler/icons-react";
 import { GetServerSideProps } from "next";
+import Link from "next/link";
 import { useRouter } from "next/router";
 import { alphabetical } from "radash";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -125,6 +126,24 @@ const isSafeReturnTo = (value: string) =>
 const normalizeToken = (token: string) =>
   token.replace(/[.,!?;:]$/, "").toLowerCase();
 
+const appendTranscriptToEssay = (
+  previousEssay: string,
+  transcript: string,
+) => {
+  const nextTranscript = transcript.trim();
+  if (!nextTranscript) {
+    return previousEssay;
+  }
+
+  if (!previousEssay.trim()) {
+    return nextTranscript;
+  }
+
+  const needsSeparator = !/\s$/.test(previousEssay);
+  const separator = needsSeparator ? " " : "";
+  return `${previousEssay}${separator}${nextTranscript}`;
+};
+
 const shouldShowLemma = (definition: Definition) => {
   if (!definition.lemma) {
     return false;
@@ -165,6 +184,12 @@ const getRemainingGoalCharacters = (progress: number, goal: number) =>
 
 const MAX_SPEECH_RECORDING_SECONDS = 60;
 
+const MICROPHONE_CAPTURE_CONSTRAINTS = {
+  autoGainControl: false,
+  echoCancellation: false,
+  noiseSuppression: false,
+} satisfies MediaTrackConstraints;
+
 const isPracticeMode = (value: string): value is PracticeMode =>
   value === "writing" || value === "speaking";
 
@@ -184,9 +209,9 @@ const getReviewLoadingLabel = (practiceMode: PracticeMode) => {
 
 const getModeTipText = (practiceMode: PracticeMode) => {
   if (practiceMode === "speaking") {
-    return "TIP: Speak naturally in Korean, then edit the transcript before grading if needed.";
+    return "Speak naturally in Korean, then edit the transcript before grading if needed.";
   }
-  return "TIP: Don't know a word? Surround the word you want to use in question marks and it will be replaced with an appropriate word when graded. Example: ?apple?를 먹어요.";
+  return "Need a word you do not know yet? Wrap it in question marks and Koala will replace it during grading (example: ?apple?를 먹어요).";
 };
 
 const getRecordTooltip = (
@@ -320,6 +345,12 @@ const getPreferredRecorderMimeType = (): string | null => {
   return "";
 };
 
+const hasLiveAudioTrack = (stream: MediaStream | null): boolean =>
+  Boolean(
+    stream?.active &&
+      stream.getAudioTracks().some((track) => track.readyState === "live"),
+  );
+
 async function transcribeBlob(
   blob: Blob,
   language: LangCode,
@@ -358,6 +389,7 @@ function useSpeechRecorder({
   onTranscript,
 }: UseSpeechRecorderOptions) {
   const recorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const startInFlightRef = useRef(false);
   const stopInFlightRef = useRef(false);
@@ -403,7 +435,6 @@ function useSpeechRecorder({
             type: recorder.mimeType,
           });
           chunksRef.current = [];
-          recorder.stream.getTracks().forEach((track) => track.stop());
           recorderRef.current = null;
           resolve(nextBlob);
         };
@@ -461,6 +492,22 @@ function useSpeechRecorder({
     }
   }, [hint, langCode, onTranscript]);
 
+  const getRecordingStream =
+    useCallback(async (): Promise<MediaStream> => {
+      const stream = streamRef.current;
+      if (stream && hasLiveAudioTrack(stream)) {
+        return stream;
+      }
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+      const nextStream = await navigator.mediaDevices.getUserMedia({
+        audio: MICROPHONE_CAPTURE_CONSTRAINTS,
+      });
+      streamRef.current = nextStream;
+      return nextStream;
+    }, []);
+
   const startRecording = useCallback(async () => {
     if (!isSupported || disabled || isTranscribing || isStarting) {
       return;
@@ -477,11 +524,8 @@ function useSpeechRecorder({
     setIsStarting(true);
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-      });
+      const stream = await getRecordingStream();
       if (recorderRef.current || stopInFlightRef.current) {
-        stream.getTracks().forEach((track) => track.stop());
         return;
       }
       const recorderOptions: MediaRecorderOptions = {};
@@ -517,7 +561,13 @@ function useSpeechRecorder({
       startInFlightRef.current = false;
       setIsStarting(false);
     }
-  }, [disabled, isStarting, isSupported, isTranscribing]);
+  }, [
+    disabled,
+    getRecordingStream,
+    isStarting,
+    isSupported,
+    isTranscribing,
+  ]);
 
   const toggleRecording = useCallback(() => {
     if (isStarting) {
@@ -562,8 +612,13 @@ function useSpeechRecorder({
       if (recorder.state !== "inactive") {
         recorder.stop();
       }
-      recorder.stream.getTracks().forEach((track) => track.stop());
       recorderRef.current = null;
+      const stream = streamRef.current;
+      if (!stream) {
+        return;
+      }
+      stream.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
     };
   }, []);
 
@@ -663,7 +718,7 @@ function ReviewControl({
 
   return (
     <Button onClick={onReview} disabled={!canReview}>
-      Save and Review Feedback
+      Get Feedback
     </Button>
   );
 }
@@ -1140,9 +1195,9 @@ export default function WritingPracticePage({
         essay.trim().length > 0
       ) {
         notifications.show({
-          title: "Clear transcript to switch",
+          title: "Clear transcript first",
           message:
-            "Voice transcripts are graded with speaking rules. Clear the text first if you want typing mode.",
+            "This text came from speaking mode. Clear it first if you want to switch to typing mode.",
           color: "yellow",
         });
         return;
@@ -1154,12 +1209,9 @@ export default function WritingPracticePage({
   );
 
   const handleTranscript = useCallback((transcript: string) => {
-    setEssay((previousEssay) => {
-      if (!previousEssay.trim()) {
-        return transcript;
-      }
-      return `${previousEssay.trimEnd()} ${transcript}`;
-    });
+    setEssay((previousEssay) =>
+      appendTranscriptToEssay(previousEssay, transcript),
+    );
     setHasVoiceTranscript(true);
     setPracticeMode("speaking");
   }, []);
@@ -1391,9 +1443,17 @@ export default function WritingPracticePage({
 
   return (
     <Container size="sm" py="md">
-      <Title order={2} mb="md">
-        Writing Practice
-      </Title>
+      <Group justify="space-between" align="center" mb="md" wrap="wrap">
+        <Title order={2}>Writing</Title>
+        <Button
+          component={Link}
+          href="/writing"
+          variant="light"
+          color="pink"
+        >
+          Writing History
+        </Button>
+      </Group>
 
       {stepContent[currentStep]}
     </Container>
