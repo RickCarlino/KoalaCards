@@ -647,7 +647,7 @@ function ToggleSettingsGroup({
       </SettingsRow>
       <SettingsRow
         label="Email me when more than 20 cards are due"
-        description="Sends at most one reminder every 24 hours."
+        description="Reminders reset after you log in again."
         labelFor="dueCardsEmailNotifications"
       >
         <Switch

@@ -22,11 +22,13 @@ Keep page concerns in `pages/` and reusable/business logic in `koala/`.
 - We have a special AI wrapper library for making LLM calls.
 
 ## User-Facing Copy
-- Everything that user reads must be meaningful to using the app.
-- Less copy is better. You do not need to explain how every asppect of the app works.
-- Never talk about implementation details on user-facing UIs
-- Any time you update user-facing text, load
-  the copy-clarity skill guidance
+- Everything users read must directly help them use the app.
+- Less copy is better. Do not explain how every aspect of the app works.
+- Avoid redundant phrasing.
+- For toggles, describe the user-visible rule in plain language.
+- Match nearby UI copy length and tone before writing new text.
+- Never talk about implementation details on user-facing UIs.
+- Any time you update user-facing text, load the copy-clarity skill guidance.
 
 ## Testing Guidelines
 - There is no automated test suite configured in this repository. Don't write tests.

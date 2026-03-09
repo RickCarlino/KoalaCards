@@ -78,6 +78,23 @@ export const authOptions: AuthOptions = {
       : EmailProvider(EMAIL_SERVER_OPTIONS),
   ],
   events: {
+    async signIn(message) {
+      const userId = message.user.id;
+      if (!userId) {
+        return errorReport("signIn event missing user ID");
+      }
+
+      await prismaClient.$transaction([
+        prismaClient.user.updateMany({
+          where: { id: userId },
+          data: { lastSeen: new Date() },
+        }),
+        prismaClient.userSettings.updateMany({
+          where: { userId },
+          data: { dueCardsEmailNotificationSentAt: null },
+        }),
+      ]);
+    },
     async createUser(message) {
       const userId = message.user.id;
       if (!userId) {
