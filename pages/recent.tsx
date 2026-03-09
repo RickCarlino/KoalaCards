@@ -15,7 +15,6 @@ type WritingSample = {
   id: number;
   prompt: string;
   submission: string;
-  createdAt: string;
 };
 
 type WrongOutcomeRow = {
@@ -51,15 +50,6 @@ type LatestCardOutcomeRow = {
   isAcceptable: boolean;
   createdAt: Date;
 };
-
-const dateFormatter = new Intl.DateTimeFormat("ko-KR", {
-  year: "numeric",
-  month: "short",
-  day: "numeric",
-});
-
-const formatDate = (isoDate: string) =>
-  dateFormatter.format(new Date(isoDate));
 
 const hasPrompt = (prompt: string) => {
   const trimmedPrompt = prompt.trim();
@@ -171,7 +161,6 @@ export const getServerSideProps: GetServerSideProps<
           id: true,
           prompt: true,
           submission: true,
-          createdAt: true,
         },
       }),
       prismaClient.$queryRaw<LatestCardOutcomeRow[]>`
@@ -232,7 +221,6 @@ export const getServerSideProps: GetServerSideProps<
     id: row.id,
     prompt: row.prompt,
     submission: row.submission,
-    createdAt: row.createdAt.toISOString(),
   }));
 
   const recentHighlights = highlightRows
@@ -293,24 +281,21 @@ function WritingSamplesSection({ samples }: { samples: WritingSample[] }) {
         >
           <thead>
             <tr>
-              <th style={{ width: "8.5rem" }}>날짜</th>
-              <th style={{ width: "16rem" }}>프롬프트</th>
               <th>작성문</th>
             </tr>
           </thead>
           <tbody>
             {samples.length === 0 && (
               <tr>
-                <td colSpan={3}>없음</td>
+                <td>없음</td>
               </tr>
             )}
             {samples.map((sample) => (
               <tr key={sample.id}>
-                <td>{formatDate(sample.createdAt)}</td>
-                <td>
-                  {hasPrompt(sample.prompt) ? sample.prompt.trim() : ""}
-                </td>
                 <td style={{ whiteSpace: "pre-wrap" }}>
+                  {hasPrompt(sample.prompt) && (
+                    <strong>{sample.prompt.trim()} </strong>
+                  )}
                   {sample.submission}
                 </td>
               </tr>
