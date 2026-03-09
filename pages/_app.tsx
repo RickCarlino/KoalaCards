@@ -26,6 +26,7 @@ function App(props: AppProps) {
   const theme = buildKoalaTheme(montserrat.style.fontFamily);
   const isPublicReaderArticle =
     props.router.pathname === "/reader/[publicId]";
+  const isRecentPage = props.router.pathname === "/recent";
 
   if (
     props.router.pathname.startsWith("/review/") ||
@@ -73,9 +74,13 @@ function App(props: AppProps) {
           ) : (
             <UserSettingsProvider>
               <Notifications />
-              <TopBarWithNoSSR>
+              {isRecentPage ? (
                 <props.Component {...props.pageProps} />
-              </TopBarWithNoSSR>
+              ) : (
+                <TopBarWithNoSSR>
+                  <props.Component {...props.pageProps} />
+                </TopBarWithNoSSR>
+              )}
             </UserSettingsProvider>
           )}
         </MantineProvider>
