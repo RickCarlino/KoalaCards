@@ -914,7 +914,7 @@ function ProgressSection({
         <ProgressChart
           title="Reader Progress"
           data={readerChartData}
-          series={{ name: "count", color: "teal", label: "Total Read" }}
+          series={{ name: "count", color: "pink", label: "Total Read" }}
           yAxisLabel="Articles Read"
         />
       </SimpleGrid>
