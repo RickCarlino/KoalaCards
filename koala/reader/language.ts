@@ -26,6 +26,12 @@ const tidyMarkdownSchema = z.object({
 const LENGTH = 20000;
 const MIN_KOREAN_HANGUL_CHAR_COUNT = 30;
 const MIN_KOREAN_HANGUL_PARAGRAPH_RATIO = 0.35;
+const ARTICLE_FIDELITY_RULES = [
+  "Preserve source wording as faithfully as possible.",
+  "Do not summarize, paraphrase, simplify, shorten, reorder, or deduplicate the article.",
+  "Do not introduce repetition, bullets, headings, or takeaways unless they already appear in the source.",
+  "Preserve names, dates, numbers, and original language.",
+];
 
 const englishLetterCount = (text: string): number => {
   const matches = text.match(/[A-Za-z]/g);
@@ -142,7 +148,9 @@ export const extractArticleContentFromPage = async (
       {
         role: "system",
         content: [
-          "Convert the provided webpage content into markdown.",
+          "Convert the provided webpage content into markdown for downstream article extraction.",
+          "Transcribe source prose faithfully while making the article cleanly readable as markdown.",
+          ...ARTICLE_FIDELITY_RULES,
           "Return markdown only.",
           "Use code fences for non-spoken content such as code or preformatted text.",
         ].join(" "),
@@ -167,8 +175,10 @@ export const extractArticleContentFromPage = async (
       {
         role: "system",
         content: [
-          "Extract the main article body.",
+          "Extract only the main article body from the provided markdown.",
+          ...ARTICLE_FIDELITY_RULES,
           "Remove all non-article content, including nav bars, share prompts, related links, newsletter signups, comments, ads, footer/legal boilerplate, and widget text.",
+          "Remove only content that is clearly not part of the article body.",
           "Return markdown only.",
           "If no article body exists, return an empty string.",
         ].join(" "),
@@ -201,11 +211,12 @@ export const tidyKoreanArticleMarkdown = async (
       {
         role: "system",
         content: [
-          "You are a Korean copy editor for reading content.",
-          "Clean and format the article as tidy markdown.",
-          "Keep full article meaning and ordering.",
+          "You are cleaning article markdown, not rewriting it.",
+          "Format the article as tidy markdown while preserving the original sentences and paragraph order.",
+          ...ARTICLE_FIDELITY_RULES,
           "Remove any leftover non-article noise such as share prompts, related links, or widget text.",
-          "Use readable paragraph breaks and headings where appropriate.",
+          "Keep existing headings only when they are already present in the article.",
+          "Normalize spacing and paragraph breaks for readability.",
           "Return only markdown.",
         ].join(" "),
       },
