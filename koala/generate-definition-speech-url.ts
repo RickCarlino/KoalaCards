@@ -4,7 +4,7 @@ import { storageProvider } from "./storage";
 import { stripEmojis } from "./utils/emoji";
 
 const VOICE = "alloy";
-const MODEL = "gpt-4o-mini-tts-2025-12-15";
+const MODEL = "gpt-4o-mini-tts";
 const VERSION = "v1";
 const AUDIO_FORMAT = "mp3";
 

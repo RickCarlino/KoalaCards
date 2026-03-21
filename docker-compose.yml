@@ -3,11 +3,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    working_dir: /app
     command: npm run dev
     entrypoint: ./entrypoint.sh
     volumes:
       - .:/app
-      - ./node_modules:/app/node_modules
+      - /app/node_modules
+      - /app/.next
     ports:
       - "3000:3000"
       - "5555:5555" # Prisma Studio, optional
@@ -24,11 +26,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    working_dir: /app
     command: npm run worker
     entrypoint: ./entrypoint.sh
     volumes:
       - .:/app
-      - ./node_modules:/app/node_modules
+      - /app/node_modules
+      - /app/.next
     env_file:
       - .env
     environment:
