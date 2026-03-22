@@ -1267,6 +1267,7 @@ function OwnerHighlightTools({
       return;
     }
 
+    const draftToExplain = activeHelperDraft;
     const controller = new AbortController();
     explainAbortRef.current?.abort();
     explainAbortRef.current = controller;
@@ -1283,10 +1284,10 @@ function OwnerHighlightTools({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             publicId,
-            selectedText: activeHelperDraft.selectedText,
-            contextBefore: activeHelperDraft.contextBefore,
-            contextAfter: activeHelperDraft.contextAfter,
-            occurrenceHint: activeHelperDraft.occurrenceHint,
+            selectedText: draftToExplain.selectedText,
+            contextBefore: draftToExplain.contextBefore,
+            contextAfter: draftToExplain.contextAfter,
+            occurrenceHint: draftToExplain.occurrenceHint,
           }),
           signal: controller.signal,
         },
@@ -1313,14 +1314,10 @@ function OwnerHighlightTools({
       });
 
       const refreshedHighlights = await highlightsQuery.refetch();
-      if (activeHighlightId !== null) {
-        return;
-      }
-
       const nextHighlights = refreshedHighlights.data?.highlights ?? [];
       const matchedHighlightId = findMatchingHighlightId(
         nextHighlights,
-        activeHelperDraft,
+        draftToExplain,
       );
       if (matchedHighlightId === null) {
         return;
@@ -1329,10 +1326,15 @@ function OwnerHighlightTools({
       const matchedHighlight = nextHighlights.find((highlight) => {
         return highlight.id === matchedHighlightId;
       });
-      setActiveHighlightId(matchedHighlightId);
       if (matchedHighlight) {
+        setHelperDraftOverride(helperDraftFromHighlight(matchedHighlight));
+        setActiveHighlightId(matchedHighlight.id);
         setActiveAnalysis(analysisFromHighlight(matchedHighlight));
+        setStreamError("");
+        return;
       }
+
+      setActiveHighlightId(matchedHighlightId);
     } catch (error) {
       const aborted = controller.signal.aborted;
       if (!aborted) {
