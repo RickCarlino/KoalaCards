@@ -23,6 +23,10 @@ type OverviewCounts = {
   deckCount: number;
   writingCount: number;
   quizResultCount: number;
+  readerArticleCount: number;
+  readerReadCount: number;
+  readerHighlightCount: number;
+  readerImportedHighlightCount: number;
 };
 
 type RecentWriting = {
@@ -38,6 +42,21 @@ type RecentQuiz = {
   definition: string;
   userInput: string;
   isAcceptable: boolean;
+};
+
+type RecentReaderArticle = {
+  id: number;
+  title: string;
+  createdAt: string;
+  readAt: string | null;
+};
+
+type RecentReaderHighlight = {
+  id: number;
+  articleTitle: string;
+  selectedText: string;
+  createdAt: string;
+  importedAt: string | null;
 };
 
 function firstQueryParam(
@@ -130,6 +149,14 @@ export async function getServerSideProps(
     deckCount,
     writingCount,
     quizResultCount,
+    readerArticleCount,
+    readerReadCount,
+    readerHighlightCount,
+    readerImportedHighlightCount,
+    recentWritingRows,
+    recentQuizRows,
+    recentReaderArticleRows,
+    recentReaderHighlightRows,
   ] = await Promise.all([
     prismaClient.card.count({ where: { userId } }),
     prismaClient.card.count({ where: { userId, repetitions: { gt: 0 } } }),
@@ -137,32 +164,65 @@ export async function getServerSideProps(
     prismaClient.deck.count({ where: { userId } }),
     prismaClient.writingSubmission.count({ where: { userId } }),
     prismaClient.quizResult.count({ where: { userId } }),
+    prismaClient.readerArticle.count({ where: { userId } }),
+    prismaClient.readerArticle.count({
+      where: { userId, readAt: { not: null } },
+    }),
+    prismaClient.readerArticleHighlight.count({ where: { userId } }),
+    prismaClient.readerArticleHighlight.count({
+      where: { userId, importedAt: { not: null } },
+    }),
+    prismaClient.writingSubmission.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      select: {
+        id: true,
+        prompt: true,
+        createdAt: true,
+        submissionCharacterCount: true,
+      },
+    }),
+    prismaClient.quizResult.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+      select: {
+        id: true,
+        createdAt: true,
+        definition: true,
+        userInput: true,
+        isAcceptable: true,
+      },
+    }),
+    prismaClient.readerArticle.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+      select: {
+        id: true,
+        title: true,
+        createdAt: true,
+        readAt: true,
+      },
+    }),
+    prismaClient.readerArticleHighlight.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+      select: {
+        id: true,
+        selectedText: true,
+        createdAt: true,
+        importedAt: true,
+        article: {
+          select: {
+            title: true,
+          },
+        },
+      },
+    }),
   ]);
-
-  const recentWritingRows = await prismaClient.writingSubmission.findMany({
-    where: { userId },
-    orderBy: { createdAt: "desc" },
-    take: 5,
-    select: {
-      id: true,
-      prompt: true,
-      createdAt: true,
-      submissionCharacterCount: true,
-    },
-  });
-
-  const recentQuizRows = await prismaClient.quizResult.findMany({
-    where: { userId },
-    orderBy: { createdAt: "desc" },
-    take: 10,
-    select: {
-      id: true,
-      createdAt: true,
-      definition: true,
-      userInput: true,
-      isAcceptable: true,
-    },
-  });
 
   const counts: OverviewCounts = {
     cardsTotal,
@@ -171,6 +231,10 @@ export async function getServerSideProps(
     deckCount,
     writingCount,
     quizResultCount,
+    readerArticleCount,
+    readerReadCount,
+    readerHighlightCount,
+    readerImportedHighlightCount,
   };
 
   const recentWriting: RecentWriting[] = recentWritingRows.map((w) => ({
@@ -188,6 +252,25 @@ export async function getServerSideProps(
     isAcceptable: q.isAcceptable,
   }));
 
+  const recentReaderArticles: RecentReaderArticle[] =
+    recentReaderArticleRows.map((article) => ({
+      id: article.id,
+      title: article.title,
+      createdAt: article.createdAt.toISOString(),
+      readAt: article.readAt ? article.readAt.toISOString() : null,
+    }));
+
+  const recentReaderHighlights: RecentReaderHighlight[] =
+    recentReaderHighlightRows.map((highlight) => ({
+      id: highlight.id,
+      articleTitle: highlight.article.title,
+      selectedText: highlight.selectedText,
+      createdAt: highlight.createdAt.toISOString(),
+      importedAt: highlight.importedAt
+        ? highlight.importedAt.toISOString()
+        : null,
+    }));
+
   return {
     props: {
       user: {
@@ -201,6 +284,8 @@ export async function getServerSideProps(
       counts,
       recentWriting,
       recentQuiz,
+      recentReaderArticles,
+      recentReaderHighlights,
     },
   };
 }
@@ -242,6 +327,8 @@ export default function UserOverviewPage({
   counts,
   recentWriting,
   recentQuiz,
+  recentReaderArticles,
+  recentReaderHighlights,
 }: Props) {
   function onConfirmDelete(e: React.FormEvent<HTMLFormElement>) {
     if (typeof window !== "undefined") {
@@ -328,6 +415,22 @@ export default function UserOverviewPage({
                   <td>Quiz Results</td>
                   <td>{counts.quizResultCount}</td>
                 </tr>
+                <tr>
+                  <td>Reader Articles</td>
+                  <td>{counts.readerArticleCount}</td>
+                </tr>
+                <tr>
+                  <td>Read Articles</td>
+                  <td>{counts.readerReadCount}</td>
+                </tr>
+                <tr>
+                  <td>Reader Highlights</td>
+                  <td>{counts.readerHighlightCount}</td>
+                </tr>
+                <tr>
+                  <td>Imported Highlights</td>
+                  <td>{counts.readerImportedHighlightCount}</td>
+                </tr>
               </tbody>
             </Table>
           </Paper>
@@ -384,6 +487,76 @@ export default function UserOverviewPage({
                     <td>{q.definition}</td>
                     <td>{q.userInput}</td>
                     <td>{yesNo(q.isAcceptable)}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </Table>
+        </Paper>
+
+        <Paper withBorder p="md" radius="md">
+          <Title order={4}>Recent Reader Articles</Title>
+          <Table striped highlightOnHover mt="sm">
+            <thead>
+              <tr>
+                <th>Added</th>
+                <th>Title</th>
+                <th>Read</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentReaderArticles.length === 0 ? (
+                <tr>
+                  <td colSpan={3}>No reader articles yet</td>
+                </tr>
+              ) : (
+                recentReaderArticles.map((article) => (
+                  <tr key={article.id}>
+                    <td>{fmtShort(article.createdAt)}</td>
+                    <td>
+                      <Text size="sm" lineClamp={2} maw={360}>
+                        {article.title}
+                      </Text>
+                    </td>
+                    <td>{fmtShort(article.readAt)}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </Table>
+        </Paper>
+
+        <Paper withBorder p="md" radius="md">
+          <Title order={4}>Recent Reader Highlights</Title>
+          <Table striped highlightOnHover mt="sm">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Article</th>
+                <th>Text</th>
+                <th>Imported</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentReaderHighlights.length === 0 ? (
+                <tr>
+                  <td colSpan={4}>No reader highlights yet</td>
+                </tr>
+              ) : (
+                recentReaderHighlights.map((highlight) => (
+                  <tr key={highlight.id}>
+                    <td>{fmtShort(highlight.createdAt)}</td>
+                    <td>
+                      <Text size="sm" lineClamp={2} maw={280}>
+                        {highlight.articleTitle}
+                      </Text>
+                    </td>
+                    <td>
+                      <Text size="sm" lineClamp={2} maw={320}>
+                        {highlight.selectedText}
+                      </Text>
+                    </td>
+                    <td>{fmtShort(highlight.importedAt)}</td>
                   </tr>
                 ))
               )}
