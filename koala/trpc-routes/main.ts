@@ -17,6 +17,12 @@ import { gradeQuiz } from "./grade-quiz";
 import { gradeSpeakingQuiz } from "./grade-speaking-quiz";
 import { gradeWriting } from "./grade-writing";
 import { importDeck } from "./import-deck";
+import {
+  answerLanguageExchangeRequest,
+  endLanguageExchangeRequest,
+  getLanguageExchangeState,
+  submitLanguageExchangeAnswer,
+} from "./language-exchange";
 import { mergeDecks } from "./merge-decks";
 import { parseCards } from "./parse-cards";
 import {
@@ -52,6 +58,7 @@ export const appRouter = router({
   editCard,
   editUserSettings,
   getDailyWritingProgress,
+  getLanguageExchangeState,
   exportDeck,
   getNextQuizzes,
   getUserSettings,
@@ -71,6 +78,7 @@ export const appRouter = router({
   importReaderInstapaperUnreadRoute,
   mergeDecks,
   importDeck,
+  answerLanguageExchangeRequest,
   listReaderArticleHighlightsRoute,
   listReaderInstapaperUnreadRoute,
   listReaderArticlesRoute,
@@ -80,6 +88,8 @@ export const appRouter = router({
   setReaderArticleReadStateRoute,
   saveReaderArticleRoute,
   saveReaderRawTextRoute,
+  submitLanguageExchangeAnswer,
+  endLanguageExchangeRequest,
   archiveCard,
   turbine,
   updateDeck,

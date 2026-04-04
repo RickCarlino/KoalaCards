@@ -308,6 +308,7 @@ type SettingsFormValues = {
   responseTimeoutSeconds: number;
   writingFirst: boolean;
   dueCardsEmailNotifications: boolean;
+  languageExchangeAvailable: boolean;
 };
 
 type SettingsNumberKey =
@@ -395,6 +396,7 @@ type SettingsFormProps = {
   onNumberChange: SettingsNumberChangeHandler;
   onWritingFirstChange: (checked: boolean) => void;
   onDueCardsEmailNotificationsChange: (checked: boolean) => void;
+  onLanguageExchangeAvailableChange: (checked: boolean) => void;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
   isSaving: boolean;
 };
@@ -618,6 +620,8 @@ type ToggleSettingsGroupProps = {
   onWritingFirstChange: (checked: boolean) => void;
   dueCardsEmailNotifications: boolean;
   onDueCardsEmailNotificationsChange: (checked: boolean) => void;
+  languageExchangeAvailable: boolean;
+  onLanguageExchangeAvailableChange: (checked: boolean) => void;
 };
 
 function ToggleSettingsGroup({
@@ -625,6 +629,8 @@ function ToggleSettingsGroup({
   onWritingFirstChange,
   dueCardsEmailNotifications,
   onDueCardsEmailNotificationsChange,
+  languageExchangeAvailable,
+  onLanguageExchangeAvailableChange,
 }: ToggleSettingsGroupProps) {
   return (
     <SettingsGroup
@@ -659,6 +665,20 @@ function ToggleSettingsGroup({
           size="md"
         />
       </SettingsRow>
+      <SettingsRow
+        label="Answer language exchange calls"
+        description="Show a small incoming call prompt while you study."
+        labelFor="languageExchangeAvailable"
+      >
+        <Switch
+          id="languageExchangeAvailable"
+          checked={languageExchangeAvailable}
+          onChange={(event) =>
+            onLanguageExchangeAvailableChange(event.currentTarget.checked)
+          }
+          size="md"
+        />
+      </SettingsRow>
     </SettingsGroup>
   );
 }
@@ -668,6 +688,7 @@ function SettingsForm({
   onNumberChange,
   onWritingFirstChange,
   onDueCardsEmailNotificationsChange,
+  onLanguageExchangeAvailableChange,
   onSubmit,
   isSaving,
 }: SettingsFormProps) {
@@ -697,6 +718,10 @@ function SettingsForm({
           dueCardsEmailNotifications={values.dueCardsEmailNotifications}
           onDueCardsEmailNotificationsChange={
             onDueCardsEmailNotificationsChange
+          }
+          languageExchangeAvailable={values.languageExchangeAvailable}
+          onLanguageExchangeAvailableChange={
+            onLanguageExchangeAvailableChange
           }
         />
 
@@ -939,6 +964,9 @@ export default function UserSettingsPage(props: Props) {
     dueCardsEmailNotifications: Boolean(
       userSettings.dueCardsEmailNotifications,
     ),
+    languageExchangeAvailable: Boolean(
+      userSettings.languageExchangeAvailable,
+    ),
   }));
   const editUserSettings = trpc.editUserSettings.useMutation();
 
@@ -966,6 +994,13 @@ export default function UserSettingsPage(props: Props) {
     setSettings({
       ...settings,
       dueCardsEmailNotifications: checked,
+    });
+  };
+
+  const handleLanguageExchangeAvailableChange = (checked: boolean) => {
+    setSettings({
+      ...settings,
+      languageExchangeAvailable: checked,
     });
   };
 
@@ -1014,6 +1049,7 @@ export default function UserSettingsPage(props: Props) {
     dueCardsEmailNotifications: Boolean(
       settings.dueCardsEmailNotifications,
     ),
+    languageExchangeAvailable: Boolean(settings.languageExchangeAvailable),
   };
 
   return (
@@ -1041,6 +1077,9 @@ export default function UserSettingsPage(props: Props) {
                 onWritingFirstChange={handleWritingFirstChange}
                 onDueCardsEmailNotificationsChange={
                   handleDueCardsEmailNotificationsChange
+                }
+                onLanguageExchangeAvailableChange={
+                  handleLanguageExchangeAvailableChange
                 }
                 onSubmit={handleSubmit}
                 isSaving={editUserSettings.isLoading}
