@@ -16,6 +16,7 @@ import {
   Button,
   Container,
   Group,
+  Paper,
   Stack,
   Text,
   ThemeIcon,
@@ -71,12 +72,18 @@ export default function LanguageExchangePage() {
   const peerRef = React.useRef<RTCPeerConnection | null>(null);
   const localStreamRef = React.useRef<MediaStream | null>(null);
   const remoteAudioRef = React.useRef<HTMLAudioElement | null>(null);
+  const remoteVideoRef = React.useRef<HTMLVideoElement | null>(null);
+  const remoteVideoContainerRef = React.useRef<HTMLDivElement | null>(
+    null,
+  );
   const appliedAnswerSdpRef = React.useRef<string | null>(null);
   const preparedOfferSdpRef = React.useRef<string | null>(null);
   const offerUploadedForRequestIdRef = React.useRef<number | null>(null);
   const latestGuestRequestRef = React.useRef<GuestRequestState | null>(
     null,
   );
+  const [remoteVideoStream, setRemoteVideoStream] =
+    React.useState<MediaStream | null>(null);
   const sounds = useLanguageExchangeSounds();
 
   React.useEffect(() => {
@@ -92,10 +99,44 @@ export default function LanguageExchangePage() {
     if (remoteAudioRef.current) {
       remoteAudioRef.current.srcObject = null;
     }
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = null;
+    }
     appliedAnswerSdpRef.current = null;
     preparedOfferSdpRef.current = null;
     offerUploadedForRequestIdRef.current = null;
+    setRemoteVideoStream(null);
   }, [sounds]);
+
+  React.useEffect(() => {
+    if (!remoteVideoRef.current) {
+      return;
+    }
+
+    if (!remoteVideoStream) {
+      remoteVideoRef.current.srcObject = null;
+      return;
+    }
+
+    if (remoteVideoRef.current.srcObject !== remoteVideoStream) {
+      remoteVideoRef.current.srcObject = remoteVideoStream;
+    }
+    void remoteVideoRef.current.play().catch(() => undefined);
+  }, [remoteVideoStream]);
+
+  const handleExpandVideo = async () => {
+    const container = remoteVideoContainerRef.current;
+    if (!container || !remoteVideoStream) {
+      return;
+    }
+
+    if (document.fullscreenElement === container) {
+      await document.exitFullscreen().catch(() => undefined);
+      return;
+    }
+
+    await container.requestFullscreen?.().catch(() => undefined);
+  };
 
   React.useEffect(() => {
     return () => {
@@ -429,6 +470,9 @@ export default function LanguageExchangePage() {
         iceServers: languageExchangeIceServers,
       });
       debugLanguageExchange("guest.connect.peer-created");
+      nextPeer.addTransceiver("video", {
+        direction: "recvonly",
+      });
       peer = nextPeer;
       peerRef.current = nextPeer;
       localStreamRef.current = stream;
@@ -440,8 +484,29 @@ export default function LanguageExchangePage() {
       nextPeer.ontrack = (event) => {
         const [stream] = event.streams;
         debugLanguageExchange("guest.remote-track", {
+          kind: event.track.kind,
           streamId: stream?.id ?? null,
         });
+        if (event.track.kind === "video") {
+          const nextVideoStream = stream ?? new MediaStream([event.track]);
+          setRemoteVideoStream(nextVideoStream);
+          event.track.onunmute = () => {
+            debugLanguageExchange("guest.remote-video.unmuted", {
+              streamId: nextVideoStream.id,
+            });
+            setRemoteVideoStream(nextVideoStream);
+          };
+          event.track.onmute = () => {
+            debugLanguageExchange("guest.remote-video.muted", {
+              streamId: nextVideoStream.id,
+            });
+          };
+          event.track.onended = () => {
+            setRemoteVideoStream(null);
+          };
+          return;
+        }
+
         if (stream && remoteAudioRef.current) {
           remoteAudioRef.current.srcObject = stream;
           void remoteAudioRef.current.play().catch(() => undefined);
@@ -570,7 +635,7 @@ export default function LanguageExchangePage() {
     : `${availableCount}명의 한국어 학습자가 언어 교환 가능합니다`;
 
   return (
-    <Container size="sm" py="xl">
+    <Container size={remoteVideoStream ? "lg" : "sm"} py="xl">
       <audio ref={remoteAudioRef} autoPlay playsInline hidden />
       <Stack gap="xl">
         <Stack gap="sm" align="center">
@@ -625,6 +690,41 @@ export default function LanguageExchangePage() {
             </Text>
           </Stack>
         </SectionCard>
+
+        {remoteVideoStream ? (
+          <SectionCard
+            title="학습 화면"
+            description="학습자가 공유한 화면입니다."
+            action={
+              <Button
+                size="xs"
+                variant="light"
+                onClick={() => void handleExpandVideo()}
+              >
+                크게 보기
+              </Button>
+            }
+          >
+            <div ref={remoteVideoContainerRef}>
+              <Paper radius="md" withBorder style={{ overflow: "hidden" }}>
+                <video
+                  ref={remoteVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  style={{
+                    aspectRatio: "16 / 9",
+                    background: "#111",
+                    display: "block",
+                    maxHeight: "70vh",
+                    objectFit: "contain",
+                    width: "100%",
+                  }}
+                />
+              </Paper>
+            </div>
+          </SectionCard>
+        ) : null}
       </Stack>
     </Container>
   );

@@ -7,24 +7,10 @@ export const LANGUAGE_EXCHANGE_WAITING_TIMEOUT_MS = 2 * 60 * 1_000;
 export const LANGUAGE_EXCHANGE_CALL_TIMEOUT_MS = 15 * 60 * 1_000;
 
 export function debugLanguageExchange(
-  event: string,
-  data?: Record<string, unknown>,
+  _event: string,
+  _data?: Record<string, unknown>,
 ): void {
-  if (process.env.NODE_ENV === "production") {
-    return;
-  }
-
-  const prefix =
-    typeof window === "undefined"
-      ? "[language-exchange:server]"
-      : "[language-exchange:client]";
-
-  if (data) {
-    console.log(prefix, event, data);
-    return;
-  }
-
-  console.log(prefix, event);
+  return;
 }
 
 function normalizeSessionDescriptionSdp(value: string): string {

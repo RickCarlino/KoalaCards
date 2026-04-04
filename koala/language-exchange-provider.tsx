@@ -5,6 +5,7 @@ import {
   LANGUAGE_EXCHANGE_POLL_INTERVAL_MS,
 } from "@/koala/language-exchange";
 import {
+  createPlaceholderVideoStream,
   languageExchangeIceServers,
   stopMediaStream,
   waitForIceGatheringComplete,
@@ -54,8 +55,12 @@ export function LanguageExchangeProvider({
   const peerRef = React.useRef<RTCPeerConnection | null>(null);
   const localStreamRef = React.useRef<MediaStream | null>(null);
   const remoteAudioRef = React.useRef<HTMLAudioElement | null>(null);
+  const screenShareStreamRef = React.useRef<MediaStream | null>(null);
+  const placeholderVideoStreamRef = React.useRef<MediaStream | null>(null);
+  const screenShareSenderRef = React.useRef<RTCRtpSender | null>(null);
   const appliedOfferSdpRef = React.useRef<string | null>(null);
   const isSubmittingAnswerRef = React.useRef(false);
+  const [isSharingScreen, setIsSharingScreen] = React.useState(false);
   const sounds = useLanguageExchangeSounds();
 
   React.useEffect(() => {
@@ -105,6 +110,19 @@ export function LanguageExchangeProvider({
   const activeRequest = stateQuery.data?.activeRequest ?? null;
   const incomingRequest = stateQuery.data?.incomingRequest ?? null;
   const hasLoadedState = stateQuery.status === "success";
+  const ensurePlaceholderVideoStream = React.useCallback(() => {
+    if (placeholderVideoStreamRef.current) {
+      return placeholderVideoStreamRef.current;
+    }
+
+    const placeholderVideoStream = createPlaceholderVideoStream();
+    if (!placeholderVideoStream) {
+      return null;
+    }
+
+    placeholderVideoStreamRef.current = placeholderVideoStream;
+    return placeholderVideoStream;
+  }, []);
 
   React.useEffect(() => {
     debugLanguageExchange("learner.query", {
@@ -136,11 +154,17 @@ export function LanguageExchangeProvider({
     peerRef.current = null;
     stopMediaStream(localStreamRef.current);
     localStreamRef.current = null;
+    stopMediaStream(screenShareStreamRef.current);
+    screenShareStreamRef.current = null;
+    stopMediaStream(placeholderVideoStreamRef.current);
+    placeholderVideoStreamRef.current = null;
+    screenShareSenderRef.current = null;
     if (remoteAudioRef.current) {
       remoteAudioRef.current.srcObject = null;
     }
     appliedOfferSdpRef.current = null;
     isSubmittingAnswerRef.current = false;
+    setIsSharingScreen(false);
   }, [sounds]);
 
   React.useEffect(() => {
@@ -348,6 +372,15 @@ export function LanguageExchangeProvider({
       stream.getTracks().forEach((track) => {
         peer.addTrack(track, stream);
       });
+      const placeholderVideoStream = ensurePlaceholderVideoStream();
+      const placeholderTrack =
+        placeholderVideoStream?.getVideoTracks()[0] ?? null;
+      if (placeholderVideoStream && placeholderTrack) {
+        screenShareSenderRef.current = peer.addTrack(
+          placeholderTrack,
+          placeholderVideoStream,
+        );
+      }
 
       peer.ontrack = (event) => {
         const [stream] = event.streams;
@@ -466,6 +499,70 @@ export function LanguageExchangeProvider({
     }
   };
 
+  const stopScreenShare = React.useCallback(async () => {
+    stopMediaStream(screenShareStreamRef.current);
+    screenShareStreamRef.current = null;
+    setIsSharingScreen(false);
+
+    const sender = screenShareSenderRef.current;
+    if (!sender) {
+      return;
+    }
+
+    const placeholderTrack =
+      ensurePlaceholderVideoStream()?.getVideoTracks()[0] ?? null;
+    await sender.replaceTrack(placeholderTrack).catch(() => undefined);
+    debugLanguageExchange("learner.screen-share.stopped", {
+      requestId: activeCall?.requestId ?? null,
+    });
+  }, [activeCall?.requestId, ensurePlaceholderVideoStream]);
+
+  const handleToggleScreenShare = async () => {
+    if (isSharingScreen) {
+      await stopScreenShare();
+      return;
+    }
+
+    const sender = screenShareSenderRef.current;
+    const peer = peerRef.current;
+    if (!sender || !peer || peer.connectionState !== "connected") {
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: false,
+      });
+      const [track] = stream.getVideoTracks();
+      if (!track) {
+        stopMediaStream(stream);
+        return;
+      }
+
+      track.onended = () => {
+        void stopScreenShare();
+      };
+
+      await sender.replaceTrack(track);
+      screenShareStreamRef.current = stream;
+      setIsSharingScreen(true);
+      debugLanguageExchange("learner.screen-share.started", {
+        requestId: activeCall?.requestId ?? null,
+      });
+    } catch (error: unknown) {
+      debugLanguageExchange("learner.screen-share.failed", {
+        requestId: activeCall?.requestId ?? null,
+        message: errorMessage(error, "Could not share study screen."),
+      });
+      notifications.show({
+        title: "Screen share failed",
+        message: errorMessage(error, "Could not share study screen."),
+        color: "red",
+      });
+    }
+  };
+
   const showIncomingPrompt =
     Boolean(stateQuery.data?.enabled) &&
     !activeCall &&
@@ -533,6 +630,14 @@ export function LanguageExchangeProvider({
                 Keep studying while you talk.
               </Text>
               <Group justify="flex-end">
+                <Button
+                  size="xs"
+                  variant="light"
+                  onClick={() => void handleToggleScreenShare()}
+                  disabled={activeCall.statusText !== "Connected"}
+                >
+                  {isSharingScreen ? "Stop sharing" : "Share study screen"}
+                </Button>
                 <Button size="xs" color="red" onClick={handleHangUp}>
                   Hang up
                 </Button>
