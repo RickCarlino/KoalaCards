@@ -1,5 +1,6 @@
 import { getUserSettingsFromEmail } from "@/koala/auth-helpers";
 import { SectionCard } from "@/koala/components/SectionCard";
+import { ensureLanguageExchangeLink } from "@/koala/language-exchange-direct-server";
 import { prismaClient } from "@/koala/prisma-client";
 import {
   REVIEW_TAKE_MAX,
@@ -49,6 +50,25 @@ function formatDate(date: Date): string {
   const month = (date.getMonth() + 1).toString().padStart(2, "0");
   const day = date.getDate().toString().padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function baseUrlFromRequest(
+  request: GetServerSidePropsContext["req"],
+): string {
+  if (process.env.NEXTAUTH_URL) {
+    return process.env.NEXTAUTH_URL;
+  }
+
+  const forwardedHost = request.headers["x-forwarded-host"];
+  const forwardedProto = request.headers["x-forwarded-proto"];
+  const host = Array.isArray(forwardedHost)
+    ? forwardedHost[0]
+    : forwardedHost || request.headers.host || "localhost:3000";
+  const protocol = Array.isArray(forwardedProto)
+    ? forwardedProto[0]
+    : forwardedProto || (host.includes("localhost") ? "http" : "https");
+
+  return `${protocol}://${host}`;
 }
 
 function buildCumulativeChartDataFromSortedDates(options: {
@@ -278,6 +298,11 @@ export async function getServerSideProps(
 
   const { statistics, cardChartData, writingChartData, readerChartData } =
     await getUserCardStatistics(userId);
+  const languageExchangeLink = await ensureLanguageExchangeLink(userId);
+  const languageExchangeUrl = new URL(
+    `/language-exchange/${languageExchangeLink.slug}`,
+    baseUrlFromRequest(context.req),
+  ).toString();
 
   return {
     props: {
@@ -286,6 +311,7 @@ export async function getServerSideProps(
       cardChartData: cardChartData,
       writingChartData: writingChartData,
       readerChartData: readerChartData,
+      languageExchangeUrl,
     },
   };
 }
@@ -295,6 +321,7 @@ type Props = UnwrapPromise<
   cardChartData: ChartDataPoint[];
   writingChartData: ChartDataPoint[];
   readerChartData: ChartDataPoint[];
+  languageExchangeUrl: string;
 };
 
 type SettingsFormValues = {
@@ -667,7 +694,7 @@ function ToggleSettingsGroup({
       </SettingsRow>
       <SettingsRow
         label="Answer language exchange calls"
-        description="Show a small incoming call prompt while you study."
+        description="Show incoming calls from your shared link while you study."
         labelFor="languageExchangeAvailable"
       >
         <Switch
@@ -732,6 +759,71 @@ function SettingsForm({
         </Group>
       </Stack>
     </form>
+  );
+}
+
+function LanguageExchangeLinkCard({
+  languageExchangeUrl,
+}: {
+  languageExchangeUrl: string;
+}) {
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(languageExchangeUrl);
+      notifications.show({
+        title: "Link copied",
+        message: "Share it with someone who wants to call you directly.",
+        color: "teal",
+      });
+    } catch (error: unknown) {
+      notifications.show({
+        title: "Copy failed",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Could not copy the link.",
+        color: "red",
+      });
+    }
+  };
+
+  return (
+    <SectionCard
+      title="Language Exchange Link"
+      titleOrder={3}
+      description="Share this link. Calls come through only while language exchange is on and Koala is open in a visible tab."
+    >
+      <Stack gap="md">
+        <Paper withBorder p="sm" radius="md">
+          <Text
+            size="sm"
+            ff="monospace"
+            style={{ wordBreak: "break-all" }}
+          >
+            {languageExchangeUrl}
+          </Text>
+        </Paper>
+        <Group>
+          <Button
+            size="sm"
+            variant="light"
+            onClick={() => void handleCopy()}
+          >
+            Copy link
+          </Button>
+          <Button
+            size="sm"
+            variant="subtle"
+            component="a"
+            href={languageExchangeUrl}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Open link
+          </Button>
+        </Group>
+      </Stack>
+    </SectionCard>
   );
 }
 
@@ -954,6 +1046,7 @@ export default function UserSettingsPage(props: Props) {
     cardChartData,
     writingChartData,
     readerChartData,
+    languageExchangeUrl,
   } = props;
   const [settings, setSettings] = useState(() => ({
     ...userSettings,
@@ -1066,25 +1159,30 @@ export default function UserSettingsPage(props: Props) {
 
         <Grid gutter="xl">
           <Grid.Col span={{ base: 12, md: 7 }}>
-            <SectionCard
-              title="Preferences"
-              titleOrder={3}
-              description="Review pacing, writing rules, and playback options."
-            >
-              <SettingsForm
-                values={formValues}
-                onNumberChange={handleNumberChange}
-                onWritingFirstChange={handleWritingFirstChange}
-                onDueCardsEmailNotificationsChange={
-                  handleDueCardsEmailNotificationsChange
-                }
-                onLanguageExchangeAvailableChange={
-                  handleLanguageExchangeAvailableChange
-                }
-                onSubmit={handleSubmit}
-                isSaving={editUserSettings.isLoading}
+            <Stack gap="xl">
+              <SectionCard
+                title="Preferences"
+                titleOrder={3}
+                description="Review pacing, writing rules, and playback options."
+              >
+                <SettingsForm
+                  values={formValues}
+                  onNumberChange={handleNumberChange}
+                  onWritingFirstChange={handleWritingFirstChange}
+                  onDueCardsEmailNotificationsChange={
+                    handleDueCardsEmailNotificationsChange
+                  }
+                  onLanguageExchangeAvailableChange={
+                    handleLanguageExchangeAvailableChange
+                  }
+                  onSubmit={handleSubmit}
+                  isSaving={editUserSettings.isLoading}
+                />
+              </SectionCard>
+              <LanguageExchangeLinkCard
+                languageExchangeUrl={languageExchangeUrl}
               />
-            </SectionCard>
+            </Stack>
           </Grid.Col>
 
           <Grid.Col span={{ base: 12, md: 5 }}>

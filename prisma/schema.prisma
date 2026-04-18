@@ -59,6 +59,9 @@ model User {
   readerArticles             ReaderArticle[]
   readerArticleHighlights    ReaderArticleHighlight[]
   answeredLanguageExchangeRequests LanguageExchangeRequest[] @relation("LanguageExchangeAnsweredByUser")
+  languageExchangeLink       LanguageExchangeLink?
+  languageExchangePresence   LanguageExchangePresence?
+  languageExchangeCalls      LanguageExchangeCall[]     @relation("LanguageExchangeCallLearner")
 }
 
 model UserSettings {
@@ -93,6 +96,15 @@ enum LanguageExchangeStatus {
   EXPIRED
 }
 
+enum LanguageExchangeCallStatus {
+  RINGING
+  ACTIVE
+  ENDED
+  DECLINED
+  CANCELLED
+  EXPIRED
+}
+
 model LanguageExchangeRequest {
   id               Int                    @id @default(autoincrement())
   guestToken       String                 @unique @db.VarChar(64)
@@ -111,6 +123,53 @@ model LanguageExchangeRequest {
 
   @@index([status, expiresAt, createdAt])
   @@index([claimedByUserId, status])
+}
+
+model LanguageExchangeLink {
+  id        Int                    @id @default(autoincrement())
+  userId    String                 @unique
+  user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slug      String                 @unique @db.VarChar(64)
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
+  calls     LanguageExchangeCall[]
+}
+
+model LanguageExchangePresence {
+  id         Int      @id @default(autoincrement())
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  leaseId    String   @db.VarChar(64)
+  isVisible  Boolean  @default(true)
+  lastSeenAt DateTime @default(now())
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([expiresAt])
+}
+
+model LanguageExchangeCall {
+  id                 Int                        @id @default(autoincrement())
+  linkId             Int
+  link               LanguageExchangeLink       @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  learnerId          String
+  learner            User                       @relation("LanguageExchangeCallLearner", fields: [learnerId], references: [id], onDelete: Cascade)
+  guestToken         String                     @unique @db.VarChar(64)
+  status             LanguageExchangeCallStatus @default(RINGING)
+  offerSdp           Json?
+  answerSdp          Json?
+  guestHeartbeatAt   DateTime                   @default(now())
+  learnerHeartbeatAt DateTime?
+  acceptedAt         DateTime?
+  endedAt            DateTime?
+  expiresAt          DateTime
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+
+  @@index([learnerId, status, createdAt])
+  @@index([linkId, status, createdAt])
+  @@index([status, expiresAt, createdAt])
 }
 
 model VerificationToken {
