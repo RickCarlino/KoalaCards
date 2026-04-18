@@ -1,8 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { z } from "zod";
 import { getApiUserOrNull } from "@/koala/get-api-user";
-import { sessionDescriptionSchema } from "@/koala/language-exchange";
-import { getDirectLanguageExchangeActiveExpiry } from "@/koala/language-exchange-direct";
+import {
+  directLanguageExchangeSessionDescriptionSchema,
+  getDirectLanguageExchangeActiveExpiry,
+} from "@/koala/language-exchange-direct";
 import {
   expireDirectLanguageExchangeCalls,
   findActiveDirectLanguageExchangeCallForLearner,
@@ -15,7 +17,7 @@ const paramsSchema = z.object({
 });
 
 const bodySchema = z.object({
-  answer: sessionDescriptionSchema.refine(
+  answer: directLanguageExchangeSessionDescriptionSchema.refine(
     (value) => value.type === "answer",
     "Expected answer SDP.",
   ),

@@ -2,11 +2,9 @@ import { Prisma } from "@prisma/client";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { prismaClient } from "@/koala/prisma-client";
 import {
-  createLanguageExchangeGuestToken,
-  SessionDescriptionPayload,
-} from "@/koala/language-exchange";
-import {
+  createDirectLanguageExchangeGuestToken,
   createLanguageExchangeLinkSlug,
+  DirectLanguageExchangeSessionDescriptionPayload,
   DIRECT_LANGUAGE_EXCHANGE_ACTIVE_TIMEOUT_MS,
   DIRECT_LANGUAGE_EXCHANGE_PRESENCE_TTL_MS,
   DirectLanguageExchangeAvailabilityStatus,
@@ -226,7 +224,7 @@ export async function getLanguageExchangeAvailabilityStatus(input: {
 export async function createDirectLanguageExchangeCall(input: {
   linkId: number;
   learnerId: string;
-  offer: SessionDescriptionPayload;
+  offer: DirectLanguageExchangeSessionDescriptionPayload;
   now?: Date;
 }) {
   const now = input.now ?? new Date();
@@ -235,7 +233,7 @@ export async function createDirectLanguageExchangeCall(input: {
     data: {
       linkId: input.linkId,
       learnerId: input.learnerId,
-      guestToken: createLanguageExchangeGuestToken(),
+      guestToken: createDirectLanguageExchangeGuestToken(),
       offerSdp: input.offer,
       guestHeartbeatAt: now,
       expiresAt: getDirectLanguageExchangeRingingExpiry(now),

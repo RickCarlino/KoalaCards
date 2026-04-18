@@ -1,7 +1,7 @@
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { z } from "zod";
-import { sessionDescriptionSchema } from "@/koala/language-exchange";
+import { directLanguageExchangeSessionDescriptionSchema } from "@/koala/language-exchange-direct";
 import {
   createDirectLanguageExchangeCall,
   expireDirectLanguageExchangeCalls,
@@ -14,7 +14,7 @@ const paramsSchema = z.object({
 });
 
 const bodySchema = z.object({
-  offer: sessionDescriptionSchema.refine(
+  offer: directLanguageExchangeSessionDescriptionSchema.refine(
     (value) => value.type === "offer",
     "Expected offer SDP.",
   ),

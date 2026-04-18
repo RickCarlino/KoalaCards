@@ -44,7 +44,6 @@ model User {
   email                      String?                     @unique
   emailVerified              DateTime?
   lastSeen                   DateTime?
-  languageExchangePresenceAt DateTime?
   image                      String?
   createdAt                  DateTime                    @default(now())
   accounts                   Account[]
@@ -58,7 +57,6 @@ model User {
   readerInstapaperCredential ReaderInstapaperCredential?
   readerArticles             ReaderArticle[]
   readerArticleHighlights    ReaderArticleHighlight[]
-  answeredLanguageExchangeRequests LanguageExchangeRequest[] @relation("LanguageExchangeAnsweredByUser")
   languageExchangeLink       LanguageExchangeLink?
   languageExchangePresence   LanguageExchangePresence?
   languageExchangeCalls      LanguageExchangeCall[]     @relation("LanguageExchangeCallLearner")
@@ -88,14 +86,6 @@ model UserSettings {
   dueCardsEmailNotificationSentAt DateTime?
 }
 
-enum LanguageExchangeStatus {
-  WAITING
-  MATCHED
-  ENDED
-  CANCELLED
-  EXPIRED
-}
-
 enum LanguageExchangeCallStatus {
   RINGING
   ACTIVE
@@ -103,26 +93,6 @@ enum LanguageExchangeCallStatus {
   DECLINED
   CANCELLED
   EXPIRED
-}
-
-model LanguageExchangeRequest {
-  id               Int                    @id @default(autoincrement())
-  guestToken       String                 @unique @db.VarChar(64)
-  status           LanguageExchangeStatus @default(WAITING)
-  guestOfferSdp    Json?
-  learnerAnswerSdp Json?
-  claimedByUserId  String?
-  claimedByUser    User?                  @relation("LanguageExchangeAnsweredByUser", fields: [claimedByUserId], references: [id], onDelete: SetNull)
-  guestHeartbeatAt DateTime               @default(now())
-  learnerHeartbeatAt DateTime?
-  claimedAt        DateTime?
-  endedAt          DateTime?
-  expiresAt        DateTime
-  createdAt        DateTime               @default(now())
-  updatedAt        DateTime               @updatedAt
-
-  @@index([status, expiresAt, createdAt])
-  @@index([claimedByUserId, status])
 }
 
 model LanguageExchangeLink {

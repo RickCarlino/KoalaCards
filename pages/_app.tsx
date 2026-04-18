@@ -17,13 +17,6 @@ const montserrat = Montserrat({
 });
 
 const TopBarWithNoSSR = dynamic(() => import("./_topbar"), { ssr: false });
-const LanguageExchangeProviderWithNoSSR = dynamic(
-  () =>
-    import("@/koala/language-exchange-provider").then((mod) => {
-      return mod.LanguageExchangeProvider;
-    }),
-  { ssr: false },
-);
 const DirectLanguageExchangeProviderWithNoSSR = dynamic(
   () =>
     import("@/koala/language-exchange-direct-provider").then((mod) => {
@@ -42,7 +35,6 @@ function App(props: AppProps) {
     props.router.pathname === "/reader/[publicId]";
   const isRecentPage = props.router.pathname === "/recent";
   const isPublicLanguageExchange =
-    props.router.pathname === "/language-exchange" ||
     props.router.pathname === "/language-exchange/[slug]";
 
   if (
@@ -60,14 +52,12 @@ function App(props: AppProps) {
         </Head>
         <SessionProvider session={props.pageProps.session}>
           <MantineProvider defaultColorScheme="light" theme={theme}>
-            <LanguageExchangeProviderWithNoSSR>
-              <DirectLanguageExchangeProviderWithNoSSR>
-                <UserSettingsProvider>
-                  <Notifications />
-                  <props.Component {...props.pageProps} />
-                </UserSettingsProvider>
-              </DirectLanguageExchangeProviderWithNoSSR>
-            </LanguageExchangeProviderWithNoSSR>
+            <DirectLanguageExchangeProviderWithNoSSR>
+              <UserSettingsProvider>
+                <Notifications />
+                <props.Component {...props.pageProps} />
+              </UserSettingsProvider>
+            </DirectLanguageExchangeProviderWithNoSSR>
           </MantineProvider>
         </SessionProvider>
       </>
@@ -85,34 +75,32 @@ function App(props: AppProps) {
       </Head>
       <SessionProvider session={props.pageProps.session}>
         <MantineProvider defaultColorScheme="light" theme={theme}>
-          <LanguageExchangeProviderWithNoSSR>
-            <DirectLanguageExchangeProviderWithNoSSR>
-              {isPublicLanguageExchange ? (
-                <>
-                  <Notifications />
+          <DirectLanguageExchangeProviderWithNoSSR>
+            {isPublicLanguageExchange ? (
+              <>
+                <Notifications />
+                <props.Component {...props.pageProps} />
+              </>
+            ) : isPublicReaderArticle ? (
+              <>
+                <Notifications />
+                <TopBarWithNoSSR>
                   <props.Component {...props.pageProps} />
-                </>
-              ) : isPublicReaderArticle ? (
-                <>
-                  <Notifications />
+                </TopBarWithNoSSR>
+              </>
+            ) : (
+              <UserSettingsProvider>
+                <Notifications />
+                {isRecentPage ? (
+                  <props.Component {...props.pageProps} />
+                ) : (
                   <TopBarWithNoSSR>
                     <props.Component {...props.pageProps} />
                   </TopBarWithNoSSR>
-                </>
-              ) : (
-                <UserSettingsProvider>
-                  <Notifications />
-                  {isRecentPage ? (
-                    <props.Component {...props.pageProps} />
-                  ) : (
-                    <TopBarWithNoSSR>
-                      <props.Component {...props.pageProps} />
-                    </TopBarWithNoSSR>
-                  )}
-                </UserSettingsProvider>
-              )}
-            </DirectLanguageExchangeProviderWithNoSSR>
-          </LanguageExchangeProviderWithNoSSR>
+                )}
+              </UserSettingsProvider>
+            )}
+          </DirectLanguageExchangeProviderWithNoSSR>
         </MantineProvider>
       </SessionProvider>
     </>

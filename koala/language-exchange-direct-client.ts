@@ -1,4 +1,4 @@
-import { SessionDescriptionPayload } from "@/koala/language-exchange";
+import { DirectLanguageExchangeSessionDescriptionPayload } from "@/koala/language-exchange-direct";
 
 export const DIRECT_LANGUAGE_EXCHANGE_LEADER_STORAGE_KEY =
   "koala.languageExchangeDirect.leader";
@@ -16,8 +16,8 @@ export type DirectLanguageExchangeCallState = {
   acceptedAt: string | null;
   endedAt: string | null;
   expiresAt: string;
-  offerSdp: SessionDescriptionPayload | null;
-  answerSdp: SessionDescriptionPayload | null;
+  offerSdp: DirectLanguageExchangeSessionDescriptionPayload | null;
+  answerSdp: DirectLanguageExchangeSessionDescriptionPayload | null;
 };
 
 export function errorMessage(error: unknown, fallback: string): string {
