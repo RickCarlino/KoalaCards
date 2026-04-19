@@ -55,16 +55,22 @@ const parseIpv4Octets = (
   return [first, second, third, fourth];
 };
 
+type Ipv4PrefixMatcher = (first: number, second: number) => boolean;
+
+const PRIVATE_IPV4_PREFIX_MATCHERS: Ipv4PrefixMatcher[] = [
+  (first) => first === 10,
+  (first) => first === 127,
+  (first) => first === 0,
+  (first, second) => first === 169 && second === 254,
+  (first, second) => first === 172 && second >= 16 && second <= 31,
+  (first, second) => first === 192 && second === 168,
+  (first, second) => first === 100 && second >= 64 && second <= 127,
+];
+
 const isPrivateIpv4Prefix = (first: number, second: number): boolean => {
-  return (
-    first === 10 ||
-    first === 127 ||
-    first === 0 ||
-    (first === 169 && second === 254) ||
-    (first === 172 && second >= 16 && second <= 31) ||
-    (first === 192 && second === 168) ||
-    (first === 100 && second >= 64 && second <= 127)
-  );
+  return PRIVATE_IPV4_PREFIX_MATCHERS.some((matches) => {
+    return matches(first, second);
+  });
 };
 
 const isPrivateIpv4Address = (ip: string): boolean => {
@@ -98,7 +104,7 @@ const isPrivateIpv6Address = (ip: string): boolean => {
   return false;
 };
 
-const isPrivateOrLocalIp = (address: string): boolean => {
+export const isPrivateOrLocalIp = (address: string): boolean => {
   const version = isIP(address);
   if (version === 4) {
     return isPrivateIpv4Address(address);

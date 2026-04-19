@@ -38,6 +38,10 @@ import type {
 } from "next";
 import * as React from "react";
 import { findLanguageExchangeLinkBySlug } from "@/koala/language-exchange-direct-server";
+import {
+  resolveGuestCallCompletion,
+  resolveGuestCallProgressStatus,
+} from "@/koala/language-exchange/guest-call-status";
 
 type DirectGuestCall = DirectLanguageExchangeCallState & {
   guestToken: string;
@@ -257,53 +261,26 @@ export default function DirectLanguageExchangePage({
       return;
     }
 
-    if (guestCall.status === "RINGING") {
-      if (!peerRef.current) {
-        setCallStatusText("연결 준비 중...");
-      }
-
-      if (peerRef.current?.connectionState !== "connected") {
-        setCallStatusText("연결 중...");
-      }
+    const progressStatus = resolveGuestCallProgressStatus({
+      status: guestCall.status,
+      connectionState: peerRef.current?.connectionState ?? null,
+      hasPeer: Boolean(peerRef.current),
+    });
+    if (progressStatus) {
+      setCallStatusText(progressStatus);
       return;
     }
 
-    if (guestCall.status === "ACTIVE") {
-      if (peerRef.current?.connectionState !== "connected") {
-        setCallStatusText("연결 중...");
-      }
+    const completion = resolveGuestCallCompletion(guestCall.status);
+    if (!completion) {
       return;
     }
 
-    if (guestCall.status === "DECLINED") {
+    if (completion.playHangupTone) {
       void sounds.playHangupTone();
-      notifications.show({
-        title: "통화가 거절되었습니다",
-        message: "학습자가 지금은 통화를 받을 수 없습니다.",
-        color: "gray",
-      });
     }
-
-    if (guestCall.status === "EXPIRED") {
-      void sounds.playHangupTone();
-      notifications.show({
-        title: "응답이 없습니다",
-        message: "학습자가 통화에 응답하지 않았습니다.",
-        color: "gray",
-      });
-    }
-
-    if (guestCall.status === "ENDED") {
-      void sounds.playHangupTone();
-      notifications.show({
-        title: "통화가 종료되었습니다",
-        message: "학습자가 통화를 종료했습니다.",
-        color: "gray",
-      });
-    }
-
-    if (guestCall.status === "CANCELLED") {
-      void sounds.playHangupTone();
+    if (completion.notification) {
+      notifications.show(completion.notification);
     }
 
     cleanupCallResources();

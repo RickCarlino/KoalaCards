@@ -6,7 +6,10 @@
   "scripts": {
     "build": "next build",
     "dev": "npm install && npx prisma generate && next dev -p 3000",
+    "dupcheck": "jscpd --gitignore --threshold 2 --pattern \"**/*.{ts,tsx,js,jsx}\" pages koala test",
     "lint": "next lint",
+    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test test/*.test.ts",
+    "test:coverage": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test --experimental-test-coverage test/*.test.ts",
     "reset": "rm -rf node_modules && rm -rf package-lock.json && npm install && npx prisma migrate dev && npx tsx seeds/ingest.ts",
     "db:migrate:deploy": "npx prisma migrate deploy",
     "start": "npm run db:migrate:deploy && next start",
@@ -23,6 +26,7 @@
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "eslint-plugin-no-else-if": "^1.0.0",
+    "jscpd": "^4.0.9",
     "prettier": "^3.6.2",
     "prisma": "^5.15.0",
     "typescript": "^5.6.3"

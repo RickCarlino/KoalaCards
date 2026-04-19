@@ -1,5 +1,9 @@
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { prismaClient } from "@/koala/prisma-client";
+import {
+  buildHighlightSnippet,
+  normalizeHighlightText,
+} from "@/koala/reader/highlight-snippet";
 import Head from "next/head";
 import type {
   GetServerSideProps,
@@ -18,92 +22,6 @@ type ReaderExportArticle = {
 
 type Props = {
   articles: ReaderExportArticle[];
-};
-
-const normalizeText = (value: string): string => {
-  return value.trim();
-};
-
-type HighlightOccurrence = {
-  before: string;
-  match: string;
-  after: string;
-};
-
-const parseHighlightOccurrences = (
-  value: unknown,
-): HighlightOccurrence[] => {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  const parsed: HighlightOccurrence[] = [];
-
-  for (const item of value) {
-    if (!item || typeof item !== "object") {
-      continue;
-    }
-
-    const maybeBefore = (item as { before?: unknown }).before;
-    const maybeMatch = (item as { match?: unknown }).match;
-    const maybeAfter = (item as { after?: unknown }).after;
-
-    if (
-      typeof maybeBefore !== "string" ||
-      typeof maybeMatch !== "string" ||
-      typeof maybeAfter !== "string"
-    ) {
-      continue;
-    }
-
-    parsed.push({
-      before: maybeBefore,
-      match: maybeMatch,
-      after: maybeAfter,
-    });
-  }
-
-  return parsed;
-};
-
-const normalizeSnippetChunk = (value: string): string => {
-  return value.replace(/\s+/g, " ").trim();
-};
-
-const buildHighlightExport = (options: {
-  selectedText: string;
-  selectedOccurrenceIndex: number;
-  occurrencesJson: unknown;
-}): { keyword: string; snippet: string } | null => {
-  const occurrences = parseHighlightOccurrences(options.occurrencesJson);
-  const selectedOccurrence =
-    occurrences[options.selectedOccurrenceIndex] ?? null;
-
-  const before = normalizeSnippetChunk(selectedOccurrence?.before ?? "");
-  const match = normalizeSnippetChunk(
-    selectedOccurrence?.match ?? options.selectedText,
-  );
-  const after = normalizeSnippetChunk(selectedOccurrence?.after ?? "");
-
-  if (match.length === 0) {
-    return null;
-  }
-
-  const wrappedMatch = `{{ ${match} }}`;
-
-  if (before.length === 0 && after.length === 0) {
-    return {
-      keyword: match,
-      snippet: wrappedMatch,
-    };
-  }
-
-  const prefix = before.length > 0 ? `...${before} ` : "";
-  const suffix = after.length > 0 ? ` ${after}...` : "";
-  return {
-    keyword: match,
-    snippet: `${prefix}${wrappedMatch}${suffix}`.trim(),
-  };
 };
 
 export const getServerSideProps: GetServerSideProps<Props> = async (
@@ -137,14 +55,16 @@ export const getServerSideProps: GetServerSideProps<Props> = async (
   return {
     props: {
       articles: articles.map((article) => {
-        const title = normalizeText(article.title);
+        const title = normalizeHighlightText(article.title);
         return {
           id: article.id,
           title: title.length > 0 ? title : "Untitled article",
           highlights: article.highlights
             .map((highlight) => {
-              const exportHighlight = buildHighlightExport({
-                selectedText: normalizeText(highlight.selectedText),
+              const exportHighlight = buildHighlightSnippet({
+                selectedText: normalizeHighlightText(
+                  highlight.selectedText,
+                ),
                 selectedOccurrenceIndex: highlight.selectedOccurrenceIndex,
                 occurrencesJson: highlight.occurrencesJson,
               });

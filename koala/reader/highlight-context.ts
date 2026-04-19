@@ -200,6 +200,38 @@ function scoreOccurrence(
   return suffixScore + prefixScore;
 }
 
+function hasValidOccurrenceHint(
+  occurrenceHint: number | undefined,
+  occurrenceCount: number,
+): occurrenceHint is number {
+  return (
+    typeof occurrenceHint === "number" &&
+    Number.isInteger(occurrenceHint) &&
+    occurrenceHint >= 0 &&
+    occurrenceHint < occurrenceCount
+  );
+}
+
+function shouldPreferOccurrenceByHint(options: {
+  score: number;
+  bestScore: number;
+  occurrenceIndex: number;
+  bestIndex: number;
+  occurrenceHint: number;
+}): boolean {
+  if (options.score !== options.bestScore) {
+    return false;
+  }
+
+  const currentDistance = Math.abs(
+    options.occurrenceIndex - options.occurrenceHint,
+  );
+  const bestDistance = Math.abs(
+    options.bestIndex - options.occurrenceHint,
+  );
+  return currentDistance < bestDistance;
+}
+
 export function selectOccurrenceIndex(options: {
   occurrences: ReaderHighlightOccurrence[];
   contextBefore: string;
@@ -217,11 +249,10 @@ export function selectOccurrenceIndex(options: {
     return 0;
   }
 
-  const hasValidHint =
-    typeof occurrenceHint === "number" &&
-    Number.isInteger(occurrenceHint) &&
-    occurrenceHint >= 0 &&
-    occurrenceHint < occurrences.length;
+  const hasValidHint = hasValidOccurrenceHint(
+    occurrenceHint,
+    occurrences.length,
+  );
 
   let bestIndex = 0;
   let bestScore = -1;
@@ -234,13 +265,17 @@ export function selectOccurrenceIndex(options: {
       continue;
     }
 
-    if (score === bestScore && hasValidHint) {
-      const currentDistance = Math.abs(occurrence.index - occurrenceHint);
-      const bestDistance = Math.abs(bestIndex - occurrenceHint);
-
-      if (currentDistance < bestDistance) {
-        bestIndex = occurrence.index;
-      }
+    if (
+      hasValidHint &&
+      shouldPreferOccurrenceByHint({
+        score,
+        bestScore,
+        occurrenceIndex: occurrence.index,
+        bestIndex,
+        occurrenceHint,
+      })
+    ) {
+      bestIndex = occurrence.index;
     }
   }
 

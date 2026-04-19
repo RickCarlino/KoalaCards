@@ -5,6 +5,11 @@ import { authOptions } from "./auth/[...nextauth]";
 import { prismaClient } from "@/koala/prisma-client";
 import { draw } from "radash";
 import { stripEmojis } from "@/koala/utils/emoji";
+import {
+  buildSpeechInput,
+  resolveSpeechContentType,
+  resolveSpeechFormat,
+} from "@/koala/api/speech-helpers";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -13,6 +18,26 @@ type SpeechBody = {
   en?: string;
   format?: "wav" | "mp3" | "opus";
 };
+
+async function requireAuthenticatedSpeechUser(
+  req: NextApiRequest,
+  res: NextApiResponse,
+): Promise<boolean> {
+  const session = await getServerSession(req, res, authOptions);
+  const email = session?.user?.email;
+  if (!email) {
+    res.status(401).json({ error: "Unauthorized" });
+    return false;
+  }
+
+  const dbUser = await prismaClient.user.findUnique({ where: { email } });
+  if (!dbUser) {
+    res.status(401).json({ error: "Unauthorized" });
+    return false;
+  }
+
+  return true;
+}
 
 export default async function handler(
   req: NextApiRequest,
@@ -23,14 +48,8 @@ export default async function handler(
     return res.status(405).json({ error: "Method Not Allowed" });
   }
 
-  const session = await getServerSession(req, res, authOptions);
-  const email = session?.user?.email;
-  if (!email) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-  const dbUser = await prismaClient.user.findUnique({ where: { email } });
-  if (!dbUser) {
-    return res.status(401).json({ error: "Unauthorized" });
+  if (!(await requireAuthenticatedSpeechUser(req, res))) {
+    return;
   }
 
   if (!process.env.OPENAI_API_KEY) {
@@ -42,12 +61,10 @@ export default async function handler(
   const enText = (en ?? "").toString();
   const cleanTlText = stripEmojis(tlText);
   const cleanEnText = stripEmojis(enText);
-  if (!cleanTlText.trim()) {
+  const input = buildSpeechInput(cleanTlText, cleanEnText);
+  if (!input) {
     return res.status(400).json({ error: "Missing 'tl'" });
   }
-  const input = cleanEnText.trim()
-    ? `${cleanTlText}\n${cleanEnText}`
-    : cleanTlText;
 
   const model = "gpt-4o-mini-tts";
   const VOICES = [
@@ -59,7 +76,7 @@ export default async function handler(
     "sage",
     "shimmer",
   ] as const;
-  const chosenFormat: NonNullable<SpeechBody["format"]> = format || "mp3";
+  const chosenFormat = resolveSpeechFormat(format);
 
   const speech = await openai.audio.speech.create({
     model,
@@ -71,15 +88,7 @@ export default async function handler(
   const arrayBuffer = await speech.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
 
-  const contentTypeMap: Record<
-    NonNullable<SpeechBody["format"]>,
-    string
-  > = {
-    wav: "audio/wav",
-    mp3: "audio/mpeg",
-    opus: "audio/ogg",
-  };
-  const contentType = contentTypeMap[chosenFormat] ?? "audio/wav";
+  const contentType = resolveSpeechContentType(chosenFormat);
 
   res.setHeader("Content-Type", contentType);
   res.setHeader("Content-Length", buffer.length.toString());

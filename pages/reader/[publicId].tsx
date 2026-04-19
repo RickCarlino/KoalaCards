@@ -20,6 +20,13 @@ import {
   type ReaderArticleHighlight,
 } from "@/koala/reader/ui/highlights";
 import {
+  buildExplainSelectionPayload,
+  canExplainSelection,
+  findExplainedHighlightMatch,
+  hasExplainSelectionStream,
+  resolveExplainSelectionErrorMessage,
+} from "@/koala/reader/owner-highlight-tools";
+import {
   formatReaderDateTime,
   readerBodyFont,
   readerDisplayFont,
@@ -1263,7 +1270,7 @@ function OwnerHighlightTools({
   };
 
   const explainSelection = async () => {
-    if (!activeHelperDraft || isExplaining) {
+    if (!canExplainSelection(activeHelperDraft, isExplaining)) {
       return;
     }
 
@@ -1282,18 +1289,14 @@ function OwnerHighlightTools({
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            publicId,
-            selectedText: draftToExplain.selectedText,
-            contextBefore: draftToExplain.contextBefore,
-            contextAfter: draftToExplain.contextAfter,
-            occurrenceHint: draftToExplain.occurrenceHint,
-          }),
+          body: JSON.stringify(
+            buildExplainSelectionPayload(publicId, draftToExplain),
+          ),
           signal: controller.signal,
         },
       );
 
-      if (!response.ok || !response.body) {
+      if (!hasExplainSelectionStream(response)) {
         const errorText = await response.text();
         throw new Error(
           errorText || "Unable to start explanation stream.",
@@ -1315,33 +1318,34 @@ function OwnerHighlightTools({
 
       const refreshedHighlights = await highlightsQuery.refetch();
       const nextHighlights = refreshedHighlights.data?.highlights ?? [];
-      const matchedHighlightId = findMatchingHighlightId(
+      const explainedMatch = findExplainedHighlightMatch(
         nextHighlights,
         draftToExplain,
+        findMatchingHighlightId,
       );
-      if (matchedHighlightId === null) {
+      if (explainedMatch.matchedHighlightId === null) {
         return;
       }
 
-      const matchedHighlight = nextHighlights.find((highlight) => {
-        return highlight.id === matchedHighlightId;
-      });
-      if (matchedHighlight) {
-        setHelperDraftOverride(helperDraftFromHighlight(matchedHighlight));
-        setActiveHighlightId(matchedHighlight.id);
-        setActiveAnalysis(analysisFromHighlight(matchedHighlight));
+      if (explainedMatch.matchedHighlight) {
+        setHelperDraftOverride(
+          helperDraftFromHighlight(explainedMatch.matchedHighlight),
+        );
+        setActiveHighlightId(explainedMatch.matchedHighlight.id);
+        setActiveAnalysis(
+          analysisFromHighlight(explainedMatch.matchedHighlight),
+        );
         setStreamError("");
         return;
       }
 
-      setActiveHighlightId(matchedHighlightId);
+      setActiveHighlightId(explainedMatch.matchedHighlightId);
     } catch (error) {
-      const aborted = controller.signal.aborted;
-      if (!aborted) {
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Unable to stream explanation.";
+      const message = resolveExplainSelectionErrorMessage(
+        error,
+        controller.signal.aborted,
+      );
+      if (message) {
         setStreamError(message);
       }
       setIsExplaining(false);
@@ -1658,6 +1662,68 @@ function OwnerHighlightTools({
     });
   };
 
+  const renderActiveView = () => {
+    if (activeView === "helper") {
+      return (
+        <ExplainSelectionCard
+          isExplaining={isExplaining}
+          streamError={streamError}
+          analysis={activeAnalysis}
+          onAddToDeck={onAddToDeck}
+          canAddToDeck={canAddActiveHighlight}
+          isAddingToDeck={isImportingActiveHighlight}
+          onDeleteHighlight={deleteActiveHighlight}
+          canDeleteHighlight={canDeleteActiveHighlight}
+          isDeletingHighlight={isDeletingActiveHighlight}
+          fillAvailableHeight
+        />
+      );
+    }
+
+    if (activeView === "saved") {
+      return (
+        <HighlightsHistoryCard
+          highlights={highlights}
+          isLoading={highlightsQuery.isLoading}
+          errorMessage={queryErrorMessage}
+          deletingHighlightId={deletingHighlightId}
+          selectedHighlightIds={selectedHighlightIds}
+          onToggleHighlightSelection={(highlightId, isSelected) => {
+            setSelectedHighlightIds((previous) => {
+              return toggleSelectedHighlights(
+                previous,
+                highlightId,
+                isSelected,
+              );
+            });
+          }}
+          onImportSelected={() => {
+            void importSelectedHighlights();
+          }}
+          canImportSelected={canImportSelected}
+          isImportingSelected={isImportingSelected}
+          onToggleSelectAll={toggleSelectAllHighlights}
+          canSelectAll={canSelectAll}
+          allImportableSelected={allImportableSelected}
+          importStatusByHighlightId={importStatusByHighlightId}
+          onDeleteHighlight={(highlightId) => {
+            void deleteHighlight(highlightId);
+          }}
+        />
+      );
+    }
+
+    return (
+      <HighlightInfoCard
+        publicId={publicId}
+        createdAt={createdAt}
+        sourceUrl={sourceUrl}
+        codeLineMode={codeLineMode}
+        onCodeLineModeChange={onCodeLineModeChange}
+      />
+    );
+  };
+
   return (
     <>
       <SelectionActionBubble
@@ -1712,59 +1778,7 @@ function OwnerHighlightTools({
                 : readerToolsScrollableContentStyle
             }
           >
-            {activeView === "helper" && (
-              <ExplainSelectionCard
-                isExplaining={isExplaining}
-                streamError={streamError}
-                analysis={activeAnalysis}
-                onAddToDeck={onAddToDeck}
-                canAddToDeck={canAddActiveHighlight}
-                isAddingToDeck={isImportingActiveHighlight}
-                onDeleteHighlight={deleteActiveHighlight}
-                canDeleteHighlight={canDeleteActiveHighlight}
-                isDeletingHighlight={isDeletingActiveHighlight}
-                fillAvailableHeight
-              />
-            )}
-            {activeView === "saved" && (
-              <HighlightsHistoryCard
-                highlights={highlights}
-                isLoading={highlightsQuery.isLoading}
-                errorMessage={queryErrorMessage}
-                deletingHighlightId={deletingHighlightId}
-                selectedHighlightIds={selectedHighlightIds}
-                onToggleHighlightSelection={(highlightId, isSelected) => {
-                  setSelectedHighlightIds((previous) => {
-                    return toggleSelectedHighlights(
-                      previous,
-                      highlightId,
-                      isSelected,
-                    );
-                  });
-                }}
-                onImportSelected={() => {
-                  void importSelectedHighlights();
-                }}
-                canImportSelected={canImportSelected}
-                isImportingSelected={isImportingSelected}
-                onToggleSelectAll={toggleSelectAllHighlights}
-                canSelectAll={canSelectAll}
-                allImportableSelected={allImportableSelected}
-                importStatusByHighlightId={importStatusByHighlightId}
-                onDeleteHighlight={(highlightId) => {
-                  void deleteHighlight(highlightId);
-                }}
-              />
-            )}
-            {activeView === "extras" && (
-              <HighlightInfoCard
-                publicId={publicId}
-                createdAt={createdAt}
-                sourceUrl={sourceUrl}
-                codeLineMode={codeLineMode}
-                onCodeLineModeChange={onCodeLineModeChange}
-              />
-            )}
+            {renderActiveView()}
           </Box>
         </ReaderPanel>
       </Box>

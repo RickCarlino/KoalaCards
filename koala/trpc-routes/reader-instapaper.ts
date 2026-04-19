@@ -753,6 +753,139 @@ export const importReaderInstapaperUnreadRoute = procedure
     }
   });
 
+function assertExportableReaderArticle(
+  article: {
+    id: number;
+    title: string;
+    normalizedUrl: string | null;
+    contentHtml: string;
+    contentText: string;
+    ingestStatus: string;
+    instapaperBookmarkId: string | null;
+  } | null,
+) {
+  if (!article) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Reader article not found.",
+    });
+  }
+
+  if (article.ingestStatus !== "READY") {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message:
+        "This article is still processing. Export after it reaches Ready.",
+    });
+  }
+
+  if (!article.normalizedUrl) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "This article does not have a source URL to export.",
+    });
+  }
+
+  return article as typeof article & { normalizedUrl: string };
+}
+
+function resolveSourceBookmarkId(options: {
+  existingBookmarkId: string | null;
+  explicitBookmarkId: string;
+}): string | null {
+  if (options.existingBookmarkId) {
+    return options.existingBookmarkId;
+  }
+  return options.explicitBookmarkId || null;
+}
+
+async function persistExplicitBookmarkId(options: {
+  articleId: number;
+  existingBookmarkId: string | null;
+  explicitBookmarkId: string;
+}) {
+  if (
+    !options.explicitBookmarkId ||
+    options.existingBookmarkId === options.explicitBookmarkId
+  ) {
+    return;
+  }
+
+  await prismaClient.readerArticle.update({
+    where: { id: options.articleId },
+    data: {
+      instapaperBookmarkId: options.explicitBookmarkId,
+    },
+  });
+}
+
+function exportedResponse(exportedBookmarkId: string) {
+  return {
+    status: "exported" as const,
+    exportedBookmarkId,
+    archivedOriginal: false,
+    archiveError: null,
+  };
+}
+
+function requireExportedBookmarkId(bookmarkId: string | null): string {
+  if (bookmarkId) {
+    return bookmarkId;
+  }
+
+  throw new TRPCError({
+    code: "INTERNAL_SERVER_ERROR",
+    message:
+      "Instapaper did not return a bookmark id for the exported article.",
+  });
+}
+
+function exportedArchiveFailedResponse(
+  exportedBookmarkId: string,
+  archiveError: string,
+) {
+  return {
+    status: "exported_archive_failed" as const,
+    exportedBookmarkId,
+    archivedOriginal: false,
+    archiveError,
+  };
+}
+
+async function archiveOriginalBookmarkAfterExport(options: {
+  session: Awaited<ReturnType<typeof requireStoredInstapaperSession>>;
+  sourceBookmarkId: string | null;
+  exportedBookmarkId: string;
+}) {
+  if (!options.sourceBookmarkId) {
+    return exportedArchiveFailedResponse(
+      options.exportedBookmarkId,
+      "Original Instapaper bookmark id is missing, so archive was skipped.",
+    );
+  }
+
+  try {
+    await archiveInstapaperBookmark(
+      options.session,
+      options.sourceBookmarkId,
+    );
+    return {
+      status: "exported_and_archived" as const,
+      exportedBookmarkId: options.exportedBookmarkId,
+      archivedOriginal: true,
+      archiveError: null,
+    };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Archive request failed.";
+
+    return exportedArchiveFailedResponse(
+      options.exportedBookmarkId,
+      message,
+    );
+  }
+}
+
 export const exportReaderArticleToInstapaperRoute = procedure
   .input(exportArticleInputSchema)
   .output(exportArticleOutputSchema)
@@ -776,97 +909,43 @@ export const exportReaderArticleToInstapaperRoute = procedure
           instapaperBookmarkId: true,
         },
       });
-
-      if (!article) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Reader article not found.",
-        });
-      }
-
-      if (article.ingestStatus !== "READY") {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message:
-            "This article is still processing. Export after it reaches Ready.",
-        });
-      }
-
-      if (!article.normalizedUrl) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "This article does not have a source URL to export.",
-        });
-      }
+      const exportableArticle = assertExportableReaderArticle(article);
 
       const privateContent = buildPrivateInstapaperContent({
-        title: article.title,
-        htmlContent: article.contentHtml,
-        textContent: article.contentText,
+        title: exportableArticle.title,
+        htmlContent: exportableArticle.contentHtml,
+        textContent: exportableArticle.contentText,
       });
 
       const added = await addPrivateInstapaperBookmark(session, {
-        url: article.normalizedUrl,
-        title: `${article.title} (한국어)`,
+        url: exportableArticle.normalizedUrl,
+        title: `${exportableArticle.title} (한국어)`,
         htmlContent: privateContent,
       });
+      const exportedBookmarkId = requireExportedBookmarkId(
+        added.bookmarkId,
+      );
 
       const explicitBookmarkId = input.originalBookmarkId?.trim() ?? "";
-      const sourceBookmarkId =
-        article.instapaperBookmarkId ?? explicitBookmarkId;
-
-      if (
-        explicitBookmarkId &&
-        article.instapaperBookmarkId !== explicitBookmarkId
-      ) {
-        await prismaClient.readerArticle.update({
-          where: { id: article.id },
-          data: {
-            instapaperBookmarkId: explicitBookmarkId,
-          },
-        });
-      }
+      const sourceBookmarkId = resolveSourceBookmarkId({
+        existingBookmarkId: exportableArticle.instapaperBookmarkId,
+        explicitBookmarkId,
+      });
+      await persistExplicitBookmarkId({
+        articleId: exportableArticle.id,
+        existingBookmarkId: exportableArticle.instapaperBookmarkId,
+        explicitBookmarkId,
+      });
 
       if (!input.archiveOriginal) {
-        return {
-          status: "exported",
-          exportedBookmarkId: added.bookmarkId,
-          archivedOriginal: false,
-          archiveError: null,
-        };
+        return exportedResponse(exportedBookmarkId);
       }
 
-      if (!sourceBookmarkId) {
-        return {
-          status: "exported_archive_failed",
-          exportedBookmarkId: added.bookmarkId,
-          archivedOriginal: false,
-          archiveError:
-            "Original Instapaper bookmark id is missing, so archive was skipped.",
-        };
-      }
-
-      try {
-        await archiveInstapaperBookmark(session, sourceBookmarkId);
-        return {
-          status: "exported_and_archived",
-          exportedBookmarkId: added.bookmarkId,
-          archivedOriginal: true,
-          archiveError: null,
-        };
-      } catch (error) {
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Archive request failed.";
-
-        return {
-          status: "exported_archive_failed",
-          exportedBookmarkId: added.bookmarkId,
-          archivedOriginal: false,
-          archiveError: message,
-        };
-      }
+      return archiveOriginalBookmarkAfterExport({
+        session,
+        sourceBookmarkId,
+        exportedBookmarkId,
+      });
     } catch (error) {
       if (error instanceof TRPCError) {
         throw error;

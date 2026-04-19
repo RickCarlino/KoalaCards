@@ -32,6 +32,7 @@ import { notifications } from "@mantine/notifications";
 import { GetServerSideProps } from "next";
 import { useRouter } from "next/router";
 import React from "react";
+import { parseCreatePageRoute } from "@/koala/create-page-query";
 
 type Mode = "vibe" | "wordlist" | "csv";
 
@@ -98,49 +99,42 @@ export default function CreateUnified(props: LanguageInputPageProps) {
   const parseCards = trpc.parseCards.useMutation();
   const turbine = trpc.turbine.useMutation();
   const bulkCreate = trpc.bulkCreateCards.useMutation();
+  const routeState = React.useMemo(() => {
+    return parseCreatePageRoute(router.query, decks);
+  }, [decks, router.query]);
 
   React.useEffect(() => {
     if (!router.isReady) {
       return;
     }
-    const m = router.query.mode;
-    if (
-      typeof m === "string" &&
-      (m === "vibe" || m === "wordlist" || m === "csv")
-    ) {
-      setMode(m);
+    if (routeState.mode) {
+      setMode(routeState.mode);
     }
-    const qDeckId = router.query.deckId ?? router.query.deck_id;
-    if (typeof qDeckId === "string") {
-      const parsed = Number(qDeckId);
-      if (!Number.isNaN(parsed)) {
-        const selected = decks.find((d) => d.id === parsed);
-        if (selected) {
-          dispatch({
-            type: "SET_DECK_SELECTION",
-            deckSelection: "existing",
-          });
-          dispatch({ type: "SET_DECK_ID", deckId: selected.id });
-          dispatch({
-            type: "SET_DECK_LANG",
-            deckLang: selected.langCode as LangCode,
-          });
-          dispatch({ type: "SET_DECK_NAME", deckName: selected.name });
-        }
-      }
+    if (routeState.selectedDeck) {
+      dispatch({
+        type: "SET_DECK_SELECTION",
+        deckSelection: "existing",
+      });
+      dispatch({
+        type: "SET_DECK_ID",
+        deckId: routeState.selectedDeck.id,
+      });
+      dispatch({
+        type: "SET_DECK_LANG",
+        deckLang: routeState.selectedDeck.langCode as LangCode,
+      });
+      dispatch({
+        type: "SET_DECK_NAME",
+        deckName: routeState.selectedDeck.name,
+      });
     }
-    const words = router.query.words;
-    if (typeof words === "string") {
-      const decoded = decodeURIComponent(words);
-      const arr = decoded
-        .split(",")
-        .map((w) => w.trim())
-        .filter(Boolean);
-      if (arr.length) {
-        dispatch({ type: "SET_RAW_INPUT", rawInput: arr.join("\n") });
-      }
+    if (routeState.words.length > 0) {
+      dispatch({
+        type: "SET_RAW_INPUT",
+        rawInput: routeState.words.join("\n"),
+      });
     }
-  }, [router.isReady, router.query.mode, router.query.words]);
+  }, [routeState, router.isReady]);
 
   const lines = React.useMemo(() => {
     return state.rawInput

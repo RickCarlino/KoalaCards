@@ -2,6 +2,16 @@ import { notifications } from "@mantine/notifications";
 import { useState } from "react";
 import { trpc } from "@/koala/trpc-config";
 import type { ImportSummary, InstapaperUnreadBookmark } from "./types";
+import {
+  buildBulkExportNotification,
+  buildExportResultNotification,
+  emptyBulkExportStats,
+  exportEligibility,
+  type ExportExecutionResult,
+  ineligibleExportNotice,
+  isExportableBookmark,
+  updateBulkExportStats,
+} from "./export-helpers";
 
 function mutationErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message.trim()) {
@@ -10,129 +20,6 @@ function mutationErrorMessage(error: unknown, fallback: string): string {
 
   return fallback;
 }
-
-type ExportEligibility =
-  | {
-      eligible: true;
-      localArticle: NonNullable<InstapaperUnreadBookmark["localArticle"]>;
-    }
-  | {
-      eligible: false;
-      reason: "missing_local_article" | "not_ready";
-    };
-
-type ExportExecutionResult =
-  | {
-      status:
-        | "exported"
-        | "exported_and_archived"
-        | "exported_archive_failed";
-      message: string | null;
-    }
-  | {
-      status: "failed" | "skipped";
-      message: string;
-    };
-
-type BulkExportStats = {
-  exported: number;
-  archived: number;
-  archiveFailed: number;
-  failed: number;
-  firstIssue: string | null;
-};
-
-const emptyBulkExportStats = (): BulkExportStats => {
-  return {
-    exported: 0,
-    archived: 0,
-    archiveFailed: 0,
-    failed: 0,
-    firstIssue: null,
-  };
-};
-
-const updateBulkExportStats = (
-  stats: BulkExportStats,
-  result: ExportExecutionResult,
-): BulkExportStats => {
-  const next = { ...stats };
-
-  if (
-    result.status === "exported" ||
-    result.status === "exported_and_archived" ||
-    result.status === "exported_archive_failed"
-  ) {
-    next.exported += 1;
-  }
-
-  if (result.status === "exported_and_archived") {
-    next.archived += 1;
-  }
-
-  if (result.status === "exported_archive_failed") {
-    next.archiveFailed += 1;
-
-    if (!next.firstIssue && result.message) {
-      next.firstIssue = result.message;
-    }
-  }
-
-  if (result.status === "failed") {
-    next.failed += 1;
-
-    if (!next.firstIssue) {
-      next.firstIssue = result.message;
-    }
-  }
-
-  return next;
-};
-
-const exportEligibility = (
-  bookmark: InstapaperUnreadBookmark,
-): ExportEligibility => {
-  if (!bookmark.localArticle) {
-    return {
-      eligible: false,
-      reason: "missing_local_article",
-    };
-  }
-
-  if (bookmark.localArticle.ingestStatus !== "ready") {
-    return {
-      eligible: false,
-      reason: "not_ready",
-    };
-  }
-
-  return {
-    eligible: true,
-    localArticle: bookmark.localArticle,
-  };
-};
-
-const isExportableBookmark = (
-  bookmark: InstapaperUnreadBookmark,
-): boolean => {
-  return exportEligibility(bookmark).eligible;
-};
-
-const ineligibleExportNotice = (
-  reason: "missing_local_article" | "not_ready",
-) => {
-  if (reason === "missing_local_article") {
-    return {
-      title: "No local article",
-      message: "Import this bookmark to Koala before exporting.",
-    };
-  }
-
-  return {
-    title: "Article not ready",
-    message: "Wait until the article is ready, then export.",
-  };
-};
 
 export function useInstapaperControls() {
   const [username, setUsername] = useState("");
@@ -328,37 +215,16 @@ export function useInstapaperControls() {
         archiveOriginal,
         originalBookmarkId: bookmark.bookmarkId,
       });
-
-      if (notify && result.status === "exported_and_archived") {
-        notifications.show({
-          title: "Exported",
-          message: "Article exported and original bookmark archived.",
-          color: "green",
-        });
-      }
-
-      if (notify && result.status === "exported") {
-        notifications.show({
-          title: "Exported",
-          message: "Article exported to Instapaper.",
-          color: "green",
-        });
-      }
-
-      if (notify && result.status === "exported_archive_failed") {
-        notifications.show({
-          title: "Partial success",
-          message:
-            result.archiveError ||
-            "Exported, but archiving the original bookmark failed.",
-          color: "yellow",
-        });
-      }
-
-      return {
+      const exportResult: ExportExecutionResult = {
         status: result.status,
         message: result.archiveError || null,
       };
+      const exportNotice = buildExportResultNotification(exportResult);
+      if (notify && exportNotice) {
+        notifications.show(exportNotice);
+      }
+
+      return exportResult;
     } catch (error: unknown) {
       const message = mutationErrorMessage(
         error,
@@ -448,36 +314,9 @@ export function useInstapaperControls() {
       setIsExportingAll(false);
     }
 
-    const hasIssues = stats.archiveFailed > 0 || stats.failed > 0;
-    const messageParts = [`${stats.exported} article(s) exported.`];
-
-    if (archiveOriginal) {
-      messageParts.push(
-        `${stats.archived} original bookmark(s) archived.`,
-      );
-    }
-
-    if (stats.archiveFailed > 0) {
-      messageParts.push(
-        `${stats.archiveFailed} archive attempt(s) failed.`,
-      );
-    }
-
-    if (stats.failed > 0) {
-      messageParts.push(`${stats.failed} export(s) failed.`);
-    }
-
-    if (stats.firstIssue) {
-      messageParts.push(`First issue: ${stats.firstIssue}`);
-    }
-
-    notifications.show({
-      title: hasIssues
-        ? "Export all finished with issues"
-        : "Export all complete",
-      message: messageParts.join(" "),
-      color: hasIssues ? "yellow" : "green",
-    });
+    notifications.show(
+      buildBulkExportNotification(stats, archiveOriginal),
+    );
   };
 
   return {

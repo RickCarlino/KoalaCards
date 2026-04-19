@@ -31,7 +31,7 @@ Keep page concerns in `pages/` and reusable/business logic in `koala/`.
 - Any time you update user-facing text, load the copy-clarity skill guidance.
 
 ## Testing Guidelines
-- There is no automated test suite configured in this repository. Don't write tests.
+- Keep test coverage high
 
 ## Commit & Pull Request Guidelines
 - Do not commit to git unless instructed to do so.

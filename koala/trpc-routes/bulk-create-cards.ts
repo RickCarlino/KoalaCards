@@ -26,44 +26,78 @@ const outputSchema = z.array(
   }),
 );
 
+function requireBulkCreateUserId(userId: string | undefined): string {
+  if (userId) {
+    return userId;
+  }
+
+  throw new TRPCError({
+    code: "UNAUTHORIZED",
+    message: "User not found",
+  });
+}
+
+async function resolveBulkCreateDeck(options: {
+  userId: string;
+  deckId?: number;
+  deckName?: string;
+}) {
+  const existingDeck =
+    options.deckId &&
+    (await prismaClient.deck.findUnique({
+      where: { id: options.deckId, userId: options.userId },
+    }));
+  if (existingDeck) {
+    return existingDeck;
+  }
+
+  if (!options.deckName) {
+    return null;
+  }
+
+  return (
+    (await prismaClient.deck.findFirst({
+      where: { userId: options.userId, name: options.deckName },
+    })) ??
+    (await prismaClient.deck.create({
+      data: { userId: options.userId, name: options.deckName },
+    }))
+  );
+}
+
+function throwMissingDeckError(deckId?: number): never {
+  throw new TRPCError({
+    code: deckId ? "NOT_FOUND" : "BAD_REQUEST",
+    message: deckId
+      ? `Deck with ID ${deckId} not found or access denied.`
+      : "Input must include either 'deckId' or 'deckName'.",
+  });
+}
+
+function duplicateResult(term: string, definition: string) {
+  const prefix = "(Duplicate) ";
+  return {
+    term: prefix + term,
+    definition: prefix + definition,
+  };
+}
+
 export const bulkCreateCards = procedure
   .input(inputSchema)
   .output(outputSchema)
   .mutation(async ({ input, ctx }) => {
-    const userId = ctx.user?.id;
-    if (!userId) {
-      throw new TRPCError({
-        code: "UNAUTHORIZED",
-        message: "User not found",
-      });
-    }
+    const userId = requireBulkCreateUserId(ctx.user?.id);
 
     const results: { term: string; definition: string }[] = [];
     const { deckId: inDeckId, deckName } = input;
-
-    let deck =
-      inDeckId &&
-      (await prismaClient.deck.findUnique({
-        where: { id: inDeckId, userId },
-      }));
-
-    if (!deck && deckName) {
-      deck =
-        (await prismaClient.deck.findFirst({
-          where: { userId, name: deckName },
-        })) ??
-        (await prismaClient.deck.create({
-          data: { userId, name: deckName },
-        }));
-    }
+    const deck = await resolveBulkCreateDeck({
+      userId,
+      deckId: inDeckId,
+      deckName,
+    });
 
     if (!deck) {
-      throw new TRPCError({
-        code: inDeckId ? "NOT_FOUND" : "BAD_REQUEST",
-        message: inDeckId
-          ? `Deck with ID ${inDeckId} not found or access denied.`
-          : "Input must include either 'deckId' or 'deckName'.",
-      });
+      throwMissingDeckError(inDeckId);
     }
 
     const { id: deckId } = deck;
@@ -75,11 +109,7 @@ export const bulkCreateCards = procedure
       });
 
       if (duplicate) {
-        const prefix = "(Duplicate) ";
-        results.push({
-          term: prefix + term,
-          definition: prefix + definition,
-        });
+        results.push(duplicateResult(term, definition));
         continue;
       }
 

@@ -21,6 +21,14 @@ import {
   readerFloatingShadow,
   readerHeadingColor,
 } from "./theme";
+import {
+  formatAnalysisAsExplanation,
+  hasAnalysis,
+  resolveExplainActionState,
+  resolveHighlightRowState,
+  resolveHighlightsHistoryState,
+  resolveHighlightsVisibility,
+} from "./highlights-state";
 
 export type ReaderHighlightStatus = "in_progress" | "ready" | "error";
 
@@ -74,84 +82,6 @@ type SelectionActionBubbleProps = {
   onExplain: () => void;
 };
 
-type ContextSummaryParts = {
-  before: string;
-  match: string;
-  after: string;
-};
-
-function normalizeContextChunk(value: string): string {
-  return value.replace(/\s+/g, " ").trim();
-}
-
-function compactContextSummary(
-  highlight: ReaderArticleHighlight,
-): ContextSummaryParts {
-  const maxTotalLength = 200;
-  const match = normalizeContextChunk(highlight.selectedText);
-  if (!match) {
-    return {
-      before: "",
-      match: "",
-      after: "",
-    };
-  }
-
-  if (match.length >= maxTotalLength) {
-    return {
-      before: "",
-      match: `${match.slice(0, maxTotalLength - 3)}...`,
-      after: "",
-    };
-  }
-
-  let before = normalizeContextChunk(highlight.contextBefore);
-  let after = normalizeContextChunk(highlight.contextAfter);
-
-  const availableContext = maxTotalLength - match.length;
-  const beforeLimit = Math.floor(availableContext / 2);
-  const afterLimit = availableContext - beforeLimit;
-
-  if (before.length > beforeLimit) {
-    const tailLength = Math.max(0, beforeLimit - 3);
-    before = tailLength > 0 ? `...${before.slice(-tailLength)}` : "";
-  }
-
-  if (after.length > afterLimit) {
-    const headLength = Math.max(0, afterLimit - 3);
-    after = headLength > 0 ? `${after.slice(0, headLength)}...` : "";
-  }
-
-  return {
-    before,
-    match,
-    after,
-  };
-}
-
-function formatHighlightTimestamp(value: Date): string {
-  try {
-    return new Date(value).toLocaleString([], {
-      dateStyle: "medium",
-      timeStyle: "short",
-    });
-  } catch {
-    return "";
-  }
-}
-
-function buildHighlightMetaLine(
-  highlight: ReaderArticleHighlight,
-  timestamp: string,
-): string {
-  const occurrenceText = `Occurrence ${highlight.selectedOccurrenceIndex + 1} of ${highlight.occurrenceCount}`;
-  if (!timestamp) {
-    return occurrenceText;
-  }
-
-  return `${occurrenceText} • ${timestamp}`;
-}
-
 function helperPanelStyle(
   fillAvailableHeight: boolean,
 ): React.CSSProperties | undefined {
@@ -189,30 +119,6 @@ function helperStreamStyle(
     flex: "1 1 auto",
     minHeight: 0,
   };
-}
-
-function hasAnalysis(analysis: ReaderHighlightAnalysis | null): boolean {
-  if (!analysis) {
-    return false;
-  }
-
-  return (
-    analysis.definition.trim().length > 0 &&
-    analysis.generalMeaning.trim().length > 0 &&
-    analysis.meaningInContext.trim().length > 0
-  );
-}
-
-function formatAnalysisAsExplanation(
-  analysis: ReaderHighlightAnalysis,
-): string {
-  return [
-    `${analysis.term}: ${analysis.definition}`,
-    "",
-    analysis.generalMeaning,
-    "",
-    analysis.meaningInContext,
-  ].join("\n");
 }
 
 function renderExplainLoading(
@@ -276,51 +182,42 @@ function renderExplainActions(options: {
   canDeleteHighlight: boolean;
   onDeleteHighlight?: () => void;
 }): React.ReactNode | null {
-  const showAddAction = Boolean(options.onAddToDeck);
-  const showDeleteAction = Boolean(options.onDeleteHighlight);
+  const actionState = resolveExplainActionState(options);
 
-  if (!showAddAction && !showDeleteAction) {
+  if (!actionState.showAddAction && !actionState.showDeleteAction) {
     return null;
   }
 
   return (
     <Group justify="flex-end">
-      {showAddAction && options.onAddToDeck && (
+      {actionState.showAddAction && options.onAddToDeck ? (
         <Button
           size="compact-sm"
           variant="light"
           color="grape"
           onClick={options.onAddToDeck}
-          disabled={
-            !options.canAddToDeck ||
-            options.isExplaining ||
-            options.isDeletingHighlight
-          }
-          loading={options.isAddingToDeck}
+          disabled={actionState.addDisabled}
+          loading={actionState.isAddingToDeck}
         >
           Add to deck
         </Button>
-      )}
-      {showDeleteAction && options.onDeleteHighlight && (
+      ) : null}
+      {actionState.showDeleteAction && options.onDeleteHighlight ? (
         <ActionIcon
           size="sm"
           variant="subtle"
           color="gray"
           onClick={options.onDeleteHighlight}
-          disabled={
-            !options.canDeleteHighlight ||
-            options.isDeletingHighlight ||
-            options.isExplaining
-          }
+          disabled={actionState.deleteDisabled}
           aria-label="Delete highlight"
         >
-          {options.isDeletingHighlight ? (
+          {actionState.isDeletingHighlight ? (
             <Loader size={12} />
           ) : (
             <IconX size={14} stroke={1.8} />
           )}
         </ActionIcon>
-      )}
+      ) : null}
     </Group>
   );
 }
@@ -427,42 +324,6 @@ type HighlightHistoryRowProps = {
   onDeleteHighlight: (highlightId: number) => void;
 };
 
-type HighlightBadgeMeta = {
-  label: string;
-  color: string;
-};
-
-function resolveHighlightBadgeMeta(
-  highlight: ReaderArticleHighlight,
-  importStatus: HighlightImportResultStatus | null,
-): HighlightBadgeMeta | null {
-  if (highlight.importedCardId !== null) {
-    return { label: "Added", color: "teal" };
-  }
-
-  if (importStatus === "created" || importStatus === "already_imported") {
-    return { label: "Added", color: "teal" };
-  }
-
-  if (importStatus === "duplicate") {
-    return { label: "Duplicate", color: "gray" };
-  }
-
-  if (importStatus === "not_ready") {
-    return { label: "Not ready", color: "yellow" };
-  }
-
-  if (highlight.status === "in_progress") {
-    return { label: "Pending", color: "yellow" };
-  }
-
-  if (highlight.status === "error") {
-    return { label: "Error", color: "red" };
-  }
-
-  return null;
-}
-
 function HighlightHistoryRow({
   highlight,
   isDeleting,
@@ -472,29 +333,11 @@ function HighlightHistoryRow({
   onDeleteHighlight,
 }: HighlightHistoryRowProps) {
   const [showExplanation, setShowExplanation] = React.useState(false);
-  const contextSummary = compactContextSummary(highlight);
-  const hasContextSummary =
-    contextSummary.before.length > 0 ||
-    contextSummary.match.length > 0 ||
-    contextSummary.after.length > 0;
-  const timestamp = formatHighlightTimestamp(highlight.createdAt);
-  const metaLine = buildHighlightMetaLine(highlight, timestamp);
-  const analysis: ReaderHighlightAnalysis = {
-    term: highlight.term,
-    definition: highlight.definition,
-    generalMeaning: highlight.generalMeaning,
-    meaningInContext: highlight.meaningInContext,
-  };
-  const highlightHasAnalysis =
-    highlight.status === "ready" && hasAnalysis(analysis);
-  const canSelect =
-    highlight.status === "ready" && highlight.importedCardId === null;
-  const badgeMeta = resolveHighlightBadgeMeta(highlight, importStatus);
-
-  let toggleLabel = "Show explanation";
-  if (showExplanation) {
-    toggleLabel = "Hide explanation";
-  }
+  const rowState = resolveHighlightRowState(
+    highlight,
+    importStatus,
+    showExplanation,
+  );
 
   return (
     <Stack
@@ -519,7 +362,7 @@ function HighlightHistoryRow({
             onChange={(event) => {
               onToggleSelected(event.currentTarget.checked);
             }}
-            disabled={!canSelect}
+            disabled={!rowState.canSelect}
             mt={2}
             aria-label={`Select highlight ${highlight.selectedText}`}
           />
@@ -536,11 +379,15 @@ function HighlightHistoryRow({
               >
                 {highlight.selectedText}
               </Text>
-              {badgeMeta && (
-                <Badge size="xs" variant="light" color={badgeMeta.color}>
-                  {badgeMeta.label}
+              {rowState.badgeMeta ? (
+                <Badge
+                  size="xs"
+                  variant="light"
+                  color={rowState.badgeMeta.color}
+                >
+                  {rowState.badgeMeta.label}
                 </Badge>
-              )}
+              ) : null}
             </Group>
           </Stack>
         </Group>
@@ -562,29 +409,28 @@ function HighlightHistoryRow({
         </ActionIcon>
       </Group>
       <Text size="xs" c="dimmed" style={{ fontFamily: readerBodyFont }}>
-        {metaLine}
+        {rowState.metaLine}
       </Text>
-      {hasContextSummary && (
+      {rowState.hasContextSummary ? (
         <Text size="xs" c="dimmed" style={{ fontFamily: readerBodyFont }}>
-          {contextSummary.before}
+          {rowState.contextSummary.before}
           <Text
             component="span"
             fw={700}
             c={readerHeadingColor}
             style={{ fontFamily: readerBodyFont }}
           >
-            {contextSummary.match}
+            {rowState.contextSummary.match}
           </Text>
-          {contextSummary.after}
+          {rowState.contextSummary.after}
         </Text>
-      )}
-      {highlight.status === "error" &&
-        highlight.errorMessage.trim().length > 0 && (
-          <Text size="sm" c="red" style={{ fontFamily: readerBodyFont }}>
-            {highlight.errorMessage}
-          </Text>
-        )}
-      {highlightHasAnalysis && (
+      ) : null}
+      {rowState.showErrorMessage ? (
+        <Text size="sm" c="red" style={{ fontFamily: readerBodyFont }}>
+          {highlight.errorMessage}
+        </Text>
+      ) : null}
+      {rowState.highlightHasAnalysis ? (
         <Group gap="xs" justify="space-between">
           <Button
             size="compact-xs"
@@ -594,11 +440,11 @@ function HighlightHistoryRow({
               setShowExplanation((previous) => !previous);
             }}
           >
-            {toggleLabel}
+            {rowState.toggleLabel}
           </Button>
         </Group>
-      )}
-      {highlightHasAnalysis && showExplanation && (
+      ) : null}
+      {rowState.highlightHasAnalysis && showExplanation ? (
         <Box
           style={{
             borderLeft: `2px solid ${readerDividerColor}`,
@@ -606,10 +452,10 @@ function HighlightHistoryRow({
           }}
         >
           <ReactMarkdown remarkPlugins={[remarkGfm]}>
-            {formatAnalysisAsExplanation(analysis)}
+            {formatAnalysisAsExplanation(rowState.analysis)}
           </ReactMarkdown>
         </Box>
-      )}
+      ) : null}
     </Stack>
   );
 }
@@ -631,14 +477,12 @@ export function HighlightsHistoryCard({
   onDeleteHighlight,
 }: HighlightsHistoryCardProps) {
   const [showAll, setShowAll] = React.useState(false);
-
-  let visibleHighlights = highlights.slice(0, 4);
-  if (showAll) {
-    visibleHighlights = highlights;
-  }
-
-  const hiddenCount = highlights.length - visibleHighlights.length;
-  const canExpand = hiddenCount > 0;
+  const historyState = resolveHighlightsHistoryState({
+    isLoading,
+    errorMessage,
+    highlightCount: highlights.length,
+  });
+  const visibility = resolveHighlightsVisibility(highlights, showAll);
 
   return (
     <Stack gap="sm">
@@ -654,7 +498,7 @@ export function HighlightsHistoryCard({
           </Text>
         </Group>
       )}
-      {!isLoading && errorMessage.trim().length > 0 && (
+      {historyState.showError ? (
         <Text
           size="sm"
           c="red"
@@ -663,19 +507,13 @@ export function HighlightsHistoryCard({
         >
           {errorMessage}
         </Text>
-      )}
-      {!isLoading &&
-        errorMessage.trim().length === 0 &&
-        highlights.length === 0 && (
-          <Text
-            size="sm"
-            c="dimmed"
-            style={{ fontFamily: readerBodyFont }}
-          >
-            No highlights saved yet.
-          </Text>
-        )}
-      {!isLoading && highlights.length > 0 && (
+      ) : null}
+      {historyState.showEmpty ? (
+        <Text size="sm" c="dimmed" style={{ fontFamily: readerBodyFont }}>
+          No highlights saved yet.
+        </Text>
+      ) : null}
+      {historyState.showList ? (
         <Stack gap="sm">
           <Group>
             <Button
@@ -697,7 +535,7 @@ export function HighlightsHistoryCard({
               {allImportableSelected ? "Clear all" : "Select all"}
             </Button>
           </Group>
-          {visibleHighlights.map((highlight) => {
+          {visibility.visibleHighlights.map((highlight) => {
             return (
               <HighlightHistoryRow
                 key={highlight.id}
@@ -714,7 +552,7 @@ export function HighlightsHistoryCard({
               />
             );
           })}
-          {canExpand && (
+          {visibility.canExpand ? (
             <Group>
               <Button
                 size="compact-sm"
@@ -724,11 +562,11 @@ export function HighlightsHistoryCard({
                   setShowAll(true);
                 }}
               >
-                Show {hiddenCount} more
+                Show {visibility.hiddenCount} more
               </Button>
             </Group>
-          )}
-          {showAll && highlights.length > 4 && (
+          ) : null}
+          {visibility.canCollapse ? (
             <Group>
               <Button
                 size="compact-sm"
@@ -741,9 +579,9 @@ export function HighlightsHistoryCard({
                 Show fewer
               </Button>
             </Group>
-          )}
+          ) : null}
         </Stack>
-      )}
+      ) : null}
     </Stack>
   );
 }

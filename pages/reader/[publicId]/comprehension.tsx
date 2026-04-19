@@ -1,40 +1,27 @@
 import { generateStructuredOutput } from "@/koala/ai";
-import { prismaClient } from "@/koala/prisma-client";
 import {
-  ReaderPageFrame,
-  ReaderPageHeader,
-  ReaderPanel,
-} from "@/koala/reader/ui/layout";
-import {
-  formatReaderDateTime,
-  readerBodyFont,
-  readerDisplayFont,
-  readerHeadingColor,
-  readerMutedColor,
-} from "@/koala/reader/ui/theme";
-import { Anchor, Group, Stack, Text } from "@mantine/core";
-import { IconExternalLink } from "@tabler/icons-react";
+  buildReaderSourceText,
+  collapseReaderWhitespace,
+  getPublicReaderArticle,
+  ReaderInputKind,
+} from "@/koala/reader/public-article";
+import { ReaderArticlePanelHeader } from "@/koala/reader/ui/article-panel-header";
+import { ReaderExercisePage } from "@/koala/reader/ui/exercise-page";
+import { ReaderPanel } from "@/koala/reader/ui/layout";
+import { ReaderProcessingPanel } from "@/koala/reader/ui/processing-panel";
+import { readerBodyFont } from "@/koala/reader/ui/theme";
+import { Stack, Text } from "@mantine/core";
 import type {
   GetServerSidePropsContext,
   InferGetServerSidePropsType,
 } from "next";
 import Head from "next/head";
-import Link from "next/link";
 import React from "react";
 import { z } from "zod";
-
-type ReaderInputKind = "url" | "raw";
-
-type PublicReaderArticle = {
-  publicId: string;
-  title: string;
-  normalizedUrl: string | null;
-  inputKind: ReaderInputKind;
-  contentText: string;
-  ingestStatus: "pending" | "in_progress" | "ready" | "error";
-  ingestError: string;
-  createdAt: string;
-};
+import {
+  buildFallbackKoreanQuestions,
+  mergeQuestionLists,
+} from "@/koala/reader/comprehension-questions";
 
 type ComprehensionQuestionData = {
   questions: string[];
@@ -57,75 +44,16 @@ const KOREAN_FALLBACK_QUESTIONS = [
   "글의 내용을 바탕으로 어떤 점을 추론할 수 있나요?",
 ];
 
-function mapIngestStatus(
-  status: "PENDING" | "IN_PROGRESS" | "READY" | "ERROR",
-): PublicReaderArticle["ingestStatus"] {
-  if (status === "PENDING") {
-    return "pending";
-  }
-
-  if (status === "IN_PROGRESS") {
-    return "in_progress";
-  }
-
-  if (status === "READY") {
-    return "ready";
-  }
-
-  return "error";
-}
-
-function mapInputKind(value: "URL" | "RAW"): ReaderInputKind {
-  if (value === "RAW") {
-    return "raw";
-  }
-
-  return "url";
-}
-
-function pendingMessage(status: "pending" | "in_progress"): string {
-  if (status === "pending") {
-    return "This article is queued for processing.";
-  }
-
-  return "This article is currently being processed.";
-}
-
-function normalizeLineBreaks(value: string): string {
-  return value.replace(/\r\n/g, "\n").trim();
-}
-
-function stripMarkdownSyntax(value: string): string {
-  return value
-    .replace(/```[\s\S]*?```/g, " ")
-    .replace(/`([^`]+)`/g, "$1")
-    .replace(/!\[[^\]]*\]\([^)]+\)/g, " ")
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-    .replace(/^>\s?/gm, "")
-    .replace(/^#{1,6}\s+/gm, "")
-    .replace(/^\s*[-*+]\s+/gm, "")
-    .replace(/^\s*\d+\.\s+/gm, "")
-    .replace(/[*_~]/g, " ");
-}
-
-function collapseWhitespace(value: string): string {
-  return value.replace(/\s+/g, " ").trim();
-}
-
 function buildReadingMaterial(
   contentText: string,
   inputKind: ReaderInputKind,
 ): string {
-  const normalized = normalizeLineBreaks(contentText);
-  if (!normalized) {
+  const sourceText = buildReaderSourceText(contentText, inputKind);
+  if (!sourceText) {
     return "";
   }
 
-  if (inputKind === "raw") {
-    return collapseWhitespace(normalized);
-  }
-
-  return collapseWhitespace(stripMarkdownSyntax(normalized));
+  return collapseReaderWhitespace(sourceText);
 }
 
 function targetComprehensionQuestionCount(characterCount: number): number {
@@ -133,103 +61,6 @@ function targetComprehensionQuestionCount(characterCount: number): number {
   return (
     1 + Math.floor(safeCharacterCount / COMPREHENSION_QUESTION_CHAR_STEP)
   );
-}
-
-function stripLeadingQuestionNumbering(value: string): string {
-  return value.replace(/^\s*\d+[.)\-\s]+/, "").trim();
-}
-
-function hasLatinLetters(value: string): boolean {
-  return /[A-Za-z]/.test(value);
-}
-
-function normalizeKoreanQuestion(value: string): string {
-  const stripped = stripLeadingQuestionNumbering(value);
-  const collapsed = collapseWhitespace(stripped);
-
-  if (!collapsed) {
-    return "";
-  }
-
-  if (hasLatinLetters(collapsed)) {
-    return "";
-  }
-
-  const normalizedPunctuation = collapsed.replace(/？/g, "?");
-  if (normalizedPunctuation.endsWith("?")) {
-    return normalizedPunctuation;
-  }
-
-  return `${normalizedPunctuation}?`;
-}
-
-function buildFallbackKoreanQuestions(questionCount: number): string[] {
-  const questions: string[] = [];
-  for (let index = 0; index < questionCount; index += 1) {
-    const fallback =
-      KOREAN_FALLBACK_QUESTIONS[index % KOREAN_FALLBACK_QUESTIONS.length];
-    const normalizedFallback = normalizeKoreanQuestion(fallback);
-    if (normalizedFallback) {
-      questions.push(normalizedFallback);
-      continue;
-    }
-
-    questions.push("이 글의 핵심 내용은 무엇인가요?");
-  }
-
-  return questions;
-}
-
-function mergeQuestionLists(options: {
-  preferredQuestions: string[];
-  fallbackQuestions: string[];
-  questionCount: number;
-}): string[] {
-  const merged: string[] = [];
-
-  for (const question of options.preferredQuestions) {
-    const normalized = normalizeKoreanQuestion(question);
-    if (!normalized) {
-      continue;
-    }
-
-    if (merged.includes(normalized)) {
-      continue;
-    }
-
-    merged.push(normalized);
-    if (merged.length >= options.questionCount) {
-      return merged.slice(0, options.questionCount);
-    }
-  }
-
-  for (const question of options.fallbackQuestions) {
-    const normalized = normalizeKoreanQuestion(question);
-    if (!normalized) {
-      continue;
-    }
-
-    if (merged.includes(normalized)) {
-      continue;
-    }
-
-    merged.push(normalized);
-    if (merged.length >= options.questionCount) {
-      return merged.slice(0, options.questionCount);
-    }
-  }
-
-  let fallbackCursor = 0;
-  while (merged.length < options.questionCount) {
-    const fallback =
-      options.fallbackQuestions[
-        fallbackCursor % options.fallbackQuestions.length
-      ] ?? "이 글의 핵심 내용은 무엇인가요?";
-    merged.push(fallback);
-    fallbackCursor += 1;
-  }
-
-  return merged.slice(0, options.questionCount);
 }
 
 function comprehensionQuestionSchema(questionCount: number) {
@@ -288,69 +119,6 @@ async function generateComprehensionQuestionsWithLlm(options: {
   return response.questions;
 }
 
-function ProcessingPanel({
-  status,
-  ingestError,
-  publicId,
-  normalizedUrl,
-}: {
-  status: PublicReaderArticle["ingestStatus"];
-  ingestError: string;
-  publicId: string;
-  normalizedUrl: string | null;
-}) {
-  if (status === "error") {
-    return (
-      <ReaderPanel>
-        <Text c="red" fw={700}>
-          We could not generate comprehension questions for this article.
-        </Text>
-        {ingestError.trim().length > 0 && (
-          <Text size="sm" c="red">
-            {ingestError}
-          </Text>
-        )}
-        <Group gap="sm" wrap="wrap">
-          <Anchor component={Link} href={`/reader/${publicId}`} size="sm">
-            Go to article
-          </Anchor>
-          <Anchor component={Link} href="/reader" size="sm">
-            Back to Reader
-          </Anchor>
-          {normalizedUrl && (
-            <Anchor
-              href={normalizedUrl}
-              target="_blank"
-              rel="noreferrer"
-              size="sm"
-            >
-              Open source page
-            </Anchor>
-          )}
-        </Group>
-      </ReaderPanel>
-    );
-  }
-
-  if (status === "pending" || status === "in_progress") {
-    return (
-      <ReaderPanel>
-        <Text c="dimmed">{pendingMessage(status)}</Text>
-        <Group gap="sm" wrap="wrap">
-          <Anchor component={Link} href={`/reader/${publicId}`} size="sm">
-            Go to article
-          </Anchor>
-          <Anchor component={Link} href="/reader" size="sm">
-            Back to Reader
-          </Anchor>
-        </Group>
-      </ReaderPanel>
-    );
-  }
-
-  return null;
-}
-
 export default function ReaderComprehensionQuestionsPage({
   article,
   questionData,
@@ -363,105 +131,49 @@ export default function ReaderComprehensionQuestionsPage({
       <Head>
         <title>{`Comprehension Questions · ${article.title} · Koala Cards`}</title>
       </Head>
-      <ReaderPageFrame>
-        <ReaderPageHeader title="Comprehension Questions" />
-        {!isReady && (
-          <ProcessingPanel
+      <ReaderExercisePage
+        article={article}
+        title="Comprehension Questions"
+        isReady={isReady}
+        hasContent={hasQuestionData}
+        processingPanel={
+          <ReaderProcessingPanel
             status={article.ingestStatus}
             ingestError={article.ingestError}
             publicId={article.publicId}
             normalizedUrl={article.normalizedUrl}
+            errorTitle="We could not generate comprehension questions for this article."
+            pendingMessages={{
+              pending: "This article is queued for processing.",
+              inProgress: "This article is currently being processed.",
+            }}
+            articleLinkLabel="Go to article"
+            backLinkLabel="Back to Reader"
+            sourceLinkLabel="Open source page"
           />
-        )}
-        {isReady && !hasQuestionData && (
-          <ReaderPanel>
-            <Text
-              size="sm"
-              c="dimmed"
-              style={{ fontFamily: readerBodyFont }}
-            >
-              This article does not have enough text to generate
-              comprehension questions.
-            </Text>
-            <Anchor
-              component={Link}
-              href={`/reader/${article.publicId}`}
-              size="sm"
-            >
-              Go to article
-            </Anchor>
-          </ReaderPanel>
-        )}
-        {isReady && hasQuestionData && (
-          <ReaderPanel>
-            <Group
-              justify="space-between"
-              align="center"
-              wrap="wrap"
-              gap="sm"
-            >
-              <Anchor
-                component={Link}
-                href={`/reader/${article.publicId}`}
-                size="sm"
-              >
-                ← Go to article
-              </Anchor>
-              <Group gap="xs" wrap="wrap">
-                <Text
-                  size="xs"
-                  style={{
-                    fontFamily: readerBodyFont,
-                    color: readerMutedColor,
-                  }}
-                >
-                  Added {formatReaderDateTime(new Date(article.createdAt))}
-                </Text>
-                {article.normalizedUrl && (
-                  <Anchor
-                    href={article.normalizedUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    size="xs"
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 4,
-                    }}
-                  >
-                    Source
-                    <IconExternalLink size={13} stroke={1.8} />
-                  </Anchor>
-                )}
-              </Group>
-            </Group>
-            <Stack gap={4}>
+        }
+        emptyMessage="This article does not have enough text to generate comprehension questions."
+        emptyLinkLabel="Go to article"
+      >
+        <ReaderPanel>
+          <ReaderArticlePanelHeader
+            article={article}
+            returnLabel="← Go to article"
+            titleFontSize="clamp(1.2rem, 2.3vw, 1.6rem)"
+          />
+          <Stack gap={8}>
+            {questionData?.questions.map((question, index) => (
               <Text
-                style={{
-                  fontFamily: readerDisplayFont,
-                  color: readerHeadingColor,
-                  fontWeight: 700,
-                  lineHeight: 1.25,
-                  fontSize: "clamp(1.2rem, 2.3vw, 1.6rem)",
-                }}
+                key={`${index}-${question}`}
+                size="sm"
+                style={{ fontFamily: readerBodyFont, lineHeight: 1.6 }}
               >
-                {article.title}
+                {index + 1}. {question}
               </Text>
-            </Stack>
-            <Stack gap={8}>
-              {questionData.questions.map((question, index) => (
-                <Text
-                  key={`${index}-${question}`}
-                  size="sm"
-                  style={{ fontFamily: readerBodyFont, lineHeight: 1.6 }}
-                >
-                  {index + 1}. {question}
-                </Text>
-              ))}
-            </Stack>
-          </ReaderPanel>
-        )}
-      </ReaderPageFrame>
+            ))}
+          </Stack>
+        </ReaderPanel>
+      </ReaderExercisePage>
     </>
   );
 }
@@ -474,48 +186,26 @@ export async function getServerSideProps(
     return { notFound: true };
   }
 
-  const article = await prismaClient.readerArticle.findUnique({
-    where: { publicId },
-    select: {
-      publicId: true,
-      title: true,
-      normalizedUrl: true,
-      inputKind: true,
-      contentText: true,
-      ingestStatus: true,
-      ingestError: true,
-      createdAt: true,
-    },
-  });
-
+  const article = await getPublicReaderArticle(publicId);
   if (!article) {
     return { notFound: true };
   }
 
-  const payload: PublicReaderArticle = {
-    publicId: article.publicId,
-    title: article.title,
-    normalizedUrl: article.normalizedUrl,
-    inputKind: mapInputKind(article.inputKind),
-    contentText: article.contentText,
-    ingestStatus: mapIngestStatus(article.ingestStatus),
-    ingestError: article.ingestError,
-    createdAt: article.createdAt.toISOString(),
-  };
-
   let questionData: ComprehensionQuestionData | null = null;
-  if (payload.ingestStatus === "ready") {
+  if (article.ingestStatus === "ready") {
     const readingMaterial = buildReadingMaterial(
-      payload.contentText,
-      payload.inputKind,
+      article.contentText,
+      article.inputKind,
     );
 
     if (readingMaterial.length > 0) {
       const characterCount = readingMaterial.length;
       const questionCount =
         targetComprehensionQuestionCount(characterCount);
-      const fallbackQuestions =
-        buildFallbackKoreanQuestions(questionCount);
+      const fallbackQuestions = buildFallbackKoreanQuestions(
+        questionCount,
+        KOREAN_FALLBACK_QUESTIONS,
+      );
 
       let llmQuestions: string[] = [];
       try {
@@ -549,7 +239,7 @@ export async function getServerSideProps(
 
   return {
     props: {
-      article: payload,
+      article,
       questionData,
     },
   };

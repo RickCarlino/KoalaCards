@@ -58,11 +58,21 @@ import { canStartNewLessons, getLessonsDue } from "@/koala/fetch-lesson";
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { prismaClient } from "@/koala/prisma-client";
 import { compare } from "@/koala/quiz-evaluators/evaluator-utils";
+import {
+  buildAssistantEditProposal,
+  createAssistantStreamParser,
+  EDIT_PLACEHOLDER,
+  EXAMPLE_PLACEHOLDER,
+} from "@/koala/review/assistant-parser";
 import { VisualDiff } from "@/koala/review/lesson-steps/visual-diff";
 import { useUserSettings } from "@/koala/settings-provider";
 import { resolveRequestedRetention } from "@/koala/settings/requested-retention";
 import { clampReviewTake } from "@/koala/settings/review-take";
 import { LangCode } from "@/koala/shared-types";
+import {
+  resolveWritingPracticeRedirect,
+  shouldRedirectFromReviewPage,
+} from "@/koala/review/server-side";
 import { trpc } from "@/koala/trpc-config";
 import { getGradeButtonText } from "@/koala/trpc-routes/calculate-scheduling-data";
 import { DeckSummary } from "@/koala/types/deck-summary";
@@ -498,8 +508,6 @@ type AssistantParserResult = {
   edits: CardEditBlock[];
 };
 
-type BlockType = "example" | "edit";
-
 type AssistantMessageContentProps = {
   message: ChatMessage;
   messageIndex: number;
@@ -677,18 +685,6 @@ const messageScrollContainerStyle: React.CSSProperties = {
   overflowY: "auto",
   overflowX: "hidden",
 };
-
-const EXAMPLE_START = "[[EXAMPLE]]";
-
-const EXAMPLE_END = "[[/EXAMPLE]]";
-
-const EXAMPLE_PLACEHOLDER = "[[__EXAMPLE_SLOT__]]";
-
-const EDIT_START = "[[EDIT_CARD]]";
-
-const EDIT_END = "[[/EDIT_CARD]]";
-
-const EDIT_PLACEHOLDER = "[[__EDIT_SLOT__]]";
 
 const messageTextStyle: React.CSSProperties = {
   whiteSpace: "pre-wrap",
@@ -3598,262 +3594,6 @@ const getMessageTone = (role: ChatMessage["role"]): MessageTone => {
 const getMessageLabel = (role: ChatMessage["role"]) =>
   role === "user" ? "You" : "Assistant";
 
-function getOverlap(source: string, token: string) {
-  const max = Math.min(source.length, token.length - 1);
-  for (let len = max; len > 0; len -= 1) {
-    if (source.endsWith(token.slice(0, len))) {
-      return len;
-    }
-  }
-  return 0;
-}
-
-function parseExample(content: string): ExampleBlock | null {
-  const normalized = content
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
-  if (normalized.length < 2) {
-    return null;
-  }
-  return {
-    phrase: normalized[0],
-    translation: normalized.slice(1).join(" "),
-  };
-}
-
-type ParsedEditField = {
-  key: string;
-  value: string;
-};
-
-function parseEditField(line: string): ParsedEditField | null {
-  const [rawKey, ...rest] = line.split(":");
-  if (!rawKey || rest.length === 0) {
-    return null;
-  }
-
-  const value = rest.join(":").trim();
-  if (!value) {
-    return null;
-  }
-
-  return {
-    key: rawKey.trim().toLowerCase(),
-    value,
-  };
-}
-
-function parseCardId(value: string): number | null {
-  const parsedId = Number.parseInt(value, 10);
-  if (Number.isFinite(parsedId)) {
-    return parsedId;
-  }
-  return null;
-}
-
-function hasEditData(edit: CardEditBlock): boolean {
-  return Boolean(edit.cardId || edit.term || edit.definition || edit.note);
-}
-
-const EDIT_FIELD_HANDLERS: Record<
-  string,
-  (edit: CardEditBlock, value: string) => void
-> = {
-  cardid: (edit, value) => {
-    const parsedId = parseCardId(value);
-    if (parsedId !== null) {
-      edit.cardId = parsedId;
-    }
-  },
-  id: (edit, value) => {
-    const parsedId = parseCardId(value);
-    if (parsedId !== null) {
-      edit.cardId = parsedId;
-    }
-  },
-  term: (edit, value) => {
-    edit.term = value;
-  },
-  definition: (edit, value) => {
-    edit.definition = value;
-  },
-  note: (edit, value) => {
-    edit.note = value;
-  },
-  reason: (edit, value) => {
-    edit.note = value;
-  },
-};
-
-function parseEdit(content: string): CardEditBlock | null {
-  const lines = content
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  if (lines.length === 0) {
-    return null;
-  }
-
-  const edit: CardEditBlock = {};
-  for (const line of lines) {
-    const field = parseEditField(line);
-    if (!field) {
-      continue;
-    }
-    const handler = EDIT_FIELD_HANDLERS[field.key];
-    if (handler) {
-      handler(edit, field.value);
-    }
-  }
-
-  if (!hasEditData(edit) && lines.length >= 2) {
-    return {
-      term: lines[0],
-      definition: lines.slice(1).join(" "),
-    };
-  }
-
-  return edit;
-}
-
-function createAssistantStreamParser() {
-  let buffer = "";
-  let blockType: BlockType | null = null;
-  let blockBuffer = "";
-
-  const applyResult = (
-    textDelta: string,
-    examples: ExampleBlock[],
-    edits: CardEditBlock[],
-  ): AssistantParserResult => ({
-    textDelta,
-    examples,
-    edits,
-  });
-
-  const createToken = (type: BlockType, index: number) => ({
-    type,
-    index,
-  });
-
-  const resolveStartToken = (content: string) => {
-    const exampleIdx = content.indexOf(EXAMPLE_START);
-    const editIdx = content.indexOf(EDIT_START);
-
-    if (exampleIdx === -1 && editIdx === -1) {
-      return null;
-    }
-
-    if (exampleIdx === -1) {
-      return createToken("edit", editIdx);
-    }
-
-    if (editIdx === -1) {
-      return createToken("example", exampleIdx);
-    }
-
-    if (exampleIdx < editIdx) {
-      return createToken("example", exampleIdx);
-    }
-
-    return createToken("edit", editIdx);
-  };
-
-  const getPlaceholder = (type: BlockType) =>
-    type === "example" ? EXAMPLE_PLACEHOLDER : EDIT_PLACEHOLDER;
-
-  const getStartToken = (type: BlockType) =>
-    type === "example" ? EXAMPLE_START : EDIT_START;
-
-  const getEndToken = (type: BlockType) =>
-    type === "example" ? EXAMPLE_END : EDIT_END;
-
-  const push = (chunk: string): AssistantParserResult => {
-    buffer += chunk;
-    let emittedText = "";
-    const foundExamples: ExampleBlock[] = [];
-    const foundEdits: CardEditBlock[] = [];
-
-    while (buffer.length > 0) {
-      if (blockType === null) {
-        const match = resolveStartToken(buffer);
-        if (!match) {
-          const overlap = Math.max(
-            getOverlap(buffer, EXAMPLE_START),
-            getOverlap(buffer, EDIT_START),
-          );
-          const flushLen = buffer.length - overlap;
-          if (flushLen > 0) {
-            emittedText += buffer.slice(0, flushLen);
-            buffer = buffer.slice(flushLen);
-          }
-          break;
-        }
-        const { type, index } = match;
-        if (index > 0) {
-          emittedText += buffer.slice(0, index);
-        }
-        buffer = buffer.slice(index + getStartToken(type).length);
-        blockType = type;
-        blockBuffer = "";
-        continue;
-      }
-
-      const endToken = getEndToken(blockType);
-      const endIdx = buffer.indexOf(endToken);
-      if (endIdx === -1) {
-        const overlap = getOverlap(buffer, endToken);
-        const takeLen = buffer.length - overlap;
-        if (takeLen > 0) {
-          blockBuffer += buffer.slice(0, takeLen);
-          buffer = buffer.slice(takeLen);
-        }
-        break;
-      }
-
-      blockBuffer += buffer.slice(0, endIdx);
-      buffer = buffer.slice(endIdx + endToken.length);
-      if (blockType === "example") {
-        const parsedExample = parseExample(blockBuffer);
-        if (parsedExample) {
-          foundExamples.push(parsedExample);
-          emittedText += getPlaceholder("example");
-        } else {
-          emittedText += blockBuffer;
-        }
-      } else {
-        const parsedEdit = parseEdit(blockBuffer);
-        if (parsedEdit) {
-          foundEdits.push(parsedEdit);
-          emittedText += getPlaceholder("edit");
-        } else {
-          emittedText += blockBuffer;
-        }
-      }
-      blockType = null;
-      blockBuffer = "";
-    }
-
-    return applyResult(emittedText, foundExamples, foundEdits);
-  };
-
-  const flush = (): AssistantParserResult => {
-    if (blockType !== null) {
-      buffer = "";
-      blockBuffer = "";
-      blockType = null;
-      return applyResult("", [], []);
-    }
-    const text = buffer;
-    buffer = "";
-    return applyResult(text, [], []);
-  };
-
-  return { push, flush };
-}
-
 function AssistantMessageList({
   messages,
   viewportRef,
@@ -4527,35 +4267,13 @@ function useAssistantChat({
     translation: example.translation,
   });
 
-  const createEditProposal = React.useCallback(
-    (draft: CardEditBlock): AssistantEditProposal | null => {
-      const latestCard = currentCardRef.current;
-      const resolvedCardId = draft.cardId ?? latestCard?.cardId;
-      if (!resolvedCardId) {
-        return null;
-      }
-      const targetCard =
-        latestCard && resolvedCardId === latestCard.cardId
-          ? latestCard
-          : undefined;
-      const resolvedTerm = draft.term?.trim() || targetCard?.term || "";
-      const resolvedDefinition =
-        draft.definition?.trim() || targetCard?.definition || "";
-      if (!resolvedTerm && !resolvedDefinition) {
-        return null;
-      }
-      return {
-        id: createProposalId(resolvedCardId),
-        cardId: resolvedCardId,
-        term: resolvedTerm,
-        definition: resolvedDefinition,
-        note: draft.note,
-        originalTerm: targetCard?.term,
-        originalDefinition: targetCard?.definition,
-      };
-    },
-    [],
-  );
+  const createEditProposal = React.useCallback((draft: CardEditBlock) => {
+    return buildAssistantEditProposal({
+      draft,
+      latestCard: currentCardRef.current,
+      createProposalId,
+    });
+  }, []);
 
   const applyParsed = React.useCallback(
     (parsed: AssistantParserResult) => {
@@ -5126,7 +4844,7 @@ export const getServerSideProps: GetServerSideProps<
     deck.id,
     Date.now(),
   );
-  if (!hasDue && !canStartNew) {
+  if (shouldRedirectFromReviewPage({ hasDue, canStartNew })) {
     return redirect("/review");
   }
 
@@ -5145,10 +4863,18 @@ export const getServerSideProps: GetServerSideProps<
 
     const progress = writingProgress._sum.correctionCharacterCount ?? 0;
     const goal = userSettings.dailyWritingGoal ?? 100;
-    if (progress < goal) {
+    const writingRedirect = resolveWritingPracticeRedirect({
+      writingFirst: userSettings.writingFirst,
+      progress,
+      goal,
+      deckId,
+      buildReviewPath,
+      buildWritingPracticeUrl,
+    });
+    if (writingRedirect) {
       return {
         redirect: {
-          destination: buildWritingPracticeUrl(buildReviewPath(deckId)),
+          destination: writingRedirect,
           permanent: false,
         },
       };

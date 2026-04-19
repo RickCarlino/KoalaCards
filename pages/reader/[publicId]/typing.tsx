@@ -1,11 +1,15 @@
-import { prismaClient } from "@/koala/prisma-client";
 import {
-  ReaderPageFrame,
-  ReaderPageHeader,
-  ReaderPanel,
-} from "@/koala/reader/ui/layout";
+  buildReaderSourceText,
+  collapseReaderWhitespace,
+  getPublicReaderArticle,
+  PublicReaderArticle,
+  ReaderInputKind,
+} from "@/koala/reader/public-article";
+import { ReaderArticlePanelHeader } from "@/koala/reader/ui/article-panel-header";
+import { ReaderExercisePage } from "@/koala/reader/ui/exercise-page";
+import { ReaderPanel } from "@/koala/reader/ui/layout";
+import { ReaderProcessingPanel } from "@/koala/reader/ui/processing-panel";
 import {
-  formatReaderDateTime,
   readerAccentColor,
   readerAccentStrongColor,
   readerBodyFont,
@@ -24,31 +28,16 @@ import {
   Button,
   Group,
   Progress,
-  Stack,
   Switch,
   Text,
   Textarea,
 } from "@mantine/core";
-import { IconExternalLink } from "@tabler/icons-react";
 import type {
   GetServerSidePropsContext,
   InferGetServerSidePropsType,
 } from "next";
 import Link from "next/link";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-
-type ReaderInputKind = "url" | "raw";
-
-type PublicReaderArticle = {
-  publicId: string;
-  title: string;
-  normalizedUrl: string | null;
-  inputKind: ReaderInputKind;
-  contentText: string;
-  ingestStatus: "pending" | "in_progress" | "ready" | "error";
-  ingestError: string;
-  createdAt: string;
-};
 
 type TypingStatus = "idle" | "in_progress" | "finished";
 
@@ -92,61 +81,6 @@ const typingPromptTextStyle: React.CSSProperties = {
   whiteSpace: "pre-wrap",
   wordBreak: "break-word",
 };
-
-function mapIngestStatus(
-  status: "PENDING" | "IN_PROGRESS" | "READY" | "ERROR",
-): PublicReaderArticle["ingestStatus"] {
-  if (status === "PENDING") {
-    return "pending";
-  }
-
-  if (status === "IN_PROGRESS") {
-    return "in_progress";
-  }
-
-  if (status === "READY") {
-    return "ready";
-  }
-
-  return "error";
-}
-
-function mapInputKind(value: "URL" | "RAW"): ReaderInputKind {
-  if (value === "RAW") {
-    return "raw";
-  }
-
-  return "url";
-}
-
-function pendingMessage(status: "pending" | "in_progress"): string {
-  if (status === "pending") {
-    return "This article is in line to be prepared.";
-  }
-
-  return "This article is being prepared now.";
-}
-
-function normalizeLineBreaks(value: string): string {
-  return value.replace(/\r\n/g, "\n").trim();
-}
-
-function stripMarkdownSyntax(value: string): string {
-  return value
-    .replace(/```[\s\S]*?```/g, " ")
-    .replace(/`([^`]+)`/g, "$1")
-    .replace(/!\[[^\]]*]\([^)]+\)/g, " ")
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-    .replace(/^>\s?/gm, "")
-    .replace(/^#{1,6}\s+/gm, "")
-    .replace(/^\s*[-*+]\s+/gm, "")
-    .replace(/^\s*\d+\.\s+/gm, "")
-    .replace(/[*_~]/g, " ");
-}
-
-function collapseWhitespace(value: string): string {
-  return value.replace(/\s+/g, " ").trim();
-}
 
 function splitLineIntoSentences(line: string): string[] {
   const matches = line.match(/[^.!?。！？]+[.!?。！？]?/g);
@@ -199,14 +133,12 @@ function buildTypingPrompt(
   inputKind: ReaderInputKind,
   shuffleSentences: boolean,
 ): string {
-  const normalized = normalizeLineBreaks(contentText);
-  if (!normalized) {
+  const sourceText = buildReaderSourceText(contentText, inputKind);
+  if (!sourceText) {
     return "";
   }
 
-  const unformattedText =
-    inputKind === "url" ? stripMarkdownSyntax(normalized) : normalized;
-  const chunks = splitPromptChunks(unformattedText);
+  const chunks = splitPromptChunks(sourceText);
   if (chunks.length === 0) {
     return "";
   }
@@ -214,7 +146,7 @@ function buildTypingPrompt(
   const promptChunks = shuffleSentences
     ? shuffleTextChunks(chunks)
     : chunks;
-  const promptText = collapseWhitespace(promptChunks.join(" "));
+  const promptText = collapseReaderWhitespace(promptChunks.join(" "));
 
   return promptText.slice(0, PROMPT_MAX_CHARACTERS);
 }
@@ -449,51 +381,11 @@ function TypingStagePanel({
 
   return (
     <ReaderPanel>
-      <Group justify="space-between" align="center" wrap="wrap" gap="sm">
-        <Anchor
-          component={Link}
-          href={`/reader/${article.publicId}`}
-          size="sm"
-        >
-          ← Back to article
-        </Anchor>
-        <Group gap="xs" wrap="wrap">
-          <Text
-            size="xs"
-            style={{ fontFamily: readerBodyFont, color: readerMutedColor }}
-          >
-            Added {formatReaderDateTime(new Date(article.createdAt))}
-          </Text>
-          {article.normalizedUrl && (
-            <Anchor
-              href={article.normalizedUrl}
-              target="_blank"
-              rel="noreferrer"
-              size="xs"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 4,
-              }}
-            >
-              Source
-              <IconExternalLink size={13} stroke={1.8} />
-            </Anchor>
-          )}
-        </Group>
-      </Group>
-      <Stack gap={10}>
-        <Text
-          style={{
-            fontFamily: readerDisplayFont,
-            color: readerHeadingColor,
-            fontWeight: 700,
-            lineHeight: 1.25,
-            fontSize: "clamp(1.25rem, 2.5vw, 1.7rem)",
-          }}
-        >
-          {article.title}
-        </Text>
+      <ReaderArticlePanelHeader
+        article={article}
+        returnLabel="← Back to article"
+        titleFontSize="clamp(1.25rem, 2.5vw, 1.7rem)"
+      >
         <Group justify="space-between" align="center" wrap="wrap" gap="xs">
           <Text
             size="sm"
@@ -525,7 +417,7 @@ function TypingStagePanel({
           size="sm"
           aria-label="Typing progress"
         />
-      </Stack>
+      </ReaderArticlePanelHeader>
       <Text
         size="sm"
         style={{ fontFamily: readerBodyFont, color: readerMutedColor }}
@@ -605,69 +497,6 @@ function TypingStagePanel({
       </Group>
     </ReaderPanel>
   );
-}
-
-function ProcessingPanel({
-  status,
-  ingestError,
-  publicId,
-  normalizedUrl,
-}: {
-  status: PublicReaderArticle["ingestStatus"];
-  ingestError: string;
-  publicId: string;
-  normalizedUrl: string | null;
-}) {
-  if (status === "error") {
-    return (
-      <ReaderPanel>
-        <Text c="red" fw={700}>
-          This article could not be prepared.
-        </Text>
-        {ingestError.trim().length > 0 && (
-          <Text size="sm" c="red">
-            {ingestError}
-          </Text>
-        )}
-        <Group gap="sm" wrap="wrap">
-          <Anchor component={Link} href={`/reader/${publicId}`} size="sm">
-            Open reading view
-          </Anchor>
-          <Anchor component={Link} href="/reader" size="sm">
-            Back to Reading
-          </Anchor>
-          {normalizedUrl && (
-            <Anchor
-              href={normalizedUrl}
-              target="_blank"
-              rel="noreferrer"
-              size="sm"
-            >
-              Open source
-            </Anchor>
-          )}
-        </Group>
-      </ReaderPanel>
-    );
-  }
-
-  if (status === "pending" || status === "in_progress") {
-    return (
-      <ReaderPanel>
-        <Text c="dimmed">{pendingMessage(status)}</Text>
-        <Group gap="sm" wrap="wrap">
-          <Anchor component={Link} href={`/reader/${publicId}`} size="sm">
-            Open reading view
-          </Anchor>
-          <Anchor component={Link} href="/reader" size="sm">
-            Back to Reading
-          </Anchor>
-        </Group>
-      </ReaderPanel>
-    );
-  }
-
-  return null;
 }
 
 type CompletionPanelProps = {
@@ -868,37 +697,31 @@ export default function ReaderTypingPage({
   };
 
   return (
-    <ReaderPageFrame>
-      <ReaderPageHeader
-        title="Comprehension Typing"
-        subtitle="Understand each phrase, then type it exactly. Speed is secondary."
-      />
-      {!isReady && (
-        <ProcessingPanel
+    <ReaderExercisePage
+      article={article}
+      title="Comprehension Typing"
+      subtitle="Understand each phrase, then type it exactly. Speed is secondary."
+      isReady={isReady}
+      hasContent={hasPrompt}
+      processingPanel={
+        <ReaderProcessingPanel
           status={article.ingestStatus}
           ingestError={article.ingestError}
           publicId={article.publicId}
           normalizedUrl={article.normalizedUrl}
+          errorTitle="This article could not be prepared."
+          pendingMessages={{
+            pending: "This article is in line to be prepared.",
+            inProgress: "This article is being prepared now.",
+          }}
+          articleLinkLabel="Open reading view"
+          backLinkLabel="Back to Reading"
+          sourceLinkLabel="Open source"
         />
-      )}
-      {isReady && !hasPrompt && (
-        <ReaderPanel>
-          <Text
-            size="sm"
-            c="dimmed"
-            style={{ fontFamily: readerBodyFont }}
-          >
-            No text is available for typing in this article.
-          </Text>
-          <Anchor
-            component={Link}
-            href={`/reader/${article.publicId}`}
-            size="sm"
-          >
-            Back to article
-          </Anchor>
-        </ReaderPanel>
-      )}
+      }
+      emptyMessage="No text is available for typing in this article."
+      emptyLinkLabel="Back to article"
+    >
       {canType && (
         <>
           <TypingStagePanel
@@ -930,7 +753,7 @@ export default function ReaderTypingPage({
           )}
         </>
       )}
-    </ReaderPageFrame>
+    </ReaderExercisePage>
   );
 }
 
@@ -942,38 +765,14 @@ export async function getServerSideProps(
     return { notFound: true };
   }
 
-  const article = await prismaClient.readerArticle.findUnique({
-    where: { publicId },
-    select: {
-      publicId: true,
-      title: true,
-      normalizedUrl: true,
-      inputKind: true,
-      contentText: true,
-      ingestStatus: true,
-      ingestError: true,
-      createdAt: true,
-    },
-  });
-
+  const article = await getPublicReaderArticle(publicId);
   if (!article) {
     return { notFound: true };
   }
 
-  const payload: PublicReaderArticle = {
-    publicId: article.publicId,
-    title: article.title,
-    normalizedUrl: article.normalizedUrl,
-    inputKind: mapInputKind(article.inputKind),
-    contentText: article.contentText,
-    ingestStatus: mapIngestStatus(article.ingestStatus),
-    ingestError: article.ingestError,
-    createdAt: article.createdAt.toISOString(),
-  };
-
   return {
     props: {
-      article: payload,
+      article,
     },
   };
 }

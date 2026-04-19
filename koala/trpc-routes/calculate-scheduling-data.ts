@@ -9,7 +9,7 @@ import {
   type Grade,
 } from "ts-fsrs";
 import type { Card } from "@prisma/client";
-import { resolveRequestedRetention } from "@/koala/settings/requested-retention";
+import { resolveRequestedRetention } from "../settings/requested-retention.ts";
 
 const fsrsCache = new Map<number, ReturnType<typeof fsrs>>();
 
@@ -57,22 +57,48 @@ function isNewCard(quiz: PartialCard) {
   return quiz.lapses + quiz.repetitions === 0;
 }
 
-function toFsrsCardInput(quiz: PartialCard, now: number): CardInput {
+function normalizeReviewCount(value: number | undefined): number {
+  return Math.max(0, Math.floor(value || 0));
+}
+
+function resolveElapsedDays(lastReview: number, now: number): number {
+  if (!lastReview) {
+    return 0;
+  }
+  return Math.max(0, (now - lastReview) / DAYS);
+}
+
+function resolveScheduledDays(
+  lastReview: number,
+  nextReview: number | undefined,
+): number {
+  if (!lastReview || !nextReview) {
+    return 0;
+  }
+  return Math.max(0, (nextReview - lastReview) / DAYS);
+}
+
+function hasReviewHistory(
+  repetitions: number,
+  lapses: number,
+  lastReview: number,
+): boolean {
+  return repetitions + lapses > 0 && lastReview > 0;
+}
+
+export function toFsrsCardInput(
+  quiz: PartialCard,
+  now: number,
+): CardInput {
   const lastReview = quiz.lastReview || 0;
-  const nextReview = quiz.nextReview || 0;
-  const lapses = Math.max(0, Math.floor(quiz.lapses || 0));
-  const repetitions = Math.max(0, Math.floor(quiz.repetitions || 0));
-  const hasHistory = repetitions + lapses > 0 && lastReview > 0;
-  const elapsedDays = lastReview
-    ? Math.max(0, (now - lastReview) / DAYS)
-    : 0;
-  const scheduledDays =
-    lastReview && nextReview
-      ? Math.max(0, (nextReview - lastReview) / DAYS)
-      : 0;
+  const lapses = normalizeReviewCount(quiz.lapses);
+  const repetitions = normalizeReviewCount(quiz.repetitions);
+  const hasHistory = hasReviewHistory(repetitions, lapses, lastReview);
+  const elapsedDays = resolveElapsedDays(lastReview, now);
+  const scheduledDays = resolveScheduledDays(lastReview, quiz.nextReview);
 
   return {
-    due: nextReview || now,
+    due: quiz.nextReview || now,
     stability: quiz.stability,
     difficulty: quiz.difficulty,
     elapsed_days: elapsedDays,
