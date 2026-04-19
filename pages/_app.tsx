@@ -35,6 +35,7 @@ function App(props: AppProps) {
     props.router.pathname === "/reader/[publicId]";
   const isRecentPage = props.router.pathname === "/recent";
   const isPublicLanguageExchange =
+    props.router.pathname === "/u/[slug]" ||
     props.router.pathname === "/language-exchange/[slug]";
 
   if (

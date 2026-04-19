@@ -1,5 +1,6 @@
 import { getUserSettingsFromEmail } from "@/koala/auth-helpers";
 import { SectionCard } from "@/koala/components/SectionCard";
+import { getLanguageExchangePublicPath } from "@/koala/language-exchange-direct";
 import { ensureLanguageExchangeLink } from "@/koala/language-exchange-direct-server";
 import { prismaClient } from "@/koala/prisma-client";
 import {
@@ -300,7 +301,7 @@ export async function getServerSideProps(
     await getUserCardStatistics(userId);
   const languageExchangeLink = await ensureLanguageExchangeLink(userId);
   const languageExchangeUrl = new URL(
-    `/language-exchange/${languageExchangeLink.slug}`,
+    getLanguageExchangePublicPath(languageExchangeLink.slug),
     baseUrlFromRequest(context.req),
   ).toString();
 
@@ -767,12 +768,20 @@ function LanguageExchangeLinkCard({
 }: {
   languageExchangeUrl: string;
 }) {
+  const [currentLanguageExchangeUrl, setCurrentLanguageExchangeUrl] =
+    React.useState(languageExchangeUrl);
+  const [isRegenerating, setIsRegenerating] = React.useState(false);
+
+  React.useEffect(() => {
+    setCurrentLanguageExchangeUrl(languageExchangeUrl);
+  }, [languageExchangeUrl]);
+
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(languageExchangeUrl);
+      await navigator.clipboard.writeText(currentLanguageExchangeUrl);
       notifications.show({
         title: "Link copied",
-        message: "Share it with someone who wants to call you directly.",
+        message: "Share it with the person you want to talk to.",
         color: "teal",
       });
     } catch (error: unknown) {
@@ -787,11 +796,60 @@ function LanguageExchangeLinkCard({
     }
   };
 
+  const handleRegenerate = async () => {
+    const confirmed = window.confirm(
+      "Regenerate your link? The old link will stop working right away.",
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setIsRegenerating(true);
+
+    try {
+      const response = await fetch(
+        "/api/language-exchange/direct/link/regenerate",
+        {
+          method: "POST",
+        },
+      );
+      const data = (await response.json().catch(() => null)) as {
+        error?: string;
+        slug?: string;
+      } | null;
+      if (!response.ok || !data?.slug) {
+        throw new Error(data?.error ?? "Could not regenerate the link.");
+      }
+
+      const nextUrl = new URL(
+        getLanguageExchangePublicPath(data.slug),
+        window.location.origin,
+      ).toString();
+      setCurrentLanguageExchangeUrl(nextUrl);
+      notifications.show({
+        title: "New link ready",
+        message: "The old link no longer works.",
+        color: "teal",
+      });
+    } catch (error: unknown) {
+      notifications.show({
+        title: "Could not regenerate link",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Could not regenerate the link.",
+        color: "red",
+      });
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
+
   return (
     <SectionCard
       title="Language Exchange Link"
       titleOrder={3}
-      description="Share this link. Calls come through only while language exchange is on and Koala is open in a visible tab."
+      description="Share this link. It only works while language exchange is on and Koala stays open in a visible tab."
     >
       <Stack gap="md">
         <Paper withBorder p="sm" radius="md">
@@ -800,7 +858,7 @@ function LanguageExchangeLinkCard({
             ff="monospace"
             style={{ wordBreak: "break-all" }}
           >
-            {languageExchangeUrl}
+            {currentLanguageExchangeUrl}
           </Text>
         </Paper>
         <Group>
@@ -813,9 +871,18 @@ function LanguageExchangeLinkCard({
           </Button>
           <Button
             size="sm"
+            variant="outline"
+            color="red"
+            onClick={() => void handleRegenerate()}
+            loading={isRegenerating}
+          >
+            Regenerate link
+          </Button>
+          <Button
+            size="sm"
             variant="subtle"
             component="a"
-            href={languageExchangeUrl}
+            href={currentLanguageExchangeUrl}
             target="_blank"
             rel="noreferrer"
           >

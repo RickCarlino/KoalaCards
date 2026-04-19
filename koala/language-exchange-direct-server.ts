@@ -50,13 +50,11 @@ export type DirectLanguageExchangeCallPayload = ReturnType<
   typeof mapDirectCall
 >;
 
-export async function ensureLanguageExchangeLink(userId: string) {
+async function createLanguageExchangeLink(userId: string) {
   for (let attempt = 0; attempt < 5; attempt += 1) {
     try {
-      return await prismaClient.languageExchangeLink.upsert({
-        where: { userId },
-        update: {},
-        create: {
+      return await prismaClient.languageExchangeLink.create({
+        data: {
           userId,
           slug: createLanguageExchangeLinkSlug(),
         },
@@ -81,6 +79,52 @@ export async function ensureLanguageExchangeLink(userId: string) {
   }
 
   throw new Error("Could not create language exchange link.");
+}
+
+export async function ensureLanguageExchangeLink(userId: string) {
+  const existing = await prismaClient.languageExchangeLink.findUnique({
+    where: { userId },
+  });
+  if (existing) {
+    return existing;
+  }
+
+  return createLanguageExchangeLink(userId);
+}
+
+export async function regenerateLanguageExchangeLink(userId: string) {
+  const existing = await prismaClient.languageExchangeLink.findUnique({
+    where: { userId },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!existing) {
+    return createLanguageExchangeLink(userId);
+  }
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      return await prismaClient.languageExchangeLink.update({
+        where: { id: existing.id },
+        data: {
+          slug: createLanguageExchangeLinkSlug(),
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  throw new Error("Could not regenerate language exchange link.");
 }
 
 export async function findLanguageExchangeLinkBySlug(slug: string) {

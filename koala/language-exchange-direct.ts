@@ -9,6 +9,11 @@ export const DIRECT_LANGUAGE_EXCHANGE_INCOMING_POLL_INTERVAL_MS = 2_000;
 export const DIRECT_LANGUAGE_EXCHANGE_CONNECT_POLL_INTERVAL_MS = 1_000;
 export const DIRECT_LANGUAGE_EXCHANGE_RINGING_TIMEOUT_MS = 45_000;
 export const DIRECT_LANGUAGE_EXCHANGE_ACTIVE_TIMEOUT_MS = 30_000;
+export const DIRECT_LANGUAGE_EXCHANGE_LINK_SLUG_LENGTH = 10;
+export const DIRECT_LANGUAGE_EXCHANGE_PUBLIC_PATH_PREFIX = "/u";
+
+const LANGUAGE_EXCHANGE_BASE32_ALPHABET =
+  "0123456789abcdefghijklmnopqrstuv";
 
 export type DirectLanguageExchangeAvailabilityStatus =
   | "available"
@@ -38,7 +43,33 @@ export type DirectLanguageExchangeSessionDescriptionPayload = z.infer<
 >;
 
 export function createLanguageExchangeLinkSlug(): string {
-  return crypto.randomUUID().replace(/-/g, "").slice(0, 24);
+  const randomBytes = crypto.getRandomValues(new Uint8Array(7));
+  let slug = "";
+  let buffer = 0;
+  let bufferedBits = 0;
+
+  for (const byte of randomBytes) {
+    buffer = (buffer << 8) | byte;
+    bufferedBits += 8;
+
+    while (
+      bufferedBits >= 5 &&
+      slug.length < DIRECT_LANGUAGE_EXCHANGE_LINK_SLUG_LENGTH
+    ) {
+      bufferedBits -= 5;
+      slug +=
+        LANGUAGE_EXCHANGE_BASE32_ALPHABET[
+          (buffer >> bufferedBits) & 0b1_1111
+        ];
+      buffer &= (1 << bufferedBits) - 1;
+    }
+  }
+
+  return slug;
+}
+
+export function getLanguageExchangePublicPath(slug: string): string {
+  return `${DIRECT_LANGUAGE_EXCHANGE_PUBLIC_PATH_PREFIX}/${slug}`;
 }
 
 export function createDirectLanguageExchangeGuestToken(): string {
