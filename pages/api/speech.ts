@@ -49,7 +49,7 @@ export default async function handler(
     ? `${cleanTlText}\n${cleanEnText}`
     : cleanTlText;
 
-  const model = "gpt-4o-mini-tts-2025-12-15";
+  const model = "gpt-4o-mini-tts";
   const VOICES = [
     "alloy",
     "echo",

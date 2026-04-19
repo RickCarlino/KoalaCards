@@ -238,7 +238,7 @@ export default async function handler(
 
   const contextMessages = buildContextMessages(contextLog, currentCard);
   const stream = await openai.chat.completions.create({
-    model: "gpt-5.1-chat-latest",
+    model: "gpt-5.4",
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
       ...contextMessages,

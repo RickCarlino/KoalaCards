@@ -1384,7 +1384,7 @@ export default function WritingPracticePage({
         return;
       }
 
-      window.location.assign(reviewTarget);
+      void router.push(reviewTarget);
     };
 
     void checkProgressAndContinue();

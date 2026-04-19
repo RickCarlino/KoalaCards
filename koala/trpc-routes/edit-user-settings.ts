@@ -44,6 +44,7 @@ export const editUserSettings = procedure
       dailyWritingGoal: z.number().int().min(1).optional(),
       writingFirst: z.boolean().optional(),
       dueCardsEmailNotifications: z.boolean().optional(),
+      languageExchangeAvailable: z.boolean().optional(),
       updatedAt: z.date(),
     }),
   )
@@ -74,6 +75,11 @@ export const editUserSettings = procedure
       data,
       "dueCardsEmailNotifications",
       input.dueCardsEmailNotifications,
+    );
+    assignIfDefined(
+      data,
+      "languageExchangeAvailable",
+      input.languageExchangeAvailable,
     );
 
     const updatedSettings = await prismaClient.userSettings.update({

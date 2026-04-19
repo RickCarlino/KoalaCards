@@ -4,7 +4,6 @@ import { prismaClient } from "@/koala/prisma-client";
 import type { WorkerTask } from "./run-loop";
 
 const DUE_CARDS_THRESHOLD = 20;
-const NOTIFICATION_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 const parsePositiveInt = (
   value: string | undefined,
@@ -45,7 +44,6 @@ const dueCardsEmailHtml = (dueCards: number, name: string): string => {
     `<p>Hi ${name},</p>`,
     `<p>You currently have <strong>${dueCards}</strong> cards due in Koala Cards.</p>`,
     `<p><a href="${appBaseUrl}/review">Open Koala Cards</a></p>`,
-    `<p>You will not receive another due-card reminder for at least 24 hours.</p>`,
   ].join("\n");
 };
 
@@ -58,7 +56,7 @@ const dueCardsEmailText = (dueCards: number, name: string): string => {
     "",
     `Open Koala Cards: ${appBaseUrl}/review`,
     "",
-    "You will not receive another due-card reminder for at least 24 hours.",
+    "You will not receive another due-card reminder until you sign in again.",
   ].join("\n");
 };
 
@@ -80,7 +78,6 @@ export const createDueCardsEmailTask = (): WorkerTask => {
 
   console.log("[worker][due-cards-email] task-initialized", {
     threshold: DUE_CARDS_THRESHOLD,
-    cooldownHours: 24,
     batchSize: dueCardsEmailBatchSize(),
     checkIntervalMinutes: dueCardsEmailCheckIntervalMs() / (60 * 1000),
   });
@@ -96,19 +93,10 @@ export const createDueCardsEmailTask = (): WorkerTask => {
       }
 
       lastCheckAtMs = nowMs;
-      const cooldownCutoff = new Date(nowMs - NOTIFICATION_COOLDOWN_MS);
-
       const settings = await prismaClient.userSettings.findMany({
         where: {
           dueCardsEmailNotifications: true,
-          OR: [
-            { dueCardsEmailNotificationSentAt: null },
-            {
-              dueCardsEmailNotificationSentAt: {
-                lt: cooldownCutoff,
-              },
-            },
-          ],
+          dueCardsEmailNotificationSentAt: null,
           user: {
             email: {
               not: null,

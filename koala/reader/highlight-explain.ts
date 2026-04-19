@@ -77,6 +77,7 @@ export function buildReaderHighlightPrompt(options: {
     "definition: a short English gloss suitable for the back of a flashcard. Give only one concise gloss, free of caveats parenthesis and semicolons.",
     "generalMeaning: explain the usual meaning or function of the phrase in Korean.",
     "meaningInContext: explain what the phrase means in the CURRENT occurrence and nearby passage.",
+    "I am a native English speaker; Explain in English!",
   ].join("\n");
 }
 

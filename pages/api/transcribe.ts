@@ -220,7 +220,7 @@ export default async function handler(
 
   const result = await openai.audio.transcriptions.create({
     file: uploadFile,
-    model: "gpt-4o-mini-transcribe-2025-12-15",
+    model: "gpt-4o-mini-transcribe",
     language,
     ...(hint ? { prompt: `Might contain words like ${hint}` } : {}),
   });

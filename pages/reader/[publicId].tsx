@@ -746,6 +746,8 @@ type OwnerHighlightToolsProps = {
   createdAt: string;
   sourceUrl: string | null;
   decks: PublicReaderArticle["decks"];
+  codeLineMode: ReaderCodeLineMode;
+  onCodeLineModeChange: (nextMode: ReaderCodeLineMode) => void;
 };
 
 type HighlightToolsView = "helper" | "saved" | "extras";
@@ -1007,15 +1009,38 @@ type HighlightInfoCardProps = {
   publicId: string;
   createdAt: string;
   sourceUrl: string | null;
+  codeLineMode: ReaderCodeLineMode;
+  onCodeLineModeChange: (nextMode: ReaderCodeLineMode) => void;
 };
 
 function HighlightInfoCard({
   publicId,
   createdAt,
   sourceUrl,
+  codeLineMode,
+  onCodeLineModeChange,
 }: HighlightInfoCardProps) {
   return (
     <Stack gap="sm">
+      <Stack gap={4}>
+        <Text size="xs" c="dimmed" style={{ fontFamily: readerBodyFont }}>
+          Code lines
+        </Text>
+        <SegmentedControl
+          aria-label="Code line display mode"
+          value={codeLineMode}
+          onChange={(nextMode) => {
+            onCodeLineModeChange(parseReaderCodeLineMode(nextMode));
+          }}
+          data={[
+            { label: "Scroll long lines", value: "scroll" },
+            { label: "Wrap long lines", value: "wrap" },
+          ]}
+          size="xs"
+          radius="xl"
+          color="grape"
+        />
+      </Stack>
       <Stack gap={4}>
         <Text size="xs" c="dimmed" style={{ fontFamily: readerBodyFont }}>
           Added
@@ -1056,6 +1081,9 @@ function HighlightInfoCard({
       <Anchor href={`/reader/${publicId}/typing`} size="sm">
         Typing practice
       </Anchor>
+      <Anchor href={`/reader/${publicId}/comprehension`} size="sm">
+        Comprehension Questions
+      </Anchor>
     </Stack>
   );
 }
@@ -1066,6 +1094,8 @@ function OwnerHighlightTools({
   createdAt,
   sourceUrl,
   decks,
+  codeLineMode,
+  onCodeLineModeChange,
 }: OwnerHighlightToolsProps) {
   const [selectionDraft, setSelectionDraft] =
     useState<ReaderSelectionDraft | null>(null);
@@ -1237,6 +1267,7 @@ function OwnerHighlightTools({
       return;
     }
 
+    const draftToExplain = activeHelperDraft;
     const controller = new AbortController();
     explainAbortRef.current?.abort();
     explainAbortRef.current = controller;
@@ -1253,10 +1284,10 @@ function OwnerHighlightTools({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             publicId,
-            selectedText: activeHelperDraft.selectedText,
-            contextBefore: activeHelperDraft.contextBefore,
-            contextAfter: activeHelperDraft.contextAfter,
-            occurrenceHint: activeHelperDraft.occurrenceHint,
+            selectedText: draftToExplain.selectedText,
+            contextBefore: draftToExplain.contextBefore,
+            contextAfter: draftToExplain.contextAfter,
+            occurrenceHint: draftToExplain.occurrenceHint,
           }),
           signal: controller.signal,
         },
@@ -1283,14 +1314,10 @@ function OwnerHighlightTools({
       });
 
       const refreshedHighlights = await highlightsQuery.refetch();
-      if (activeHighlightId !== null) {
-        return;
-      }
-
       const nextHighlights = refreshedHighlights.data?.highlights ?? [];
       const matchedHighlightId = findMatchingHighlightId(
         nextHighlights,
-        activeHelperDraft,
+        draftToExplain,
       );
       if (matchedHighlightId === null) {
         return;
@@ -1299,10 +1326,15 @@ function OwnerHighlightTools({
       const matchedHighlight = nextHighlights.find((highlight) => {
         return highlight.id === matchedHighlightId;
       });
-      setActiveHighlightId(matchedHighlightId);
       if (matchedHighlight) {
+        setHelperDraftOverride(helperDraftFromHighlight(matchedHighlight));
+        setActiveHighlightId(matchedHighlight.id);
         setActiveAnalysis(analysisFromHighlight(matchedHighlight));
+        setStreamError("");
+        return;
       }
+
+      setActiveHighlightId(matchedHighlightId);
     } catch (error) {
       const aborted = controller.signal.aborted;
       if (!aborted) {
@@ -1604,7 +1636,7 @@ function OwnerHighlightTools({
     return [
       { label: "Word Help", value: "helper" },
       { label: `Saved (${highlights.length})`, value: "saved" },
-      { label: "Article Info", value: "extras" },
+      { label: "extras", value: "extras" },
     ];
   }, [highlights.length]);
 
@@ -1729,6 +1761,8 @@ function OwnerHighlightTools({
                 publicId={publicId}
                 createdAt={createdAt}
                 sourceUrl={sourceUrl}
+                codeLineMode={codeLineMode}
+                onCodeLineModeChange={onCodeLineModeChange}
               />
             )}
           </Box>
@@ -1826,6 +1860,10 @@ export default function PublicReaderArticlePage({
       createdAt={article.createdAt}
       sourceUrl={article.normalizedUrl}
       decks={article.decks}
+      codeLineMode={codeLineMode}
+      onCodeLineModeChange={(nextMode) => {
+        setCodeLineMode(nextMode);
+      }}
     />
   ) : null;
 
@@ -1899,7 +1937,7 @@ export default function PublicReaderArticlePage({
         `}</style>
         <Stack gap="clamp(10px, 1.6vw, 18px)">
           {!article.viewerIsOwner && <ArticleMetaRow article={article} />}
-          {showCodeLineModeControl && (
+          {showCodeLineModeControl && !article.viewerIsOwner && (
             <Group justify="space-between" align="center" wrap="wrap">
               <Text
                 size="xs"

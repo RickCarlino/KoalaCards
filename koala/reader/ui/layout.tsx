@@ -43,7 +43,7 @@ export function ReaderPageFrame({
 
 type ReaderPageHeaderProps = {
   title: string;
-  subtitle: string;
+  subtitle?: string;
   rightSlot?: React.ReactNode;
 };
 
@@ -67,17 +67,19 @@ export function ReaderPageHeader({
         >
           {title}
         </Title>
-        <Text
-          size="sm"
-          style={{
-            ...readerPanelSubtitleStyle,
-            fontFamily: readerBodyFont,
-            maxWidth: 620,
-            lineHeight: 1.5,
-          }}
-        >
-          {subtitle}
-        </Text>
+        {subtitle && (
+          <Text
+            size="sm"
+            style={{
+              ...readerPanelSubtitleStyle,
+              fontFamily: readerBodyFont,
+              maxWidth: 620,
+              lineHeight: 1.5,
+            }}
+          >
+            {subtitle}
+          </Text>
+        )}
       </Stack>
       {rightSlot}
     </Group>

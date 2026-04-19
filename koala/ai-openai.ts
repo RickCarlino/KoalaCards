@@ -20,10 +20,10 @@ const DEFAULT_IMAGE_SIZE = "1024x1024" as const;
 type ModelKind = TextModel | ImageModelIdentifier;
 
 const registry: Record<ModelKind, string> = {
-  fast: "gpt-5-nano",
-  cheap: "gpt-5.3-chat-latest",
-  good: "gpt-5.3-chat-latest",
-  imageDefault: "gpt-image-1-mini",
+  fast: "gpt-5.4-nano",
+  cheap: "gpt-5.4-mini",
+  good: "gpt-5.4",
+  imageDefault: "gpt-image-1.5",
 };
 
 type ReasoningEffortLevel = Exclude<ReasoningEffort, null>;

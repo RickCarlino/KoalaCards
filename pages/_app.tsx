@@ -17,6 +17,13 @@ const montserrat = Montserrat({
 });
 
 const TopBarWithNoSSR = dynamic(() => import("./_topbar"), { ssr: false });
+const DirectLanguageExchangeProviderWithNoSSR = dynamic(
+  () =>
+    import("@/koala/language-exchange-direct-provider").then((mod) => {
+      return mod.LanguageExchangeDirectProvider;
+    }),
+  { ssr: false },
+);
 
 function App(props: AppProps) {
   if (props.router.pathname === "/auth/email") {
@@ -26,6 +33,10 @@ function App(props: AppProps) {
   const theme = buildKoalaTheme(montserrat.style.fontFamily);
   const isPublicReaderArticle =
     props.router.pathname === "/reader/[publicId]";
+  const isRecentPage = props.router.pathname === "/recent";
+  const isPublicLanguageExchange =
+    props.router.pathname === "/u/[slug]" ||
+    props.router.pathname === "/language-exchange/[slug]";
 
   if (
     props.router.pathname.startsWith("/review/") ||
@@ -42,10 +53,12 @@ function App(props: AppProps) {
         </Head>
         <SessionProvider session={props.pageProps.session}>
           <MantineProvider defaultColorScheme="light" theme={theme}>
-            <UserSettingsProvider>
-              <Notifications />
-              <props.Component {...props.pageProps} />
-            </UserSettingsProvider>
+            <DirectLanguageExchangeProviderWithNoSSR>
+              <UserSettingsProvider>
+                <Notifications />
+                <props.Component {...props.pageProps} />
+              </UserSettingsProvider>
+            </DirectLanguageExchangeProviderWithNoSSR>
           </MantineProvider>
         </SessionProvider>
       </>
@@ -63,21 +76,32 @@ function App(props: AppProps) {
       </Head>
       <SessionProvider session={props.pageProps.session}>
         <MantineProvider defaultColorScheme="light" theme={theme}>
-          {isPublicReaderArticle ? (
-            <>
-              <Notifications />
-              <TopBarWithNoSSR>
+          <DirectLanguageExchangeProviderWithNoSSR>
+            {isPublicLanguageExchange ? (
+              <>
+                <Notifications />
                 <props.Component {...props.pageProps} />
-              </TopBarWithNoSSR>
-            </>
-          ) : (
-            <UserSettingsProvider>
-              <Notifications />
-              <TopBarWithNoSSR>
-                <props.Component {...props.pageProps} />
-              </TopBarWithNoSSR>
-            </UserSettingsProvider>
-          )}
+              </>
+            ) : isPublicReaderArticle ? (
+              <>
+                <Notifications />
+                <TopBarWithNoSSR>
+                  <props.Component {...props.pageProps} />
+                </TopBarWithNoSSR>
+              </>
+            ) : (
+              <UserSettingsProvider>
+                <Notifications />
+                {isRecentPage ? (
+                  <props.Component {...props.pageProps} />
+                ) : (
+                  <TopBarWithNoSSR>
+                    <props.Component {...props.pageProps} />
+                  </TopBarWithNoSSR>
+                )}
+              </UserSettingsProvider>
+            )}
+          </DirectLanguageExchangeProviderWithNoSSR>
         </MantineProvider>
       </SessionProvider>
     </>

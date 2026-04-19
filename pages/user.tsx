@@ -1,5 +1,7 @@
 import { getUserSettingsFromEmail } from "@/koala/auth-helpers";
 import { SectionCard } from "@/koala/components/SectionCard";
+import { getLanguageExchangePublicPath } from "@/koala/language-exchange-direct";
+import { ensureLanguageExchangeLink } from "@/koala/language-exchange-direct-server";
 import { prismaClient } from "@/koala/prisma-client";
 import {
   REVIEW_TAKE_MAX,
@@ -49,6 +51,25 @@ function formatDate(date: Date): string {
   const month = (date.getMonth() + 1).toString().padStart(2, "0");
   const day = date.getDate().toString().padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function baseUrlFromRequest(
+  request: GetServerSidePropsContext["req"],
+): string {
+  if (process.env.NEXTAUTH_URL) {
+    return process.env.NEXTAUTH_URL;
+  }
+
+  const forwardedHost = request.headers["x-forwarded-host"];
+  const forwardedProto = request.headers["x-forwarded-proto"];
+  const host = Array.isArray(forwardedHost)
+    ? forwardedHost[0]
+    : forwardedHost || request.headers.host || "localhost:3000";
+  const protocol = Array.isArray(forwardedProto)
+    ? forwardedProto[0]
+    : forwardedProto || (host.includes("localhost") ? "http" : "https");
+
+  return `${protocol}://${host}`;
 }
 
 function buildCumulativeChartDataFromSortedDates(options: {
@@ -278,6 +299,11 @@ export async function getServerSideProps(
 
   const { statistics, cardChartData, writingChartData, readerChartData } =
     await getUserCardStatistics(userId);
+  const languageExchangeLink = await ensureLanguageExchangeLink(userId);
+  const languageExchangeUrl = new URL(
+    getLanguageExchangePublicPath(languageExchangeLink.slug),
+    baseUrlFromRequest(context.req),
+  ).toString();
 
   return {
     props: {
@@ -286,6 +312,7 @@ export async function getServerSideProps(
       cardChartData: cardChartData,
       writingChartData: writingChartData,
       readerChartData: readerChartData,
+      languageExchangeUrl,
     },
   };
 }
@@ -295,6 +322,7 @@ type Props = UnwrapPromise<
   cardChartData: ChartDataPoint[];
   writingChartData: ChartDataPoint[];
   readerChartData: ChartDataPoint[];
+  languageExchangeUrl: string;
 };
 
 type SettingsFormValues = {
@@ -308,6 +336,7 @@ type SettingsFormValues = {
   responseTimeoutSeconds: number;
   writingFirst: boolean;
   dueCardsEmailNotifications: boolean;
+  languageExchangeAvailable: boolean;
 };
 
 type SettingsNumberKey =
@@ -395,6 +424,7 @@ type SettingsFormProps = {
   onNumberChange: SettingsNumberChangeHandler;
   onWritingFirstChange: (checked: boolean) => void;
   onDueCardsEmailNotificationsChange: (checked: boolean) => void;
+  onLanguageExchangeAvailableChange: (checked: boolean) => void;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
   isSaving: boolean;
 };
@@ -618,6 +648,8 @@ type ToggleSettingsGroupProps = {
   onWritingFirstChange: (checked: boolean) => void;
   dueCardsEmailNotifications: boolean;
   onDueCardsEmailNotificationsChange: (checked: boolean) => void;
+  languageExchangeAvailable: boolean;
+  onLanguageExchangeAvailableChange: (checked: boolean) => void;
 };
 
 function ToggleSettingsGroup({
@@ -625,6 +657,8 @@ function ToggleSettingsGroup({
   onWritingFirstChange,
   dueCardsEmailNotifications,
   onDueCardsEmailNotificationsChange,
+  languageExchangeAvailable,
+  onLanguageExchangeAvailableChange,
 }: ToggleSettingsGroupProps) {
   return (
     <SettingsGroup
@@ -647,7 +681,7 @@ function ToggleSettingsGroup({
       </SettingsRow>
       <SettingsRow
         label="Email me when more than 20 cards are due"
-        description="Sends at most one reminder every 24 hours."
+        description="Reminders reset after you log in again."
         labelFor="dueCardsEmailNotifications"
       >
         <Switch
@@ -655,6 +689,20 @@ function ToggleSettingsGroup({
           checked={dueCardsEmailNotifications}
           onChange={(event) =>
             onDueCardsEmailNotificationsChange(event.currentTarget.checked)
+          }
+          size="md"
+        />
+      </SettingsRow>
+      <SettingsRow
+        label="Answer language exchange calls"
+        description="Show incoming calls from your shared link while you study."
+        labelFor="languageExchangeAvailable"
+      >
+        <Switch
+          id="languageExchangeAvailable"
+          checked={languageExchangeAvailable}
+          onChange={(event) =>
+            onLanguageExchangeAvailableChange(event.currentTarget.checked)
           }
           size="md"
         />
@@ -668,6 +716,7 @@ function SettingsForm({
   onNumberChange,
   onWritingFirstChange,
   onDueCardsEmailNotificationsChange,
+  onLanguageExchangeAvailableChange,
   onSubmit,
   isSaving,
 }: SettingsFormProps) {
@@ -698,6 +747,10 @@ function SettingsForm({
           onDueCardsEmailNotificationsChange={
             onDueCardsEmailNotificationsChange
           }
+          languageExchangeAvailable={values.languageExchangeAvailable}
+          onLanguageExchangeAvailableChange={
+            onLanguageExchangeAvailableChange
+          }
         />
 
         <Group justify="flex-end">
@@ -707,6 +760,137 @@ function SettingsForm({
         </Group>
       </Stack>
     </form>
+  );
+}
+
+function LanguageExchangeLinkCard({
+  languageExchangeUrl,
+}: {
+  languageExchangeUrl: string;
+}) {
+  const [currentLanguageExchangeUrl, setCurrentLanguageExchangeUrl] =
+    React.useState(languageExchangeUrl);
+  const [isRegenerating, setIsRegenerating] = React.useState(false);
+
+  React.useEffect(() => {
+    setCurrentLanguageExchangeUrl(languageExchangeUrl);
+  }, [languageExchangeUrl]);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(currentLanguageExchangeUrl);
+      notifications.show({
+        title: "Link copied",
+        message: "Share it with the person you want to talk to.",
+        color: "teal",
+      });
+    } catch (error: unknown) {
+      notifications.show({
+        title: "Copy failed",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Could not copy the link.",
+        color: "red",
+      });
+    }
+  };
+
+  const handleRegenerate = async () => {
+    const confirmed = window.confirm(
+      "Regenerate your link? The old link will stop working right away.",
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setIsRegenerating(true);
+
+    try {
+      const response = await fetch(
+        "/api/language-exchange/direct/link/regenerate",
+        {
+          method: "POST",
+        },
+      );
+      const data = (await response.json().catch(() => null)) as {
+        error?: string;
+        slug?: string;
+      } | null;
+      if (!response.ok || !data?.slug) {
+        throw new Error(data?.error ?? "Could not regenerate the link.");
+      }
+
+      const nextUrl = new URL(
+        getLanguageExchangePublicPath(data.slug),
+        window.location.origin,
+      ).toString();
+      setCurrentLanguageExchangeUrl(nextUrl);
+      notifications.show({
+        title: "New link ready",
+        message: "The old link no longer works.",
+        color: "teal",
+      });
+    } catch (error: unknown) {
+      notifications.show({
+        title: "Could not regenerate link",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Could not regenerate the link.",
+        color: "red",
+      });
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
+
+  return (
+    <SectionCard
+      title="Language Exchange Link"
+      titleOrder={3}
+      description="Share this link. It only works while language exchange is on and Koala stays open in a visible tab."
+    >
+      <Stack gap="md">
+        <Paper withBorder p="sm" radius="md">
+          <Text
+            size="sm"
+            ff="monospace"
+            style={{ wordBreak: "break-all" }}
+          >
+            {currentLanguageExchangeUrl}
+          </Text>
+        </Paper>
+        <Group>
+          <Button
+            size="sm"
+            variant="light"
+            onClick={() => void handleCopy()}
+          >
+            Copy link
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            color="red"
+            onClick={() => void handleRegenerate()}
+            loading={isRegenerating}
+          >
+            Regenerate link
+          </Button>
+          <Button
+            size="sm"
+            variant="subtle"
+            component="a"
+            href={currentLanguageExchangeUrl}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Open link
+          </Button>
+        </Group>
+      </Stack>
+    </SectionCard>
   );
 }
 
@@ -914,7 +1098,7 @@ function ProgressSection({
         <ProgressChart
           title="Reader Progress"
           data={readerChartData}
-          series={{ name: "count", color: "teal", label: "Total Read" }}
+          series={{ name: "count", color: "pink", label: "Total Read" }}
           yAxisLabel="Articles Read"
         />
       </SimpleGrid>
@@ -929,6 +1113,7 @@ export default function UserSettingsPage(props: Props) {
     cardChartData,
     writingChartData,
     readerChartData,
+    languageExchangeUrl,
   } = props;
   const [settings, setSettings] = useState(() => ({
     ...userSettings,
@@ -938,6 +1123,9 @@ export default function UserSettingsPage(props: Props) {
     ),
     dueCardsEmailNotifications: Boolean(
       userSettings.dueCardsEmailNotifications,
+    ),
+    languageExchangeAvailable: Boolean(
+      userSettings.languageExchangeAvailable,
     ),
   }));
   const editUserSettings = trpc.editUserSettings.useMutation();
@@ -966,6 +1154,13 @@ export default function UserSettingsPage(props: Props) {
     setSettings({
       ...settings,
       dueCardsEmailNotifications: checked,
+    });
+  };
+
+  const handleLanguageExchangeAvailableChange = (checked: boolean) => {
+    setSettings({
+      ...settings,
+      languageExchangeAvailable: checked,
     });
   };
 
@@ -1014,6 +1209,7 @@ export default function UserSettingsPage(props: Props) {
     dueCardsEmailNotifications: Boolean(
       settings.dueCardsEmailNotifications,
     ),
+    languageExchangeAvailable: Boolean(settings.languageExchangeAvailable),
   };
 
   return (
@@ -1030,22 +1226,30 @@ export default function UserSettingsPage(props: Props) {
 
         <Grid gutter="xl">
           <Grid.Col span={{ base: 12, md: 7 }}>
-            <SectionCard
-              title="Preferences"
-              titleOrder={3}
-              description="Review pacing, writing rules, and playback options."
-            >
-              <SettingsForm
-                values={formValues}
-                onNumberChange={handleNumberChange}
-                onWritingFirstChange={handleWritingFirstChange}
-                onDueCardsEmailNotificationsChange={
-                  handleDueCardsEmailNotificationsChange
-                }
-                onSubmit={handleSubmit}
-                isSaving={editUserSettings.isLoading}
+            <Stack gap="xl">
+              <SectionCard
+                title="Preferences"
+                titleOrder={3}
+                description="Review pacing, writing rules, and playback options."
+              >
+                <SettingsForm
+                  values={formValues}
+                  onNumberChange={handleNumberChange}
+                  onWritingFirstChange={handleWritingFirstChange}
+                  onDueCardsEmailNotificationsChange={
+                    handleDueCardsEmailNotificationsChange
+                  }
+                  onLanguageExchangeAvailableChange={
+                    handleLanguageExchangeAvailableChange
+                  }
+                  onSubmit={handleSubmit}
+                  isSaving={editUserSettings.isLoading}
+                />
+              </SectionCard>
+              <LanguageExchangeLinkCard
+                languageExchangeUrl={languageExchangeUrl}
               />
-            </SectionCard>
+            </Stack>
           </Grid.Col>
 
           <Grid.Col span={{ base: 12, md: 5 }}>

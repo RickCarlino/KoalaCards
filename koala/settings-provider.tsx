@@ -30,6 +30,7 @@ type AppUserSettings = {
   dailyWritingGoal: number;
   writingFirst: boolean;
   dueCardsEmailNotifications: boolean;
+  languageExchangeAvailable: boolean;
 };
 
 type AppUserSettingsInput = Omit<
@@ -43,6 +44,7 @@ type AppUserSettingsInput = Omit<
   requestedRetention?: number;
   maxLapses?: number;
   dueCardsEmailNotifications?: boolean;
+  languageExchangeAvailable?: boolean;
 };
 
 interface UserSettingsProviderProps {
@@ -66,6 +68,7 @@ const pickAppUserSettings = (
   dailyWritingGoal: input.dailyWritingGoal,
   writingFirst: input.writingFirst,
   dueCardsEmailNotifications: Boolean(input.dueCardsEmailNotifications),
+  languageExchangeAvailable: Boolean(input.languageExchangeAvailable),
 });
 
 const EMPTY: AppUserSettings = {
@@ -83,6 +86,7 @@ const EMPTY: AppUserSettings = {
   dailyWritingGoal: 300,
   writingFirst: false,
   dueCardsEmailNotifications: false,
+  languageExchangeAvailable: false,
 };
 
 const UserSettingsContext = createContext<AppUserSettings>(EMPTY);

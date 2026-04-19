@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { errorReport } from "@/koala/error-report";
 import { prismaClient } from "./prisma-client";
 
@@ -16,22 +17,46 @@ export const getUserSettings = async (userId?: UserID) => {
   if (!userId) {
     return errorReport("Missing User ID");
   }
-  const params = { userId: "" + userId };
+  const resolvedUserId = "" + userId;
+  const params = { userId: resolvedUserId };
   prismaClient.user
     .update({
-      where: { id: "" + userId },
+      where: { id: resolvedUserId },
       data: { lastSeen: new Date() },
     })
     .then(
       () => undefined,
       () => undefined,
     );
-  return await prismaClient.userSettings.upsert({
+
+  const include = {
+    user: true,
+  } satisfies Prisma.UserSettingsInclude;
+
+  const existingSettings = await prismaClient.userSettings.findUnique({
     where: params,
-    update: {},
-    create: params,
-    include: {
-      user: true,
-    },
+    include,
   });
+  if (existingSettings) {
+    return existingSettings;
+  }
+
+  try {
+    return await prismaClient.userSettings.create({
+      data: params,
+      include,
+    });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return await prismaClient.userSettings.findUniqueOrThrow({
+        where: params,
+        include,
+      });
+    }
+
+    throw error;
+  }
 };

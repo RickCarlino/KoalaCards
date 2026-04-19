@@ -1,20 +1,13 @@
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { prismaClient } from "@/koala/prisma-client";
-import {
-  Box,
-  Container,
-  Divider,
-  Paper,
-  ScrollArea,
-  Stack,
-  Table,
-  Text,
-  Title,
-} from "@mantine/core";
+import { Container, Stack, Table, Title } from "@mantine/core";
 import { GetServerSideProps } from "next";
+import { useRouter } from "next/router";
 
 const WRITING_SAMPLE_LIMIT = 5;
-const OUTCOME_LIMIT = 50;
+const WRONG_OUTCOME_LIMIT = 50;
+const CORRECT_OUTCOME_LIMIT = 10;
+const RECENT_HIGHLIGHT_LIMIT = 10;
 const SPEAKING_EVENT_TYPE = "speaking-judgement";
 const DEFAULT_PROMPT = "Not set.";
 
@@ -22,23 +15,31 @@ type WritingSample = {
   id: number;
   prompt: string;
   submission: string;
-  createdAt: string;
 };
 
-type OutcomeRow = {
-  cardId: number;
+type WrongOutcomeRow = {
   term: string;
   definition: string;
   userInput: string;
   createdAt: string;
 };
 
-type CorrectOutcomeRow = Omit<OutcomeRow, "userInput">;
+type CorrectOutcomeRow = {
+  definition: string;
+  userInput: string;
+  createdAt: string;
+};
+
+type RecentHighlightWord = {
+  id: number;
+  context: string;
+};
 
 type RecentPageProps = {
   writingSamples: WritingSample[];
-  wrongOutcomes: OutcomeRow[];
+  wrongOutcomes: WrongOutcomeRow[];
   correctOutcomes: CorrectOutcomeRow[];
+  recentHighlights: RecentHighlightWord[];
 };
 
 type LatestCardOutcomeRow = {
@@ -50,36 +51,90 @@ type LatestCardOutcomeRow = {
   createdAt: Date;
 };
 
-type OutcomeDisplayRow = {
-  cardId: number;
-  term: string;
-  definition: string;
-  createdAt: string;
-  userInput?: string;
-};
-
-const dateFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  hour: "numeric",
-  minute: "2-digit",
-});
-
-const formatDate = (isoDate: string) =>
-  dateFormatter.format(new Date(isoDate));
-
 const hasPrompt = (prompt: string) => {
   const trimmedPrompt = prompt.trim();
   return Boolean(trimmedPrompt) && trimmedPrompt !== DEFAULT_PROMPT;
 };
 
-const formatItemCount = (count: number) =>
-  `${count} item${count === 1 ? "" : "s"}`;
+type HighlightOccurrence = {
+  before: string;
+  match: string;
+  after: string;
+};
+
+const parseHighlightOccurrences = (
+  value: unknown,
+): HighlightOccurrence[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const parsed: HighlightOccurrence[] = [];
+
+  for (const item of value) {
+    if (!item || typeof item !== "object") {
+      continue;
+    }
+
+    const maybeBefore = (item as { before?: unknown }).before;
+    const maybeMatch = (item as { match?: unknown }).match;
+    const maybeAfter = (item as { after?: unknown }).after;
+
+    if (
+      typeof maybeBefore !== "string" ||
+      typeof maybeMatch !== "string" ||
+      typeof maybeAfter !== "string"
+    ) {
+      continue;
+    }
+
+    parsed.push({
+      before: maybeBefore,
+      match: maybeMatch,
+      after: maybeAfter,
+    });
+  }
+
+  return parsed;
+};
+
+const normalizeSnippetChunk = (value: string): string => {
+  return value.replace(/\s+/g, " ").trim();
+};
+
+const buildHighlightContextSnippet = (options: {
+  selectedText: string;
+  selectedOccurrenceIndex: number;
+  occurrencesJson: unknown;
+}): string | null => {
+  const occurrences = parseHighlightOccurrences(options.occurrencesJson);
+  const selectedOccurrence =
+    occurrences[options.selectedOccurrenceIndex] ?? null;
+
+  const before = normalizeSnippetChunk(selectedOccurrence?.before ?? "");
+  const match = normalizeSnippetChunk(
+    selectedOccurrence?.match ?? options.selectedText,
+  );
+  const after = normalizeSnippetChunk(selectedOccurrence?.after ?? "");
+
+  if (match.length === 0) {
+    return null;
+  }
+
+  const wrappedMatch = `{{ ${match} }}`;
+
+  if (before.length === 0 && after.length === 0) {
+    return wrappedMatch;
+  }
+
+  const prefix = before.length > 0 ? `...${before} ` : "";
+  const suffix = after.length > 0 ? ` ${after}...` : "";
+  return `${prefix}${wrappedMatch}${suffix}`.trim();
+};
 
 const toSerializableOutcome = (
   row: LatestCardOutcomeRow,
-): Omit<OutcomeRow, "createdAt"> & { createdAt: string } => ({
-  cardId: row.cardId,
+): Omit<WrongOutcomeRow, "createdAt"> & { createdAt: string } => ({
   term: row.term,
   definition: row.definition,
   userInput: row.userInput,
@@ -96,19 +151,19 @@ export const getServerSideProps: GetServerSideProps<
     };
   }
 
-  const [writingRows, latestCardOutcomes] = await Promise.all([
-    prismaClient.writingSubmission.findMany({
-      where: { userId: dbUser.id },
-      orderBy: { createdAt: "desc" },
-      take: WRITING_SAMPLE_LIMIT,
-      select: {
-        id: true,
-        prompt: true,
-        submission: true,
-        createdAt: true,
-      },
-    }),
-    prismaClient.$queryRaw<LatestCardOutcomeRow[]>`
+  const [writingRows, latestCardOutcomes, highlightRows] =
+    await Promise.all([
+      prismaClient.writingSubmission.findMany({
+        where: { userId: dbUser.id },
+        orderBy: { createdAt: "desc" },
+        take: WRITING_SAMPLE_LIMIT,
+        select: {
+          id: true,
+          prompt: true,
+          submission: true,
+        },
+      }),
+      prismaClient.$queryRaw<LatestCardOutcomeRow[]>`
       SELECT DISTINCT ON (c.id)
         c.id AS "cardId",
         c.term AS term,
@@ -124,7 +179,22 @@ export const getServerSideProps: GetServerSideProps<
         AND q."eventType" = ${SPEAKING_EVENT_TYPE}
       ORDER BY c.id, q."createdAt" DESC, q.id DESC
     `,
-  ]);
+      prismaClient.readerArticleHighlight.findMany({
+        where: {
+          userId: dbUser.id,
+          status: "READY",
+        },
+        orderBy: { createdAt: "desc" },
+        take: 40,
+        select: {
+          id: true,
+          term: true,
+          selectedText: true,
+          selectedOccurrenceIndex: true,
+          occurrencesJson: true,
+        },
+      }),
+    ]);
 
   const sortedOutcomes = latestCardOutcomes.sort(
     (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
@@ -132,18 +202,17 @@ export const getServerSideProps: GetServerSideProps<
 
   const wrongOutcomes = sortedOutcomes
     .filter((row) => !row.isAcceptable)
-    .slice(0, OUTCOME_LIMIT)
+    .slice(0, WRONG_OUTCOME_LIMIT)
     .map(toSerializableOutcome);
 
   const correctOutcomes = sortedOutcomes
     .filter((row) => row.isAcceptable)
-    .slice(0, OUTCOME_LIMIT)
+    .slice(0, CORRECT_OUTCOME_LIMIT)
     .map((row) => {
       const serializable = toSerializableOutcome(row);
       return {
-        cardId: serializable.cardId,
-        term: serializable.term,
         definition: serializable.definition,
+        userInput: serializable.userInput,
         createdAt: serializable.createdAt,
       };
     });
@@ -152,132 +221,238 @@ export const getServerSideProps: GetServerSideProps<
     id: row.id,
     prompt: row.prompt,
     submission: row.submission,
-    createdAt: row.createdAt.toISOString(),
   }));
+
+  const recentHighlights = highlightRows
+    .map((row) => {
+      const context = buildHighlightContextSnippet({
+        selectedText: row.selectedText.trim(),
+        selectedOccurrenceIndex: row.selectedOccurrenceIndex,
+        occurrencesJson: row.occurrencesJson,
+      });
+      if (!context) {
+        return null;
+      }
+
+      return {
+        id: row.id,
+        context,
+      };
+    })
+    .filter(
+      (row): row is RecentHighlightWord =>
+        row !== null && row.context.length > 0,
+    )
+    .slice(0, RECENT_HIGHLIGHT_LIMIT);
 
   return {
     props: {
       writingSamples,
       wrongOutcomes,
       correctOutcomes,
+      recentHighlights,
     },
   };
 };
 
-function SectionHeading({
-  title,
-  count,
-}: {
-  title: string;
-  count?: number;
-}) {
+function SectionHeading({ title }: { title: string }) {
   return (
-    <Stack gap={2}>
-      <Title order={3} style={{ letterSpacing: "-0.01em" }}>
-        {title}
-      </Title>
-      {typeof count === "number" && (
-        <Text size="sm" c="dimmed">
-          {formatItemCount(count)}
-        </Text>
-      )}
-    </Stack>
+    <Title
+      order={4}
+      style={{ letterSpacing: "-0.01em", lineHeight: 1.15 }}
+    >
+      {title}
+    </Title>
   );
 }
 
 function WritingSamplesSection({ samples }: { samples: WritingSample[] }) {
-  if (samples.length === 0) {
-    return <Text c="dimmed">No writing samples yet.</Text>;
-  }
-
   return (
-    <Stack gap="md">
-      {samples.map((sample, index) => {
-        const showDivider = index < samples.length - 1;
-
-        return (
-          <Box key={sample.id}>
-            <Stack gap={6}>
-              <Text fw={700}>{formatDate(sample.createdAt)}</Text>
-              {hasPrompt(sample.prompt) && (
-                <Text size="sm" style={{ lineHeight: 1.6 }}>
-                  <Text component="span" fw={700}>
-                    Prompt:
-                  </Text>{" "}
-                  {sample.prompt.trim()}
-                </Text>
-              )}
-              <Text
-                size="sm"
-                style={{ whiteSpace: "pre-wrap", lineHeight: 1.75 }}
-              >
-                {sample.submission}
-              </Text>
-            </Stack>
-            {showDivider && <Divider my="md" />}
-          </Box>
-        );
-      })}
-    </Stack>
-  );
-}
-
-function OutcomeSection({
-  title,
-  rows,
-  includeInputColumn,
-  emptyMessage,
-}: {
-  title: string;
-  rows: OutcomeDisplayRow[];
-  includeInputColumn: boolean;
-  emptyMessage: string;
-}) {
-  const columnCount = includeInputColumn ? 5 : 4;
-
-  return (
-    <Stack gap="sm">
-      <SectionHeading title={title} count={rows.length} />
-      <ScrollArea type="auto">
+    <section className="recent-print-section">
+      <Stack gap={4}>
+        <SectionHeading title="최근 작문 샘플" />
         <Table
           withColumnBorders
           withTableBorder
-          horizontalSpacing="md"
-          verticalSpacing="xs"
-          style={{ minWidth: 720 }}
+          horizontalSpacing="xs"
+          verticalSpacing={4}
+          className="recent-print-table"
+          style={{ tableLayout: "fixed" }}
         >
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Term</th>
-              <th>Definition</th>
-              {includeInputColumn && <th>My Input</th>}
-              <th>Card ID</th>
+              <th>작성문</th>
+            </tr>
+          </thead>
+          <tbody>
+            {samples.length === 0 && (
+              <tr>
+                <td>없음</td>
+              </tr>
+            )}
+            {samples.map((sample) => (
+              <tr key={sample.id}>
+                <td style={{ whiteSpace: "pre-wrap" }}>
+                  {hasPrompt(sample.prompt) && (
+                    <strong>{sample.prompt.trim()} </strong>
+                  )}
+                  {sample.submission}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      </Stack>
+    </section>
+  );
+}
+
+function WrongOutcomesSection({ rows }: { rows: WrongOutcomeRow[] }) {
+  return (
+    <section className="recent-print-section">
+      <Stack gap={4}>
+        <SectionHeading title="최근 오답" />
+        <Table
+          withColumnBorders
+          withTableBorder
+          horizontalSpacing="xs"
+          verticalSpacing={4}
+          className="recent-print-table"
+          style={{ tableLayout: "fixed" }}
+        >
+          <thead>
+            <tr>
+              <th>뜻</th>
+              <th>단어</th>
+              <th>내 답변</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={columnCount}>
-                  <Text size="sm" c="dimmed">
-                    {emptyMessage}
-                  </Text>
-                </td>
+                <td colSpan={3}>없음</td>
               </tr>
             )}
             {rows.map((row) => (
-              <tr key={row.cardId}>
-                <td>{formatDate(row.createdAt)}</td>
-                <td>{row.term}</td>
+              <tr key={`${row.createdAt}-${row.term}-${row.userInput}`}>
                 <td>{row.definition}</td>
-                {includeInputColumn && <td>{row.userInput ?? ""}</td>}
-                <td>{row.cardId}</td>
+                <td>{row.term}</td>
+                <td>{row.userInput}</td>
               </tr>
             ))}
           </tbody>
         </Table>
-      </ScrollArea>
-    </Stack>
+      </Stack>
+    </section>
+  );
+}
+
+function CorrectOutcomesSection({ rows }: { rows: CorrectOutcomeRow[] }) {
+  return (
+    <section className="recent-print-section">
+      <Stack gap={4}>
+        <SectionHeading title="최근 정답" />
+        <Table
+          withColumnBorders
+          withTableBorder
+          horizontalSpacing="xs"
+          verticalSpacing={4}
+          className="recent-print-table"
+          style={{ tableLayout: "fixed" }}
+        >
+          <thead>
+            <tr>
+              <th>내 답변</th>
+              <th>뜻</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 && (
+              <tr>
+                <td colSpan={2}>없음</td>
+              </tr>
+            )}
+            {rows.map((row) => (
+              <tr
+                key={`${row.createdAt}-${row.userInput}-${row.definition}`}
+              >
+                <td>{row.userInput}</td>
+                <td>{row.definition}</td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      </Stack>
+    </section>
+  );
+}
+
+function RecentHighlightsSection({
+  rows,
+}: {
+  rows: RecentHighlightWord[];
+}) {
+  const renderContext = (context: string) => {
+    const startToken = "{{ ";
+    const endToken = " }}";
+    const startIndex = context.indexOf(startToken);
+    if (startIndex < 0) {
+      return context;
+    }
+
+    const matchStart = startIndex + startToken.length;
+    const endIndex = context.indexOf(endToken, matchStart);
+    if (endIndex < 0) {
+      return context;
+    }
+
+    const before = context.slice(0, startIndex);
+    const match = context.slice(matchStart, endIndex);
+    const after = context.slice(endIndex + endToken.length);
+
+    return (
+      <>
+        {before}
+        {"{{ "}
+        <strong>{match}</strong>
+        {" }}"}
+        {after}
+      </>
+    );
+  };
+
+  return (
+    <section className="recent-print-section">
+      <Stack gap={4}>
+        <SectionHeading title="최근 하이라이트 단어" />
+        <Table
+          withColumnBorders
+          withTableBorder
+          horizontalSpacing="xs"
+          verticalSpacing={4}
+          className="recent-print-table"
+          style={{ tableLayout: "fixed" }}
+        >
+          <thead>
+            <tr>
+              <th>문맥</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 && (
+              <tr>
+                <td>없음</td>
+              </tr>
+            )}
+            {rows.map((row) => (
+              <tr key={row.id}>
+                <td>{renderContext(row.context)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      </Stack>
+    </section>
   );
 }
 
@@ -285,66 +460,103 @@ export default function RecentPage({
   writingSamples,
   wrongOutcomes,
   correctOutcomes,
+  recentHighlights,
 }: RecentPageProps) {
+  const router = useRouter();
+  const handleBack = () => {
+    if (
+      typeof window !== "undefined" &&
+      window.history &&
+      window.history.length > 1
+    ) {
+      router.back();
+      return;
+    }
+
+    void router.push("/");
+  };
+
   return (
-    <Container size="lg" py={{ base: "md", sm: "xl" }}>
-      <Paper
-        withBorder
-        radius="lg"
-        p={{ base: "md", sm: "xl" }}
-        style={{
-          background:
-            "linear-gradient(180deg, rgba(255, 248, 251, 0.96), rgba(255, 255, 255, 1))",
-          borderColor: "rgba(221, 170, 190, 0.55)",
-          fontFamily:
-            '"Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif',
-        }}
-      >
-        <Stack gap="xl">
-          <Stack gap={4}>
-            <Title
-              order={2}
-              style={{
-                letterSpacing: "-0.015em",
-                fontSize: "clamp(1.55rem, 2.2vw, 2rem)",
-              }}
-            >
-              Recent Study Activity
-            </Title>
-            <Text c="dimmed" size="sm" style={{ lineHeight: 1.7 }}>
-              Writing samples and quiz outcomes from recent sessions.
-            </Text>
-          </Stack>
+    <>
+      <style jsx global>{`
+        .recent-print-root {
+          color: #111;
+        }
 
-          <Divider />
+        .recent-print-table th,
+        .recent-print-table td {
+          vertical-align: top;
+          line-height: 1.2;
+          font-size: 12px;
+        }
 
-          <Stack gap="sm">
-            <SectionHeading
-              title="Recent Writing Samples"
-              count={writingSamples.length}
-            />
-            <WritingSamplesSection samples={writingSamples} />
-          </Stack>
+        .recent-back-button {
+          border: 0;
+          background: transparent;
+          padding: 0;
+          margin: 0;
+          width: fit-content;
+          font-size: 11px;
+          line-height: 1;
+          opacity: 0.6;
+          color: #111;
+          cursor: pointer;
+        }
 
-          <Divider />
+        .recent-back-button:hover {
+          opacity: 0.85;
+        }
 
-          <OutcomeSection
-            title="Recent Wrong Answers"
-            rows={wrongOutcomes}
-            includeInputColumn
-            emptyMessage="No wrong answers found."
-          />
+        @media print {
+          @page {
+            margin: 10mm;
+          }
 
-          <Divider />
+          .recent-print-root {
+            max-width: none !important;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+          }
 
-          <OutcomeSection
-            title="Recent Correct Answers"
-            rows={correctOutcomes}
-            includeInputColumn={false}
-            emptyMessage="No correct answers found."
-          />
+          .recent-print-section {
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+
+          .recent-print-table th,
+          .recent-print-table td {
+            padding: 3px 6px !important;
+            line-height: 1.15 !important;
+            font-size: 11px !important;
+          }
+
+          .recent-back-button {
+            display: none;
+          }
+        }
+      `}</style>
+
+      <Container size="xl" py="xs" className="recent-print-root">
+        <Stack gap={8}>
+          <button
+            type="button"
+            className="recent-back-button"
+            onClick={handleBack}
+          >
+            ← 뒤로
+          </button>
+          <Title
+            order={3}
+            style={{ letterSpacing: "-0.01em", lineHeight: 1.1 }}
+          >
+            최근 학습 활동
+          </Title>
+          <WritingSamplesSection samples={writingSamples} />
+          <RecentHighlightsSection rows={recentHighlights} />
+          <WrongOutcomesSection rows={wrongOutcomes} />
+          <CorrectOutcomesSection rows={correctOutcomes} />
         </Stack>
-      </Paper>
-    </Container>
+      </Container>
+    </>
   );
 }
