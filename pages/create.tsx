@@ -10,6 +10,7 @@ import type {
 import { getLangName } from "@/koala/get-lang-name";
 import { containsHangul } from "@/koala/utils/hangul";
 import {
+  ActionIcon,
   Button,
   Container,
   Divider,
@@ -27,8 +28,11 @@ import {
   Title,
   useMantineTheme,
   Radio,
+  Stack,
+  Tooltip,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
+import { IconTrash } from "@tabler/icons-react";
 import { GetServerSideProps } from "next";
 import { useRouter } from "next/router";
 import React from "react";
@@ -642,10 +646,13 @@ function VibeContent(props: {
     props;
   return (
     <>
-      <Text size="sm" c={themeColors.gray[7]} mb="xs">
-        What cards shall we create? Example: "Please make 25 {deckLangName}{" "}
-        example sentences about food."
-      </Text>
+      <Group justify="space-between" align="flex-start" mb="xs" gap="sm">
+        <Text size="sm" c={themeColors.gray[7]} style={{ flex: 1 }}>
+          What cards shall we create? Example: "Please make 25{" "}
+          {deckLangName} example sentences about food."
+        </Text>
+        <Button onClick={onGenerate}>Generate</Button>
+      </Group>
       <Textarea
         minRows={6}
         autosize
@@ -653,9 +660,6 @@ function VibeContent(props: {
         value={rawInput}
         onChange={(e) => setRawInput(e.currentTarget.value)}
       />
-      <Group justify="flex-end" mt="md">
-        <Button onClick={onGenerate}>Generate</Button>
-      </Group>
     </>
   );
 }
@@ -669,9 +673,12 @@ function WordlistContent(props: {
   const { themeColors, rawInput, setRawInput, onEnrich } = props;
   return (
     <>
-      <Text size="sm" c={themeColors.gray[7]} mb="xs">
-        Paste one word per line. We’ll fetch definitions.
-      </Text>
+      <Group justify="space-between" align="flex-start" mb="xs" gap="sm">
+        <Text size="sm" c={themeColors.gray[7]} style={{ flex: 1 }}>
+          Paste one word per line. We’ll fetch definitions.
+        </Text>
+        <Button onClick={onEnrich}>Enrich</Button>
+      </Group>
       <Textarea
         minRows={6}
         autosize
@@ -679,9 +686,6 @@ function WordlistContent(props: {
         value={rawInput}
         onChange={(e) => setRawInput(e.currentTarget.value)}
       />
-      <Group justify="flex-end" mt="md">
-        <Button onClick={onEnrich}>Enrich</Button>
-      </Group>
     </>
   );
 }
@@ -789,8 +793,8 @@ type PreviewSectionProps = {
 function PreviewSection(props: PreviewSectionProps) {
   const { processedCards, onEdit, onRemove, canSave, onSave } = props;
   return (
-    <Paper withBorder p="md" radius="md">
-      <Group justify="space-between" mb="xs">
+    <Paper withBorder p="md" radius="md" style={previewPaperStyle}>
+      <Group justify="space-between" mb="md">
         <Title order={4}>Preview</Title>
         <Button onClick={onSave} disabled={!canSave}>
           Save {processedCards.length ? `(${processedCards.length})` : ""}
@@ -799,37 +803,56 @@ function PreviewSection(props: PreviewSectionProps) {
       {processedCards.length === 0 ? (
         <Text c="dimmed">No cards yet. Generate or parse to preview.</Text>
       ) : (
-        processedCards.map((card, index) => (
-          <Group
-            key={`${card.term}-${index}`}
-            grow
-            align="flex-end"
-            mb="sm"
-          >
-            <TextInput
-              label="Term"
-              value={card.term}
-              onChange={(e) =>
-                onEdit(index, "term", e.currentTarget.value)
-              }
-            />
-            <TextInput
-              label="Definition"
-              value={card.definition}
-              onChange={(e) =>
-                onEdit(index, "definition", e.currentTarget.value)
-              }
-            />
-            <Button
-              color="red"
-              variant="light"
-              onClick={() => onRemove(index)}
-            >
-              Remove
-            </Button>
-          </Group>
-        ))
+        <Stack gap={0}>
+          {processedCards.map((card, index) => (
+            <div key={`${card.term}-${index}`} style={previewCardStyle}>
+              <Tooltip label="Remove">
+                <ActionIcon
+                  aria-label={`Remove card ${index + 1}`}
+                  color="red"
+                  variant="subtle"
+                  onClick={() => onRemove(index)}
+                  style={previewDeleteButtonStyle}
+                >
+                  <IconTrash size={16} stroke={1.8} />
+                </ActionIcon>
+              </Tooltip>
+              <Stack gap="xs">
+                <TextInput
+                  label="Term"
+                  value={card.term}
+                  onChange={(e) =>
+                    onEdit(index, "term", e.currentTarget.value)
+                  }
+                />
+                <TextInput
+                  label="Definition"
+                  value={card.definition}
+                  onChange={(e) =>
+                    onEdit(index, "definition", e.currentTarget.value)
+                  }
+                />
+              </Stack>
+            </div>
+          ))}
+        </Stack>
       )}
     </Paper>
   );
 }
+
+const previewPaperStyle: React.CSSProperties = {
+  overflow: "hidden",
+};
+
+const previewCardStyle: React.CSSProperties = {
+  position: "relative",
+  borderTop: "1px solid var(--mantine-color-pink-1)",
+  padding: "12px 40px 12px 8px",
+};
+
+const previewDeleteButtonStyle: React.CSSProperties = {
+  position: "absolute",
+  top: 10,
+  right: 4,
+};
