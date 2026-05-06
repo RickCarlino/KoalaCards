@@ -71,6 +71,19 @@ test("highlight state helpers summarize list visibility and actions", () => {
     },
   );
 
+  assert.equal(
+    resolveExplainActionState({
+      onAddToDeck: () => {},
+      canAddToDeck: true,
+      isExplaining: true,
+      isDeletingHighlight: false,
+      isAddingToDeck: false,
+      canDeleteHighlight: true,
+      onDeleteHighlight: () => {},
+    }).deleteDisabled,
+    false,
+  );
+
   assert.deepEqual(resolveHighlightsVisibility([1, 2, 3, 4, 5], false), {
     visibleHighlights: [1, 2, 3, 4],
     hiddenCount: 1,

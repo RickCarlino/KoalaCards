@@ -87,6 +87,7 @@ type ReaderSelectionDraft = {
 };
 
 type StreamHandlers = {
+  onHighlightId: (highlightId: number) => void;
   onAnalysis: (analysis: ReaderHighlightAnalysis) => void;
   onDone: () => void;
   onError: (message: string) => void;
@@ -602,11 +603,30 @@ function parseSseChunk(chunk: string): {
   };
 }
 
+function handleHighlightIdSsePayload(
+  payload: string,
+  handlers: StreamHandlers,
+): void {
+  try {
+    const parsed = JSON.parse(payload) as { id?: unknown };
+    if (typeof parsed.id === "number" && Number.isFinite(parsed.id)) {
+      handlers.onHighlightId(parsed.id);
+    }
+  } catch {
+    handlers.onError("Unable to read saved highlight.");
+  }
+}
+
 function handleSseChunk(chunk: string, handlers: StreamHandlers): boolean {
   const { eventName, payload } = parseSseChunk(chunk);
 
   if (eventName === "done") {
     return true;
+  }
+
+  if (eventName === "highlight") {
+    handleHighlightIdSsePayload(payload, handlers);
+    return false;
   }
 
   if (eventName === "error") {
@@ -1255,6 +1275,7 @@ function OwnerHighlightTools({
       }
 
       setActiveHighlightId(null);
+      setSelectionDraft(null);
       setHelperDraftOverride(null);
       setActiveAnalysis(null);
       setStreamError("");
@@ -1305,6 +1326,9 @@ function OwnerHighlightTools({
 
       const reader = response.body.getReader();
       await readSseStream(reader, {
+        onHighlightId: (highlightId) => {
+          setActiveHighlightId(highlightId);
+        },
         onAnalysis: (analysis) => {
           setActiveAnalysis(analysis);
         },
@@ -1646,7 +1670,8 @@ function OwnerHighlightTools({
 
   const queryErrorMessage = highlightsQuery.error?.message ?? "";
   const fillToolsBody = shouldFillToolsBody(activeView);
-  const activeHighlightIdForActions = activeHighlight?.id ?? null;
+  const activeHighlightIdForActions =
+    activeHighlight?.id ?? activeHighlightId;
   const canDeleteActiveHighlight = activeHighlightIdForActions !== null;
   const isDeletingActiveHighlight =
     activeHighlightIdForActions !== null &&

@@ -149,9 +149,7 @@ export function resolveExplainActionState(options: {
       options.isExplaining ||
       options.isDeletingHighlight,
     deleteDisabled:
-      !options.canDeleteHighlight ||
-      options.isDeletingHighlight ||
-      options.isExplaining,
+      !options.canDeleteHighlight || options.isDeletingHighlight,
     isAddingToDeck: options.isAddingToDeck,
     isDeletingHighlight: options.isDeletingHighlight,
   };

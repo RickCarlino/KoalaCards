@@ -105,6 +105,18 @@ function streamAnalysis(
   writeSSE(res, JSON.stringify(analysis), "analysis");
 }
 
+function streamHighlightId(
+  res: NextApiResponse,
+  isClosed: boolean,
+  highlightId: number,
+): void {
+  if (isClosed) {
+    return;
+  }
+
+  writeSSE(res, JSON.stringify({ id: highlightId }), "highlight");
+}
+
 function normalizeArticleText(value: string): string {
   return value.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
 }
@@ -449,6 +461,7 @@ function streamCachedResponse(options: {
       meaningInContext: options.cached.meaningInContext,
     },
   });
+  streamHighlightId(options.res, options.isClosed(), options.cached.id);
   streamAnalysis(options.res, options.isClosed(), normalizedAnalysis);
   streamDone(options.res, options.isClosed());
   return true;
@@ -483,6 +496,7 @@ async function streamGeneratedResponse(options: {
     occurrencesJson: occurrences,
     articleContentHash,
   });
+  streamHighlightId(res, isClosed(), highlightId);
 
   const promptOccurrences = takePromptOccurrences({
     occurrences,
@@ -519,10 +533,18 @@ async function streamGeneratedResponse(options: {
       analysis: generated,
     });
 
+    if (isClosed()) {
+      return;
+    }
+
     await markHighlightReady(highlightId, normalizedAnalysis);
     streamAnalysis(res, isClosed(), normalizedAnalysis);
     streamDone(res, isClosed());
   } catch (error) {
+    if (isClosed()) {
+      return;
+    }
+
     const errorMessage = trimErrorMessage(error);
     await markHighlightError(highlightId, errorMessage);
     streamError(res, isClosed(), errorMessage);
