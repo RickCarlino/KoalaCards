@@ -36,6 +36,57 @@ test("createAssistantStreamParser preserves partial tokens across chunks", () =>
   ]);
 });
 
+test("createAssistantStreamParser handles fallback edits and malformed blocks", () => {
+  const parser = createAssistantStreamParser();
+
+  assert.deepEqual(
+    parser.push("[[EDIT_CARD]]새 단어\n새 뜻[[/EDIT_CARD]]"),
+    {
+      textDelta: EDIT_PLACEHOLDER,
+      examples: [],
+      edits: [{ term: "새 단어", definition: "새 뜻" }],
+    },
+  );
+
+  assert.deepEqual(
+    parser.push(
+      "[[EDIT_CARD]]id: 99\nreason: better wording[[/EDIT_CARD]]",
+    ),
+    {
+      textDelta: EDIT_PLACEHOLDER,
+      examples: [],
+      edits: [{ cardId: 99, note: "better wording" }],
+    },
+  );
+
+  assert.deepEqual(parser.push("[[EXAMPLE]]only one line[[/EXAMPLE]]"), {
+    textDelta: "only one line",
+    examples: [],
+    edits: [],
+  });
+
+  parser.push("[[EXAMPLE]]문장");
+  assert.deepEqual(parser.flush(), {
+    textDelta: "",
+    examples: [],
+    edits: [],
+  });
+});
+
+test("createAssistantStreamParser flushes ordinary buffered text", () => {
+  const parser = createAssistantStreamParser();
+  assert.deepEqual(parser.push("hello [[EX"), {
+    textDelta: "hello ",
+    examples: [],
+    edits: [],
+  });
+  assert.deepEqual(parser.flush(), {
+    textDelta: "[[EX",
+    examples: [],
+    edits: [],
+  });
+});
+
 test("buildAssistantEditProposal merges draft data with the current card", () => {
   const proposal = buildAssistantEditProposal({
     draft: {
@@ -68,4 +119,29 @@ test("buildAssistantEditProposal returns null when nothing can be edited", () =>
   });
 
   assert.equal(proposal, null);
+});
+
+test("buildAssistantEditProposal supports explicit card ids without latest card", () => {
+  const proposal = buildAssistantEditProposal({
+    draft: {
+      cardId: 44,
+      term: "새 단어",
+    },
+    latestCard: {
+      cardId: 12,
+      term: "원래 단어",
+      definition: "원래 뜻",
+    },
+    createProposalId: (cardId) => `edit-${cardId}`,
+  });
+
+  assert.deepEqual(proposal, {
+    id: "edit-44",
+    cardId: 44,
+    term: "새 단어",
+    definition: "",
+    note: undefined,
+    originalTerm: undefined,
+    originalDefinition: undefined,
+  });
 });
