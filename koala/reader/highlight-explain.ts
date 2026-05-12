@@ -74,7 +74,7 @@ export function buildReaderHighlightPrompt(options: {
     "Return concise, practical answers.",
     "",
     "Field requirements:",
-    "definition: a short English gloss suitable for the back of a flashcard. Give only one concise gloss, free of caveats parenthesis and semicolons.",
+    "definition: a short English gloss suitable for the back of a flashcard. Prefer the phrase's reusable core meaning over a contextual paraphrase. Do not import contextual referents or implications into this field; save those for meaningInContext. Give only one concise gloss, free of caveats, parentheses, and semicolons.",
     "generalMeaning: explain the usual meaning or function of the phrase in Korean.",
     "meaningInContext: explain what the phrase means in the CURRENT occurrence and nearby passage.",
     "I am a native English speaker; Explain in English!",

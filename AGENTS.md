@@ -11,6 +11,7 @@ Keep page concerns in `pages/` and reusable/business logic in `koala/`.
 
 ## Build and Development Commands
 - This is a containerized setup. We run commands in docker compose as much as possible. Do not assume my local env has the correct vars or tools installed. It does not. Everything runs in the container, including instructions you give me.
+- When running the required tidy check, use `docker compose run app sh /app/tidy.sh`. Do not run host `./tidy.sh`: `.next` and `node_modules` are container-owned, and the app image is Alpine without `/bin/bash`.
 - Due-card reminder emails are checked by the `worker` service (`koala/worker/`).
 
 ## Coding Style & Naming Conventions
