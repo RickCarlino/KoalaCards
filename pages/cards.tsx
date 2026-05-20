@@ -21,6 +21,7 @@ import { useRouter } from "next/router";
 import { useState, useEffect, FormEvent } from "react";
 import { getServersideUser } from "@/koala/get-serverside-user";
 import Link from "next/link";
+import { parseCardsQueryParams } from "@/koala/cards/query-params";
 
 type CardRecord = {
   id: number;
@@ -86,7 +87,12 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
     };
   }
 
-  const parsedQuery = parseQueryParams(ctx.query);
+  const parsedQuery = parseCardsQueryParams(ctx.query, {
+    allowedSortValues: SORT_OPTIONS.map((option) => option.value),
+    defaultSortBy: DEFAULT_SORT_BY,
+    defaultSortOrder: DEFAULT_SORT_ORDER,
+    defaultPage: DEFAULT_PAGE,
+  });
   const decks = await prismaClient.deck.findMany({
     where: { userId },
     select: { id: true, name: true },
@@ -119,48 +125,6 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
     },
   };
 };
-
-function parseQueryParams(query: Record<string, unknown>) {
-  const toStr = (val: unknown): string | undefined => {
-    if (typeof val === "string") {
-      return val;
-    }
-    if (Array.isArray(val)) {
-      return val[0];
-    }
-    return undefined;
-  };
-
-  const rawSortBy = toStr(query.sortBy) ?? DEFAULT_SORT_BY;
-  const rawSortOrder = toStr(query.sortOrder) ?? DEFAULT_SORT_ORDER;
-  const rawPage = parseInt(toStr(query.page) ?? "", 10);
-  const rawQ = toStr(query.q) ?? "";
-  const rawPaused = toStr(query.paused) ?? "false";
-  const rawDeckId = parseInt(
-    toStr(query.deckId) ?? toStr(query.deck_id) ?? "",
-    10,
-  );
-
-  const validSortBy = SORT_OPTIONS.map((o) => o.value).includes(rawSortBy)
-    ? rawSortBy
-    : DEFAULT_SORT_BY;
-  const finalSortOrder =
-    rawSortOrder === "asc" ? "asc" : DEFAULT_SORT_ORDER;
-  const finalPage =
-    !Number.isNaN(rawPage) && rawPage > 0 ? rawPage : DEFAULT_PAGE;
-  const finalPaused = rawPaused === "true";
-  const deckId =
-    Number.isFinite(rawDeckId) && rawDeckId > 0 ? rawDeckId : null;
-
-  return {
-    sortBy: validSortBy,
-    sortOrder: finalSortOrder,
-    page: finalPage,
-    q: rawQ,
-    paused: finalPaused,
-    deckId,
-  };
-}
 
 function getValidDeckId(deckId: number | null, decks: DeckListItem[]) {
   if (deckId === null) {

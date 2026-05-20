@@ -32,6 +32,11 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { alphabetical } from "radash";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  buildRecorderOptions,
+  canStartSpeechRecording,
+  recordingStartErrorMessage,
+} from "@/koala/writing/recording-state";
 
 type WritingPracticeProps = {
   returnTo: string | null;
@@ -509,13 +514,16 @@ function useSpeechRecorder({
     }, []);
 
   const startRecording = useCallback(async () => {
-    if (!isSupported || disabled || isTranscribing || isStarting) {
-      return;
-    }
     if (
-      recorderRef.current ||
-      startInFlightRef.current ||
-      stopInFlightRef.current
+      !canStartSpeechRecording({
+        isSupported,
+        disabled,
+        isTranscribing,
+        isStarting,
+        hasRecorder: Boolean(recorderRef.current),
+        startInFlight: startInFlightRef.current,
+        stopInFlight: stopInFlightRef.current,
+      })
     ) {
       return;
     }
@@ -528,13 +536,9 @@ function useSpeechRecorder({
       if (recorderRef.current || stopInFlightRef.current) {
         return;
       }
-      const recorderOptions: MediaRecorderOptions = {};
       const preferredMimeType = getPreferredRecorderMimeType();
-      if (preferredMimeType) {
-        recorderOptions.mimeType = preferredMimeType;
-      }
-      recorderOptions.audioBitsPerSecond = 16_000;
-
+      const recorderOptions: MediaRecorderOptions =
+        buildRecorderOptions(preferredMimeType);
       const recorder = new MediaRecorder(stream, recorderOptions);
       chunksRef.current = [];
       recorder.ondataavailable = (event: BlobEvent) => {
@@ -548,13 +552,9 @@ function useSpeechRecorder({
       setRemainingSeconds(MAX_SPEECH_RECORDING_SECONDS);
       setIsRecording(true);
     } catch (error: unknown) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Unable to access microphone.";
       notifications.show({
         title: "Microphone error",
-        message,
+        message: recordingStartErrorMessage(error),
         color: "red",
       });
     } finally {

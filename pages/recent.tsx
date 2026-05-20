@@ -1,5 +1,9 @@
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { prismaClient } from "@/koala/prisma-client";
+import {
+  buildHighlightSnippet,
+  normalizeHighlightText,
+} from "@/koala/reader/highlight-snippet";
 import { Container, Stack, Table, Title } from "@mantine/core";
 import { GetServerSideProps } from "next";
 import { useRouter } from "next/router";
@@ -56,80 +60,13 @@ const hasPrompt = (prompt: string) => {
   return Boolean(trimmedPrompt) && trimmedPrompt !== DEFAULT_PROMPT;
 };
 
-type HighlightOccurrence = {
-  before: string;
-  match: string;
-  after: string;
-};
-
-const parseHighlightOccurrences = (
-  value: unknown,
-): HighlightOccurrence[] => {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  const parsed: HighlightOccurrence[] = [];
-
-  for (const item of value) {
-    if (!item || typeof item !== "object") {
-      continue;
-    }
-
-    const maybeBefore = (item as { before?: unknown }).before;
-    const maybeMatch = (item as { match?: unknown }).match;
-    const maybeAfter = (item as { after?: unknown }).after;
-
-    if (
-      typeof maybeBefore !== "string" ||
-      typeof maybeMatch !== "string" ||
-      typeof maybeAfter !== "string"
-    ) {
-      continue;
-    }
-
-    parsed.push({
-      before: maybeBefore,
-      match: maybeMatch,
-      after: maybeAfter,
-    });
-  }
-
-  return parsed;
-};
-
-const normalizeSnippetChunk = (value: string): string => {
-  return value.replace(/\s+/g, " ").trim();
-};
-
 const buildHighlightContextSnippet = (options: {
   selectedText: string;
   selectedOccurrenceIndex: number;
   occurrencesJson: unknown;
 }): string | null => {
-  const occurrences = parseHighlightOccurrences(options.occurrencesJson);
-  const selectedOccurrence =
-    occurrences[options.selectedOccurrenceIndex] ?? null;
-
-  const before = normalizeSnippetChunk(selectedOccurrence?.before ?? "");
-  const match = normalizeSnippetChunk(
-    selectedOccurrence?.match ?? options.selectedText,
-  );
-  const after = normalizeSnippetChunk(selectedOccurrence?.after ?? "");
-
-  if (match.length === 0) {
-    return null;
-  }
-
-  const wrappedMatch = `{{ ${match} }}`;
-
-  if (before.length === 0 && after.length === 0) {
-    return wrappedMatch;
-  }
-
-  const prefix = before.length > 0 ? `...${before} ` : "";
-  const suffix = after.length > 0 ? ` ${after}...` : "";
-  return `${prefix}${wrappedMatch}${suffix}`.trim();
+  const snippet = buildHighlightSnippet(options);
+  return snippet?.snippet ?? null;
 };
 
 const toSerializableOutcome = (
@@ -226,7 +163,7 @@ export const getServerSideProps: GetServerSideProps<
   const recentHighlights = highlightRows
     .map((row) => {
       const context = buildHighlightContextSnippet({
-        selectedText: row.selectedText.trim(),
+        selectedText: normalizeHighlightText(row.selectedText),
         selectedOccurrenceIndex: row.selectedOccurrenceIndex,
         occurrencesJson: row.occurrencesJson,
       });

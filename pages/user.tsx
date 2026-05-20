@@ -253,29 +253,29 @@ export async function getServerSideProps(
     }
 
     const writingChartData = cumulativeWritingData;
-    const readArticles = await prismaClient.readerArticle.findMany({
-      where: {
-        userId,
-        readAt: {
-          not: null,
-          gte: threeMonthsAgo,
+    const readerHighlights =
+      await prismaClient.readerArticleHighlight.findMany({
+        where: {
+          userId,
+          createdAt: {
+            gte: threeMonthsAgo,
+          },
         },
-      },
-      select: {
-        readAt: true,
-      },
-      orderBy: {
-        readAt: "asc",
-      },
-    });
+        select: {
+          createdAt: true,
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+      });
 
-    const sortedReadDates = readArticles
-      .map((article) => article.readAt)
-      .filter((readAt): readAt is Date => readAt !== null);
+    const sortedReaderHighlightDates = readerHighlights.map(
+      (highlight) => highlight.createdAt,
+    );
     const readerChartData = buildCumulativeChartDataFromSortedDates({
       startDate: threeMonthsAgo,
       endDate,
-      sortedDates: sortedReadDates,
+      sortedDates: sortedReaderHighlightDates,
     });
 
     const weeklyTarget = userSettings.cardsPerDayMax * 7;
@@ -1096,10 +1096,14 @@ function ProgressSection({
           yAxisLabel="Characters Written"
         />
         <ProgressChart
-          title="Reader Progress"
+          title="Reader Highlights"
           data={readerChartData}
-          series={{ name: "count", color: "pink", label: "Total Read" }}
-          yAxisLabel="Articles Read"
+          series={{
+            name: "count",
+            color: "pink",
+            label: "Total Highlights",
+          }}
+          yAxisLabel="Highlights"
         />
       </SimpleGrid>
     </Stack>

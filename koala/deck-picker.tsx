@@ -42,6 +42,7 @@ interface DeckPickerProps {
   dispatch: React.Dispatch<DeckPickerAction>;
   onNext: () => void;
   title?: string;
+  description?: string;
 }
 
 export function DeckPicker({
@@ -50,6 +51,7 @@ export function DeckPicker({
   dispatch,
   onNext,
   title = "Step 1: Select or Create Deck",
+  description = "You can add new items to an existing deck or create a new one below.",
 }: DeckPickerProps) {
   const theme = useMantineTheme();
 
@@ -90,8 +92,7 @@ export function DeckPicker({
           {title}
         </Title>
         <Text size="sm" c="dimmed" mb="md">
-          You can add new items to an existing deck or create a new one
-          below.
+          {description}
         </Text>
 
         <RadioGroup

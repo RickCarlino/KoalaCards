@@ -6,6 +6,14 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "./auth/[...nextauth]";
 import { prismaClient } from "@/koala/prisma-client";
 import { shuffle } from "radash";
+import {
+  buildTranscriptionRequest,
+  buildTranscriptionPrompt,
+  firstParam,
+  getAudioFilename,
+  hasValidAudioContentLength,
+  resolveContentType,
+} from "@/koala/api/transcribe-helpers";
 
 export const config = {
   api: { bodyParser: false },
@@ -79,10 +87,6 @@ async function readRawBody(
   });
 }
 
-function firstParam(v: string | string[] | undefined): string | undefined {
-  return Array.isArray(v) ? v[0] : v;
-}
-
 function requirePostMethod(
   req: NextApiRequest,
   res: NextApiResponse,
@@ -141,19 +145,6 @@ function parseLanguage(
   return null;
 }
 
-function resolveContentType(
-  contentTypeHeader: string | string[] | undefined,
-): string {
-  return firstParam(contentTypeHeader) ?? "application/octet-stream";
-}
-
-function hasValidContentLength(contentLength: number): boolean {
-  if (!Number.isFinite(contentLength)) {
-    return true;
-  }
-  return contentLength <= MAX_AUDIO_BYTES;
-}
-
 async function readAudioBody(
   req: NextApiRequest,
   res: NextApiResponse,
@@ -167,13 +158,6 @@ async function readAudioBody(
     }
     throw error;
   }
-}
-
-function getAudioFilename(contentType: string): string {
-  if (/mp4|mpeg/.test(contentType)) {
-    return "recording.mp4";
-  }
-  return "recording.webm";
 }
 
 export default async function handler(
@@ -196,11 +180,12 @@ export default async function handler(
 
   const tokens = (firstParam(req.query.hint) || "").split(/[ ,]+/);
   const hint = shuffle(tokens).join(", ").trim();
+  const prompt = buildTranscriptionPrompt(hint);
 
   const contentType = resolveContentType(req.headers["content-type"]);
 
   const contentLength = Number(firstParam(req.headers["content-length"]));
-  if (!hasValidContentLength(contentLength)) {
+  if (!hasValidAudioContentLength(contentLength, MAX_AUDIO_BYTES)) {
     respondPayloadTooLarge(res);
     return;
   }
@@ -218,12 +203,13 @@ export default async function handler(
 
   const uploadFile = await toFile(raw, filename, { type: contentType });
 
-  const result = await openai.audio.transcriptions.create({
-    file: uploadFile,
-    model: "gpt-4o-mini-transcribe",
-    language,
-    ...(hint ? { prompt: `Might contain words like ${hint}` } : {}),
-  });
+  const result = await openai.audio.transcriptions.create(
+    buildTranscriptionRequest({
+      file: uploadFile,
+      language,
+      prompt,
+    }),
+  );
 
   const text = result.text ?? "There was a transcription error.";
   console.log({

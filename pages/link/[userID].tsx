@@ -84,18 +84,130 @@ function resolveDeleteError(
   return null;
 }
 
+function authorizedSuperUsers(value: string): string[] {
+  return value
+    .split(",")
+    .map((entry) => entry.trim().toLowerCase())
+    .filter((entry) => entry.includes("@"));
+}
+
+function isAuthorizedSuperUser(
+  email: string | null,
+  superUsers: string[],
+): boolean {
+  return Boolean(email && superUsers.includes(email));
+}
+
+async function maybeDeleteLinkedUser(options: {
+  method: string | undefined;
+  intent: string | string[] | undefined;
+  viewerEmail: string | null;
+  userId: string;
+}) {
+  if (!isDeleteIntent(options.method, options.intent)) {
+    return null;
+  }
+
+  const currentUser = options.viewerEmail
+    ? await prismaClient.user.findUnique({
+        where: { email: options.viewerEmail },
+      })
+    : null;
+  if (currentUser?.id === options.userId) {
+    return {
+      redirect: {
+        destination: `/link/${options.userId}?error=self-delete`,
+        permanent: false,
+      },
+    };
+  }
+
+  await prismaClient.user.delete({ where: { id: options.userId } });
+  return {
+    redirect: { destination: "/admin", permanent: false },
+  };
+}
+
+function mapRecentWritingRows(
+  rows: {
+    id: number;
+    prompt: string;
+    createdAt: Date;
+    submissionCharacterCount: number;
+  }[],
+): RecentWriting[] {
+  return rows.map((writing) => ({
+    id: writing.id,
+    prompt: writing.prompt,
+    createdAt: writing.createdAt.toISOString(),
+    submissionCharacterCount: writing.submissionCharacterCount,
+  }));
+}
+
+function mapRecentQuizRows(
+  rows: {
+    id: number;
+    createdAt: Date;
+    definition: string;
+    userInput: string;
+    isAcceptable: boolean;
+  }[],
+): RecentQuiz[] {
+  return rows.map((quiz) => ({
+    id: quiz.id,
+    createdAt: quiz.createdAt.toISOString(),
+    definition: quiz.definition,
+    userInput: quiz.userInput,
+    isAcceptable: quiz.isAcceptable,
+  }));
+}
+
+function mapRecentReaderArticleRows(
+  rows: {
+    id: number;
+    title: string;
+    createdAt: Date;
+    readAt: Date | null;
+  }[],
+): RecentReaderArticle[] {
+  return rows.map((article) => ({
+    id: article.id,
+    title: article.title,
+    createdAt: article.createdAt.toISOString(),
+    readAt: article.readAt ? article.readAt.toISOString() : null,
+  }));
+}
+
+function mapRecentReaderHighlightRows(
+  rows: {
+    id: number;
+    selectedText: string;
+    createdAt: Date;
+    importedAt: Date | null;
+    article: { title: string };
+  }[],
+): RecentReaderHighlight[] {
+  return rows.map((highlight) => ({
+    id: highlight.id,
+    articleTitle: highlight.article.title,
+    selectedText: highlight.selectedText,
+    createdAt: highlight.createdAt.toISOString(),
+    importedAt: highlight.importedAt
+      ? highlight.importedAt.toISOString()
+      : null,
+  }));
+}
+
 export async function getServerSideProps(
   context: GetServerSidePropsContext,
 ) {
   const session = await getSession({ req: context.req });
   const email = session?.user?.email?.toLowerCase() ?? null;
+  const superUsers = authorizedSuperUsers(
+    process.env.AUTHORIZED_EMAILS || "",
+  );
 
-  const superUsers = (process.env.AUTHORIZED_EMAILS || "")
-    .split(",")
-    .map((x) => x.trim().toLowerCase())
-    .filter((x) => x.includes("@"));
-
-  if (!email || !superUsers.includes(email)) {
+  if (!isAuthorizedSuperUser(email, superUsers)) {
     return {
       redirect: {
         destination: "/user",
@@ -109,22 +221,14 @@ export async function getServerSideProps(
     return { notFound: true };
   }
 
-  if (isDeleteIntent(context.req.method, context.query.intent)) {
-    const currentUser = email
-      ? await prismaClient.user.findUnique({ where: { email } })
-      : null;
-    if (currentUser?.id === userId) {
-      return {
-        redirect: {
-          destination: `/link/${userId}?error=self-delete`,
-          permanent: false,
-        },
-      };
-    }
-    await prismaClient.user.delete({ where: { id: userId } });
-    return {
-      redirect: { destination: "/admin", permanent: false },
-    };
+  const deleteRedirect = await maybeDeleteLinkedUser({
+    method: context.req.method,
+    intent: context.query.intent,
+    viewerEmail: email,
+    userId,
+  });
+  if (deleteRedirect) {
+    return deleteRedirect;
   }
 
   const user = await prismaClient.user.findUnique({
@@ -237,39 +341,14 @@ export async function getServerSideProps(
     readerImportedHighlightCount,
   };
 
-  const recentWriting: RecentWriting[] = recentWritingRows.map((w) => ({
-    id: w.id,
-    prompt: w.prompt,
-    createdAt: w.createdAt.toISOString(),
-    submissionCharacterCount: w.submissionCharacterCount,
-  }));
-
-  const recentQuiz: RecentQuiz[] = recentQuizRows.map((q) => ({
-    id: q.id,
-    createdAt: q.createdAt.toISOString(),
-    definition: q.definition,
-    userInput: q.userInput,
-    isAcceptable: q.isAcceptable,
-  }));
-
-  const recentReaderArticles: RecentReaderArticle[] =
-    recentReaderArticleRows.map((article) => ({
-      id: article.id,
-      title: article.title,
-      createdAt: article.createdAt.toISOString(),
-      readAt: article.readAt ? article.readAt.toISOString() : null,
-    }));
-
-  const recentReaderHighlights: RecentReaderHighlight[] =
-    recentReaderHighlightRows.map((highlight) => ({
-      id: highlight.id,
-      articleTitle: highlight.article.title,
-      selectedText: highlight.selectedText,
-      createdAt: highlight.createdAt.toISOString(),
-      importedAt: highlight.importedAt
-        ? highlight.importedAt.toISOString()
-        : null,
-    }));
+  const recentWriting = mapRecentWritingRows(recentWritingRows);
+  const recentQuiz = mapRecentQuizRows(recentQuizRows);
+  const recentReaderArticles = mapRecentReaderArticleRows(
+    recentReaderArticleRows,
+  );
+  const recentReaderHighlights = mapRecentReaderHighlightRows(
+    recentReaderHighlightRows,
+  );
 
   return {
     props: {
