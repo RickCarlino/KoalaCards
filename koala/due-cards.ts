@@ -19,6 +19,7 @@ export const getDueCardsCount = async (
     where: {
       userId,
       paused: { not: true },
+      ...(deckId ? { deckId } : {}),
       lastFailure: { not: 0 },
     },
   });

@@ -1,4 +1,5 @@
 import { getLessonsDue } from "../fetch-lesson";
+import { ensureDeckFsrsConfig } from "../fsrs/scheduler";
 import { prismaClient } from "../prisma-client";
 
 export type DeckWithReviewInfo = {
@@ -7,6 +8,11 @@ export type DeckWithReviewInfo = {
   description: string | null;
   quizzesDue: number;
   newQuizzes: number;
+  requestedRetention: number;
+  optimizerStatus: string;
+  optimizerError: string | null;
+  eligibleLogCount: number;
+  lastOptimizedAt: string | null;
 };
 
 const fetchUserDecks = (userId: string) =>
@@ -26,12 +32,23 @@ export const decksWithReviewInfo = async (
 ): Promise<DeckWithReviewInfo[]> => {
   const decks = await fetchUserDecks(userId);
   return Promise.all(
-    decks.map(async (deck) => ({
-      id: deck.id,
-      name: deck.name,
-      description: deck.description ?? null,
-      quizzesDue: (await getLessonsDue(deck.id)) || 0,
-      newQuizzes: (await newCardCount(deck.id)) || 0,
-    })),
+    decks.map(async (deck) => {
+      const fsrsConfig = await ensureDeckFsrsConfig(prismaClient, {
+        userId,
+        deckId: deck.id,
+      });
+      return {
+        id: deck.id,
+        name: deck.name,
+        description: deck.description ?? null,
+        quizzesDue: (await getLessonsDue(deck.id)) || 0,
+        newQuizzes: (await newCardCount(deck.id)) || 0,
+        requestedRetention: fsrsConfig.requestedRetention,
+        optimizerStatus: fsrsConfig.optimizerStatus ?? "idle",
+        optimizerError: fsrsConfig.optimizerError,
+        eligibleLogCount: fsrsConfig.eligibleLogCount,
+        lastOptimizedAt: fsrsConfig.lastOptimizedAt?.toISOString() ?? null,
+      };
+    }),
   );
 };

@@ -18,6 +18,7 @@ import {
   Container,
   Grid,
   Group,
+  NumberInput,
   Stack,
   Text,
   TextInput,
@@ -30,6 +31,7 @@ import {
   IconGitMerge,
   IconPencil,
   IconPlus,
+  IconRefresh,
   IconStars,
   IconTrash,
   IconX,
@@ -246,6 +248,100 @@ function DeckDescriptionField({
   );
 }
 
+type DeckLearningSettingsProps = {
+  requestedRetention: number;
+  onChange: (value: number) => void;
+};
+
+function DeckLearningSettings({
+  requestedRetention,
+  onChange,
+}: DeckLearningSettingsProps) {
+  return (
+    <NumberInput
+      label="Requested retention"
+      min={0.65}
+      max={0.95}
+      step={0.01}
+      decimalScale={2}
+      value={requestedRetention}
+      onChange={(value) => {
+        if (typeof value === "number") {
+          onChange(value);
+        }
+      }}
+    />
+  );
+}
+
+type DeckLearningSummaryProps = {
+  deck: DeckWithReviewInfo;
+  onOptimize: () => void;
+  isOptimizing: boolean;
+};
+
+function formatOptimizedAt(value: string | null): string | null {
+  if (!value) {
+    return null;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  return date.toLocaleDateString();
+}
+
+function deckLearningMessage(deck: DeckWithReviewInfo): string {
+  if (deck.optimizerStatus === "failed") {
+    return "Optimization failed. The previous review settings are still active.";
+  }
+
+  const optimizedAt = formatOptimizedAt(deck.lastOptimizedAt);
+  if (optimizedAt) {
+    return `This deck was last tuned on ${optimizedAt}.`;
+  }
+
+  if (deck.eligibleLogCount < 250) {
+    return "This deck needs more review history before it can tune itself.";
+  }
+
+  return "This deck adjusts its review timing from your answers in this deck.";
+}
+
+function DeckLearningSummary({
+  deck,
+  onOptimize,
+  isOptimizing,
+}: DeckLearningSummaryProps) {
+  return (
+    <Stack gap={6}>
+      <Text size="sm" c="gray.7">
+        {deckLearningMessage(deck)}
+      </Text>
+      <Group justify="space-between" align="center" gap="xs" wrap="wrap">
+        <Group gap="xs">
+          <Badge color="blue" variant="light" radius="md">
+            {deck.eligibleLogCount} eligible
+          </Badge>
+          <Badge color="gray" variant="light" radius="md">
+            {deck.optimizerStatus}
+          </Badge>
+        </Group>
+        <Button
+          leftSection={<IconRefresh size={16} />}
+          variant="subtle"
+          color="pink"
+          size="xs"
+          onClick={onOptimize}
+          loading={isOptimizing}
+        >
+          Optimize now
+        </Button>
+      </Group>
+    </Stack>
+  );
+}
+
 type DeckStatsProps = {
   quizzesDue: number;
   newQuizzes: number;
@@ -366,8 +462,14 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [title, setTitle] = useState(deck.name);
     const [description, setDescription] = useState(deck.description ?? "");
+    const [requestedRetention, setRequestedRetention] = useState(
+      deck.requestedRetention,
+    );
     const updateDeckMutation = trpc.updateDeck.useMutation();
     const deleteDeckMutation = trpc.deleteDeck.useMutation();
+    const optimizeDeckMutation = trpc.optimizeDeckFsrsRoute.useMutation({
+      onSuccess: refreshData,
+    });
     const isSelected = selectedDeckIds.includes(deck.id);
 
     const handleEdit = useCallback(() => setIsEditing(true), []);
@@ -375,7 +477,8 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
       setIsEditing(false);
       setTitle(deck.name);
       setDescription(deck.description ?? "");
-    }, [deck.description, deck.name]);
+      setRequestedRetention(deck.requestedRetention);
+    }, [deck.description, deck.name, deck.requestedRetention]);
 
     const handleSave = useCallback(async () => {
       const trimmedTitle = title.trim();
@@ -386,11 +489,16 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
       const nameChanged = normalizedTitle !== deck.name;
       const descriptionChanged =
         descriptionValue !== (deck.description ?? null);
-      if (nameChanged || descriptionChanged) {
+      const retentionChanged =
+        requestedRetention !== deck.requestedRetention;
+      if (nameChanged || descriptionChanged || retentionChanged) {
         await updateDeckMutation.mutateAsync({
           deckId: deck.id,
           name: normalizedTitle,
           description: descriptionValue,
+          requestedRetention: retentionChanged
+            ? requestedRetention
+            : undefined,
         });
         refreshData();
       }
@@ -402,6 +510,7 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
       deck.id,
       deck.name,
       description,
+      requestedRetention,
       title,
       updateDeckMutation,
     ]);
@@ -433,11 +542,24 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
             isDeleting={deleteDeckMutation.isLoading}
           />
           {isEditing && (
-            <DeckDescriptionField
-              description={description}
-              onChange={setDescription}
-            />
+            <Stack gap="sm">
+              <DeckDescriptionField
+                description={description}
+                onChange={setDescription}
+              />
+              <DeckLearningSettings
+                requestedRetention={requestedRetention}
+                onChange={setRequestedRetention}
+              />
+            </Stack>
           )}
+          <DeckLearningSummary
+            deck={deck}
+            onOptimize={() =>
+              optimizeDeckMutation.mutate({ deckId: deck.id })
+            }
+            isOptimizing={optimizeDeckMutation.isLoading}
+          />
           <DeckFooter
             quizzesDue={deck.quizzesDue}
             newQuizzes={deck.newQuizzes}

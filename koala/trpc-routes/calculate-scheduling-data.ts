@@ -1,35 +1,20 @@
 import {
   createEmptyCard,
-  fsrs,
-  generatorParameters,
   Rating,
   State,
   type Card as FsrsCard,
   type CardInput,
   type Grade,
+  type RecordLogItem,
 } from "ts-fsrs";
 import type { Card } from "@prisma/client";
-import { resolveRequestedRetention } from "../settings/requested-retention.ts";
-
-const fsrsCache = new Map<number, ReturnType<typeof fsrs>>();
-
-function getFsrs(requestedRetention?: number) {
-  const normalizedRetention =
-    resolveRequestedRetention(requestedRetention);
-  const cached = fsrsCache.get(normalizedRetention);
-  if (cached) {
-    return cached;
-  }
-  const instance = fsrs(
-    generatorParameters({
-      request_retention: normalizedRetention,
-      enable_fuzz: true,
-      enable_short_term: false,
-    }),
-  );
-  fsrsCache.set(normalizedRetention, instance);
-  return instance;
-}
+import {
+  buildDefaultFsrsParameters,
+  deserializeDeckScheduler,
+  getFsrsInstance,
+  type ResolvedDeckScheduler,
+  type SerializedDeckScheduler,
+} from "../fsrs/scheduler.ts";
 
 const DAYS = 24 * 60 * 60 * 1000;
 
@@ -45,6 +30,25 @@ type SchedulingData = {
   stability: number;
   nextReview: number;
 };
+
+export type SchedulingReviewResult = SchedulingData & {
+  fsrsCardBefore: CardInput | FsrsCard;
+  fsrsCardAfter: FsrsCard;
+  rawLog: RecordLogItem["log"];
+  dueAt: Date;
+  scheduledDays: number;
+  elapsedDays: number;
+  stabilityBefore: number;
+  stabilityAfter: number;
+  difficultyBefore: number;
+  difficultyAfter: number;
+};
+
+type SchedulingContext =
+  | number
+  | ResolvedDeckScheduler
+  | SerializedDeckScheduler
+  | undefined;
 
 const gradeOrder: Grade[] = [
   Rating.Again,
@@ -119,41 +123,71 @@ function toSchedulingData(card: FsrsCard): SchedulingData {
   };
 }
 
+function getSchedulingInstance(context: SchedulingContext) {
+  if (typeof context === "object" && context && "cacheKey" in context) {
+    const scheduler = isSerializedDeckScheduler(context)
+      ? deserializeDeckScheduler(context)
+      : context;
+    return getFsrsInstance(scheduler);
+  }
+
+  const parameters = buildDefaultFsrsParameters(context);
+  return getFsrsInstance({
+    cacheKey: `legacy:${parameters.request_retention}`,
+    parameters,
+  });
+}
+
+function isSerializedDeckScheduler(
+  context: ResolvedDeckScheduler | SerializedDeckScheduler,
+): context is SerializedDeckScheduler {
+  return typeof context.updatedAt === "string";
+}
+
 function scheduleNewCard(
   grade: Grade,
   now = Date.now(),
-  requestedRetention?: number,
-): SchedulingData {
+  context?: SchedulingContext,
+): SchedulingReviewResult {
   const nowDate = new Date(now);
   const card = createEmptyCard(nowDate);
-  const result = getFsrs(requestedRetention).next(card, nowDate, grade);
+  const result = getSchedulingInstance(context).next(card, nowDate, grade);
 
-  return toSchedulingData(result.card);
+  return toSchedulingReviewResult(card, result);
 }
 
 export function calculateSchedulingData(
   quiz: PartialCard,
   grade: Grade,
   now = Date.now(),
-  requestedRetention?: number,
+  context?: SchedulingContext,
 ): SchedulingData {
+  return calculateSchedulingReview(quiz, grade, now, context);
+}
+
+export function calculateSchedulingReview(
+  quiz: PartialCard,
+  grade: Grade,
+  now = Date.now(),
+  context?: SchedulingContext,
+): SchedulingReviewResult {
   if (isNewCard(quiz)) {
-    return scheduleNewCard(grade, now, requestedRetention);
+    return scheduleNewCard(grade, now, context);
   }
   const nowDate = new Date(now);
   const fsrsCard = toFsrsCardInput(quiz, now);
-  const result = getFsrs(requestedRetention).next(
+  const result = getSchedulingInstance(context).next(
     fsrsCard,
     nowDate,
     grade,
   );
 
-  return toSchedulingData(result.card);
+  return toSchedulingReviewResult(fsrsCard, result);
 }
 
 export function getGradeButtonText(
   quiz: PartialCard,
-  requestedRetention?: number,
+  context?: SchedulingContext,
 ): [Grade, string][] {
   const now = Date.now();
   const SCALE: Record<Grade, string> = {
@@ -168,7 +202,7 @@ export function getGradeButtonText(
       quiz,
       grade,
       now,
-      requestedRetention,
+      context,
     );
     if (!nextReview) {
       return [grade, "❓SOON"];
@@ -199,4 +233,24 @@ export function getGradeButtonText(
     const val = Math.floor(minutes / (30 * 24 * 60));
     return [grade, `${emoji}${val} month${val === 1 ? "" : "s"}`];
   });
+}
+
+function toSchedulingReviewResult(
+  before: CardInput | FsrsCard,
+  result: RecordLogItem,
+): SchedulingReviewResult {
+  const data = toSchedulingData(result.card);
+  return {
+    ...data,
+    fsrsCardBefore: before,
+    fsrsCardAfter: result.card,
+    rawLog: result.log,
+    dueAt: result.log.due,
+    scheduledDays: result.log.scheduled_days,
+    elapsedDays: result.log.elapsed_days,
+    stabilityBefore: before.stability,
+    stabilityAfter: result.card.stability,
+    difficultyBefore: before.difficulty,
+    difficultyAfter: result.card.difficulty,
+  };
 }

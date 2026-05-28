@@ -3,6 +3,8 @@ import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc-procedure";
 import { getUserSettings } from "../auth-helpers";
 import { TRPCError } from "@trpc/server";
+import { ensureDeckFsrsConfig } from "../fsrs/scheduler";
+import { REVIEW_LOG_COVERAGE_PARTIAL } from "../fsrs/constants";
 
 export const mergeDecks = procedure
   .input(
@@ -52,6 +54,7 @@ export const mergeDecks = procedure
           userId,
         },
       });
+      await ensureDeckFsrsConfig(tx, { userId, deckId: newDeck.id });
 
       await tx.writingSubmission.updateMany({
         where: {
@@ -63,7 +66,25 @@ export const mergeDecks = procedure
         },
       });
 
-      const updateResult = await tx.card.updateMany({
+      const reviewedUpdateResult = await tx.card.updateMany({
+        where: {
+          userId,
+          deckId: { in: input.deckIds },
+          OR: [
+            { firstReview: { gt: 0 } },
+            { lastReview: { gt: 0 } },
+            { repetitions: { gt: 0 } },
+            { lapses: { gt: 0 } },
+          ],
+        },
+        data: {
+          deckId: newDeck.id,
+          reviewLogCoverage: REVIEW_LOG_COVERAGE_PARTIAL,
+          reviewLogStartedAt: null,
+        },
+      });
+
+      const unreviewedUpdateResult = await tx.card.updateMany({
         where: {
           userId,
           deckId: { in: input.deckIds },
@@ -73,16 +94,32 @@ export const mergeDecks = procedure
         },
       });
 
+      const sourceDecksWithReviewLogs = await tx.cardReviewLog.findMany({
+        where: {
+          userId,
+          deckId: { in: input.deckIds },
+        },
+        distinct: ["deckId"],
+        select: { deckId: true },
+      });
+      const sourceDeckIdsWithReviewLogs = new Set(
+        sourceDecksWithReviewLogs.map((log) => log.deckId),
+      );
+      const deletableSourceDeckIds = input.deckIds.filter(
+        (deckId) => !sourceDeckIdsWithReviewLogs.has(deckId),
+      );
+
       await tx.deck.deleteMany({
         where: {
-          id: { in: input.deckIds },
+          id: { in: deletableSourceDeckIds },
           userId,
         },
       });
 
       return {
         newDeckId: newDeck.id,
-        cardsUpdated: updateResult.count,
+        cardsUpdated:
+          reviewedUpdateResult.count + unreviewedUpdateResult.count,
       };
     });
 

@@ -66,7 +66,6 @@ import {
 } from "@/koala/review/assistant-parser";
 import { VisualDiff } from "@/koala/review/lesson-steps/visual-diff";
 import { useUserSettings } from "@/koala/settings-provider";
-import { resolveRequestedRetention } from "@/koala/settings/requested-retention";
 import { clampReviewTake } from "@/koala/settings/review-take";
 import { LangCode } from "@/koala/shared-types";
 import {
@@ -319,10 +318,11 @@ interface GradingSuccessProps {
     difficulty: number;
     stability: number;
     lastReview: number;
+    nextReview: number;
     lapses: number;
     repetitions: number;
   };
-  requestedRetention: number;
+  scheduler: Quiz["scheduler"];
   onGradeSelect: (grade: Grade) => void;
   isLoading?: boolean;
   feedback?: string;
@@ -2296,13 +2296,13 @@ function renderFeedbackSection(
 
 function GradingSuccess({
   quizData,
-  requestedRetention,
+  scheduler,
   onGradeSelect,
   isLoading,
   feedback,
   quizResultId,
 }: GradingSuccessProps) {
-  const gradeOptions = getGradeButtonText(quizData, requestedRetention);
+  const gradeOptions = getGradeButtonText(quizData, scheduler);
 
   const hotkeys: [string, () => void][] = [
     [HOTKEYS.GRADE_AGAIN, () => !isLoading && onGradeSelect(Rating.Again)],
@@ -2506,7 +2506,6 @@ const quizPhaseContent = (
   quizResultId: number | null,
   handleGradeSelect: (grade: Grade) => Promise<void>,
   isLoading: boolean,
-  requestedRetention: number,
 ) => {
   const quizData = {
     difficulty: card.difficulty,
@@ -2531,7 +2530,7 @@ const quizPhaseContent = (
     success: (
       <GradingSuccess
         quizData={quizData}
-        requestedRetention={requestedRetention}
+        scheduler={card.scheduler}
         onGradeSelect={handleGradeSelect}
         isLoading={isLoading}
         feedback={feedback}
@@ -2559,9 +2558,6 @@ const QuizCard: React.FC<QuizCardProps> = ({
     null,
   );
   const userSettings = useUserSettings();
-  const requestedRetention = resolveRequestedRetention(
-    userSettings.requestedRetention,
-  );
 
   const config = quizConfigs[quizType];
 
@@ -2679,7 +2675,6 @@ const QuizCard: React.FC<QuizCardProps> = ({
     quizResultId,
     handleGradeSelect,
     isLoading,
-    requestedRetention,
   );
 
   const promptText = (

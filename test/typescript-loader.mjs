@@ -12,8 +12,45 @@ function isTypeScriptUrl(url) {
   return url.endsWith(".ts") || url.endsWith(".tsx");
 }
 
+async function isFile(filePath) {
+  try {
+    const stat = await fs.stat(filePath);
+    return stat.isFile();
+  } catch {
+    return false;
+  }
+}
+
+async function resolveTypeScriptFile(filePath) {
+  const candidates = [
+    filePath,
+    `${filePath}.ts`,
+    `${filePath}.tsx`,
+    path.join(filePath, "index.ts"),
+    path.join(filePath, "index.tsx"),
+  ];
+
+  for (const candidate of candidates) {
+    if (await isFile(candidate)) {
+      return pathToFileURL(candidate).href;
+    }
+  }
+
+  return null;
+}
+
 export async function resolve(specifier, context, nextResolve) {
   if (specifier.startsWith("@/")) {
+    const resolved = await resolveTypeScriptFile(
+      path.join(projectRoot, specifier.slice(2)),
+    );
+    if (resolved) {
+      return {
+        shortCircuit: true,
+        url: resolved,
+      };
+    }
+
     return {
       shortCircuit: true,
       url: pathToFileURL(path.join(projectRoot, specifier.slice(2))).href,
@@ -28,6 +65,18 @@ export async function resolve(specifier, context, nextResolve) {
       shortCircuit: true,
       url: new URL(specifier, context.parentURL).href,
     };
+  }
+
+  if (specifier.startsWith(".") || specifier.startsWith("/")) {
+    const resolved = await resolveTypeScriptFile(
+      fileURLToPath(new URL(specifier, context.parentURL)),
+    );
+    if (resolved) {
+      return {
+        shortCircuit: true,
+        url: resolved,
+      };
+    }
   }
 
   return nextResolve(specifier, context);

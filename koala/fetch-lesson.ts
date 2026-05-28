@@ -2,6 +2,11 @@ import { prismaClient } from "@/koala/prisma-client";
 import type { Card, Prisma } from "@prisma/client";
 import { shuffle } from "radash";
 import { getUserSettings } from "./auth-helpers";
+import {
+  resolveDeckScheduler,
+  serializeDeckScheduler,
+  type ResolvedDeckScheduler,
+} from "./fsrs/scheduler";
 import { maybeGetCardImageUrl } from "./image";
 import { LessonType } from "./shared-types";
 import { generateDefinitionAudio, generateTermAudio } from "./speech";
@@ -163,7 +168,10 @@ function tagLessonType(
   return q;
 }
 
-async function buildQuizPayload(q: LocalCard & { quizType?: string }) {
+async function buildQuizPayload(
+  q: LocalCard & { quizType?: string },
+  scheduler: ResolvedDeckScheduler,
+) {
   const r = q.repetitions ?? 0;
   const definitionAudio = await generateDefinitionAudio(q.definition);
   const termAudio = await generateTermAudio({
@@ -184,6 +192,7 @@ async function buildQuizPayload(q: LocalCard & { quizType?: string }) {
     imageURL: await maybeGetCardImageUrl(q.imageBlobId),
     stability: q.stability,
     difficulty: q.difficulty,
+    scheduler: serializeDeckScheduler(scheduler),
   };
 }
 
@@ -260,15 +269,16 @@ export async function getLessons({
   }
 
   const hand = await buildHand(userId, deckId, now, take);
+  const scheduler = await resolveDeckScheduler({ userId, deckId });
 
-  return Promise.all(hand.map((q) => buildQuizPayload(q)));
+  return Promise.all(hand.map((q) => buildQuizPayload(q, scheduler)));
 }
 
 export async function getLessonsDue(
   deckId: number,
   now: number = Date.now(),
 ) {
-  return prismaClient.card.count({
+  const routineDue = await prismaClient.card.count({
     where: {
       deckId,
       paused: { not: true },
@@ -277,6 +287,14 @@ export async function getLessonsDue(
       lastFailure: 0,
     },
   });
+  const remedialDue = await prismaClient.card.count({
+    where: {
+      deckId,
+      paused: { not: true },
+      lastFailure: { gt: 0 },
+    },
+  });
+  return routineDue + remedialDue;
 }
 
 export async function canStartNewLessons(

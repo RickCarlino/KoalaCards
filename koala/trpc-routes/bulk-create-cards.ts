@@ -4,6 +4,7 @@ import { procedure } from "../trpc-procedure";
 import { LANG_CODES } from "../shared-types";
 import { TRPCError } from "@trpc/server";
 import { maybeAddImageToCard } from "../image";
+import { ensureDeckFsrsConfig } from "../fsrs/scheduler";
 
 const inputSchema = z.object({
   deckId: z.number().optional(),
@@ -101,6 +102,7 @@ export const bulkCreateCards = procedure
     }
 
     const { id: deckId } = deck;
+    await ensureDeckFsrsConfig(prismaClient, { userId, deckId });
     let processed = 0;
 
     for (const { term, definition } of input.input) {

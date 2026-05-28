@@ -18,6 +18,7 @@ import { gradeSpeakingQuiz } from "./grade-speaking-quiz";
 import { gradeWriting } from "./grade-writing";
 import { importDeck } from "./import-deck";
 import { mergeDecks } from "./merge-decks";
+import { optimizeDeckFsrsRoute } from "./optimize-deck-fsrs";
 import { parseCards } from "./parse-cards";
 import {
   deleteReaderArticleHighlightRoute,
@@ -70,6 +71,7 @@ export const appRouter = router({
   importReaderHighlightsToDeckRoute,
   importReaderInstapaperUnreadRoute,
   mergeDecks,
+  optimizeDeckFsrsRoute,
   importDeck,
   listReaderArticleHighlightsRoute,
   listReaderInstapaperUnreadRoute,
