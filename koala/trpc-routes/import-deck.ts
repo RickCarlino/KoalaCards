@@ -4,6 +4,7 @@ import { prismaClient } from "../prisma-client";
 import { storageProvider } from "../storage";
 import { procedure } from "../trpc-procedure";
 import { DeckExportCard, deckExportSchema } from "../types/deck-export";
+import { ensureDeckFsrsConfig } from "../fsrs/scheduler";
 
 type PreparedCardInput = {
   term: string;
@@ -125,6 +126,7 @@ export const importDeck = procedure.input(importDeckInput).mutation(
         message: "Deck not found",
       });
     }
+    await ensureDeckFsrsConfig(prismaClient, { userId, deckId: deck.id });
 
     if (input.payload.cards.length > MAX_IMPORT) {
       throw new TRPCError({

@@ -51,6 +51,8 @@ model User {
   userSettings               UserSettings?
   Card                       Card[]
   Deck                       Deck[]
+  deckFsrsConfigs            DeckFsrsConfig[]
+  cardReviewLogs             CardReviewLog[]
   writingSubmissions         WritingSubmission[]         // Added relation to WritingSubmission
   quizResults                QuizResult[]
   readerBookmarkletCredential ReaderBookmarkletCredential?
@@ -157,6 +159,8 @@ model Deck {
   userId             String
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   Card               Card[]
+  fsrsConfig         DeckFsrsConfig?
+  reviewLogs         CardReviewLog[]
   createdAt          DateTime            @default(now())
   writingSubmissions WritingSubmission[] // Added relation to WritingSubmission
 
@@ -184,6 +188,9 @@ model Card {
   nextReview  Float    @default(0)
   lapses      Float    @default(0)
   repetitions Float    @default(0)
+  reviewLogs          CardReviewLog[]
+  reviewLogCoverage   String?
+  reviewLogStartedAt  DateTime?
   importedReaderHighlights ReaderArticleHighlight[] @relation("ImportedHighlightCard")
 
   @@unique([userId, term])
@@ -192,6 +199,75 @@ model Card {
   @@index([userId, createdAt])
   @@index([userId, paused])
   @@index([userId, nextReview])
+}
+
+model DeckFsrsConfig {
+  id                 Int      @id @default(autoincrement())
+
+  deckId             Int      @unique
+  deck               Deck     @relation(fields: [deckId], references: [id], onDelete: Cascade)
+
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  requestedRetention Float
+  parametersJson     Json
+  parametersSource   String
+  tsFsrsVersion      String
+  schedulerFlagsJson Json
+
+  lastOptimizedAt    DateTime?
+  lastOptimizedLogId BigInt?
+  logsSinceOptimize  Int      @default(0)
+  eligibleLogCount   Int      @default(0)
+  optimizerStatus    String?
+  optimizerError     String?
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  reviewLogs         CardReviewLog[]
+
+  @@index([userId])
+}
+
+model CardReviewLog {
+  id                 BigInt   @id @default(autoincrement())
+
+  userId             String
+  deckId             Int
+  deckFsrsConfigId   Int
+  cardId             Int
+
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deck               Deck     @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  deckFsrsConfig     DeckFsrsConfig @relation(fields: [deckFsrsConfigId], references: [id], onDelete: Cascade)
+  card               Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  reviewAt           DateTime
+  rating             Int
+
+  completeness       String
+
+  rawLogJson         Json
+  cardBeforeJson     Json?
+  cardAfterJson      Json?
+
+  dueAt              DateTime?
+  scheduledDays      Float?
+  elapsedDays        Float?
+  stabilityBefore    Float?
+  stabilityAfter     Float?
+  difficultyBefore   Float?
+  difficultyAfter    Float?
+
+  tsFsrsVersion      String
+  createdAt          DateTime @default(now())
+
+  @@index([deckId, reviewAt])
+  @@index([deckFsrsConfigId, reviewAt])
+  @@index([cardId, reviewAt])
+  @@index([userId, deckId, reviewAt])
 }
 
 model QuizResult {

@@ -3,6 +3,12 @@ import { prismaClient } from "../prisma-client";
 import { DECK_DESCRIPTION_MAX_LENGTH } from "../decks/constants";
 import { procedure } from "../trpc-procedure";
 import { getUserSettings } from "../auth-helpers";
+import {
+  ensureDeckFsrsConfig,
+  fsrsParametersJson,
+  validateFsrsParameters,
+} from "../fsrs/scheduler";
+import { resolveRequestedRetention } from "../settings/requested-retention";
 
 export const updateDeck = procedure
   .input(
@@ -15,6 +21,7 @@ export const updateDeck = procedure
         .max(DECK_DESCRIPTION_MAX_LENGTH)
         .nullable()
         .optional(),
+      requestedRetention: z.number().min(0.65).max(0.95).optional(),
     }),
   )
   .output(z.void())
@@ -32,8 +39,34 @@ export const updateDeck = procedure
     if (input.description !== undefined) {
       data.description = input.description || null;
     }
-    await prismaClient.deck.update({
-      where: { id: input.deckId },
-      data,
+    await prismaClient.$transaction(async (tx) => {
+      await tx.deck.update({
+        where: { id: input.deckId },
+        data,
+      });
+
+      if (input.requestedRetention !== undefined) {
+        const config = await ensureDeckFsrsConfig(tx, {
+          userId: userSettings.user.id,
+          deckId: input.deckId,
+        });
+        const requestedRetention = resolveRequestedRetention(
+          input.requestedRetention,
+        );
+        const parameters = validateFsrsParameters({
+          ...validateFsrsParameters(config.parametersJson),
+          request_retention: requestedRetention,
+        });
+        await tx.deckFsrsConfig.update({
+          where: { id: config.id },
+          data: {
+            requestedRetention,
+            parametersJson: fsrsParametersJson(parameters),
+            parametersSource: "manual",
+            optimizerStatus: "idle",
+            optimizerError: null,
+          },
+        });
+      }
     });
   });
