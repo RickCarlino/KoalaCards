@@ -299,6 +299,8 @@ type HighlightsHistoryCardProps = {
   highlights: ReaderArticleHighlight[];
   isLoading: boolean;
   errorMessage: string;
+  actions?: React.ReactNode;
+  hideActions?: boolean;
   deletingHighlightId: number | null;
   selectedHighlightIds: number[];
   onToggleHighlightSelection: (
@@ -464,6 +466,8 @@ export function HighlightsHistoryCard({
   highlights,
   isLoading,
   errorMessage,
+  actions,
+  hideActions = false,
   deletingHighlightId,
   selectedHighlightIds,
   onToggleHighlightSelection,
@@ -515,26 +519,30 @@ export function HighlightsHistoryCard({
       ) : null}
       {historyState.showList ? (
         <Stack gap="sm">
-          <Group>
-            <Button
-              size="compact-sm"
-              color="grape"
-              onClick={onImportSelected}
-              disabled={!canImportSelected}
-              loading={isImportingSelected}
-            >
-              Import
-            </Button>
-            <Button
-              size="compact-sm"
-              variant="subtle"
-              color="grape"
-              onClick={onToggleSelectAll}
-              disabled={!canSelectAll}
-            >
-              {allImportableSelected ? "Clear all" : "Select all"}
-            </Button>
-          </Group>
+          {hideActions
+            ? null
+            : (actions ?? (
+                <Group>
+                  <Button
+                    size="compact-sm"
+                    color="grape"
+                    onClick={onImportSelected}
+                    disabled={!canImportSelected}
+                    loading={isImportingSelected}
+                  >
+                    Add to deck
+                  </Button>
+                  <Button
+                    size="compact-sm"
+                    variant="subtle"
+                    color="grape"
+                    onClick={onToggleSelectAll}
+                    disabled={!canSelectAll}
+                  >
+                    {allImportableSelected ? "Clear all" : "Select all"}
+                  </Button>
+                </Group>
+              ))}
           {visibility.visibleHighlights.map((highlight) => {
             return (
               <HighlightHistoryRow

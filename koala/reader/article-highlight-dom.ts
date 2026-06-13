@@ -13,7 +13,7 @@ function textPositionAtOffset(
   container: HTMLElement,
   targetOffset: number,
 ): TextPosition | null {
-  const walker = document.createTreeWalker(
+  const walker = container.ownerDocument.createTreeWalker(
     container,
     NodeFilter.SHOW_TEXT,
   );
@@ -51,7 +51,7 @@ function collectIntersectingTextNodes(
   container: HTMLElement,
   domRange: Range,
 ): Text[] {
-  const walker = document.createTreeWalker(
+  const walker = container.ownerDocument.createTreeWalker(
     container,
     NodeFilter.SHOW_TEXT,
   );
@@ -100,7 +100,7 @@ function wrapTextNodeSlice(options: {
     return;
   }
 
-  const mark = document.createElement("mark");
+  const mark = highlightedTextNode.ownerDocument.createElement("mark");
   mark.setAttribute("data-reader-highlight", "saved");
   mark.setAttribute("data-highlight-id", String(highlightId));
   parent.insertBefore(mark, highlightedTextNode);
@@ -172,7 +172,7 @@ export function applyRenderedArticleHighlights(
       continue;
     }
 
-    const domRange = document.createRange();
+    const domRange = container.ownerDocument.createRange();
     domRange.setStart(start.node, start.offset);
     domRange.setEnd(end.node, end.offset);
 

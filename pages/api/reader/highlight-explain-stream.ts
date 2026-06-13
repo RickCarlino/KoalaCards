@@ -1,24 +1,25 @@
-import { generateStructuredOutput } from "@/koala/ai";
 import { prismaClient } from "@/koala/prisma-client";
 import {
   buildOccurrenceContexts,
   selectOccurrenceIndex,
-  takePromptOccurrences,
 } from "@/koala/reader/highlight-context";
 import {
-  buildReaderHighlightPrompt,
-  normalizeReaderHighlightAnalysis,
-  readerHighlightModelOutputSchema,
   READER_HIGHLIGHT_CONTEXT_RADIUS,
-  READER_HIGHLIGHT_MAX_PROMPT_OCCURRENCES,
   READER_HIGHLIGHT_PROMPT_VERSION,
   sha256Hex,
   type ReaderHighlightAnalysis,
 } from "@/koala/reader/highlight-explain";
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getServerSession } from "next-auth";
 import { z } from "zod";
-import { authOptions } from "../auth/[...nextauth]";
+import {
+  streamCachedAnalysisResponse,
+  streamGeneratedAnalysisResponse,
+} from "./highlight-generation-helpers";
+import {
+  requirePostMethod,
+  requireReaderApiUserId,
+  startSSE,
+} from "./highlight-stream-helpers";
 
 const bodySchema = z.object({
   publicId: z.string().trim().min(1),
@@ -46,100 +47,8 @@ type OwnedArticleRecord = {
   contentText: string;
 };
 
-function writeSSE(
-  res: NextApiResponse,
-  data: string,
-  event?: string,
-): void {
-  if (event) {
-    res.write(`event: ${event}\n`);
-  }
-
-  const lines = data.split("\n");
-  for (const line of lines) {
-    res.write(`data: ${line}\n`);
-  }
-
-  res.write("\n");
-}
-
-function startSSE(res: NextApiResponse): void {
-  res.writeHead(200, {
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache, no-transform",
-    Connection: "keep-alive",
-  });
-}
-
-function streamDone(res: NextApiResponse, isClosed: boolean): void {
-  if (isClosed) {
-    return;
-  }
-
-  writeSSE(res, "done", "done");
-  res.end();
-}
-
-function streamError(
-  res: NextApiResponse,
-  isClosed: boolean,
-  message: string,
-): void {
-  if (isClosed) {
-    return;
-  }
-
-  writeSSE(res, message, "error");
-  streamDone(res, isClosed);
-}
-
-function streamAnalysis(
-  res: NextApiResponse,
-  isClosed: boolean,
-  analysis: ReaderHighlightAnalysis,
-): void {
-  if (isClosed) {
-    return;
-  }
-
-  writeSSE(res, JSON.stringify(analysis), "analysis");
-}
-
-function streamHighlightId(
-  res: NextApiResponse,
-  isClosed: boolean,
-  highlightId: number,
-): void {
-  if (isClosed) {
-    return;
-  }
-
-  writeSSE(res, JSON.stringify({ id: highlightId }), "highlight");
-}
-
 function normalizeArticleText(value: string): string {
   return value.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-}
-
-function trimErrorMessage(error: unknown): string {
-  if (error instanceof Error && error.message.trim().length > 0) {
-    return error.message.trim().slice(0, 1800);
-  }
-
-  return "Unexpected streaming error.";
-}
-
-function requirePostMethod(
-  req: NextApiRequest,
-  res: NextApiResponse,
-): boolean {
-  if (req.method === "POST") {
-    return true;
-  }
-
-  res.setHeader("Allow", "POST");
-  res.status(405).end("Method Not Allowed");
-  return false;
 }
 
 function parseBody(
@@ -153,31 +62,6 @@ function parseBody(
 
   res.status(400).end("Invalid request body.");
   return null;
-}
-
-async function requireUserId(
-  req: NextApiRequest,
-  res: NextApiResponse,
-): Promise<string | null> {
-  const session = await getServerSession(req, res, authOptions);
-  const email = session?.user?.email;
-
-  if (!email) {
-    res.status(401).end("Unauthorized");
-    return null;
-  }
-
-  const user = await prismaClient.user.findUnique({
-    where: { email },
-    select: { id: true },
-  });
-
-  if (!user) {
-    res.status(401).end("Unauthorized");
-    return null;
-  }
-
-  return user.id;
 }
 
 async function requireOwnedArticle(
@@ -378,7 +262,7 @@ async function resolveExplainRequest(
     return null;
   }
 
-  const userId = await requireUserId(req, res);
+  const userId = await requireReaderApiUserId(req, res);
   if (!userId) {
     return null;
   }
@@ -430,43 +314,6 @@ async function resolveExplainRequest(
   };
 }
 
-function hasReadyAnalysis(record: {
-  status: "IN_PROGRESS" | "READY" | "ERROR";
-  definition: string;
-  generalMeaning: string;
-  meaningInContext: string;
-}) {
-  return (
-    record.status === "READY" &&
-    record.definition.trim().length > 0 &&
-    record.generalMeaning.trim().length > 0 &&
-    record.meaningInContext.trim().length > 0
-  );
-}
-
-function streamCachedResponse(options: {
-  res: NextApiResponse;
-  isClosed: () => boolean;
-  cached: CachedHighlightRecord;
-}): boolean {
-  if (!hasReadyAnalysis(options.cached)) {
-    return false;
-  }
-
-  const normalizedAnalysis = normalizeReaderHighlightAnalysis({
-    selectedText: options.cached.selectedText,
-    analysis: {
-      definition: options.cached.definition,
-      generalMeaning: options.cached.generalMeaning,
-      meaningInContext: options.cached.meaningInContext,
-    },
-  });
-  streamHighlightId(options.res, options.isClosed(), options.cached.id);
-  streamAnalysis(options.res, options.isClosed(), normalizedAnalysis);
-  streamDone(options.res, options.isClosed());
-  return true;
-}
-
 async function streamGeneratedResponse(options: {
   res: NextApiResponse;
   isClosed: () => boolean;
@@ -486,69 +333,28 @@ async function streamGeneratedResponse(options: {
     isClosed,
   } = options;
 
-  const highlightId = await upsertHighlight({
-    userId,
-    articleId: article.id,
+  await streamGeneratedAnalysisResponse({
+    res,
+    isClosed,
+    title: article.title,
     selectedText,
-    selectedTextHash,
     selectedOccurrenceIndex,
     occurrenceCount: occurrences.length,
-    occurrencesJson: occurrences,
-    articleContentHash,
-  });
-  streamHighlightId(res, isClosed(), highlightId);
-
-  const promptOccurrences = takePromptOccurrences({
     occurrences,
-    selectedIndex: selectedOccurrenceIndex,
-    maxOccurrences: READER_HIGHLIGHT_MAX_PROMPT_OCCURRENCES,
+    createInProgressRecord: () =>
+      upsertHighlight({
+        userId,
+        articleId: article.id,
+        selectedText,
+        selectedTextHash,
+        selectedOccurrenceIndex,
+        occurrenceCount: occurrences.length,
+        occurrencesJson: occurrences,
+        articleContentHash,
+      }),
+    markReady: markHighlightReady,
+    markError: markHighlightError,
   });
-
-  const prompt = buildReaderHighlightPrompt({
-    articleTitle: article.title,
-    selectedText,
-    selectedIndex: selectedOccurrenceIndex,
-    occurrenceCount: occurrences.length,
-    occurrences: promptOccurrences,
-  });
-
-  try {
-    const generated = await generateStructuredOutput({
-      model: "good",
-      schema: readerHighlightModelOutputSchema,
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a careful Korean reading assistant. Keep output concise, specific, and practical.",
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-    });
-    const normalizedAnalysis = normalizeReaderHighlightAnalysis({
-      selectedText,
-      analysis: generated,
-    });
-
-    if (isClosed()) {
-      return;
-    }
-
-    await markHighlightReady(highlightId, normalizedAnalysis);
-    streamAnalysis(res, isClosed(), normalizedAnalysis);
-    streamDone(res, isClosed());
-  } catch (error) {
-    if (isClosed()) {
-      return;
-    }
-
-    const errorMessage = trimErrorMessage(error);
-    await markHighlightError(highlightId, errorMessage);
-    streamError(res, isClosed(), errorMessage);
-  }
 }
 
 export default async function handler(
@@ -576,7 +382,15 @@ export default async function handler(
   startSSE(res);
   const isClosed = () => closed;
 
-  if (cached && streamCachedResponse({ res, isClosed, cached })) {
+  if (
+    cached &&
+    streamCachedAnalysisResponse({
+      res,
+      isClosed,
+      cached,
+      selectedText: cached.selectedText,
+    })
+  ) {
     return;
   }
 
