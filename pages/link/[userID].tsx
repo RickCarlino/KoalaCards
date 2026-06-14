@@ -3,7 +3,6 @@ import type {
   GetServerSidePropsContext,
   InferGetServerSidePropsType,
 } from "next";
-import { getSession } from "next-auth/react";
 import { prismaClient } from "@/koala/prisma-client";
 import {
   Button,
@@ -15,6 +14,11 @@ import {
   Text,
   Title,
 } from "@mantine/core";
+import {
+  fmtShortDate,
+  requireAdminRequest,
+  yesNo,
+} from "@/koala/admin-helpers";
 
 type OverviewCounts = {
   cardsTotal: number;
@@ -82,20 +86,6 @@ function resolveDeleteError(
     return "Admins cannot delete themselves.";
   }
   return null;
-}
-
-function authorizedSuperUsers(value: string): string[] {
-  return value
-    .split(",")
-    .map((entry) => entry.trim().toLowerCase())
-    .filter((entry) => entry.includes("@"));
-}
-
-function isAuthorizedSuperUser(
-  email: string | null,
-  superUsers: string[],
-): boolean {
-  return Boolean(email && superUsers.includes(email));
 }
 
 async function maybeDeleteLinkedUser(options: {
@@ -201,19 +191,9 @@ function mapRecentReaderHighlightRows(
 export async function getServerSideProps(
   context: GetServerSidePropsContext,
 ) {
-  const session = await getSession({ req: context.req });
-  const email = session?.user?.email?.toLowerCase() ?? null;
-  const superUsers = authorizedSuperUsers(
-    process.env.AUTHORIZED_EMAILS || "",
-  );
-
-  if (!isAuthorizedSuperUser(email, superUsers)) {
-    return {
-      redirect: {
-        destination: "/user",
-        permanent: false,
-      },
-    };
+  const adminRequest = await requireAdminRequest(context);
+  if ("redirect" in adminRequest) {
+    return adminRequest;
   }
 
   const userId = context.params?.userID as string | undefined;
@@ -224,7 +204,7 @@ export async function getServerSideProps(
   const deleteRedirect = await maybeDeleteLinkedUser({
     method: context.req.method,
     intent: context.query.intent,
-    viewerEmail: email,
+    viewerEmail: adminRequest.email,
     userId,
   });
   if (deleteRedirect) {
@@ -371,33 +351,8 @@ export async function getServerSideProps(
 
 type Props = InferGetServerSidePropsType<typeof getServerSideProps>;
 
-function yesNo(value: boolean): string {
-  return value ? "Yes" : "No";
-}
-
 function fmtShort(iso: string | null): string {
-  if (!iso) {
-    return "—";
-  }
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const MONTHS = [
-    "JAN",
-    "FEB",
-    "MAR",
-    "APR",
-    "MAY",
-    "JUN",
-    "JUL",
-    "AUG",
-    "SEP",
-    "OCT",
-    "NOV",
-    "DEC",
-  ];
-  return `${MONTHS[d.getMonth()]} ${pad(d.getDate())} ${pad(d.getHours())}:${pad(
-    d.getMinutes(),
-  )}`;
+  return fmtShortDate(iso, "—");
 }
 
 export default function UserOverviewPage({

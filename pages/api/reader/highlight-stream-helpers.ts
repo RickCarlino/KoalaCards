@@ -1,25 +1,8 @@
-import { prismaClient } from "@/koala/prisma-client";
 import type { ReaderHighlightAnalysis } from "@/koala/reader/highlight-explain";
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]";
-
-function writeSSE(
-  res: NextApiResponse,
-  data: string,
-  event?: string,
-): void {
-  if (event) {
-    res.write(`event: ${event}\n`);
-  }
-
-  const lines = data.split("\n");
-  for (const line of lines) {
-    res.write(`data: ${line}\n`);
-  }
-
-  res.write("\n");
-}
+import { requireTextPostMethod } from "@/koala/api/next-api";
+import { writeSSE } from "@/koala/api/sse";
+import { requireTextApiUserId } from "@/koala/get-api-user";
 
 export function startSSE(res: NextApiResponse): void {
   res.writeHead(200, {
@@ -91,36 +74,21 @@ export function requirePostMethod(
   req: NextApiRequest,
   res: NextApiResponse,
 ): boolean {
-  if (req.method === "POST") {
-    return true;
-  }
-
-  res.setHeader("Allow", "POST");
-  res.status(405).end("Method Not Allowed");
-  return false;
+  return requireTextPostMethod(req, res);
 }
 
 export async function requireReaderApiUserId(
   req: NextApiRequest,
   res: NextApiResponse,
 ): Promise<string | null> {
-  const session = await getServerSession(req, res, authOptions);
-  const email = session?.user?.email;
+  return requireTextApiUserId(req, res);
+}
 
-  if (!email) {
-    res.status(401).end("Unauthorized");
-    return null;
-  }
-
-  const user = await prismaClient.user.findUnique({
-    where: { email },
-    select: { id: true },
+export function trackRequestClosed(req: NextApiRequest): () => boolean {
+  let closed = false;
+  req.on("close", () => {
+    closed = true;
   });
 
-  if (!user) {
-    res.status(401).end("Unauthorized");
-    return null;
-  }
-
-  return user.id;
+  return () => closed;
 }

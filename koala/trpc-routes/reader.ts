@@ -34,6 +34,38 @@ const readerArticleSchema = z.object({
   createdAt: z.date(),
 });
 
+const readerArticleListSelect = {
+  id: true,
+  publicId: true,
+  title: true,
+  normalizedUrl: true,
+  inputKind: true,
+  description: true,
+  ingestStatus: true,
+  ingestError: true,
+  readAt: true,
+  createdAt: true,
+} satisfies Prisma.ReaderArticleSelect;
+
+type ReaderArticleListRecord = Prisma.ReaderArticleGetPayload<{
+  select: typeof readerArticleListSelect;
+}>;
+
+function mapReaderArticleListRecord(article: ReaderArticleListRecord) {
+  return {
+    id: article.id,
+    publicId: article.publicId,
+    title: article.title,
+    normalizedUrl: article.normalizedUrl,
+    inputKind: mapInputKind(article.inputKind),
+    description: article.description,
+    ingestStatus: mapIngestStatus(article.ingestStatus),
+    ingestError: article.ingestError,
+    readAt: article.readAt,
+    createdAt: article.createdAt,
+  };
+}
+
 const bookmarkletConfigSchema = z.object({
   endpointUrl: z.string().url(),
   secretKey: z.string(),
@@ -195,6 +227,32 @@ const mapInputKind = (inputKind: "URL" | "RAW"): ReaderInputKindValue => {
 
   return "url";
 };
+
+async function requireOwnedReaderArticle(options: {
+  publicId: string;
+  userId: string;
+}): Promise<{ id: number }> {
+  const article = await prismaClient.readerArticle.findUnique({
+    where: { publicId: options.publicId },
+    select: { id: true, userId: true },
+  });
+
+  if (!article) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Article not found.",
+    });
+  }
+
+  if (article.userId !== options.userId) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Article not owned by current user.",
+    });
+  }
+
+  return { id: article.id };
+}
 
 const mapHighlightStatus = (
   status: "IN_PROGRESS" | "READY" | "ERROR",
@@ -465,33 +523,11 @@ export const listReaderArticlesRoute = procedure
       where: { userId },
       orderBy: { createdAt: "desc" },
       take: limit,
-      select: {
-        id: true,
-        publicId: true,
-        title: true,
-        normalizedUrl: true,
-        inputKind: true,
-        description: true,
-        ingestStatus: true,
-        ingestError: true,
-        readAt: true,
-        createdAt: true,
-      },
+      select: readerArticleListSelect,
     });
 
     return {
-      articles: articles.map((article) => ({
-        id: article.id,
-        publicId: article.publicId,
-        title: article.title,
-        normalizedUrl: article.normalizedUrl,
-        inputKind: mapInputKind(article.inputKind),
-        description: article.description,
-        ingestStatus: mapIngestStatus(article.ingestStatus),
-        ingestError: article.ingestError,
-        readAt: article.readAt,
-        createdAt: article.createdAt,
-      })),
+      articles: articles.map(mapReaderArticleListRecord),
     };
   });
 
@@ -544,59 +580,22 @@ export const setReaderArticleReadStateRoute = procedure
   .output(setReaderArticleReadStateOutputSchema)
   .mutation(async ({ input, ctx }) => {
     const userId = requireUserId(ctx.user?.id);
-
-    const article = await prismaClient.readerArticle.findUnique({
-      where: { publicId: input.publicId },
-      select: { id: true, userId: true },
+    const article = await requireOwnedReaderArticle({
+      publicId: input.publicId,
+      userId,
     });
-
-    if (!article) {
-      throw new TRPCError({
-        code: "NOT_FOUND",
-        message: "Article not found.",
-      });
-    }
-
-    if (article.userId !== userId) {
-      throw new TRPCError({
-        code: "FORBIDDEN",
-        message: "Article not owned by current user.",
-      });
-    }
 
     const updated = await prismaClient.readerArticle.update({
       where: { id: article.id },
       data: {
         readAt: input.read ? new Date() : null,
       },
-      select: {
-        id: true,
-        publicId: true,
-        title: true,
-        normalizedUrl: true,
-        inputKind: true,
-        description: true,
-        ingestStatus: true,
-        ingestError: true,
-        readAt: true,
-        createdAt: true,
-      },
+      select: readerArticleListSelect,
     });
 
     return {
       status: "updated",
-      article: {
-        id: updated.id,
-        publicId: updated.publicId,
-        title: updated.title,
-        normalizedUrl: updated.normalizedUrl,
-        inputKind: mapInputKind(updated.inputKind),
-        description: updated.description,
-        ingestStatus: mapIngestStatus(updated.ingestStatus),
-        ingestError: updated.ingestError,
-        readAt: updated.readAt,
-        createdAt: updated.createdAt,
-      },
+      article: mapReaderArticleListRecord(updated),
     };
   });
 
@@ -605,25 +604,10 @@ export const listReaderArticleHighlightsRoute = procedure
   .output(listReaderArticleHighlightsOutputSchema)
   .query(async ({ input, ctx }) => {
     const userId = requireUserId(ctx.user?.id);
-
-    const article = await prismaClient.readerArticle.findUnique({
-      where: { publicId: input.publicId },
-      select: { id: true, userId: true },
+    const article = await requireOwnedReaderArticle({
+      publicId: input.publicId,
+      userId,
     });
-
-    if (!article) {
-      throw new TRPCError({
-        code: "NOT_FOUND",
-        message: "Article not found.",
-      });
-    }
-
-    if (article.userId !== userId) {
-      throw new TRPCError({
-        code: "FORBIDDEN",
-        message: "Article not owned by current user.",
-      });
-    }
 
     const highlights = await prismaClient.readerArticleHighlight.findMany({
       where: {
@@ -782,25 +766,10 @@ export const importReaderHighlightsToDeckRoute = procedure
   .output(importReaderHighlightsToDeckOutputSchema)
   .mutation(async ({ input, ctx }) => {
     const userId = requireUserId(ctx.user?.id);
-
-    const article = await prismaClient.readerArticle.findUnique({
-      where: { publicId: input.publicId },
-      select: { id: true, userId: true },
+    const article = await requireOwnedReaderArticle({
+      publicId: input.publicId,
+      userId,
     });
-
-    if (!article) {
-      throw new TRPCError({
-        code: "NOT_FOUND",
-        message: "Article not found.",
-      });
-    }
-
-    if (article.userId !== userId) {
-      throw new TRPCError({
-        code: "FORBIDDEN",
-        message: "Article not owned by current user.",
-      });
-    }
 
     const deck = await prismaClient.deck.findUnique({
       where: {
@@ -915,25 +884,10 @@ export const deleteReaderArticleHighlightRoute = procedure
   .output(deleteReaderArticleHighlightOutputSchema)
   .mutation(async ({ input, ctx }) => {
     const userId = requireUserId(ctx.user?.id);
-
-    const article = await prismaClient.readerArticle.findUnique({
-      where: { publicId: input.publicId },
-      select: { id: true, userId: true },
+    const article = await requireOwnedReaderArticle({
+      publicId: input.publicId,
+      userId,
     });
-
-    if (!article) {
-      throw new TRPCError({
-        code: "NOT_FOUND",
-        message: "Article not found.",
-      });
-    }
-
-    if (article.userId !== userId) {
-      throw new TRPCError({
-        code: "FORBIDDEN",
-        message: "Article not owned by current user.",
-      });
-    }
 
     const deletedHighlight =
       await prismaClient.readerArticleHighlight.deleteMany({

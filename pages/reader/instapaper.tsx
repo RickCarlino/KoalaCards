@@ -1,4 +1,4 @@
-import { getUserSettingsFromEmail } from "@/koala/auth-helpers";
+import { getReaderEmptyPageProps } from "@/koala/reader/page-auth";
 import {
   ReaderPageFrame,
   ReaderPageHeader,
@@ -29,9 +29,7 @@ import {
   Text,
   TextInput,
 } from "@mantine/core";
-import { GetServerSidePropsContext } from "next";
 import Link from "next/link";
-import { getSession } from "next-auth/react";
 import React from "react";
 
 function canExportBookmark(bookmark: InstapaperUnreadBookmark): boolean {
@@ -461,18 +459,4 @@ export default function ReaderInstapaperPage() {
   );
 }
 
-export async function getServerSideProps(
-  context: GetServerSidePropsContext,
-) {
-  const session = await getSession({ req: context.req });
-  if (!session?.user?.email) {
-    return { redirect: { destination: "/", permanent: false } };
-  }
-
-  const userSettings = await getUserSettingsFromEmail(session.user.email);
-  if (!userSettings) {
-    return { redirect: { destination: "/", permanent: false } };
-  }
-
-  return { props: {} };
-}
+export const getServerSideProps = getReaderEmptyPageProps;

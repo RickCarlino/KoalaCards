@@ -1,9 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]";
 import OpenAI from "openai";
 import { prismaClient } from "@/koala/prisma-client";
 import { z } from "zod";
+import {
+  requireTextOpenAiApiKey,
+  requireTextPostMethod,
+} from "@/koala/api/next-api";
+import { writeSSE } from "@/koala/api/sse";
+import { requireTextApiUserId } from "@/koala/get-api-user";
 
 export const config = {
   api: {
@@ -95,35 +99,15 @@ TRANSLATIONS / PHRASES
 * Use idiomatic grammar, correct particles, and fully conjugated verbs in polite speech.
 `;
 
-function writeSSE(res: NextApiResponse, data: string, event?: string) {
-  if (event) {
-    res.write(`event: ${event}\n`);
-  }
-  const lines = data.split("\n");
-  for (const line of lines) {
-    res.write(`data: ${line}\n`);
-  }
-  res.write("\n");
-}
-
 function requirePostMethod(
   req: NextApiRequest,
   res: NextApiResponse,
 ): boolean {
-  if (req.method === "POST") {
-    return true;
-  }
-  res.setHeader("Allow", "POST");
-  res.status(405).end("Method Not Allowed");
-  return false;
+  return requireTextPostMethod(req, res);
 }
 
 function requireOpenAiApiKey(res: NextApiResponse): boolean {
-  if (process.env.OPENAI_API_KEY) {
-    return true;
-  }
-  res.status(500).end("Missing OPENAI_API_KEY");
-  return false;
+  return requireTextOpenAiApiKey(res);
 }
 
 function parseStreamRequestBody(
@@ -142,20 +126,7 @@ async function requireUserId(
   req: NextApiRequest,
   res: NextApiResponse,
 ): Promise<string | null> {
-  const session = await getServerSession(req, res, authOptions);
-  const email = session?.user?.email;
-  if (!email) {
-    res.status(401).end("Unauthorized");
-    return null;
-  }
-
-  const dbUser = await prismaClient.user.findUnique({ where: { email } });
-  if (!dbUser) {
-    res.status(401).end("Unauthorized");
-    return null;
-  }
-
-  return dbUser.id;
+  return requireTextApiUserId(req, res);
 }
 
 async function requireDeckAccess(

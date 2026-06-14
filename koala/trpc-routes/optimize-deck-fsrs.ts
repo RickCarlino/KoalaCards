@@ -1,8 +1,7 @@
-import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { optimizeDeckFsrs } from "../fsrs/optimizer";
-import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc-procedure";
+import { requireOwnedDeck, requireRouteUserId } from "./route-helpers";
 
 export const optimizeDeckFsrsRoute = procedure
   .input(z.object({ deckId: z.number() }))
@@ -14,24 +13,11 @@ export const optimizeDeckFsrsRoute = procedure
     }),
   )
   .mutation(async ({ input, ctx }) => {
-    const userId = ctx.user?.id;
-    if (!userId) {
-      throw new TRPCError({
-        code: "UNAUTHORIZED",
-        message: "User not found",
-      });
-    }
-
-    const deck = await prismaClient.deck.findUnique({
+    const userId = requireRouteUserId(ctx.user?.id);
+    await requireOwnedDeck({
       where: { id: input.deckId, userId },
       select: { id: true },
     });
-    if (!deck) {
-      throw new TRPCError({
-        code: "NOT_FOUND",
-        message: "Deck not found",
-      });
-    }
 
     const result = await optimizeDeckFsrs({
       userId,

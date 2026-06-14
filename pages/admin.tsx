@@ -3,11 +3,15 @@ import {
   GetServerSidePropsContext,
   InferGetServerSidePropsType,
 } from "next";
-import { getSession } from "next-auth/react";
 import { prismaClient } from "@/koala/prisma-client";
 import { Container, Table, Title } from "@mantine/core";
 import { useRouter } from "next/router";
 import { Prisma } from "@prisma/client";
+import {
+  fmtShortDate,
+  requireAdminRequest,
+  yesNo,
+} from "@/koala/admin-helpers";
 
 const ONE_DAY = 24 * 60 * 60 * 1000;
 
@@ -21,21 +25,9 @@ function daysSince(date: Date | null): number {
 export async function getServerSideProps(
   context: GetServerSidePropsContext,
 ) {
-  const session = await getSession({ req: context.req });
-  const email = session?.user?.email?.toLowerCase() ?? null;
-
-  const superUsers = (process.env.AUTHORIZED_EMAILS || "")
-    .split(",")
-    .map((x) => x.trim().toLowerCase())
-    .filter((x) => x.includes("@"));
-
-  if (!email || !superUsers.includes(email)) {
-    return {
-      redirect: {
-        destination: "/user",
-        permanent: false,
-      },
-    };
+  const adminRequest = await requireAdminRequest(context);
+  if ("redirect" in adminRequest) {
+    return adminRequest;
   }
 
   type UserWithCount = Prisma.UserGetPayload<{
@@ -78,7 +70,9 @@ export async function getServerSideProps(
       daysSinceLastSeen: daysSince(u.lastSeen),
       cardCount: u._count.Card,
       studiedCount: studiedByUser.get(u.id) || 0,
-      isAdmin: !!u.email && superUsers.includes(u.email.toLowerCase()),
+      isAdmin:
+        !!u.email &&
+        adminRequest.superUsers.includes(u.email.toLowerCase()),
     };
   });
 
@@ -91,33 +85,8 @@ export async function getServerSideProps(
 
 type Props = InferGetServerSidePropsType<typeof getServerSideProps>;
 
-function yesNo(value: boolean): string {
-  return value ? "Yes" : "No";
-}
-
 function fmtDate(iso: string | null): string {
-  if (!iso) {
-    return "No";
-  }
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const MONTHS = [
-    "JAN",
-    "FEB",
-    "MAR",
-    "APR",
-    "MAY",
-    "JUN",
-    "JUL",
-    "AUG",
-    "SEP",
-    "OCT",
-    "NOV",
-    "DEC",
-  ];
-  return `${MONTHS[d.getMonth()]} ${pad(d.getDate())} ${pad(d.getHours())}:${pad(
-    d.getMinutes(),
-  )}`;
+  return fmtShortDate(iso, "No");
 }
 
 export default function AdminPage({ userData }: Props) {

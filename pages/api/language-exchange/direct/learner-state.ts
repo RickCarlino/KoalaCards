@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { z } from "zod";
-import { getApiUserOrNull } from "@/koala/get-api-user";
+import { requireJsonGetMethod, setNoStore } from "@/koala/api/next-api";
+import { requireJsonApiUser } from "@/koala/get-api-user";
 import { getUserSettings } from "@/koala/auth-helpers";
 import {
   expireDirectLanguageExchangeCalls,
@@ -14,32 +15,18 @@ const querySchema = z.object({
   activeCallId: z.coerce.number().int().positive().optional(),
 });
 
-function requireGetMethod(
-  req: NextApiRequest,
-  res: NextApiResponse,
-): boolean {
-  if (req.method === "GET") {
-    return true;
-  }
-
-  res.setHeader("Allow", "GET");
-  res.status(405).json({ error: "Method Not Allowed" });
-  return false;
-}
-
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
 ) {
-  if (!requireGetMethod(req, res)) {
+  if (!requireJsonGetMethod(req, res)) {
     return;
   }
 
-  res.setHeader("Cache-Control", "no-store");
+  setNoStore(res);
 
-  const user = await getApiUserOrNull(req, res);
+  const user = await requireJsonApiUser(req, res);
   if (!user) {
-    res.status(401).json({ error: "Unauthorized" });
     return;
   }
 

@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc-procedure";
-import { getUserSettings } from "../auth-helpers";
 import { errorReport } from "@/koala/error-report";
+import { findOwnedCard, getSettingsUserId } from "./route-helpers";
 
 export const deleteCard = procedure
   .input(
@@ -11,14 +11,8 @@ export const deleteCard = procedure
     }),
   )
   .mutation(async ({ input, ctx }) => {
-    const userId = (await getUserSettings(ctx.user?.id)).user.id;
-
-    const card = await prismaClient.card.findFirst({
-      where: {
-        id: input.id,
-        userId,
-      },
-    });
+    const userId = await getSettingsUserId(ctx.user?.id);
+    const card = await findOwnedCard({ cardId: input.id, userId });
 
     if (!card) {
       return errorReport("Card not found");

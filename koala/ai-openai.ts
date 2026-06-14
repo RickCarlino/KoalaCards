@@ -79,12 +79,14 @@ const reasoningEffortFor = (
   return REASONING_EFFORT[model];
 };
 
-const buildTextCompletionParams = (options: {
-  model: LanguageModelIdentifier;
-  modelName: string;
-  maxTokens: number | undefined;
-}): CompletionParams => {
-  const params: CompletionParams = {};
+const applyReasoningCompletionParams = (
+  params: CompletionParams,
+  options: {
+    model: LanguageModelIdentifier;
+    modelName: string;
+    maxTokens: number | undefined;
+  },
+): void => {
   const reasoningEffort = reasoningEffortFor(
     options.modelName,
     options.model,
@@ -102,7 +104,15 @@ const buildTextCompletionParams = (options: {
   if (completionTokenLimit !== undefined) {
     params.max_completion_tokens = completionTokenLimit;
   }
+};
 
+const buildTextCompletionParams = (options: {
+  model: LanguageModelIdentifier;
+  modelName: string;
+  maxTokens: number | undefined;
+}): CompletionParams => {
+  const params: CompletionParams = {};
+  applyReasoningCompletionParams(params, options);
   return params;
 };
 
@@ -112,28 +122,11 @@ const buildStructuredCompletionParams = (options: {
   maxTokens: number | undefined;
 }): CompletionParams => {
   const params: CompletionParams = {};
-  const reasoningEffort = reasoningEffortFor(
-    options.modelName,
-    options.model,
-  );
-  const completionTokenLimit = completionTokenLimitFrom(options.maxTokens);
-
   if (!isGpt5Model(options.modelName)) {
     return params;
   }
 
-  if (reasoningEffort) {
-    params.reasoning_effort = reasoningEffort;
-  }
-
-  if (reasoningEffort === "low") {
-    params.verbosity = "low";
-  }
-
-  if (completionTokenLimit !== undefined) {
-    params.max_completion_tokens = completionTokenLimit;
-  }
-
+  applyReasoningCompletionParams(params, options);
   return params;
 };
 

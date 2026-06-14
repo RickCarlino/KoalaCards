@@ -10,14 +10,37 @@ import {
   READER_HIGHLIGHT_MAX_PROMPT_OCCURRENCES,
   type ReaderHighlightAnalysis,
 } from "@/koala/reader/highlight-explain";
-import type { NextApiResponse } from "next";
+import type { NextApiRequest, NextApiResponse } from "next";
 import {
+  startSSE,
   streamAnalysis,
   streamDone,
   streamError,
   streamHighlightId,
+  trackRequestClosed,
   trimStreamErrorMessage,
 } from "./highlight-stream-helpers";
+
+type GeneratedAnalysisCallbacks = {
+  createInProgressRecord: () => Promise<number>;
+  markReady: (
+    highlightId: number,
+    analysis: ReaderHighlightAnalysis,
+  ) => Promise<void>;
+  markError: (highlightId: number, message: string) => Promise<void>;
+};
+
+type GeneratedAnalysisBaseOptions = {
+  res: NextApiResponse;
+  isClosed: () => boolean;
+  title: string;
+};
+
+type GeneratedSelection = {
+  selectedText: string;
+  selectedOccurrenceIndex: number;
+  occurrences: ReaderHighlightOccurrence[];
+};
 
 export type CachedHighlightAnalysisRecord = {
   id: number;
@@ -68,21 +91,15 @@ export function streamCachedAnalysisResponse(options: {
   return true;
 }
 
-export async function streamGeneratedAnalysisResponse(options: {
-  res: NextApiResponse;
-  isClosed: () => boolean;
-  title: string;
-  selectedText: string;
-  selectedOccurrenceIndex: number;
-  occurrenceCount: number;
-  occurrences: ReaderHighlightOccurrence[];
-  createInProgressRecord: () => Promise<number>;
-  markReady: (
-    highlightId: number,
-    analysis: ReaderHighlightAnalysis,
-  ) => Promise<void>;
-  markError: (highlightId: number, message: string) => Promise<void>;
-}): Promise<void> {
+export async function streamGeneratedAnalysisResponse(
+  options: GeneratedAnalysisBaseOptions &
+    GeneratedAnalysisCallbacks & {
+      selectedText: string;
+      selectedOccurrenceIndex: number;
+      occurrenceCount: number;
+      occurrences: ReaderHighlightOccurrence[];
+    },
+): Promise<void> {
   const highlightId = await options.createInProgressRecord();
   streamHighlightId({
     res: options.res,
@@ -149,4 +166,60 @@ export async function streamGeneratedAnalysisResponse(options: {
       message: errorMessage,
     });
   }
+}
+
+export async function streamGeneratedSelectionResponse(
+  options: GeneratedAnalysisBaseOptions &
+    GeneratedAnalysisCallbacks & { selection: GeneratedSelection },
+): Promise<void> {
+  await streamGeneratedAnalysisResponse({
+    res: options.res,
+    isClosed: options.isClosed,
+    title: options.title,
+    selectedText: options.selection.selectedText,
+    selectedOccurrenceIndex: options.selection.selectedOccurrenceIndex,
+    occurrenceCount: options.selection.occurrences.length,
+    occurrences: options.selection.occurrences,
+    createInProgressRecord: options.createInProgressRecord,
+    markReady: options.markReady,
+    markError: options.markError,
+  });
+}
+
+export async function runHighlightAnalysisStream<
+  TResolved,
+  TCached extends CachedHighlightAnalysisRecord,
+>(options: {
+  req: NextApiRequest;
+  res: NextApiResponse;
+  resolve: () => Promise<TResolved | null>;
+  loadCached: (resolved: TResolved) => Promise<TCached | null>;
+  cachedSelectedText: (cached: TCached) => string;
+  streamGenerated: (
+    resolved: TResolved,
+    isClosed: () => boolean,
+  ) => Promise<void>;
+}): Promise<void> {
+  const resolved = await options.resolve();
+  if (!resolved) {
+    return;
+  }
+
+  const cached = await options.loadCached(resolved);
+  startSSE(options.res);
+  const isClosed = trackRequestClosed(options.req);
+
+  if (
+    cached &&
+    streamCachedAnalysisResponse({
+      res: options.res,
+      isClosed,
+      cached,
+      selectedText: options.cachedSelectedText(cached),
+    })
+  ) {
+    return;
+  }
+
+  await options.streamGenerated(resolved, isClosed);
 }

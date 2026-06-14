@@ -1,10 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import OpenAI from "openai";
-import { getServerSession } from "next-auth";
-import { authOptions } from "./auth/[...nextauth]";
-import { prismaClient } from "@/koala/prisma-client";
 import { draw } from "radash";
 import { stripEmojis } from "@/koala/utils/emoji";
+import {
+  requireJsonOpenAiApiKey,
+  requireJsonPostMethod,
+} from "@/koala/api/next-api";
+import { requireJsonApiUser } from "@/koala/get-api-user";
 import {
   buildSpeechInput,
   resolveSpeechContentType,
@@ -23,37 +25,23 @@ async function requireAuthenticatedSpeechUser(
   req: NextApiRequest,
   res: NextApiResponse,
 ): Promise<boolean> {
-  const session = await getServerSession(req, res, authOptions);
-  const email = session?.user?.email;
-  if (!email) {
-    res.status(401).json({ error: "Unauthorized" });
-    return false;
-  }
-
-  const dbUser = await prismaClient.user.findUnique({ where: { email } });
-  if (!dbUser) {
-    res.status(401).json({ error: "Unauthorized" });
-    return false;
-  }
-
-  return true;
+  return Boolean(await requireJsonApiUser(req, res));
 }
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
 ) {
-  if (req.method !== "POST") {
-    res.setHeader("Allow", "POST");
-    return res.status(405).json({ error: "Method Not Allowed" });
+  if (!requireJsonPostMethod(req, res)) {
+    return;
   }
 
   if (!(await requireAuthenticatedSpeechUser(req, res))) {
     return;
   }
 
-  if (!process.env.OPENAI_API_KEY) {
-    return res.status(500).json({ error: "Missing OPENAI_API_KEY" });
+  if (!requireJsonOpenAiApiKey(res)) {
+    return;
   }
 
   const { tl, en, format } = (req.body ?? {}) as SpeechBody;

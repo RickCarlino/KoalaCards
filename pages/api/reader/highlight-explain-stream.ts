@@ -1,33 +1,31 @@
 import { prismaClient } from "@/koala/prisma-client";
 import {
-  buildOccurrenceContexts,
-  selectOccurrenceIndex,
-} from "@/koala/reader/highlight-context";
-import {
-  READER_HIGHLIGHT_CONTEXT_RADIUS,
   READER_HIGHLIGHT_PROMPT_VERSION,
   sha256Hex,
   type ReaderHighlightAnalysis,
 } from "@/koala/reader/highlight-explain";
+import {
+  baseHighlightStreamBodySchema,
+  errorAnalysisData,
+  inProgressAnalysisData,
+  parseHighlightStreamBody,
+  readyAnalysisData,
+  resolveHighlightSelection,
+  type HighlightOccurrenceRecord,
+} from "@/koala/reader/highlight-stream-shared";
+import { requireTextOpenAiApiKey } from "@/koala/api/next-api";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { z } from "zod";
 import {
-  streamCachedAnalysisResponse,
-  streamGeneratedAnalysisResponse,
+  runHighlightAnalysisStream,
+  streamGeneratedSelectionResponse,
 } from "./highlight-generation-helpers";
 import {
   requirePostMethod,
   requireReaderApiUserId,
-  startSSE,
 } from "./highlight-stream-helpers";
 
-const bodySchema = z.object({
-  publicId: z.string().trim().min(1),
-  selectedText: z.string().trim().min(1).max(220),
-  contextBefore: z.string().max(260).optional(),
-  contextAfter: z.string().max(260).optional(),
-  occurrenceHint: z.number().int().min(0).optional(),
-});
+const bodySchema = baseHighlightStreamBodySchema;
 
 type StreamRequestBody = z.infer<typeof bodySchema>;
 
@@ -47,21 +45,11 @@ type OwnedArticleRecord = {
   contentText: string;
 };
 
-function normalizeArticleText(value: string): string {
-  return value.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-}
-
 function parseBody(
   req: NextApiRequest,
   res: NextApiResponse,
 ): StreamRequestBody | null {
-  const parsed = bodySchema.safeParse(req.body);
-  if (parsed.success) {
-    return parsed.data;
-  }
-
-  res.status(400).end("Invalid request body.");
-  return null;
+  return parseHighlightStreamBody(bodySchema, req.body, res);
 }
 
 async function requireOwnedArticle(
@@ -140,14 +128,7 @@ async function upsertHighlight(options: {
   selectedTextHash: string;
   selectedOccurrenceIndex: number;
   occurrenceCount: number;
-  occurrencesJson: Array<{
-    index: number;
-    startOffset: number;
-    endOffset: number;
-    before: string;
-    match: string;
-    after: string;
-  }>;
+  occurrencesJson: HighlightOccurrenceRecord[];
   articleContentHash: string;
 }): Promise<number> {
   const record = await prismaClient.readerArticleHighlight.upsert({
@@ -172,24 +153,14 @@ async function upsertHighlight(options: {
       occurrencesJson: options.occurrencesJson,
       articleContentHash: options.articleContentHash,
       promptVersion: READER_HIGHLIGHT_PROMPT_VERSION,
-      status: "IN_PROGRESS",
-      term: "",
-      definition: "",
-      generalMeaning: "",
-      meaningInContext: "",
-      errorMessage: "",
+      ...inProgressAnalysisData(),
     },
     update: {
       selectedText: options.selectedText,
       selectedOccurrenceIndex: options.selectedOccurrenceIndex,
       occurrenceCount: options.occurrenceCount,
       occurrencesJson: options.occurrencesJson,
-      status: "IN_PROGRESS",
-      term: "",
-      definition: "",
-      generalMeaning: "",
-      meaningInContext: "",
-      errorMessage: "",
+      ...inProgressAnalysisData(),
     },
     select: { id: true },
   });
@@ -203,14 +174,7 @@ async function markHighlightReady(
 ): Promise<void> {
   await prismaClient.readerArticleHighlight.update({
     where: { id: highlightId },
-    data: {
-      status: "READY",
-      term: analysis.term,
-      definition: analysis.definition,
-      generalMeaning: analysis.generalMeaning,
-      meaningInContext: analysis.meaningInContext,
-      errorMessage: "",
-    },
+    data: readyAnalysisData(analysis),
   });
 }
 
@@ -220,10 +184,7 @@ async function markHighlightError(
 ): Promise<void> {
   await prismaClient.readerArticleHighlight.update({
     where: { id: highlightId },
-    data: {
-      status: "ERROR",
-      errorMessage: message,
-    },
+    data: errorAnalysisData(message),
   });
 }
 
@@ -234,14 +195,7 @@ type ResolvedExplainRequest = {
   selectedTextHash: string;
   articleContentHash: string;
   selectedOccurrenceIndex: number;
-  occurrences: Array<{
-    index: number;
-    startOffset: number;
-    endOffset: number;
-    before: string;
-    match: string;
-    after: string;
-  }>;
+  occurrences: HighlightOccurrenceRecord[];
 };
 
 async function resolveExplainRequest(
@@ -252,8 +206,7 @@ async function resolveExplainRequest(
     return null;
   }
 
-  if (!process.env.OPENAI_API_KEY) {
-    res.status(500).end("Missing OPENAI_API_KEY");
+  if (!requireTextOpenAiApiKey(res)) {
     return null;
   }
 
@@ -276,41 +229,24 @@ async function resolveExplainRequest(
     return null;
   }
 
-  const articleText = normalizeArticleText(article.contentText);
-  const selectedText = parsedBody.selectedText.trim();
-  const occurrences = buildOccurrenceContexts(
-    articleText,
-    selectedText,
-    READER_HIGHLIGHT_CONTEXT_RADIUS,
-  );
-
-  if (occurrences.length === 0) {
-    res
-      .status(400)
-      .end("Selected text was not found in this article content.");
-    return null;
-  }
-
-  const selectedOccurrenceIndex = selectOccurrenceIndex({
-    occurrences,
-    contextBefore: parsedBody.contextBefore ?? "",
-    contextAfter: parsedBody.contextAfter ?? "",
-    occurrenceHint: parsedBody.occurrenceHint,
+  const selection = resolveHighlightSelection({
+    body: parsedBody,
+    missingMessage: "Selected text was not found in this article content.",
+    res,
+    sourceText: article.contentText,
   });
-
-  if (selectedOccurrenceIndex < 0) {
-    res.status(400).end("Could not resolve selected occurrence.");
+  if (!selection) {
     return null;
   }
 
   return {
     userId,
     article,
-    selectedText,
-    selectedTextHash: sha256Hex(selectedText),
-    articleContentHash: sha256Hex(articleText),
-    selectedOccurrenceIndex,
-    occurrences,
+    selectedText: selection.selectedText,
+    selectedTextHash: sha256Hex(selection.selectedText),
+    articleContentHash: sha256Hex(selection.sourceText),
+    selectedOccurrenceIndex: selection.selectedOccurrenceIndex,
+    occurrences: selection.occurrences,
   };
 }
 
@@ -319,28 +255,22 @@ async function streamGeneratedResponse(options: {
   isClosed: () => boolean;
   resolved: ResolvedExplainRequest;
 }): Promise<void> {
+  const { resolved, res, isClosed } = options;
   const {
-    resolved: {
-      userId,
-      article,
-      selectedText,
-      selectedTextHash,
-      articleContentHash,
-      selectedOccurrenceIndex,
-      occurrences,
-    },
-    res,
-    isClosed,
-  } = options;
+    userId,
+    article,
+    selectedText,
+    selectedTextHash,
+    articleContentHash,
+    selectedOccurrenceIndex,
+    occurrences,
+  } = resolved;
 
-  await streamGeneratedAnalysisResponse({
+  await streamGeneratedSelectionResponse({
     res,
     isClosed,
     title: article.title,
-    selectedText,
-    selectedOccurrenceIndex,
-    occurrenceCount: occurrences.length,
-    occurrences,
+    selection: resolved,
     createInProgressRecord: () =>
       upsertHighlight({
         userId,
@@ -361,38 +291,26 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
 ): Promise<void> {
-  const resolved = await resolveExplainRequest(req, res);
-  if (!resolved) {
-    return;
-  }
+  const resolve = () => resolveExplainRequest(req, res);
+  const loadCached = (resolved: ResolvedExplainRequest) =>
+    loadCachedHighlight({
+      userId: resolved.userId,
+      articleId: resolved.article.id,
+      selectedTextHash: resolved.selectedTextHash,
+      selectedOccurrenceIndex: resolved.selectedOccurrenceIndex,
+      articleContentHash: resolved.articleContentHash,
+    });
+  const streamGenerated = (
+    resolved: ResolvedExplainRequest,
+    isClosed: () => boolean,
+  ) => streamGeneratedResponse({ res, isClosed, resolved });
 
-  const cached = await loadCachedHighlight({
-    userId: resolved.userId,
-    articleId: resolved.article.id,
-    selectedTextHash: resolved.selectedTextHash,
-    selectedOccurrenceIndex: resolved.selectedOccurrenceIndex,
-    articleContentHash: resolved.articleContentHash,
+  await runHighlightAnalysisStream({
+    req,
+    res,
+    resolve,
+    loadCached,
+    cachedSelectedText: (cached) => cached.selectedText,
+    streamGenerated,
   });
-
-  let closed = false;
-  req.on("close", () => {
-    closed = true;
-  });
-
-  startSSE(res);
-  const isClosed = () => closed;
-
-  if (
-    cached &&
-    streamCachedAnalysisResponse({
-      res,
-      isClosed,
-      cached,
-      selectedText: cached.selectedText,
-    })
-  ) {
-    return;
-  }
-
-  await streamGeneratedResponse({ res, isClosed, resolved });
 }

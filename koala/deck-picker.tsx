@@ -1,10 +1,8 @@
 import React from "react";
 import {
   Button,
-  Paper,
   Radio,
   Select,
-  Title,
   Divider,
   Flex,
   RadioGroup,
@@ -14,8 +12,9 @@ import {
 } from "@mantine/core";
 import { LangCode, supportedLanguages } from "./shared-types";
 import { getLangName } from "./get-lang-name";
-import { buttonShadow, paperStyle, titleStyle } from "./styles";
+import { buttonShadow } from "./styles";
 import { DEFAULT_LANG } from "./types/create-reducer";
+import { CreateStepFrame } from "./components/CreateStepFrame";
 
 export interface Deck {
   id: number;
@@ -44,6 +43,11 @@ interface DeckPickerProps {
   title?: string;
   description?: string;
 }
+
+const radioPointerStyles = {
+  radio: { cursor: "pointer" },
+  label: { cursor: "pointer" },
+};
 
 export function DeckPicker({
   decks,
@@ -86,148 +90,113 @@ export function DeckPicker({
   })();
 
   return (
-    <Paper withBorder p="xl" radius="lg" style={paperStyle(theme)}>
-      <Flex direction="column" gap="md">
-        <Title order={3} mb="xs" style={titleStyle(theme)}>
-          {title}
-        </Title>
-        <Text size="sm" c="dimmed" mb="md">
-          {description}
-        </Text>
+    <CreateStepFrame title={title}>
+      <Text size="sm" c="dimmed" mb="md">
+        {description}
+      </Text>
 
-        <RadioGroup
+      <RadioGroup
+        label={
+          <Text fw={500} c={theme.colors.gray[7]}>
+            Deck Mode
+          </Text>
+        }
+        value={state.deckSelection}
+        onChange={(value) =>
+          handleDeckModeChange(value as "existing" | "new")
+        }
+      >
+        <Radio
+          value="existing"
+          label="Use an existing deck"
+          color="pink"
+          styles={radioPointerStyles}
+          disabled={decks.length === 0}
+        />
+        <Radio
+          value="new"
+          label="Create a new deck"
+          color="pink"
+          styles={radioPointerStyles}
+        />
+      </RadioGroup>
+
+      {state.deckSelection === "existing" && decks.length > 0 && (
+        <Select
           label={
             <Text fw={500} c={theme.colors.gray[7]}>
-              Deck Mode
+              Existing Deck
             </Text>
           }
-          value={state.deckSelection}
-          onChange={(value) =>
-            handleDeckModeChange(value as "existing" | "new")
+          placeholder="Select your deck"
+          value={state.deckId ? String(state.deckId) : null}
+          onChange={(val) =>
+            handleExistingDeckChange(val ? Number(val) : undefined)
           }
-        >
-          <Radio
-            value="existing"
-            label="Use an existing deck"
-            color="pink"
-            styles={{
-              radio: { cursor: "pointer" },
-              label: { cursor: "pointer" },
-            }}
-            disabled={decks.length === 0}
-          />
-          <Radio
-            value="new"
-            label="Create a new deck"
-            color="pink"
-            styles={{
-              radio: { cursor: "pointer" },
-              label: { cursor: "pointer" },
-            }}
-          />
-        </RadioGroup>
+          data={decks.map((d) => ({
+            label: `${d.name} (${getLangName(d.langCode)})`,
+            value: String(d.id),
+          }))}
+          searchable
+          clearable
+        />
+      )}
+      {state.deckSelection === "existing" && decks.length === 0 && (
+        <Text size="sm" c="dimmed" mt="sm">
+          No existing decks found. Please create a new one.
+        </Text>
+      )}
 
-        {state.deckSelection === "existing" && decks.length > 0 && (
+      {state.deckSelection === "new" && (
+        <>
+          <TextInput
+            label={
+              <Text fw={500} c={theme.colors.gray[7]}>
+                New Deck Name
+              </Text>
+            }
+            placeholder="e.g. 'Spanish Travel Phrases'"
+            value={state.deckName}
+            onChange={(e) =>
+              dispatch({
+                type: "SET_DECK_NAME",
+                deckName: e.currentTarget.value,
+              })
+            }
+          />
           <Select
             label={
               <Text fw={500} c={theme.colors.gray[7]}>
-                Existing Deck
+                Language
               </Text>
             }
-            placeholder="Select your deck"
-            value={state.deckId ? String(state.deckId) : null}
+            placeholder="Choose language"
+            value={state.deckLang}
             onChange={(val) =>
-              handleExistingDeckChange(val ? Number(val) : undefined)
+              dispatch({
+                type: "SET_DECK_LANG",
+                deckLang: val as LangCode,
+              })
             }
-            data={decks.map((d) => ({
-              label: `${d.name} (${getLangName(d.langCode)})`,
-              value: String(d.id),
-            }))}
-            styles={{
-              input: {
-                borderColor: theme.colors.pink[1],
-                "&:focus": {
-                  borderColor: theme.colors.pink[5],
-                },
-              },
-            }}
+            data={[{ value: "ko", label: supportedLanguages.ko }]}
             searchable
-            clearable
           />
-        )}
-        {state.deckSelection === "existing" && decks.length === 0 && (
-          <Text size="sm" c="dimmed" mt="sm">
-            No existing decks found. Please create a new one.
-          </Text>
-        )}
+        </>
+      )}
 
-        {state.deckSelection === "new" && (
-          <>
-            <TextInput
-              label={
-                <Text fw={500} c={theme.colors.gray[7]}>
-                  New Deck Name
-                </Text>
-              }
-              placeholder="e.g. 'Spanish Travel Phrases'"
-              value={state.deckName}
-              onChange={(e) =>
-                dispatch({
-                  type: "SET_DECK_NAME",
-                  deckName: e.currentTarget.value,
-                })
-              }
-              styles={{
-                input: {
-                  borderColor: theme.colors.pink[1],
-                  "&:focus": {
-                    borderColor: theme.colors.pink[5],
-                  },
-                },
-              }}
-            />
-            <Select
-              label={
-                <Text fw={500} c={theme.colors.gray[7]}>
-                  Language
-                </Text>
-              }
-              placeholder="Choose language"
-              value={state.deckLang}
-              onChange={(val) =>
-                dispatch({
-                  type: "SET_DECK_LANG",
-                  deckLang: val as LangCode,
-                })
-              }
-              data={[{ value: "ko", label: supportedLanguages.ko }]}
-              styles={{
-                input: {
-                  borderColor: theme.colors.pink[1],
-                  "&:focus": {
-                    borderColor: theme.colors.pink[5],
-                  },
-                },
-              }}
-              searchable
-            />
-          </>
-        )}
-
-        <Divider my="lg" color={theme.colors.pink[1]} />
-        <Flex justify="flex-end">
-          <Button
-            onClick={onNext}
-            disabled={isNextDisabled}
-            color="pink"
-            radius="md"
-            size="md"
-            style={buttonShadow}
-          >
-            Next
-          </Button>
-        </Flex>
+      <Divider my="lg" color={theme.colors.pink[1]} />
+      <Flex justify="flex-end">
+        <Button
+          onClick={onNext}
+          disabled={isNextDisabled}
+          color="pink"
+          radius="md"
+          size="md"
+          style={buttonShadow}
+        >
+          Next
+        </Button>
       </Flex>
-    </Paper>
+    </CreateStepFrame>
   );
 }

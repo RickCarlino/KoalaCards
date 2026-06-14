@@ -4,6 +4,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import ReactMarkdown from "react-markdown";
 import { z } from "zod";
+import { escapeHtml } from "@/koala/html";
 import { prismaClient } from "@/koala/prisma-client";
 import {
   InstapaperApiError,
@@ -449,15 +450,6 @@ const pushImportError = (
     error instanceof Error ? error.message : "Unexpected import error.";
 
   errors.push(`${bookmarkTitle}: ${message}`);
-};
-
-const escapeHtml = (value: string): string => {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
 };
 
 const renderMarkdownToHtml = (value: string): string => {

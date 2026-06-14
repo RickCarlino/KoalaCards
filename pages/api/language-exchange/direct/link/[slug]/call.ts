@@ -2,16 +2,11 @@ import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { z } from "zod";
 import { directLanguageExchangeSessionDescriptionSchema } from "@/koala/language-exchange-direct";
+import { resolveDirectLinkRequest } from "@/koala/language-exchange-direct-api";
 import {
   createDirectLanguageExchangeCall,
-  expireDirectLanguageExchangeCalls,
-  findLanguageExchangeLinkBySlug,
   getLanguageExchangeAvailabilityStatus,
 } from "@/koala/language-exchange-direct-server";
-
-const paramsSchema = z.object({
-  slug: z.string().trim().min(1).max(64),
-});
 
 const bodySchema = z.object({
   offer: directLanguageExchangeSessionDescriptionSchema.refine(
@@ -20,44 +15,27 @@ const bodySchema = z.object({
   ),
 });
 
-function requirePostMethod(
-  req: NextApiRequest,
-  res: NextApiResponse,
-): boolean {
-  if (req.method === "POST") {
-    return true;
-  }
-
-  res.setHeader("Allow", "POST");
-  res.status(405).json({ error: "Method Not Allowed" });
-  return false;
-}
-
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
 ) {
-  if (!requirePostMethod(req, res)) {
+  const directLinkRequest = await resolveDirectLinkRequest({
+    invalidMessage: "Invalid request",
+    method: "POST",
+    req,
+    res,
+  });
+  if (!directLinkRequest) {
     return;
   }
 
-  const parsedParams = paramsSchema.safeParse(req.query);
   const parsedBody = bodySchema.safeParse(req.body);
-  if (!parsedParams.success || !parsedBody.success) {
+  if (!parsedBody.success) {
     res.status(400).json({ error: "Invalid request" });
     return;
   }
 
-  const now = new Date();
-  await expireDirectLanguageExchangeCalls(now);
-
-  const link = await findLanguageExchangeLinkBySlug(
-    parsedParams.data.slug,
-  );
-  if (!link) {
-    res.status(404).json({ error: "Link not found" });
-    return;
-  }
+  const { link, now } = directLinkRequest;
 
   const availability = await getLanguageExchangeAvailabilityStatus({
     userId: link.userId,

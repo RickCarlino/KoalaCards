@@ -1,44 +1,33 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { z } from "zod";
 import { getApiUserOrNull } from "@/koala/get-api-user";
+import { requireJsonPostMethod } from "@/koala/api/next-api";
+import { parseDirectCallId } from "@/koala/language-exchange-direct-api";
 import {
   expireDirectLanguageExchangeCalls,
   findGuestDirectLanguageExchangeCallOrNull,
 } from "@/koala/language-exchange-direct-server";
 import { prismaClient } from "@/koala/prisma-client";
 
-const paramsSchema = z.object({
-  callId: z.coerce.number().int().positive(),
-});
-
 const bodySchema = z.object({
   guestToken: z.string().trim().min(1).max(128).optional(),
 });
-
-function requirePostMethod(
-  req: NextApiRequest,
-  res: NextApiResponse,
-): boolean {
-  if (req.method === "POST") {
-    return true;
-  }
-
-  res.setHeader("Allow", "POST");
-  res.status(405).json({ error: "Method Not Allowed" });
-  return false;
-}
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
 ) {
-  if (!requirePostMethod(req, res)) {
+  if (!requireJsonPostMethod(req, res)) {
     return;
   }
 
-  const parsedParams = paramsSchema.safeParse(req.query);
+  const callId = parseDirectCallId(req, res);
+  if (!callId) {
+    return;
+  }
+
   const parsedBody = bodySchema.safeParse(req.body ?? {});
-  if (!parsedParams.success || !parsedBody.success) {
+  if (!parsedBody.success) {
     res.status(400).json({ error: "Invalid request" });
     return;
   }
@@ -50,7 +39,7 @@ export default async function handler(
   if (user) {
     const ended = await prismaClient.languageExchangeCall.updateMany({
       where: {
-        id: parsedParams.data.callId,
+        id: callId,
         learnerId: user.id,
         status: {
           in: ["RINGING", "ACTIVE"],
@@ -77,7 +66,7 @@ export default async function handler(
   }
 
   const call = await findGuestDirectLanguageExchangeCallOrNull({
-    callId: parsedParams.data.callId,
+    callId,
     guestToken: parsedBody.data.guestToken,
   });
   if (!call) {

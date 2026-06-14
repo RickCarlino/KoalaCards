@@ -23,6 +23,43 @@ type ReaderProcessingPanelProps = {
   sourceLinkLabel: string;
 };
 
+function ReaderProcessingLinks({
+  articleLinkLabel,
+  backHref,
+  backLinkLabel,
+  normalizedUrl,
+  publicId,
+  sourceLinkLabel,
+}: {
+  articleLinkLabel: string;
+  backHref: string;
+  backLinkLabel: string;
+  normalizedUrl?: string | null;
+  publicId: string;
+  sourceLinkLabel: string;
+}) {
+  return (
+    <Group gap="sm" wrap="wrap">
+      <Anchor component={Link} href={`/reader/${publicId}`} size="sm">
+        {articleLinkLabel}
+      </Anchor>
+      <Anchor component={Link} href={backHref} size="sm">
+        {backLinkLabel}
+      </Anchor>
+      {normalizedUrl && (
+        <Anchor
+          href={normalizedUrl}
+          target="_blank"
+          rel="noreferrer"
+          size="sm"
+        >
+          {sourceLinkLabel}
+        </Anchor>
+      )}
+    </Group>
+  );
+}
+
 export function ReaderProcessingPanel({
   status,
   ingestError,
@@ -46,24 +83,14 @@ export function ReaderProcessingPanel({
             {ingestError}
           </Text>
         )}
-        <Group gap="sm" wrap="wrap">
-          <Anchor component={Link} href={`/reader/${publicId}`} size="sm">
-            {articleLinkLabel}
-          </Anchor>
-          <Anchor component={Link} href={backHref} size="sm">
-            {backLinkLabel}
-          </Anchor>
-          {normalizedUrl && (
-            <Anchor
-              href={normalizedUrl}
-              target="_blank"
-              rel="noreferrer"
-              size="sm"
-            >
-              {sourceLinkLabel}
-            </Anchor>
-          )}
-        </Group>
+        <ReaderProcessingLinks
+          articleLinkLabel={articleLinkLabel}
+          backHref={backHref}
+          backLinkLabel={backLinkLabel}
+          normalizedUrl={normalizedUrl}
+          publicId={publicId}
+          sourceLinkLabel={sourceLinkLabel}
+        />
       </ReaderPanel>
     );
   }
@@ -74,14 +101,13 @@ export function ReaderProcessingPanel({
         <Text c="dimmed">
           {selectPendingMessage(status, pendingMessages)}
         </Text>
-        <Group gap="sm" wrap="wrap">
-          <Anchor component={Link} href={`/reader/${publicId}`} size="sm">
-            {articleLinkLabel}
-          </Anchor>
-          <Anchor component={Link} href={backHref} size="sm">
-            {backLinkLabel}
-          </Anchor>
-        </Group>
+        <ReaderProcessingLinks
+          articleLinkLabel={articleLinkLabel}
+          backHref={backHref}
+          backLinkLabel={backLinkLabel}
+          publicId={publicId}
+          sourceLinkLabel={sourceLinkLabel}
+        />
       </ReaderPanel>
     );
   }

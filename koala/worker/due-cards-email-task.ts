@@ -1,21 +1,10 @@
 import { getDueCardsCount } from "@/koala/due-cards";
 import { sendKoalaEmail } from "@/koala/email/send-koala-email";
 import { prismaClient } from "@/koala/prisma-client";
+import { parsePositiveInt } from "@/koala/worker/env";
 import type { WorkerTask } from "./run-loop";
 
 const DUE_CARDS_THRESHOLD = 20;
-
-const parsePositiveInt = (
-  value: string | undefined,
-  fallback: number,
-): number => {
-  const parsed = Number.parseInt(value ?? "", 10);
-  if (Number.isNaN(parsed) || parsed < 1) {
-    return fallback;
-  }
-
-  return parsed;
-};
 
 const dueCardsEmailBatchSize = (): number => {
   return parsePositiveInt(process.env.DUE_CARDS_EMAIL_BATCH_SIZE, 100);

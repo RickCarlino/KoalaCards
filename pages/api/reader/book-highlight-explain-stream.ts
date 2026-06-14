@@ -2,33 +2,32 @@ import { prismaClient } from "@/koala/prisma-client";
 import { readerBookLocatorSchema } from "@/koala/reader/book";
 import { Prisma } from "@prisma/client";
 import {
-  buildOccurrenceContexts,
-  selectOccurrenceIndex,
-} from "@/koala/reader/highlight-context";
-import {
-  READER_HIGHLIGHT_CONTEXT_RADIUS,
   READER_HIGHLIGHT_PROMPT_VERSION,
   sha256Hex,
   type ReaderHighlightAnalysis,
 } from "@/koala/reader/highlight-explain";
+import {
+  baseHighlightStreamBodySchema,
+  errorAnalysisData,
+  inProgressAnalysisData,
+  parseHighlightStreamBody,
+  readyAnalysisData,
+  resolveHighlightSelection,
+  type HighlightOccurrenceRecord,
+} from "@/koala/reader/highlight-stream-shared";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { z } from "zod";
+import { requireTextOpenAiApiKey } from "@/koala/api/next-api";
 import {
-  streamCachedAnalysisResponse,
-  streamGeneratedAnalysisResponse,
+  runHighlightAnalysisStream,
+  streamGeneratedSelectionResponse,
 } from "./highlight-generation-helpers";
 import {
   requirePostMethod,
   requireReaderApiUserId,
-  startSSE,
 } from "./highlight-stream-helpers";
 
-const bodySchema = z.object({
-  publicId: z.string().trim().min(1),
-  selectedText: z.string().trim().min(1).max(220),
-  contextBefore: z.string().max(260).optional(),
-  contextAfter: z.string().max(260).optional(),
-  occurrenceHint: z.number().int().min(0).optional(),
+const bodySchema = baseHighlightStreamBodySchema.extend({
   sectionText: z.string().min(1).max(80000),
   locatorJson: readerBookLocatorSchema,
   epubCfi: z.string().trim().max(1000).optional(),
@@ -64,14 +63,7 @@ type ResolvedExplainRequest = {
   epubCfi: string | null;
   chapterTitle: string;
   progression: number;
-  occurrences: Array<{
-    index: number;
-    startOffset: number;
-    endOffset: number;
-    before: string;
-    match: string;
-    after: string;
-  }>;
+  occurrences: HighlightOccurrenceRecord[];
 };
 
 type ResolvedSelectionOccurrences = {
@@ -85,21 +77,11 @@ function toPrismaJson(value: unknown): Prisma.InputJsonValue {
   return value as Prisma.InputJsonValue;
 }
 
-function normalizeSectionText(value: string): string {
-  return value.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-}
-
 function parseBody(
   req: NextApiRequest,
   res: NextApiResponse,
 ): StreamRequestBody | null {
-  const parsed = bodySchema.safeParse(req.body);
-  if (parsed.success) {
-    return parsed.data;
-  }
-
-  res.status(400).end("Invalid request body.");
-  return null;
+  return parseHighlightStreamBody(bodySchema, req.body, res);
 }
 
 async function requireOwnedBook(
@@ -174,18 +156,23 @@ async function upsertAnnotation(options: {
   selectedTextHash: string;
   selectedOccurrenceIndex: number;
   occurrenceCount: number;
-  occurrencesJson: Array<{
-    index: number;
-    startOffset: number;
-    endOffset: number;
-    before: string;
-    match: string;
-    after: string;
-  }>;
+  occurrencesJson: HighlightOccurrenceRecord[];
   sectionTextHash: string;
 }): Promise<number> {
   const currentOccurrence =
     options.occurrencesJson[options.selectedOccurrenceIndex] ?? null;
+  const annotationData = {
+    locatorJson: toPrismaJson(options.locatorJson),
+    epubCfi: options.epubCfi,
+    chapterTitle: options.chapterTitle,
+    progression: options.progression,
+    quote: options.selectedText,
+    contextBefore: currentOccurrence?.before ?? "",
+    contextAfter: currentOccurrence?.after ?? "",
+    selectedOccurrenceIndex: options.selectedOccurrenceIndex,
+    occurrenceCount: options.occurrenceCount,
+    occurrencesJson: toPrismaJson(options.occurrencesJson),
+  };
   const record = await prismaClient.readerBookAnnotation.upsert({
     where: {
       userId_bookId_selectedTextHash_selectedOccurrenceIndex_sectionTextHash_promptVersion:
@@ -201,43 +188,15 @@ async function upsertAnnotation(options: {
     create: {
       userId: options.userId,
       bookId: options.bookId,
-      locatorJson: toPrismaJson(options.locatorJson),
-      epubCfi: options.epubCfi,
-      chapterTitle: options.chapterTitle,
-      progression: options.progression,
-      quote: options.selectedText,
-      contextBefore: currentOccurrence?.before ?? "",
-      contextAfter: currentOccurrence?.after ?? "",
+      ...annotationData,
       selectedTextHash: options.selectedTextHash,
-      selectedOccurrenceIndex: options.selectedOccurrenceIndex,
-      occurrenceCount: options.occurrenceCount,
-      occurrencesJson: toPrismaJson(options.occurrencesJson),
       sectionTextHash: options.sectionTextHash,
       promptVersion: READER_HIGHLIGHT_PROMPT_VERSION,
-      status: "IN_PROGRESS",
-      term: "",
-      definition: "",
-      generalMeaning: "",
-      meaningInContext: "",
-      errorMessage: "",
+      ...inProgressAnalysisData(),
     },
     update: {
-      locatorJson: toPrismaJson(options.locatorJson),
-      epubCfi: options.epubCfi,
-      chapterTitle: options.chapterTitle,
-      progression: options.progression,
-      quote: options.selectedText,
-      contextBefore: currentOccurrence?.before ?? "",
-      contextAfter: currentOccurrence?.after ?? "",
-      selectedOccurrenceIndex: options.selectedOccurrenceIndex,
-      occurrenceCount: options.occurrenceCount,
-      occurrencesJson: toPrismaJson(options.occurrencesJson),
-      status: "IN_PROGRESS",
-      term: "",
-      definition: "",
-      generalMeaning: "",
-      meaningInContext: "",
-      errorMessage: "",
+      ...annotationData,
+      ...inProgressAnalysisData(),
     },
     select: { id: true },
   });
@@ -251,14 +210,7 @@ async function markAnnotationReady(
 ): Promise<void> {
   await prismaClient.readerBookAnnotation.update({
     where: { id: annotationId },
-    data: {
-      status: "READY",
-      term: analysis.term,
-      definition: analysis.definition,
-      generalMeaning: analysis.generalMeaning,
-      meaningInContext: analysis.meaningInContext,
-      errorMessage: "",
-    },
+    data: readyAnalysisData(analysis),
   });
 }
 
@@ -268,20 +220,12 @@ async function markAnnotationError(
 ): Promise<void> {
   await prismaClient.readerBookAnnotation.update({
     where: { id: annotationId },
-    data: {
-      status: "ERROR",
-      errorMessage: message,
-    },
+    data: errorAnalysisData(message),
   });
 }
 
 function requireOpenAiKey(res: NextApiResponse): boolean {
-  if (process.env.OPENAI_API_KEY) {
-    return true;
-  }
-
-  res.status(500).end("Missing OPENAI_API_KEY");
-  return false;
+  return requireTextOpenAiApiKey(res);
 }
 
 async function resolveAuthorizedBook(
@@ -306,36 +250,21 @@ function resolveSelectionOccurrences(
   parsedBody: StreamRequestBody,
   res: NextApiResponse,
 ): ResolvedSelectionOccurrences | null {
-  const sectionText = normalizeSectionText(parsedBody.sectionText);
-  const selectedText = parsedBody.selectedText.trim();
-  const occurrences = buildOccurrenceContexts(
-    sectionText,
-    selectedText,
-    READER_HIGHLIGHT_CONTEXT_RADIUS,
-  );
-
-  if (occurrences.length === 0) {
-    res.status(400).end("Selected text was not found in this section.");
-    return null;
-  }
-
-  const selectedOccurrenceIndex = selectOccurrenceIndex({
-    occurrences,
-    contextBefore: parsedBody.contextBefore ?? "",
-    contextAfter: parsedBody.contextAfter ?? "",
-    occurrenceHint: parsedBody.occurrenceHint,
+  const selection = resolveHighlightSelection({
+    body: parsedBody,
+    missingMessage: "Selected text was not found in this section.",
+    res,
+    sourceText: parsedBody.sectionText,
   });
-
-  if (selectedOccurrenceIndex < 0) {
-    res.status(400).end("Could not resolve selected occurrence.");
+  if (!selection) {
     return null;
   }
 
   return {
-    sectionText,
-    selectedText,
-    selectedOccurrenceIndex,
-    occurrences,
+    sectionText: selection.sourceText,
+    selectedText: selection.selectedText,
+    selectedOccurrenceIndex: selection.selectedOccurrenceIndex,
+    occurrences: selection.occurrences,
   };
 }
 
@@ -408,32 +337,26 @@ async function streamGeneratedResponse(options: {
   isClosed: () => boolean;
   resolved: ResolvedExplainRequest;
 }): Promise<void> {
+  const { resolved, res, isClosed } = options;
   const {
-    resolved: {
-      userId,
-      book,
-      selectedText,
-      selectedTextHash,
-      sectionTextHash,
-      selectedOccurrenceIndex,
-      locatorJson,
-      epubCfi,
-      chapterTitle,
-      progression,
-      occurrences,
-    },
-    res,
-    isClosed,
-  } = options;
+    userId,
+    book,
+    selectedText,
+    selectedTextHash,
+    sectionTextHash,
+    selectedOccurrenceIndex,
+    locatorJson,
+    epubCfi,
+    chapterTitle,
+    progression,
+    occurrences,
+  } = resolved;
 
-  await streamGeneratedAnalysisResponse({
+  await streamGeneratedSelectionResponse({
     res,
     isClosed,
     title: chapterTitle ? `${book.title} - ${chapterTitle}` : book.title,
-    selectedText,
-    selectedOccurrenceIndex,
-    occurrenceCount: occurrences.length,
-    occurrences,
+    selection: resolved,
     createInProgressRecord: () =>
       upsertAnnotation({
         userId,
@@ -458,38 +381,20 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
 ): Promise<void> {
-  const resolved = await resolveExplainRequest(req, res);
-  if (!resolved) {
-    return;
-  }
-
-  const cached = await loadCachedAnnotation({
-    userId: resolved.userId,
-    bookId: resolved.book.id,
-    selectedTextHash: resolved.selectedTextHash,
-    selectedOccurrenceIndex: resolved.selectedOccurrenceIndex,
-    sectionTextHash: resolved.sectionTextHash,
+  await runHighlightAnalysisStream({
+    req,
+    res,
+    resolve: () => resolveExplainRequest(req, res),
+    loadCached: (resolved) =>
+      loadCachedAnnotation({
+        userId: resolved.userId,
+        bookId: resolved.book.id,
+        selectedTextHash: resolved.selectedTextHash,
+        selectedOccurrenceIndex: resolved.selectedOccurrenceIndex,
+        sectionTextHash: resolved.sectionTextHash,
+      }),
+    cachedSelectedText: (cached) => cached.quote,
+    streamGenerated: (resolved, isClosed) =>
+      streamGeneratedResponse({ res, isClosed, resolved }),
   });
-
-  let closed = false;
-  req.on("close", () => {
-    closed = true;
-  });
-
-  startSSE(res);
-  const isClosed = () => closed;
-
-  if (
-    cached &&
-    streamCachedAnalysisResponse({
-      res,
-      isClosed,
-      cached,
-      selectedText: cached.quote,
-    })
-  ) {
-    return;
-  }
-
-  await streamGeneratedResponse({ res, isClosed, resolved });
 }
