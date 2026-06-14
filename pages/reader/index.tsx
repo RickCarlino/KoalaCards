@@ -79,7 +79,6 @@ type ReaderBookSummary = {
     };
     lastOpenedAt: Date | null;
   } | null;
-  bookmarkCount: number;
   annotationCount: number;
   createdAt: Date;
   updatedAt: Date;
@@ -617,8 +616,7 @@ function BookRow({
               </Text>
             </Group>
             <Text size="xs" c="dimmed">
-              {book.bookmarkCount} bookmarks · {book.annotationCount}{" "}
-              highlights
+              {book.annotationCount} highlights
             </Text>
           </Stack>
         </Group>

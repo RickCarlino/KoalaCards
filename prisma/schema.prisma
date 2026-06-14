@@ -61,7 +61,6 @@ model User {
   readerArticleHighlights    ReaderArticleHighlight[]
   readerBooks                ReaderBook[]
   readerBookProgresses       ReaderBookProgress[]
-  readerBookBookmarks        ReaderBookBookmark[]
   readerBookAnnotations      ReaderBookAnnotation[]
   languageExchangeLink       LanguageExchangeLink?
   languageExchangePresence   LanguageExchangePresence?
@@ -89,6 +88,9 @@ model UserSettings {
   maxLapses          Int      @default(0)
   dueCardsEmailNotifications Boolean @default(false)
   languageExchangeAvailable Boolean @default(false)
+  readerBookFontSize Int @default(20)
+  readerBookLineHeight Float @default(1.75)
+  readerBookColumnWidth Int @default(800)
   dueCardsEmailNotificationSentAt DateTime?
 }
 
@@ -443,7 +445,6 @@ model ReaderBook {
   createdAt        DateTime               @default(now())
   updatedAt        DateTime               @updatedAt
   progress         ReaderBookProgress?
-  bookmarks        ReaderBookBookmark[]
   annotations      ReaderBookAnnotation[]
 
   @@unique([userId, fingerprint])
@@ -465,24 +466,6 @@ model ReaderBookProgress {
   updatedAt           DateTime   @updatedAt
 
   @@index([userId, lastOpenedAt])
-}
-
-model ReaderBookBookmark {
-  id           Int        @id @default(autoincrement())
-  userId       String
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  bookId       Int
-  book         ReaderBook @relation(fields: [bookId], references: [id], onDelete: Cascade)
-  locatorJson  Json
-  epubCfi      String?    @db.Text
-  chapterTitle String     @default("") @db.Text
-  progression  Float      @default(0)
-  label        String     @default("") @db.Text
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-
-  @@index([userId, bookId, createdAt])
-  @@index([bookId, createdAt])
 }
 
 model ReaderBookAnnotation {

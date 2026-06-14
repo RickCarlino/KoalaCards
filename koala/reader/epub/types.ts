@@ -26,13 +26,10 @@ export type EpubManifest = {
   spineJson: EpubSpineItem[];
 };
 
-export type EpubReaderFlow = "scrolled" | "paginated";
-
 export type EpubReadingPreferences = {
   fontSize: number;
   lineHeight: number;
   columnWidth: number;
-  flow: EpubReaderFlow;
 };
 
 export type EpubBookLocator = {

@@ -23,6 +23,11 @@ import {
   type EpubSession,
 } from "@/koala/reader/epub/parser";
 import {
+  DEFAULT_EPUB_READING_PREFERENCES,
+  EPUB_READING_PREFERENCE_LIMITS,
+  resolveEpubReadingPreferences,
+} from "@/koala/reader/epub/preferences";
+import {
   canRelinkReaderBook,
   manifestForRelinkedReaderBook,
 } from "@/koala/reader/epub/relink";
@@ -46,7 +51,6 @@ import {
 } from "@/koala/reader/ui/highlights";
 import { ReaderPanel } from "@/koala/reader/ui/layout";
 import {
-  formatReaderDateTime,
   readerDividerColor,
   readerHeadingColor,
   readerPanelBorderColor,
@@ -63,7 +67,6 @@ import {
   Select,
   Slider,
   Stack,
-  Tabs,
   Text,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
@@ -112,52 +115,72 @@ type ReaderBookHeaderData = {
   author: string;
 };
 
-type ReaderBookBookmarkView = {
-  id: number;
-  locatorJson: EpubBookLocator;
-  label: string;
-  chapterTitle: string;
-  progression: number;
-  createdAt: Date;
-};
-
 type ReaderDeckOption = {
   id: number;
   name: string;
 };
 
-type ReaderBookInspectorTab = "highlights" | "bookmarks" | "contents";
-
-const DEFAULT_PREFERENCES: EpubReadingPreferences = {
-  fontSize: 18,
-  lineHeight: 1.65,
-  columnWidth: 720,
-  flow: "scrolled",
+type ReaderBookPageProps = {
+  initialPreferences: EpubReadingPreferences;
 };
+
+type SideRailPanel = "current" | "highlights" | "settings";
 
 const SELECTION_CONTEXT_RADIUS = 60;
-const PAGINATED_KEYBOARD_PAGE_GAP = 42;
+const AUTO_EXPLAIN_SELECTION_MAX_LENGTH = 80;
 const readerPageStyle: React.CSSProperties = {
+  boxSizing: "border-box",
   width: "100%",
-  paddingInline: "clamp(10px, 2.2vw, 28px)",
-  paddingTop: "clamp(10px, 1.5vw, 18px)",
-  paddingBottom: "clamp(16px, 2.6vw, 30px)",
+  maxWidth: "100vw",
+  height: "100svh",
+  maxHeight: "100svh",
+  overflow: "hidden",
 };
 const bookWorkspaceStyle: React.CSSProperties = {
+  boxSizing: "border-box",
   display: "grid",
-  gridTemplateColumns: "minmax(0, 1fr) minmax(280px, 360px)",
-  gap: "clamp(10px, 1.5vw, 18px)",
-  alignItems: "start",
+  gridTemplateColumns:
+    "minmax(275px, 335px) minmax(0, 1fr) minmax(400px, 460px)",
+  alignItems: "stretch",
+  minWidth: 0,
+  width: "100%",
+  height: "100%",
+  minHeight: 0,
 };
 const bookWorkspaceResponsiveStyle: React.CSSProperties = {
   ...bookWorkspaceStyle,
-  gridTemplateColumns: "minmax(0, 1fr) minmax(min(100%, 280px), 360px)",
+  gridTemplateColumns:
+    "minmax(275px, 335px) minmax(0, 1fr) minmax(400px, 460px)",
+};
+const readerBookRailStyle: React.CSSProperties = {
+  boxSizing: "border-box",
+  display: "flex",
+  flexDirection: "column",
+  gap: 18,
+  minWidth: 0,
+  minHeight: 0,
+  height: "100%",
+  borderRight: `1px solid ${readerPanelBorderColor}`,
+  backgroundColor: "#fffdfd",
+  padding: "14px 16px",
+  overflow: "hidden",
+};
+const readerBookRailBodyStyle: React.CSSProperties = {
+  flex: "1 1 auto",
+  minHeight: 0,
+  minWidth: 0,
+  overflow: "hidden",
+};
+const readerCenterStyle: React.CSSProperties = {
+  boxSizing: "border-box",
+  minWidth: 0,
+  minHeight: 0,
+  height: "100%",
+  backgroundColor: "#fff",
 };
 const bookFrameStyle: React.CSSProperties = {
-  height: "calc(100svh - var(--app-shell-header-offset, 60px) - 118px)",
-  minHeight: 520,
-  border: `1px solid ${readerPanelBorderColor}`,
-  borderRadius: 8,
+  height: "100%",
+  minHeight: 0,
   overflow: "hidden",
   backgroundColor: "#fff",
 };
@@ -168,23 +191,49 @@ const iframeStyle: React.CSSProperties = {
   display: "block",
 };
 const sideRailStyle: React.CSSProperties = {
-  position: "sticky",
-  top: "calc(var(--app-shell-header-offset, 60px) + 12px)",
-  maxHeight: "calc(100svh - var(--app-shell-header-offset, 60px) - 24px)",
+  boxSizing: "border-box",
+  display: "flex",
+  flexDirection: "column",
+  minWidth: 0,
+  width: "100%",
+  maxWidth: "100%",
+  height: "100%",
+  maxHeight: "100%",
+  borderLeft: `1px solid ${readerPanelBorderColor}`,
+  backgroundColor: "#fffdfd",
+  padding: "12px 14px",
   overflow: "hidden",
 };
-const sideRailPanelHeight =
-  "calc(100svh - var(--app-shell-header-offset, 60px) - 82px)";
+const sideRailContentStyle: React.CSSProperties = {
+  minWidth: 0,
+  paddingRight: 6,
+  paddingBottom: 16,
+};
+const sideRailScrollAreaStyle: React.CSSProperties = {
+  flex: "1 1 auto",
+  minHeight: 0,
+  minWidth: 0,
+  maxWidth: "100%",
+};
+const sideRailSectionStyle: React.CSSProperties = {
+  minWidth: 0,
+};
+const selectedHighlightPreviewStyle: React.CSSProperties = {
+  borderBottom: `1px solid ${readerDividerColor}`,
+  paddingBottom: 8,
+  overflowWrap: "anywhere",
+};
 const openingBookStates = new Set<BookLoadState>(["checking", "loading"]);
-const readerFlowValues = new Set<EpubReadingPreferences["flow"]>([
-  "scrolled",
-  "paginated",
-]);
-const readerBookInspectorTabs = new Set<ReaderBookInspectorTab>([
+const sideRailPanelValues = new Set<SideRailPanel>([
+  "current",
   "highlights",
-  "bookmarks",
-  "contents",
+  "settings",
 ]);
+const sideRailPanelOptions = [
+  { value: "current", label: "Current" },
+  { value: "highlights", label: "Highlights" },
+  { value: "settings", label: "Settings" },
+];
 
 function mutationErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message.trim()) {
@@ -222,19 +271,8 @@ function normalizeHref(value: string): string {
   return value.split("#")[0].split("?")[0];
 }
 
-function isReaderFlow(
-  value: string,
-): value is EpubReadingPreferences["flow"] {
-  return readerFlowValues.has(value as EpubReadingPreferences["flow"]);
-}
-
-function isReaderBookInspectorTab(
-  value: string | null,
-): value is ReaderBookInspectorTab {
-  return (
-    typeof value === "string" &&
-    readerBookInspectorTabs.has(value as ReaderBookInspectorTab)
-  );
+function isSideRailPanel(value: string): value is SideRailPanel {
+  return sideRailPanelValues.has(value as SideRailPanel);
 }
 
 function shouldIgnoreReaderKeyTarget(target: EventTarget | null): boolean {
@@ -304,20 +342,11 @@ function findSectionIndex(
 
 function currentProgressionFromFrame(
   iframe: HTMLIFrameElement | null,
-  flow: EpubReadingPreferences["flow"],
 ): number {
   const document = iframe?.contentDocument;
   const scrollingElement = document?.scrollingElement;
   if (!scrollingElement) {
     return 0;
-  }
-
-  if (flow === "paginated") {
-    const maxScroll = Math.max(
-      1,
-      scrollingElement.scrollWidth - scrollingElement.clientWidth,
-    );
-    return scrollingElement.scrollLeft / maxScroll;
   }
 
   const maxScroll = Math.max(
@@ -330,7 +359,6 @@ function currentProgressionFromFrame(
 function scrollFrameToProgression(
   iframe: HTMLIFrameElement | null,
   locator: EpubBookLocator | null,
-  flow: EpubReadingPreferences["flow"],
 ): void {
   if (!locator || typeof locator.progression !== "number") {
     return;
@@ -343,54 +371,11 @@ function scrollFrameToProgression(
   }
 
   const progression = Math.max(0, Math.min(1, locator.progression));
-  if (flow === "paginated") {
-    const maxScroll = Math.max(
-      0,
-      scrollingElement.scrollWidth - scrollingElement.clientWidth,
-    );
-    scrollingElement.scrollLeft = maxScroll * progression;
-    return;
-  }
-
   const maxScroll = Math.max(
     0,
     scrollingElement.scrollHeight - scrollingElement.clientHeight,
   );
   scrollingElement.scrollTop = maxScroll * progression;
-}
-
-function pageFrameHorizontally(
-  iframe: HTMLIFrameElement | null,
-  direction: -1 | 1,
-): boolean {
-  const scrollingElement = iframe?.contentDocument?.scrollingElement;
-  if (!scrollingElement) {
-    return false;
-  }
-
-  const maxScroll = Math.max(
-    0,
-    scrollingElement.scrollWidth - scrollingElement.clientWidth,
-  );
-  if (maxScroll === 0) {
-    return false;
-  }
-
-  const currentScroll = scrollingElement.scrollLeft;
-  const pageWidth = Math.max(
-    1,
-    scrollingElement.clientWidth - PAGINATED_KEYBOARD_PAGE_GAP,
-  );
-  const nextScroll = Math.max(
-    0,
-    Math.min(maxScroll, currentScroll + pageWidth * direction),
-  );
-  if (Math.abs(nextScroll - currentScroll) < 1) {
-    return false;
-  }
-
-  scrollingElement.scrollLeft = nextScroll;
-  return true;
 }
 
 function isAnnotationInSection(
@@ -450,6 +435,209 @@ function canImportReaderAnnotations(options: {
     options.selectedAnnotationIds.length > 0 &&
     options.selectedDeckId !== null
   );
+}
+
+function selectionDraftKey(options: {
+  draft: ReaderSelectionDraft;
+  sectionHref: string;
+}): string {
+  const { draft, sectionHref } = options;
+
+  return JSON.stringify([
+    sectionHref,
+    draft.selectedText,
+    draft.contextBefore,
+    draft.contextAfter,
+    draft.occurrenceHint,
+  ]);
+}
+
+function isAutoExplainSelection(
+  draft: ReaderSelectionDraft | null,
+): boolean {
+  return (
+    draft !== null &&
+    draft.selectedText.length <= AUTO_EXPLAIN_SELECTION_MAX_LENGTH
+  );
+}
+
+function annotationAnalysis(
+  annotation: ReaderArticleHighlight,
+): ReaderHighlightAnalysis | null {
+  const analysis = {
+    term: annotation.term,
+    definition: annotation.definition,
+    generalMeaning: annotation.generalMeaning,
+    meaningInContext: annotation.meaningInContext,
+  };
+
+  if (
+    annotation.status !== "ready" ||
+    analysis.definition.trim().length === 0 ||
+    analysis.generalMeaning.trim().length === 0 ||
+    analysis.meaningInContext.trim().length === 0
+  ) {
+    return null;
+  }
+
+  return analysis;
+}
+
+function selectionDraftFromAnnotation(
+  annotation: ReaderArticleHighlight,
+): ReaderSelectionDraft {
+  return {
+    selectedText: annotation.selectedText,
+    contextBefore: annotation.contextBefore,
+    contextAfter: annotation.contextAfter,
+    occurrenceHint: annotation.selectedOccurrenceIndex,
+  };
+}
+
+function readerBookImportStatusLabel(
+  status: HighlightImportResultStatus,
+): string {
+  if (status === "created") {
+    return "Added to deck";
+  }
+
+  if (status === "duplicate") {
+    return "Duplicate term";
+  }
+
+  if (status === "already_imported") {
+    return "Already added";
+  }
+
+  if (status === "not_ready") {
+    return "Not ready";
+  }
+
+  return "Not found";
+}
+
+function readerBookImportStatusColor(
+  status: HighlightImportResultStatus,
+): string {
+  if (status === "created") {
+    return "green";
+  }
+
+  if (status === "not_ready") {
+    return "yellow";
+  }
+
+  return "gray";
+}
+
+function importStatusIsAdded(
+  status: HighlightImportResultStatus | undefined,
+): boolean {
+  return status === "created" || status === "already_imported";
+}
+
+function closestElementFromEventTarget(
+  target: EventTarget | null,
+  selector: string,
+): Element | null {
+  if (!target || typeof target !== "object") {
+    return null;
+  }
+
+  const targetElement = target as {
+    closest?: (selector: string) => Element | null;
+    parentElement?: Element | null;
+  };
+  if (typeof targetElement.closest === "function") {
+    return targetElement.closest(selector);
+  }
+
+  return targetElement.parentElement?.closest(selector) ?? null;
+}
+
+function activeAnnotationFrom(
+  annotations: ReaderArticleHighlight[],
+  explainedAnnotationId: number | null,
+): ReaderArticleHighlight | null {
+  if (explainedAnnotationId === null) {
+    return null;
+  }
+
+  return (
+    annotations.find(
+      (annotation) => annotation.id === explainedAnnotationId,
+    ) ?? null
+  );
+}
+
+function activeImportStatusFrom(options: {
+  explainedAnnotationId: number | null;
+  importStatusByAnnotationId: Record<number, HighlightImportResultStatus>;
+}): HighlightImportResultStatus | undefined {
+  if (options.explainedAnnotationId === null) {
+    return undefined;
+  }
+
+  return options.importStatusByAnnotationId[options.explainedAnnotationId];
+}
+
+function isActiveAnnotationAlreadyAdded(options: {
+  activeAnnotation: ReaderArticleHighlight | null;
+  activeImportStatus: HighlightImportResultStatus | undefined;
+}): boolean {
+  if (
+    options.activeAnnotation !== null &&
+    options.activeAnnotation.importedCardId !== null
+  ) {
+    return true;
+  }
+
+  return importStatusIsAdded(options.activeImportStatus);
+}
+
+function canAddActiveAnnotationToDeck(options: {
+  explainedAnnotationId: number | null;
+  selectedDeckId: string | null;
+  analysis: ReaderHighlightAnalysis | null;
+  activeAnnotationAlreadyAdded: boolean;
+  isExplaining: boolean;
+  isImportingActiveAnnotation: boolean;
+}): boolean {
+  if (options.explainedAnnotationId === null) {
+    return false;
+  }
+
+  if (options.selectedDeckId === null) {
+    return false;
+  }
+
+  if (options.analysis === null) {
+    return false;
+  }
+
+  if (options.activeAnnotationAlreadyAdded || options.isExplaining) {
+    return false;
+  }
+
+  return !options.isImportingActiveAnnotation;
+}
+
+function activeAnnotationHandlerOrUndefined(options: {
+  explainedAnnotationId: number | null;
+  activeAnnotationAlreadyAdded: boolean;
+  handler: () => Promise<void>;
+}): (() => void) | undefined {
+  if (options.explainedAnnotationId === null) {
+    return undefined;
+  }
+
+  if (options.activeAnnotationAlreadyAdded) {
+    return undefined;
+  }
+
+  return () => {
+    void options.handler();
+  };
 }
 
 function textOffsetBeforeRange(
@@ -638,41 +826,30 @@ function BookQueryErrorPanel({ errorMessage }: { errorMessage: string }) {
   );
 }
 
-function ReaderBookHeader({ book }: { book: ReaderBookHeaderData }) {
-  const hasAuthor = book.author.trim().length > 0;
-
-  return (
-    <Group justify="space-between" align="flex-start" wrap="wrap">
-      <Stack gap={2} style={{ minWidth: 0, flex: "1 1 360px" }}>
-        <Anchor component={Link} href="/reader" size="sm">
-          Reader
-        </Anchor>
-        <Text size="xl" fw={700} c={readerHeadingColor} lineClamp={2}>
-          {book.title}
-        </Text>
-        {hasAuthor && (
-          <Text size="sm" c="dimmed" lineClamp={1}>
-            {book.author}
-          </Text>
-        )}
-      </Stack>
-    </Group>
-  );
-}
-
-function SectionNavigation({
+function BookInfoRail({
+  book,
   currentSpineItem,
   sectionIndex,
   sectionCount,
   readerUnavailable,
+  navigationItems,
+  isRelinking,
   onSectionChange,
+  onJumpToLocator,
+  onRelink,
 }: {
+  book: ReaderBookHeaderData;
   currentSpineItem: EpubSpineItem | null;
   sectionIndex: number;
   sectionCount: number;
   readerUnavailable: boolean;
+  navigationItems: EpubNavigationItem[];
+  isRelinking: boolean;
   onSectionChange: (nextIndex: number) => void;
+  onJumpToLocator: (locator: EpubBookLocator) => void;
+  onRelink: () => void;
 }) {
+  const hasAuthor = book.author.trim().length > 0;
   const previousDisabled = readerUnavailable || sectionIndex <= 0;
   const nextDisabled =
     readerUnavailable || sectionIndex >= sectionCount - 1;
@@ -680,31 +857,94 @@ function SectionNavigation({
     currentSpineItem?.title ?? `Section ${sectionIndex + 1}`;
 
   return (
-    <Group justify="space-between" wrap="wrap" gap="xs">
-      <Group gap="xs" wrap="wrap">
-        <Button
-          variant="subtle"
-          color="gray"
-          size="compact-sm"
-          disabled={previousDisabled}
-          onClick={() => onSectionChange(sectionIndex - 1)}
+    <Box component="aside" style={readerBookRailStyle}>
+      <Anchor component={Link} href="/reader" size="sm">
+        Reader
+      </Anchor>
+      <Stack gap={4} style={{ minWidth: 0 }}>
+        <Text
+          size="lg"
+          fw={700}
+          c={readerHeadingColor}
+          lineClamp={5}
+          style={{ lineHeight: 1.25 }}
         >
-          Previous
-        </Button>
-        <Button
-          variant="subtle"
-          color="gray"
-          size="compact-sm"
-          disabled={nextDisabled}
-          onClick={() => onSectionChange(sectionIndex + 1)}
-        >
-          Next
-        </Button>
-      </Group>
-      <Text size="xs" c="dimmed">
-        {sectionTitle} · {sectionIndex + 1} / {sectionCount}
-      </Text>
-    </Group>
+          {book.title}
+        </Text>
+        {hasAuthor ? (
+          <Text size="sm" c="dimmed" lineClamp={2}>
+            {book.author}
+          </Text>
+        ) : null}
+      </Stack>
+      <Stack
+        gap="xs"
+        style={{
+          borderTop: `1px solid ${readerDividerColor}`,
+          paddingTop: 14,
+          minWidth: 0,
+        }}
+      >
+        <Text size="xs" c="dimmed">
+          Section {sectionIndex + 1} / {sectionCount}
+        </Text>
+        <Text size="sm" fw={700} c={readerHeadingColor} lineClamp={4}>
+          {sectionTitle}
+        </Text>
+        <Group gap="xs" grow>
+          <Button
+            variant="light"
+            color="gray"
+            size="compact-sm"
+            disabled={previousDisabled}
+            onClick={() => onSectionChange(sectionIndex - 1)}
+          >
+            Previous
+          </Button>
+          <Button
+            variant="light"
+            color="gray"
+            size="compact-sm"
+            disabled={nextDisabled}
+            onClick={() => onSectionChange(sectionIndex + 1)}
+          >
+            Next
+          </Button>
+        </Group>
+      </Stack>
+      <Box style={readerBookRailBodyStyle}>
+        <Stack gap="xs" h="100%" style={{ minWidth: 0 }}>
+          <Group justify="space-between" gap="sm" wrap="nowrap">
+            <Text size="sm" fw={700} c={readerHeadingColor}>
+              Contents
+            </Text>
+            <Button
+              variant="subtle"
+              color="gray"
+              size="compact-xs"
+              onClick={onRelink}
+              loading={isRelinking}
+            >
+              Relink
+            </Button>
+          </Group>
+          <ScrollArea
+            h="100%"
+            type="auto"
+            style={{ flex: "1 1 auto", minHeight: 0 }}
+          >
+            <Box pr={6}>
+              <NavigationList
+                items={navigationItems}
+                onJump={(href) => {
+                  onJumpToLocator({ href, progression: 0 });
+                }}
+              />
+            </Box>
+          </ScrollArea>
+        </Stack>
+      </Box>
+    </Box>
   );
 }
 
@@ -867,45 +1107,28 @@ function BookFrameContent({
 }
 
 function BookReaderPanel({
-  currentSpineItem,
-  sectionIndex,
-  sectionCount,
-  readerUnavailable,
   loadState,
   loadError,
   title,
   renderedSection,
   iframeRef,
   isRelinking,
-  onSectionChange,
   onRelink,
   onRequestPermission,
   onIframeLoad,
 }: {
-  currentSpineItem: EpubSpineItem | null;
-  sectionIndex: number;
-  sectionCount: number;
-  readerUnavailable: boolean;
   loadState: BookLoadState;
   loadError: string;
   title: string;
   renderedSection: RenderedSectionState | null;
   iframeRef: React.MutableRefObject<HTMLIFrameElement | null>;
   isRelinking: boolean;
-  onSectionChange: (nextIndex: number) => void;
   onRelink: () => void;
   onRequestPermission: () => void;
   onIframeLoad: () => void;
 }) {
   return (
-    <ReaderPanel gap="xs">
-      <SectionNavigation
-        currentSpineItem={currentSpineItem}
-        sectionIndex={sectionIndex}
-        sectionCount={sectionCount}
-        readerUnavailable={readerUnavailable}
-        onSectionChange={onSectionChange}
-      />
+    <Box style={readerCenterStyle}>
       <Box style={bookFrameStyle}>
         <BookFrameContent
           loadState={loadState}
@@ -919,18 +1142,68 @@ function BookReaderPanel({
           onIframeLoad={onIframeLoad}
         />
       </Box>
-    </ReaderPanel>
+    </Box>
   );
 }
 
-function HighlightSelectionPanel({
+function currentHighlightDeleteState(options: {
+  explainedAnnotationId: number | null;
+  deletingAnnotationId: number | null;
+  onDeleteAnnotation: (annotationId: number) => void;
+}): {
+  deleteHighlight?: () => void;
+  canDeleteHighlight: boolean;
+  isDeletingHighlight: boolean;
+} {
+  if (options.explainedAnnotationId === null) {
+    return {
+      canDeleteHighlight: false,
+      isDeletingHighlight: false,
+    };
+  }
+
+  const annotationId = options.explainedAnnotationId;
+  return {
+    deleteHighlight: () => options.onDeleteAnnotation(annotationId),
+    canDeleteHighlight: true,
+    isDeletingHighlight: options.deletingAnnotationId === annotationId,
+  };
+}
+
+function shouldShowCurrentHighlightText(options: {
+  selectionDraft: ReaderSelectionDraft | null;
+  analysis: ReaderHighlightAnalysis | null;
+}): boolean {
+  return options.selectionDraft !== null && options.analysis === null;
+}
+
+function shouldShowManualCurrentExplain(options: {
+  selectionDraft: ReaderSelectionDraft | null;
+  streamError: string;
+  analysis: ReaderHighlightAnalysis | null;
+}): boolean {
+  if (options.selectionDraft === null || options.analysis !== null) {
+    return false;
+  }
+
+  if (!isAutoExplainSelection(options.selectionDraft)) {
+    return true;
+  }
+
+  return options.streamError.trim().length > 0;
+}
+
+function CurrentHighlightPanel({
   selectionDraft,
   isExplaining,
   streamError,
   analysis,
   explainedAnnotationId,
+  canAddActiveAnnotation,
+  isImportingActiveAnnotation,
   deletingAnnotationId,
   onExplainSelection,
+  onAddActiveAnnotation,
   onDeleteAnnotation,
 }: {
   selectionDraft: ReaderSelectionDraft | null;
@@ -939,68 +1212,71 @@ function HighlightSelectionPanel({
   analysis: ReaderHighlightAnalysis | null;
   explainedAnnotationId: number | null;
   deletingAnnotationId: number | null;
+  canAddActiveAnnotation: boolean;
+  isImportingActiveAnnotation: boolean;
   onExplainSelection: () => void;
+  onAddActiveAnnotation?: () => void;
   onDeleteAnnotation: (annotationId: number) => void;
 }) {
-  const deleteAnnotationId = explainedAnnotationId;
-  const deleteHighlight =
-    deleteAnnotationId === null
-      ? undefined
-      : () => onDeleteAnnotation(deleteAnnotationId);
-  const canDeleteHighlight = deleteAnnotationId !== null;
-  const isDeletingHighlight =
-    deleteAnnotationId !== null &&
-    deletingAnnotationId === deleteAnnotationId;
-  const hasSelectionPanelState =
-    selectionDraft !== null ||
-    isExplaining ||
-    streamError.trim().length > 0 ||
-    analysis !== null ||
-    canDeleteHighlight;
-
-  if (!hasSelectionPanelState) {
-    return null;
-  }
+  const { deleteHighlight, canDeleteHighlight, isDeletingHighlight } =
+    currentHighlightDeleteState({
+      explainedAnnotationId,
+      deletingAnnotationId,
+      onDeleteAnnotation,
+    });
+  const showManualExplain = shouldShowManualCurrentExplain({
+    selectionDraft,
+    streamError,
+    analysis,
+  });
+  const explainLabel = streamError.trim().length > 0 ? "Retry" : "Explain";
+  const showSelectedText = shouldShowCurrentHighlightText({
+    selectionDraft,
+    analysis,
+  });
+  const selectedText = selectionDraft?.selectedText ?? "";
 
   return (
-    <Stack
-      gap="sm"
-      style={{
-        borderBottom: `1px solid ${readerDividerColor}`,
-        paddingBottom: 10,
-      }}
-    >
-      {selectionDraft ? (
+    <Stack gap="sm" style={sideRailSectionStyle}>
+      {showSelectedText ? (
         <Stack gap={6}>
-          <Text size="xs" c="dimmed">
-            Selected
-          </Text>
           <Text
             size="sm"
             fw={700}
             c={readerHeadingColor}
-            style={{ overflowWrap: "anywhere" }}
+            style={selectedHighlightPreviewStyle}
           >
-            {selectionDraft.selectedText}
+            {selectedText}
           </Text>
-          <Button
-            size="compact-sm"
-            color="grape"
-            onClick={onExplainSelection}
-            loading={isExplaining}
-            disabled={isExplaining}
-          >
-            Explain
-          </Button>
+          {showManualExplain ? (
+            <Button
+              size="compact-sm"
+              color="grape"
+              onClick={onExplainSelection}
+              loading={isExplaining}
+              disabled={isExplaining}
+            >
+              {explainLabel}
+            </Button>
+          ) : null}
         </Stack>
+      ) : null}
+      {!selectionDraft ? (
+        <Text size="sm" c="dimmed">
+          Highlight text to explain it.
+        </Text>
       ) : null}
       <ExplainSelectionCard
         isExplaining={isExplaining}
         streamError={streamError}
         analysis={analysis}
+        onAddToDeck={onAddActiveAnnotation}
+        canAddToDeck={canAddActiveAnnotation}
+        isAddingToDeck={isImportingActiveAnnotation}
         onDeleteHighlight={deleteHighlight}
         canDeleteHighlight={canDeleteHighlight}
         isDeletingHighlight={isDeletingHighlight}
+        flowExplanation
       />
     </Stack>
   );
@@ -1033,7 +1309,12 @@ function HighlightDeckActionRow({
   }));
 
   return (
-    <Group gap="xs" align="center" wrap="wrap">
+    <Group
+      gap="xs"
+      align="center"
+      wrap="wrap"
+      style={{ minWidth: 0, width: "100%" }}
+    >
       <Select
         aria-label="Deck"
         placeholder="Deck"
@@ -1041,7 +1322,7 @@ function HighlightDeckActionRow({
         value={selectedDeckId}
         onChange={onDeckChange}
         data={deckOptions}
-        style={{ flex: "1 1 150px", minWidth: 0 }}
+        style={{ flex: "1 1 150px", minWidth: 0, maxWidth: "100%" }}
       />
       <Button
         size="compact-sm"
@@ -1049,6 +1330,7 @@ function HighlightDeckActionRow({
         onClick={onImportSelected}
         disabled={!canImportSelected}
         loading={isImportingSelected}
+        style={{ flex: "0 1 auto" }}
       >
         Add to deck
       </Button>
@@ -1058,6 +1340,7 @@ function HighlightDeckActionRow({
         color="grape"
         onClick={onToggleSelectAll}
         disabled={!canSelectAll}
+        style={{ flex: "0 1 auto" }}
       >
         {allImportableSelected ? "Clear all" : "Select all"}
       </Button>
@@ -1065,68 +1348,22 @@ function HighlightDeckActionRow({
   );
 }
 
-function ContentsPanel({
-  items,
-  isRelinking,
+function SettingsPanel({
   preferences,
   setPreferences,
-  onJumpToLocator,
-  onRelink,
 }: {
-  items: EpubNavigationItem[];
-  isRelinking: boolean;
   preferences: EpubReadingPreferences;
   setPreferences: React.Dispatch<
     React.SetStateAction<EpubReadingPreferences>
   >;
-  onJumpToLocator: (locator: EpubBookLocator) => void;
-  onRelink: () => void;
 }) {
   return (
-    <ReaderPanel
-      style={{ height: "100%", minHeight: 0, overflow: "hidden" }}
-    >
-      <Stack gap="md" style={{ height: "100%", minHeight: 0 }}>
-        <ReadingPreferencesControls
-          preferences={preferences}
-          setPreferences={setPreferences}
-        />
-        <Stack
-          gap="xs"
-          style={{
-            borderTop: `1px solid ${readerDividerColor}`,
-            paddingTop: 10,
-            flex: "1 1 auto",
-            minHeight: 0,
-          }}
-        >
-          <Group justify="space-between" align="center" gap="xs">
-            <Text size="sm" fw={700} c={readerHeadingColor}>
-              Contents
-            </Text>
-            <Button
-              variant="subtle"
-              color="gray"
-              size="compact-xs"
-              onClick={onRelink}
-              loading={isRelinking}
-            >
-              Relink
-            </Button>
-          </Group>
-          <ScrollArea style={{ flex: "1 1 auto", minHeight: 0 }}>
-            <Box pr={4}>
-              <NavigationList
-                items={items}
-                onJump={(href) => {
-                  onJumpToLocator({ href, progression: 0 });
-                }}
-              />
-            </Box>
-          </ScrollArea>
-        </Stack>
-      </Stack>
-    </ReaderPanel>
+    <Stack gap="sm" style={sideRailSectionStyle}>
+      <ReadingPreferencesControls
+        preferences={preferences}
+        setPreferences={setPreferences}
+      />
+    </Stack>
   );
 }
 
@@ -1141,36 +1378,13 @@ function ReadingPreferencesControls({
 }) {
   return (
     <Stack gap="xs">
-      <Text size="sm" fw={700} c={readerHeadingColor}>
-        Reading
-      </Text>
-      <SegmentedControl
-        value={preferences.flow}
-        onChange={(value) => {
-          if (!isReaderFlow(value)) {
-            return;
-          }
-
-          setPreferences((current) => ({
-            ...current,
-            flow: value,
-          }));
-        }}
-        data={[
-          { value: "scrolled", label: "Scroll" },
-          { value: "paginated", label: "Pages" },
-        ]}
-        size="xs"
-        color="pink"
-        fullWidth
-      />
       <Text size="xs" c="dimmed">
         Font size
       </Text>
       <Slider
-        min={14}
-        max={26}
-        step={1}
+        min={EPUB_READING_PREFERENCE_LIMITS.fontSize.min}
+        max={EPUB_READING_PREFERENCE_LIMITS.fontSize.max}
+        step={EPUB_READING_PREFERENCE_LIMITS.fontSize.step}
         value={preferences.fontSize}
         onChange={(fontSize) => {
           setPreferences((current) => ({
@@ -1184,9 +1398,9 @@ function ReadingPreferencesControls({
         Line height
       </Text>
       <Slider
-        min={1.25}
-        max={2}
-        step={0.05}
+        min={EPUB_READING_PREFERENCE_LIMITS.lineHeight.min}
+        max={EPUB_READING_PREFERENCE_LIMITS.lineHeight.max}
+        step={EPUB_READING_PREFERENCE_LIMITS.lineHeight.step}
         value={preferences.lineHeight}
         onChange={(lineHeight) => {
           setPreferences((current) => ({
@@ -1200,9 +1414,9 @@ function ReadingPreferencesControls({
         Width
       </Text>
       <Slider
-        min={520}
-        max={900}
-        step={20}
+        min={EPUB_READING_PREFERENCE_LIMITS.columnWidth.min}
+        max={EPUB_READING_PREFERENCE_LIMITS.columnWidth.max}
+        step={EPUB_READING_PREFERENCE_LIMITS.columnWidth.step}
         value={preferences.columnWidth}
         onChange={(columnWidth) => {
           setPreferences((current) => ({
@@ -1216,104 +1430,9 @@ function ReadingPreferencesControls({
   );
 }
 
-function bookmarkDisplayLabel(bookmark: ReaderBookBookmarkView): string {
-  return (
-    bookmark.label ||
-    bookmark.chapterTitle ||
-    bookmark.locatorJson.title ||
-    "Bookmark"
-  );
-}
-
-function BookmarksPanel({
-  bookmarks,
-  readerUnavailable,
-  isAddingBookmark,
-  deletingBookmarkId,
-  onAddBookmark,
-  onJumpToLocator,
-  onDeleteBookmark,
-}: {
-  bookmarks: ReaderBookBookmarkView[];
-  readerUnavailable: boolean;
-  isAddingBookmark: boolean;
-  deletingBookmarkId: number | null;
-  onAddBookmark: () => void;
-  onJumpToLocator: (locator: EpubBookLocator) => void;
-  onDeleteBookmark: (bookmarkId: number) => void;
-}) {
-  return (
-    <ReaderPanel>
-      <Stack gap="xs">
-        <Group justify="space-between" align="center" gap="xs">
-          <Text size="sm" fw={700} c={readerHeadingColor}>
-            Bookmarks
-          </Text>
-          <Button
-            variant="subtle"
-            color="pink"
-            size="compact-xs"
-            onClick={onAddBookmark}
-            loading={isAddingBookmark}
-            disabled={readerUnavailable}
-          >
-            Bookmark
-          </Button>
-        </Group>
-        {bookmarks.length === 0 && (
-          <Text size="sm" c="dimmed">
-            No bookmarks yet.
-          </Text>
-        )}
-        {bookmarks.map((bookmark) => (
-          <Stack
-            key={bookmark.id}
-            gap={4}
-            style={{
-              borderTop: `1px solid ${readerDividerColor}`,
-              paddingTop: 8,
-            }}
-          >
-            <Button
-              variant="subtle"
-              color="gray"
-              size="compact-xs"
-              justify="flex-start"
-              onClick={() => onJumpToLocator(bookmark.locatorJson)}
-              style={{ whiteSpace: "normal" }}
-            >
-              {bookmarkDisplayLabel(bookmark)}
-            </Button>
-            <Group justify="space-between" gap="xs">
-              <Text size="xs" c="dimmed">
-                {Math.round(bookmark.progression * 100)}% ·{" "}
-                {formatReaderDateTime(bookmark.createdAt)}
-              </Text>
-              <Button
-                variant="subtle"
-                color="red"
-                size="compact-xs"
-                loading={deletingBookmarkId === bookmark.id}
-                onClick={() => onDeleteBookmark(bookmark.id)}
-              >
-                Delete
-              </Button>
-            </Group>
-          </Stack>
-        ))}
-      </Stack>
-    </ReaderPanel>
-  );
-}
-
 function HighlightsPanel({
-  selectionDraft,
   decks,
   selectedDeckId,
-  isExplaining,
-  streamError,
-  analysis,
-  explainedAnnotationId,
   annotations,
   isFetching,
   deletingAnnotationId,
@@ -1324,19 +1443,14 @@ function HighlightsPanel({
   allImportableSelected,
   importStatusByAnnotationId,
   onDeckChange,
-  onExplainSelection,
+  onOpenAnnotation,
   onToggleAnnotationSelection,
   onImportSelected,
   onToggleSelectAll,
   onDeleteAnnotation,
 }: {
-  selectionDraft: ReaderSelectionDraft | null;
   decks: ReaderDeckOption[];
   selectedDeckId: string | null;
-  isExplaining: boolean;
-  streamError: string;
-  analysis: ReaderHighlightAnalysis | null;
-  explainedAnnotationId: number | null;
   annotations: ReaderArticleHighlight[];
   isFetching: boolean;
   deletingAnnotationId: number | null;
@@ -1347,7 +1461,7 @@ function HighlightsPanel({
   allImportableSelected: boolean;
   importStatusByAnnotationId: Record<number, HighlightImportResultStatus>;
   onDeckChange: (deckId: string | null) => void;
-  onExplainSelection: () => void;
+  onOpenAnnotation?: (annotation: ReaderArticleHighlight) => void;
   onToggleAnnotationSelection: (
     annotationId: number,
     isSelected: boolean,
@@ -1356,19 +1470,11 @@ function HighlightsPanel({
   onToggleSelectAll: () => void;
   onDeleteAnnotation: (annotationId: number) => void;
 }) {
+  const showBulkActions = annotations.length > 0;
+
   return (
-    <ReaderPanel>
-      <Stack gap="sm">
-        <HighlightSelectionPanel
-          selectionDraft={selectionDraft}
-          isExplaining={isExplaining}
-          streamError={streamError}
-          analysis={analysis}
-          explainedAnnotationId={explainedAnnotationId}
-          deletingAnnotationId={deletingAnnotationId}
-          onExplainSelection={onExplainSelection}
-          onDeleteAnnotation={onDeleteAnnotation}
-        />
+    <Stack gap="sm" style={sideRailSectionStyle}>
+      {showBulkActions ? (
         <HighlightDeckActionRow
           decks={decks}
           selectedDeckId={selectedDeckId}
@@ -1380,46 +1486,32 @@ function HighlightsPanel({
           onImportSelected={onImportSelected}
           onToggleSelectAll={onToggleSelectAll}
         />
-        <HighlightsHistoryCard
-          highlights={annotations}
-          isLoading={isFetching}
-          errorMessage=""
-          hideActions
-          deletingHighlightId={deletingAnnotationId}
-          selectedHighlightIds={selectedAnnotationIds}
-          onToggleHighlightSelection={onToggleAnnotationSelection}
-          onImportSelected={onImportSelected}
-          canImportSelected={canImportSelected}
-          isImportingSelected={isImportingSelected}
-          onToggleSelectAll={onToggleSelectAll}
-          canSelectAll={importableAnnotationIds.length > 0}
-          allImportableSelected={allImportableSelected}
-          importStatusByHighlightId={importStatusByAnnotationId}
-          onDeleteHighlight={onDeleteAnnotation}
-        />
-      </Stack>
-    </ReaderPanel>
-  );
-}
-
-function SideRailTabScroll({ children }: { children: React.ReactNode }) {
-  return (
-    <ScrollArea h={sideRailPanelHeight} type="auto">
-      <Box pr={4} pt="sm">
-        {children}
-      </Box>
-    </ScrollArea>
+      ) : null}
+      <HighlightsHistoryCard
+        highlights={annotations}
+        isLoading={isFetching}
+        errorMessage=""
+        hideActions
+        deletingHighlightId={deletingAnnotationId}
+        selectedHighlightIds={selectedAnnotationIds}
+        onToggleHighlightSelection={onToggleAnnotationSelection}
+        onImportSelected={onImportSelected}
+        canImportSelected={canImportSelected}
+        isImportingSelected={isImportingSelected}
+        onToggleSelectAll={onToggleSelectAll}
+        canSelectAll={importableAnnotationIds.length > 0}
+        allImportableSelected={allImportableSelected}
+        importStatusByHighlightId={importStatusByAnnotationId}
+        onDeleteHighlight={onDeleteAnnotation}
+        onOpenHighlight={onOpenAnnotation}
+      />
+    </Stack>
   );
 }
 
 function BookSideRail({
-  activeTab,
+  activePanel,
   selectionDraft,
-  navigationItems,
-  bookmarks,
-  readerUnavailable,
-  isAddingBookmark,
-  isRelinking,
   preferences,
   decks,
   selectedDeckId,
@@ -1427,9 +1519,10 @@ function BookSideRail({
   streamError,
   analysis,
   explainedAnnotationId,
+  canAddActiveAnnotation,
+  isImportingActiveAnnotation,
   annotations,
   isFetching,
-  deletingBookmarkId,
   deletingAnnotationId,
   selectedAnnotationIds,
   canImportSelected,
@@ -1438,25 +1531,18 @@ function BookSideRail({
   allImportableSelected,
   importStatusByAnnotationId,
   setPreferences,
-  onActiveTabChange,
-  onAddBookmark,
+  onActivePanelChange,
   onDeckChange,
   onExplainSelection,
-  onJumpToLocator,
-  onRelink,
-  onDeleteBookmark,
+  onAddActiveAnnotation,
+  onOpenAnnotation,
   onToggleAnnotationSelection,
   onImportSelected,
   onToggleSelectAll,
   onDeleteAnnotation,
 }: {
-  activeTab: ReaderBookInspectorTab;
+  activePanel: SideRailPanel;
   selectionDraft: ReaderSelectionDraft | null;
-  navigationItems: EpubNavigationItem[];
-  bookmarks: ReaderBookBookmarkView[];
-  readerUnavailable: boolean;
-  isAddingBookmark: boolean;
-  isRelinking: boolean;
   preferences: EpubReadingPreferences;
   decks: ReaderDeckOption[];
   selectedDeckId: string | null;
@@ -1464,9 +1550,10 @@ function BookSideRail({
   streamError: string;
   analysis: ReaderHighlightAnalysis | null;
   explainedAnnotationId: number | null;
+  canAddActiveAnnotation: boolean;
+  isImportingActiveAnnotation: boolean;
   annotations: ReaderArticleHighlight[];
   isFetching: boolean;
-  deletingBookmarkId: number | null;
   deletingAnnotationId: number | null;
   selectedAnnotationIds: number[];
   canImportSelected: boolean;
@@ -1477,13 +1564,11 @@ function BookSideRail({
   setPreferences: React.Dispatch<
     React.SetStateAction<EpubReadingPreferences>
   >;
-  onActiveTabChange: (tab: ReaderBookInspectorTab) => void;
-  onAddBookmark: () => void;
+  onActivePanelChange: (panel: SideRailPanel) => void;
   onDeckChange: (deckId: string | null) => void;
   onExplainSelection: () => void;
-  onJumpToLocator: (locator: EpubBookLocator) => void;
-  onRelink: () => void;
-  onDeleteBookmark: (bookmarkId: number) => void;
+  onAddActiveAnnotation?: () => void;
+  onOpenAnnotation?: (annotation: ReaderArticleHighlight) => void;
   onToggleAnnotationSelection: (
     annotationId: number,
     isSelected: boolean,
@@ -1492,87 +1577,83 @@ function BookSideRail({
   onToggleSelectAll: () => void;
   onDeleteAnnotation: (annotationId: number) => void;
 }) {
+  let activePanelContent: React.ReactNode = null;
+
+  if (activePanel === "current") {
+    activePanelContent = (
+      <CurrentHighlightPanel
+        selectionDraft={selectionDraft}
+        isExplaining={isExplaining}
+        streamError={streamError}
+        analysis={analysis}
+        explainedAnnotationId={explainedAnnotationId}
+        canAddActiveAnnotation={canAddActiveAnnotation}
+        isImportingActiveAnnotation={isImportingActiveAnnotation}
+        deletingAnnotationId={deletingAnnotationId}
+        onExplainSelection={onExplainSelection}
+        onAddActiveAnnotation={onAddActiveAnnotation}
+        onDeleteAnnotation={onDeleteAnnotation}
+      />
+    );
+  }
+
+  if (activePanel === "highlights") {
+    activePanelContent = (
+      <HighlightsPanel
+        decks={decks}
+        selectedDeckId={selectedDeckId}
+        annotations={annotations}
+        isFetching={isFetching}
+        deletingAnnotationId={deletingAnnotationId}
+        selectedAnnotationIds={selectedAnnotationIds}
+        canImportSelected={canImportSelected}
+        isImportingSelected={isImportingSelected}
+        importableAnnotationIds={importableAnnotationIds}
+        allImportableSelected={allImportableSelected}
+        importStatusByAnnotationId={importStatusByAnnotationId}
+        onDeckChange={onDeckChange}
+        onOpenAnnotation={onOpenAnnotation}
+        onToggleAnnotationSelection={onToggleAnnotationSelection}
+        onImportSelected={onImportSelected}
+        onToggleSelectAll={onToggleSelectAll}
+        onDeleteAnnotation={onDeleteAnnotation}
+      />
+    );
+  }
+
+  if (activePanel === "settings") {
+    activePanelContent = (
+      <SettingsPanel
+        preferences={preferences}
+        setPreferences={setPreferences}
+      />
+    );
+  }
+
   return (
     <Stack gap="sm" style={sideRailStyle}>
-      <Tabs
-        value={activeTab}
+      <SegmentedControl
+        value={activePanel}
         onChange={(value) => {
-          if (isReaderBookInspectorTab(value)) {
-            onActiveTabChange(value);
+          if (isSideRailPanel(value)) {
+            onActivePanelChange(value);
           }
         }}
-        keepMounted={false}
-      >
-        <Tabs.List grow>
-          <Tabs.Tab value="highlights">Highlights</Tabs.Tab>
-          <Tabs.Tab value="bookmarks">Bookmarks</Tabs.Tab>
-          <Tabs.Tab value="contents">Contents</Tabs.Tab>
-        </Tabs.List>
-
-        <Tabs.Panel value="highlights">
-          <SideRailTabScroll>
-            <HighlightsPanel
-              selectionDraft={selectionDraft}
-              decks={decks}
-              selectedDeckId={selectedDeckId}
-              isExplaining={isExplaining}
-              streamError={streamError}
-              analysis={analysis}
-              explainedAnnotationId={explainedAnnotationId}
-              annotations={annotations}
-              isFetching={isFetching}
-              deletingAnnotationId={deletingAnnotationId}
-              selectedAnnotationIds={selectedAnnotationIds}
-              canImportSelected={canImportSelected}
-              isImportingSelected={isImportingSelected}
-              importableAnnotationIds={importableAnnotationIds}
-              allImportableSelected={allImportableSelected}
-              importStatusByAnnotationId={importStatusByAnnotationId}
-              onDeckChange={onDeckChange}
-              onExplainSelection={onExplainSelection}
-              onToggleAnnotationSelection={onToggleAnnotationSelection}
-              onImportSelected={onImportSelected}
-              onToggleSelectAll={onToggleSelectAll}
-              onDeleteAnnotation={onDeleteAnnotation}
-            />
-          </SideRailTabScroll>
-        </Tabs.Panel>
-        <Tabs.Panel value="bookmarks">
-          <SideRailTabScroll>
-            <BookmarksPanel
-              bookmarks={bookmarks}
-              readerUnavailable={readerUnavailable}
-              isAddingBookmark={isAddingBookmark}
-              deletingBookmarkId={deletingBookmarkId}
-              onAddBookmark={onAddBookmark}
-              onJumpToLocator={onJumpToLocator}
-              onDeleteBookmark={onDeleteBookmark}
-            />
-          </SideRailTabScroll>
-        </Tabs.Panel>
-        <Tabs.Panel value="contents">
-          <Box
-            pr={4}
-            pt="sm"
-            style={{ height: sideRailPanelHeight, minHeight: 0 }}
-          >
-            <ContentsPanel
-              items={navigationItems}
-              isRelinking={isRelinking}
-              preferences={preferences}
-              setPreferences={setPreferences}
-              onJumpToLocator={onJumpToLocator}
-              onRelink={onRelink}
-            />
-          </Box>
-        </Tabs.Panel>
-      </Tabs>
+        data={sideRailPanelOptions}
+        size="xs"
+        color="pink"
+        fullWidth
+      />
+      <ScrollArea h="100%" type="auto" style={sideRailScrollAreaStyle}>
+        <Box style={sideRailContentStyle}>{activePanelContent}</Box>
+      </ScrollArea>
     </Stack>
   );
 }
 
 function ReaderBookWorkspace({
   book,
+  activeSideRailPanel,
   currentSpineItem,
   sectionIndex,
   sectionCount,
@@ -1581,7 +1662,6 @@ function ReaderBookWorkspace({
   loadError,
   renderedSection,
   iframeRef,
-  isAddingBookmark,
   isRelinking,
   decks,
   selectedDeckId,
@@ -1589,37 +1669,37 @@ function ReaderBookWorkspace({
   streamError,
   analysis,
   explainedAnnotationId,
+  canAddActiveAnnotation,
+  isImportingActiveAnnotation,
   deletingAnnotationId,
-  bookmarks,
   preferences,
   annotations,
   isFetching,
-  deletingBookmarkId,
   selectedAnnotationIds,
   canImportSelected,
   isImportingSelected,
   importableAnnotationIds,
   allImportableSelected,
   importStatusByAnnotationId,
-  activeInspectorTab,
   selectionDraft,
   setPreferences,
-  onActiveInspectorTabChange,
-  onAddBookmark,
+  setActiveSideRailPanel,
   onSectionChange,
   onRelink,
   onRequestPermission,
   onIframeLoad,
   onDeckChange,
   onExplainSelection,
+  onAddActiveAnnotation,
+  onOpenAnnotation,
   onDeleteAnnotation,
   onJumpToLocator,
-  onDeleteBookmark,
   onToggleAnnotationSelection,
   onImportSelected,
   onToggleSelectAll,
 }: {
   book: ReaderBookHeaderData & { navigationJson: EpubNavigationItem[] };
+  activeSideRailPanel: SideRailPanel;
   currentSpineItem: EpubSpineItem | null;
   sectionIndex: number;
   sectionCount: number;
@@ -1628,7 +1708,6 @@ function ReaderBookWorkspace({
   loadError: string;
   renderedSection: RenderedSectionState | null;
   iframeRef: React.MutableRefObject<HTMLIFrameElement | null>;
-  isAddingBookmark: boolean;
   isRelinking: boolean;
   decks: ReaderDeckOption[];
   selectedDeckId: string | null;
@@ -1636,34 +1715,33 @@ function ReaderBookWorkspace({
   streamError: string;
   analysis: ReaderHighlightAnalysis | null;
   explainedAnnotationId: number | null;
+  canAddActiveAnnotation: boolean;
+  isImportingActiveAnnotation: boolean;
   deletingAnnotationId: number | null;
-  bookmarks: ReaderBookBookmarkView[];
   preferences: EpubReadingPreferences;
   annotations: ReaderArticleHighlight[];
   isFetching: boolean;
-  deletingBookmarkId: number | null;
   selectedAnnotationIds: number[];
   canImportSelected: boolean;
   isImportingSelected: boolean;
   importableAnnotationIds: number[];
   allImportableSelected: boolean;
   importStatusByAnnotationId: Record<number, HighlightImportResultStatus>;
-  activeInspectorTab: ReaderBookInspectorTab;
   selectionDraft: ReaderSelectionDraft | null;
   setPreferences: React.Dispatch<
     React.SetStateAction<EpubReadingPreferences>
   >;
-  onActiveInspectorTabChange: (tab: ReaderBookInspectorTab) => void;
-  onAddBookmark: () => void;
+  setActiveSideRailPanel: (panel: SideRailPanel) => void;
   onSectionChange: (nextIndex: number) => void;
   onRelink: () => void;
   onRequestPermission: () => void;
   onIframeLoad: () => void;
   onDeckChange: (deckId: string | null) => void;
   onExplainSelection: () => void;
+  onAddActiveAnnotation?: () => void;
+  onOpenAnnotation?: (annotation: ReaderArticleHighlight) => void;
   onDeleteAnnotation: (annotationId: number) => void;
   onJumpToLocator: (locator: EpubBookLocator) => void;
-  onDeleteBookmark: (bookmarkId: number) => void;
   onToggleAnnotationSelection: (
     annotationId: number,
     isSelected: boolean,
@@ -1673,33 +1751,33 @@ function ReaderBookWorkspace({
 }) {
   return (
     <Box style={bookWorkspaceResponsiveStyle}>
-      <Stack gap="sm" style={{ minWidth: 0 }}>
-        <BookReaderPanel
-          currentSpineItem={currentSpineItem}
-          sectionIndex={sectionIndex}
-          sectionCount={sectionCount}
-          readerUnavailable={readerUnavailable}
-          loadState={loadState}
-          loadError={loadError}
-          title={book.title}
-          renderedSection={renderedSection}
-          iframeRef={iframeRef}
-          isRelinking={isRelinking}
-          onSectionChange={onSectionChange}
-          onRelink={onRelink}
-          onRequestPermission={onRequestPermission}
-          onIframeLoad={onIframeLoad}
-        />
-      </Stack>
+      <BookInfoRail
+        book={book}
+        currentSpineItem={currentSpineItem}
+        sectionIndex={sectionIndex}
+        sectionCount={sectionCount}
+        readerUnavailable={readerUnavailable}
+        navigationItems={book.navigationJson}
+        isRelinking={isRelinking}
+        onSectionChange={onSectionChange}
+        onJumpToLocator={onJumpToLocator}
+        onRelink={onRelink}
+      />
+      <BookReaderPanel
+        loadState={loadState}
+        loadError={loadError}
+        title={book.title}
+        renderedSection={renderedSection}
+        iframeRef={iframeRef}
+        isRelinking={isRelinking}
+        onRelink={onRelink}
+        onRequestPermission={onRequestPermission}
+        onIframeLoad={onIframeLoad}
+      />
 
       <BookSideRail
-        activeTab={activeInspectorTab}
+        activePanel={activeSideRailPanel}
         selectionDraft={selectionDraft}
-        navigationItems={book.navigationJson}
-        bookmarks={bookmarks}
-        readerUnavailable={readerUnavailable}
-        isAddingBookmark={isAddingBookmark}
-        isRelinking={isRelinking}
         preferences={preferences}
         decks={decks}
         selectedDeckId={selectedDeckId}
@@ -1707,9 +1785,10 @@ function ReaderBookWorkspace({
         streamError={streamError}
         analysis={analysis}
         explainedAnnotationId={explainedAnnotationId}
+        canAddActiveAnnotation={canAddActiveAnnotation}
+        isImportingActiveAnnotation={isImportingActiveAnnotation}
         annotations={annotations}
         isFetching={isFetching}
-        deletingBookmarkId={deletingBookmarkId}
         deletingAnnotationId={deletingAnnotationId}
         selectedAnnotationIds={selectedAnnotationIds}
         canImportSelected={canImportSelected}
@@ -1718,13 +1797,11 @@ function ReaderBookWorkspace({
         allImportableSelected={allImportableSelected}
         importStatusByAnnotationId={importStatusByAnnotationId}
         setPreferences={setPreferences}
-        onActiveTabChange={onActiveInspectorTabChange}
-        onAddBookmark={onAddBookmark}
+        onActivePanelChange={setActiveSideRailPanel}
         onDeckChange={onDeckChange}
         onExplainSelection={onExplainSelection}
-        onJumpToLocator={onJumpToLocator}
-        onRelink={onRelink}
-        onDeleteBookmark={onDeleteBookmark}
+        onAddActiveAnnotation={onAddActiveAnnotation}
+        onOpenAnnotation={onOpenAnnotation}
         onToggleAnnotationSelection={onToggleAnnotationSelection}
         onImportSelected={onImportSelected}
         onToggleSelectAll={onToggleSelectAll}
@@ -1736,6 +1813,7 @@ function ReaderBookWorkspace({
 
 function ReaderBookShell({
   book,
+  activeSideRailPanel,
   currentSpineItem,
   sectionIndex,
   sectionCount,
@@ -1744,7 +1822,6 @@ function ReaderBookShell({
   loadError,
   renderedSection,
   iframeRef,
-  isAddingBookmark,
   isRelinking,
   decks,
   selectedDeckId,
@@ -1752,23 +1829,21 @@ function ReaderBookShell({
   streamError,
   analysis,
   explainedAnnotationId,
+  canAddActiveAnnotation,
+  isImportingActiveAnnotation,
   deletingAnnotationId,
-  bookmarks,
   preferences,
   annotations,
   isFetching,
-  deletingBookmarkId,
   selectedAnnotationIds,
   canImportSelected,
   isImportingSelected,
   importableAnnotationIds,
   allImportableSelected,
   importStatusByAnnotationId,
-  activeInspectorTab,
   selectionDraft,
   setPreferences,
-  onActiveInspectorTabChange,
-  onAddBookmark,
+  setActiveSideRailPanel,
   onSectionChange,
   onRelink,
   onRequestPermission,
@@ -1776,13 +1851,15 @@ function ReaderBookShell({
   onDeckChange,
   onDeleteAnnotation,
   onJumpToLocator,
-  onDeleteBookmark,
   onToggleAnnotationSelection,
   onImportSelected,
   onToggleSelectAll,
   onExplainSelection,
+  onAddActiveAnnotation,
+  onOpenAnnotation,
 }: {
   book: ReaderBookHeaderData & { navigationJson: EpubNavigationItem[] };
+  activeSideRailPanel: SideRailPanel;
   currentSpineItem: EpubSpineItem | null;
   sectionIndex: number;
   sectionCount: number;
@@ -1791,7 +1868,6 @@ function ReaderBookShell({
   loadError: string;
   renderedSection: RenderedSectionState | null;
   iframeRef: React.MutableRefObject<HTMLIFrameElement | null>;
-  isAddingBookmark: boolean;
   isRelinking: boolean;
   decks: ReaderDeckOption[];
   selectedDeckId: string | null;
@@ -1799,25 +1875,23 @@ function ReaderBookShell({
   streamError: string;
   analysis: ReaderHighlightAnalysis | null;
   explainedAnnotationId: number | null;
+  canAddActiveAnnotation: boolean;
+  isImportingActiveAnnotation: boolean;
   deletingAnnotationId: number | null;
-  bookmarks: ReaderBookBookmarkView[];
   preferences: EpubReadingPreferences;
   annotations: ReaderArticleHighlight[];
   isFetching: boolean;
-  deletingBookmarkId: number | null;
   selectedAnnotationIds: number[];
   canImportSelected: boolean;
   isImportingSelected: boolean;
   importableAnnotationIds: number[];
   allImportableSelected: boolean;
   importStatusByAnnotationId: Record<number, HighlightImportResultStatus>;
-  activeInspectorTab: ReaderBookInspectorTab;
   selectionDraft: ReaderSelectionDraft | null;
   setPreferences: React.Dispatch<
     React.SetStateAction<EpubReadingPreferences>
   >;
-  onActiveInspectorTabChange: (tab: ReaderBookInspectorTab) => void;
-  onAddBookmark: () => void;
+  setActiveSideRailPanel: (panel: SideRailPanel) => void;
   onSectionChange: (nextIndex: number) => void;
   onRelink: () => void;
   onRequestPermission: () => void;
@@ -1825,7 +1899,6 @@ function ReaderBookShell({
   onDeckChange: (deckId: string | null) => void;
   onDeleteAnnotation: (annotationId: number) => void;
   onJumpToLocator: (locator: EpubBookLocator) => void;
-  onDeleteBookmark: (bookmarkId: number) => void;
   onToggleAnnotationSelection: (
     annotationId: number,
     isSelected: boolean,
@@ -1833,60 +1906,58 @@ function ReaderBookShell({
   onImportSelected: () => void;
   onToggleSelectAll: () => void;
   onExplainSelection: () => void;
+  onAddActiveAnnotation?: () => void;
+  onOpenAnnotation?: (annotation: ReaderArticleHighlight) => void;
 }) {
   return (
     <Box style={readerPageStyle}>
-      <Stack gap="sm">
-        <ReaderBookHeader book={book} />
-        <ReaderBookWorkspace
-          book={book}
-          currentSpineItem={currentSpineItem}
-          sectionIndex={sectionIndex}
-          sectionCount={sectionCount}
-          readerUnavailable={readerUnavailable}
-          loadState={loadState}
-          loadError={loadError}
-          renderedSection={renderedSection}
-          iframeRef={iframeRef}
-          isAddingBookmark={isAddingBookmark}
-          isRelinking={isRelinking}
-          decks={decks}
-          selectedDeckId={selectedDeckId}
-          isExplaining={isExplaining}
-          streamError={streamError}
-          analysis={analysis}
-          explainedAnnotationId={explainedAnnotationId}
-          deletingAnnotationId={deletingAnnotationId}
-          bookmarks={bookmarks}
-          preferences={preferences}
-          annotations={annotations}
-          isFetching={isFetching}
-          deletingBookmarkId={deletingBookmarkId}
-          selectedAnnotationIds={selectedAnnotationIds}
-          canImportSelected={canImportSelected}
-          isImportingSelected={isImportingSelected}
-          importableAnnotationIds={importableAnnotationIds}
-          allImportableSelected={allImportableSelected}
-          importStatusByAnnotationId={importStatusByAnnotationId}
-          activeInspectorTab={activeInspectorTab}
-          selectionDraft={selectionDraft}
-          setPreferences={setPreferences}
-          onActiveInspectorTabChange={onActiveInspectorTabChange}
-          onAddBookmark={onAddBookmark}
-          onSectionChange={onSectionChange}
-          onRelink={onRelink}
-          onRequestPermission={onRequestPermission}
-          onIframeLoad={onIframeLoad}
-          onDeckChange={onDeckChange}
-          onDeleteAnnotation={onDeleteAnnotation}
-          onJumpToLocator={onJumpToLocator}
-          onDeleteBookmark={onDeleteBookmark}
-          onToggleAnnotationSelection={onToggleAnnotationSelection}
-          onImportSelected={onImportSelected}
-          onToggleSelectAll={onToggleSelectAll}
-          onExplainSelection={onExplainSelection}
-        />
-      </Stack>
+      <ReaderBookWorkspace
+        book={book}
+        activeSideRailPanel={activeSideRailPanel}
+        currentSpineItem={currentSpineItem}
+        sectionIndex={sectionIndex}
+        sectionCount={sectionCount}
+        readerUnavailable={readerUnavailable}
+        loadState={loadState}
+        loadError={loadError}
+        renderedSection={renderedSection}
+        iframeRef={iframeRef}
+        isRelinking={isRelinking}
+        decks={decks}
+        selectedDeckId={selectedDeckId}
+        isExplaining={isExplaining}
+        streamError={streamError}
+        analysis={analysis}
+        explainedAnnotationId={explainedAnnotationId}
+        canAddActiveAnnotation={canAddActiveAnnotation}
+        isImportingActiveAnnotation={isImportingActiveAnnotation}
+        deletingAnnotationId={deletingAnnotationId}
+        preferences={preferences}
+        annotations={annotations}
+        isFetching={isFetching}
+        selectedAnnotationIds={selectedAnnotationIds}
+        canImportSelected={canImportSelected}
+        isImportingSelected={isImportingSelected}
+        importableAnnotationIds={importableAnnotationIds}
+        allImportableSelected={allImportableSelected}
+        importStatusByAnnotationId={importStatusByAnnotationId}
+        selectionDraft={selectionDraft}
+        setPreferences={setPreferences}
+        setActiveSideRailPanel={setActiveSideRailPanel}
+        onSectionChange={onSectionChange}
+        onRelink={onRelink}
+        onRequestPermission={onRequestPermission}
+        onIframeLoad={onIframeLoad}
+        onDeckChange={onDeckChange}
+        onDeleteAnnotation={onDeleteAnnotation}
+        onJumpToLocator={onJumpToLocator}
+        onToggleAnnotationSelection={onToggleAnnotationSelection}
+        onImportSelected={onImportSelected}
+        onToggleSelectAll={onToggleSelectAll}
+        onExplainSelection={onExplainSelection}
+        onAddActiveAnnotation={onAddActiveAnnotation}
+        onOpenAnnotation={onOpenAnnotation}
+      />
     </Box>
   );
 }
@@ -1924,7 +1995,9 @@ async function openStoredBookSession(
   return { status: "ready", session };
 }
 
-export default function ReaderBookPage() {
+export default function ReaderBookPage({
+  initialPreferences,
+}: ReaderBookPageProps) {
   const router = useRouter();
   const publicId = readerPublicIdFromQuery(router.query.publicId);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
@@ -1932,6 +2005,13 @@ export default function ReaderBookPage() {
   const progressTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
+  const preferencesSaveTimeoutRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
+  const preferencesMountedRef = useRef(false);
+  const explainAbortRef = useRef<AbortController | null>(null);
+  const explainRequestIdRef = useRef(0);
+  const autoExplainedSelectionKeyRef = useRef<string | null>(null);
   const [session, setSession] = useState<EpubSession | null>(null);
   const [loadState, setLoadState] = useState<BookLoadState>("checking");
   const [loadError, setLoadError] = useState("");
@@ -1941,12 +2021,15 @@ export default function ReaderBookPage() {
   const [renderedSection, setRenderedSection] =
     useState<RenderedSectionState | null>(null);
   const [preferences, setPreferences] = useState<EpubReadingPreferences>(
-    DEFAULT_PREFERENCES,
+    () =>
+      resolveEpubReadingPreferences(
+        initialPreferences ?? DEFAULT_EPUB_READING_PREFERENCES,
+      ),
   );
+  const [activeSideRailPanel, setActiveSideRailPanel] =
+    useState<SideRailPanel>("current");
   const [selectionDraft, setSelectionDraft] =
     useState<ReaderSelectionDraft | null>(null);
-  const [activeInspectorTab, setActiveInspectorTab] =
-    useState<ReaderBookInspectorTab>("highlights");
   const [isExplaining, setIsExplaining] = useState(false);
   const [streamError, setStreamError] = useState("");
   const [analysis, setAnalysis] = useState<ReaderHighlightAnalysis | null>(
@@ -1967,10 +2050,8 @@ export default function ReaderBookPage() {
     number | null
   >(null);
   const [isImportingSelected, setIsImportingSelected] = useState(false);
-  const [isAddingBookmark, setIsAddingBookmark] = useState(false);
-  const [deletingBookmarkId, setDeletingBookmarkId] = useState<
-    number | null
-  >(null);
+  const [isImportingActiveAnnotation, setIsImportingActiveAnnotation] =
+    useState(false);
   const [isRelinking, setIsRelinking] = useState(false);
 
   const bookQuery = trpc.getReaderBookRoute.useQuery(
@@ -1981,8 +2062,11 @@ export default function ReaderBookPage() {
     },
   );
   const updateProgress = trpc.updateReaderBookProgressRoute.useMutation();
-  const createBookmark = trpc.createReaderBookBookmarkRoute.useMutation();
-  const deleteBookmark = trpc.deleteReaderBookBookmarkRoute.useMutation();
+  const updateReaderPreferences =
+    trpc.updateReaderBookPreferencesRoute.useMutation();
+  const updateReaderPreferencesRef = useRef(
+    updateReaderPreferences.mutate,
+  );
   const deleteAnnotation =
     trpc.deleteReaderBookAnnotationRoute.useMutation();
   const importAnnotations =
@@ -1992,13 +2076,41 @@ export default function ReaderBookPage() {
   const annotations = useMemo(() => {
     return bookQuery.data?.annotations ?? [];
   }, [bookQuery.data]);
-  const bookmarks = bookQuery.data?.bookmarks ?? [];
   const decks = useMemo(() => {
     return bookQuery.data?.decks ?? [];
   }, [bookQuery.data?.decks]);
   const spineJson = book?.spineJson ?? [];
   const currentSpineItem = spineJson[sectionIndex] ?? null;
   const currentSectionText = renderedSection?.text ?? "";
+
+  useEffect(() => {
+    updateReaderPreferencesRef.current = updateReaderPreferences.mutate;
+  }, [updateReaderPreferences.mutate]);
+
+  useEffect(() => {
+    if (!preferencesMountedRef.current) {
+      preferencesMountedRef.current = true;
+      return;
+    }
+
+    if (preferencesSaveTimeoutRef.current) {
+      clearTimeout(preferencesSaveTimeoutRef.current);
+    }
+
+    preferencesSaveTimeoutRef.current = setTimeout(() => {
+      updateReaderPreferencesRef.current(
+        resolveEpubReadingPreferences(preferences),
+      );
+      preferencesSaveTimeoutRef.current = null;
+    }, 500);
+
+    return () => {
+      if (preferencesSaveTimeoutRef.current) {
+        clearTimeout(preferencesSaveTimeoutRef.current);
+        preferencesSaveTimeoutRef.current = null;
+      }
+    };
+  }, [preferences]);
 
   useEffect(() => {
     setSelectedDeckId((current) => {
@@ -2023,10 +2135,7 @@ export default function ReaderBookPage() {
       return null;
     }
 
-    const progression = currentProgressionFromFrame(
-      iframeRef.current,
-      preferences.flow,
-    );
+    const progression = currentProgressionFromFrame(iframeRef.current);
     const totalProgression =
       spineJson.length > 0
         ? Math.max(
@@ -2045,13 +2154,7 @@ export default function ReaderBookPage() {
       progression,
       totalProgression,
     };
-  }, [
-    book,
-    currentSpineItem,
-    preferences.flow,
-    sectionIndex,
-    spineJson.length,
-  ]);
+  }, [book, currentSpineItem, sectionIndex, spineJson.length]);
 
   const scheduleProgressSave = useCallback(() => {
     if (!book || progressTimeoutRef.current) {
@@ -2093,10 +2196,14 @@ export default function ReaderBookPage() {
     (locator: EpubBookLocator) => {
       const nextIndex = findSectionIndex(spineJson, locator.href);
       pendingScrollLocatorRef.current = locator;
+      explainAbortRef.current?.abort();
+      autoExplainedSelectionKeyRef.current = null;
       setSectionIndex(nextIndex);
       setSelectionDraft(null);
       setAnalysis(null);
       setStreamError("");
+      setIsExplaining(false);
+      setExplainedAnnotationId(null);
     },
     [spineJson],
   );
@@ -2106,6 +2213,7 @@ export default function ReaderBookPage() {
       if (progressTimeoutRef.current) {
         clearTimeout(progressTimeoutRef.current);
       }
+      explainAbortRef.current?.abort();
     };
   }, []);
 
@@ -2239,10 +2347,117 @@ export default function ReaderBookPage() {
     applyCurrentSectionHighlights();
   }, [applyCurrentSectionHighlights]);
 
+  const explainSelectionDraft = useCallback(
+    async (draft: ReaderSelectionDraft) => {
+      if (!book || !currentSpineItem) {
+        return;
+      }
+
+      const locator = currentLocator();
+      if (!locator) {
+        return;
+      }
+
+      const requestId = explainRequestIdRef.current + 1;
+      const controller = new AbortController();
+      const isCurrentRequest = () =>
+        explainRequestIdRef.current === requestId &&
+        !controller.signal.aborted;
+
+      explainRequestIdRef.current = requestId;
+      explainAbortRef.current?.abort();
+      explainAbortRef.current = controller;
+      setIsExplaining(true);
+      setStreamError("");
+      setAnalysis(null);
+      setExplainedAnnotationId(null);
+
+      try {
+        const response = await fetch(
+          "/api/reader/book-highlight-explain-stream",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              publicId: book.publicId,
+              selectedText: draft.selectedText,
+              contextBefore: draft.contextBefore,
+              contextAfter: draft.contextAfter,
+              occurrenceHint: draft.occurrenceHint,
+              sectionText: currentSectionText,
+              locatorJson: locator,
+              chapterTitle: locator.chapterTitle,
+              progression: locator.totalProgression,
+            }),
+            signal: controller.signal,
+          },
+        );
+
+        if (!hasExplainSelectionStream(response)) {
+          throw new Error(await response.text());
+        }
+
+        await readBookExplainStream(response, {
+          onAnnotationId: (annotationId) => {
+            if (!isCurrentRequest()) {
+              return;
+            }
+
+            setExplainedAnnotationId(annotationId);
+            setSelectedAnnotationIds((current) =>
+              Array.from(new Set([...current, annotationId])),
+            );
+          },
+          onAnalysis: (nextAnalysis) => {
+            if (!isCurrentRequest()) {
+              return;
+            }
+
+            setAnalysis(nextAnalysis);
+          },
+          onDone: () => {
+            if (isCurrentRequest()) {
+              setIsExplaining(false);
+            }
+          },
+          onError: (message) => {
+            if (isCurrentRequest()) {
+              setStreamError(message);
+            }
+          },
+        });
+      } catch (error: unknown) {
+        const message = resolveExplainSelectionErrorMessage(
+          error,
+          controller.signal.aborted,
+        );
+        if (message && isCurrentRequest()) {
+          setStreamError(message);
+        }
+      } finally {
+        if (isCurrentRequest()) {
+          setIsExplaining(false);
+          bookQuery.refetch();
+        }
+        if (explainAbortRef.current === controller) {
+          explainAbortRef.current = null;
+        }
+      }
+    },
+    [
+      book,
+      bookQuery,
+      currentLocator,
+      currentSectionText,
+      currentSpineItem,
+    ],
+  );
+
   const handleFrameSelection = useCallback(() => {
     const iframe = iframeRef.current;
     if (!iframe || !renderedSection) {
       setSelectionDraft(null);
+      autoExplainedSelectionKeyRef.current = null;
       return;
     }
 
@@ -2251,10 +2466,28 @@ export default function ReaderBookPage() {
       sectionText: renderedSection.text,
     });
     setSelectionDraft(nextDraft);
-    if (nextDraft) {
-      setActiveInspectorTab("highlights");
+    if (!nextDraft) {
+      autoExplainedSelectionKeyRef.current = null;
+      return;
     }
-  }, [renderedSection]);
+
+    setActiveSideRailPanel("current");
+
+    if (!currentSpineItem || !isAutoExplainSelection(nextDraft)) {
+      return;
+    }
+
+    const nextSelectionKey = selectionDraftKey({
+      draft: nextDraft,
+      sectionHref: currentSpineItem.href,
+    });
+    if (autoExplainedSelectionKeyRef.current === nextSelectionKey) {
+      return;
+    }
+
+    autoExplainedSelectionKeyRef.current = nextSelectionKey;
+    void explainSelectionDraft(nextDraft);
+  }, [currentSpineItem, explainSelectionDraft, renderedSection]);
 
   const handleSectionChange = useCallback(
     async (nextIndex: number) => {
@@ -2269,9 +2502,12 @@ export default function ReaderBookPage() {
       setSectionIndex(
         Math.max(0, Math.min(spineJson.length - 1, nextIndex)),
       );
+      explainAbortRef.current?.abort();
+      autoExplainedSelectionKeyRef.current = null;
       setSelectionDraft(null);
       setAnalysis(null);
       setStreamError("");
+      setIsExplaining(false);
       setExplainedAnnotationId(null);
     },
     [book, currentLocator, spineJson.length, updateProgress],
@@ -2285,14 +2521,6 @@ export default function ReaderBookPage() {
       }
 
       event.preventDefault();
-      if (
-        preferences.flow === "paginated" &&
-        pageFrameHorizontally(iframeRef.current, direction)
-      ) {
-        scheduleProgressSave();
-        return;
-      }
-
       const nextIndex = Math.max(
         0,
         Math.min(spineJson.length - 1, sectionIndex + direction),
@@ -2303,14 +2531,7 @@ export default function ReaderBookPage() {
 
       void handleSectionChange(nextIndex);
     },
-    [
-      handleSectionChange,
-      loadState,
-      preferences.flow,
-      scheduleProgressSave,
-      sectionIndex,
-      spineJson.length,
-    ],
+    [handleSectionChange, loadState, sectionIndex, spineJson.length],
   );
 
   useEffect(() => {
@@ -2320,12 +2541,73 @@ export default function ReaderBookPage() {
     };
   }, [handleReaderKeyDown]);
 
+  const activateAnnotation = useCallback(
+    (annotation: ReaderArticleHighlight) => {
+      explainAbortRef.current?.abort();
+      autoExplainedSelectionKeyRef.current = null;
+      setIsExplaining(false);
+      setSelectionDraft(selectionDraftFromAnnotation(annotation));
+      setExplainedAnnotationId(annotation.id);
+      setAnalysis(annotationAnalysis(annotation));
+      setActiveSideRailPanel("current");
+      setSelectedAnnotationIds((current) =>
+        Array.from(new Set([...current, annotation.id])),
+      );
+
+      if (
+        annotation.status === "error" &&
+        annotation.errorMessage.trim().length > 0
+      ) {
+        setStreamError(annotation.errorMessage);
+        return;
+      }
+
+      setStreamError("");
+    },
+    [],
+  );
+
+  const handleFrameHighlightClick = useCallback(
+    (event: MouseEvent) => {
+      const highlightMark = closestElementFromEventTarget(
+        event.target,
+        "mark[data-reader-highlight='saved'][data-highlight-id]",
+      );
+      if (!highlightMark) {
+        return;
+      }
+
+      const rawId = highlightMark.getAttribute("data-highlight-id");
+      if (!rawId) {
+        return;
+      }
+
+      const annotationId = Number.parseInt(rawId, 10);
+      if (!Number.isFinite(annotationId)) {
+        return;
+      }
+
+      const annotation = annotations.find(
+        (item) => item.id === annotationId,
+      );
+      if (!annotation) {
+        return;
+      }
+
+      event.preventDefault();
+      iframeRef.current?.contentWindow?.getSelection()?.removeAllRanges();
+      activateAnnotation(annotation);
+    },
+    [activateAnnotation, annotations],
+  );
+
   const handleIframeLoad = useCallback(() => {
     const document = iframeRef.current?.contentDocument;
     if (!document) {
       return;
     }
 
+    document.addEventListener("click", handleFrameHighlightClick);
     document.addEventListener("mouseup", handleFrameSelection);
     document.addEventListener("keyup", handleFrameSelection);
     document.addEventListener("keydown", handleReaderKeyDown);
@@ -2334,145 +2616,23 @@ export default function ReaderBookPage() {
     scrollFrameToProgression(
       iframeRef.current,
       pendingScrollLocatorRef.current,
-      preferences.flow,
     );
     pendingScrollLocatorRef.current = null;
     scheduleProgressSave();
   }, [
     applyCurrentSectionHighlights,
+    handleFrameHighlightClick,
     handleFrameSelection,
     handleReaderKeyDown,
-    preferences.flow,
     scheduleProgressSave,
   ]);
 
   const handleExplainSelection = async () => {
-    if (
-      !book ||
-      !canExplainSelection(selectionDraft, isExplaining) ||
-      !currentSpineItem
-    ) {
+    if (!canExplainSelection(selectionDraft, isExplaining)) {
       return;
     }
 
-    const locator = currentLocator();
-    if (!locator) {
-      return;
-    }
-
-    setIsExplaining(true);
-    setActiveInspectorTab("highlights");
-    setStreamError("");
-    setAnalysis(null);
-    setExplainedAnnotationId(null);
-
-    try {
-      const response = await fetch(
-        "/api/reader/book-highlight-explain-stream",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            publicId: book.publicId,
-            selectedText: selectionDraft.selectedText,
-            contextBefore: selectionDraft.contextBefore,
-            contextAfter: selectionDraft.contextAfter,
-            occurrenceHint: selectionDraft.occurrenceHint,
-            sectionText: currentSectionText,
-            locatorJson: locator,
-            chapterTitle: locator.chapterTitle,
-            progression: locator.totalProgression,
-          }),
-        },
-      );
-
-      if (!hasExplainSelectionStream(response)) {
-        throw new Error(await response.text());
-      }
-
-      await readBookExplainStream(response, {
-        onAnnotationId: (annotationId) => {
-          setExplainedAnnotationId(annotationId);
-          setSelectedAnnotationIds((current) =>
-            Array.from(new Set([...current, annotationId])),
-          );
-        },
-        onAnalysis: setAnalysis,
-        onDone: () => {
-          setIsExplaining(false);
-          bookQuery.refetch();
-        },
-        onError: (message) => {
-          setStreamError(message);
-        },
-      });
-    } catch (error: unknown) {
-      const message = resolveExplainSelectionErrorMessage(error, false);
-      if (message) {
-        setStreamError(message);
-      }
-    } finally {
-      setIsExplaining(false);
-      bookQuery.refetch();
-    }
-  };
-
-  const handleAddBookmark = async () => {
-    if (!book) {
-      return;
-    }
-
-    const locator = currentLocator();
-    if (!locator) {
-      return;
-    }
-
-    setIsAddingBookmark(true);
-    try {
-      await createBookmark.mutateAsync({
-        publicId: book.publicId,
-        locatorJson: locator,
-        chapterTitle: locator.chapterTitle,
-        progression: locator.totalProgression,
-      });
-      notifications.show({
-        title: "Bookmark saved",
-        message: "Added to this book.",
-        color: "green",
-      });
-      bookQuery.refetch();
-    } catch (error: unknown) {
-      notifications.show({
-        title: "Bookmark failed",
-        message: mutationErrorMessage(error, "Couldn't save bookmark."),
-        color: "red",
-      });
-    } finally {
-      setIsAddingBookmark(false);
-    }
-  };
-
-  const handleDeleteBookmark = async (bookmarkId: number) => {
-    if (!book) {
-      return;
-    }
-
-    setDeletingBookmarkId(bookmarkId);
-    try {
-      await deleteBookmark.mutateAsync({
-        publicId: book.publicId,
-        bookmarkId,
-      });
-      bookQuery.refetch();
-    } catch (error: unknown) {
-      notifications.show({
-        title: "Delete failed",
-        message: mutationErrorMessage(error, "Couldn't delete bookmark."),
-        color: "red",
-      });
-    } finally {
-      setDeletingBookmarkId(null);
-    }
+    await explainSelectionDraft(selectionDraft);
   };
 
   const handleToggleAnnotationSelection = (
@@ -2490,7 +2650,7 @@ export default function ReaderBookPage() {
 
   const importAnnotationIds = async (annotationIds: number[]) => {
     if (!book || !selectedDeckId) {
-      return;
+      return null;
     }
 
     const result = await importAnnotations.mutateAsync({
@@ -2505,6 +2665,7 @@ export default function ReaderBookPage() {
       ),
     }));
     bookQuery.refetch();
+    return result;
   };
 
   const handleImportSelected = async () => {
@@ -2520,6 +2681,35 @@ export default function ReaderBookPage() {
       });
     } finally {
       setIsImportingSelected(false);
+    }
+  };
+
+  const handleImportActiveAnnotation = async () => {
+    if (explainedAnnotationId === null) {
+      return;
+    }
+
+    setIsImportingActiveAnnotation(true);
+    try {
+      const result = await importAnnotationIds([explainedAnnotationId]);
+      const status = result?.results[0]?.status;
+      if (!status) {
+        return;
+      }
+
+      notifications.show({
+        title: "Import",
+        message: readerBookImportStatusLabel(status),
+        color: readerBookImportStatusColor(status),
+      });
+    } catch (error: unknown) {
+      notifications.show({
+        title: "Add failed",
+        message: mutationErrorMessage(error, "Couldn't add highlight."),
+        color: "red",
+      });
+    } finally {
+      setIsImportingActiveAnnotation(false);
     }
   };
 
@@ -2678,6 +2868,31 @@ export default function ReaderBookPage() {
     selectedAnnotationIds,
     selectedDeckId,
   });
+  const activeAnnotation = activeAnnotationFrom(
+    annotations,
+    explainedAnnotationId,
+  );
+  const activeImportStatus = activeImportStatusFrom({
+    explainedAnnotationId,
+    importStatusByAnnotationId,
+  });
+  const activeAnnotationAlreadyAdded = isActiveAnnotationAlreadyAdded({
+    activeAnnotation,
+    activeImportStatus,
+  });
+  const canAddActiveAnnotation = canAddActiveAnnotationToDeck({
+    explainedAnnotationId,
+    selectedDeckId,
+    analysis,
+    activeAnnotationAlreadyAdded,
+    isExplaining,
+    isImportingActiveAnnotation,
+  });
+  const addActiveAnnotationHandler = activeAnnotationHandlerOrUndefined({
+    explainedAnnotationId,
+    activeAnnotationAlreadyAdded,
+    handler: handleImportActiveAnnotation,
+  });
 
   if (bookQuery.isError) {
     return (
@@ -2699,6 +2914,7 @@ export default function ReaderBookPage() {
   return (
     <ReaderBookShell
       book={book}
+      activeSideRailPanel={activeSideRailPanel}
       currentSpineItem={currentSpineItem}
       sectionIndex={sectionIndex}
       sectionCount={spineJson.length}
@@ -2707,7 +2923,6 @@ export default function ReaderBookPage() {
       loadError={loadError}
       renderedSection={renderedSection}
       iframeRef={iframeRef}
-      isAddingBookmark={isAddingBookmark}
       isRelinking={isRelinking}
       decks={decks}
       selectedDeckId={selectedDeckId}
@@ -2715,23 +2930,21 @@ export default function ReaderBookPage() {
       streamError={streamError}
       analysis={analysis}
       explainedAnnotationId={explainedAnnotationId}
+      canAddActiveAnnotation={canAddActiveAnnotation}
+      isImportingActiveAnnotation={isImportingActiveAnnotation}
       deletingAnnotationId={deletingAnnotationId}
-      bookmarks={bookmarks}
       preferences={preferences}
       annotations={annotations}
       isFetching={bookQuery.isFetching}
-      deletingBookmarkId={deletingBookmarkId}
       selectedAnnotationIds={selectedAnnotationIds}
       canImportSelected={canImportSelected}
       isImportingSelected={isImportingSelected}
       importableAnnotationIds={importableAnnotationIds}
       allImportableSelected={allImportableSelected}
       importStatusByAnnotationId={importStatusByAnnotationId}
-      activeInspectorTab={activeInspectorTab}
       selectionDraft={selectionDraft}
       setPreferences={setPreferences}
-      onActiveInspectorTabChange={setActiveInspectorTab}
-      onAddBookmark={handleAddBookmark}
+      setActiveSideRailPanel={setActiveSideRailPanel}
       onSectionChange={handleSectionChange}
       onRelink={handleRelink}
       onRequestPermission={handleRequestPermission}
@@ -2739,11 +2952,12 @@ export default function ReaderBookPage() {
       onDeckChange={setSelectedDeckId}
       onDeleteAnnotation={handleDeleteAnnotation}
       onJumpToLocator={jumpToLocator}
-      onDeleteBookmark={handleDeleteBookmark}
       onToggleAnnotationSelection={handleToggleAnnotationSelection}
       onImportSelected={handleImportSelected}
       onToggleSelectAll={handleToggleSelectAll}
       onExplainSelection={handleExplainSelection}
+      onAddActiveAnnotation={addActiveAnnotationHandler}
+      onOpenAnnotation={activateAnnotation}
     />
   );
 }
@@ -2760,5 +2974,11 @@ export async function getServerSideProps(
     return { redirect: { destination: "/", permanent: false } };
   }
 
-  return { props: {} };
+  const initialPreferences = resolveEpubReadingPreferences({
+    fontSize: userSettings.readerBookFontSize,
+    lineHeight: userSettings.readerBookLineHeight,
+    columnWidth: userSettings.readerBookColumnWidth,
+  });
+
+  return { props: { initialPreferences } };
 }

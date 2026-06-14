@@ -402,22 +402,6 @@ function blobToDataUrl(blob: Blob): Promise<string> {
 }
 
 function cssForPreferences(preferences: EpubReadingPreferences): string {
-  const flowCss =
-    preferences.flow === "paginated"
-      ? `
-        html, body { height: 100%; overflow: hidden; }
-        body {
-          max-width: none;
-          width: max-content;
-          column-width: ${preferences.columnWidth}px;
-          column-gap: 42px;
-        }
-      `
-      : `
-        html, body { min-height: 100%; }
-        body { max-width: ${preferences.columnWidth}px; }
-      `;
-
   return `
     :root {
       color-scheme: light;
@@ -439,7 +423,8 @@ function cssForPreferences(preferences: EpubReadingPreferences): string {
       line-height: ${preferences.lineHeight};
       overflow-wrap: anywhere;
     }
-    ${flowCss}
+    html, body { min-height: 100%; }
+    body { max-width: ${preferences.columnWidth}px; }
     img, svg, video {
       max-width: 100%;
       height: auto;

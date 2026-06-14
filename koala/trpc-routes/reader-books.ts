@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prismaClient } from "@/koala/prisma-client";
+import { EPUB_READING_PREFERENCE_LIMITS } from "@/koala/reader/epub/preferences";
 import {
   chooseFurthestReaderBookLocator,
   normalizeReaderBookProgression,
@@ -42,38 +43,43 @@ const readerBookProgressSchema = z.object({
   updatedAt: z.date(),
 });
 
-const readerBookBookmarkSchema = z.object({
-  id: z.number().int().positive(),
-  locatorJson: readerBookLocatorSchema,
-  epubCfi: z.string().nullable(),
-  chapterTitle: z.string(),
-  progression: z.number().min(0).max(1),
-  label: z.string(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-});
-
-const readerBookAnnotationSchema = z.object({
-  id: z.number().int().positive(),
+const readerBookAnnotationSelectionFields = {
   selectedText: z.string(),
   selectedOccurrenceIndex: z.number().int().min(0),
   occurrenceCount: z.number().int().min(0),
   status: z.enum(["in_progress", "ready", "error"]),
+};
+
+const readerBookAnnotationExplanationFields = {
   term: z.string(),
   definition: z.string(),
   generalMeaning: z.string(),
   meaningInContext: z.string(),
   errorMessage: z.string(),
+};
+
+const readerBookAnnotationImportFields = {
+  importedCardId: z.number().int().nullable(),
+  importedAt: z.date().nullable(),
+};
+
+const readerBookAnnotationTimestampFields = {
+  createdAt: z.date(),
+  updatedAt: z.date(),
+};
+
+const readerBookAnnotationSchema = z.object({
+  id: z.number().int().positive(),
+  ...readerBookAnnotationSelectionFields,
+  ...readerBookAnnotationExplanationFields,
   contextBefore: z.string(),
   contextAfter: z.string(),
   locatorJson: readerBookLocatorSchema,
   epubCfi: z.string().nullable(),
   chapterTitle: z.string(),
   progression: z.number().min(0).max(1),
-  importedCardId: z.number().int().nullable(),
-  importedAt: z.date().nullable(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
+  ...readerBookAnnotationImportFields,
+  ...readerBookAnnotationTimestampFields,
 });
 
 const readerBookSchema = z.object({
@@ -93,7 +99,6 @@ const readerBookSchema = z.object({
   navigationJson: z.array(readerBookNavigationItemSchema),
   spineJson: z.array(readerBookSpineItemSchema),
   progress: readerBookProgressSchema.nullable(),
-  bookmarkCount: z.number().int().min(0),
   annotationCount: z.number().int().min(0),
   createdAt: z.date(),
   updatedAt: z.date(),
@@ -139,7 +144,6 @@ const getReaderBookInputSchema = z.object({
 
 const getReaderBookOutputSchema = z.object({
   book: readerBookSchema,
-  bookmarks: z.array(readerBookBookmarkSchema),
   annotations: z.array(readerBookAnnotationSchema),
   decks: z.array(deckSummarySchema),
 });
@@ -151,31 +155,30 @@ const updateReaderBookProgressInputSchema = z.object({
   completed: z.boolean().optional(),
 });
 
+const updateReaderBookPreferencesInputSchema = z.object({
+  fontSize: z
+    .number()
+    .int()
+    .min(EPUB_READING_PREFERENCE_LIMITS.fontSize.min)
+    .max(EPUB_READING_PREFERENCE_LIMITS.fontSize.max),
+  lineHeight: z
+    .number()
+    .min(EPUB_READING_PREFERENCE_LIMITS.lineHeight.min)
+    .max(EPUB_READING_PREFERENCE_LIMITS.lineHeight.max),
+  columnWidth: z
+    .number()
+    .int()
+    .min(EPUB_READING_PREFERENCE_LIMITS.columnWidth.min)
+    .max(EPUB_READING_PREFERENCE_LIMITS.columnWidth.max),
+});
+
 const updateReaderBookProgressOutputSchema = z.object({
   status: z.literal("updated"),
   progress: readerBookProgressSchema,
 });
 
-const createReaderBookBookmarkInputSchema = z.object({
-  publicId: z.string().trim().min(1),
-  locatorJson: readerBookLocatorSchema,
-  epubCfi: z.string().trim().max(1000).optional(),
-  chapterTitle: z.string().trim().max(500).optional(),
-  progression: z.number().min(0).max(1).optional(),
-  label: z.string().trim().max(500).optional(),
-});
-
-const createReaderBookBookmarkOutputSchema = z.object({
-  bookmark: readerBookBookmarkSchema,
-});
-
-const deleteReaderBookBookmarkInputSchema = z.object({
-  publicId: z.string().trim().min(1),
-  bookmarkId: z.number().int().positive(),
-});
-
-const deleteReaderBookBookmarkOutputSchema = z.object({
-  status: z.literal("deleted"),
+const updateReaderBookPreferencesOutputSchema = z.object({
+  status: z.literal("updated"),
 });
 
 const listReaderBookAnnotationsInputSchema = z.object({
@@ -214,16 +217,28 @@ const importReaderBookAnnotationResultSchema = z.object({
   status: importReaderBookAnnotationResultStatusSchema,
 });
 
+const readerBookImportCountSchema = z.number().int().min(0);
+const importReaderBookAnnotationSummarySchema = z.object({
+  created: readerBookImportCountSchema,
+  duplicate: readerBookImportCountSchema,
+  alreadyImported: readerBookImportCountSchema,
+  notReady: readerBookImportCountSchema,
+  missing: readerBookImportCountSchema,
+});
+
 const importReaderBookAnnotationsToDeckOutputSchema = z.object({
   results: z.array(importReaderBookAnnotationResultSchema),
-  summary: z.object({
-    created: z.number().int().min(0),
-    duplicate: z.number().int().min(0),
-    alreadyImported: z.number().int().min(0),
-    notReady: z.number().int().min(0),
-    missing: z.number().int().min(0),
-  }),
+  summary: importReaderBookAnnotationSummarySchema,
 });
+
+type ReaderBookAnnotationImportResult = z.infer<
+  typeof importReaderBookAnnotationResultSchema
+>;
+type ReaderBookAnnotationImportResultStatus =
+  ReaderBookAnnotationImportResult["status"];
+type ReaderBookAnnotationImportSummary = z.infer<
+  typeof importReaderBookAnnotationsToDeckOutputSchema
+>["summary"];
 
 type ReaderBookWithCounts = {
   id: number;
@@ -243,7 +258,6 @@ type ReaderBookWithCounts = {
   spineJson: Prisma.JsonValue;
   progress: ReaderBookProgressRecord | null;
   _count: {
-    bookmarks: number;
     annotations: number;
   };
   createdAt: Date;
@@ -339,7 +353,6 @@ const mapBook = (book: ReaderBookWithCounts) => {
     navigationJson: parseNavigationJson(book.navigationJson),
     spineJson: parseSpineJson(book.spineJson),
     progress: mapProgress(book.progress),
-    bookmarkCount: book._count.bookmarks,
     annotationCount: book._count.annotations,
     createdAt: book.createdAt,
     updatedAt: book.updatedAt,
@@ -360,27 +373,38 @@ const mapHighlightStatus = (
   return "error";
 };
 
-const mapBookmark = (bookmark: {
-  id: number;
-  locatorJson: Prisma.JsonValue;
-  epubCfi: string | null;
-  chapterTitle: string;
-  progression: number;
-  label: string;
-  createdAt: Date;
-  updatedAt: Date;
-}) => {
-  return {
-    id: bookmark.id,
-    locatorJson: parseLocatorJson(bookmark.locatorJson),
-    epubCfi: bookmark.epubCfi,
-    chapterTitle: bookmark.chapterTitle,
-    progression: normalizeReaderBookProgression(bookmark.progression),
-    label: bookmark.label,
-    createdAt: bookmark.createdAt,
-    updatedAt: bookmark.updatedAt,
-  };
-};
+const readerBookAnnotationSelect =
+  Prisma.validator<Prisma.ReaderBookAnnotationSelect>()({
+    id: true,
+    quote: true,
+    selectedOccurrenceIndex: true,
+    occurrenceCount: true,
+    status: true,
+    term: true,
+    definition: true,
+    generalMeaning: true,
+    meaningInContext: true,
+    errorMessage: true,
+    contextBefore: true,
+    contextAfter: true,
+    locatorJson: true,
+    epubCfi: true,
+    chapterTitle: true,
+    progression: true,
+    importedCardId: true,
+    importedAt: true,
+    createdAt: true,
+    updatedAt: true,
+  });
+
+const readerBookAnnotationImportSelect =
+  Prisma.validator<Prisma.ReaderBookAnnotationSelect>()({
+    id: true,
+    status: true,
+    term: true,
+    definition: true,
+    importedCardId: true,
+  });
 
 const mapAnnotation = (annotation: {
   id: number;
@@ -455,7 +479,6 @@ const readerBookSelect = Prisma.validator<Prisma.ReaderBookSelect>()({
   },
   _count: {
     select: {
-      bookmarks: true,
       annotations: true,
     },
   },
@@ -490,6 +513,28 @@ async function requireOwnedBook(publicId: string, userId: string) {
   return book;
 }
 
+async function requireReaderBookImportDeckId(options: {
+  deckId: number;
+  userId: string;
+}): Promise<number> {
+  const deck = await prismaClient.deck.findFirst({
+    where: {
+      id: options.deckId,
+      userId: options.userId,
+    },
+    select: { id: true },
+  });
+
+  if (deck) {
+    return deck.id;
+  }
+
+  throw new TRPCError({
+    code: "NOT_FOUND",
+    message: "Deck not found.",
+  });
+}
+
 function isReadyAnnotationForImport(
   annotation: ReaderBookAnnotationImportCandidate,
 ): boolean {
@@ -509,34 +554,34 @@ function isReadyAnnotationForImport(
 }
 
 function recordAnnotationImportResult(
-  summary: {
-    created: number;
-    duplicate: number;
-    alreadyImported: number;
-    notReady: number;
-    missing: number;
-  },
-  results: z.infer<typeof importReaderBookAnnotationResultSchema>[],
+  summary: ReaderBookAnnotationImportSummary,
+  results: ReaderBookAnnotationImportResult[],
   annotationId: number,
-  status: z.infer<typeof importReaderBookAnnotationResultSchema>["status"],
+  status: ReaderBookAnnotationImportResultStatus,
 ) {
-  if (status === "created") {
-    summary.created += 1;
-  }
-  if (status === "duplicate") {
-    summary.duplicate += 1;
-  }
-  if (status === "already_imported") {
-    summary.alreadyImported += 1;
-  }
-  if (status === "not_ready") {
-    summary.notReady += 1;
-  }
-  if (status === "missing") {
-    summary.missing += 1;
-  }
+  const summaryKeyByStatus: Record<
+    ReaderBookAnnotationImportResultStatus,
+    keyof ReaderBookAnnotationImportSummary
+  > = {
+    created: "created",
+    duplicate: "duplicate",
+    already_imported: "alreadyImported",
+    not_ready: "notReady",
+    missing: "missing",
+  };
 
+  summary[summaryKeyByStatus[status]] += 1;
   results.push({ annotationId, status });
+}
+
+function emptyAnnotationImportSummary(): ReaderBookAnnotationImportSummary {
+  return {
+    created: 0,
+    duplicate: 0,
+    alreadyImported: 0,
+    notReady: 0,
+    missing: 0,
+  };
 }
 
 function resolveExistingAnnotationImportStatus(options: {
@@ -574,13 +619,7 @@ async function createCardFromReaderBookAnnotation(options: {
         term: options.annotation.term,
         definition: options.annotation.definition,
         deckId: options.deckId,
-        stability: 0,
-        difficulty: 0,
-        firstReview: 0,
-        lastReview: 0,
-        nextReview: 0,
-        lapses: 0,
-        repetitions: 0,
+        ...newReaderBookCardSchedulingFields(),
       },
       select: { id: true },
     });
@@ -605,6 +644,45 @@ async function createCardFromReaderBookAnnotation(options: {
 
     throw error;
   }
+}
+
+async function existingCardsByReadyAnnotationTerm(options: {
+  annotations: (ReaderBookAnnotationImportCandidate & { id: number })[];
+  userId: string;
+}): Promise<Map<string, number>> {
+  const readyTerms = Array.from(
+    new Set(
+      options.annotations
+        .filter((annotation) => isReadyAnnotationForImport(annotation))
+        .map((annotation) => annotation.term),
+    ),
+  );
+
+  if (readyTerms.length === 0) {
+    return new Map();
+  }
+
+  const cards = await prismaClient.card.findMany({
+    where: {
+      userId: options.userId,
+      term: { in: readyTerms },
+    },
+    select: { id: true, term: true },
+  });
+
+  return new Map(cards.map((card) => [card.term, card.id]));
+}
+
+function newReaderBookCardSchedulingFields() {
+  return {
+    stability: 0,
+    difficulty: 0,
+    firstReview: 0,
+    lastReview: 0,
+    nextReview: 0,
+    lapses: 0,
+    repetitions: 0,
+  };
 }
 
 function readerBookUpsertFields(
@@ -688,13 +766,11 @@ export const getReaderBookRoute = procedure
   .output(getReaderBookOutputSchema)
   .query(async ({ input, ctx }) => {
     const userId = requireUserId(ctx.user?.id);
+    const ownedBook = await requireOwnedBook(input.publicId, userId);
 
     const book = await prismaClient.readerBook.findUnique({
-      where: { publicId: input.publicId },
-      select: {
-        userId: true,
-        ...readerBookSelect,
-      },
+      where: { id: ownedBook.id },
+      select: readerBookSelect,
     });
 
     if (!book) {
@@ -704,53 +780,11 @@ export const getReaderBookRoute = procedure
       });
     }
 
-    if (book.userId !== userId) {
-      throw new TRPCError({
-        code: "FORBIDDEN",
-        message: "Book not owned by current user.",
-      });
-    }
-
-    const [bookmarks, annotations, decks] = await Promise.all([
-      prismaClient.readerBookBookmark.findMany({
-        where: { userId, bookId: book.id },
-        orderBy: { createdAt: "desc" },
-        select: {
-          id: true,
-          locatorJson: true,
-          epubCfi: true,
-          chapterTitle: true,
-          progression: true,
-          label: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      }),
+    const [annotations, decks] = await Promise.all([
       prismaClient.readerBookAnnotation.findMany({
         where: { userId, bookId: book.id },
         orderBy: { createdAt: "desc" },
-        select: {
-          id: true,
-          quote: true,
-          selectedOccurrenceIndex: true,
-          occurrenceCount: true,
-          status: true,
-          term: true,
-          definition: true,
-          generalMeaning: true,
-          meaningInContext: true,
-          errorMessage: true,
-          contextBefore: true,
-          contextAfter: true,
-          locatorJson: true,
-          epubCfi: true,
-          chapterTitle: true,
-          progression: true,
-          importedCardId: true,
-          importedAt: true,
-          createdAt: true,
-          updatedAt: true,
-        },
+        select: readerBookAnnotationSelect,
       }),
       prismaClient.deck.findMany({
         where: { userId },
@@ -761,7 +795,6 @@ export const getReaderBookRoute = procedure
 
     return {
       book: mapBook(book),
-      bookmarks: bookmarks.map(mapBookmark),
       annotations: annotations.map(mapAnnotation),
       decks,
     };
@@ -831,70 +864,21 @@ export const updateReaderBookProgressRoute = procedure
     };
   });
 
-export const createReaderBookBookmarkRoute = procedure
-  .input(createReaderBookBookmarkInputSchema)
-  .output(createReaderBookBookmarkOutputSchema)
+export const updateReaderBookPreferencesRoute = procedure
+  .input(updateReaderBookPreferencesInputSchema)
+  .output(updateReaderBookPreferencesOutputSchema)
   .mutation(async ({ input, ctx }) => {
     const userId = requireUserId(ctx.user?.id);
-    const book = await requireOwnedBook(input.publicId, userId);
-    const progression = normalizeReaderBookProgression(
-      input.progression ??
-        input.locatorJson.totalProgression ??
-        input.locatorJson.progression ??
-        0,
-    );
-
-    const bookmark = await prismaClient.readerBookBookmark.create({
+    await prismaClient.userSettings.update({
+      where: { userId },
       data: {
-        userId,
-        bookId: book.id,
-        locatorJson: toPrismaJson(input.locatorJson),
-        epubCfi: input.epubCfi ?? null,
-        chapterTitle:
-          input.chapterTitle ??
-          input.locatorJson.chapterTitle ??
-          input.locatorJson.title ??
-          "",
-        progression,
-        label: input.label ?? "",
-      },
-      select: {
-        id: true,
-        locatorJson: true,
-        epubCfi: true,
-        chapterTitle: true,
-        progression: true,
-        label: true,
-        createdAt: true,
-        updatedAt: true,
+        readerBookFontSize: input.fontSize,
+        readerBookLineHeight: input.lineHeight,
+        readerBookColumnWidth: input.columnWidth,
       },
     });
 
-    return { bookmark: mapBookmark(bookmark) };
-  });
-
-export const deleteReaderBookBookmarkRoute = procedure
-  .input(deleteReaderBookBookmarkInputSchema)
-  .output(deleteReaderBookBookmarkOutputSchema)
-  .mutation(async ({ input, ctx }) => {
-    const userId = requireUserId(ctx.user?.id);
-    const book = await requireOwnedBook(input.publicId, userId);
-    const deleted = await prismaClient.readerBookBookmark.deleteMany({
-      where: {
-        id: input.bookmarkId,
-        userId,
-        bookId: book.id,
-      },
-    });
-
-    if (deleted.count === 0) {
-      throw new TRPCError({
-        code: "NOT_FOUND",
-        message: "Bookmark not found.",
-      });
-    }
-
-    return { status: "deleted" };
+    return { status: "updated" };
   });
 
 export const listReaderBookAnnotationsRoute = procedure
@@ -906,28 +890,7 @@ export const listReaderBookAnnotationsRoute = procedure
     const annotations = await prismaClient.readerBookAnnotation.findMany({
       where: { userId, bookId: book.id },
       orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        quote: true,
-        selectedOccurrenceIndex: true,
-        occurrenceCount: true,
-        status: true,
-        term: true,
-        definition: true,
-        generalMeaning: true,
-        meaningInContext: true,
-        errorMessage: true,
-        contextBefore: true,
-        contextAfter: true,
-        locatorJson: true,
-        epubCfi: true,
-        chapterTitle: true,
-        progression: true,
-        importedCardId: true,
-        importedAt: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: readerBookAnnotationSelect,
     });
 
     return { annotations: annotations.map(mapAnnotation) };
@@ -963,21 +926,10 @@ export const importReaderBookAnnotationsToDeckRoute = procedure
   .mutation(async ({ input, ctx }) => {
     const userId = requireUserId(ctx.user?.id);
     const book = await requireOwnedBook(input.publicId, userId);
-
-    const deck = await prismaClient.deck.findUnique({
-      where: {
-        id: input.deckId,
-        userId,
-      },
-      select: { id: true },
+    const deckId = await requireReaderBookImportDeckId({
+      deckId: input.deckId,
+      userId,
     });
-
-    if (!deck) {
-      throw new TRPCError({
-        code: "NOT_FOUND",
-        message: "Deck not found.",
-      });
-    }
 
     const uniqueAnnotationIds = Array.from(new Set(input.annotationIds));
     const annotations = await prismaClient.readerBookAnnotation.findMany({
@@ -986,52 +938,20 @@ export const importReaderBookAnnotationsToDeckRoute = procedure
         userId,
         bookId: book.id,
       },
-      select: {
-        id: true,
-        status: true,
-        term: true,
-        definition: true,
-        importedCardId: true,
-      },
+      select: readerBookAnnotationImportSelect,
     });
 
     const annotationById = new Map(
       annotations.map((annotation) => [annotation.id, annotation]),
     );
 
-    const readyTerms = Array.from(
-      new Set(
-        annotations
-          .filter((annotation) => isReadyAnnotationForImport(annotation))
-          .map((annotation) => annotation.term),
-      ),
-    );
+    const existingCardByTerm = await existingCardsByReadyAnnotationTerm({
+      annotations,
+      userId,
+    });
 
-    const existingCards =
-      readyTerms.length > 0
-        ? await prismaClient.card.findMany({
-            where: {
-              userId,
-              term: { in: readyTerms },
-            },
-            select: { id: true, term: true },
-          })
-        : [];
-
-    const existingCardByTerm = new Map(
-      existingCards.map((card) => [card.term, card.id]),
-    );
-
-    const results: z.infer<
-      typeof importReaderBookAnnotationResultSchema
-    >[] = [];
-    const summary = {
-      created: 0,
-      duplicate: 0,
-      alreadyImported: 0,
-      notReady: 0,
-      missing: 0,
-    };
+    const results: ReaderBookAnnotationImportResult[] = [];
+    const summary = emptyAnnotationImportSummary();
 
     for (const annotationId of uniqueAnnotationIds) {
       const annotation = annotationById.get(annotationId);
@@ -1054,7 +974,7 @@ export const importReaderBookAnnotationsToDeckRoute = procedure
 
       const createdStatus = await createCardFromReaderBookAnnotation({
         userId,
-        deckId: deck.id,
+        deckId,
         annotationId,
         annotation,
         existingCardByTerm,

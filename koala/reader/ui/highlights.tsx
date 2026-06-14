@@ -72,6 +72,7 @@ type ExplainSelectionCardProps = {
   canAddToDeck?: boolean;
   isAddingToDeck?: boolean;
   fillAvailableHeight?: boolean;
+  flowExplanation?: boolean;
 };
 
 type SelectionActionBubbleProps = {
@@ -96,21 +97,29 @@ function helperPanelStyle(
   };
 }
 
-function helperStreamStyle(
-  fillAvailableHeight: boolean,
-): React.CSSProperties {
+function helperStreamStyle(options: {
+  fillAvailableHeight: boolean;
+  flowExplanation: boolean;
+}): React.CSSProperties {
+  if (options.flowExplanation) {
+    return {
+      paddingBottom: 4,
+      overflowWrap: "anywhere",
+    };
+  }
+
   const baseStyle: React.CSSProperties = {
     borderLeft: `2px solid ${readerDividerColor}`,
     paddingLeft: 10,
     paddingRight: 4,
     paddingBottom: 4,
-    overflowY: "auto",
   };
 
-  if (!fillAvailableHeight) {
+  if (!options.fillAvailableHeight) {
     return {
       ...baseStyle,
       maxHeight: 220,
+      overflowY: "auto",
     };
   }
 
@@ -118,6 +127,7 @@ function helperStreamStyle(
     ...baseStyle,
     flex: "1 1 auto",
     minHeight: 0,
+    overflowY: "auto",
   };
 }
 
@@ -155,6 +165,7 @@ function renderExplainError(streamError: string): React.ReactNode | null {
 function renderExplainAnalysis(options: {
   analysis: ReaderHighlightAnalysis | null;
   fillAvailableHeight: boolean;
+  flowExplanation: boolean;
 }): React.ReactNode | null {
   if (!options.analysis || !hasAnalysis(options.analysis)) {
     return null;
@@ -164,7 +175,10 @@ function renderExplainAnalysis(options: {
     <Box
       role="status"
       aria-live="polite"
-      style={helperStreamStyle(options.fillAvailableHeight)}
+      style={helperStreamStyle({
+        fillAvailableHeight: options.fillAvailableHeight,
+        flowExplanation: options.flowExplanation,
+      })}
     >
       <ReactMarkdown remarkPlugins={[remarkGfm]}>
         {formatAnalysisAsExplanation(options.analysis)}
@@ -276,21 +290,30 @@ export function ExplainSelectionCard({
   canAddToDeck = false,
   isAddingToDeck = false,
   fillAvailableHeight = false,
+  flowExplanation = false,
 }: ExplainSelectionCardProps) {
+  const actions = renderExplainActions({
+    onAddToDeck,
+    canAddToDeck,
+    isExplaining,
+    isDeletingHighlight,
+    isAddingToDeck,
+    canDeleteHighlight,
+    onDeleteHighlight,
+  });
+  const explanation = renderExplainAnalysis({
+    analysis,
+    fillAvailableHeight,
+    flowExplanation,
+  });
+
   return (
     <Stack gap="sm" style={helperPanelStyle(fillAvailableHeight)}>
-      {renderExplainActions({
-        onAddToDeck,
-        canAddToDeck,
-        isExplaining,
-        isDeletingHighlight,
-        isAddingToDeck,
-        canDeleteHighlight,
-        onDeleteHighlight,
-      })}
+      {flowExplanation ? actions : null}
       {renderExplainLoading(isExplaining)}
       {renderExplainError(streamError)}
-      {renderExplainAnalysis({ analysis, fillAvailableHeight })}
+      {flowExplanation ? explanation : actions}
+      {flowExplanation ? null : explanation}
     </Stack>
   );
 }
@@ -315,6 +338,7 @@ type HighlightsHistoryCardProps = {
   allImportableSelected: boolean;
   importStatusByHighlightId: Record<number, HighlightImportResultStatus>;
   onDeleteHighlight: (highlightId: number) => void;
+  onOpenHighlight?: (highlight: ReaderArticleHighlight) => void;
 };
 
 type HighlightHistoryRowProps = {
@@ -324,7 +348,48 @@ type HighlightHistoryRowProps = {
   onToggleSelected: (next: boolean) => void;
   importStatus: HighlightImportResultStatus | null;
   onDeleteHighlight: (highlightId: number) => void;
+  onOpenHighlight?: (highlight: ReaderArticleHighlight) => void;
 };
+
+type HighlightHistoryOpenState = {
+  cursor?: React.CSSProperties["cursor"];
+  rowProps: {
+    onClick?: () => void;
+    onKeyDown?: (event: React.KeyboardEvent<HTMLDivElement>) => void;
+    role?: "button";
+    tabIndex?: number;
+  };
+};
+
+function resolveHighlightHistoryOpenState(options: {
+  highlight: ReaderArticleHighlight;
+  onOpenHighlight?: (highlight: ReaderArticleHighlight) => void;
+}): HighlightHistoryOpenState {
+  if (!options.onOpenHighlight) {
+    return { rowProps: {} };
+  }
+
+  const openHighlight = () => {
+    options.onOpenHighlight?.(options.highlight);
+  };
+
+  return {
+    cursor: "pointer",
+    rowProps: {
+      role: "button",
+      tabIndex: 0,
+      onClick: openHighlight,
+      onKeyDown: (event) => {
+        if (event.key !== "Enter" && event.key !== " ") {
+          return;
+        }
+
+        event.preventDefault();
+        openHighlight();
+      },
+    },
+  };
+}
 
 function HighlightHistoryRow({
   highlight,
@@ -333,6 +398,7 @@ function HighlightHistoryRow({
   onToggleSelected,
   importStatus,
   onDeleteHighlight,
+  onOpenHighlight,
 }: HighlightHistoryRowProps) {
   const [showExplanation, setShowExplanation] = React.useState(false);
   const rowState = resolveHighlightRowState(
@@ -340,13 +406,19 @@ function HighlightHistoryRow({
     importStatus,
     showExplanation,
   );
+  const openState = resolveHighlightHistoryOpenState({
+    highlight,
+    onOpenHighlight,
+  });
 
   return (
     <Stack
       gap={4}
+      {...openState.rowProps}
       style={{
         borderBottom: `1px solid ${readerDividerColor}`,
         paddingBottom: 7,
+        cursor: openState.cursor,
       }}
     >
       <Group justify="space-between" align="flex-start" wrap="nowrap">
@@ -363,6 +435,9 @@ function HighlightHistoryRow({
             checked={isSelected}
             onChange={(event) => {
               onToggleSelected(event.currentTarget.checked);
+            }}
+            onClick={(event) => {
+              event.stopPropagation();
             }}
             disabled={!rowState.canSelect}
             mt={2}
@@ -397,7 +472,8 @@ function HighlightHistoryRow({
           size="sm"
           variant="subtle"
           color="gray"
-          onClick={() => {
+          onClick={(event) => {
+            event.stopPropagation();
             onDeleteHighlight(highlight.id);
           }}
           disabled={isDeleting}
@@ -438,7 +514,8 @@ function HighlightHistoryRow({
             size="compact-xs"
             variant="subtle"
             color="grape"
-            onClick={() => {
+            onClick={(event) => {
+              event.stopPropagation();
               setShowExplanation((previous) => !previous);
             }}
           >
@@ -479,6 +556,7 @@ export function HighlightsHistoryCard({
   allImportableSelected,
   importStatusByHighlightId,
   onDeleteHighlight,
+  onOpenHighlight,
 }: HighlightsHistoryCardProps) {
   const [showAll, setShowAll] = React.useState(false);
   const historyState = resolveHighlightsHistoryState({
@@ -557,6 +635,7 @@ export function HighlightsHistoryCard({
                   importStatusByHighlightId[highlight.id] ?? null
                 }
                 onDeleteHighlight={onDeleteHighlight}
+                onOpenHighlight={onOpenHighlight}
               />
             );
           })}
