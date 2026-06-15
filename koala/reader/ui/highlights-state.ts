@@ -106,6 +106,16 @@ function buildHighlightMetaLine(
   return `${occurrenceText} • ${timestamp}`;
 }
 
+function compactDefinitionPreview(
+  highlight: ReaderArticleHighlightLike,
+): string {
+  if (highlight.status !== "ready") {
+    return "";
+  }
+
+  return normalizeContextChunk(highlight.definition);
+}
+
 export function hasAnalysis(
   analysis: ReaderHighlightAnalysisLike | null,
 ): boolean {
@@ -191,7 +201,6 @@ export function resolveHighlightRowState(
   importStatus: HighlightImportResultStatusLike | null,
   showExplanation: boolean,
 ) {
-  const contextSummary = compactContextSummary(highlight);
   const analysis = {
     term: highlight.term,
     definition: highlight.definition,
@@ -206,11 +215,7 @@ export function resolveHighlightRowState(
     badgeMeta: resolveHighlightBadgeMeta(highlight, importStatus),
     canSelect:
       highlight.status === "ready" && highlight.importedCardId === null,
-    contextSummary,
-    hasContextSummary:
-      contextSummary.before.length > 0 ||
-      contextSummary.match.length > 0 ||
-      contextSummary.after.length > 0,
+    definitionPreview: compactDefinitionPreview(highlight),
     highlightHasAnalysis,
     metaLine: buildHighlightMetaLine(
       highlight,

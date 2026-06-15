@@ -43,7 +43,7 @@ test("highlight state helpers derive row display state", () => {
   assert.equal(rowState.highlightHasAnalysis, true);
   assert.equal(rowState.toggleLabel, "Hide explanation");
   assert.equal(rowState.badgeMeta, null);
-  assert.equal(rowState.hasContextSummary, true);
+  assert.equal(rowState.definitionPreview, "뜻");
   assert.ok(
     formatAnalysisAsExplanation(rowState.analysis).includes("단어: 뜻"),
   );
@@ -170,6 +170,7 @@ test("highlight state helpers cover badges, empty analysis, and error rows", () 
   assert.equal(rowState.canSelect, false);
   assert.equal(rowState.showErrorMessage, true);
   assert.equal(rowState.highlightHasAnalysis, false);
+  assert.equal(rowState.definitionPreview, "");
   assert.equal(rowState.metaLine, "Occurrence 1 of 1 • Invalid Date");
   assert.equal(rowState.toggleLabel, "Show explanation");
 

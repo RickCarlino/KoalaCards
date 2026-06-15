@@ -378,6 +378,10 @@ function scrollFrameToProgression(
   scrollingElement.scrollTop = maxScroll * progression;
 }
 
+function clearFrameSelection(iframe: HTMLIFrameElement | null): void {
+  iframe?.contentWindow?.getSelection()?.removeAllRanges();
+}
+
 function isAnnotationInSection(
   annotation: ReaderArticleHighlight & { locatorJson?: EpubBookLocator },
   sectionHref: string,
@@ -2403,6 +2407,8 @@ export default function ReaderBookPage({
               return;
             }
 
+            clearFrameSelection(iframeRef.current);
+            setSelectionDraft(null);
             setExplainedAnnotationId(annotationId);
             setSelectedAnnotationIds((current) =>
               Array.from(new Set([...current, annotationId])),
@@ -2413,6 +2419,8 @@ export default function ReaderBookPage({
               return;
             }
 
+            clearFrameSelection(iframeRef.current);
+            setSelectionDraft(null);
             setAnalysis(nextAnalysis);
           },
           onDone: () => {
@@ -2595,7 +2603,7 @@ export default function ReaderBookPage({
       }
 
       event.preventDefault();
-      iframeRef.current?.contentWindow?.getSelection()?.removeAllRanges();
+      clearFrameSelection(iframeRef.current);
       activateAnnotation(annotation);
     },
     [activateAnnotation, annotations],

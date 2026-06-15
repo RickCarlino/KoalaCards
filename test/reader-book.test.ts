@@ -10,6 +10,7 @@ import {
   canRelinkReaderBook,
   manifestForRelinkedReaderBook,
 } from "../koala/reader/epub/relink.ts";
+import { buildSavedArticleHighlightRanges } from "../koala/reader/article-highlight-ranges.ts";
 import type { EpubManifest } from "../koala/reader/epub/types.ts";
 
 function testManifest(overrides: Partial<EpubManifest>): EpubManifest {
@@ -82,6 +83,34 @@ test("reader book helpers keep furthest progress separate from last location", (
       candidate: laterCandidate,
     }),
     laterCandidate,
+  );
+});
+
+test("reader highlight ranges keep repeated terms tied to their saved occurrence", () => {
+  assert.deepEqual(
+    buildSavedArticleHighlightRanges({
+      articleText: "단어 하나. 단어 둘. 단어 셋.",
+      highlights: [
+        {
+          id: 10,
+          selectedText: "단어",
+          selectedOccurrenceIndex: 0,
+          contextBefore: "",
+          contextAfter: "",
+        },
+        {
+          id: 20,
+          selectedText: "단어",
+          selectedOccurrenceIndex: 2,
+          contextBefore: "",
+          contextAfter: "",
+        },
+      ],
+    }),
+    [
+      { highlightId: 10, startOffset: 0, endOffset: 2 },
+      { highlightId: 20, startOffset: 13, endOffset: 15 },
+    ],
   );
 });
 

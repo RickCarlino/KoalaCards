@@ -73,7 +73,6 @@ export function buildSavedArticleHighlightRanges(options: {
   }
 
   const ranges: ArticleHighlightRange[] = [];
-  const seenSelectedTexts = new Set<string>();
   const offsetsBySelectedText = new Map<
     string,
     Array<{ startOffset: number; endOffset: number }>
@@ -85,11 +84,6 @@ export function buildSavedArticleHighlightRanges(options: {
       continue;
     }
 
-    if (seenSelectedTexts.has(selectedText)) {
-      continue;
-    }
-    seenSelectedTexts.add(selectedText);
-
     const offsets =
       offsetsBySelectedText.get(selectedText) ??
       findOccurrenceOffsets(articleText, selectedText);
@@ -99,17 +93,16 @@ export function buildSavedArticleHighlightRanges(options: {
       continue;
     }
 
-    for (const offset of offsets) {
-      if (!isNonEmptyRange(offset)) {
-        continue;
-      }
-
-      ranges.push({
-        highlightId: highlight.id,
-        startOffset: offset.startOffset,
-        endOffset: offset.endOffset,
-      });
+    const offset = offsets[highlight.selectedOccurrenceIndex];
+    if (!offset || !isNonEmptyRange(offset)) {
+      continue;
     }
+
+    ranges.push({
+      highlightId: highlight.id,
+      startOffset: offset.startOffset,
+      endOffset: offset.endOffset,
+    });
   }
 
   const deduped = dedupeRanges(ranges);

@@ -466,6 +466,19 @@ function HighlightHistoryRow({
                 </Badge>
               ) : null}
             </Group>
+            {rowState.definitionPreview ? (
+              <Text
+                size="sm"
+                c="dimmed"
+                lineClamp={2}
+                style={{
+                  fontFamily: readerBodyFont,
+                  overflowWrap: "anywhere",
+                }}
+              >
+                {rowState.definitionPreview}
+              </Text>
+            ) : null}
           </Stack>
         </Group>
         <ActionIcon
@@ -489,20 +502,6 @@ function HighlightHistoryRow({
       <Text size="xs" c="dimmed" style={{ fontFamily: readerBodyFont }}>
         {rowState.metaLine}
       </Text>
-      {rowState.hasContextSummary ? (
-        <Text size="xs" c="dimmed" style={{ fontFamily: readerBodyFont }}>
-          {rowState.contextSummary.before}
-          <Text
-            component="span"
-            fw={700}
-            c={readerHeadingColor}
-            style={{ fontFamily: readerBodyFont }}
-          >
-            {rowState.contextSummary.match}
-          </Text>
-          {rowState.contextSummary.after}
-        </Text>
-      ) : null}
       {rowState.showErrorMessage ? (
         <Text size="sm" c="red" style={{ fontFamily: readerBodyFont }}>
           {highlight.errorMessage}
