@@ -100,10 +100,12 @@ function helperPanelStyle(
 function helperStreamStyle(options: {
   fillAvailableHeight: boolean;
   flowExplanation: boolean;
+  floatingActionsWidth?: number;
 }): React.CSSProperties {
   if (options.flowExplanation) {
     return {
       paddingBottom: 4,
+      paddingRight: options.floatingActionsWidth,
       overflowWrap: "anywhere",
     };
   }
@@ -166,6 +168,7 @@ function renderExplainAnalysis(options: {
   analysis: ReaderHighlightAnalysis | null;
   fillAvailableHeight: boolean;
   flowExplanation: boolean;
+  floatingActionsWidth?: number;
 }): React.ReactNode | null {
   if (!options.analysis || !hasAnalysis(options.analysis)) {
     return null;
@@ -178,6 +181,7 @@ function renderExplainAnalysis(options: {
       style={helperStreamStyle({
         fillAvailableHeight: options.fillAvailableHeight,
         flowExplanation: options.flowExplanation,
+        floatingActionsWidth: options.floatingActionsWidth,
       })}
     >
       <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -203,7 +207,7 @@ function renderExplainActions(options: {
   }
 
   return (
-    <Group justify="flex-end">
+    <Group justify="flex-end" align="flex-start" gap="xs" wrap="nowrap">
       {actionState.showAddAction && options.onAddToDeck ? (
         <Button
           size="compact-sm"
@@ -233,6 +237,37 @@ function renderExplainActions(options: {
         </ActionIcon>
       ) : null}
     </Group>
+  );
+}
+
+function renderFlowExplanation(options: {
+  actions: React.ReactNode | null;
+  explanation: React.ReactNode | null;
+}): React.ReactNode {
+  if (!options.actions && !options.explanation) {
+    return null;
+  }
+
+  if (!options.explanation) {
+    return options.actions;
+  }
+
+  return (
+    <Box style={{ position: "relative", minWidth: 0 }}>
+      {options.actions ? (
+        <Box
+          style={{
+            position: "absolute",
+            top: 0,
+            right: 0,
+            zIndex: 1,
+          }}
+        >
+          {options.actions}
+        </Box>
+      ) : null}
+      {options.explanation}
+    </Box>
   );
 }
 
@@ -301,19 +336,31 @@ export function ExplainSelectionCard({
     canDeleteHighlight,
     onDeleteHighlight,
   });
+  const floatingActionsWidth =
+    flowExplanation && actions !== null ? (onAddToDeck ? 132 : 36) : 0;
   const explanation = renderExplainAnalysis({
     analysis,
     fillAvailableHeight,
     flowExplanation,
+    floatingActionsWidth,
   });
+
+  if (flowExplanation) {
+    return (
+      <Stack gap="sm" style={helperPanelStyle(fillAvailableHeight)}>
+        {renderExplainLoading(isExplaining)}
+        {renderExplainError(streamError)}
+        {renderFlowExplanation({ actions, explanation })}
+      </Stack>
+    );
+  }
 
   return (
     <Stack gap="sm" style={helperPanelStyle(fillAvailableHeight)}>
-      {flowExplanation ? actions : null}
       {renderExplainLoading(isExplaining)}
       {renderExplainError(streamError)}
-      {flowExplanation ? explanation : actions}
-      {flowExplanation ? null : explanation}
+      {actions}
+      {explanation}
     </Stack>
   );
 }

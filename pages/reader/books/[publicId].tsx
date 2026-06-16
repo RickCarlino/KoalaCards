@@ -1197,6 +1197,20 @@ function shouldShowManualCurrentExplain(options: {
   return options.streamError.trim().length > 0;
 }
 
+function shouldShowCurrentHighlightPrompt(options: {
+  selectionDraft: ReaderSelectionDraft | null;
+  isExplaining: boolean;
+  streamError: string;
+  analysis: ReaderHighlightAnalysis | null;
+}): boolean {
+  return (
+    options.selectionDraft === null &&
+    !options.isExplaining &&
+    options.streamError.trim().length === 0 &&
+    options.analysis === null
+  );
+}
+
 function CurrentHighlightPanel({
   selectionDraft,
   isExplaining,
@@ -1239,6 +1253,12 @@ function CurrentHighlightPanel({
     analysis,
   });
   const selectedText = selectionDraft?.selectedText ?? "";
+  const showPrompt = shouldShowCurrentHighlightPrompt({
+    selectionDraft,
+    isExplaining,
+    streamError,
+    analysis,
+  });
 
   return (
     <Stack gap="sm" style={sideRailSectionStyle}>
@@ -1265,7 +1285,7 @@ function CurrentHighlightPanel({
           ) : null}
         </Stack>
       ) : null}
-      {!selectionDraft ? (
+      {showPrompt ? (
         <Text size="sm" c="dimmed">
           Highlight text to explain it.
         </Text>
