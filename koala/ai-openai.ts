@@ -49,7 +49,14 @@ function getModelString(
   return modelString;
 }
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+let openaiClient: OpenAI | null = null;
+
+const getOpenAIClient = (): OpenAI => {
+  if (!openaiClient) {
+    openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+  return openaiClient;
+};
 
 const contentOf = (r: ChatCompletion): string =>
   r.choices?.[0]?.message?.content?.toString() ?? "";
@@ -139,7 +146,7 @@ export const openaiGenerateText: LanguageGenFn = async (options) => {
     maxTokens: options.maxTokens,
   });
 
-  const result = await openai.chat.completions.create({
+  const result = await getOpenAIClient().chat.completions.create({
     model: modelName,
     messages: options.messages,
     ...completionParams,
@@ -158,7 +165,7 @@ export const openaiGenerateStructuredOutput: StructuredGenFn = async (
     maxTokens: options.maxTokens,
   });
 
-  const res = await openai.chat.completions.parse({
+  const res = await getOpenAIClient().chat.completions.parse({
     model: modelName,
     messages: options.messages,
     response_format: zodResponseFormat(options.schema, "result"),
@@ -168,7 +175,7 @@ export const openaiGenerateStructuredOutput: StructuredGenFn = async (
 };
 
 export const openaiGenerateImage: ImageGenFn = async (options) => {
-  const result = await openai.images.generate({
+  const result = await getOpenAIClient().images.generate({
     model: getModelString(options.model ?? DEFAULT_IMAGE_MODEL),
     prompt: options.prompt,
     size: DEFAULT_IMAGE_SIZE,

@@ -96,6 +96,34 @@ class GCSStorageProvider implements StorageProvider {
   }
 }
 
-const storageProvider = new GCSStorageProvider();
+let gcsStorageProvider: StorageProvider | null = null;
 
-export { storageProvider };
+const getStorageProvider = (): StorageProvider => {
+  if (!gcsStorageProvider) {
+    gcsStorageProvider = new GCSStorageProvider();
+  }
+  return gcsStorageProvider;
+};
+
+const storageProvider: StorageProvider = {
+  uploadFromBase64: (...args) => {
+    return getStorageProvider().uploadFromBase64(...args);
+  },
+  getExpiringURL: (...args) => {
+    return getStorageProvider().getExpiringURL(...args);
+  },
+  createBlobID: (...args) => {
+    return getStorageProvider().createBlobID(...args);
+  },
+  getFile: (...args) => {
+    return getStorageProvider().getFile(...args);
+  },
+  saveBuffer: (...args) => {
+    return getStorageProvider().saveBuffer(...args);
+  },
+  fileExists: (...args) => {
+    return getStorageProvider().fileExists(...args);
+  },
+};
+
+export { getStorageProvider, storageProvider };

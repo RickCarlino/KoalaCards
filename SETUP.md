@@ -94,13 +94,13 @@ Docker Compose is used to manage multi-container Docker applications.
    Docker Desktop typically includes Docker Compose. Verify by running:
 
    ```bash
-   docker-compose --version
+   docker compose version
    ```
 
    You should see the installed Docker Compose version.
 
    ```bash
-   docker-compose version 2.x.x, build xxxxxxx
+   Docker Compose version v2.x.x
    ```
 
 2. **If Not Installed, Install Docker Compose:**
@@ -333,7 +333,7 @@ With all configurations in place, you can now run **KoalaCards** using Docker Co
    From the project root directory, run:
 
    ```bash
-   docker-compose up -d --build
+   ./run-dev.sh -d
    ```
 
    - `-d`: Runs the containers in detached mode (in the background).
@@ -342,17 +342,17 @@ With all configurations in place, you can now run **KoalaCards** using Docker Co
 3. **Verify the Services are Running:**
 
    ```bash
-   docker-compose ps
+   docker compose ps
    ```
 
-   You should see both `app` and `db` services running.
+   You should see `app`, `worker`, and `db` services running. The `migrate` service exits after applying migrations.
 
 4. **Apply Database Migrations:**
 
-   The `entrypoint.sh` script automatically handles migrations when the `app` container starts. To manually run migrations, you can execute:
+   The `migrate` service automatically handles migrations before the app and worker start. To manually run migrations, you can execute:
 
    ```bash
-   docker-compose exec app npx prisma migrate deploy
+   docker compose run app npm run db:migrate:deploy
    ```
 
    For hosted environments (for example Northflank), prefer running migrations in a separate deploy/release step:
@@ -372,7 +372,7 @@ With all configurations in place, you can now run **KoalaCards** using Docker Co
    Prisma Studio provides a visual interface to interact with your database.
 
    ```bash
-   docker-compose exec app npx prisma studio
+   docker compose exec app npx prisma studio --hostname 0.0.0.0
    ```
 
    Open the provided URL in your browser to access Prisma Studio.
@@ -402,13 +402,13 @@ If you encounter any issues during setup or while running the application, consi
    View logs for all services:
 
    ```bash
-   docker-compose logs -f
+   docker compose logs -f
    ```
 
    To view logs for a specific service (e.g., `app`):
 
    ```bash
-   docker-compose logs -f app
+   docker compose logs -f app
    ```
 
 2. **Restart Services:**
@@ -416,7 +416,7 @@ If you encounter any issues during setup or while running the application, consi
    Sometimes, restarting the services can resolve transient issues.
 
    ```bash
-   docker-compose restart
+   docker compose restart
    ```
 
 3. **Rebuild Containers:**
@@ -424,7 +424,7 @@ If you encounter any issues during setup or while running the application, consi
    If you've made changes to the `Dockerfile` or dependencies, rebuild the containers.
 
    ```bash
-   docker-compose up -d --build
+   ./run-dev.sh -d
    ```
 
 4. **Verify Environment Variables:**
@@ -444,7 +444,7 @@ If you encounter any issues during setup or while running the application, consi
    If migrations are out of sync, you can reset them. **Warning:** This will delete all data in the database.
 
    ```bash
-   docker-compose exec app npx prisma migrate reset
+   docker compose exec app npx prisma migrate reset
    ```
 
 8. **Seek Help:**

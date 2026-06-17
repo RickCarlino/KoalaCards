@@ -1,13 +1,1 @@
-services:
-  app:
-    volumes:
-      - .:/app
-      - /app/node_modules
-      - /app/.next
-    command: npm run dev
-  worker:
-    volumes:
-      - .:/app
-      - /app/node_modules
-      - /app/.next
-    command: npm run worker
+services: {}
