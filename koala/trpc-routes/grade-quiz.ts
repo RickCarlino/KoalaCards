@@ -1,6 +1,6 @@
 import { Grades, Rating } from "ts-fsrs";
 import { z } from "zod";
-import { maybeAddImageToCard } from "../image";
+import { maybeAddImageToCardInBackground } from "../image";
 import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc-procedure";
 import { setGrade } from "./import-cards";
@@ -44,7 +44,7 @@ export const gradeQuiz = procedure
     }
 
     if ([Rating.Again, Rating.Hard].includes(grade)) {
-      maybeAddImageToCard(card);
+      maybeAddImageToCardInBackground(card, "gradeQuiz");
     }
     const settings = await getUserSettings(user.id);
     await setGrade(card, grade, Date.now(), settings.maxLapses);

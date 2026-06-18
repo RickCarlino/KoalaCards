@@ -36,6 +36,7 @@ import {
   IconTrash,
   IconX,
 } from "@tabler/icons-react";
+import { notifications } from "@mantine/notifications";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { GetServerSideProps } from "next/types";
@@ -280,6 +281,17 @@ type DeckLearningSummaryProps = {
   isOptimizing: boolean;
 };
 
+type OptimizeDeckResult = {
+  status: "succeeded" | "skipped" | "failed";
+  eligibleLogCount: number;
+  reason:
+    | "eligible"
+    | "not_enough_logs"
+    | "not_enough_cards"
+    | "not_enough_new_logs"
+    | "cooldown";
+};
+
 function formatOptimizedAt(value: string | null): string | null {
   if (!value) {
     return null;
@@ -288,7 +300,10 @@ function formatOptimizedAt(value: string | null): string | null {
   if (Number.isNaN(date.getTime())) {
     return null;
   }
-  return date.toLocaleDateString();
+  return date.toLocaleString(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
 }
 
 function deckLearningMessage(deck: DeckWithReviewInfo): string {
@@ -298,7 +313,7 @@ function deckLearningMessage(deck: DeckWithReviewInfo): string {
 
   const optimizedAt = formatOptimizedAt(deck.lastOptimizedAt);
   if (optimizedAt) {
-    return `This deck was last tuned on ${optimizedAt}.`;
+    return `Tuned ${optimizedAt}. New review timing is active.`;
   }
 
   if (deck.eligibleLogCount < 250) {
@@ -306,6 +321,84 @@ function deckLearningMessage(deck: DeckWithReviewInfo): string {
   }
 
   return "This deck adjusts its review timing from your answers in this deck.";
+}
+
+function deckLearningStatusLabel(deck: DeckWithReviewInfo): string {
+  if (deck.optimizerStatus === "failed") {
+    return "Failed";
+  }
+
+  if (deck.lastOptimizedAt) {
+    return "Tuned";
+  }
+
+  if (deck.eligibleLogCount < 250) {
+    return "Needs reviews";
+  }
+
+  return "Ready";
+}
+
+function deckLearningStatusColor(deck: DeckWithReviewInfo): string {
+  if (deck.optimizerStatus === "failed") {
+    return "red";
+  }
+
+  if (deck.lastOptimizedAt) {
+    return "green";
+  }
+
+  if (deck.eligibleLogCount < 250) {
+    return "gray";
+  }
+
+  return "blue";
+}
+
+function skippedOptimizationMessage(result: OptimizeDeckResult): string {
+  if (result.reason === "not_enough_logs") {
+    return `${result.eligibleLogCount} eligible reviews. Tune after 250.`;
+  }
+
+  if (result.reason === "not_enough_cards") {
+    return "Tune after more cards have repeat reviews.";
+  }
+
+  if (result.reason === "not_enough_new_logs") {
+    return "Tune again after 250 more reviews.";
+  }
+
+  if (result.reason === "cooldown") {
+    return "Try again after the tuning cooldown.";
+  }
+
+  return "No tuning needed right now.";
+}
+
+function showOptimizationResult(result: OptimizeDeckResult) {
+  if (result.status === "succeeded") {
+    notifications.show({
+      title: "Deck tuned",
+      message: `Used ${result.eligibleLogCount} reviews. New timing is active.`,
+      color: "green",
+    });
+    return;
+  }
+
+  if (result.status === "skipped") {
+    notifications.show({
+      title: "Not tuned",
+      message: skippedOptimizationMessage(result),
+      color: "yellow",
+    });
+    return;
+  }
+
+  notifications.show({
+    title: "Optimization failed",
+    message: "Previous timing is still active.",
+    color: "red",
+  });
 }
 
 function DeckLearningSummary({
@@ -323,8 +416,12 @@ function DeckLearningSummary({
           <Badge color="blue" variant="light" radius="md">
             {deck.eligibleLogCount} eligible
           </Badge>
-          <Badge color="gray" variant="light" radius="md">
-            {deck.optimizerStatus}
+          <Badge
+            color={deckLearningStatusColor(deck)}
+            variant="light"
+            radius="md"
+          >
+            {deckLearningStatusLabel(deck)}
           </Badge>
         </Group>
         <Button
@@ -468,7 +565,17 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
     const updateDeckMutation = trpc.updateDeck.useMutation();
     const deleteDeckMutation = trpc.deleteDeck.useMutation();
     const optimizeDeckMutation = trpc.optimizeDeckFsrsRoute.useMutation({
-      onSuccess: refreshData,
+      onSuccess: (result) => {
+        showOptimizationResult(result);
+        refreshData();
+      },
+      onError: () => {
+        notifications.show({
+          title: "Optimization failed",
+          message: "Previous timing is still active.",
+          color: "red",
+        });
+      },
     });
     const isSelected = selectedDeckIds.includes(deck.id);
 

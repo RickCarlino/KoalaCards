@@ -3,7 +3,7 @@ import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc-procedure";
 import { LANG_CODES } from "../shared-types";
 import { TRPCError } from "@trpc/server";
-import { maybeAddImageToCard } from "../image";
+import { maybeAddImageToCardInBackground } from "../image";
 import { ensureDeckFsrsConfig } from "../fsrs/scheduler";
 
 const inputSchema = z.object({
@@ -133,7 +133,7 @@ export const bulkCreateCards = procedure
       results.push({ term, definition });
       processed += 1;
       if (processed < 50) {
-        maybeAddImageToCard(card);
+        maybeAddImageToCardInBackground(card, "bulkCreateCards");
       }
     }
 

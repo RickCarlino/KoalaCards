@@ -179,7 +179,6 @@ export const openaiGenerateImage: ImageGenFn = async (options) => {
     model: getModelString(options.model ?? DEFAULT_IMAGE_MODEL),
     prompt: options.prompt,
     size: DEFAULT_IMAGE_SIZE,
-    response_format: "b64_json",
   });
   return result.data?.[0]?.b64_json ?? "";
 };

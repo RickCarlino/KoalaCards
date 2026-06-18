@@ -3,13 +3,21 @@ import { optimizeDeckFsrs } from "../fsrs/optimizer";
 import { procedure } from "../trpc-procedure";
 import { requireOwnedDeck, requireRouteUserId } from "./route-helpers";
 
+const optimizationReasonSchema = z.enum([
+  "eligible",
+  "not_enough_logs",
+  "not_enough_cards",
+  "not_enough_new_logs",
+  "cooldown",
+]);
+
 export const optimizeDeckFsrsRoute = procedure
   .input(z.object({ deckId: z.number() }))
   .output(
     z.object({
       status: z.enum(["succeeded", "skipped", "failed"]),
       eligibleLogCount: z.number(),
-      reason: z.string(),
+      reason: optimizationReasonSchema,
     }),
   )
   .mutation(async ({ input, ctx }) => {
