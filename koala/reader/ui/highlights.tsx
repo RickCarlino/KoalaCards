@@ -9,7 +9,7 @@ import {
   Stack,
   Text,
 } from "@mantine/core";
-import { IconX } from "@tabler/icons-react";
+import { IconRefresh, IconX } from "@tabler/icons-react";
 import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -68,6 +68,9 @@ type ExplainSelectionCardProps = {
   onDeleteHighlight?: () => void;
   canDeleteHighlight?: boolean;
   isDeletingHighlight?: boolean;
+  onRetryHighlight?: () => void;
+  canRetryHighlight?: boolean;
+  isRetryingHighlight?: boolean;
   onAddToDeck?: () => void;
   canAddToDeck?: boolean;
   isAddingToDeck?: boolean;
@@ -199,44 +202,111 @@ function renderExplainActions(options: {
   isAddingToDeck: boolean;
   canDeleteHighlight: boolean;
   onDeleteHighlight?: () => void;
+  canRetryHighlight: boolean;
+  onRetryHighlight?: () => void;
+  isRetryingHighlight: boolean;
 }): React.ReactNode | null {
   const actionState = resolveExplainActionState(options);
-
-  if (!actionState.showAddAction && !actionState.showDeleteAction) {
+  if (
+    !actionState.showAddAction &&
+    !actionState.showDeleteAction &&
+    !actionState.showRetryAction
+  ) {
     return null;
   }
 
   return (
     <Group justify="flex-end" align="flex-start" gap="xs" wrap="nowrap">
-      {actionState.showAddAction && options.onAddToDeck ? (
-        <Button
-          size="compact-sm"
-          variant="light"
-          color="grape"
-          onClick={options.onAddToDeck}
-          disabled={actionState.addDisabled}
-          loading={actionState.isAddingToDeck}
-        >
-          Add to deck
-        </Button>
-      ) : null}
-      {actionState.showDeleteAction && options.onDeleteHighlight ? (
-        <ActionIcon
-          size="sm"
-          variant="subtle"
-          color="gray"
-          onClick={options.onDeleteHighlight}
-          disabled={actionState.deleteDisabled}
-          aria-label="Delete highlight"
-        >
-          {actionState.isDeletingHighlight ? (
-            <Loader size={12} />
-          ) : (
-            <IconX size={14} stroke={1.8} />
-          )}
-        </ActionIcon>
-      ) : null}
+      {renderAddToDeckAction({
+        onAddToDeck: options.onAddToDeck,
+        actionState,
+      })}
+      {renderRetryHighlightAction({
+        onRetryHighlight: options.onRetryHighlight,
+        actionState,
+      })}
+      {renderDeleteHighlightAction({
+        onDeleteHighlight: options.onDeleteHighlight,
+        actionState,
+      })}
     </Group>
+  );
+}
+
+function renderAddToDeckAction(options: {
+  onAddToDeck?: () => void;
+  actionState: ReturnType<typeof resolveExplainActionState>;
+}): React.ReactNode | null {
+  if (!options.actionState.showAddAction || !options.onAddToDeck) {
+    return null;
+  }
+
+  return (
+    <Button
+      size="compact-sm"
+      variant="light"
+      color="grape"
+      onClick={options.onAddToDeck}
+      disabled={options.actionState.addDisabled}
+      loading={options.actionState.isAddingToDeck}
+    >
+      Add to deck
+    </Button>
+  );
+}
+
+function renderRetryHighlightAction(options: {
+  onRetryHighlight?: () => void;
+  actionState: ReturnType<typeof resolveExplainActionState>;
+}): React.ReactNode | null {
+  if (!options.actionState.showRetryAction || !options.onRetryHighlight) {
+    return null;
+  }
+
+  return (
+    <ActionIcon
+      size="sm"
+      variant="subtle"
+      color="gray"
+      onClick={options.onRetryHighlight}
+      disabled={options.actionState.retryDisabled}
+      aria-label="Retry highlight"
+    >
+      {options.actionState.isRetryingHighlight ? (
+        <Loader size={12} />
+      ) : (
+        <IconRefresh size={14} stroke={1.8} />
+      )}
+    </ActionIcon>
+  );
+}
+
+function renderDeleteHighlightAction(options: {
+  onDeleteHighlight?: () => void;
+  actionState: ReturnType<typeof resolveExplainActionState>;
+}): React.ReactNode | null {
+  if (
+    !options.actionState.showDeleteAction ||
+    !options.onDeleteHighlight
+  ) {
+    return null;
+  }
+
+  return (
+    <ActionIcon
+      size="sm"
+      variant="subtle"
+      color="gray"
+      onClick={options.onDeleteHighlight}
+      disabled={options.actionState.deleteDisabled}
+      aria-label="Delete highlight"
+    >
+      {options.actionState.isDeletingHighlight ? (
+        <Loader size={12} />
+      ) : (
+        <IconX size={14} stroke={1.8} />
+      )}
+    </ActionIcon>
   );
 }
 
@@ -321,6 +391,9 @@ export function ExplainSelectionCard({
   onDeleteHighlight,
   canDeleteHighlight = false,
   isDeletingHighlight = false,
+  onRetryHighlight,
+  canRetryHighlight = false,
+  isRetryingHighlight = false,
   onAddToDeck,
   canAddToDeck = false,
   isAddingToDeck = false,
@@ -335,9 +408,14 @@ export function ExplainSelectionCard({
     isAddingToDeck,
     canDeleteHighlight,
     onDeleteHighlight,
+    canRetryHighlight,
+    onRetryHighlight,
+    isRetryingHighlight,
   });
   const floatingActionsWidth =
-    flowExplanation && actions !== null ? (onAddToDeck ? 132 : 36) : 0;
+    flowExplanation && actions !== null
+      ? (onAddToDeck ? 132 : 36) + (onRetryHighlight ? 36 : 0)
+      : 0;
   const explanation = renderExplainAnalysis({
     analysis,
     fillAvailableHeight,

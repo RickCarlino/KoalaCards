@@ -89,6 +89,24 @@ type ReaderSelectionDraft = {
   occurrenceHint: number;
 };
 
+type ExplainSelectionOptions = {
+  regenerate?: boolean;
+};
+
+type ReaderBookAnnotationForRender = ReaderArticleHighlight & {
+  locatorJson?: EpubBookLocator;
+};
+
+type OptimisticRenderedAnnotation = {
+  id: number;
+  selectedText: string;
+  selectedOccurrenceIndex: number;
+  contextBefore: string;
+  contextAfter: string;
+  locatorJson: EpubBookLocator;
+  optimisticKey: string;
+};
+
 type BookLoadState =
   | "checking"
   | "missing"
@@ -383,7 +401,7 @@ function clearFrameSelection(iframe: HTMLIFrameElement | null): void {
 }
 
 function isAnnotationInSection(
-  annotation: ReaderArticleHighlight & { locatorJson?: EpubBookLocator },
+  annotation: { locatorJson?: EpubBookLocator },
   sectionHref: string,
 ): boolean {
   return (
@@ -454,6 +472,40 @@ function selectionDraftKey(options: {
     draft.contextAfter,
     draft.occurrenceHint,
   ]);
+}
+
+function annotationMatchesOptimisticRender(options: {
+  annotation: ReaderBookAnnotationForRender;
+  optimisticAnnotation: OptimisticRenderedAnnotation;
+}): boolean {
+  const { annotation, optimisticAnnotation } = options;
+  return (
+    annotation.selectedText === optimisticAnnotation.selectedText &&
+    annotation.selectedOccurrenceIndex ===
+      optimisticAnnotation.selectedOccurrenceIndex &&
+    annotation.contextBefore === optimisticAnnotation.contextBefore &&
+    annotation.contextAfter === optimisticAnnotation.contextAfter &&
+    normalizeHref(annotation.locatorJson?.href ?? "") ===
+      normalizeHref(optimisticAnnotation.locatorJson.href)
+  );
+}
+
+function pruneOptimisticRenderedAnnotations(options: {
+  annotations: ReaderBookAnnotationForRender[];
+  optimisticAnnotations: OptimisticRenderedAnnotation[];
+}): OptimisticRenderedAnnotation[] {
+  return options.optimisticAnnotations.filter((optimisticAnnotation) => {
+    return !options.annotations.some((annotation) => {
+      if (annotation.id === optimisticAnnotation.id) {
+        return true;
+      }
+
+      return annotationMatchesOptimisticRender({
+        annotation,
+        optimisticAnnotation,
+      });
+    });
+  });
 }
 
 function isAutoExplainSelection(
@@ -767,6 +819,16 @@ async function readBookExplainStream(
       }
     }
   }
+}
+
+async function requireBookExplainStreamResponse(
+  response: Response,
+): Promise<Response & { body: ReadableStream<Uint8Array> }> {
+  if (!hasExplainSelectionStream(response)) {
+    throw new Error(await response.text());
+  }
+
+  return response;
 }
 
 function NavigationList({
@@ -1221,6 +1283,8 @@ function CurrentHighlightPanel({
   isImportingActiveAnnotation,
   deletingAnnotationId,
   onExplainSelection,
+  onRetryHighlight,
+  canRetryHighlight,
   onAddActiveAnnotation,
   onDeleteAnnotation,
 }: {
@@ -1233,6 +1297,8 @@ function CurrentHighlightPanel({
   canAddActiveAnnotation: boolean;
   isImportingActiveAnnotation: boolean;
   onExplainSelection: () => void;
+  onRetryHighlight?: () => void;
+  canRetryHighlight: boolean;
   onAddActiveAnnotation?: () => void;
   onDeleteAnnotation: (annotationId: number) => void;
 }) {
@@ -1297,6 +1363,9 @@ function CurrentHighlightPanel({
         onAddToDeck={onAddActiveAnnotation}
         canAddToDeck={canAddActiveAnnotation}
         isAddingToDeck={isImportingActiveAnnotation}
+        onRetryHighlight={showManualExplain ? undefined : onRetryHighlight}
+        canRetryHighlight={!showManualExplain && canRetryHighlight}
+        isRetryingHighlight={isExplaining}
         onDeleteHighlight={deleteHighlight}
         canDeleteHighlight={canDeleteHighlight}
         isDeletingHighlight={isDeletingHighlight}
@@ -1558,6 +1627,8 @@ function BookSideRail({
   onActivePanelChange,
   onDeckChange,
   onExplainSelection,
+  onRetryHighlight,
+  canRetryHighlight,
   onAddActiveAnnotation,
   onOpenAnnotation,
   onToggleAnnotationSelection,
@@ -1591,6 +1662,8 @@ function BookSideRail({
   onActivePanelChange: (panel: SideRailPanel) => void;
   onDeckChange: (deckId: string | null) => void;
   onExplainSelection: () => void;
+  onRetryHighlight?: () => void;
+  canRetryHighlight: boolean;
   onAddActiveAnnotation?: () => void;
   onOpenAnnotation?: (annotation: ReaderArticleHighlight) => void;
   onToggleAnnotationSelection: (
@@ -1615,6 +1688,8 @@ function BookSideRail({
         isImportingActiveAnnotation={isImportingActiveAnnotation}
         deletingAnnotationId={deletingAnnotationId}
         onExplainSelection={onExplainSelection}
+        onRetryHighlight={onRetryHighlight}
+        canRetryHighlight={canRetryHighlight}
         onAddActiveAnnotation={onAddActiveAnnotation}
         onDeleteAnnotation={onDeleteAnnotation}
       />
@@ -1714,6 +1789,8 @@ function ReaderBookWorkspace({
   onIframeLoad,
   onDeckChange,
   onExplainSelection,
+  onRetryHighlight,
+  canRetryHighlight,
   onAddActiveAnnotation,
   onOpenAnnotation,
   onDeleteAnnotation,
@@ -1762,6 +1839,8 @@ function ReaderBookWorkspace({
   onIframeLoad: () => void;
   onDeckChange: (deckId: string | null) => void;
   onExplainSelection: () => void;
+  onRetryHighlight?: () => void;
+  canRetryHighlight: boolean;
   onAddActiveAnnotation?: () => void;
   onOpenAnnotation?: (annotation: ReaderArticleHighlight) => void;
   onDeleteAnnotation: (annotationId: number) => void;
@@ -1824,6 +1903,8 @@ function ReaderBookWorkspace({
         onActivePanelChange={setActiveSideRailPanel}
         onDeckChange={onDeckChange}
         onExplainSelection={onExplainSelection}
+        onRetryHighlight={onRetryHighlight}
+        canRetryHighlight={canRetryHighlight}
         onAddActiveAnnotation={onAddActiveAnnotation}
         onOpenAnnotation={onOpenAnnotation}
         onToggleAnnotationSelection={onToggleAnnotationSelection}
@@ -1879,6 +1960,8 @@ function ReaderBookShell({
   onImportSelected,
   onToggleSelectAll,
   onExplainSelection,
+  onRetryHighlight,
+  canRetryHighlight,
   onAddActiveAnnotation,
   onOpenAnnotation,
 }: {
@@ -1930,6 +2013,8 @@ function ReaderBookShell({
   onImportSelected: () => void;
   onToggleSelectAll: () => void;
   onExplainSelection: () => void;
+  onRetryHighlight?: () => void;
+  canRetryHighlight: boolean;
   onAddActiveAnnotation?: () => void;
   onOpenAnnotation?: (annotation: ReaderArticleHighlight) => void;
 }) {
@@ -1979,6 +2064,8 @@ function ReaderBookShell({
         onImportSelected={onImportSelected}
         onToggleSelectAll={onToggleSelectAll}
         onExplainSelection={onExplainSelection}
+        onRetryHighlight={onRetryHighlight}
+        canRetryHighlight={canRetryHighlight}
         onAddActiveAnnotation={onAddActiveAnnotation}
         onOpenAnnotation={onOpenAnnotation}
       />
@@ -2035,6 +2122,7 @@ export default function ReaderBookPage({
   const preferencesMountedRef = useRef(false);
   const explainAbortRef = useRef<AbortController | null>(null);
   const explainRequestIdRef = useRef(0);
+  const optimisticAnnotationIdRef = useRef(-1);
   const autoExplainedSelectionKeyRef = useRef<string | null>(null);
   const [session, setSession] = useState<EpubSession | null>(null);
   const [loadState, setLoadState] = useState<BookLoadState>("checking");
@@ -2054,6 +2142,8 @@ export default function ReaderBookPage({
     useState<SideRailPanel>("current");
   const [selectionDraft, setSelectionDraft] =
     useState<ReaderSelectionDraft | null>(null);
+  const [retrySelectionDraft, setRetrySelectionDraft] =
+    useState<ReaderSelectionDraft | null>(null);
   const [isExplaining, setIsExplaining] = useState(false);
   const [streamError, setStreamError] = useState("");
   const [analysis, setAnalysis] = useState<ReaderHighlightAnalysis | null>(
@@ -2068,6 +2158,8 @@ export default function ReaderBookPage({
   const [selectedAnnotationIds, setSelectedAnnotationIds] = useState<
     number[]
   >([]);
+  const [optimisticRenderedAnnotations, setOptimisticRenderedAnnotations] =
+    useState<OptimisticRenderedAnnotation[]>([]);
   const [importStatusByAnnotationId, setImportStatusByAnnotationId] =
     useState<Record<number, HighlightImportResultStatus>>({});
   const [deletingAnnotationId, setDeletingAnnotationId] = useState<
@@ -2106,6 +2198,20 @@ export default function ReaderBookPage({
   const spineJson = book?.spineJson ?? [];
   const currentSpineItem = spineJson[sectionIndex] ?? null;
   const currentSectionText = renderedSection?.text ?? "";
+
+  useEffect(() => {
+    setOptimisticRenderedAnnotations((current) => {
+      const next = pruneOptimisticRenderedAnnotations({
+        annotations,
+        optimisticAnnotations: current,
+      });
+      if (next.length === current.length) {
+        return current;
+      }
+
+      return next;
+    });
+  }, [annotations]);
 
   useEffect(() => {
     updateReaderPreferencesRef.current = updateReaderPreferences.mutate;
@@ -2209,12 +2315,29 @@ export default function ReaderBookPage({
     const sectionAnnotations = annotations.filter((annotation) =>
       isAnnotationInSection(annotation, currentSpineItem.href),
     );
+    const sectionOptimisticAnnotations =
+      optimisticRenderedAnnotations.filter((annotation) =>
+        isAnnotationInSection(annotation, currentSpineItem.href),
+      );
+    const optimisticAnnotationsToRender =
+      pruneOptimisticRenderedAnnotations({
+        annotations: sectionAnnotations,
+        optimisticAnnotations: sectionOptimisticAnnotations,
+      });
     const ranges = buildSavedArticleHighlightRanges({
       articleText: renderedSection.text,
-      highlights: sectionAnnotations,
+      highlights: [
+        ...sectionAnnotations,
+        ...optimisticAnnotationsToRender,
+      ],
     });
     applyRenderedArticleHighlights(body, ranges);
-  }, [annotations, currentSpineItem, renderedSection]);
+  }, [
+    annotations,
+    currentSpineItem,
+    optimisticRenderedAnnotations,
+    renderedSection,
+  ]);
 
   const jumpToLocator = useCallback(
     (locator: EpubBookLocator) => {
@@ -2224,6 +2347,7 @@ export default function ReaderBookPage({
       autoExplainedSelectionKeyRef.current = null;
       setSectionIndex(nextIndex);
       setSelectionDraft(null);
+      setRetrySelectionDraft(null);
       setAnalysis(null);
       setStreamError("");
       setIsExplaining(false);
@@ -2372,7 +2496,10 @@ export default function ReaderBookPage({
   }, [applyCurrentSectionHighlights]);
 
   const explainSelectionDraft = useCallback(
-    async (draft: ReaderSelectionDraft) => {
+    async (
+      draft: ReaderSelectionDraft,
+      options: ExplainSelectionOptions = {},
+    ) => {
       if (!book || !currentSpineItem) {
         return;
       }
@@ -2387,6 +2514,13 @@ export default function ReaderBookPage({
       const isCurrentRequest = () =>
         explainRequestIdRef.current === requestId &&
         !controller.signal.aborted;
+      const optimisticKey = selectionDraftKey({
+        draft,
+        sectionHref: currentSpineItem.href,
+      });
+      const optimisticAnnotationId = optimisticAnnotationIdRef.current;
+      optimisticAnnotationIdRef.current -= 1;
+      let streamedAnnotationId: number | null = null;
 
       explainRequestIdRef.current = requestId;
       explainAbortRef.current?.abort();
@@ -2395,6 +2529,22 @@ export default function ReaderBookPage({
       setStreamError("");
       setAnalysis(null);
       setExplainedAnnotationId(null);
+      setRetrySelectionDraft(draft);
+      setOptimisticRenderedAnnotations((current) => [
+        {
+          id: optimisticAnnotationId,
+          selectedText: draft.selectedText,
+          selectedOccurrenceIndex: draft.occurrenceHint,
+          contextBefore: draft.contextBefore,
+          contextAfter: draft.contextAfter,
+          locatorJson: locator,
+          optimisticKey,
+        },
+        ...current.filter(
+          (annotation) => annotation.optimisticKey !== optimisticKey,
+        ),
+      ]);
+      clearFrameSelection(iframeRef.current);
 
       try {
         const response = await fetch(
@@ -2412,48 +2562,62 @@ export default function ReaderBookPage({
               locatorJson: locator,
               chapterTitle: locator.chapterTitle,
               progression: locator.totalProgression,
+              regenerate: options.regenerate === true,
             }),
             signal: controller.signal,
           },
         );
 
-        if (!hasExplainSelectionStream(response)) {
-          throw new Error(await response.text());
-        }
+        await readBookExplainStream(
+          await requireBookExplainStreamResponse(response),
+          {
+            onAnnotationId: (annotationId) => {
+              if (!isCurrentRequest()) {
+                return;
+              }
 
-        await readBookExplainStream(response, {
-          onAnnotationId: (annotationId) => {
-            if (!isCurrentRequest()) {
-              return;
-            }
+              streamedAnnotationId = annotationId;
+              setOptimisticRenderedAnnotations((current) =>
+                current.map((annotation) => {
+                  if (annotation.optimisticKey !== optimisticKey) {
+                    return annotation;
+                  }
 
-            clearFrameSelection(iframeRef.current);
-            setSelectionDraft(null);
-            setExplainedAnnotationId(annotationId);
-            setSelectedAnnotationIds((current) =>
-              Array.from(new Set([...current, annotationId])),
-            );
-          },
-          onAnalysis: (nextAnalysis) => {
-            if (!isCurrentRequest()) {
-              return;
-            }
+                  return {
+                    ...annotation,
+                    id: annotationId,
+                  };
+                }),
+              );
+              clearFrameSelection(iframeRef.current);
+              setSelectionDraft(null);
+              setExplainedAnnotationId(annotationId);
+              setSelectedAnnotationIds((current) =>
+                Array.from(new Set([...current, annotationId])),
+              );
+              bookQuery.refetch();
+            },
+            onAnalysis: (nextAnalysis) => {
+              if (!isCurrentRequest()) {
+                return;
+              }
 
-            clearFrameSelection(iframeRef.current);
-            setSelectionDraft(null);
-            setAnalysis(nextAnalysis);
+              clearFrameSelection(iframeRef.current);
+              setSelectionDraft(null);
+              setAnalysis(nextAnalysis);
+            },
+            onDone: () => {
+              if (isCurrentRequest()) {
+                setIsExplaining(false);
+              }
+            },
+            onError: (message) => {
+              if (isCurrentRequest()) {
+                setStreamError(message);
+              }
+            },
           },
-          onDone: () => {
-            if (isCurrentRequest()) {
-              setIsExplaining(false);
-            }
-          },
-          onError: (message) => {
-            if (isCurrentRequest()) {
-              setStreamError(message);
-            }
-          },
-        });
+        );
       } catch (error: unknown) {
         const message = resolveExplainSelectionErrorMessage(
           error,
@@ -2461,6 +2625,13 @@ export default function ReaderBookPage({
         );
         if (message && isCurrentRequest()) {
           setStreamError(message);
+        }
+        if (streamedAnnotationId === null) {
+          setOptimisticRenderedAnnotations((current) =>
+            current.filter(
+              (annotation) => annotation.optimisticKey !== optimisticKey,
+            ),
+          );
         }
       } finally {
         if (isCurrentRequest()) {
@@ -2533,6 +2704,7 @@ export default function ReaderBookPage({
       explainAbortRef.current?.abort();
       autoExplainedSelectionKeyRef.current = null;
       setSelectionDraft(null);
+      setRetrySelectionDraft(null);
       setAnalysis(null);
       setStreamError("");
       setIsExplaining(false);
@@ -2573,8 +2745,10 @@ export default function ReaderBookPage({
     (annotation: ReaderArticleHighlight) => {
       explainAbortRef.current?.abort();
       autoExplainedSelectionKeyRef.current = null;
+      const draft = selectionDraftFromAnnotation(annotation);
       setIsExplaining(false);
-      setSelectionDraft(selectionDraftFromAnnotation(annotation));
+      setSelectionDraft(draft);
+      setRetrySelectionDraft(draft);
       setExplainedAnnotationId(annotation.id);
       setAnalysis(annotationAnalysis(annotation));
       setActiveSideRailPanel("current");
@@ -2661,6 +2835,16 @@ export default function ReaderBookPage({
     }
 
     await explainSelectionDraft(selectionDraft);
+  };
+
+  const handleRetryHighlight = async () => {
+    if (retrySelectionDraft === null || isExplaining) {
+      return;
+    }
+
+    await explainSelectionDraft(retrySelectionDraft, {
+      regenerate: true,
+    });
   };
 
   const handleToggleAnnotationSelection = (
@@ -2916,6 +3100,7 @@ export default function ReaderBookPage({
     isExplaining,
     isImportingActiveAnnotation,
   });
+  const canRetryHighlight = retrySelectionDraft !== null && !isExplaining;
   const addActiveAnnotationHandler = activeAnnotationHandlerOrUndefined({
     explainedAnnotationId,
     activeAnnotationAlreadyAdded,
@@ -2984,6 +3169,10 @@ export default function ReaderBookPage({
       onImportSelected={handleImportSelected}
       onToggleSelectAll={handleToggleSelectAll}
       onExplainSelection={handleExplainSelection}
+      onRetryHighlight={
+        canRetryHighlight ? handleRetryHighlight : undefined
+      }
+      canRetryHighlight={canRetryHighlight}
       onAddActiveAnnotation={addActiveAnnotationHandler}
       onOpenAnnotation={activateAnnotation}
     />

@@ -150,18 +150,28 @@ export function resolveExplainActionState(options: {
   isAddingToDeck: boolean;
   canDeleteHighlight: boolean;
   onDeleteHighlight?: () => void;
+  canRetryHighlight: boolean;
+  onRetryHighlight?: () => void;
+  isRetryingHighlight: boolean;
 }) {
   return {
     showAddAction: Boolean(options.onAddToDeck),
     showDeleteAction: Boolean(options.onDeleteHighlight),
+    showRetryAction: Boolean(options.onRetryHighlight),
     addDisabled:
       !options.canAddToDeck ||
       options.isExplaining ||
       options.isDeletingHighlight,
     deleteDisabled:
       !options.canDeleteHighlight || options.isDeletingHighlight,
+    retryDisabled:
+      !options.canRetryHighlight ||
+      options.isExplaining ||
+      options.isDeletingHighlight ||
+      options.isAddingToDeck,
     isAddingToDeck: options.isAddingToDeck,
     isDeletingHighlight: options.isDeletingHighlight,
+    isRetryingHighlight: options.isRetryingHighlight,
   };
 }
 

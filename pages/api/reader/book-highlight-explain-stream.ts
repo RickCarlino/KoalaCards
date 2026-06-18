@@ -33,6 +33,7 @@ const bodySchema = baseHighlightStreamBodySchema.extend({
   epubCfi: z.string().trim().max(1000).optional(),
   chapterTitle: z.string().trim().max(500).optional(),
   progression: z.number().min(0).max(1).optional(),
+  regenerate: z.boolean().optional(),
 });
 
 type StreamRequestBody = z.infer<typeof bodySchema>;
@@ -64,6 +65,7 @@ type ResolvedExplainRequest = {
   chapterTitle: string;
   progression: number;
   occurrences: HighlightOccurrenceRecord[];
+  regenerate: boolean;
 };
 
 type ResolvedSelectionOccurrences = {
@@ -295,6 +297,7 @@ function buildResolvedExplainRequest(options: {
       parsedBody.locatorJson.progression ??
       0,
     occurrences: resolvedSelection.occurrences,
+    regenerate: parsedBody.regenerate ?? false,
   };
 }
 
@@ -385,14 +388,19 @@ export default async function handler(
     req,
     res,
     resolve: () => resolveExplainRequest(req, res),
-    loadCached: (resolved) =>
-      loadCachedAnnotation({
+    loadCached: (resolved) => {
+      if (resolved.regenerate) {
+        return Promise.resolve(null);
+      }
+
+      return loadCachedAnnotation({
         userId: resolved.userId,
         bookId: resolved.book.id,
         selectedTextHash: resolved.selectedTextHash,
         selectedOccurrenceIndex: resolved.selectedOccurrenceIndex,
         sectionTextHash: resolved.sectionTextHash,
-      }),
+      });
+    },
     cachedSelectedText: (cached) => cached.quote,
     streamGenerated: (resolved, isClosed) =>
       streamGeneratedResponse({ res, isClosed, resolved }),

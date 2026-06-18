@@ -63,14 +63,20 @@ test("highlight state helpers summarize list visibility and actions", () => {
       isAddingToDeck: true,
       canDeleteHighlight: false,
       onDeleteHighlight: () => {},
+      canRetryHighlight: false,
+      onRetryHighlight: undefined,
+      isRetryingHighlight: false,
     }),
     {
       showAddAction: true,
       showDeleteAction: true,
+      showRetryAction: false,
       addDisabled: false,
       deleteDisabled: true,
+      retryDisabled: true,
       isAddingToDeck: true,
       isDeletingHighlight: false,
+      isRetryingHighlight: false,
     },
   );
 
@@ -83,6 +89,9 @@ test("highlight state helpers summarize list visibility and actions", () => {
       isAddingToDeck: false,
       canDeleteHighlight: true,
       onDeleteHighlight: () => {},
+      canRetryHighlight: false,
+      onRetryHighlight: undefined,
+      isRetryingHighlight: false,
     }).deleteDisabled,
     false,
   );
