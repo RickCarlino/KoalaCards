@@ -47,6 +47,7 @@ const DECK_HAND_HARD_CAP = 50;
 const ROUND_ROBIN_ORDER: Bucket[] = [REMEDIAL, NEW_CARD, ROUTINE];
 const PER_BUCKET_PREFETCH = 45;
 const NEW_CARD_WINDOW_SIZE = 1000;
+const QUIZ_PAYLOAD_CONCURRENCY = 4;
 
 async function getDailyLimits(userId: string, now: number) {
   const { cardsPerDayMax = NEW_CARD_DEFAULT_TARGET } =
@@ -173,10 +174,19 @@ async function buildQuizPayload(
   scheduler: ResolvedDeckScheduler,
 ) {
   const r = q.repetitions ?? 0;
-  const definitionAudio = await generateDefinitionAudio(q.definition);
-  const termAudio = await generateTermAudio({
-    card: q as Card,
-  });
+  const [definitionAudio, termAudio, imageURL] = await Promise.all([
+    buildQuizAsset(q.id, "definition audio", "", () =>
+      generateDefinitionAudio(q.definition),
+    ),
+    buildQuizAsset(q.id, "term audio", "", () =>
+      generateTermAudio({
+        card: q as Card,
+      }),
+    ),
+    buildQuizAsset(q.id, "card image", undefined, () =>
+      maybeGetCardImageUrl(q.imageBlobId),
+    ),
+  ]);
   return {
     cardId: q.id,
     definition: q.definition,
@@ -189,11 +199,28 @@ async function buildQuizPayload(
     langCode: "ko",
     lastReview: q.lastReview ?? 0,
     nextReview: q.nextReview ?? 0,
-    imageURL: await maybeGetCardImageUrl(q.imageBlobId),
+    imageURL,
     stability: q.stability,
     difficulty: q.difficulty,
     scheduler: serializeDeckScheduler(scheduler),
   };
+}
+
+async function buildQuizAsset<T>(
+  cardId: number,
+  label: string,
+  fallback: T,
+  load: () => Promise<T>,
+): Promise<T> {
+  try {
+    return await load();
+  } catch (error) {
+    console.error(
+      `Unable to prepare ${label} for review card ${cardId}:`,
+      error,
+    );
+    return fallback;
+  }
 }
 
 async function buildHand(
@@ -270,8 +297,18 @@ export async function getLessons({
 
   const hand = await buildHand(userId, deckId, now, take);
   const scheduler = await resolveDeckScheduler({ userId, deckId });
+  const quizzes: Awaited<ReturnType<typeof buildQuizPayload>>[] = [];
 
-  return Promise.all(hand.map((q) => buildQuizPayload(q, scheduler)));
+  for (let i = 0; i < hand.length; i += QUIZ_PAYLOAD_CONCURRENCY) {
+    const batch = hand.slice(i, i + QUIZ_PAYLOAD_CONCURRENCY);
+    quizzes.push(
+      ...(await Promise.all(
+        batch.map((q) => buildQuizPayload(q, scheduler)),
+      )),
+    );
+  }
+
+  return quizzes;
 }
 
 export async function getLessonsDue(

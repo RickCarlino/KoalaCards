@@ -33,7 +33,7 @@ export async function getLessonMeta(userId: string, deckId?: number) {
 export const getNextQuizzes = procedure
   .input(QuizInput)
   .output(QuizList)
-  .mutation(async ({ ctx, input }) => {
+  .query(async ({ ctx, input }) => {
     const { user } = await getUserSettings(ctx.user?.id);
     const userId = user.id;
     const quizzes = await getLessons({
