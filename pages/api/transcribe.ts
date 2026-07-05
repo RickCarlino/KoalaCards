@@ -2,10 +2,12 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import OpenAI from "openai";
 import { toFile } from "openai/uploads";
 import { LANG_CODES } from "@/koala/shared-types";
-import { getServerSession } from "next-auth";
-import { authOptions } from "./auth/[...nextauth]";
-import { prismaClient } from "@/koala/prisma-client";
 import { shuffle } from "radash";
+import {
+  requireJsonOpenAiApiKey,
+  requireJsonPostMethod,
+} from "@/koala/api/next-api";
+import { requireJsonApiUser } from "@/koala/get-api-user";
 import {
   buildTranscriptionRequest,
   buildTranscriptionPrompt,
@@ -91,20 +93,11 @@ function requirePostMethod(
   req: NextApiRequest,
   res: NextApiResponse,
 ): boolean {
-  if (req.method === "POST") {
-    return true;
-  }
-  res.setHeader("Allow", "POST");
-  res.status(405).json({ error: "Method Not Allowed" });
-  return false;
+  return requireJsonPostMethod(req, res);
 }
 
 function requireOpenAiApiKey(res: NextApiResponse): boolean {
-  if (process.env.OPENAI_API_KEY) {
-    return true;
-  }
-  res.status(500).json({ error: "Missing OPENAI_API_KEY" });
-  return false;
+  return requireJsonOpenAiApiKey(res);
 }
 
 function respondPayloadTooLarge(res: NextApiResponse) {
@@ -117,19 +110,7 @@ async function requireAuthenticatedUser(
   req: NextApiRequest,
   res: NextApiResponse,
 ): Promise<boolean> {
-  const session = await getServerSession(req, res, authOptions);
-  const email = session?.user?.email;
-  if (!email) {
-    res.status(401).json({ error: "Unauthorized" });
-    return false;
-  }
-
-  const dbUser = await prismaClient.user.findUnique({ where: { email } });
-  if (dbUser) {
-    return true;
-  }
-  res.status(401).json({ error: "Unauthorized" });
-  return false;
+  return Boolean(await requireJsonApiUser(req, res));
 }
 
 function parseLanguage(
@@ -203,11 +184,12 @@ export default async function handler(
 
   const uploadFile = await toFile(raw, filename, { type: contentType });
 
+  console.log(`Temporarily discarding prompt: ${prompt}`);
   const result = await openai.audio.transcriptions.create(
     buildTranscriptionRequest({
       file: uploadFile,
       language,
-      prompt,
+      prompt: null,
     }),
   );
 

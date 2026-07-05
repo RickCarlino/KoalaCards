@@ -1,5 +1,7 @@
 # Repository Guidelines
 
+YOU ARE NOT ALLOWED TO CHANGE LINT RULES OR OVERRIDE THEM.
+
 ## Project Structure & Module Organization
 - `pages/`: Next.js Pages Router routes and page-level UI (`pages/api/` for API handlers).
 - `koala/`: Core app logic and shared modules (reader flows, auth helpers, worker, settings, tRPC routes).

@@ -45,10 +45,41 @@ type PresenceResponse = {
   enabled: boolean;
 };
 
+type LanguageExchangeAffixProps = {
+  badgeLabel: string;
+  children: React.ReactNode;
+  message: string;
+  zIndex: number;
+};
+
 type LeaderLease = {
   leaseId: string;
   expiresAt: number;
 };
+
+function LanguageExchangeAffix({
+  badgeLabel,
+  children,
+  message,
+  zIndex,
+}: LanguageExchangeAffixProps) {
+  return (
+    <Affix position={{ bottom: 20, right: 20 }} zIndex={zIndex}>
+      <Paper p="md" radius="lg" shadow="lg">
+        <Stack gap="sm">
+          <Group justify="space-between" align="center" gap="sm">
+            <Text fw={600}>Language exchange</Text>
+            <Badge color="pink">{badgeLabel}</Badge>
+          </Group>
+          <Text size="sm" c="dimmed">
+            {message}
+          </Text>
+          <Group justify="flex-end">{children}</Group>
+        </Stack>
+      </Paper>
+    </Affix>
+  );
+}
 
 function readLeaderLease(): LeaderLease | null {
   if (typeof window === "undefined") {
@@ -701,65 +732,47 @@ export function LanguageExchangeDirectProvider({
       {children}
       <audio ref={remoteAudioRef} autoPlay playsInline hidden />
       {showIncomingPrompt && incomingCall ? (
-        <Affix position={{ bottom: 20, right: 20 }} zIndex={302}>
-          <Paper p="md" radius="lg" shadow="lg">
-            <Stack gap="sm">
-              <Group justify="space-between" align="center" gap="sm">
-                <Text fw={600}>Language exchange</Text>
-                <Badge color="pink">Incoming</Badge>
-              </Group>
-              <Text size="sm" c="dimmed">
-                Someone is calling your language exchange link now.
-              </Text>
-              <Group justify="flex-end">
-                <Button
-                  size="xs"
-                  variant="subtle"
-                  loading={incomingBusyId === incomingCall.id}
-                  onClick={() => void handleDecline(incomingCall.id)}
-                >
-                  Decline
-                </Button>
-                <Button
-                  size="xs"
-                  color="pink"
-                  loading={incomingBusyId === incomingCall.id}
-                  onClick={() => void handleAnswer(incomingCall)}
-                >
-                  Answer
-                </Button>
-              </Group>
-            </Stack>
-          </Paper>
-        </Affix>
+        <LanguageExchangeAffix
+          badgeLabel="Incoming"
+          message="Someone is calling your language exchange link now."
+          zIndex={302}
+        >
+          <Button
+            size="xs"
+            variant="subtle"
+            loading={incomingBusyId === incomingCall.id}
+            onClick={() => void handleDecline(incomingCall.id)}
+          >
+            Decline
+          </Button>
+          <Button
+            size="xs"
+            color="pink"
+            loading={incomingBusyId === incomingCall.id}
+            onClick={() => void handleAnswer(incomingCall)}
+          >
+            Answer
+          </Button>
+        </LanguageExchangeAffix>
       ) : null}
       {activeCall ? (
-        <Affix position={{ bottom: 20, right: 20 }} zIndex={303}>
-          <Paper p="md" radius="lg" shadow="lg">
-            <Stack gap="sm">
-              <Group justify="space-between" align="center" gap="sm">
-                <Text fw={600}>Language exchange</Text>
-                <Badge color="pink">{activeCall.statusText}</Badge>
-              </Group>
-              <Text size="sm" c="dimmed">
-                Keep studying while you talk.
-              </Text>
-              <Group justify="flex-end">
-                <Button
-                  size="xs"
-                  variant="light"
-                  onClick={() => void handleToggleScreenShare()}
-                  disabled={activeCall.statusText !== "Connected"}
-                >
-                  {isSharingScreen ? "Stop sharing" : "Share study screen"}
-                </Button>
-                <Button size="xs" color="red" onClick={handleHangUp}>
-                  Hang up
-                </Button>
-              </Group>
-            </Stack>
-          </Paper>
-        </Affix>
+        <LanguageExchangeAffix
+          badgeLabel={activeCall.statusText}
+          message="Keep studying while you talk."
+          zIndex={303}
+        >
+          <Button
+            size="xs"
+            variant="light"
+            onClick={() => void handleToggleScreenShare()}
+            disabled={activeCall.statusText !== "Connected"}
+          >
+            {isSharingScreen ? "Stop sharing" : "Share study screen"}
+          </Button>
+          <Button size="xs" color="red" onClick={handleHangUp}>
+            Hang up
+          </Button>
+        </LanguageExchangeAffix>
       ) : null}
     </>
   );

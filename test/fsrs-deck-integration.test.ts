@@ -84,6 +84,7 @@ async function seedCompleteReviewLogs(input: {
   cardPrefix: string;
   cardCount: number;
   logsPerCard: number;
+  elapsedDays?: (reviewIndex: number) => number;
 }) {
   const cards = await Promise.all(
     Array.from({ length: input.cardCount }, (_, index) =>
@@ -115,7 +116,11 @@ async function seedCompleteReviewLogs(input: {
           cardAfterJson: {},
           dueAt: reviewAt,
           scheduledDays: reviewIndex,
-          elapsedDays: reviewIndex === 0 ? 0 : Math.max(1, reviewIndex),
+          elapsedDays: input.elapsedDays
+            ? input.elapsedDays(reviewIndex)
+            : reviewIndex === 0
+              ? 0
+              : Math.max(1, reviewIndex),
           stabilityBefore: 0,
           stabilityAfter: 1 + reviewIndex,
           difficultyBefore: 0,
@@ -661,6 +666,66 @@ test("successful optimization updates only the target deck config and ignores pa
   );
   assert.equal(updatedOtherConfig.parametersSource, "default");
   assert.equal(updatedOtherConfig.lastOptimizedAt, null);
+});
+
+test("optimization fails before binding when histories have no positive intervals", async () => {
+  const user = await createUser();
+  const deck = await createDeck(
+    user.id,
+    `${runId}-zero-interval-optimize`,
+  );
+  const config = await prismaClient.deckFsrsConfig.findUniqueOrThrow({
+    where: { deckId: deck.id },
+  });
+  await seedCompleteReviewLogs({
+    userId: user.id,
+    deckId: deck.id,
+    deckFsrsConfigId: config.id,
+    cardPrefix: `${runId}-zero-interval-card`,
+    cardCount: 50,
+    logsPerCard: 5,
+    elapsedDays: () => 0,
+  });
+  await prismaClient.deckFsrsConfig.update({
+    where: { id: config.id },
+    data: {
+      eligibleLogCount: 250,
+      logsSinceOptimize: 250,
+    },
+  });
+  let bindingCalled = false;
+
+  const result = await optimizeDeckFsrs({
+    userId: user.id,
+    deckId: deck.id,
+    now: new Date("2026-08-02T00:00:00.000Z"),
+    binding: {
+      createReview: () => {
+        bindingCalled = true;
+        return {};
+      },
+      createItem: () => {
+        bindingCalled = true;
+        return {};
+      },
+      computeParameters: async () => {
+        bindingCalled = true;
+        return [];
+      },
+    },
+  });
+
+  const after = await prismaClient.deckFsrsConfig.findUniqueOrThrow({
+    where: { id: config.id },
+  });
+
+  assert.equal(result.status, "failed");
+  assert.equal(bindingCalled, false);
+  assert.deepEqual(after.parametersJson, config.parametersJson);
+  assert.equal(after.parametersSource, config.parametersSource);
+  assert.equal(after.optimizerStatus, "failed");
+  assert.match(after.optimizerError ?? "", /positive intervals/);
+  assert.equal(after.lastOptimizedAt, null);
 });
 
 test("failed optimization preserves previous parameters and stores a safe error", async () => {

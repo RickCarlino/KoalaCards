@@ -9,7 +9,7 @@ import {
   Stack,
   Text,
 } from "@mantine/core";
-import { IconX } from "@tabler/icons-react";
+import { IconRefresh, IconX } from "@tabler/icons-react";
 import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -68,10 +68,14 @@ type ExplainSelectionCardProps = {
   onDeleteHighlight?: () => void;
   canDeleteHighlight?: boolean;
   isDeletingHighlight?: boolean;
+  onRetryHighlight?: () => void;
+  canRetryHighlight?: boolean;
+  isRetryingHighlight?: boolean;
   onAddToDeck?: () => void;
   canAddToDeck?: boolean;
   isAddingToDeck?: boolean;
   fillAvailableHeight?: boolean;
+  flowExplanation?: boolean;
 };
 
 type SelectionActionBubbleProps = {
@@ -96,21 +100,31 @@ function helperPanelStyle(
   };
 }
 
-function helperStreamStyle(
-  fillAvailableHeight: boolean,
-): React.CSSProperties {
+function helperStreamStyle(options: {
+  fillAvailableHeight: boolean;
+  flowExplanation: boolean;
+  floatingActionsWidth?: number;
+}): React.CSSProperties {
+  if (options.flowExplanation) {
+    return {
+      paddingBottom: 4,
+      paddingRight: options.floatingActionsWidth,
+      overflowWrap: "anywhere",
+    };
+  }
+
   const baseStyle: React.CSSProperties = {
     borderLeft: `2px solid ${readerDividerColor}`,
     paddingLeft: 10,
     paddingRight: 4,
     paddingBottom: 4,
-    overflowY: "auto",
   };
 
-  if (!fillAvailableHeight) {
+  if (!options.fillAvailableHeight) {
     return {
       ...baseStyle,
       maxHeight: 220,
+      overflowY: "auto",
     };
   }
 
@@ -118,6 +132,7 @@ function helperStreamStyle(
     ...baseStyle,
     flex: "1 1 auto",
     minHeight: 0,
+    overflowY: "auto",
   };
 }
 
@@ -155,6 +170,8 @@ function renderExplainError(streamError: string): React.ReactNode | null {
 function renderExplainAnalysis(options: {
   analysis: ReaderHighlightAnalysis | null;
   fillAvailableHeight: boolean;
+  flowExplanation: boolean;
+  floatingActionsWidth?: number;
 }): React.ReactNode | null {
   if (!options.analysis || !hasAnalysis(options.analysis)) {
     return null;
@@ -164,7 +181,11 @@ function renderExplainAnalysis(options: {
     <Box
       role="status"
       aria-live="polite"
-      style={helperStreamStyle(options.fillAvailableHeight)}
+      style={helperStreamStyle({
+        fillAvailableHeight: options.fillAvailableHeight,
+        flowExplanation: options.flowExplanation,
+        floatingActionsWidth: options.floatingActionsWidth,
+      })}
     >
       <ReactMarkdown remarkPlugins={[remarkGfm]}>
         {formatAnalysisAsExplanation(options.analysis)}
@@ -181,44 +202,142 @@ function renderExplainActions(options: {
   isAddingToDeck: boolean;
   canDeleteHighlight: boolean;
   onDeleteHighlight?: () => void;
+  canRetryHighlight: boolean;
+  onRetryHighlight?: () => void;
+  isRetryingHighlight: boolean;
 }): React.ReactNode | null {
   const actionState = resolveExplainActionState(options);
-
-  if (!actionState.showAddAction && !actionState.showDeleteAction) {
+  if (
+    !actionState.showAddAction &&
+    !actionState.showDeleteAction &&
+    !actionState.showRetryAction
+  ) {
     return null;
   }
 
   return (
-    <Group justify="flex-end">
-      {actionState.showAddAction && options.onAddToDeck ? (
-        <Button
-          size="compact-sm"
-          variant="light"
-          color="grape"
-          onClick={options.onAddToDeck}
-          disabled={actionState.addDisabled}
-          loading={actionState.isAddingToDeck}
-        >
-          Add to deck
-        </Button>
-      ) : null}
-      {actionState.showDeleteAction && options.onDeleteHighlight ? (
-        <ActionIcon
-          size="sm"
-          variant="subtle"
-          color="gray"
-          onClick={options.onDeleteHighlight}
-          disabled={actionState.deleteDisabled}
-          aria-label="Delete highlight"
-        >
-          {actionState.isDeletingHighlight ? (
-            <Loader size={12} />
-          ) : (
-            <IconX size={14} stroke={1.8} />
-          )}
-        </ActionIcon>
-      ) : null}
+    <Group justify="flex-end" align="flex-start" gap="xs" wrap="nowrap">
+      {renderAddToDeckAction({
+        onAddToDeck: options.onAddToDeck,
+        actionState,
+      })}
+      {renderRetryHighlightAction({
+        onRetryHighlight: options.onRetryHighlight,
+        actionState,
+      })}
+      {renderDeleteHighlightAction({
+        onDeleteHighlight: options.onDeleteHighlight,
+        actionState,
+      })}
     </Group>
+  );
+}
+
+function renderAddToDeckAction(options: {
+  onAddToDeck?: () => void;
+  actionState: ReturnType<typeof resolveExplainActionState>;
+}): React.ReactNode | null {
+  if (!options.actionState.showAddAction || !options.onAddToDeck) {
+    return null;
+  }
+
+  return (
+    <Button
+      size="compact-sm"
+      variant="light"
+      color="grape"
+      onClick={options.onAddToDeck}
+      disabled={options.actionState.addDisabled}
+      loading={options.actionState.isAddingToDeck}
+    >
+      Add to deck
+    </Button>
+  );
+}
+
+function renderRetryHighlightAction(options: {
+  onRetryHighlight?: () => void;
+  actionState: ReturnType<typeof resolveExplainActionState>;
+}): React.ReactNode | null {
+  if (!options.actionState.showRetryAction || !options.onRetryHighlight) {
+    return null;
+  }
+
+  return (
+    <ActionIcon
+      size="sm"
+      variant="subtle"
+      color="gray"
+      onClick={options.onRetryHighlight}
+      disabled={options.actionState.retryDisabled}
+      aria-label="Retry highlight"
+    >
+      {options.actionState.isRetryingHighlight ? (
+        <Loader size={12} />
+      ) : (
+        <IconRefresh size={14} stroke={1.8} />
+      )}
+    </ActionIcon>
+  );
+}
+
+function renderDeleteHighlightAction(options: {
+  onDeleteHighlight?: () => void;
+  actionState: ReturnType<typeof resolveExplainActionState>;
+}): React.ReactNode | null {
+  if (
+    !options.actionState.showDeleteAction ||
+    !options.onDeleteHighlight
+  ) {
+    return null;
+  }
+
+  return (
+    <ActionIcon
+      size="sm"
+      variant="subtle"
+      color="gray"
+      onClick={options.onDeleteHighlight}
+      disabled={options.actionState.deleteDisabled}
+      aria-label="Delete highlight"
+    >
+      {options.actionState.isDeletingHighlight ? (
+        <Loader size={12} />
+      ) : (
+        <IconX size={14} stroke={1.8} />
+      )}
+    </ActionIcon>
+  );
+}
+
+function renderFlowExplanation(options: {
+  actions: React.ReactNode | null;
+  explanation: React.ReactNode | null;
+}): React.ReactNode {
+  if (!options.actions && !options.explanation) {
+    return null;
+  }
+
+  if (!options.explanation) {
+    return options.actions;
+  }
+
+  return (
+    <Box style={{ position: "relative", minWidth: 0 }}>
+      {options.actions ? (
+        <Box
+          style={{
+            position: "absolute",
+            top: 0,
+            right: 0,
+            zIndex: 1,
+          }}
+        >
+          {options.actions}
+        </Box>
+      ) : null}
+      {options.explanation}
+    </Box>
   );
 }
 
@@ -272,25 +391,54 @@ export function ExplainSelectionCard({
   onDeleteHighlight,
   canDeleteHighlight = false,
   isDeletingHighlight = false,
+  onRetryHighlight,
+  canRetryHighlight = false,
+  isRetryingHighlight = false,
   onAddToDeck,
   canAddToDeck = false,
   isAddingToDeck = false,
   fillAvailableHeight = false,
+  flowExplanation = false,
 }: ExplainSelectionCardProps) {
+  const actions = renderExplainActions({
+    onAddToDeck,
+    canAddToDeck,
+    isExplaining,
+    isDeletingHighlight,
+    isAddingToDeck,
+    canDeleteHighlight,
+    onDeleteHighlight,
+    canRetryHighlight,
+    onRetryHighlight,
+    isRetryingHighlight,
+  });
+  const floatingActionsWidth =
+    flowExplanation && actions !== null
+      ? (onAddToDeck ? 132 : 36) + (onRetryHighlight ? 36 : 0)
+      : 0;
+  const explanation = renderExplainAnalysis({
+    analysis,
+    fillAvailableHeight,
+    flowExplanation,
+    floatingActionsWidth,
+  });
+
+  if (flowExplanation) {
+    return (
+      <Stack gap="sm" style={helperPanelStyle(fillAvailableHeight)}>
+        {renderExplainLoading(isExplaining)}
+        {renderExplainError(streamError)}
+        {renderFlowExplanation({ actions, explanation })}
+      </Stack>
+    );
+  }
+
   return (
     <Stack gap="sm" style={helperPanelStyle(fillAvailableHeight)}>
-      {renderExplainActions({
-        onAddToDeck,
-        canAddToDeck,
-        isExplaining,
-        isDeletingHighlight,
-        isAddingToDeck,
-        canDeleteHighlight,
-        onDeleteHighlight,
-      })}
       {renderExplainLoading(isExplaining)}
       {renderExplainError(streamError)}
-      {renderExplainAnalysis({ analysis, fillAvailableHeight })}
+      {actions}
+      {explanation}
     </Stack>
   );
 }
@@ -299,6 +447,8 @@ type HighlightsHistoryCardProps = {
   highlights: ReaderArticleHighlight[];
   isLoading: boolean;
   errorMessage: string;
+  actions?: React.ReactNode;
+  hideActions?: boolean;
   deletingHighlightId: number | null;
   selectedHighlightIds: number[];
   onToggleHighlightSelection: (
@@ -313,6 +463,7 @@ type HighlightsHistoryCardProps = {
   allImportableSelected: boolean;
   importStatusByHighlightId: Record<number, HighlightImportResultStatus>;
   onDeleteHighlight: (highlightId: number) => void;
+  onOpenHighlight?: (highlight: ReaderArticleHighlight) => void;
 };
 
 type HighlightHistoryRowProps = {
@@ -322,7 +473,48 @@ type HighlightHistoryRowProps = {
   onToggleSelected: (next: boolean) => void;
   importStatus: HighlightImportResultStatus | null;
   onDeleteHighlight: (highlightId: number) => void;
+  onOpenHighlight?: (highlight: ReaderArticleHighlight) => void;
 };
+
+type HighlightHistoryOpenState = {
+  cursor?: React.CSSProperties["cursor"];
+  rowProps: {
+    onClick?: () => void;
+    onKeyDown?: (event: React.KeyboardEvent<HTMLDivElement>) => void;
+    role?: "button";
+    tabIndex?: number;
+  };
+};
+
+function resolveHighlightHistoryOpenState(options: {
+  highlight: ReaderArticleHighlight;
+  onOpenHighlight?: (highlight: ReaderArticleHighlight) => void;
+}): HighlightHistoryOpenState {
+  if (!options.onOpenHighlight) {
+    return { rowProps: {} };
+  }
+
+  const openHighlight = () => {
+    options.onOpenHighlight?.(options.highlight);
+  };
+
+  return {
+    cursor: "pointer",
+    rowProps: {
+      role: "button",
+      tabIndex: 0,
+      onClick: openHighlight,
+      onKeyDown: (event) => {
+        if (event.key !== "Enter" && event.key !== " ") {
+          return;
+        }
+
+        event.preventDefault();
+        openHighlight();
+      },
+    },
+  };
+}
 
 function HighlightHistoryRow({
   highlight,
@@ -331,6 +523,7 @@ function HighlightHistoryRow({
   onToggleSelected,
   importStatus,
   onDeleteHighlight,
+  onOpenHighlight,
 }: HighlightHistoryRowProps) {
   const [showExplanation, setShowExplanation] = React.useState(false);
   const rowState = resolveHighlightRowState(
@@ -338,13 +531,19 @@ function HighlightHistoryRow({
     importStatus,
     showExplanation,
   );
+  const openState = resolveHighlightHistoryOpenState({
+    highlight,
+    onOpenHighlight,
+  });
 
   return (
     <Stack
       gap={4}
+      {...openState.rowProps}
       style={{
         borderBottom: `1px solid ${readerDividerColor}`,
         paddingBottom: 7,
+        cursor: openState.cursor,
       }}
     >
       <Group justify="space-between" align="flex-start" wrap="nowrap">
@@ -361,6 +560,9 @@ function HighlightHistoryRow({
             checked={isSelected}
             onChange={(event) => {
               onToggleSelected(event.currentTarget.checked);
+            }}
+            onClick={(event) => {
+              event.stopPropagation();
             }}
             disabled={!rowState.canSelect}
             mt={2}
@@ -389,13 +591,27 @@ function HighlightHistoryRow({
                 </Badge>
               ) : null}
             </Group>
+            {rowState.definitionPreview ? (
+              <Text
+                size="sm"
+                c="dimmed"
+                lineClamp={2}
+                style={{
+                  fontFamily: readerBodyFont,
+                  overflowWrap: "anywhere",
+                }}
+              >
+                {rowState.definitionPreview}
+              </Text>
+            ) : null}
           </Stack>
         </Group>
         <ActionIcon
           size="sm"
           variant="subtle"
           color="gray"
-          onClick={() => {
+          onClick={(event) => {
+            event.stopPropagation();
             onDeleteHighlight(highlight.id);
           }}
           disabled={isDeleting}
@@ -411,20 +627,6 @@ function HighlightHistoryRow({
       <Text size="xs" c="dimmed" style={{ fontFamily: readerBodyFont }}>
         {rowState.metaLine}
       </Text>
-      {rowState.hasContextSummary ? (
-        <Text size="xs" c="dimmed" style={{ fontFamily: readerBodyFont }}>
-          {rowState.contextSummary.before}
-          <Text
-            component="span"
-            fw={700}
-            c={readerHeadingColor}
-            style={{ fontFamily: readerBodyFont }}
-          >
-            {rowState.contextSummary.match}
-          </Text>
-          {rowState.contextSummary.after}
-        </Text>
-      ) : null}
       {rowState.showErrorMessage ? (
         <Text size="sm" c="red" style={{ fontFamily: readerBodyFont }}>
           {highlight.errorMessage}
@@ -436,7 +638,8 @@ function HighlightHistoryRow({
             size="compact-xs"
             variant="subtle"
             color="grape"
-            onClick={() => {
+            onClick={(event) => {
+              event.stopPropagation();
               setShowExplanation((previous) => !previous);
             }}
           >
@@ -464,6 +667,8 @@ export function HighlightsHistoryCard({
   highlights,
   isLoading,
   errorMessage,
+  actions,
+  hideActions = false,
   deletingHighlightId,
   selectedHighlightIds,
   onToggleHighlightSelection,
@@ -475,6 +680,7 @@ export function HighlightsHistoryCard({
   allImportableSelected,
   importStatusByHighlightId,
   onDeleteHighlight,
+  onOpenHighlight,
 }: HighlightsHistoryCardProps) {
   const [showAll, setShowAll] = React.useState(false);
   const historyState = resolveHighlightsHistoryState({
@@ -515,26 +721,30 @@ export function HighlightsHistoryCard({
       ) : null}
       {historyState.showList ? (
         <Stack gap="sm">
-          <Group>
-            <Button
-              size="compact-sm"
-              color="grape"
-              onClick={onImportSelected}
-              disabled={!canImportSelected}
-              loading={isImportingSelected}
-            >
-              Import
-            </Button>
-            <Button
-              size="compact-sm"
-              variant="subtle"
-              color="grape"
-              onClick={onToggleSelectAll}
-              disabled={!canSelectAll}
-            >
-              {allImportableSelected ? "Clear all" : "Select all"}
-            </Button>
-          </Group>
+          {hideActions
+            ? null
+            : (actions ?? (
+                <Group>
+                  <Button
+                    size="compact-sm"
+                    color="grape"
+                    onClick={onImportSelected}
+                    disabled={!canImportSelected}
+                    loading={isImportingSelected}
+                  >
+                    Add to deck
+                  </Button>
+                  <Button
+                    size="compact-sm"
+                    variant="subtle"
+                    color="grape"
+                    onClick={onToggleSelectAll}
+                    disabled={!canSelectAll}
+                  >
+                    {allImportableSelected ? "Clear all" : "Select all"}
+                  </Button>
+                </Group>
+              ))}
           {visibility.visibleHighlights.map((highlight) => {
             return (
               <HighlightHistoryRow
@@ -549,6 +759,7 @@ export function HighlightsHistoryCard({
                   importStatusByHighlightId[highlight.id] ?? null
                 }
                 onDeleteHighlight={onDeleteHighlight}
+                onOpenHighlight={onOpenHighlight}
               />
             );
           })}

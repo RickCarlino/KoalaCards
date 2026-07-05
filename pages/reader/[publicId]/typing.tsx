@@ -1,10 +1,10 @@
 import {
   buildReaderSourceText,
   collapseReaderWhitespace,
-  getPublicReaderArticle,
   PublicReaderArticle,
   ReaderInputKind,
 } from "@/koala/reader/public-article";
+import { getPublicReaderArticlePage } from "@/koala/reader/page-public-article";
 import { ReaderArticlePanelHeader } from "@/koala/reader/ui/article-panel-header";
 import { ReaderExercisePage } from "@/koala/reader/ui/exercise-page";
 import { ReaderPanel } from "@/koala/reader/ui/layout";
@@ -760,12 +760,7 @@ export default function ReaderTypingPage({
 export async function getServerSideProps(
   context: GetServerSidePropsContext,
 ) {
-  const publicId = context.params?.publicId;
-  if (typeof publicId !== "string" || publicId.trim().length === 0) {
-    return { notFound: true };
-  }
-
-  const article = await getPublicReaderArticle(publicId);
+  const article = await getPublicReaderArticlePage(context);
   if (!article) {
     return { notFound: true };
   }

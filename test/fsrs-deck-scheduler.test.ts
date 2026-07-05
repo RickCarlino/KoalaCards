@@ -60,6 +60,22 @@ const newCard = {
   nextReview: 0,
 };
 
+function completeReviewLog(input: {
+  id: number;
+  cardId: number;
+  reviewOffsetMs: number;
+  rating: Rating;
+  elapsedDays: number;
+}): CompleteReviewLog {
+  return {
+    id: BigInt(input.id),
+    cardId: input.cardId,
+    reviewAt: new Date(now + input.reviewOffsetMs),
+    rating: input.rating,
+    elapsedDays: input.elapsedDays,
+  };
+}
+
 test("deck FSRS migration backfills one config per deck from user defaults", async () => {
   const migrationSql = await readFile(deckFsrsMigration, "utf8");
 
@@ -232,6 +248,46 @@ test("optimizer groups complete logs into complete per-card training histories",
       { rating: Rating.Good, deltaT: 0 },
       { rating: Rating.Easy, deltaT: 1 },
       { rating: Rating.Again, deltaT: 2 },
+    ],
+  ]);
+});
+
+test("optimizer skips training histories without a positive review interval", () => {
+  const logs: CompleteReviewLog[] = [
+    completeReviewLog({
+      id: 1,
+      cardId: 1,
+      reviewOffsetMs: 0,
+      rating: Rating.Good,
+      elapsedDays: 0,
+    }),
+    completeReviewLog({
+      id: 2,
+      cardId: 1,
+      reviewOffsetMs: 1000,
+      rating: Rating.Hard,
+      elapsedDays: 0,
+    }),
+    completeReviewLog({
+      id: 3,
+      cardId: 2,
+      reviewOffsetMs: 2000,
+      rating: Rating.Good,
+      elapsedDays: 0,
+    }),
+    completeReviewLog({
+      id: 4,
+      cardId: 2,
+      reviewOffsetMs: 86_400_000,
+      rating: Rating.Easy,
+      elapsedDays: 1,
+    }),
+  ];
+
+  assert.deepEqual(buildOptimizerReviewSequences(logs), [
+    [
+      { rating: Rating.Good, deltaT: 0 },
+      { rating: Rating.Easy, deltaT: 1 },
     ],
   ]);
 });

@@ -5,6 +5,7 @@ import { storageProvider } from "../storage";
 import { procedure } from "../trpc-procedure";
 import { DeckExportCard, deckExportSchema } from "../types/deck-export";
 import { ensureDeckFsrsConfig } from "../fsrs/scheduler";
+import { requireOwnedDeck, requireRouteUserId } from "./route-helpers";
 
 type PreparedCardInput = {
   term: string;
@@ -108,24 +109,11 @@ export const importDeck = procedure.input(importDeckInput).mutation(
     skippedDuplicateCount: number;
     attempted: number;
   }> => {
-    const userId = ctx.user?.id;
-    if (!userId) {
-      throw new TRPCError({
-        code: "UNAUTHORIZED",
-        message: "User not found",
-      });
-    }
-
-    const deck = await prismaClient.deck.findUnique({
+    const userId = requireRouteUserId(ctx.user?.id);
+    const deck = await requireOwnedDeck({
       where: { id: input.deckId, userId },
+      select: { id: true },
     });
-
-    if (!deck) {
-      throw new TRPCError({
-        code: "NOT_FOUND",
-        message: "Deck not found",
-      });
-    }
     await ensureDeckFsrsConfig(prismaClient, { userId, deckId: deck.id });
 
     if (input.payload.cards.length > MAX_IMPORT) {

@@ -63,6 +63,7 @@ const TopBar = ({ children }: TopBarProps) => {
 
   const isHome = router.pathname === "/";
   const isReaderArticleRoute = router.pathname === "/reader/[publicId]";
+  const isReaderBookRoute = router.pathname === "/reader/books/[publicId]";
 
   React.useEffect(() => {
     if (!isReaderArticleRoute) {
@@ -127,6 +128,20 @@ const TopBar = ({ children }: TopBarProps) => {
       <IconArrowBack size={18} />
     </ThemeIcon>
   );
+
+  if (isReaderBookRoute) {
+    return (
+      <AppShell padding={0}>
+        <AppShell.Main
+          style={{
+            minHeight: "100vh",
+          }}
+        >
+          {children}
+        </AppShell.Main>
+      </AppShell>
+    );
+  }
 
   if (isReaderArticleRoute) {
     return (

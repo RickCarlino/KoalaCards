@@ -103,6 +103,10 @@ export type OptimizerReview = {
   deltaT: number;
 };
 
+function hasPositiveReviewInterval(reviews: OptimizerReview[]): boolean {
+  return reviews.some((review) => review.deltaT > 0);
+}
+
 export function buildOptimizerReviewSequences(
   logs: CompleteReviewLog[],
 ): OptimizerReview[][] {
@@ -121,7 +125,7 @@ export function buildOptimizerReviewSequences(
       previousReviewAt = log.reviewAt;
       reviews.push({ rating: log.rating, deltaT });
 
-      if (reviews.length > 1) {
+      if (reviews.length > 1 && hasPositiveReviewInterval(reviews)) {
         sequences.push([...reviews]);
       }
     }
@@ -254,10 +258,28 @@ export async function optimizeDeckFsrs(input: {
   }
 
   try {
+    const sequences = buildOptimizerReviewSequences(logs);
+    if (sequences.length === 0) {
+      await prismaClient.deckFsrsConfig.update({
+        where: { id: config.id },
+        data: {
+          eligibleLogCount: readiness.completeLogCount,
+          optimizerStatus: "failed",
+          optimizerError:
+            "No trainable FSRS review histories with positive intervals.",
+        },
+      });
+      return {
+        status: "failed",
+        readiness,
+        eligibleLogCount: readiness.completeLogCount,
+      };
+    }
+
     const binding =
       input.binding ??
       toOptimizerBinding(await import("@open-spaced-repetition/binding"));
-    const items = buildOptimizerReviewSequences(logs).map((sequence) => {
+    const items = sequences.map((sequence) => {
       return binding.createItem(
         sequence.map((review) =>
           binding.createReview(review.rating, review.deltaT),

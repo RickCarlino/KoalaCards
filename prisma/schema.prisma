@@ -59,6 +59,9 @@ model User {
   readerInstapaperCredential ReaderInstapaperCredential?
   readerArticles             ReaderArticle[]
   readerArticleHighlights    ReaderArticleHighlight[]
+  readerBooks                ReaderBook[]
+  readerBookProgresses       ReaderBookProgress[]
+  readerBookAnnotations      ReaderBookAnnotation[]
   languageExchangeLink       LanguageExchangeLink?
   languageExchangePresence   LanguageExchangePresence?
   languageExchangeCalls      LanguageExchangeCall[]     @relation("LanguageExchangeCallLearner")
@@ -85,6 +88,9 @@ model UserSettings {
   maxLapses          Int      @default(0)
   dueCardsEmailNotifications Boolean @default(false)
   languageExchangeAvailable Boolean @default(false)
+  readerBookFontSize Int @default(20)
+  readerBookLineHeight Float @default(1.75)
+  readerBookColumnWidth Int @default(800)
   dueCardsEmailNotificationSentAt DateTime?
 }
 
@@ -192,6 +198,7 @@ model Card {
   reviewLogCoverage   String?
   reviewLogStartedAt  DateTime?
   importedReaderHighlights ReaderArticleHighlight[] @relation("ImportedHighlightCard")
+  importedReaderBookAnnotations ReaderBookAnnotation[] @relation("ImportedBookAnnotationCard")
 
   @@unique([userId, term])
   @@index([deckId])
@@ -415,4 +422,85 @@ model ReaderArticleHighlight {
   @@index([articleId, createdAt])
   @@index([importedCardId])
   @@unique([userId, articleId, selectedTextHash, selectedOccurrenceIndex, articleContentHash, promptVersion])
+}
+
+model ReaderBook {
+  id               Int                    @id @default(autoincrement())
+  userId           String
+  user             User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  publicId         String                 @unique @default(cuid())
+  fingerprint      String                 @db.VarChar(512)
+  title            String                 @db.Text
+  author           String                 @default("") @db.Text
+  description      String                 @default("") @db.Text
+  language         String                 @default("") @db.VarChar(32)
+  opfIdentifier    String                 @default("") @db.Text
+  fileName         String                 @db.Text
+  fileSize         BigInt
+  fileLastModified BigInt
+  coverPath        String                 @default("") @db.Text
+  targetFormat     String                 @default("REFLOWABLE_EPUB") @db.VarChar(40)
+  navigationJson   Json
+  spineJson        Json
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  progress         ReaderBookProgress?
+  annotations      ReaderBookAnnotation[]
+
+  @@unique([userId, fingerprint])
+  @@index([userId, createdAt])
+  @@index([publicId])
+}
+
+model ReaderBookProgress {
+  id                  Int        @id @default(autoincrement())
+  userId              String
+  user                User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookId              Int        @unique
+  book                ReaderBook @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  lastLocatorJson     Json
+  furthestLocatorJson Json
+  lastOpenedAt        DateTime?
+  completedAt         DateTime?
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  @@index([userId, lastOpenedAt])
+}
+
+model ReaderBookAnnotation {
+  id                      Int                   @id @default(autoincrement())
+  userId                  String
+  user                    User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookId                  Int
+  book                    ReaderBook            @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  locatorJson             Json
+  epubCfi                 String?               @db.Text
+  chapterTitle            String                @default("") @db.Text
+  progression             Float                 @default(0)
+  quote                   String                @db.Text
+  contextBefore           String                @default("") @db.Text
+  contextAfter            String                @default("") @db.Text
+  selectedTextHash        String                @db.VarChar(64)
+  selectedOccurrenceIndex Int
+  occurrenceCount         Int
+  occurrencesJson         Json
+  sectionTextHash         String                @db.VarChar(64)
+  promptVersion           Int                   @default(1)
+  status                  ReaderHighlightStatus @default(IN_PROGRESS)
+  term                    String                @default("") @db.Text
+  definition              String                @default("") @db.Text
+  generalMeaning          String                @default("") @db.Text
+  meaningInContext        String                @default("") @db.Text
+  errorMessage            String                @default("") @db.Text
+  importedCardId          Int?
+  importedCard            Card?                 @relation("ImportedBookAnnotationCard", fields: [importedCardId], references: [id], onDelete: SetNull)
+  importedAt              DateTime?
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+
+  @@index([userId, bookId, createdAt])
+  @@index([bookId, createdAt])
+  @@index([importedCardId])
+  @@unique([userId, bookId, selectedTextHash, selectedOccurrenceIndex, sectionTextHash, promptVersion])
 }

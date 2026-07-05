@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { z } from "zod";
+import { requireJsonGetMethod, setNoStore } from "@/koala/api/next-api";
 import {
   expireDirectLanguageExchangeCalls,
   findGuestDirectLanguageExchangeCallOrNull,
@@ -12,28 +13,15 @@ const paramsSchema = z.object({
   guestToken: z.string().trim().min(1).max(128),
 });
 
-function requireGetMethod(
-  req: NextApiRequest,
-  res: NextApiResponse,
-): boolean {
-  if (req.method === "GET") {
-    return true;
-  }
-
-  res.setHeader("Allow", "GET");
-  res.status(405).json({ error: "Method Not Allowed" });
-  return false;
-}
-
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
 ) {
-  if (!requireGetMethod(req, res)) {
+  if (!requireJsonGetMethod(req, res)) {
     return;
   }
 
-  res.setHeader("Cache-Control", "no-store");
+  setNoStore(res);
 
   const parsedParams = paramsSchema.safeParse({
     callId: req.query.callId,

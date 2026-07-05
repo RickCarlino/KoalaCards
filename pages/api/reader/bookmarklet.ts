@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
+import { escapeHtml } from "@/koala/html";
 import { prismaClient } from "@/koala/prisma-client";
 import { hashBookmarkletSecret } from "@/koala/reader/secret";
 import {
@@ -19,15 +20,6 @@ const htmlResponse = (
   message: string,
   color: string,
 ): string => {
-  const escapeHtml = (value: string): string => {
-    return value
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
-  };
-
   const safeTitle = escapeHtml(title);
   const safeMessage = escapeHtml(message);
 

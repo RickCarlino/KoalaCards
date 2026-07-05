@@ -74,14 +74,14 @@ If the worker is not running, Reader URL ingest and due-card reminder emails do 
 3. Start everything: `./run-dev.sh`
 4. Open `http://localhost:3000`
 
-The compose setup runs app, worker, and database together.
+The compose setup runs app, worker, migrations, and database together. App dependencies, Next cache, npm cache, and Postgres data live in named Docker volumes.
 
 ## Developer Notes
 
 - Main setup reference: `SETUP.md`
 - Env reference: `.env.example`
 - Prisma schema: `prisma/schema.prisma`
-- Before finishing changes, run: `./tidy.sh`
+- Before finishing changes, run: `docker compose run app sh /app/tidy.sh`
 
 ## License
 

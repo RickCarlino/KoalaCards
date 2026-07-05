@@ -2,9 +2,9 @@ import { generateStructuredOutput } from "@/koala/ai";
 import {
   buildReaderSourceText,
   collapseReaderWhitespace,
-  getPublicReaderArticle,
   ReaderInputKind,
 } from "@/koala/reader/public-article";
+import { getPublicReaderArticlePage } from "@/koala/reader/page-public-article";
 import { ReaderArticlePanelHeader } from "@/koala/reader/ui/article-panel-header";
 import { ReaderExercisePage } from "@/koala/reader/ui/exercise-page";
 import { ReaderPanel } from "@/koala/reader/ui/layout";
@@ -181,12 +181,7 @@ export default function ReaderComprehensionQuestionsPage({
 export async function getServerSideProps(
   context: GetServerSidePropsContext,
 ) {
-  const publicId = context.params?.publicId;
-  if (typeof publicId !== "string" || publicId.trim().length === 0) {
-    return { notFound: true };
-  }
-
-  const article = await getPublicReaderArticle(publicId);
+  const article = await getPublicReaderArticlePage(context);
   if (!article) {
     return { notFound: true };
   }
@@ -217,7 +212,7 @@ export async function getServerSideProps(
         console.error(
           "[reader-comprehension] question generation failed",
           {
-            publicId,
+            publicId: article.publicId,
             error,
           },
         );

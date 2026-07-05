@@ -54,3 +54,15 @@ export async function maybeAddImageToCard(card: Card) {
 
   return await maybeGetCardImageUrl(filePath);
 }
+
+export function maybeAddImageToCardInBackground(
+  card: Card,
+  source: string,
+) {
+  void maybeAddImageToCard(card).catch((error) => {
+    console.error(
+      `Card image generation failed in ${source} for card ${card.id}:`,
+      error,
+    );
+  });
+}

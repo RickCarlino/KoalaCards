@@ -1,32 +1,31 @@
-import { generateStructuredOutput } from "@/koala/ai";
 import { prismaClient } from "@/koala/prisma-client";
 import {
-  buildOccurrenceContexts,
-  selectOccurrenceIndex,
-  takePromptOccurrences,
-} from "@/koala/reader/highlight-context";
-import {
-  buildReaderHighlightPrompt,
-  normalizeReaderHighlightAnalysis,
-  readerHighlightModelOutputSchema,
-  READER_HIGHLIGHT_CONTEXT_RADIUS,
-  READER_HIGHLIGHT_MAX_PROMPT_OCCURRENCES,
   READER_HIGHLIGHT_PROMPT_VERSION,
   sha256Hex,
   type ReaderHighlightAnalysis,
 } from "@/koala/reader/highlight-explain";
+import {
+  baseHighlightStreamBodySchema,
+  errorAnalysisData,
+  inProgressAnalysisData,
+  parseHighlightStreamBody,
+  readyAnalysisData,
+  resolveHighlightSelection,
+  type HighlightOccurrenceRecord,
+} from "@/koala/reader/highlight-stream-shared";
+import { requireTextOpenAiApiKey } from "@/koala/api/next-api";
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getServerSession } from "next-auth";
 import { z } from "zod";
-import { authOptions } from "../auth/[...nextauth]";
+import {
+  runHighlightAnalysisStream,
+  streamGeneratedSelectionResponse,
+} from "./highlight-generation-helpers";
+import {
+  requirePostMethod,
+  requireReaderApiUserId,
+} from "./highlight-stream-helpers";
 
-const bodySchema = z.object({
-  publicId: z.string().trim().min(1),
-  selectedText: z.string().trim().min(1).max(220),
-  contextBefore: z.string().max(260).optional(),
-  contextAfter: z.string().max(260).optional(),
-  occurrenceHint: z.number().int().min(0).optional(),
-});
+const bodySchema = baseHighlightStreamBodySchema;
 
 type StreamRequestBody = z.infer<typeof bodySchema>;
 
@@ -46,138 +45,11 @@ type OwnedArticleRecord = {
   contentText: string;
 };
 
-function writeSSE(
-  res: NextApiResponse,
-  data: string,
-  event?: string,
-): void {
-  if (event) {
-    res.write(`event: ${event}\n`);
-  }
-
-  const lines = data.split("\n");
-  for (const line of lines) {
-    res.write(`data: ${line}\n`);
-  }
-
-  res.write("\n");
-}
-
-function startSSE(res: NextApiResponse): void {
-  res.writeHead(200, {
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache, no-transform",
-    Connection: "keep-alive",
-  });
-}
-
-function streamDone(res: NextApiResponse, isClosed: boolean): void {
-  if (isClosed) {
-    return;
-  }
-
-  writeSSE(res, "done", "done");
-  res.end();
-}
-
-function streamError(
-  res: NextApiResponse,
-  isClosed: boolean,
-  message: string,
-): void {
-  if (isClosed) {
-    return;
-  }
-
-  writeSSE(res, message, "error");
-  streamDone(res, isClosed);
-}
-
-function streamAnalysis(
-  res: NextApiResponse,
-  isClosed: boolean,
-  analysis: ReaderHighlightAnalysis,
-): void {
-  if (isClosed) {
-    return;
-  }
-
-  writeSSE(res, JSON.stringify(analysis), "analysis");
-}
-
-function streamHighlightId(
-  res: NextApiResponse,
-  isClosed: boolean,
-  highlightId: number,
-): void {
-  if (isClosed) {
-    return;
-  }
-
-  writeSSE(res, JSON.stringify({ id: highlightId }), "highlight");
-}
-
-function normalizeArticleText(value: string): string {
-  return value.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-}
-
-function trimErrorMessage(error: unknown): string {
-  if (error instanceof Error && error.message.trim().length > 0) {
-    return error.message.trim().slice(0, 1800);
-  }
-
-  return "Unexpected streaming error.";
-}
-
-function requirePostMethod(
-  req: NextApiRequest,
-  res: NextApiResponse,
-): boolean {
-  if (req.method === "POST") {
-    return true;
-  }
-
-  res.setHeader("Allow", "POST");
-  res.status(405).end("Method Not Allowed");
-  return false;
-}
-
 function parseBody(
   req: NextApiRequest,
   res: NextApiResponse,
 ): StreamRequestBody | null {
-  const parsed = bodySchema.safeParse(req.body);
-  if (parsed.success) {
-    return parsed.data;
-  }
-
-  res.status(400).end("Invalid request body.");
-  return null;
-}
-
-async function requireUserId(
-  req: NextApiRequest,
-  res: NextApiResponse,
-): Promise<string | null> {
-  const session = await getServerSession(req, res, authOptions);
-  const email = session?.user?.email;
-
-  if (!email) {
-    res.status(401).end("Unauthorized");
-    return null;
-  }
-
-  const user = await prismaClient.user.findUnique({
-    where: { email },
-    select: { id: true },
-  });
-
-  if (!user) {
-    res.status(401).end("Unauthorized");
-    return null;
-  }
-
-  return user.id;
+  return parseHighlightStreamBody(bodySchema, req.body, res);
 }
 
 async function requireOwnedArticle(
@@ -256,14 +128,7 @@ async function upsertHighlight(options: {
   selectedTextHash: string;
   selectedOccurrenceIndex: number;
   occurrenceCount: number;
-  occurrencesJson: Array<{
-    index: number;
-    startOffset: number;
-    endOffset: number;
-    before: string;
-    match: string;
-    after: string;
-  }>;
+  occurrencesJson: HighlightOccurrenceRecord[];
   articleContentHash: string;
 }): Promise<number> {
   const record = await prismaClient.readerArticleHighlight.upsert({
@@ -288,24 +153,14 @@ async function upsertHighlight(options: {
       occurrencesJson: options.occurrencesJson,
       articleContentHash: options.articleContentHash,
       promptVersion: READER_HIGHLIGHT_PROMPT_VERSION,
-      status: "IN_PROGRESS",
-      term: "",
-      definition: "",
-      generalMeaning: "",
-      meaningInContext: "",
-      errorMessage: "",
+      ...inProgressAnalysisData(),
     },
     update: {
       selectedText: options.selectedText,
       selectedOccurrenceIndex: options.selectedOccurrenceIndex,
       occurrenceCount: options.occurrenceCount,
       occurrencesJson: options.occurrencesJson,
-      status: "IN_PROGRESS",
-      term: "",
-      definition: "",
-      generalMeaning: "",
-      meaningInContext: "",
-      errorMessage: "",
+      ...inProgressAnalysisData(),
     },
     select: { id: true },
   });
@@ -319,14 +174,7 @@ async function markHighlightReady(
 ): Promise<void> {
   await prismaClient.readerArticleHighlight.update({
     where: { id: highlightId },
-    data: {
-      status: "READY",
-      term: analysis.term,
-      definition: analysis.definition,
-      generalMeaning: analysis.generalMeaning,
-      meaningInContext: analysis.meaningInContext,
-      errorMessage: "",
-    },
+    data: readyAnalysisData(analysis),
   });
 }
 
@@ -336,10 +184,7 @@ async function markHighlightError(
 ): Promise<void> {
   await prismaClient.readerArticleHighlight.update({
     where: { id: highlightId },
-    data: {
-      status: "ERROR",
-      errorMessage: message,
-    },
+    data: errorAnalysisData(message),
   });
 }
 
@@ -350,14 +195,7 @@ type ResolvedExplainRequest = {
   selectedTextHash: string;
   articleContentHash: string;
   selectedOccurrenceIndex: number;
-  occurrences: Array<{
-    index: number;
-    startOffset: number;
-    endOffset: number;
-    before: string;
-    match: string;
-    after: string;
-  }>;
+  occurrences: HighlightOccurrenceRecord[];
 };
 
 async function resolveExplainRequest(
@@ -368,8 +206,7 @@ async function resolveExplainRequest(
     return null;
   }
 
-  if (!process.env.OPENAI_API_KEY) {
-    res.status(500).end("Missing OPENAI_API_KEY");
+  if (!requireTextOpenAiApiKey(res)) {
     return null;
   }
 
@@ -378,7 +215,7 @@ async function resolveExplainRequest(
     return null;
   }
 
-  const userId = await requireUserId(req, res);
+  const userId = await requireReaderApiUserId(req, res);
   if (!userId) {
     return null;
   }
@@ -392,79 +229,25 @@ async function resolveExplainRequest(
     return null;
   }
 
-  const articleText = normalizeArticleText(article.contentText);
-  const selectedText = parsedBody.selectedText.trim();
-  const occurrences = buildOccurrenceContexts(
-    articleText,
-    selectedText,
-    READER_HIGHLIGHT_CONTEXT_RADIUS,
-  );
-
-  if (occurrences.length === 0) {
-    res
-      .status(400)
-      .end("Selected text was not found in this article content.");
-    return null;
-  }
-
-  const selectedOccurrenceIndex = selectOccurrenceIndex({
-    occurrences,
-    contextBefore: parsedBody.contextBefore ?? "",
-    contextAfter: parsedBody.contextAfter ?? "",
-    occurrenceHint: parsedBody.occurrenceHint,
+  const selection = resolveHighlightSelection({
+    body: parsedBody,
+    missingMessage: "Selected text was not found in this article content.",
+    res,
+    sourceText: article.contentText,
   });
-
-  if (selectedOccurrenceIndex < 0) {
-    res.status(400).end("Could not resolve selected occurrence.");
+  if (!selection) {
     return null;
   }
 
   return {
     userId,
     article,
-    selectedText,
-    selectedTextHash: sha256Hex(selectedText),
-    articleContentHash: sha256Hex(articleText),
-    selectedOccurrenceIndex,
-    occurrences,
+    selectedText: selection.selectedText,
+    selectedTextHash: sha256Hex(selection.selectedText),
+    articleContentHash: sha256Hex(selection.sourceText),
+    selectedOccurrenceIndex: selection.selectedOccurrenceIndex,
+    occurrences: selection.occurrences,
   };
-}
-
-function hasReadyAnalysis(record: {
-  status: "IN_PROGRESS" | "READY" | "ERROR";
-  definition: string;
-  generalMeaning: string;
-  meaningInContext: string;
-}) {
-  return (
-    record.status === "READY" &&
-    record.definition.trim().length > 0 &&
-    record.generalMeaning.trim().length > 0 &&
-    record.meaningInContext.trim().length > 0
-  );
-}
-
-function streamCachedResponse(options: {
-  res: NextApiResponse;
-  isClosed: () => boolean;
-  cached: CachedHighlightRecord;
-}): boolean {
-  if (!hasReadyAnalysis(options.cached)) {
-    return false;
-  }
-
-  const normalizedAnalysis = normalizeReaderHighlightAnalysis({
-    selectedText: options.cached.selectedText,
-    analysis: {
-      definition: options.cached.definition,
-      generalMeaning: options.cached.generalMeaning,
-      meaningInContext: options.cached.meaningInContext,
-    },
-  });
-  streamHighlightId(options.res, options.isClosed(), options.cached.id);
-  streamAnalysis(options.res, options.isClosed(), normalizedAnalysis);
-  streamDone(options.res, options.isClosed());
-  return true;
 }
 
 async function streamGeneratedResponse(options: {
@@ -472,113 +255,62 @@ async function streamGeneratedResponse(options: {
   isClosed: () => boolean;
   resolved: ResolvedExplainRequest;
 }): Promise<void> {
+  const { resolved, res, isClosed } = options;
   const {
-    resolved: {
-      userId,
-      article,
-      selectedText,
-      selectedTextHash,
-      articleContentHash,
-      selectedOccurrenceIndex,
-      occurrences,
-    },
-    res,
-    isClosed,
-  } = options;
-
-  const highlightId = await upsertHighlight({
     userId,
-    articleId: article.id,
+    article,
     selectedText,
     selectedTextHash,
-    selectedOccurrenceIndex,
-    occurrenceCount: occurrences.length,
-    occurrencesJson: occurrences,
     articleContentHash,
-  });
-  streamHighlightId(res, isClosed(), highlightId);
-
-  const promptOccurrences = takePromptOccurrences({
+    selectedOccurrenceIndex,
     occurrences,
-    selectedIndex: selectedOccurrenceIndex,
-    maxOccurrences: READER_HIGHLIGHT_MAX_PROMPT_OCCURRENCES,
+  } = resolved;
+
+  await streamGeneratedSelectionResponse({
+    res,
+    isClosed,
+    title: article.title,
+    selection: resolved,
+    createInProgressRecord: () =>
+      upsertHighlight({
+        userId,
+        articleId: article.id,
+        selectedText,
+        selectedTextHash,
+        selectedOccurrenceIndex,
+        occurrenceCount: occurrences.length,
+        occurrencesJson: occurrences,
+        articleContentHash,
+      }),
+    markReady: markHighlightReady,
+    markError: markHighlightError,
   });
-
-  const prompt = buildReaderHighlightPrompt({
-    articleTitle: article.title,
-    selectedText,
-    selectedIndex: selectedOccurrenceIndex,
-    occurrenceCount: occurrences.length,
-    occurrences: promptOccurrences,
-  });
-
-  try {
-    const generated = await generateStructuredOutput({
-      model: "good",
-      schema: readerHighlightModelOutputSchema,
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a careful Korean reading assistant. Keep output concise, specific, and practical.",
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-    });
-    const normalizedAnalysis = normalizeReaderHighlightAnalysis({
-      selectedText,
-      analysis: generated,
-    });
-
-    if (isClosed()) {
-      return;
-    }
-
-    await markHighlightReady(highlightId, normalizedAnalysis);
-    streamAnalysis(res, isClosed(), normalizedAnalysis);
-    streamDone(res, isClosed());
-  } catch (error) {
-    if (isClosed()) {
-      return;
-    }
-
-    const errorMessage = trimErrorMessage(error);
-    await markHighlightError(highlightId, errorMessage);
-    streamError(res, isClosed(), errorMessage);
-  }
 }
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
 ): Promise<void> {
-  const resolved = await resolveExplainRequest(req, res);
-  if (!resolved) {
-    return;
-  }
+  const resolve = () => resolveExplainRequest(req, res);
+  const loadCached = (resolved: ResolvedExplainRequest) =>
+    loadCachedHighlight({
+      userId: resolved.userId,
+      articleId: resolved.article.id,
+      selectedTextHash: resolved.selectedTextHash,
+      selectedOccurrenceIndex: resolved.selectedOccurrenceIndex,
+      articleContentHash: resolved.articleContentHash,
+    });
+  const streamGenerated = (
+    resolved: ResolvedExplainRequest,
+    isClosed: () => boolean,
+  ) => streamGeneratedResponse({ res, isClosed, resolved });
 
-  const cached = await loadCachedHighlight({
-    userId: resolved.userId,
-    articleId: resolved.article.id,
-    selectedTextHash: resolved.selectedTextHash,
-    selectedOccurrenceIndex: resolved.selectedOccurrenceIndex,
-    articleContentHash: resolved.articleContentHash,
+  await runHighlightAnalysisStream({
+    req,
+    res,
+    resolve,
+    loadCached,
+    cachedSelectedText: (cached) => cached.selectedText,
+    streamGenerated,
   });
-
-  let closed = false;
-  req.on("close", () => {
-    closed = true;
-  });
-
-  startSSE(res);
-  const isClosed = () => closed;
-
-  if (cached && streamCachedResponse({ res, isClosed, cached })) {
-    return;
-  }
-
-  await streamGeneratedResponse({ res, isClosed, resolved });
 }

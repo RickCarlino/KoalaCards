@@ -33,6 +33,34 @@ const colors: Record<string, MantineColorsTuple> = {
   ] as MantineColorsTuple,
 };
 
+const panelLikeDefaults = {
+  radius: "md",
+  shadow: "sm",
+  withBorder: true,
+} as const;
+
+const panelLikeRootStyles = (theme: MantineTheme) => ({
+  root: {
+    borderColor: theme.colors.pink[2],
+    backgroundColor: theme.white,
+    transition: "box-shadow 160ms ease, border-color 160ms ease",
+  },
+});
+
+const filledInputStyles = (theme: MantineTheme) => ({
+  input: {
+    backgroundColor: theme.white,
+    borderColor: theme.colors.pink[1],
+    transition:
+      "box-shadow 150ms ease, border-color 150ms ease, background-color 150ms ease",
+    "&:focus": {
+      borderColor: theme.colors.pink[5],
+      boxShadow: `0 0 0 3px ${theme.colors.pink[0]}`,
+      backgroundColor: theme.white,
+    },
+  },
+});
+
 export function buildKoalaTheme(fontFamily: string) {
   const theme: MantineThemeOverride = {
     colors,
@@ -104,68 +132,24 @@ export function buildKoalaTheme(fontFamily: string) {
         }),
       },
       Card: {
-        defaultProps: {
-          radius: "md",
-          shadow: "sm",
-          withBorder: true,
-        },
-        styles: (theme: MantineTheme) => ({
-          root: {
-            borderColor: theme.colors.pink[2],
-            backgroundColor: theme.white,
-            transition: "box-shadow 160ms ease, border-color 160ms ease",
-          },
-        }),
+        defaultProps: panelLikeDefaults,
+        styles: panelLikeRootStyles,
       },
       Paper: {
-        defaultProps: {
-          radius: "md",
-          shadow: "sm",
-          withBorder: true,
-        },
-        styles: (theme: MantineTheme) => ({
-          root: {
-            borderColor: theme.colors.pink[2],
-            backgroundColor: theme.white,
-            transition: "box-shadow 160ms ease, border-color 160ms ease",
-          },
-        }),
+        defaultProps: panelLikeDefaults,
+        styles: panelLikeRootStyles,
       },
       TextInput: {
         defaultProps: {
           variant: "filled",
         },
-        styles: (theme: MantineTheme) => ({
-          input: {
-            backgroundColor: theme.white,
-            borderColor: theme.colors.pink[1],
-            transition:
-              "box-shadow 150ms ease, border-color 150ms ease, background-color 150ms ease",
-            "&:focus": {
-              borderColor: theme.colors.pink[5],
-              boxShadow: `0 0 0 3px ${theme.colors.pink[0]}`,
-              backgroundColor: theme.white,
-            },
-          },
-        }),
+        styles: filledInputStyles,
       },
       Select: {
         defaultProps: {
           variant: "filled",
         },
-        styles: (theme: MantineTheme) => ({
-          input: {
-            backgroundColor: theme.white,
-            borderColor: theme.colors.pink[1],
-            transition:
-              "box-shadow 150ms ease, border-color 150ms ease, background-color 150ms ease",
-            "&:focus": {
-              borderColor: theme.colors.pink[5],
-              boxShadow: `0 0 0 3px ${theme.colors.pink[0]}`,
-              backgroundColor: theme.white,
-            },
-          },
-        }),
+        styles: filledInputStyles,
       },
       Anchor: {
         defaultProps: {

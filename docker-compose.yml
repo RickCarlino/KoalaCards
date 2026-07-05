@@ -1,46 +1,66 @@
+x-koala-app: &koala-app
+  image: koala-cards-app:dev
+  build:
+    context: .
+    dockerfile: Dockerfile
+    target: dev
+  working_dir: /app
+  entrypoint: ./entrypoint.sh
+  env_file:
+    - .env
+  environment:
+    POSTGRES_URI: postgres://prisma:your_password@db:5432/prisma
+  init: true
+  logging: &bounded-logs
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+  networks:
+    - koala-network
+
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    working_dir: /app
+    <<: *koala-app
     command: npm run dev
-    entrypoint: ./entrypoint.sh
     volumes:
       - .:/app
-      - /app/node_modules
-      - /app/.next
+      - node-modules:/app/node_modules
+      - next-cache:/app/.next
+      - npm-cache:/root/.npm
     ports:
       - "3000:3000"
-      - "5555:5555" # Prisma Studio, optional
-    env_file:
-      - .env
-    environment:
-      POSTGRES_URI: postgres://prisma:your_password@db:5432/prisma
+      - "5555:5555"
     depends_on:
-      - db
-    networks:
-      - koala-network
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
   worker:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    working_dir: /app
+    <<: *koala-app
     command: npm run worker
-    entrypoint: ./entrypoint.sh
     volumes:
       - .:/app
-      - /app/node_modules
-      - /app/.next
-    env_file:
-      - .env
-    environment:
-      POSTGRES_URI: postgres://prisma:your_password@db:5432/prisma
+      - node-modules:/app/node_modules
+      - npm-cache:/root/.npm
     depends_on:
-      - db
-    networks:
-      - koala-network
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  migrate:
+    <<: *koala-app
+    command: npm run db:migrate:deploy
+    restart: "no"
+    volumes:
+      - .:/app
+      - node-modules:/app/node_modules
+      - npm-cache:/root/.npm
+    depends_on:
+      db:
+        condition: service_healthy
 
   db:
     image: postgres:17
@@ -52,7 +72,7 @@ services:
     volumes:
       - db-data:/var/lib/postgresql/data
     ports:
-      - "5432:5432" # To access the DB externally via pgAdmin and other tools
+      - "5432:5432"
     networks:
       - koala-network
     healthcheck:
@@ -60,9 +80,13 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    logging: *bounded-logs
 
 volumes:
   db-data:
+  next-cache:
+  node-modules:
+  npm-cache:
 
 networks:
   koala-network:

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc-procedure";
-import { getUserSettings } from "../auth-helpers";
+import { getSettingsUserId, requireOwnedCard } from "./route-helpers";
 
 export const editCard = procedure
   .input(
@@ -18,14 +18,8 @@ export const editCard = procedure
     }),
   )
   .mutation(async ({ input, ctx }) => {
-    const userId = (await getUserSettings(ctx.user?.id)).user.id;
-
-    const card = await prismaClient.card.findFirstOrThrow({
-      where: {
-        id: input.id,
-        userId,
-      },
-    });
+    const userId = await getSettingsUserId(ctx.user?.id);
+    const card = await requireOwnedCard({ cardId: input.id, userId });
 
     const data = {
       ...card,

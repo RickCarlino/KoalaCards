@@ -18,7 +18,7 @@ function staleAt(now: Date, timeoutMs: number): Date {
   return new Date(now.getTime() - timeoutMs);
 }
 
-function mapDirectCall(
+export function mapDirectLanguageExchangeCall(
   call: {
     id: number;
     status: string;
@@ -47,7 +47,7 @@ function mapDirectCall(
 }
 
 export type DirectLanguageExchangeCallPayload = ReturnType<
-  typeof mapDirectCall
+  typeof mapDirectLanguageExchangeCall
 >;
 
 async function createLanguageExchangeLink(userId: string) {
@@ -412,19 +412,4 @@ export async function touchLearnerDirectLanguageExchangeCall(input: {
       expiresAt: getDirectLanguageExchangeActiveExpiry(now),
     },
   });
-}
-
-export function mapDirectLanguageExchangeCall(
-  call: {
-    id: number;
-    status: string;
-    createdAt: Date;
-    acceptedAt: Date | null;
-    endedAt: Date | null;
-    expiresAt: Date;
-    offerSdp: Prisma.JsonValue | null;
-    answerSdp: Prisma.JsonValue | null;
-  } | null,
-) {
-  return mapDirectCall(call);
 }

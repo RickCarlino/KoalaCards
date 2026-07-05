@@ -511,46 +511,16 @@ type ContentSectionProps = {
 };
 
 function ContentSection(props: ContentSectionProps) {
-  const {
-    mode,
-    onModeChange,
-    rawInput,
-    setRawInput,
-    separator,
-    setSeparator,
-    linesCount,
-    parsedRows,
-    autoSwapCsvColumns,
-    deckLangName,
-    onVibe,
-    onWordlist,
-    onCsv,
-  } = props;
   const theme = useMantineTheme();
-
-  const body = getContentBody({
-    mode,
-    theme,
-    deckLangName,
-    rawInput,
-    setRawInput,
-    separator,
-    setSeparator,
-    linesCount,
-    parsedRows,
-    autoSwapCsvColumns,
-    onVibe,
-    onWordlist,
-    onCsv,
-  });
+  const body = getContentBody({ ...props, theme });
 
   return (
     <Paper withBorder p="md" radius="md">
       <Group justify="space-between" mb="xs">
         <Title order={4}>Content</Title>
         <SegmentedControl
-          value={mode}
-          onChange={(val) => onModeChange(val as Mode)}
+          value={props.mode}
+          onChange={(val) => props.onModeChange(val as Mode)}
           data={[
             { label: "Free Form", value: "vibe" },
             { label: "Word list", value: "wordlist" },
@@ -563,20 +533,8 @@ function ContentSection(props: ContentSectionProps) {
   );
 }
 
-type ContentBodyParams = {
-  mode: Mode;
+type ContentBodyParams = ContentSectionProps & {
   theme: ReturnType<typeof useMantineTheme>;
-  deckLangName: string;
-  rawInput: string;
-  setRawInput: (text: string) => void;
-  separator: string;
-  setSeparator: (sep: string) => void;
-  linesCount: number;
-  parsedRows: { term: string; definition: string }[];
-  autoSwapCsvColumns: boolean;
-  onVibe: () => void;
-  onWordlist: () => void;
-  onCsv: () => void;
 };
 
 function getContentBody(params: ContentBodyParams) {
@@ -645,22 +603,18 @@ function VibeContent(props: {
   const { themeColors, deckLangName, rawInput, setRawInput, onGenerate } =
     props;
   return (
-    <>
-      <Group justify="space-between" align="flex-start" mb="xs" gap="sm">
-        <Text size="sm" c={themeColors.gray[7]} style={{ flex: 1 }}>
-          What cards shall we create? Example: "Please make 25{" "}
-          {deckLangName} example sentences about food."
-        </Text>
-        <Button onClick={onGenerate}>Generate</Button>
-      </Group>
-      <Textarea
-        minRows={6}
-        autosize
-        placeholder={`Please make 25 ${deckLangName} example sentences about travel.`}
-        value={rawInput}
-        onChange={(e) => setRawInput(e.currentTarget.value)}
-      />
-    </>
+    <GeneratedTextContent
+      actionLabel="Generate"
+      buttonAction={onGenerate}
+      placeholder={`Please make 25 ${deckLangName} example sentences about travel.`}
+      rawInput={rawInput}
+      setRawInput={setRawInput}
+    >
+      <Text size="sm" c={themeColors.gray[7]} style={{ flex: 1 }}>
+        What cards shall we create? Example: "Please make 25 {deckLangName}{" "}
+        example sentences about food."
+      </Text>
+    </GeneratedTextContent>
   );
 }
 
@@ -672,19 +626,49 @@ function WordlistContent(props: {
 }) {
   const { themeColors, rawInput, setRawInput, onEnrich } = props;
   return (
+    <GeneratedTextContent
+      actionLabel="Enrich"
+      buttonAction={onEnrich}
+      placeholder={`hola\nadiós\npor favor`}
+      rawInput={rawInput}
+      setRawInput={setRawInput}
+    >
+      <Text size="sm" c={themeColors.gray[7]} style={{ flex: 1 }}>
+        Paste one word per line. We’ll fetch definitions.
+      </Text>
+    </GeneratedTextContent>
+  );
+}
+
+function GeneratedTextContent(props: {
+  actionLabel: string;
+  buttonAction: () => void;
+  children: React.ReactNode;
+  placeholder: string;
+  rawInput: string;
+  setRawInput: (text: string) => void;
+}) {
+  const {
+    actionLabel,
+    buttonAction,
+    children,
+    placeholder,
+    rawInput,
+    setRawInput,
+  } = props;
+
+  return (
     <>
       <Group justify="space-between" align="flex-start" mb="xs" gap="sm">
-        <Text size="sm" c={themeColors.gray[7]} style={{ flex: 1 }}>
-          Paste one word per line. We’ll fetch definitions.
-        </Text>
-        <Button onClick={onEnrich}>Enrich</Button>
+        {children}
+        <Button onClick={buttonAction}>{actionLabel}</Button>
       </Group>
       <Textarea
         minRows={6}
         autosize
-        placeholder={`hola\nadiós\npor favor`}
+        placeholder={placeholder}
         value={rawInput}
-        onChange={(e) => setRawInput(e.currentTarget.value)}
+        onChange={(event) => setRawInput(event.currentTarget.value)}
       />
     </>
   );

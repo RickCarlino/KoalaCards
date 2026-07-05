@@ -1723,7 +1723,6 @@ function updateCard(action: UpdateCardAction, state: State): State {
 }
 
 function useReview(deckId: number) {
-  const mutation = trpc.getNextQuizzes.useMutation();
   const repairCardMutation = trpc.editCard.useMutation();
   const [state, dispatch] = React.useReducer(reducer, initialState());
   const [isFetching, setIsFetching] = React.useState(true);
@@ -1739,29 +1738,31 @@ function useReview(deckId: number) {
     }
   }
   const take = clampReviewTake(requestedTake);
-  const fetchQuizzes = (currentDeckId: number) => {
+
+  const quizzesQuery = trpc.getNextQuizzes.useQuery(
+    { take, deckId },
+    {
+      enabled: false,
+      onSuccess: (fetchedData) => {
+        const withUUID = fetchedData.quizzes.map((q) => ({
+          ...q,
+          uuid: uid(8),
+        }));
+        dispatch({ type: "REPLACE_CARDS", payload: withUUID });
+      },
+    },
+  );
+
+  const fetchQuizzes = () => {
     setIsFetching(true);
-    mutation
-      .mutateAsync(
-        { take, deckId: currentDeckId },
-        {
-          onSuccess: (fetchedData) => {
-            const withUUID = fetchedData.quizzes.map((q) => ({
-              ...q,
-              uuid: uid(8),
-            }));
-            dispatch({ type: "REPLACE_CARDS", payload: withUUID });
-          },
-        },
-      )
-      .finally(() => setIsFetching(false));
+    quizzesQuery.refetch().finally(() => setIsFetching(false));
   };
 
   React.useEffect(() => {
     if (deckId) {
-      fetchQuizzes(deckId);
+      fetchQuizzes();
     }
-  }, [deckId]);
+  }, [deckId, take]);
 
   const remainingSteps = getItemsDue(state.queue);
   const progress =
@@ -1775,8 +1776,8 @@ function useReview(deckId: number) {
     Object.values(state.cards).find((card) => card.cardId === cardId)
       ?.uuid;
 
-  const error = mutation.isError
-    ? (mutation.error ?? new Error("Unknown error"))
+  const error = quizzesQuery.isError
+    ? (quizzesQuery.error ?? new Error("Unknown error"))
     : null;
 
   return {
@@ -1818,7 +1819,7 @@ function useReview(deckId: number) {
       });
     },
     refetchQuizzes: () => {
-      fetchQuizzes(deckId);
+      fetchQuizzes();
     },
     updateCardFields: (
       cardId: number,

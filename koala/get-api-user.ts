@@ -18,3 +18,29 @@ export async function getApiUserOrNull(
     where: { email },
   });
 }
+
+export async function requireJsonApiUser(
+  req: NextApiRequest,
+  res: NextApiResponse,
+): Promise<User | null> {
+  const user = await getApiUserOrNull(req, res);
+  if (user) {
+    return user;
+  }
+
+  res.status(401).json({ error: "Unauthorized" });
+  return null;
+}
+
+export async function requireTextApiUserId(
+  req: NextApiRequest,
+  res: NextApiResponse,
+): Promise<string | null> {
+  const user = await getApiUserOrNull(req, res);
+  if (user) {
+    return user.id;
+  }
+
+  res.status(401).end("Unauthorized");
+  return null;
+}

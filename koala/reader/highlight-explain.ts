@@ -6,11 +6,14 @@ export const READER_HIGHLIGHT_PROMPT_VERSION = 5;
 export const READER_HIGHLIGHT_CONTEXT_RADIUS = 60;
 export const READER_HIGHLIGHT_MAX_PROMPT_OCCURRENCES = 25;
 
+const compactGlossSchema = z.string().min(1).max(220);
+const explanationSchema = z.string().min(1).max(500);
+
 export const readerHighlightAnalysisSchema = z.object({
-  term: z.string().min(1).max(220),
-  definition: z.string().min(1).max(220),
-  generalMeaning: z.string().min(1).max(500),
-  meaningInContext: z.string().min(1).max(500),
+  term: compactGlossSchema,
+  definition: compactGlossSchema,
+  generalMeaning: explanationSchema,
+  meaningInContext: explanationSchema,
 });
 
 export type ReaderHighlightAnalysis = z.infer<
@@ -18,9 +21,9 @@ export type ReaderHighlightAnalysis = z.infer<
 >;
 
 export const readerHighlightModelOutputSchema = z.object({
-  definition: z.string().min(1).max(220),
-  generalMeaning: z.string().min(1).max(500),
-  meaningInContext: z.string().min(1).max(500),
+  definition: compactGlossSchema,
+  generalMeaning: explanationSchema,
+  meaningInContext: explanationSchema,
 });
 
 export function sha256Hex(value: string) {
