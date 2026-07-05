@@ -184,11 +184,12 @@ export default async function handler(
 
   const uploadFile = await toFile(raw, filename, { type: contentType });
 
+  console.log(`Temporarily discarding prompt: ${prompt}`);
   const result = await openai.audio.transcriptions.create(
     buildTranscriptionRequest({
       file: uploadFile,
       language,
-      prompt,
+      prompt: null,
     }),
   );
 
