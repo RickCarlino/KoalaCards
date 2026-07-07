@@ -9,8 +9,9 @@ import {
 } from "@/koala/api/next-api";
 import { requireJsonApiUser } from "@/koala/get-api-user";
 import {
-  buildTranscriptionRequest,
+  buildKoreanTranscriptionPrompt,
   buildTranscriptionPrompt,
+  buildTranscriptionRequest,
   firstParam,
   getAudioFilename,
   hasValidAudioContentLength,
@@ -162,6 +163,7 @@ export default async function handler(
   const tokens = (firstParam(req.query.hint) || "").split(/[ ,]+/);
   const hint = shuffle(tokens).join(", ").trim();
   const prompt = buildTranscriptionPrompt(hint);
+  const transcriptionPrompt = buildKoreanTranscriptionPrompt(prompt);
 
   const contentType = resolveContentType(req.headers["content-type"]);
 
@@ -184,12 +186,11 @@ export default async function handler(
 
   const uploadFile = await toFile(raw, filename, { type: contentType });
 
-  console.log(`Temporarily discarding prompt: ${prompt}`);
   const result = await openai.audio.transcriptions.create(
     buildTranscriptionRequest({
       file: uploadFile,
       language,
-      prompt: null,
+      prompt: transcriptionPrompt,
     }),
   );
 
