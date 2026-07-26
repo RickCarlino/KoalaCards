@@ -191,10 +191,13 @@ Environment variables are crucial for configuring the application. Follow these 
    GOOGLE_APPLICATION_CREDENTIALS=./path-to-your-gcs-credentials.json
 
    # Optional Reader integration: Instapaper
+   READER_ENCRYPTION_KEY=replace_with_a_strong_random_secret
    INSTAPAPER_CONSUMER_KEY=your_instapaper_consumer_key
    INSTAPAPER_CONSUMER_SECRET=your_instapaper_consumer_secret
    ```
 
+   `READER_ENCRYPTION_KEY` encrypts stored Reader credentials. If it is not
+   set, `NEXTAUTH_SECRET` is used.
    `INSTAPAPER_CONSUMER_KEY` and `INSTAPAPER_CONSUMER_SECRET` are optional.
    If they are not set, only `/reader/instapaper` actions are disabled.
 

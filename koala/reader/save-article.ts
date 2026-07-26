@@ -2,7 +2,6 @@ import {
   Prisma,
   ReaderIngestStatus,
   ReaderInputKind,
-  ReaderSaveOrigin,
 } from "@prisma/client";
 import { prismaClient } from "@/koala/prisma-client";
 import {
@@ -21,7 +20,6 @@ export type ReaderIngestState =
   | "in_progress"
   | "ready"
   | "error";
-export type ReaderSaveOriginValue = "DASHBOARD" | "BOOKMARKLET";
 export type ReaderInputKindValue = "url" | "raw";
 export type ReaderRouteErrorCode =
   | "BAD_REQUEST"
@@ -90,7 +88,6 @@ export type SavedReaderArticle = {
 type QueueReaderArticleInput = {
   userId: string;
   requestUrl: string;
-  saveOrigin: ReaderSaveOriginValue;
   suggestedTitle?: string;
   instapaperBookmarkId?: string;
 };
@@ -99,11 +96,6 @@ type SaveReaderRawTextInput = {
   userId: string;
   title?: string;
   text: string;
-};
-
-type RefreshReaderArticleInput = {
-  userId: string;
-  publicId: string;
 };
 
 type ProcessedReaderArticle = {
@@ -429,7 +421,6 @@ export const queueReaderArticle = async (
   }
 
   const normalizedRequestUrl = normalizeRequestUrl(requestUrl);
-  const saveOrigin: ReaderSaveOrigin = input.saveOrigin;
   const normalizedInstapaperBookmarkId =
     input.instapaperBookmarkId?.trim() ?? "";
 
@@ -442,7 +433,6 @@ export const queueReaderArticle = async (
       inputKind: "URL",
       title: queuedTitleFor(normalizedRequestUrl, input.suggestedTitle),
       description: "",
-      saveOrigin,
       ingestStatus: "PENDING",
       ingestError: "",
       ingestStartedAt: null,
@@ -471,7 +461,6 @@ export const saveReaderRawTextArticle = async (
       inputKind: "RAW",
       title,
       description: "",
-      saveOrigin: "DASHBOARD",
       ingestStatus: "READY",
       ingestError: "",
       ingestStartedAt: null,
@@ -483,64 +472,6 @@ export const saveReaderRawTextArticle = async (
   });
 
   return mapSavedArticle(saved);
-};
-
-export const refreshReaderArticle = async (
-  input: RefreshReaderArticleInput,
-): Promise<SavedReaderArticle> => {
-  const article = await prismaClient.readerArticle.findUnique({
-    where: { publicId: input.publicId },
-    select: {
-      id: true,
-      userId: true,
-      inputKind: true,
-      ingestStatus: true,
-      publicId: true,
-      instapaperBookmarkId: true,
-      title: true,
-      normalizedUrl: true,
-      description: true,
-      ingestError: true,
-      readAt: true,
-      createdAt: true,
-    },
-  });
-
-  if (!article || article.userId !== input.userId) {
-    throw new ReaderSaveError("Article not found.", "BAD_REQUEST", 404);
-  }
-
-  if (article.inputKind === "RAW") {
-    return mapSavedArticle(article);
-  }
-
-  const isAlreadyQueued =
-    article.ingestStatus === "PENDING" ||
-    article.ingestStatus === "IN_PROGRESS";
-
-  if (isAlreadyQueued) {
-    throw new ReaderSaveError(
-      "This article is already queued for processing.",
-      "BAD_REQUEST",
-      400,
-    );
-  }
-
-  const refreshed = await prismaClient.readerArticle.update({
-    where: { id: article.id },
-    data: {
-      ingestStatus: "PENDING",
-      ingestError: "",
-      ingestStartedAt: null,
-      ingestedAt: null,
-      description: "",
-      contentText: "",
-      contentHtml: "",
-    },
-    select: readerArticleSummarySelect,
-  });
-
-  return mapSavedArticle(refreshed);
 };
 
 export const claimNextQueuedReaderArticle =

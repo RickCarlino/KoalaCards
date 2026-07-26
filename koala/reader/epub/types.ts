@@ -26,12 +26,6 @@ export type EpubManifest = {
   spineJson: EpubSpineItem[];
 };
 
-export type EpubReadingPreferences = {
-  fontSize: number;
-  lineHeight: number;
-  columnWidth: number;
-};
-
 export type EpubBookLocator = {
   href: string;
   title?: string;

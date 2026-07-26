@@ -1,9 +1,6 @@
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { prismaClient } from "@/koala/prisma-client";
-import {
-  buildHighlightSnippet,
-  normalizeHighlightText,
-} from "@/koala/reader/highlight-snippet";
+import { combineReaderHighlightActivity } from "@/koala/reader/activity";
 import { Container, Stack, Table, Title } from "@mantine/core";
 import { GetServerSideProps } from "next";
 import { useRouter } from "next/router";
@@ -35,8 +32,9 @@ type CorrectOutcomeRow = {
 };
 
 type RecentHighlightWord = {
-  id: number;
+  key: string;
   context: string;
+  source: string;
 };
 
 type RecentPageProps = {
@@ -60,15 +58,6 @@ const hasPrompt = (prompt: string) => {
   return Boolean(trimmedPrompt) && trimmedPrompt !== DEFAULT_PROMPT;
 };
 
-const buildHighlightContextSnippet = (options: {
-  selectedText: string;
-  selectedOccurrenceIndex: number;
-  occurrencesJson: unknown;
-}): string | null => {
-  const snippet = buildHighlightSnippet(options);
-  return snippet?.snippet ?? null;
-};
-
 const toSerializableOutcome = (
   row: LatestCardOutcomeRow,
 ): Omit<WrongOutcomeRow, "createdAt"> & { createdAt: string } => ({
@@ -88,19 +77,23 @@ export const getServerSideProps: GetServerSideProps<
     };
   }
 
-  const [writingRows, latestCardOutcomes, highlightRows] =
-    await Promise.all([
-      prismaClient.writingSubmission.findMany({
-        where: { userId: dbUser.id },
-        orderBy: { createdAt: "desc" },
-        take: WRITING_SAMPLE_LIMIT,
-        select: {
-          id: true,
-          prompt: true,
-          submission: true,
-        },
-      }),
-      prismaClient.$queryRaw<LatestCardOutcomeRow[]>`
+  const [
+    writingRows,
+    latestCardOutcomes,
+    articleHighlightRows,
+    bookHighlightRows,
+  ] = await Promise.all([
+    prismaClient.writingSubmission.findMany({
+      where: { userId: dbUser.id },
+      orderBy: { createdAt: "desc" },
+      take: WRITING_SAMPLE_LIMIT,
+      select: {
+        id: true,
+        prompt: true,
+        submission: true,
+      },
+    }),
+    prismaClient.$queryRaw<LatestCardOutcomeRow[]>`
       SELECT DISTINCT ON (c.id)
         c.id AS "cardId",
         c.term AS term,
@@ -116,22 +109,51 @@ export const getServerSideProps: GetServerSideProps<
         AND q."eventType" = ${SPEAKING_EVENT_TYPE}
       ORDER BY c.id, q."createdAt" DESC, q.id DESC
     `,
-      prismaClient.readerArticleHighlight.findMany({
-        where: {
-          userId: dbUser.id,
-          status: "READY",
+    prismaClient.readerArticleHighlight.findMany({
+      where: {
+        userId: dbUser.id,
+        status: "READY",
+      },
+      orderBy: { createdAt: "desc" },
+      take: 40,
+      select: {
+        id: true,
+        term: true,
+        selectedText: true,
+        selectedOccurrenceIndex: true,
+        occurrencesJson: true,
+        createdAt: true,
+        importedAt: true,
+        article: {
+          select: {
+            title: true,
+          },
         },
-        orderBy: { createdAt: "desc" },
-        take: 40,
-        select: {
-          id: true,
-          term: true,
-          selectedText: true,
-          selectedOccurrenceIndex: true,
-          occurrencesJson: true,
+      },
+    }),
+    prismaClient.readerBookAnnotation.findMany({
+      where: {
+        userId: dbUser.id,
+        status: "READY",
+      },
+      orderBy: { createdAt: "desc" },
+      take: 40,
+      select: {
+        id: true,
+        quote: true,
+        selectedOccurrenceIndex: true,
+        occurrencesJson: true,
+        chapterTitle: true,
+        createdAt: true,
+        importedAt: true,
+        book: {
+          select: {
+            title: true,
+          },
         },
-      }),
-    ]);
+      },
+    }),
+  ]);
 
   const sortedOutcomes = latestCardOutcomes.sort(
     (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
@@ -160,27 +182,18 @@ export const getServerSideProps: GetServerSideProps<
     submission: row.submission,
   }));
 
-  const recentHighlights = highlightRows
-    .map((row) => {
-      const context = buildHighlightContextSnippet({
-        selectedText: normalizeHighlightText(row.selectedText),
-        selectedOccurrenceIndex: row.selectedOccurrenceIndex,
-        occurrencesJson: row.occurrencesJson,
-      });
-      if (!context) {
-        return null;
-      }
-
-      return {
-        id: row.id,
-        context,
-      };
-    })
-    .filter(
-      (row): row is RecentHighlightWord =>
-        row !== null && row.context.length > 0,
-    )
-    .slice(0, RECENT_HIGHLIGHT_LIMIT);
+  const recentHighlights = combineReaderHighlightActivity({
+    articles: articleHighlightRows,
+    books: bookHighlightRows,
+    limit: RECENT_HIGHLIGHT_LIMIT,
+  }).map((highlight) => ({
+    key: highlight.key,
+    context: highlight.context,
+    source:
+      highlight.kind === "book" && highlight.chapterTitle
+        ? `${highlight.sourceTitle} · ${highlight.chapterTitle}`
+        : highlight.sourceTitle,
+  }));
 
   return {
     props: {
@@ -372,17 +385,19 @@ function RecentHighlightsSection({
         >
           <thead>
             <tr>
+              <th>출처</th>
               <th>문맥</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td>없음</td>
+                <td colSpan={2}>없음</td>
               </tr>
             )}
             {rows.map((row) => (
-              <tr key={row.id}>
+              <tr key={row.key}>
+                <td>{row.source}</td>
                 <td>{renderContext(row.context)}</td>
               </tr>
             ))}

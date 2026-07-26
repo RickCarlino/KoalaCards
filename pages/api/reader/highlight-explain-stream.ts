@@ -1,9 +1,15 @@
+import { Prisma } from "@prisma/client";
+import type { NextApiRequest, NextApiResponse } from "next";
+import { z } from "zod";
+import { requireTextOpenAiApiKey } from "@/koala/api/next-api";
 import { prismaClient } from "@/koala/prisma-client";
+import { readerBookLocatorSchema } from "@/koala/reader/book";
 import {
   READER_HIGHLIGHT_PROMPT_VERSION,
   sha256Hex,
   type ReaderHighlightAnalysis,
 } from "@/koala/reader/highlight-explain";
+import { shouldLoadReaderHighlightCache } from "@/koala/reader/highlight-cache";
 import {
   baseHighlightStreamBodySchema,
   errorAnalysisData,
@@ -13,9 +19,6 @@ import {
   resolveHighlightSelection,
   type HighlightOccurrenceRecord,
 } from "@/koala/reader/highlight-stream-shared";
-import { requireTextOpenAiApiKey } from "@/koala/api/next-api";
-import type { NextApiRequest, NextApiResponse } from "next";
-import { z } from "zod";
 import {
   runHighlightAnalysisStream,
   streamGeneratedSelectionResponse,
@@ -25,40 +28,90 @@ import {
   requireReaderApiUserId,
 } from "./highlight-stream-helpers";
 
-const bodySchema = baseHighlightStreamBodySchema;
+const commonBodySchema = baseHighlightStreamBodySchema.extend({
+  retry: z.boolean().optional(),
+});
+
+const bodySchema = z.discriminatedUnion("kind", [
+  commonBodySchema.extend({
+    kind: z.literal("article"),
+  }),
+  commonBodySchema.extend({
+    kind: z.literal("book"),
+    sectionText: z.string().min(1).max(80000),
+    locator: readerBookLocatorSchema,
+    chapterTitle: z.string().trim().max(500).optional(),
+    progression: z.number().min(0).max(1).optional(),
+  }),
+]);
 
 type StreamRequestBody = z.infer<typeof bodySchema>;
+type ArticleStreamRequestBody = Extract<
+  StreamRequestBody,
+  { kind: "article" }
+>;
+type BookStreamRequestBody = Extract<StreamRequestBody, { kind: "book" }>;
 
-type CachedHighlightRecord = {
+type ResolvedExplainRequestBase = {
+  userId: string;
+  selectedText: string;
+  selectedTextHash: string;
+  selectedOccurrenceIndex: number;
+  occurrences: HighlightOccurrenceRecord[];
+  title: string;
+  retry: boolean;
+};
+
+type ResolvedArticleExplainRequest = ResolvedExplainRequestBase & {
+  kind: "article";
+  articleId: number;
+  articleContentHash: string;
+};
+
+type ResolvedBookExplainRequest = ResolvedExplainRequestBase & {
+  kind: "book";
+  bookId: number;
+  sectionTextHash: string;
+  locator: BookStreamRequestBody["locator"];
+  chapterTitle: string;
+  progression: number;
+};
+
+type ResolvedExplainRequest =
+  | ResolvedArticleExplainRequest
+  | ResolvedBookExplainRequest;
+
+type CachedReaderHighlight = {
   id: number;
   status: "IN_PROGRESS" | "READY" | "ERROR";
   selectedText: string;
-  term: string;
   definition: string;
   generalMeaning: string;
   meaningInContext: string;
 };
 
-type OwnedArticleRecord = {
+type OwnedArticle = {
   id: number;
   title: string;
   contentText: string;
 };
 
-function parseBody(
-  req: NextApiRequest,
-  res: NextApiResponse,
-): StreamRequestBody | null {
-  return parseHighlightStreamBody(bodySchema, req.body, res);
+type OwnedBook = {
+  id: number;
+  title: string;
+};
+
+function toPrismaJson(value: unknown): Prisma.InputJsonValue {
+  return value as Prisma.InputJsonValue;
 }
 
-async function requireOwnedArticle(
-  publicId: string,
-  userId: string,
-  res: NextApiResponse,
-): Promise<OwnedArticleRecord | null> {
+async function requireOwnedArticle(options: {
+  publicId: string;
+  userId: string;
+  res: NextApiResponse;
+}): Promise<OwnedArticle | null> {
   const article = await prismaClient.readerArticle.findUnique({
-    where: { publicId },
+    where: { publicId: options.publicId },
     select: {
       id: true,
       userId: true,
@@ -67,19 +120,16 @@ async function requireOwnedArticle(
       ingestStatus: true,
     },
   });
-
   if (!article) {
-    res.status(404).end("Article not found.");
+    options.res.status(404).end("Article not found.");
     return null;
   }
-
-  if (article.userId !== userId) {
-    res.status(403).end("Forbidden");
+  if (article.userId !== options.userId) {
+    options.res.status(403).end("Forbidden");
     return null;
   }
-
   if (article.ingestStatus !== "READY") {
-    res.status(409).end("Article is not ready.");
+    options.res.status(409).end("Article is not ready.");
     return null;
   }
 
@@ -90,128 +140,112 @@ async function requireOwnedArticle(
   };
 }
 
-async function loadCachedHighlight(options: {
+async function requireOwnedBook(options: {
+  publicId: string;
   userId: string;
-  articleId: number;
-  selectedTextHash: string;
-  selectedOccurrenceIndex: number;
-  articleContentHash: string;
-}): Promise<CachedHighlightRecord | null> {
-  return prismaClient.readerArticleHighlight.findUnique({
-    where: {
-      userId_articleId_selectedTextHash_selectedOccurrenceIndex_articleContentHash_promptVersion:
-        {
-          userId: options.userId,
-          articleId: options.articleId,
-          selectedTextHash: options.selectedTextHash,
-          selectedOccurrenceIndex: options.selectedOccurrenceIndex,
-          articleContentHash: options.articleContentHash,
-          promptVersion: READER_HIGHLIGHT_PROMPT_VERSION,
-        },
-    },
-    select: {
-      id: true,
-      status: true,
-      selectedText: true,
-      term: true,
-      definition: true,
-      generalMeaning: true,
-      meaningInContext: true,
-    },
+  res: NextApiResponse;
+}): Promise<OwnedBook | null> {
+  const book = await prismaClient.readerBook.findUnique({
+    where: { publicId: options.publicId },
+    select: { id: true, userId: true, title: true },
   });
+  if (!book) {
+    options.res.status(404).end("Book not found.");
+    return null;
+  }
+  if (book.userId !== options.userId) {
+    options.res.status(403).end("Forbidden");
+    return null;
+  }
+
+  return { id: book.id, title: book.title };
 }
 
-async function upsertHighlight(options: {
+function resolveArticleSelection(options: {
+  body: ArticleStreamRequestBody;
+  article: OwnedArticle;
   userId: string;
-  articleId: number;
-  selectedText: string;
-  selectedTextHash: string;
-  selectedOccurrenceIndex: number;
-  occurrenceCount: number;
-  occurrencesJson: HighlightOccurrenceRecord[];
-  articleContentHash: string;
-}): Promise<number> {
-  const record = await prismaClient.readerArticleHighlight.upsert({
-    where: {
-      userId_articleId_selectedTextHash_selectedOccurrenceIndex_articleContentHash_promptVersion:
-        {
-          userId: options.userId,
-          articleId: options.articleId,
-          selectedTextHash: options.selectedTextHash,
-          selectedOccurrenceIndex: options.selectedOccurrenceIndex,
-          articleContentHash: options.articleContentHash,
-          promptVersion: READER_HIGHLIGHT_PROMPT_VERSION,
-        },
-    },
-    create: {
-      userId: options.userId,
-      articleId: options.articleId,
-      selectedText: options.selectedText,
-      selectedTextHash: options.selectedTextHash,
-      selectedOccurrenceIndex: options.selectedOccurrenceIndex,
-      occurrenceCount: options.occurrenceCount,
-      occurrencesJson: options.occurrencesJson,
-      articleContentHash: options.articleContentHash,
-      promptVersion: READER_HIGHLIGHT_PROMPT_VERSION,
-      ...inProgressAnalysisData(),
-    },
-    update: {
-      selectedText: options.selectedText,
-      selectedOccurrenceIndex: options.selectedOccurrenceIndex,
-      occurrenceCount: options.occurrenceCount,
-      occurrencesJson: options.occurrencesJson,
-      ...inProgressAnalysisData(),
-    },
-    select: { id: true },
+  res: NextApiResponse;
+}): ResolvedArticleExplainRequest | null {
+  const selection = resolveHighlightSelection({
+    body: options.body,
+    sourceText: options.article.contentText,
+    missingMessage: "Selected text was not found in this article.",
+    res: options.res,
   });
+  if (!selection) {
+    return null;
+  }
 
-  return record.id;
+  return {
+    kind: "article",
+    userId: options.userId,
+    articleId: options.article.id,
+    title: options.article.title,
+    selectedText: selection.selectedText,
+    selectedTextHash: sha256Hex(selection.selectedText),
+    selectedOccurrenceIndex: selection.selectedOccurrenceIndex,
+    occurrences: selection.occurrences,
+    articleContentHash: sha256Hex(selection.sourceText),
+    retry: options.body.retry ?? false,
+  };
 }
 
-async function markHighlightReady(
-  highlightId: number,
-  analysis: ReaderHighlightAnalysis,
-): Promise<void> {
-  await prismaClient.readerArticleHighlight.update({
-    where: { id: highlightId },
-    data: readyAnalysisData(analysis),
-  });
-}
-
-async function markHighlightError(
-  highlightId: number,
-  message: string,
-): Promise<void> {
-  await prismaClient.readerArticleHighlight.update({
-    where: { id: highlightId },
-    data: errorAnalysisData(message),
-  });
-}
-
-type ResolvedExplainRequest = {
+function resolveBookSelection(options: {
+  body: BookStreamRequestBody;
+  book: OwnedBook;
   userId: string;
-  article: OwnedArticleRecord;
-  selectedText: string;
-  selectedTextHash: string;
-  articleContentHash: string;
-  selectedOccurrenceIndex: number;
-  occurrences: HighlightOccurrenceRecord[];
-};
+  res: NextApiResponse;
+}): ResolvedBookExplainRequest | null {
+  const selection = resolveHighlightSelection({
+    body: options.body,
+    sourceText: options.body.sectionText,
+    missingMessage: "Selected text was not found in this section.",
+    res: options.res,
+  });
+  if (!selection) {
+    return null;
+  }
+
+  const chapterTitle =
+    options.body.chapterTitle ??
+    options.body.locator.chapterTitle ??
+    options.body.locator.title ??
+    "";
+
+  return {
+    kind: "book",
+    userId: options.userId,
+    bookId: options.book.id,
+    title: chapterTitle
+      ? `${options.book.title} - ${chapterTitle}`
+      : options.book.title,
+    selectedText: selection.selectedText,
+    selectedTextHash: sha256Hex(selection.selectedText),
+    selectedOccurrenceIndex: selection.selectedOccurrenceIndex,
+    occurrences: selection.occurrences,
+    sectionTextHash: sha256Hex(selection.sourceText),
+    locator: options.body.locator,
+    chapterTitle,
+    progression:
+      options.body.progression ??
+      options.body.locator.totalProgression ??
+      options.body.locator.progression ??
+      0,
+    retry: options.body.retry ?? false,
+  };
+}
 
 async function resolveExplainRequest(
   req: NextApiRequest,
   res: NextApiResponse,
 ): Promise<ResolvedExplainRequest | null> {
-  if (!requirePostMethod(req, res)) {
+  if (!requirePostMethod(req, res) || !requireTextOpenAiApiKey(res)) {
     return null;
   }
 
-  if (!requireTextOpenAiApiKey(res)) {
-    return null;
-  }
-
-  const parsedBody = parseBody(req, res);
-  if (!parsedBody) {
+  const body = parseHighlightStreamBody(bodySchema, req.body, res);
+  if (!body) {
     return null;
   }
 
@@ -220,70 +254,263 @@ async function resolveExplainRequest(
     return null;
   }
 
-  const article = await requireOwnedArticle(
-    parsedBody.publicId,
-    userId,
-    res,
-  );
-  if (!article) {
-    return null;
+  if (body.kind === "article") {
+    const article = await requireOwnedArticle({
+      publicId: body.publicId,
+      userId,
+      res,
+    });
+    if (!article) {
+      return null;
+    }
+    return resolveArticleSelection({ body, article, userId, res });
   }
 
-  const selection = resolveHighlightSelection({
-    body: parsedBody,
-    missingMessage: "Selected text was not found in this article content.",
+  const book = await requireOwnedBook({
+    publicId: body.publicId,
+    userId,
     res,
-    sourceText: article.contentText,
   });
-  if (!selection) {
+  if (!book) {
+    return null;
+  }
+  return resolveBookSelection({ body, book, userId, res });
+}
+
+async function loadCachedArticle(
+  resolved: ResolvedArticleExplainRequest,
+): Promise<CachedReaderHighlight | null> {
+  return prismaClient.readerArticleHighlight.findUnique({
+    where: {
+      userId_articleId_selectedTextHash_selectedOccurrenceIndex_articleContentHash_promptVersion:
+        {
+          userId: resolved.userId,
+          articleId: resolved.articleId,
+          selectedTextHash: resolved.selectedTextHash,
+          selectedOccurrenceIndex: resolved.selectedOccurrenceIndex,
+          articleContentHash: resolved.articleContentHash,
+          promptVersion: READER_HIGHLIGHT_PROMPT_VERSION,
+        },
+    },
+    select: {
+      id: true,
+      status: true,
+      selectedText: true,
+      definition: true,
+      generalMeaning: true,
+      meaningInContext: true,
+    },
+  });
+}
+
+async function loadCachedBook(
+  resolved: ResolvedBookExplainRequest,
+): Promise<CachedReaderHighlight | null> {
+  const cached = await prismaClient.readerBookAnnotation.findUnique({
+    where: {
+      userId_bookId_selectedTextHash_selectedOccurrenceIndex_sectionTextHash_promptVersion:
+        {
+          userId: resolved.userId,
+          bookId: resolved.bookId,
+          selectedTextHash: resolved.selectedTextHash,
+          selectedOccurrenceIndex: resolved.selectedOccurrenceIndex,
+          sectionTextHash: resolved.sectionTextHash,
+          promptVersion: READER_HIGHLIGHT_PROMPT_VERSION,
+        },
+    },
+    select: {
+      id: true,
+      status: true,
+      quote: true,
+      definition: true,
+      generalMeaning: true,
+      meaningInContext: true,
+    },
+  });
+  if (!cached) {
     return null;
   }
 
   return {
-    userId,
-    article,
-    selectedText: selection.selectedText,
-    selectedTextHash: sha256Hex(selection.selectedText),
-    articleContentHash: sha256Hex(selection.sourceText),
-    selectedOccurrenceIndex: selection.selectedOccurrenceIndex,
-    occurrences: selection.occurrences,
+    ...cached,
+    selectedText: cached.quote,
   };
 }
 
+async function loadCachedHighlight(
+  resolved: ResolvedExplainRequest,
+): Promise<CachedReaderHighlight | null> {
+  if (
+    !shouldLoadReaderHighlightCache({
+      kind: resolved.kind,
+      retry: resolved.retry,
+    })
+  ) {
+    return null;
+  }
+  if (resolved.kind === "article") {
+    return loadCachedArticle(resolved);
+  }
+
+  return loadCachedBook(resolved);
+}
+
+async function upsertArticleHighlight(
+  resolved: ResolvedArticleExplainRequest,
+): Promise<number> {
+  const record = await prismaClient.readerArticleHighlight.upsert({
+    where: {
+      userId_articleId_selectedTextHash_selectedOccurrenceIndex_articleContentHash_promptVersion:
+        {
+          userId: resolved.userId,
+          articleId: resolved.articleId,
+          selectedTextHash: resolved.selectedTextHash,
+          selectedOccurrenceIndex: resolved.selectedOccurrenceIndex,
+          articleContentHash: resolved.articleContentHash,
+          promptVersion: READER_HIGHLIGHT_PROMPT_VERSION,
+        },
+    },
+    create: {
+      userId: resolved.userId,
+      articleId: resolved.articleId,
+      selectedText: resolved.selectedText,
+      selectedTextHash: resolved.selectedTextHash,
+      selectedOccurrenceIndex: resolved.selectedOccurrenceIndex,
+      occurrenceCount: resolved.occurrences.length,
+      occurrencesJson: toPrismaJson(resolved.occurrences),
+      articleContentHash: resolved.articleContentHash,
+      promptVersion: READER_HIGHLIGHT_PROMPT_VERSION,
+      ...inProgressAnalysisData(),
+    },
+    update: {
+      selectedText: resolved.selectedText,
+      selectedOccurrenceIndex: resolved.selectedOccurrenceIndex,
+      occurrenceCount: resolved.occurrences.length,
+      occurrencesJson: toPrismaJson(resolved.occurrences),
+      ...inProgressAnalysisData(),
+    },
+    select: { id: true },
+  });
+  return record.id;
+}
+
+async function upsertBookHighlight(
+  resolved: ResolvedBookExplainRequest,
+): Promise<number> {
+  const currentOccurrence =
+    resolved.occurrences[resolved.selectedOccurrenceIndex] ?? null;
+  const locationData = {
+    locatorJson: toPrismaJson(resolved.locator),
+    chapterTitle: resolved.chapterTitle,
+    progression: resolved.progression,
+    quote: resolved.selectedText,
+    contextBefore: currentOccurrence?.before ?? "",
+    contextAfter: currentOccurrence?.after ?? "",
+    selectedOccurrenceIndex: resolved.selectedOccurrenceIndex,
+    occurrenceCount: resolved.occurrences.length,
+    occurrencesJson: toPrismaJson(resolved.occurrences),
+  };
+  const record = await prismaClient.readerBookAnnotation.upsert({
+    where: {
+      userId_bookId_selectedTextHash_selectedOccurrenceIndex_sectionTextHash_promptVersion:
+        {
+          userId: resolved.userId,
+          bookId: resolved.bookId,
+          selectedTextHash: resolved.selectedTextHash,
+          selectedOccurrenceIndex: resolved.selectedOccurrenceIndex,
+          sectionTextHash: resolved.sectionTextHash,
+          promptVersion: READER_HIGHLIGHT_PROMPT_VERSION,
+        },
+    },
+    create: {
+      userId: resolved.userId,
+      bookId: resolved.bookId,
+      ...locationData,
+      selectedTextHash: resolved.selectedTextHash,
+      sectionTextHash: resolved.sectionTextHash,
+      promptVersion: READER_HIGHLIGHT_PROMPT_VERSION,
+      ...inProgressAnalysisData(),
+    },
+    update: {
+      ...locationData,
+      ...inProgressAnalysisData(),
+    },
+    select: { id: true },
+  });
+  return record.id;
+}
+
+async function upsertReaderHighlight(
+  resolved: ResolvedExplainRequest,
+): Promise<number> {
+  if (resolved.kind === "article") {
+    return upsertArticleHighlight(resolved);
+  }
+
+  return upsertBookHighlight(resolved);
+}
+
+async function markReaderHighlightReady(options: {
+  resolved: ResolvedExplainRequest;
+  highlightId: number;
+  analysis: ReaderHighlightAnalysis;
+}): Promise<void> {
+  if (options.resolved.kind === "article") {
+    await prismaClient.readerArticleHighlight.update({
+      where: { id: options.highlightId },
+      data: readyAnalysisData(options.analysis),
+    });
+    return;
+  }
+
+  await prismaClient.readerBookAnnotation.update({
+    where: { id: options.highlightId },
+    data: readyAnalysisData(options.analysis),
+  });
+}
+
+async function markReaderHighlightError(options: {
+  resolved: ResolvedExplainRequest;
+  highlightId: number;
+  message: string;
+}): Promise<void> {
+  if (options.resolved.kind === "article") {
+    await prismaClient.readerArticleHighlight.update({
+      where: { id: options.highlightId },
+      data: errorAnalysisData(options.message),
+    });
+    return;
+  }
+
+  await prismaClient.readerBookAnnotation.update({
+    where: { id: options.highlightId },
+    data: errorAnalysisData(options.message),
+  });
+}
+
 async function streamGeneratedResponse(options: {
+  resolved: ResolvedExplainRequest;
   res: NextApiResponse;
   isClosed: () => boolean;
-  resolved: ResolvedExplainRequest;
 }): Promise<void> {
-  const { resolved, res, isClosed } = options;
-  const {
-    userId,
-    article,
-    selectedText,
-    selectedTextHash,
-    articleContentHash,
-    selectedOccurrenceIndex,
-    occurrences,
-  } = resolved;
-
   await streamGeneratedSelectionResponse({
-    res,
-    isClosed,
-    title: article.title,
-    selection: resolved,
-    createInProgressRecord: () =>
-      upsertHighlight({
-        userId,
-        articleId: article.id,
-        selectedText,
-        selectedTextHash,
-        selectedOccurrenceIndex,
-        occurrenceCount: occurrences.length,
-        occurrencesJson: occurrences,
-        articleContentHash,
+    res: options.res,
+    isClosed: options.isClosed,
+    title: options.resolved.title,
+    selection: options.resolved,
+    createInProgressRecord: () => upsertReaderHighlight(options.resolved),
+    markReady: (highlightId, analysis) =>
+      markReaderHighlightReady({
+        resolved: options.resolved,
+        highlightId,
+        analysis,
       }),
-    markReady: markHighlightReady,
-    markError: markHighlightError,
+    markError: (highlightId, message) =>
+      markReaderHighlightError({
+        resolved: options.resolved,
+        highlightId,
+        message,
+      }),
   });
 }
 
@@ -291,26 +518,13 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
 ): Promise<void> {
-  const resolve = () => resolveExplainRequest(req, res);
-  const loadCached = (resolved: ResolvedExplainRequest) =>
-    loadCachedHighlight({
-      userId: resolved.userId,
-      articleId: resolved.article.id,
-      selectedTextHash: resolved.selectedTextHash,
-      selectedOccurrenceIndex: resolved.selectedOccurrenceIndex,
-      articleContentHash: resolved.articleContentHash,
-    });
-  const streamGenerated = (
-    resolved: ResolvedExplainRequest,
-    isClosed: () => boolean,
-  ) => streamGeneratedResponse({ res, isClosed, resolved });
-
   await runHighlightAnalysisStream({
     req,
     res,
-    resolve,
-    loadCached,
+    resolve: () => resolveExplainRequest(req, res),
+    loadCached: loadCachedHighlight,
     cachedSelectedText: (cached) => cached.selectedText,
-    streamGenerated,
+    streamGenerated: (resolved, isClosed) =>
+      streamGeneratedResponse({ resolved, res, isClosed }),
   });
 }

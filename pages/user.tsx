@@ -3,6 +3,7 @@ import { SectionCard } from "@/koala/components/SectionCard";
 import { getLanguageExchangePublicPath } from "@/koala/language-exchange-direct";
 import { ensureLanguageExchangeLink } from "@/koala/language-exchange-direct-server";
 import { prismaClient } from "@/koala/prisma-client";
+import { combineReaderHighlightDates } from "@/koala/reader/activity";
 import {
   REVIEW_TAKE_MAX,
   REVIEW_TAKE_MIN,
@@ -253,8 +254,8 @@ export async function getServerSideProps(
     }
 
     const writingChartData = cumulativeWritingData;
-    const readerHighlights =
-      await prismaClient.readerArticleHighlight.findMany({
+    const [articleHighlights, bookHighlights] = await Promise.all([
+      prismaClient.readerArticleHighlight.findMany({
         where: {
           userId,
           createdAt: {
@@ -264,14 +265,23 @@ export async function getServerSideProps(
         select: {
           createdAt: true,
         },
-        orderBy: {
-          createdAt: "asc",
+      }),
+      prismaClient.readerBookAnnotation.findMany({
+        where: {
+          userId,
+          createdAt: {
+            gte: threeMonthsAgo,
+          },
         },
-      });
-
-    const sortedReaderHighlightDates = readerHighlights.map(
-      (highlight) => highlight.createdAt,
-    );
+        select: {
+          createdAt: true,
+        },
+      }),
+    ]);
+    const sortedReaderHighlightDates = combineReaderHighlightDates({
+      articles: articleHighlights.map((highlight) => highlight.createdAt),
+      books: bookHighlights.map((highlight) => highlight.createdAt),
+    });
     const readerChartData = buildCumulativeChartDataFromSortedDates({
       startDate: threeMonthsAgo,
       endDate,

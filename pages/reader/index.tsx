@@ -5,22 +5,27 @@ import {
   openEpubFileWithPicker,
   readLocalCoverCache,
   requestPersistentReaderStorage,
+  removeLocalBookData,
   saveLocalBookHandle,
   saveLocalCoverCache,
-  saveLocalManifestCache,
   type LocalBookAvailability,
   type ReaderFileSystemFileHandle,
 } from "@/koala/reader/epub/local-library";
 import { readEpubManifest } from "@/koala/reader/epub/parser";
-import {
-  canRelinkReaderBook,
-  manifestForRelinkedReaderBook,
-} from "@/koala/reader/epub/relink";
-import { useReaderDashboardControls } from "@/koala/reader/ui/dashboard/use-reader-dashboard-controls";
+import { canRelinkReaderBook } from "@/koala/reader/epub/relink";
+import type { ReaderBookLocator } from "@/koala/reader/book";
 import type {
-  ReaderArticleSummary,
-  ReaderReadFilter,
-} from "@/koala/reader/ui/dashboard/types";
+  ReaderArticleLibraryItem,
+  ReaderBookLibraryItem,
+  ReaderLibraryItem,
+} from "@/koala/reader/contracts";
+import {
+  filterAndSortReaderDocuments,
+  readerDocumentFilterCounts,
+  type ReaderDocumentFilter,
+} from "@/koala/reader/library";
+import { useReaderDashboardControls } from "@/koala/reader/ui/dashboard/use-reader-dashboard-controls";
+import type { ReaderArticleSummary } from "@/koala/reader/ui/dashboard/types";
 import {
   formatReaderDateTime,
   readerPanelBorderColor,
@@ -40,6 +45,7 @@ import {
   Group,
   Image,
   SegmentedControl,
+  Select,
   Stack,
   Text,
   TextInput,
@@ -63,21 +69,15 @@ type ReaderBookSummary = {
   fingerprint: string;
   title: string;
   author: string;
+  description: string;
   opfIdentifier: string;
   fileName: string;
   coverPath: string;
   progress: {
-    lastLocatorJson: {
-      title?: string;
-      chapterTitle?: string;
-      totalProgression?: number;
-      progression?: number;
-    };
-    furthestLocatorJson: {
-      totalProgression?: number;
-      progression?: number;
-    };
+    lastLocatorJson: ReaderBookLocator;
+    furthestLocatorJson: ReaderBookLocator;
     lastOpenedAt: Date | null;
+    updatedAt: Date;
   } | null;
   annotationCount: number;
   createdAt: Date;
@@ -138,31 +138,17 @@ function parseAddSourceMode(value: string): AddSourceMode | null {
   return null;
 }
 
-function parseReadFilter(value: string): ReaderReadFilter | null {
-  if (value === "unread" || value === "read" || value === "all") {
+function parseDocumentFilter(value: string): ReaderDocumentFilter | null {
+  if (
+    value === "all" ||
+    value === "url" ||
+    value === "text" ||
+    value === "epub"
+  ) {
     return value;
   }
 
   return null;
-}
-
-function filteredEmptyMessage(options: {
-  hasAnyArticles: boolean;
-  readFilter: ReaderReadFilter;
-}): string {
-  if (!options.hasAnyArticles) {
-    return "No saved articles yet.";
-  }
-
-  if (options.readFilter === "unread") {
-    return "No unread articles. Try Read or All.";
-  }
-
-  if (options.readFilter === "read") {
-    return "No read articles yet.";
-  }
-
-  return "No matching articles.";
 }
 
 function mutationErrorMessage(error: unknown, fallback: string): string {
@@ -189,26 +175,70 @@ function progressPercent(value: number | undefined): number {
   return Math.round(value * 100);
 }
 
-function bookProgressLabel(book: ReaderBookSummary): string {
+function bookProgressLabel(book: ReaderBookLibraryItem): string {
   const progress = book.progress;
   if (!progress) {
     return "Not started";
   }
 
   const furthest = progressPercent(
-    progress.furthestLocatorJson.totalProgression ??
-      progress.furthestLocatorJson.progression,
+    progress.furthestLocator.totalProgression ??
+      progress.furthestLocator.progression,
   );
   const chapter =
-    progress.lastLocatorJson.chapterTitle ??
-    progress.lastLocatorJson.title ??
-    "";
+    progress.locator.chapterTitle ?? progress.locator.title ?? "";
 
   if (chapter.trim().length === 0) {
     return `Furthest ${furthest}%`;
   }
 
   return `Last: ${chapter} · Furthest ${furthest}%`;
+}
+
+function toArticleLibraryItem(
+  article: ReaderArticleSummary,
+): ReaderArticleLibraryItem {
+  return {
+    kind: "article",
+    publicId: article.publicId,
+    title: article.title,
+    description: article.description,
+    createdAt: article.createdAt,
+    updatedAt: article.updatedAt,
+    highlightCount: article.highlightCount,
+    sourceKind: article.inputKind === "raw" ? "text" : "url",
+    sourceUrl: article.normalizedUrl,
+    readAt: article.readAt,
+    ingest: {
+      status: article.ingestStatus,
+      error: article.ingestError,
+    },
+  };
+}
+
+function toBookLibraryItem(
+  book: ReaderBookSummary,
+): ReaderBookLibraryItem {
+  return {
+    kind: "book",
+    publicId: book.publicId,
+    title: book.title,
+    description: book.description,
+    createdAt: book.createdAt,
+    updatedAt: book.updatedAt,
+    highlightCount: book.annotationCount,
+    author: book.author,
+    fingerprint: book.fingerprint,
+    fileName: book.fileName,
+    coverPath: book.coverPath,
+    progress: book.progress
+      ? {
+          locator: book.progress.lastLocatorJson,
+          furthestLocator: book.progress.furthestLocatorJson,
+          lastOpenedAt: book.progress.lastOpenedAt,
+        }
+      : null,
+  };
 }
 
 function bookAvailabilityLabel(
@@ -228,21 +258,12 @@ function bookAvailabilityLabel(
   return { label: "Needs permission", color: "yellow" };
 }
 
-type ReaderShortcutsProps = {
-  includeBookmarklet: boolean;
-};
-
-function ReaderShortcuts({ includeBookmarklet }: ReaderShortcutsProps) {
+function ReaderShortcuts() {
   return (
     <Group gap="sm" wrap="wrap">
       <Anchor component={Link} href="/reader/instapaper" size="sm">
         Instapaper
       </Anchor>
-      {includeBookmarklet && (
-        <Anchor component={Link} href="/reader/bookmarklet" size="sm">
-          Bookmarklet
-        </Anchor>
-      )}
     </Group>
   );
 }
@@ -416,7 +437,7 @@ function AddFromCard({
           data={[
             { label: "URL", value: "url" },
             { label: "Text", value: "raw" },
-            { label: "Book", value: "epub" },
+            { label: "EPUB", value: "epub" },
           ]}
           radius="md"
           size="xs"
@@ -453,13 +474,21 @@ function AddFromCard({
 }
 
 type ArticleRowProps = {
-  article: ReaderArticleSummary;
+  article: ReaderArticleLibraryItem;
   isDeleting: boolean;
   isUpdatingRead: boolean;
   onDelete: () => void;
   onToggleRead: () => void;
   withDivider: boolean;
 };
+
+function LibraryItemActions({ children }: { children: React.ReactNode }) {
+  return (
+    <Group gap={8} align="center" wrap="wrap">
+      {children}
+    </Group>
+  );
+}
 
 function ArticleRow({
   article,
@@ -492,7 +521,8 @@ function ArticleRow({
             {article.title}
           </Anchor>
           <Text size="xs" c="dimmed">
-            {readerIngestLabel(article.ingestStatus)} ·{" "}
+            {article.sourceKind === "url" ? "URL" : "Text"} ·{" "}
+            {readerIngestLabel(article.ingest.status)} ·{" "}
             {formatReaderDateTime(article.createdAt)}
           </Text>
           {isRead && article.readAt && (
@@ -500,10 +530,10 @@ function ArticleRow({
               Read {formatReaderDateTime(article.readAt)}
             </Text>
           )}
-          {article.ingestStatus === "error" &&
-            article.ingestError.trim().length > 0 && (
+          {article.ingest.status === "error" &&
+            article.ingest.error.trim().length > 0 && (
               <Text size="sm" c="red" lineClamp={2}>
-                {article.ingestError}
+                {article.ingest.error}
               </Text>
             )}
           {article.description.trim().length > 0 && (
@@ -512,7 +542,16 @@ function ArticleRow({
             </Text>
           )}
         </Stack>
-        <Group gap={8} align="center" wrap="wrap">
+        <LibraryItemActions>
+          <Button
+            component={Link}
+            href={`/reader/${article.publicId}`}
+            variant="subtle"
+            color="teal"
+            size="compact-xs"
+          >
+            Open
+          </Button>
           <Button
             variant="subtle"
             color={isRead ? "gray" : "teal"}
@@ -531,19 +570,21 @@ function ArticleRow({
           >
             Delete
           </Button>
-        </Group>
+        </LibraryItemActions>
       </Group>
     </Stack>
   );
 }
 
 type BookRowProps = {
-  book: ReaderBookSummary;
+  book: ReaderBookLibraryItem;
   availability: LocalBookAvailability | undefined;
   coverDataUrl: string | undefined;
   isRelinking: boolean;
+  isDeleting: boolean;
   withDivider: boolean;
   onRelink: () => void;
+  onDelete: () => void;
 };
 
 function BookRow({
@@ -551,8 +592,10 @@ function BookRow({
   availability,
   coverDataUrl,
   isRelinking,
+  isDeleting,
   withDivider,
   onRelink,
+  onDelete,
 }: BookRowProps) {
   const availabilityMeta = bookAvailabilityLabel(availability);
 
@@ -603,6 +646,9 @@ function BookRow({
                 {book.author}
               </Text>
             )}
+            <Text size="xs" c="dimmed">
+              EPUB · {formatReaderDateTime(book.createdAt)}
+            </Text>
             <Group gap={6} wrap="wrap">
               <Badge
                 size="xs"
@@ -616,11 +662,11 @@ function BookRow({
               </Text>
             </Group>
             <Text size="xs" c="dimmed">
-              {book.annotationCount} highlights
+              {book.highlightCount} highlights
             </Text>
           </Stack>
         </Group>
-        <Group gap={8} align="center" wrap="wrap">
+        <LibraryItemActions>
           <Button
             component={Link}
             href={`/reader/books/${book.publicId}`}
@@ -641,240 +687,238 @@ function BookRow({
               Relink
             </Button>
           )}
-        </Group>
+          <Button
+            variant="subtle"
+            color="red"
+            size="compact-xs"
+            loading={isDeleting}
+            onClick={onDelete}
+          >
+            Delete
+          </Button>
+        </LibraryItemActions>
       </Group>
     </Stack>
   );
 }
 
-type BooksCardProps = {
-  books: ReaderBookSummary[];
+function ReaderLibraryRow({
+  item,
+  withDivider,
+  isDeleting,
+  isUpdatingRead = false,
+  isRelinking = false,
+  availability,
+  coverDataUrl,
+  onDelete,
+  onToggleRead,
+  onRelink,
+}: {
+  item: ReaderLibraryItem;
+  withDivider: boolean;
+  isDeleting: boolean;
+  isUpdatingRead?: boolean;
+  isRelinking?: boolean;
+  availability?: LocalBookAvailability;
+  coverDataUrl?: string;
+  onDelete: () => void;
+  onToggleRead?: () => void;
+  onRelink?: () => void;
+}) {
+  if (item.kind === "article") {
+    return (
+      <ArticleRow
+        article={item}
+        isDeleting={isDeleting}
+        isUpdatingRead={isUpdatingRead}
+        onDelete={onDelete}
+        onToggleRead={() => onToggleRead?.()}
+        withDivider={withDivider}
+      />
+    );
+  }
+
+  return (
+    <BookRow
+      book={item}
+      availability={availability}
+      coverDataUrl={coverDataUrl}
+      isRelinking={isRelinking}
+      isDeleting={isDeleting}
+      withDivider={withDivider}
+      onRelink={() => onRelink?.()}
+      onDelete={onDelete}
+    />
+  );
+}
+
+type ReaderDocumentsProps = {
+  documents: ReaderLibraryItem[];
+  documentCount: number;
+  filter: ReaderDocumentFilter;
+  filterCounts: ReturnType<typeof readerDocumentFilterCounts>;
   isLoading: boolean;
   isRefreshing: boolean;
-  errorMessage: string | null;
+  errorMessages: string[];
   availabilityByFingerprint: Record<string, LocalBookAvailability>;
   coverByFingerprint: Record<string, string>;
   relinkingPublicId: string | null;
+  deletingBookPublicId: string | null;
+  deletingArticlePublicId: string | null;
+  updatingReadPublicId: string | null;
+  onFilterChange: (filter: ReaderDocumentFilter) => void;
   onRefresh: () => void;
-  onRelinkBook: (book: ReaderBookSummary) => void;
+  onDelete: (item: ReaderLibraryItem) => void;
+  onToggleRead: (article: ReaderArticleLibraryItem) => void;
+  onRelink: (book: ReaderBookLibraryItem) => void;
 };
 
-function BooksCard({
-  books,
+function ReaderDocuments({
+  documents,
+  documentCount,
+  filter,
+  filterCounts,
   isLoading,
   isRefreshing,
-  errorMessage,
+  errorMessages,
   availabilityByFingerprint,
   coverByFingerprint,
   relinkingPublicId,
+  deletingBookPublicId,
+  deletingArticlePublicId,
+  updatingReadPublicId,
+  onFilterChange,
   onRefresh,
-  onRelinkBook,
-}: BooksCardProps) {
-  return (
-    <Box style={readerSurfaceStyle}>
-      <Stack gap="sm">
-        <Group justify="space-between" align="center" wrap="wrap">
-          <Text size="sm" fw={700} c={readerHeadingColor}>
-            Books
-          </Text>
-          <Button
-            variant="subtle"
-            size="compact-sm"
-            color="pink"
-            onClick={onRefresh}
-            loading={isRefreshing}
-          >
-            Refresh
-          </Button>
-        </Group>
-        {isLoading && (
-          <Text size="sm" c="dimmed">
-            Loading books...
-          </Text>
-        )}
-        {errorMessage && <Text c="red">{errorMessage}</Text>}
-        {!isLoading && !errorMessage && books.length === 0 && (
-          <Text size="sm" c="dimmed">
-            No books yet.
-          </Text>
-        )}
-        {!isLoading && !errorMessage && books.length > 0 && (
-          <Stack gap={0}>
-            {books.map((book, index) => (
-              <BookRow
-                key={book.id}
-                book={book}
-                availability={availabilityByFingerprint[book.fingerprint]}
-                coverDataUrl={coverByFingerprint[book.fingerprint]}
-                isRelinking={relinkingPublicId === book.publicId}
-                onRelink={() => onRelinkBook(book)}
-                withDivider={index > 0}
-              />
-            ))}
-          </Stack>
-        )}
+  onDelete,
+  onToggleRead,
+  onRelink,
+}: ReaderDocumentsProps) {
+  let content: React.ReactNode = (
+    <Text size="sm" c="dimmed">
+      Loading documents…
+    </Text>
+  );
+  if (!isLoading && documentCount === 0) {
+    content = (
+      <Text size="sm" c="dimmed">
+        No documents yet.
+      </Text>
+    );
+  }
+  if (documentCount > 0) {
+    content = (
+      <Text size="sm" c="dimmed">
+        No documents match this filter.
+      </Text>
+    );
+  }
+  if (documents.length > 0) {
+    content = (
+      <Stack gap={0}>
+        {documents.map((item, index) => {
+          const isBook = item.kind === "book";
+          return (
+            <ReaderLibraryRow
+              key={`${item.kind}-${item.publicId}`}
+              item={item}
+              availability={
+                isBook
+                  ? availabilityByFingerprint[item.fingerprint]
+                  : undefined
+              }
+              coverDataUrl={
+                isBook ? coverByFingerprint[item.fingerprint] : undefined
+              }
+              isRelinking={isBook && relinkingPublicId === item.publicId}
+              isDeleting={
+                isBook
+                  ? deletingBookPublicId === item.publicId
+                  : deletingArticlePublicId === item.publicId
+              }
+              isUpdatingRead={
+                !isBook && updatingReadPublicId === item.publicId
+              }
+              onRelink={() => {
+                if (item.kind === "book") {
+                  onRelink(item);
+                }
+              }}
+              onToggleRead={() => {
+                if (item.kind === "article") {
+                  onToggleRead(item);
+                }
+              }}
+              onDelete={() => onDelete(item)}
+              withDivider={index > 0}
+            />
+          );
+        })}
       </Stack>
-    </Box>
-  );
-}
-
-type ArticlesBodyProps = {
-  isLoading: boolean;
-  errorMessage: string | null;
-  readFilter: ReaderReadFilter;
-  articles: ReaderArticleSummary[];
-  hasAnyArticles: boolean;
-  deletingPublicId: string | null;
-  updatingReadPublicId: string | null;
-  onDeleteArticle: (article: ReaderArticleSummary) => void;
-  onToggleReadState: (article: ReaderArticleSummary) => void;
-};
-
-function ArticlesBody({
-  isLoading,
-  errorMessage,
-  readFilter,
-  articles,
-  hasAnyArticles,
-  deletingPublicId,
-  updatingReadPublicId,
-  onDeleteArticle,
-  onToggleReadState,
-}: ArticlesBodyProps) {
-  if (isLoading) {
-    return (
-      <Text size="sm" c="dimmed">
-        Loading articles...
-      </Text>
-    );
-  }
-
-  if (errorMessage) {
-    return <Text c="red">{errorMessage}</Text>;
-  }
-
-  if (articles.length === 0) {
-    return (
-      <Text size="sm" c="dimmed">
-        {filteredEmptyMessage({ hasAnyArticles, readFilter })}
-      </Text>
     );
   }
 
   return (
-    <Stack gap={0}>
-      {articles.map((article, index) => {
-        return (
-          <ArticleRow
-            key={article.id}
-            article={article}
-            isDeleting={deletingPublicId === article.publicId}
-            isUpdatingRead={updatingReadPublicId === article.publicId}
-            onDelete={() => onDeleteArticle(article)}
-            onToggleRead={() => onToggleReadState(article)}
-            withDivider={index > 0}
-          />
-        );
-      })}
-    </Stack>
-  );
-}
-
-type ArticlesCardProps = {
-  articles: ReaderArticleSummary[];
-  isLoading: boolean;
-  isRefreshing: boolean;
-  errorMessage: string | null;
-  readFilter: ReaderReadFilter;
-  allArticlesCount: number;
-  readArticlesCount: number;
-  unreadArticlesCount: number;
-  deletingPublicId: string | null;
-  updatingReadPublicId: string | null;
-  onReadFilterChange: (next: ReaderReadFilter) => void;
-  onDeleteArticle: (article: ReaderArticleSummary) => void;
-  onToggleReadState: (article: ReaderArticleSummary) => void;
-  onRefresh: () => void;
-};
-
-function ArticlesCard({
-  articles,
-  isLoading,
-  isRefreshing,
-  errorMessage,
-  readFilter,
-  allArticlesCount,
-  readArticlesCount,
-  unreadArticlesCount,
-  deletingPublicId,
-  updatingReadPublicId,
-  onReadFilterChange,
-  onDeleteArticle,
-  onToggleReadState,
-  onRefresh,
-}: ArticlesCardProps) {
-  return (
-    <Box style={readerSurfaceStyle}>
-      <Stack gap="sm">
-        <Stack gap="xs">
-          <Group justify="space-between" align="center" wrap="wrap">
-            <Text size="sm" fw={700} c={readerHeadingColor}>
-              Articles
-            </Text>
-            <Button
-              variant="subtle"
-              size="compact-sm"
-              color="pink"
-              onClick={onRefresh}
-              loading={isRefreshing}
-            >
-              Refresh
-            </Button>
-          </Group>
-          <SegmentedControl
-            value={readFilter}
+    <Stack gap="sm">
+      <Group justify="space-between" align="center" wrap="wrap">
+        <Text size="sm" fw={700} c={readerHeadingColor}>
+          Documents
+        </Text>
+        <Group gap="xs" wrap="wrap" justify="flex-end">
+          <Select
+            aria-label="Filter documents"
+            value={filter}
             onChange={(value) => {
-              const nextFilter = parseReadFilter(value);
+              const nextFilter = parseDocumentFilter(value ?? "");
               if (nextFilter) {
-                onReadFilterChange(nextFilter);
+                onFilterChange(nextFilter);
               }
             }}
             data={[
               {
-                label: `Unread (${unreadArticlesCount})`,
-                value: "unread",
+                label: `All documents (${filterCounts.all})`,
+                value: "all",
               },
-              { label: `Read (${readArticlesCount})`, value: "read" },
-              { label: `All (${allArticlesCount})`, value: "all" },
+              { label: `URL (${filterCounts.url})`, value: "url" },
+              { label: `Text (${filterCounts.text})`, value: "text" },
+              { label: `EPUB (${filterCounts.epub})`, value: "epub" },
             ]}
             size="xs"
-            radius="md"
-            color="pink"
-            fullWidth
+            allowDeselect={false}
+            w={190}
+            maw="100%"
           />
-        </Stack>
-        <ArticlesBody
-          isLoading={isLoading}
-          errorMessage={errorMessage}
-          readFilter={readFilter}
-          articles={articles}
-          hasAnyArticles={allArticlesCount > 0}
-          deletingPublicId={deletingPublicId}
-          updatingReadPublicId={updatingReadPublicId}
-          onDeleteArticle={onDeleteArticle}
-          onToggleReadState={onToggleReadState}
-        />
-      </Stack>
-    </Box>
+          <Button
+            variant="subtle"
+            size="compact-sm"
+            color="pink"
+            loading={isRefreshing}
+            onClick={onRefresh}
+          >
+            Refresh
+          </Button>
+        </Group>
+      </Group>
+      {errorMessages.map((errorMessage) => (
+        <Text key={errorMessage} size="sm" c="red">
+          {errorMessage}
+        </Text>
+      ))}
+      {content}
+    </Stack>
   );
 }
 
 export default function ReaderDashboardPage() {
   const controls = useReaderDashboardControls();
   const [addSourceMode, setAddSourceMode] = useState<AddSourceMode>("url");
+  const [documentFilter, setDocumentFilter] =
+    useState<ReaderDocumentFilter>("all");
   const router = useRouter();
   const [openingBook, setOpeningBook] = useState(false);
   const [relinkingPublicId, setRelinkingPublicId] = useState<
+    string | null
+  >(null);
+  const [deletingBookPublicId, setDeletingBookPublicId] = useState<
     string | null
   >(null);
   const [availabilityByFingerprint, setAvailabilityByFingerprint] =
@@ -887,6 +931,7 @@ export default function ReaderDashboardPage() {
     { refetchOnWindowFocus: false },
   );
   const upsertBook = trpc.upsertReaderBookRoute.useMutation();
+  const deleteBook = trpc.deleteReaderBookRoute.useMutation();
   const books = useMemo<ReaderBookSummary[]>(() => {
     return bookQuery.data?.books ?? [];
   }, [bookQuery.data]);
@@ -897,9 +942,37 @@ export default function ReaderDashboardPage() {
 
     return mutationErrorMessage(
       bookQuery.error,
-      "Couldn't load your books.",
+      "Couldn't load EPUB documents.",
     );
   }, [bookQuery.error, bookQuery.isError]);
+  const allDocuments = useMemo<ReaderLibraryItem[]>(() => {
+    return [
+      ...controls.allArticles.map(toArticleLibraryItem),
+      ...books.map(toBookLibraryItem),
+    ];
+  }, [books, controls.allArticles]);
+  const filterCounts = useMemo(() => {
+    return readerDocumentFilterCounts(allDocuments);
+  }, [allDocuments]);
+  const documents = useMemo(() => {
+    return filterAndSortReaderDocuments({
+      items: allDocuments,
+      filter: documentFilter,
+    });
+  }, [allDocuments, documentFilter]);
+  const articleByPublicId = useMemo(() => {
+    return new Map(
+      controls.allArticles.map((article) => [article.publicId, article]),
+    );
+  }, [controls.allArticles]);
+  const bookByPublicId = useMemo(() => {
+    return new Map(books.map((book) => [book.publicId, book]));
+  }, [books]);
+  const documentErrorMessages = useMemo(() => {
+    return [controls.listErrorMessage, bookListErrorMessage].filter(
+      (message): message is string => message !== null,
+    );
+  }, [bookListErrorMessage, controls.listErrorMessage]);
 
   useEffect(() => {
     let cancelled = false;
@@ -972,7 +1045,6 @@ export default function ReaderDashboardPage() {
       fileSize: manifest.fileSize,
       fileLastModified: manifest.fileLastModified,
       coverPath: manifest.coverPath,
-      targetFormat: "REFLOWABLE_EPUB",
       navigationJson: manifest.navigationJson,
       spineJson: manifest.spineJson,
     });
@@ -983,7 +1055,6 @@ export default function ReaderDashboardPage() {
       file: parsedLocalBook.file,
       handle: parsedLocalBook.handle,
     });
-    await saveLocalManifestCache(manifest);
     if (coverDataUrl) {
       await saveLocalCoverCache({
         fingerprint: manifest.fingerprint,
@@ -1007,17 +1078,12 @@ export default function ReaderDashboardPage() {
       throw new Error("Choose the same EPUB.");
     }
 
-    const linkedManifest = manifestForRelinkedReaderBook({
-      book,
-      manifest,
-    });
     await saveLocalBookHandle({
       fingerprint: book.fingerprint,
       serverPublicId: book.publicId,
       file: parsedLocalBook.file,
       handle: parsedLocalBook.handle,
     });
-    await saveLocalManifestCache(linkedManifest);
     if (coverDataUrl) {
       await saveLocalCoverCache({
         fingerprint: book.fingerprint,
@@ -1053,7 +1119,7 @@ export default function ReaderDashboardPage() {
       const publicId = await saveParsedLocalBook(picked);
       notifications.show({
         title: "Book added",
-        message: "Saved to your Reader library.",
+        message: "Saved to Reading.",
         color: "green",
       });
       router.push(`/reader/books/${publicId}`);
@@ -1100,6 +1166,75 @@ export default function ReaderDashboardPage() {
     }
   };
 
+  const handleDeleteBook = async (book: ReaderBookSummary) => {
+    const shouldDelete = window.confirm(`Delete "${book.title}"?`);
+    if (!shouldDelete) {
+      return;
+    }
+
+    setDeletingBookPublicId(book.publicId);
+    try {
+      await deleteBook.mutateAsync({ publicId: book.publicId });
+      let localCleanupFailed = false;
+      try {
+        await removeLocalBookData(book.fingerprint);
+      } catch {
+        localCleanupFailed = true;
+      }
+      notifications.show({
+        title: "Deleted",
+        message: localCleanupFailed
+          ? "Book removed. Local browser data could not be cleared."
+          : "Book removed.",
+        color: localCleanupFailed ? "yellow" : "green",
+      });
+      void bookQuery.refetch();
+    } catch (error: unknown) {
+      notifications.show({
+        title: "Delete failed",
+        message: mutationErrorMessage(error, "Couldn't delete this book."),
+        color: "red",
+      });
+    } finally {
+      setDeletingBookPublicId((current) => {
+        return current === book.publicId ? null : current;
+      });
+    }
+  };
+
+  const refreshDocuments = async () => {
+    await Promise.all([bookQuery.refetch(), controls.onRefreshArticles()]);
+  };
+
+  const deleteDocument = (item: ReaderLibraryItem) => {
+    if (item.kind === "article") {
+      const article = articleByPublicId.get(item.publicId);
+      if (article) {
+        void controls.onDeleteArticle(article);
+      }
+      return;
+    }
+
+    const book = bookByPublicId.get(item.publicId);
+    if (book) {
+      void handleDeleteBook(book);
+    }
+  };
+
+  const toggleArticleReadState = (item: ReaderArticleLibraryItem) => {
+    const article = articleByPublicId.get(item.publicId);
+    if (article) {
+      void controls.onToggleReadState(article);
+    }
+  };
+
+  const relinkDocument = (item: ReaderBookLibraryItem) => {
+    const book = bookByPublicId.get(item.publicId);
+    if (book) {
+      void handleRelinkBook(book);
+    }
+  };
+
   return (
     <Box style={readerPageStyle}>
       <Box style={readerHeaderRowStyle}>
@@ -1127,40 +1262,37 @@ export default function ReaderDashboardPage() {
               onSaveRawTextSubmit={controls.onSaveRawTextSubmit}
               onOpenBook={handleOpenBook}
             />
-            <ReaderShortcuts includeBookmarklet={false} />
+            <ReaderShortcuts />
           </Stack>
         </Box>
 
         <Box style={readerContentColumnStyle}>
-          <Stack gap="sm">
-            <BooksCard
-              books={books}
-              isLoading={bookQuery.isLoading}
-              isRefreshing={bookQuery.isFetching}
-              errorMessage={bookListErrorMessage}
+          <Box style={readerSurfaceStyle}>
+            <ReaderDocuments
+              documents={documents}
+              documentCount={allDocuments.length}
+              filter={documentFilter}
+              filterCounts={filterCounts}
+              isLoading={bookQuery.isLoading || controls.isArticlesLoading}
+              isRefreshing={
+                bookQuery.isFetching || controls.isArticlesRefreshing
+              }
+              errorMessages={documentErrorMessages}
               availabilityByFingerprint={availabilityByFingerprint}
               coverByFingerprint={coverByFingerprint}
               relinkingPublicId={relinkingPublicId}
-              onRefresh={() => bookQuery.refetch()}
-              onRelinkBook={handleRelinkBook}
-            />
-            <ArticlesCard
-              articles={controls.articles}
-              isLoading={controls.isArticlesLoading}
-              isRefreshing={controls.isArticlesRefreshing}
-              errorMessage={controls.listErrorMessage}
-              readFilter={controls.readFilter}
-              allArticlesCount={controls.allArticlesCount}
-              readArticlesCount={controls.readArticlesCount}
-              unreadArticlesCount={controls.unreadArticlesCount}
-              deletingPublicId={controls.deletingPublicId}
+              deletingBookPublicId={deletingBookPublicId}
+              deletingArticlePublicId={controls.deletingPublicId}
               updatingReadPublicId={controls.updatingReadPublicId}
-              onReadFilterChange={controls.onReadFilterChange}
-              onDeleteArticle={controls.onDeleteArticle}
-              onToggleReadState={controls.onToggleReadState}
-              onRefresh={controls.onRefreshArticles}
+              onFilterChange={setDocumentFilter}
+              onRefresh={() => {
+                void refreshDocuments();
+              }}
+              onDelete={deleteDocument}
+              onToggleRead={toggleArticleReadState}
+              onRelink={relinkDocument}
             />
-          </Stack>
+          </Box>
         </Box>
       </Box>
     </Box>

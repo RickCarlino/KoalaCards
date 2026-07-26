@@ -22,14 +22,14 @@ KoalaCards is a Korean study app that combines spaced repetition cards, speaking
 - Writing history is searchable and tied to decks.
 
 ### Reader
-- Save Korean content from a URL or pasted raw text.
+- Save Korean content from a URL, pasted text, or local EPUB.
 - Background ingest extracts and cleans article content.
-- Highlight text in an article to get:
+- Highlight text while reading to get:
   - a flashcard-friendly definition,
   - general meaning,
   - and meaning in context.
 - Import highlight results directly into a deck as cards.
-- Mark articles read/unread and use typing practice mode per article.
+- Mark articles read/unread and reopen EPUBs at saved progress.
 - Instapaper integration can import unread bookmarks into Reader and export processed articles back.
 
 ### Decks And Cards

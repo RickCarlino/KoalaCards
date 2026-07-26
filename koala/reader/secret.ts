@@ -3,13 +3,11 @@ import {
   createDecipheriv,
   createHash,
   randomBytes,
-  timingSafeEqual,
 } from "crypto";
 
 const ENCRYPTION_VERSION = "v1";
 const ENCRYPTION_ALGORITHM = "aes-256-gcm";
 const ENCRYPTION_IV_BYTES = 12;
-const BOOKMARKLET_SECRET_BYTES = 24;
 
 const readEncryptionMaterial = (): string => {
   const explicit = process.env.READER_ENCRYPTION_KEY;
@@ -100,30 +98,4 @@ export const decryptReaderSecret = (payload: string): string => {
   ]);
 
   return plainText.toString("utf8");
-};
-
-export const generateBookmarkletSecret = (): string => {
-  const token = randomBytes(BOOKMARKLET_SECRET_BYTES).toString(
-    "base64url",
-  );
-  return `kcr_${token}`;
-};
-
-export const hashBookmarkletSecret = (secret: string): string => {
-  return createHash("sha256").update(secret, "utf8").digest("hex");
-};
-
-export const safeSecretMatch = (
-  providedSecret: string,
-  expectedHash: string,
-): boolean => {
-  const providedHash = hashBookmarkletSecret(providedSecret);
-  const left = Buffer.from(providedHash, "hex");
-  const right = Buffer.from(expectedHash, "hex");
-
-  if (left.length !== right.length) {
-    return false;
-  }
-
-  return timingSafeEqual(left, right);
 };

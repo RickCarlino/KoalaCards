@@ -1,5 +1,3 @@
-import type { EpubManifest } from "./types";
-
 type ReaderFilePermissionMode = "read" | "readwrite";
 
 type ReaderFilePermissionDescriptor = {
@@ -41,11 +39,17 @@ export type LocalBookAvailability = {
 };
 
 const DB_NAME = "koala-reader-books";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const HANDLE_STORE = "localBookHandle";
-const MANIFEST_STORE = "localBookManifestCache";
 const COVER_STORE = "localBookCoverCache";
-const SECTION_STORE = "localBookSectionCache";
+const REMOVED_STORES = [
+  "localBookManifestCache",
+  "localBookSectionCache",
+] as const;
+
+export function localBookDataStoreNames(): [string, string] {
+  return [HANDLE_STORE, COVER_STORE];
+}
 
 function hasBrowserStorage(): boolean {
   return typeof window !== "undefined" && typeof indexedDB !== "undefined";
@@ -104,16 +108,14 @@ function openReaderBookDb(): Promise<IDBDatabase> {
         store.createIndex("localId", "localId", { unique: false });
       }
 
-      if (!db.objectStoreNames.contains(MANIFEST_STORE)) {
-        db.createObjectStore(MANIFEST_STORE, { keyPath: "fingerprint" });
-      }
-
       if (!db.objectStoreNames.contains(COVER_STORE)) {
         db.createObjectStore(COVER_STORE, { keyPath: "fingerprint" });
       }
 
-      if (!db.objectStoreNames.contains(SECTION_STORE)) {
-        db.createObjectStore(SECTION_STORE, { keyPath: "cacheKey" });
+      for (const storeName of REMOVED_STORES) {
+        if (db.objectStoreNames.contains(storeName)) {
+          db.deleteObjectStore(storeName);
+        }
       }
     };
 
@@ -292,16 +294,6 @@ export async function getLocalBookHandleByPublicId(
   }
 }
 
-export async function saveLocalManifestCache(
-  manifest: EpubManifest,
-): Promise<void> {
-  await putValue(MANIFEST_STORE, {
-    fingerprint: manifest.fingerprint,
-    manifest,
-    updatedAt: Date.now(),
-  });
-}
-
 export async function saveLocalCoverCache(options: {
   fingerprint: string;
   coverDataUrl: string;
@@ -347,4 +339,22 @@ export async function listLocalBookAvailability(
   }
 
   return availability;
+}
+
+export async function removeLocalBookData(
+  fingerprint: string,
+): Promise<void> {
+  const db = await openReaderBookDb();
+  try {
+    const [handleStore, coverStore] = localBookDataStoreNames();
+    const transaction = db.transaction(
+      [handleStore, coverStore],
+      "readwrite",
+    );
+    transaction.objectStore(handleStore).delete(fingerprint);
+    transaction.objectStore(coverStore).delete(fingerprint);
+    await transactionDone(transaction);
+  } finally {
+    db.close();
+  }
 }

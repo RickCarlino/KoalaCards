@@ -708,7 +708,6 @@ export const importReaderInstapaperUnreadRoute = procedure
           await queueReaderArticle({
             userId,
             requestUrl: bookmark.url,
-            saveOrigin: "DASHBOARD",
             suggestedTitle: bookmark.title,
             instapaperBookmarkId: bookmark.bookmarkId,
           });

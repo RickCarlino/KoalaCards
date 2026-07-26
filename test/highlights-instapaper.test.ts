@@ -18,11 +18,11 @@ import {
   resolveHighlightRowState,
   resolveHighlightsHistoryState,
   resolveHighlightsVisibility,
-  type ReaderArticleHighlightLike,
+  type ReaderHighlightLike,
 } from "../koala/reader/ui/highlights-state.ts";
 
 test("highlight state helpers derive row display state", () => {
-  const highlight: ReaderArticleHighlightLike = {
+  const highlight: ReaderHighlightLike = {
     selectedText: "선택된 문장",
     selectedOccurrenceIndex: 1,
     occurrenceCount: 3,
@@ -118,7 +118,7 @@ test("highlight state helpers summarize list visibility and actions", () => {
 });
 
 test("highlight state helpers cover badges, empty analysis, and error rows", () => {
-  const baseHighlight: ReaderArticleHighlightLike = {
+  const baseHighlight: ReaderHighlightLike = {
     selectedText: " ".repeat(2),
     selectedOccurrenceIndex: 0,
     occurrenceCount: 1,

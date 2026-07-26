@@ -5,7 +5,7 @@ export type ReaderHighlightAnalysisLike = {
   meaningInContext: string;
 };
 
-export type ReaderArticleHighlightLike = ReaderHighlightAnalysisLike & {
+export type ReaderHighlightLike = ReaderHighlightAnalysisLike & {
   selectedText: string;
   selectedOccurrenceIndex: number;
   occurrenceCount: number;
@@ -40,7 +40,7 @@ function normalizeContextChunk(value: string): string {
 }
 
 export function compactContextSummary(
-  highlight: ReaderArticleHighlightLike,
+  highlight: ReaderHighlightLike,
 ): ContextSummaryParts {
   const maxTotalLength = 200;
   const match = normalizeContextChunk(highlight.selectedText);
@@ -95,7 +95,7 @@ function formatHighlightTimestamp(value: Date): string {
 }
 
 function buildHighlightMetaLine(
-  highlight: ReaderArticleHighlightLike,
+  highlight: ReaderHighlightLike,
   timestamp: string,
 ): string {
   const occurrenceText = `Occurrence ${highlight.selectedOccurrenceIndex + 1} of ${highlight.occurrenceCount}`;
@@ -106,9 +106,7 @@ function buildHighlightMetaLine(
   return `${occurrenceText} • ${timestamp}`;
 }
 
-function compactDefinitionPreview(
-  highlight: ReaderArticleHighlightLike,
-): string {
+function compactDefinitionPreview(highlight: ReaderHighlightLike): string {
   if (highlight.status !== "ready") {
     return "";
   }
@@ -176,7 +174,7 @@ export function resolveExplainActionState(options: {
 }
 
 export function resolveHighlightBadgeMeta(
-  highlight: ReaderArticleHighlightLike,
+  highlight: ReaderHighlightLike,
   importStatus: HighlightImportResultStatusLike | null,
 ): HighlightBadgeMeta | null {
   if (highlight.importedCardId !== null) {
@@ -207,7 +205,7 @@ export function resolveHighlightBadgeMeta(
 }
 
 export function resolveHighlightRowState(
-  highlight: ReaderArticleHighlightLike,
+  highlight: ReaderHighlightLike,
   importStatus: HighlightImportResultStatusLike | null,
   showExplanation: boolean,
 ) {

@@ -1,7 +1,7 @@
+import type { ReaderPreferences } from "../contracts";
 import type {
   EpubManifest,
   EpubNavigationItem,
-  EpubReadingPreferences,
   EpubSpineItem,
 } from "./types";
 
@@ -401,7 +401,7 @@ function blobToDataUrl(blob: Blob): Promise<string> {
   });
 }
 
-function cssForPreferences(preferences: EpubReadingPreferences): string {
+function cssForPreferences(preferences: ReaderPreferences): string {
   return `
     :root {
       color-scheme: light;
@@ -424,7 +424,7 @@ function cssForPreferences(preferences: EpubReadingPreferences): string {
       overflow-wrap: anywhere;
     }
     html, body { min-height: 100%; }
-    body { max-width: ${preferences.columnWidth}px; }
+    body { max-width: ${preferences.readingWidth}px; }
     img, svg, video {
       max-width: 100%;
       height: auto;
@@ -486,7 +486,7 @@ function isLocalResourceHref(value: string): boolean {
 function sectionDocumentHtml(options: {
   document: Document;
   styles: string[];
-  preferences: EpubReadingPreferences;
+  preferences: ReaderPreferences;
 }): string {
   const body = options.document.body ?? options.document.documentElement;
   const styleText = [
@@ -575,7 +575,7 @@ export class EpubSession {
 
   async renderSection(
     sectionHref: string,
-    preferences: EpubReadingPreferences,
+    preferences: ReaderPreferences,
   ): Promise<RenderedSection> {
     const sectionPath = normalizeArchivePath(
       stripHrefFragment(sectionHref),

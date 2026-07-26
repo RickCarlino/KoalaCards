@@ -55,7 +55,6 @@ model User {
   cardReviewLogs             CardReviewLog[]
   writingSubmissions         WritingSubmission[]         // Added relation to WritingSubmission
   quizResults                QuizResult[]
-  readerBookmarkletCredential ReaderBookmarkletCredential?
   readerInstapaperCredential ReaderInstapaperCredential?
   readerArticles             ReaderArticle[]
   readerArticleHighlights    ReaderArticleHighlight[]
@@ -88,9 +87,9 @@ model UserSettings {
   maxLapses          Int      @default(0)
   dueCardsEmailNotifications Boolean @default(false)
   languageExchangeAvailable Boolean @default(false)
-  readerBookFontSize Int @default(20)
-  readerBookLineHeight Float @default(1.75)
-  readerBookColumnWidth Int @default(800)
+  readerFontSize Int @default(20)
+  readerLineHeight Float @default(1.75)
+  readerReadingWidth Int @default(800)
   dueCardsEmailNotificationSentAt DateTime?
 }
 
@@ -315,11 +314,6 @@ model WritingSubmission {
   @@index([userId, deckId, createdAt])
 }
 
-enum ReaderSaveOrigin {
-  DASHBOARD
-  BOOKMARKLET
-}
-
 enum ReaderIngestStatus {
   PENDING
   IN_PROGRESS
@@ -336,18 +330,6 @@ enum ReaderHighlightStatus {
   IN_PROGRESS
   READY
   ERROR
-}
-
-model ReaderBookmarkletCredential {
-  id              Int      @id @default(autoincrement())
-  userId          String   @unique
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  secretHash      String   @unique @db.VarChar(64)
-  encryptedSecret String   @db.Text
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  @@index([userId])
 }
 
 model ReaderInstapaperCredential {
@@ -374,7 +356,6 @@ model ReaderArticle {
   inputKind     ReaderInputKind    @default(URL)
   title         String             @db.Text
   description   String             @db.Text
-  saveOrigin    ReaderSaveOrigin   @default(DASHBOARD)
   ingestStatus  ReaderIngestStatus @default(PENDING)
   ingestError   String             @default("") @db.Text
   ingestStartedAt DateTime?
@@ -439,7 +420,6 @@ model ReaderBook {
   fileSize         BigInt
   fileLastModified BigInt
   coverPath        String                 @default("") @db.Text
-  targetFormat     String                 @default("REFLOWABLE_EPUB") @db.VarChar(40)
   navigationJson   Json
   spineJson        Json
   createdAt        DateTime               @default(now())
@@ -461,7 +441,6 @@ model ReaderBookProgress {
   lastLocatorJson     Json
   furthestLocatorJson Json
   lastOpenedAt        DateTime?
-  completedAt         DateTime?
   createdAt           DateTime   @default(now())
   updatedAt           DateTime   @updatedAt
 
@@ -475,7 +454,6 @@ model ReaderBookAnnotation {
   bookId                  Int
   book                    ReaderBook            @relation(fields: [bookId], references: [id], onDelete: Cascade)
   locatorJson             Json
-  epubCfi                 String?               @db.Text
   chapterTitle            String                @default("") @db.Text
   progression             Float                 @default(0)
   quote                   String                @db.Text
