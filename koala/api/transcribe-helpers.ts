@@ -1,3 +1,5 @@
+import { OPENAI_TRANSCRIPTION_MODEL } from "../ai-openai-config";
+
 export function firstParam(
   value: string | string[] | undefined,
 ): string | undefined {
@@ -53,8 +55,9 @@ export function buildTranscriptionRequest<TFile>(options: {
 }) {
   return {
     file: options.file,
-    model: "gpt-4o-mini-transcribe" as const,
+    model: OPENAI_TRANSCRIPTION_MODEL,
     language: options.language,
+    response_format: "json" as const,
     ...(options.prompt ? { prompt: options.prompt } : {}),
   };
 }

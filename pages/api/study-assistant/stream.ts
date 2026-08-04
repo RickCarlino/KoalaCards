@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import OpenAI from "openai";
 import { prismaClient } from "@/koala/prisma-client";
+import { streamAIText } from "@/koala/ai";
+import type { CoreMessage } from "@/koala/ai";
 import { z } from "zod";
 import {
   requireTextOpenAiApiKey,
@@ -14,9 +15,6 @@ export const config = {
     bodyParser: true,
   },
 };
-
-type CompletionMessage =
-  OpenAI.Chat.Completions.ChatCompletionMessageParam;
 
 const BodySchema = z.object({
   deckId: z.number(),
@@ -37,7 +35,6 @@ const BodySchema = z.object({
 });
 type StreamRequestBody = z.infer<typeof BodySchema>;
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const SYSTEM_PROMPT = `You are a Korean-learning study assistant.
 Optimize output for fast reading and practice.
 
@@ -147,8 +144,8 @@ async function requireDeckAccess(
 function buildContextMessages(
   contextLog: string[] | undefined,
   currentCard: StreamRequestBody["currentCard"],
-): CompletionMessage[] {
-  const messages: CompletionMessage[] = [];
+): CoreMessage[] {
+  const messages: CoreMessage[] = [];
   const activityLogLines =
     contextLog?.map((line) => line.trim()).filter(Boolean) ?? [];
   const recentActivityLines = activityLogLines.slice(-30).reverse();
@@ -208,22 +205,20 @@ export default async function handler(
   });
 
   const contextMessages = buildContextMessages(contextLog, currentCard);
-  const stream = await openai.chat.completions.create({
-    model: "gpt-5.4",
+  const stream = streamAIText({
+    model: "interactive",
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
       ...contextMessages,
       ...messages,
     ],
-    stream: true,
   });
 
   let _full = "";
-  for await (const part of stream) {
+  for await (const chunk of stream) {
     if (closed) {
       break;
     }
-    const chunk = part.choices?.[0]?.delta?.content || "";
     if (chunk) {
       _full += chunk;
       writeSSE(res, chunk);

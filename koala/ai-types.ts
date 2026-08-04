@@ -1,4 +1,4 @@
-export type TextModel = "good" | "fast" | "cheap";
+export type TextModel = "good" | "fast" | "cheap" | "interactive";
 export type CoreContent = string | TextContentPart[];
 export type TextContentPart = { type: "text"; text: string };
 export type CoreMessage = {

@@ -365,8 +365,9 @@ test("transcribe helpers normalize headers and preserve hint prompt text", () =>
     }),
     {
       file: "blob",
-      model: "gpt-4o-mini-transcribe",
+      model: "gpt-4o-transcribe",
       language: "ko",
+      response_format: "json",
       prompt:
         "한국어 음성을 한글로 받아쓰세요. 로마자나 일본어 문자로 바꾸지 마세요.\nMight contain words like 단어",
     },

@@ -10,6 +10,7 @@
     "lint": "next lint",
     "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./test/register-typescript-loader.mjs --test test/*.test.ts",
     "test:coverage": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./test/register-typescript-loader.mjs --test --experimental-test-coverage test/*.test.ts",
+    "verify:openai": "tsx scripts/verify-openai-models.ts",
     "reset": "rm -rf node_modules && rm -rf package-lock.json && npm install && npx prisma migrate dev && tsx seeds/ingest.ts",
     "db:migrate:deploy": "npx prisma migrate deploy",
     "start": "npm run db:migrate:deploy && next start",
@@ -58,7 +59,7 @@
     "next": "^14.2.4",
     "next-auth": "^4.24.7",
     "nodemailer": "^6.9.13",
-    "openai": "^5.12.2",
+    "openai": "^7.4.0",
     "prisma": "^5.15.0",
     "radash": "^12.1.0",
     "react": "^18.3.1",
@@ -69,6 +70,6 @@
     "superjson": "^2.2.1",
     "ts-fsrs": "^5.4.0",
     "tsx": "^4.22.4",
-    "zod": "^3.23.8"
+    "zod": "^3.25.76"
   }
 }
