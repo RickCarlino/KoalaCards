@@ -13,6 +13,7 @@ import {
   HighlightsHistoryCard,
   type ReaderHighlight,
 } from "./highlights";
+import { shouldShowReaderRetryAction } from "./highlights-state";
 import type { ReaderHighlightController } from "./use-reader-highlight-controller";
 
 const toolsRailStyle: React.CSSProperties = {
@@ -48,15 +49,6 @@ function showManualReaderExplain(
   }
   return !shouldAutoExplainSelection(
     controller.selectionDraft.selectedText,
-  );
-}
-
-function canRetryReaderExplain(
-  controller: ReaderHighlightController,
-): boolean {
-  return (
-    controller.retryDraft !== null &&
-    controller.streamError.trim().length > 0
   );
 }
 
@@ -139,7 +131,11 @@ function CurrentHighlightPanel({
 }) {
   const selectedText = currentReaderSelectionText(controller);
   const showManualExplain = showManualReaderExplain(controller);
-  const canRetry = canRetryReaderExplain(controller);
+  const canRetry = shouldShowReaderRetryAction({
+    hasRetryDraft: controller.retryDraft !== null,
+    isExplaining: controller.isExplaining,
+    showManualExplain,
+  });
   const activeHighlightId = activeReaderHighlightId(controller);
 
   return (

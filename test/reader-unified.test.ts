@@ -9,6 +9,7 @@ import {
 import { scrollToArticleHighlight } from "../koala/reader/article-location.ts";
 import {
   ARTICLE_SELECTION_COMPLETION_EVENTS,
+  clearCompletedReaderSelection,
   listenForCompletedArticleSelections,
 } from "../koala/reader/article-selection.ts";
 import {
@@ -475,6 +476,7 @@ test("reader location helpers scroll marks and select EPUB sections", () => {
 test("article selections run only after a completed input gesture", () => {
   const added: string[] = [];
   const removed: string[] = [];
+  let clearedSelectionCount = 0;
   const target = {
     addEventListener: (eventName: string) => {
       added.push(eventName);
@@ -490,6 +492,12 @@ test("article selections run only after a completed input gesture", () => {
 
   assert.deepEqual(added, [...ARTICLE_SELECTION_COMPLETION_EVENTS]);
   assert.equal(new Set<string>(added).has("selectionchange"), false);
+  clearCompletedReaderSelection({
+    removeAllRanges: () => {
+      clearedSelectionCount += 1;
+    },
+  });
+  assert.equal(clearedSelectionCount, 1);
   cleanup();
   assert.deepEqual(removed, added);
 });

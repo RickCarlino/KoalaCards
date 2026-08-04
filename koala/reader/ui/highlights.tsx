@@ -72,12 +72,10 @@ function helperPanelStyle(
 function helperStreamStyle(options: {
   fillAvailableHeight: boolean;
   flowExplanation: boolean;
-  floatingActionsWidth?: number;
 }): React.CSSProperties {
   if (options.flowExplanation) {
     return {
       paddingBottom: 4,
-      paddingRight: options.floatingActionsWidth,
       overflowWrap: "anywhere",
     };
   }
@@ -140,7 +138,6 @@ function renderExplainAnalysis(options: {
   analysis: ReaderHighlightAnalysis | null;
   fillAvailableHeight: boolean;
   flowExplanation: boolean;
-  floatingActionsWidth?: number;
 }): React.ReactNode | null {
   if (!options.analysis || !hasAnalysis(options.analysis)) {
     return null;
@@ -153,7 +150,6 @@ function renderExplainAnalysis(options: {
       style={helperStreamStyle({
         fillAvailableHeight: options.fillAvailableHeight,
         flowExplanation: options.flowExplanation,
-        floatingActionsWidth: options.floatingActionsWidth,
       })}
     >
       <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -279,37 +275,6 @@ function renderDeleteHighlightAction(options: {
   );
 }
 
-function renderFlowExplanation(options: {
-  actions: React.ReactNode | null;
-  explanation: React.ReactNode | null;
-}): React.ReactNode {
-  if (!options.actions && !options.explanation) {
-    return null;
-  }
-
-  if (!options.explanation) {
-    return options.actions;
-  }
-
-  return (
-    <Box style={{ position: "relative", minWidth: 0 }}>
-      {options.actions ? (
-        <Box
-          style={{
-            position: "absolute",
-            top: 0,
-            right: 0,
-            zIndex: 1,
-          }}
-        >
-          {options.actions}
-        </Box>
-      ) : null}
-      {options.explanation}
-    </Box>
-  );
-}
-
 export function ExplainSelectionCard({
   isExplaining,
   streamError,
@@ -338,15 +303,10 @@ export function ExplainSelectionCard({
     onRetryHighlight,
     isRetryingHighlight,
   });
-  const floatingActionsWidth =
-    flowExplanation && actions !== null
-      ? (onAddToDeck ? 132 : 36) + (onRetryHighlight ? 36 : 0)
-      : 0;
   const explanation = renderExplainAnalysis({
     analysis,
     fillAvailableHeight,
     flowExplanation,
-    floatingActionsWidth,
   });
 
   if (flowExplanation) {
@@ -354,7 +314,8 @@ export function ExplainSelectionCard({
       <Stack gap="sm" style={helperPanelStyle(fillAvailableHeight)}>
         {renderExplainLoading(isExplaining)}
         {renderExplainError(streamError)}
-        {renderFlowExplanation({ actions, explanation })}
+        {actions}
+        {explanation}
       </Stack>
     );
   }

@@ -173,6 +173,18 @@ export function resolveExplainActionState(options: {
   };
 }
 
+export function shouldShowReaderRetryAction(options: {
+  hasRetryDraft: boolean;
+  isExplaining: boolean;
+  showManualExplain: boolean;
+}): boolean {
+  return (
+    options.hasRetryDraft &&
+    !options.isExplaining &&
+    !options.showManualExplain
+  );
+}
+
 export function resolveHighlightBadgeMeta(
   highlight: ReaderHighlightLike,
   importStatus: HighlightImportResultStatusLike | null,

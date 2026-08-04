@@ -9,6 +9,12 @@ type ArticleSelectionEventTarget = Pick<
   "addEventListener" | "removeEventListener"
 >;
 
+export function clearCompletedReaderSelection(
+  selection: Pick<Selection, "removeAllRanges"> | null | undefined,
+): void {
+  selection?.removeAllRanges();
+}
+
 export function listenForCompletedArticleSelections(
   target: ArticleSelectionEventTarget,
   listener: EventListener,

@@ -18,6 +18,7 @@ import {
   resolveHighlightRowState,
   resolveHighlightsHistoryState,
   resolveHighlightsVisibility,
+  shouldShowReaderRetryAction,
   type ReaderHighlightLike,
 } from "../koala/reader/ui/highlights-state.ts";
 
@@ -114,6 +115,23 @@ test("highlight state helpers summarize list visibility and actions", () => {
       showEmpty: true,
       showList: false,
     },
+  );
+
+  assert.equal(
+    shouldShowReaderRetryAction({
+      hasRetryDraft: true,
+      isExplaining: false,
+      showManualExplain: false,
+    }),
+    true,
+  );
+  assert.equal(
+    shouldShowReaderRetryAction({
+      hasRetryDraft: true,
+      isExplaining: true,
+      showManualExplain: false,
+    }),
+    false,
   );
 });
 

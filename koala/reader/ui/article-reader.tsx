@@ -20,7 +20,10 @@ import {
   buildSavedArticleHighlightRanges,
   type SavedArticleHighlightForRender,
 } from "../article-highlight-ranges";
-import { listenForCompletedArticleSelections } from "../article-selection";
+import {
+  clearCompletedReaderSelection,
+  listenForCompletedArticleSelections,
+} from "../article-selection";
 import type {
   ReaderHighlight,
   ReaderPreferences,
@@ -385,6 +388,9 @@ export function ReaderArticlePage({
     const updateSelection = () => {
       const element = articleRef.current;
       const draft = element ? buildArticleSelectionDraft(element) : null;
+      if (draft) {
+        clearCompletedReaderSelection(window.getSelection());
+      }
       const key = draft
         ? JSON.stringify([
             draft.selectedText,

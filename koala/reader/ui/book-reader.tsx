@@ -28,6 +28,7 @@ import {
   buildSavedArticleHighlightRanges,
   type SavedArticleHighlightForRender,
 } from "../article-highlight-ranges";
+import { clearCompletedReaderSelection } from "../article-selection";
 import { locatorProgression, type ReaderBookLocator } from "../book";
 import {
   findReaderBookSectionIndex,
@@ -872,6 +873,9 @@ export function ReaderBookPage({
       sectionText: renderedSection.text,
       locator,
     });
+    if (draft) {
+      clearCompletedReaderSelection(iframe.contentWindow?.getSelection());
+    }
     const key = draft
       ? JSON.stringify([
           draft.selectedText,
