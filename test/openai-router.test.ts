@@ -75,7 +75,7 @@ test("OpenAI specialized requests use active quality-focused models", () => {
     n: 1,
     stream: false,
   });
-  assert.equal(OPENAI_SPEECH_MODEL, "tts-1-hd");
+  assert.equal(OPENAI_SPEECH_MODEL, "gpt-4o-mini-tts");
   assert.equal(OPENAI_TRANSCRIPTION_MODEL, "gpt-4o-transcribe");
   assert.deepEqual(
     buildTranscriptionRequest({

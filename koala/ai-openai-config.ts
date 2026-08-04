@@ -49,7 +49,7 @@ const imageModels: Record<ImageModelIdentifier, string> = {
 };
 
 export const OPENAI_SPEECH_MODEL =
-  "tts-1-hd" as const satisfies SpeechCreateParams["model"];
+  "gpt-4o-mini-tts" as const satisfies SpeechCreateParams["model"];
 
 export const OPENAI_TRANSCRIPTION_MODEL =
   "gpt-4o-transcribe" as const satisfies TranscriptionCreateParamsNonStreaming["model"];
