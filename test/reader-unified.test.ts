@@ -625,6 +625,7 @@ test("reader documents share one source filter and recency order", () => {
       description: "",
       createdAt: early,
       updatedAt: early,
+      lastReadAt: late,
       highlightCount: 0,
       sourceKind: "url",
       sourceUrl: "https://example.com",
@@ -637,7 +638,8 @@ test("reader documents share one source filter and recency order", () => {
       title: "Book",
       description: "",
       createdAt: early,
-      updatedAt: late,
+      updatedAt: early,
+      lastReadAt: middle,
       highlightCount: 0,
       author: "Author",
       fingerprint: "book-fingerprint",
@@ -651,7 +653,8 @@ test("reader documents share one source filter and recency order", () => {
       title: "Pasted text",
       description: "",
       createdAt: early,
-      updatedAt: middle,
+      updatedAt: late,
+      lastReadAt: null,
       highlightCount: 0,
       sourceKind: "text",
       sourceUrl: null,
@@ -671,7 +674,7 @@ test("reader documents share one source filter and recency order", () => {
       items: documents,
       filter: "all",
     }).map((document) => document.publicId),
-    ["book", "pasted-text", "url-article"],
+    ["url-article", "book", "pasted-text"],
   );
   assert.deepEqual(
     filterAndSortReaderDocuments({

@@ -23,6 +23,28 @@ function mapIngestStatus(
   return "error";
 }
 
+async function recordOwnedReaderArticleRead(options: {
+  publicId: string;
+  ownerId: string;
+  viewerId?: string;
+  ingestStatus: "PENDING" | "IN_PROGRESS" | "READY" | "ERROR";
+}): Promise<void> {
+  if (
+    options.viewerId !== options.ownerId ||
+    options.ingestStatus !== "READY"
+  ) {
+    return;
+  }
+
+  await prismaClient.readerArticle.updateMany({
+    where: {
+      publicId: options.publicId,
+      userId: options.ownerId,
+    },
+    data: { lastReadAt: new Date() },
+  });
+}
+
 export default ReaderArticlePage;
 
 export async function getServerSideProps(
@@ -73,6 +95,12 @@ export async function getServerSideProps(
       })
     : null;
   const viewerIsOwner = viewer?.id === article.userId;
+  await recordOwnedReaderArticleRead({
+    publicId: article.publicId,
+    ownerId: article.userId,
+    viewerId: viewer?.id,
+    ingestStatus: article.ingestStatus,
+  });
   const ownerPreferences = article.user.userSettings;
   const initialPreferences =
     viewerIsOwner && ownerPreferences

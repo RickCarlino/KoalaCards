@@ -26,6 +26,7 @@ const readerArticleSchema = z.object({
   ingestStatus: z.enum(["pending", "in_progress", "ready", "error"]),
   ingestError: z.string(),
   readAt: z.date().nullable(),
+  lastReadAt: z.date().nullable(),
   highlightCount: z.number().int().min(0),
   createdAt: z.date(),
   updatedAt: z.date(),
@@ -42,6 +43,7 @@ const readerArticleListSelect =
     ingestStatus: true,
     ingestError: true,
     readAt: true,
+    lastReadAt: true,
     createdAt: true,
     updatedAt: true,
     _count: {
@@ -131,6 +133,7 @@ function mapReaderArticleListRecord(article: ReaderArticleListRecord) {
     ingestStatus: mapIngestStatus(article.ingestStatus),
     ingestError: article.ingestError,
     readAt: article.readAt,
+    lastReadAt: article.lastReadAt,
     highlightCount: article._count.highlights,
     createdAt: article.createdAt,
     updatedAt: article.updatedAt,
@@ -148,6 +151,7 @@ function mapSavedArticle(article: SavedReaderArticle) {
     ingestStatus: article.ingestStatus,
     ingestError: article.ingestError,
     readAt: article.readAt,
+    lastReadAt: article.lastReadAt,
     highlightCount: 0,
     createdAt: article.createdAt,
     updatedAt: article.createdAt,
@@ -222,7 +226,10 @@ export const listReaderArticlesRoute = procedure
     const userId = requireReaderUserId(ctx.user?.id);
     const articles = await prismaClient.readerArticle.findMany({
       where: { userId },
-      orderBy: { createdAt: "desc" },
+      orderBy: [
+        { lastReadAt: { sort: "desc", nulls: "last" } },
+        { updatedAt: "desc" },
+      ],
       take: input.limit ?? 100,
       select: readerArticleListSelect,
     });

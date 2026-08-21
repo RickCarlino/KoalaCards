@@ -8,6 +8,7 @@ export type ReaderArticleSummary = {
   ingestStatus: "pending" | "in_progress" | "ready" | "error";
   ingestError: string;
   readAt: Date | null;
+  lastReadAt: Date | null;
   highlightCount: number;
   createdAt: Date;
   updatedAt: Date;

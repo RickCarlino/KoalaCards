@@ -239,7 +239,14 @@ export const listReaderBooksRoute = procedure
     const userId = requireReaderUserId(ctx.user?.id);
     const books = await prismaClient.readerBook.findMany({
       where: { userId },
-      orderBy: { updatedAt: "desc" },
+      orderBy: [
+        {
+          progress: {
+            lastOpenedAt: { sort: "desc", nulls: "last" },
+          },
+        },
+        { updatedAt: "desc" },
+      ],
       take: input.limit ?? 100,
       select: readerBookSelect,
     });

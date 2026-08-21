@@ -46,6 +46,20 @@ export function filterAndSortReaderDocuments(options: {
       );
     })
     .sort((left, right) => {
+      if (left.lastReadAt && right.lastReadAt) {
+        const lastReadDifference =
+          right.lastReadAt.getTime() - left.lastReadAt.getTime();
+        if (lastReadDifference !== 0) {
+          return lastReadDifference;
+        }
+      }
+      if (left.lastReadAt) {
+        return -1;
+      }
+      if (right.lastReadAt) {
+        return 1;
+      }
+
       const updatedDifference =
         right.updatedAt.getTime() - left.updatedAt.getTime();
       if (updatedDifference !== 0) {

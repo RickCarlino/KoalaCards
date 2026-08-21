@@ -37,6 +37,7 @@ const readerArticleSummarySelect = {
   ingestStatus: true,
   ingestError: true,
   readAt: true,
+  lastReadAt: true,
   createdAt: true,
 } satisfies Prisma.ReaderArticleSelect;
 
@@ -82,6 +83,7 @@ export type SavedReaderArticle = {
   ingestStatus: ReaderIngestState;
   ingestError: string;
   readAt: Date | null;
+  lastReadAt: Date | null;
   createdAt: Date;
 };
 
@@ -275,6 +277,7 @@ const mapSavedArticle = (
     ingestStatus: fromReaderIngestStatus(article.ingestStatus),
     ingestError: article.ingestError,
     readAt: article.readAt,
+    lastReadAt: article.lastReadAt,
     createdAt: article.createdAt,
   };
 };

@@ -113,6 +113,7 @@ type ReaderLibraryItemBase = {
   description: string;
   createdAt: Date;
   updatedAt: Date;
+  lastReadAt: Date | null;
   highlightCount: number;
 };
 
