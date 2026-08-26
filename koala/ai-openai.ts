@@ -54,7 +54,7 @@ export const openaiGenerateStructuredOutput: StructuredGenFn = async (
     ...buildOpenAITextRequest(options),
     response_format: zodResponseFormat(options.schema, "result"),
   });
-  return res.choices?.[0]?.message?.parsed;
+  return options.schema.parse(res.choices?.[0]?.message?.parsed);
 };
 
 export const openaiGenerateImage: ImageGenFn = async (options) => {

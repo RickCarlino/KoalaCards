@@ -9,10 +9,12 @@ import {
 } from "../koala/fsrs/constants.ts";
 import {
   buildDefaultFsrsParameters,
-  ensureDeckFsrsConfig,
   fsrsParametersJson,
-  resolveDeckScheduler,
 } from "../koala/fsrs/scheduler.ts";
+import {
+  ensureDeckFsrsConfig,
+  resolveDeckScheduler,
+} from "../koala/fsrs/scheduler-server.ts";
 import {
   loadCompleteDeckReviewLogs,
   optimizeDeckFsrs,
@@ -232,7 +234,7 @@ test("failed card update does not leave an orphan review log", async () => {
         Rating.Good,
         Date.parse("2026-05-28T19:00:00.000Z"),
       ),
-    /Record to update not found|No 'Card' record/,
+    /Record to update not found|No 'Card' record|No record was found for an update/,
   );
 
   const orphanLogs = await prismaClient.cardReviewLog.count({

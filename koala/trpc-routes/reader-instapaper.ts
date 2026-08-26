@@ -1,4 +1,4 @@
-import { ReaderIngestStatus } from "@prisma/client";
+import { ReaderIngestStatus } from "@/koala/generated/prisma/client";
 import { TRPCError } from "@trpc/server";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -452,6 +452,72 @@ const pushImportError = (
   errors.push(`${bookmarkTitle}: ${message}`);
 };
 
+type ImportUnreadResult = {
+  imported: number;
+  duplicates: number;
+  invalidUrls: number;
+  failed: number;
+  errors: string[];
+};
+
+async function importUnreadBookmarks(
+  userId: string,
+  bookmarks: UnreadBookmarkItem[],
+  localByUrl: Map<string, LocalReaderArticleRecord>,
+): Promise<ImportUnreadResult> {
+  const handledNormalizedUrls = new Set(localByUrl.keys());
+  const result: ImportUnreadResult = {
+    imported: 0,
+    duplicates: 0,
+    invalidUrls: 0,
+    failed: 0,
+    errors: [],
+  };
+
+  for (const bookmark of bookmarks) {
+    if (!bookmark.normalizedUrl) {
+      result.invalidUrls += 1;
+      continue;
+    }
+
+    const existing = localByUrl.get(bookmark.normalizedUrl);
+    if (handledNormalizedUrls.has(bookmark.normalizedUrl)) {
+      result.duplicates += 1;
+
+      if (
+        existing &&
+        existing.instapaperBookmarkId !== bookmark.bookmarkId
+      ) {
+        await prismaClient.readerArticle.update({
+          where: { id: existing.id },
+          data: {
+            instapaperBookmarkId: bookmark.bookmarkId,
+          },
+        });
+        existing.instapaperBookmarkId = bookmark.bookmarkId;
+      }
+
+      continue;
+    }
+
+    try {
+      await queueReaderArticle({
+        userId,
+        requestUrl: bookmark.url,
+        suggestedTitle: bookmark.title,
+        instapaperBookmarkId: bookmark.bookmarkId,
+      });
+      result.imported += 1;
+      handledNormalizedUrls.add(bookmark.normalizedUrl);
+    } catch (error) {
+      result.failed += 1;
+      pushImportError(result.errors, bookmark.title, error);
+    }
+  }
+
+  return result;
+}
+
 const renderMarkdownToHtml = (value: string): string => {
   const markdown = value.trim();
   if (!markdown) {
@@ -670,65 +736,22 @@ export const importReaderInstapaperUnreadRoute = procedure
         userId,
         toUniqueNormalizedUrls(normalized),
       );
-      const handledNormalizedUrls = new Set(localByUrl.keys());
-
-      let imported = 0;
-      let duplicates = 0;
-      let invalidUrls = 0;
-      let failed = 0;
-      const errors: string[] = [];
-
-      for (const bookmark of normalized) {
-        if (!bookmark.normalizedUrl) {
-          invalidUrls += 1;
-          continue;
-        }
-
-        const existing = localByUrl.get(bookmark.normalizedUrl);
-        if (handledNormalizedUrls.has(bookmark.normalizedUrl)) {
-          duplicates += 1;
-
-          if (
-            existing &&
-            existing.instapaperBookmarkId !== bookmark.bookmarkId
-          ) {
-            await prismaClient.readerArticle.update({
-              where: { id: existing.id },
-              data: {
-                instapaperBookmarkId: bookmark.bookmarkId,
-              },
-            });
-            existing.instapaperBookmarkId = bookmark.bookmarkId;
-          }
-
-          continue;
-        }
-
-        try {
-          await queueReaderArticle({
-            userId,
-            requestUrl: bookmark.url,
-            suggestedTitle: bookmark.title,
-            instapaperBookmarkId: bookmark.bookmarkId,
-          });
-          imported += 1;
-          handledNormalizedUrls.add(bookmark.normalizedUrl);
-        } catch (error) {
-          failed += 1;
-          pushImportError(errors, bookmark.title, error);
-        }
-      }
+      const importResult = await importUnreadBookmarks(
+        userId,
+        normalized,
+        localByUrl,
+      );
 
       const bookmarks = await hydrateUnreadBookmarks(userId, unread);
 
       return {
         summary: {
-          imported,
-          duplicates,
-          invalidUrls,
-          failed,
+          imported: importResult.imported,
+          duplicates: importResult.duplicates,
+          invalidUrls: importResult.invalidUrls,
+          failed: importResult.failed,
         },
-        errors,
+        errors: importResult.errors,
         bookmarks,
       };
     } catch (error) {

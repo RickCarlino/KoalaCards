@@ -1,10 +1,7 @@
 import type { CSSProperties } from "react";
 
 export type ReaderUiIngestStatus =
-  | "pending"
-  | "in_progress"
-  | "ready"
-  | "error";
+  "pending" | "in_progress" | "ready" | "error";
 
 export const readerDisplayFont = "inherit";
 export const readerBodyFont = "inherit";

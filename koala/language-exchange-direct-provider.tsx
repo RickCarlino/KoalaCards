@@ -81,6 +81,102 @@ function LanguageExchangeAffix({
   );
 }
 
+type LanguageExchangeDirectViewProps = {
+  activeCall: ActiveDirectCall | null;
+  children: React.ReactNode;
+  handleAnswer: (call: DirectLanguageExchangeCallState) => Promise<void>;
+  handleDecline: (callId: number) => Promise<void>;
+  handleHangUp: () => Promise<void>;
+  handleToggleScreenShare: () => Promise<void>;
+  incomingBusyId: number | null;
+  incomingCall: DirectLanguageExchangeCallState | null;
+  isSharingScreen: boolean;
+  remoteAudioRef: React.RefObject<HTMLAudioElement | null>;
+  showIncomingPrompt: boolean;
+};
+
+function LanguageExchangeDirectView({
+  activeCall,
+  children,
+  handleAnswer,
+  handleDecline,
+  handleHangUp,
+  handleToggleScreenShare,
+  incomingBusyId,
+  incomingCall,
+  isSharingScreen,
+  remoteAudioRef,
+  showIncomingPrompt,
+}: LanguageExchangeDirectViewProps) {
+  return (
+    <>
+      {children}
+      <audio ref={remoteAudioRef} autoPlay playsInline hidden />
+      {showIncomingPrompt && incomingCall ? (
+        <LanguageExchangeAffix
+          badgeLabel="Incoming"
+          message="Someone is calling your language exchange link now."
+          zIndex={302}
+        >
+          <Button
+            size="xs"
+            variant="subtle"
+            loading={incomingBusyId === incomingCall.id}
+            onClick={() => void handleDecline(incomingCall.id)}
+          >
+            Decline
+          </Button>
+          <Button
+            size="xs"
+            color="pink"
+            loading={incomingBusyId === incomingCall.id}
+            onClick={() => void handleAnswer(incomingCall)}
+          >
+            Answer
+          </Button>
+        </LanguageExchangeAffix>
+      ) : null}
+      {activeCall ? (
+        <LanguageExchangeAffix
+          badgeLabel={activeCall.statusText}
+          message="Keep studying while you talk."
+          zIndex={303}
+        >
+          <Button
+            size="xs"
+            variant="light"
+            onClick={() => void handleToggleScreenShare()}
+            disabled={activeCall.statusText !== "Connected"}
+          >
+            {isSharingScreen ? "Stop sharing" : "Share study screen"}
+          </Button>
+          <Button
+            size="xs"
+            color="red"
+            onClick={() => void handleHangUp()}
+          >
+            Hang up
+          </Button>
+        </LanguageExchangeAffix>
+      ) : null}
+    </>
+  );
+}
+
+function resolveActiveServerCall(
+  serverActiveCall: DirectLanguageExchangeCallState | null,
+  incomingCall: DirectLanguageExchangeCallState | null,
+  activeCall: ActiveDirectCall | null,
+): DirectLanguageExchangeCallState | null {
+  if (serverActiveCall?.id === activeCall?.callId) {
+    return serverActiveCall;
+  }
+  if (incomingCall?.id === activeCall?.callId) {
+    return incomingCall;
+  }
+  return null;
+}
+
 function readLeaderLease(): LeaderLease | null {
   if (typeof window === "undefined") {
     return null;
@@ -279,8 +375,10 @@ export function LanguageExchangeDirectProvider({
   React.useEffect(() => {
     if (sessionStatus !== "authenticated" || !isLeader || !isVisible) {
       releasePresence();
-      setIsEnabled(false);
-      return;
+      const timeoutId = window.setTimeout(() => {
+        setIsEnabled(false);
+      }, 0);
+      return () => window.clearTimeout(timeoutId);
     }
 
     let cancelled = false;
@@ -342,7 +440,7 @@ export function LanguageExchangeDirectProvider({
     );
 
     return readJsonOrThrow<LearnerStateResponse>(response);
-  }, [activeCall?.callId]);
+  }, [activeCall]);
 
   React.useEffect(() => {
     if (
@@ -351,11 +449,13 @@ export function LanguageExchangeDirectProvider({
       !isLeader ||
       (!isEnabled && !activeCall)
     ) {
-      setIncomingCall(null);
-      if (!activeCall) {
-        setServerActiveCall(null);
-      }
-      return;
+      const timeoutId = window.setTimeout(() => {
+        setIncomingCall(null);
+        if (!activeCall) {
+          setServerActiveCall(null);
+        }
+      }, 0);
+      return () => window.clearTimeout(timeoutId);
     }
 
     let cancelled = false;
@@ -422,12 +522,11 @@ export function LanguageExchangeDirectProvider({
     sounds,
   ]);
 
-  const activeServerCall =
-    serverActiveCall?.id === activeCall?.callId
-      ? serverActiveCall
-      : incomingCall?.id === activeCall?.callId
-        ? incomingCall
-        : null;
+  const activeServerCall = resolveActiveServerCall(
+    serverActiveCall,
+    incomingCall,
+    activeCall,
+  );
 
   React.useEffect(() => {
     const peer = peerRef.current;
@@ -728,52 +827,19 @@ export function LanguageExchangeDirectProvider({
   }, [incomingBusyId, showIncomingPrompt, sounds]);
 
   return (
-    <>
+    <LanguageExchangeDirectView
+      activeCall={activeCall}
+      handleAnswer={handleAnswer}
+      handleDecline={handleDecline}
+      handleHangUp={handleHangUp}
+      handleToggleScreenShare={handleToggleScreenShare}
+      incomingBusyId={incomingBusyId}
+      incomingCall={incomingCall}
+      isSharingScreen={isSharingScreen}
+      remoteAudioRef={remoteAudioRef}
+      showIncomingPrompt={showIncomingPrompt}
+    >
       {children}
-      <audio ref={remoteAudioRef} autoPlay playsInline hidden />
-      {showIncomingPrompt && incomingCall ? (
-        <LanguageExchangeAffix
-          badgeLabel="Incoming"
-          message="Someone is calling your language exchange link now."
-          zIndex={302}
-        >
-          <Button
-            size="xs"
-            variant="subtle"
-            loading={incomingBusyId === incomingCall.id}
-            onClick={() => void handleDecline(incomingCall.id)}
-          >
-            Decline
-          </Button>
-          <Button
-            size="xs"
-            color="pink"
-            loading={incomingBusyId === incomingCall.id}
-            onClick={() => void handleAnswer(incomingCall)}
-          >
-            Answer
-          </Button>
-        </LanguageExchangeAffix>
-      ) : null}
-      {activeCall ? (
-        <LanguageExchangeAffix
-          badgeLabel={activeCall.statusText}
-          message="Keep studying while you talk."
-          zIndex={303}
-        >
-          <Button
-            size="xs"
-            variant="light"
-            onClick={() => void handleToggleScreenShare()}
-            disabled={activeCall.statusText !== "Connected"}
-          >
-            {isSharingScreen ? "Stop sharing" : "Share study screen"}
-          </Button>
-          <Button size="xs" color="red" onClick={handleHangUp}>
-            Hang up
-          </Button>
-        </LanguageExchangeAffix>
-      ) : null}
-    </>
+    </LanguageExchangeDirectView>
   );
 }

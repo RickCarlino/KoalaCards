@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma } from "@/koala/generated/prisma/client";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { prismaClient } from "@/koala/prisma-client";
@@ -32,26 +32,25 @@ const readerArticleSchema = z.object({
   updatedAt: z.date(),
 });
 
-const readerArticleListSelect =
-  Prisma.validator<Prisma.ReaderArticleSelect>()({
-    id: true,
-    publicId: true,
-    title: true,
-    normalizedUrl: true,
-    inputKind: true,
-    description: true,
-    ingestStatus: true,
-    ingestError: true,
-    readAt: true,
-    lastReadAt: true,
-    createdAt: true,
-    updatedAt: true,
-    _count: {
-      select: {
-        highlights: true,
-      },
+const readerArticleListSelect = {
+  id: true,
+  publicId: true,
+  title: true,
+  normalizedUrl: true,
+  inputKind: true,
+  description: true,
+  ingestStatus: true,
+  ingestError: true,
+  readAt: true,
+  lastReadAt: true,
+  createdAt: true,
+  updatedAt: true,
+  _count: {
+    select: {
+      highlights: true,
     },
-  });
+  },
+} satisfies Prisma.ReaderArticleSelect;
 
 type ReaderArticleListRecord = Prisma.ReaderArticleGetPayload<{
   select: typeof readerArticleListSelect;

@@ -18,11 +18,7 @@ export type ReaderHighlightLike = ReaderHighlightAnalysisLike & {
 };
 
 export type HighlightImportResultStatusLike =
-  | "created"
-  | "duplicate"
-  | "already_imported"
-  | "not_ready"
-  | "missing";
+  "created" | "duplicate" | "already_imported" | "not_ready" | "missing";
 
 export type ContextSummaryParts = {
   before: string;

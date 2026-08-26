@@ -4,7 +4,7 @@
 set -e
 trap 'exit 2' ERR
 
-npx next lint --fix
+npx eslint pages/ --fix
 npx eslint koala/ --fix
 npx tsc --noEmit
 npm run test

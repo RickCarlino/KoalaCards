@@ -46,6 +46,47 @@ type ReviewPageProps = {
   decks: DeckWithReviewInfo[];
 };
 
+function NoDecksMessage() {
+  return (
+    <Container size="md" py="xl">
+      <Stack align="center" gap="xs" mb="xl">
+        <Title order={2} c="pink.8" ta="center">
+          Ready to start?
+        </Title>
+        <Text size="md" c="gray.7" ta="center">
+          Add cards to create your first study deck.
+        </Text>
+      </Stack>
+      <Card withBorder p="xl" radius="md">
+        <Stack align="center" gap="md">
+          <Group gap="sm" wrap="wrap" justify="center">
+            <Button
+              component={Link}
+              href="/create"
+              leftSection={<IconPlus size={18} />}
+              color="pink"
+              variant="light"
+              size="md"
+            >
+              Add Cards
+            </Button>
+            <Button
+              component={Link}
+              href="/cards"
+              leftSection={<IconCards size={18} />}
+              color="pink"
+              variant="light"
+              size="md"
+            >
+              View Cards
+            </Button>
+          </Group>
+        </Stack>
+      </Card>
+    </Container>
+  );
+}
+
 type DeckTitleFieldProps = {
   isEditing: boolean;
   title: string;
@@ -645,8 +686,8 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
             onSave={handleSave}
             onCancel={handleCancel}
             onDelete={handleDelete}
-            isSaving={updateDeckMutation.isLoading}
-            isDeleting={deleteDeckMutation.isLoading}
+            isSaving={updateDeckMutation.isPending}
+            isDeleting={deleteDeckMutation.isPending}
           />
           {isEditing && (
             <Stack gap="sm">
@@ -665,7 +706,7 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
             onOptimize={() =>
               optimizeDeckMutation.mutate({ deckId: deck.id })
             }
-            isOptimizing={optimizeDeckMutation.isLoading}
+            isOptimizing={optimizeDeckMutation.isPending}
           />
           <DeckFooter
             quizzesDue={deck.quizzesDue}
@@ -675,47 +716,6 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
           />
         </Stack>
       </Card>
-    );
-  }
-
-  function NoDecksMessage() {
-    return (
-      <Container size="md" py="xl">
-        <Stack align="center" gap="xs" mb="xl">
-          <Title order={2} c="pink.8" ta="center">
-            Ready to start?
-          </Title>
-          <Text size="md" c="gray.7" ta="center">
-            Add cards to create your first study deck.
-          </Text>
-        </Stack>
-        <Card withBorder p="xl" radius="md">
-          <Stack align="center" gap="md">
-            <Group gap="sm" wrap="wrap" justify="center">
-              <Button
-                component={Link}
-                href="/create"
-                leftSection={<IconPlus size={18} />}
-                color="pink"
-                variant="light"
-                size="md"
-              >
-                Add Cards
-              </Button>
-              <Button
-                component={Link}
-                href="/cards"
-                leftSection={<IconCards size={18} />}
-                color="pink"
-                variant="light"
-                size="md"
-              >
-                View Cards
-              </Button>
-            </Group>
-          </Stack>
-        </Card>
-      </Container>
     );
   }
 
@@ -805,7 +805,7 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
         </Card>
       )}
 
-      <Grid gutter="md">
+      <Grid gap="md">
         {sortedDecks.map((deck) => (
           <Grid.Col key={deck.id} span={{ base: 12, md: 6 }}>
             <DeckCard deck={deck} />

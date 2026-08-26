@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma } from "@/koala/generated/prisma/client";
 import { errorReport } from "@/koala/error-report";
 import { prismaClient } from "./prisma-client";
 

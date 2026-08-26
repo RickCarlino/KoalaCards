@@ -155,7 +155,7 @@ function CardEditor({ card }: CardPageProps) {
           </Group>
         </Group>
 
-        <Grid gutter="md">
+        <Grid gap="md">
           <Grid.Col span={{ base: 12, md: 7 }}>
             <Paper withBorder p="lg" radius="md" shadow="xs">
               <Title order={4} mb="sm">
@@ -207,7 +207,7 @@ function CardEditor({ card }: CardPageProps) {
               <Title order={5} mb="sm">
                 Scheduling
               </Title>
-              <Grid gutter="sm">
+              <Grid gap="sm">
                 <Grid.Col span={{ base: 12, sm: 6 }}>
                   <Stat
                     label="Repetitions"

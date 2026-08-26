@@ -1,4 +1,4 @@
-/** @type {import('next').NextConfig} */
+/** @type {import("next").NextConfig} */
 const nextConfig = {
   productionBrowserSourceMaps: true,
   typescript: {
@@ -27,4 +27,4 @@ const nextConfig = {
   skipTrailingSlashRedirect: true,
 };
 
-module.exports = nextConfig;
+export default nextConfig;

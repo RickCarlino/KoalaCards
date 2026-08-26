@@ -1,6 +1,7 @@
 import { getUserSettingsFromEmail } from "@/koala/auth-helpers";
 import type { GetServerSidePropsContext } from "next";
 import { getSession } from "next-auth/react";
+import { resolveReaderPreferences } from "./preferences";
 
 export async function requireReaderPageSettings(
   context: GetServerSidePropsContext,
@@ -22,4 +23,23 @@ export async function getReaderEmptyPageProps(
   }
 
   return { props: {} };
+}
+
+export async function getReaderBookPageProps(
+  context: GetServerSidePropsContext,
+) {
+  const settings = await requireReaderPageSettings(context);
+  if (!settings) {
+    return { redirect: { destination: "/", permanent: false } };
+  }
+
+  return {
+    props: {
+      initialPreferences: resolveReaderPreferences({
+        fontSize: settings.readerFontSize,
+        lineHeight: settings.readerLineHeight,
+        readingWidth: settings.readerReadingWidth,
+      }),
+    },
+  };
 }

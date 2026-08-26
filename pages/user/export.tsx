@@ -262,10 +262,10 @@ export default function DeckExportPage({ decks }: Props) {
             <DeckActionsTable
               decks={decks}
               exportingDeckId={
-                exportDeck.isLoading ? exportingDeckId : null
+                exportDeck.isPending ? exportingDeckId : null
               }
               importingDeckId={
-                importDeck.isLoading ? importingDeckId : null
+                importDeck.isPending ? importingDeckId : null
               }
               onExport={handleExport}
               onImport={handleImportClick}

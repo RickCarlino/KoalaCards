@@ -51,6 +51,25 @@ export function normalizeHighlightText(value: string): string {
   return value.trim();
 }
 
+function normalizeSelectedOccurrence(
+  selectedOccurrence: HighlightOccurrence | null,
+  selectedText: string,
+): HighlightOccurrence {
+  if (!selectedOccurrence) {
+    return {
+      before: "",
+      match: normalizeSnippetChunk(selectedText),
+      after: "",
+    };
+  }
+
+  return {
+    before: normalizeSnippetChunk(selectedOccurrence.before),
+    match: normalizeSnippetChunk(selectedOccurrence.match),
+    after: normalizeSnippetChunk(selectedOccurrence.after),
+  };
+}
+
 export function buildHighlightSnippet(options: {
   selectedText: string;
   selectedOccurrenceIndex: number;
@@ -59,12 +78,10 @@ export function buildHighlightSnippet(options: {
   const occurrences = parseHighlightOccurrences(options.occurrencesJson);
   const selectedOccurrence =
     occurrences[options.selectedOccurrenceIndex] ?? null;
-
-  const before = normalizeSnippetChunk(selectedOccurrence?.before ?? "");
-  const match = normalizeSnippetChunk(
-    selectedOccurrence?.match ?? options.selectedText,
+  const { before, match, after } = normalizeSelectedOccurrence(
+    selectedOccurrence,
+    options.selectedText,
   );
-  const after = normalizeSnippetChunk(selectedOccurrence?.after ?? "");
 
   if (match.length === 0) {
     return null;

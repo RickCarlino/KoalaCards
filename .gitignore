@@ -17,6 +17,7 @@
 /.pnp
 /build
 /coverage
+/koala/generated/prisma/
 /node_modules
 /out/
 data/

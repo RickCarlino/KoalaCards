@@ -35,6 +35,16 @@ type ActivateReaderHighlightOptions = {
   retryDraft?: ReaderSelectionDraft | null;
 };
 
+function resolveSelectedDeckId(
+  selectedDeckId: string | null,
+  decks: Array<{ id: number }>,
+): string | null {
+  if (selectedDeckId !== null) {
+    return selectedDeckId;
+  }
+  return decks[0] ? String(decks[0].id) : null;
+}
+
 export function useReaderHighlightController(options: {
   resource: ReaderResource;
   enabled?: boolean;
@@ -65,7 +75,7 @@ export function useReaderHighlightController(options: {
   const [selectedDeckId, setSelectedDeckId] = useState<string | null>(
     null,
   );
-  const [selectedHighlightIds, setSelectedHighlightIds] = useState<
+  const [selectedHighlightIdsState, setSelectedHighlightIds] = useState<
     number[]
   >([]);
   const [importStatusByHighlightId, setImportStatusByHighlightId] =
@@ -107,6 +117,16 @@ export function useReaderHighlightController(options: {
     () => importableReaderHighlightIds(highlights),
     [highlights],
   );
+  const selectedHighlightIds = useMemo(() => {
+    const importableIdSet = new Set(importableIds);
+    return selectedHighlightIdsState.filter((id) =>
+      importableIdSet.has(id),
+    );
+  }, [importableIds, selectedHighlightIdsState]);
+  const resolvedSelectedDeckId = resolveSelectedDeckId(
+    selectedDeckId,
+    decks,
+  );
   const activeHighlight = useMemo(() => {
     if (activeHighlightId === null) {
       return null;
@@ -127,29 +147,16 @@ export function useReaderHighlightController(options: {
     };
   }, []);
 
-  useEffect(() => {
-    if (selectedDeckId !== null || decks.length === 0) {
-      return;
-    }
-    setSelectedDeckId(String(decks[0].id));
-  }, [decks, selectedDeckId]);
-
-  useEffect(() => {
-    const importableIdSet = new Set(importableIds);
-    setSelectedHighlightIds((current) => {
-      return current.filter((id) => importableIdSet.has(id));
-    });
-  }, [importableIds]);
-
-  useEffect(() => {
+  const visibleOptimisticHighlight = useMemo(() => {
     if (
       optimisticHighlight &&
       highlights.some(
         (highlight) => highlight.id === optimisticHighlight.id,
       )
     ) {
-      setOptimisticHighlight(null);
+      return null;
     }
+    return optimisticHighlight;
   }, [highlights, optimisticHighlight]);
 
   const cancelExplanation = useCallback(() => {
@@ -340,13 +347,13 @@ export function useReaderHighlightController(options: {
 
   const importHighlightIds = useCallback(
     async (highlightIds: number[]) => {
-      if (!selectedDeckId || highlightIds.length === 0) {
+      if (!resolvedSelectedDeckId || highlightIds.length === 0) {
         return null;
       }
 
       const result = await importMutation.mutateAsync({
         resource,
-        deckId: Number(selectedDeckId),
+        deckId: Number(resolvedSelectedDeckId),
         highlightIds,
       });
       setImportStatusByHighlightId((current) => {
@@ -355,7 +362,7 @@ export function useReaderHighlightController(options: {
       await workspaceQuery.refetch();
       return result;
     },
-    [importMutation, resource, selectedDeckId, workspaceQuery],
+    [importMutation, resolvedSelectedDeckId, resource, workspaceQuery],
   );
 
   const importSelected = useCallback(async () => {
@@ -438,11 +445,11 @@ export function useReaderHighlightController(options: {
     analysis,
     streamError,
     isExplaining,
-    optimisticHighlight,
+    optimisticHighlight: visibleOptimisticHighlight,
     highlights,
     decks,
     workspaceQuery,
-    selectedDeckId,
+    selectedDeckId: resolvedSelectedDeckId,
     setSelectedDeckId,
     selectedHighlightIds,
     importableIds,
@@ -452,13 +459,13 @@ export function useReaderHighlightController(options: {
     isImportingSelected,
     isImportingCurrent,
     canImportSelected:
-      selectedDeckId !== null &&
+      resolvedSelectedDeckId !== null &&
       importableIds.length > 0 &&
       !isImportingSelected,
     canImportCurrent:
       activeHighlight?.status === "ready" &&
       activeHighlight.importedCardId === null &&
-      selectedDeckId !== null &&
+      resolvedSelectedDeckId !== null &&
       !isExplaining,
     activateHighlight,
     deleteHighlight,

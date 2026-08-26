@@ -1,5 +1,5 @@
 import { prismaClient } from "@/koala/prisma-client";
-import { Card } from "@prisma/client";
+import { Card } from "@/koala/generated/prisma/client";
 import { errorReport } from "./error-report";
 import { maybeGetCardImageUrl } from "./image";
 import { generateDefinitionAudio, generateTermAudio } from "./speech";

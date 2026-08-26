@@ -910,6 +910,37 @@ function ReaderDocuments({
   );
 }
 
+async function loadLocalBookState(fingerprints: string[]) {
+  let availability: Record<string, LocalBookAvailability> = {};
+  let covers: Record<string, string> = {};
+
+  try {
+    availability = await listLocalBookAvailability(fingerprints);
+  } catch {
+    availability = {};
+  }
+
+  try {
+    const coverEntries = await Promise.all(
+      fingerprints.map(async (fingerprint) => {
+        return [
+          fingerprint,
+          await readLocalCoverCache(fingerprint),
+        ] as const;
+      }),
+    );
+    covers = Object.fromEntries(
+      coverEntries.filter((entry): entry is readonly [string, string] => {
+        return entry[1] !== null;
+      }),
+    );
+  } catch {
+    covers = {};
+  }
+
+  return { availability, covers };
+}
+
 export default function ReaderDashboardPage() {
   const controls = useReaderDashboardControls();
   const [addSourceMode, setAddSourceMode] = useState<AddSourceMode>("url");
@@ -979,50 +1010,13 @@ export default function ReaderDashboardPage() {
   useEffect(() => {
     let cancelled = false;
     const fingerprints = books.map((book) => book.fingerprint);
-    if (fingerprints.length === 0) {
-      setAvailabilityByFingerprint({});
-      setCoverByFingerprint({});
-      return;
-    }
-
-    listLocalBookAvailability(fingerprints)
-      .then((availability) => {
-        if (!cancelled) {
-          setAvailabilityByFingerprint(availability);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setAvailabilityByFingerprint({});
-        }
-      });
-
-    Promise.all(
-      fingerprints.map(async (fingerprint) => {
-        return [
-          fingerprint,
-          await readLocalCoverCache(fingerprint),
-        ] as const;
-      }),
-    )
-      .then((covers) => {
-        if (cancelled) {
-          return;
-        }
-
-        setCoverByFingerprint(
-          Object.fromEntries(
-            covers.filter((entry): entry is readonly [string, string] => {
-              return entry[1] !== null;
-            }),
-          ),
-        );
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setCoverByFingerprint({});
-        }
-      });
+    loadLocalBookState(fingerprints).then((localState) => {
+      if (cancelled) {
+        return;
+      }
+      setAvailabilityByFingerprint(localState.availability);
+      setCoverByFingerprint(localState.covers);
+    });
 
     return () => {
       cancelled = true;
@@ -1256,7 +1250,7 @@ export default function ReaderDashboardPage() {
               rawText={controls.rawText}
               isSavingUrl={controls.isSavingUrl}
               isSavingRaw={controls.isSavingRaw}
-              isOpeningBook={openingBook || upsertBook.isLoading}
+              isOpeningBook={openingBook || upsertBook.isPending}
               onArticleUrlChange={controls.onArticleUrlChange}
               onRawTitleChange={controls.onRawTitleChange}
               onRawTextChange={controls.onRawTextChange}

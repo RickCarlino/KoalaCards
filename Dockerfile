@@ -1,11 +1,12 @@
 # syntax=docker/dockerfile:1
 
-FROM node:22-alpine AS base
+FROM node:24-alpine AS base
 
 ENV NEXT_TELEMETRY_DISABLED=1
 WORKDIR /app
 
 RUN apk add --no-cache libc6-compat openssl
+RUN npm install --global npm@12.0.2
 
 FROM base AS deps
 
@@ -19,6 +20,7 @@ ENV NODE_ENV=development
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
+COPY prisma.config.ts ./prisma.config.ts
 RUN npx prisma generate
 COPY . .
 
@@ -43,7 +45,7 @@ RUN addgroup -S nextjs && adduser -S nextjs -G nextjs
 COPY --from=builder --chown=nextjs:nextjs /app/node_modules ./node_modules
 COPY --from=builder --chown=nextjs:nextjs /app/public ./public
 COPY --from=builder --chown=nextjs:nextjs /app/.next ./.next
-COPY --from=builder --chown=nextjs:nextjs /app/next.config.js ./next.config.js
+COPY --from=builder --chown=nextjs:nextjs /app/next.config.mjs ./next.config.mjs
 COPY --from=builder --chown=nextjs:nextjs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nextjs /app/koala ./koala
 COPY --from=builder --chown=nextjs:nextjs /app/tsconfig.json ./tsconfig.json

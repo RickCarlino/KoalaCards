@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma } from "@/koala/generated/prisma/client";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { prismaClient } from "@/koala/prisma-client";
@@ -125,47 +125,45 @@ const importReaderHighlightsOutputSchema = z.object({
   summary: readerHighlightImportSummarySchema,
 });
 
-const articleHighlightSelect =
-  Prisma.validator<Prisma.ReaderArticleHighlightSelect>()({
-    id: true,
-    selectedText: true,
-    selectedOccurrenceIndex: true,
-    occurrenceCount: true,
-    occurrencesJson: true,
-    status: true,
-    term: true,
-    definition: true,
-    generalMeaning: true,
-    meaningInContext: true,
-    errorMessage: true,
-    importedCardId: true,
-    importedAt: true,
-    createdAt: true,
-    updatedAt: true,
-  });
+const articleHighlightSelect = {
+  id: true,
+  selectedText: true,
+  selectedOccurrenceIndex: true,
+  occurrenceCount: true,
+  occurrencesJson: true,
+  status: true,
+  term: true,
+  definition: true,
+  generalMeaning: true,
+  meaningInContext: true,
+  errorMessage: true,
+  importedCardId: true,
+  importedAt: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.ReaderArticleHighlightSelect;
 
-const bookHighlightSelect =
-  Prisma.validator<Prisma.ReaderBookAnnotationSelect>()({
-    id: true,
-    quote: true,
-    selectedOccurrenceIndex: true,
-    occurrenceCount: true,
-    status: true,
-    term: true,
-    definition: true,
-    generalMeaning: true,
-    meaningInContext: true,
-    errorMessage: true,
-    contextBefore: true,
-    contextAfter: true,
-    locatorJson: true,
-    chapterTitle: true,
-    progression: true,
-    importedCardId: true,
-    importedAt: true,
-    createdAt: true,
-    updatedAt: true,
-  });
+const bookHighlightSelect = {
+  id: true,
+  quote: true,
+  selectedOccurrenceIndex: true,
+  occurrenceCount: true,
+  status: true,
+  term: true,
+  definition: true,
+  generalMeaning: true,
+  meaningInContext: true,
+  errorMessage: true,
+  contextBefore: true,
+  contextAfter: true,
+  locatorJson: true,
+  chapterTitle: true,
+  progression: true,
+  importedCardId: true,
+  importedAt: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.ReaderBookAnnotationSelect;
 
 const importCandidateSelect = {
   id: true,

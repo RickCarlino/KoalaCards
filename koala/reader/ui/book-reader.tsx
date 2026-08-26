@@ -19,7 +19,6 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { getUserSettingsFromEmail } from "@/koala/auth-helpers";
 import {
   applyRenderedArticleHighlights,
   clearRenderedArticleHighlights,
@@ -63,8 +62,6 @@ import {
   resolveReaderPreferences,
 } from "../preferences";
 import { trpc } from "@/koala/trpc-config";
-import type { GetServerSidePropsContext } from "next";
-import { getSession } from "next-auth/react";
 import { ReaderPanel } from "./layout";
 import { ReaderToolsRail } from "./reader-tools-rail";
 import { ReadingPreferencesControls } from "./reading-preferences-controls";
@@ -80,12 +77,7 @@ import { ReaderWorkspace } from "./workspace";
 const SELECTION_CONTEXT_RADIUS = 60;
 
 type BookLoadState =
-  | "checking"
-  | "missing"
-  | "permission"
-  | "loading"
-  | "ready"
-  | "error";
+  "checking" | "missing" | "permission" | "loading" | "ready" | "error";
 
 type RenderedSection = {
   html: string;
@@ -1180,27 +1172,4 @@ export function ReaderBookPage({
       />
     </>
   );
-}
-
-export async function getReaderBookPageProps(
-  context: GetServerSidePropsContext,
-) {
-  const session = await getSession({ req: context.req });
-  if (!session?.user?.email) {
-    return { redirect: { destination: "/", permanent: false } };
-  }
-  const settings = await getUserSettingsFromEmail(session.user.email);
-  if (!settings) {
-    return { redirect: { destination: "/", permanent: false } };
-  }
-
-  return {
-    props: {
-      initialPreferences: resolveReaderPreferences({
-        fontSize: settings.readerFontSize,
-        lineHeight: settings.readerLineHeight,
-        readingWidth: settings.readerReadingWidth,
-      }),
-    },
-  };
 }

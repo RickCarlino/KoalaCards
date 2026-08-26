@@ -42,11 +42,7 @@ export type AddPrivateBookmarkInput = {
 };
 
 export type InstapaperErrorKind =
-  | "config"
-  | "auth"
-  | "api"
-  | "network"
-  | "bad_response";
+  "config" | "auth" | "api" | "network" | "bad_response";
 
 const knownInstapaperErrorCodes: Record<number, string> = {
   1040: "Rate limit exceeded.",

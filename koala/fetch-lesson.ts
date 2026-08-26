@@ -1,12 +1,12 @@
 import { prismaClient } from "@/koala/prisma-client";
-import type { Card, Prisma } from "@prisma/client";
+import type { Card, Prisma } from "@/koala/generated/prisma/client";
 import { shuffle } from "radash";
 import { getUserSettings } from "./auth-helpers";
 import {
-  resolveDeckScheduler,
   serializeDeckScheduler,
   type ResolvedDeckScheduler,
 } from "./fsrs/scheduler";
+import { resolveDeckScheduler } from "./fsrs/scheduler-server";
 import { maybeGetCardImageUrl } from "./image";
 import { LessonType } from "./shared-types";
 import { generateDefinitionAudio, generateTermAudio } from "./speech";

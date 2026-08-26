@@ -292,7 +292,7 @@ function ArticleSurface({
   codeLineMode,
 }: {
   article: ReaderArticlePageData;
-  articleRef: React.RefObject<HTMLElement>;
+  articleRef: React.RefObject<HTMLElement | null>;
   preferences: ReaderPreferences;
   codeLineMode: "scroll" | "wrap";
 }) {
@@ -615,7 +615,7 @@ export function ReaderArticlePage({
           <ArticleInformationRail
             article={article}
             readAt={readAt}
-            isUpdatingRead={updateReadState.isLoading}
+            isUpdatingRead={updateReadState.isPending}
             onToggleRead={() => {
               void handleToggleRead();
             }}

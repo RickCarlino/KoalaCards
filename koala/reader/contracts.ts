@@ -22,8 +22,7 @@ export type ReaderBookLocation = {
 };
 
 export type ReaderSavedLocation =
-  | ReaderArticleLocation
-  | ReaderBookLocation;
+  ReaderArticleLocation | ReaderBookLocation;
 
 export type ReaderArticleSourceContext = {
   kind: "article";
@@ -35,8 +34,7 @@ export type ReaderBookSourceContext = {
 };
 
 export type ReaderSelectionSourceContext =
-  | ReaderArticleSourceContext
-  | ReaderBookSourceContext;
+  ReaderArticleSourceContext | ReaderBookSourceContext;
 
 export type ReaderSelectionDraft = {
   selectedText: string;
@@ -73,11 +71,7 @@ export type ReaderHighlight = ReaderHighlightAnalysis & {
 };
 
 export type ReaderHighlightImportStatus =
-  | "created"
-  | "duplicate"
-  | "already_imported"
-  | "not_ready"
-  | "missing";
+  "created" | "duplicate" | "already_imported" | "not_ready" | "missing";
 
 export type ReaderHighlightImportResult = {
   highlightId: number;
@@ -142,8 +136,7 @@ export type ReaderBookLibraryItem = ReaderLibraryItemBase & {
 };
 
 export type ReaderLibraryItem =
-  | ReaderArticleLibraryItem
-  | ReaderBookLibraryItem;
+  ReaderArticleLibraryItem | ReaderBookLibraryItem;
 
 type ReaderExplainPayloadBase = {
   publicId: string;
@@ -167,8 +160,7 @@ export type ReaderBookExplainPayload = ReaderExplainPayloadBase & {
 };
 
 export type ReaderExplainPayload =
-  | ReaderArticleExplainPayload
-  | ReaderBookExplainPayload;
+  ReaderArticleExplainPayload | ReaderBookExplainPayload;
 
 export function shouldAutoExplainSelection(selectedText: string): boolean {
   const selectionLength = selectedText.trim().length;

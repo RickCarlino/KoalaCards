@@ -4,7 +4,7 @@ import { procedure } from "../trpc-procedure";
 import { LANG_CODES } from "../shared-types";
 import { TRPCError } from "@trpc/server";
 import { maybeAddImageToCardInBackground } from "../image";
-import { ensureDeckFsrsConfig } from "../fsrs/scheduler";
+import { ensureDeckFsrsConfig } from "../fsrs/scheduler-server";
 
 const inputSchema = z.object({
   deckId: z.number().optional(),

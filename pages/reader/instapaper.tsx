@@ -30,7 +30,6 @@ import {
   TextInput,
 } from "@mantine/core";
 import Link from "next/link";
-import React from "react";
 
 function canExportBookmark(bookmark: InstapaperUnreadBookmark): boolean {
   if (!bookmark.localArticle) {

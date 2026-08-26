@@ -4,7 +4,7 @@ import { prismaClient } from "../prisma-client";
 import { storageProvider } from "../storage";
 import { procedure } from "../trpc-procedure";
 import { DeckExportCard, deckExportSchema } from "../types/deck-export";
-import { ensureDeckFsrsConfig } from "../fsrs/scheduler";
+import { ensureDeckFsrsConfig } from "../fsrs/scheduler-server";
 import { requireOwnedDeck, requireRouteUserId } from "./route-helpers";
 
 type PreparedCardInput = {

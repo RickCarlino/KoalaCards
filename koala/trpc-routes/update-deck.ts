@@ -4,10 +4,10 @@ import { DECK_DESCRIPTION_MAX_LENGTH } from "../decks/constants";
 import { procedure } from "../trpc-procedure";
 import { getUserSettings } from "../auth-helpers";
 import {
-  ensureDeckFsrsConfig,
   fsrsParametersJson,
   validateFsrsParameters,
 } from "../fsrs/scheduler";
+import { ensureDeckFsrsConfig } from "../fsrs/scheduler-server";
 import { resolveRequestedRetention } from "../settings/requested-retention";
 
 export const updateDeck = procedure

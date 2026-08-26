@@ -18,7 +18,7 @@ import {
 } from "@mantine/core";
 import { prismaClient } from "@/koala/prisma-client";
 import { useRouter } from "next/router";
-import { useState, useEffect, FormEvent } from "react";
+import { useState, FormEvent } from "react";
 import { getServersideUser } from "@/koala/get-serverside-user";
 import Link from "next/link";
 import { parseCardsQueryParams } from "@/koala/cards/query-params";
@@ -377,7 +377,7 @@ function FiltersPanel({
     >
       <form onSubmit={onSubmit}>
         <Stack gap="lg">
-          <Grid gutter="lg">
+          <Grid gap="lg">
             <Grid.Col span={{ base: 12, md: 12, xl: 6 }}>
               <TextInput
                 label="Search"
@@ -587,7 +587,7 @@ function CardsTablePanel({
   );
 }
 
-export default function Edit({
+function StatefulEdit({
   cards,
   totalCount,
   sortBy,
@@ -609,14 +609,6 @@ export default function Edit({
   const [selectedDeckId, setSelectedDeckId] = useState(
     deckId ? String(deckId) : "",
   );
-
-  useEffect(() => {
-    setCurrentSortBy(sortBy);
-    setCurrentSortOrder(sortOrder);
-    setQuery(q);
-    setShowPaused(paused);
-    setSelectedDeckId(deckId ? String(deckId) : "");
-  }, [deckId, paused, q, sortBy, sortOrder]);
 
   const appliedFilters: FilterState = {
     query: q,
@@ -677,7 +669,7 @@ export default function Edit({
       <Stack gap="xl">
         <CardsHeader totalCount={totalCount} />
 
-        <Grid gutter="xl">
+        <Grid gap="xl">
           <Grid.Col span={{ base: 12, lg: 4 }}>
             <Stack gap="lg">
               <FiltersPanel
@@ -698,7 +690,7 @@ export default function Edit({
 
               <MaintenancePanel
                 onDeletePaused={handleDeletePaused}
-                isDeleting={deletePaused.isLoading}
+                isDeleting={deletePaused.isPending}
               />
             </Stack>
           </Grid.Col>
@@ -717,4 +709,8 @@ export default function Edit({
       </Stack>
     </Container>
   );
+}
+
+export default function Edit(props: EditProps) {
+  return <StatefulEdit key={JSON.stringify(props)} {...props} />;
 }

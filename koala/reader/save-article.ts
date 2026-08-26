@@ -2,7 +2,7 @@ import {
   Prisma,
   ReaderIngestStatus,
   ReaderInputKind,
-} from "@prisma/client";
+} from "@/koala/generated/prisma/client";
 import { prismaClient } from "@/koala/prisma-client";
 import {
   fetchArticleSnapshot,
@@ -16,15 +16,10 @@ import {
 } from "@/koala/reader/language";
 
 export type ReaderIngestState =
-  | "pending"
-  | "in_progress"
-  | "ready"
-  | "error";
+  "pending" | "in_progress" | "ready" | "error";
 export type ReaderInputKindValue = "url" | "raw";
 export type ReaderRouteErrorCode =
-  | "BAD_REQUEST"
-  | "FORBIDDEN"
-  | "INTERNAL_SERVER_ERROR";
+  "BAD_REQUEST" | "FORBIDDEN" | "INTERNAL_SERVER_ERROR";
 
 const readerArticleSummarySelect = {
   id: true,

@@ -14,9 +14,7 @@ export type ExportEligibility =
 export type ExportExecutionResult =
   | {
       status:
-        | "exported"
-        | "exported_and_archived"
-        | "exported_archive_failed";
+        "exported" | "exported_and_archived" | "exported_archive_failed";
       message: string | null;
     }
   | {

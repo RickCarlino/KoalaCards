@@ -45,62 +45,51 @@ async function recordOwnedReaderArticleRead(options: {
   });
 }
 
-export default ReaderArticlePage;
-
-export async function getServerSideProps(
-  context: GetServerSidePropsContext,
-) {
-  const publicId = context.params?.publicId;
-  if (typeof publicId !== "string" || !publicId.trim()) {
-    return { notFound: true };
-  }
-
-  const [article, session] = await Promise.all([
-    prismaClient.readerArticle.findUnique({
-      where: { publicId },
-      select: {
-        userId: true,
-        publicId: true,
-        title: true,
-        normalizedUrl: true,
-        inputKind: true,
-        contentText: true,
-        ingestStatus: true,
-        ingestError: true,
-        readAt: true,
-        createdAt: true,
-        user: {
-          select: {
-            userSettings: {
-              select: {
-                readerFontSize: true,
-                readerLineHeight: true,
-                readerReadingWidth: true,
-              },
+async function loadReaderArticle(publicId: string) {
+  return prismaClient.readerArticle.findUnique({
+    where: { publicId },
+    select: {
+      userId: true,
+      publicId: true,
+      title: true,
+      normalizedUrl: true,
+      inputKind: true,
+      contentText: true,
+      ingestStatus: true,
+      ingestError: true,
+      readAt: true,
+      createdAt: true,
+      user: {
+        select: {
+          userSettings: {
+            select: {
+              readerFontSize: true,
+              readerLineHeight: true,
+              readerReadingWidth: true,
             },
           },
         },
       },
-    }),
-    getSession({ req: context.req }),
-  ]);
-  if (!article) {
-    return { notFound: true };
-  }
-
-  const viewer = session?.user?.email
-    ? await prismaClient.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true },
-      })
-    : null;
-  const viewerIsOwner = viewer?.id === article.userId;
-  await recordOwnedReaderArticleRead({
-    publicId: article.publicId,
-    ownerId: article.userId,
-    viewerId: viewer?.id,
-    ingestStatus: article.ingestStatus,
+    },
   });
+}
+
+async function findViewerId(email?: string | null) {
+  if (!email) {
+    return undefined;
+  }
+  const viewer = await prismaClient.user.findUnique({
+    where: { email },
+    select: { id: true },
+  });
+  return viewer?.id;
+}
+
+function buildReaderArticlePayload(
+  article: NonNullable<Awaited<ReturnType<typeof loadReaderArticle>>>,
+  viewerId?: string,
+): ReaderArticlePageData {
+  const viewerIsOwner = viewerId === article.userId;
   const ownerPreferences = article.user.userSettings;
   const initialPreferences =
     viewerIsOwner && ownerPreferences
@@ -110,7 +99,8 @@ export async function getServerSideProps(
           readingWidth: ownerPreferences.readerReadingWidth,
         }
       : DEFAULT_READER_PREFERENCES;
-  const payload: ReaderArticlePageData = {
+
+  return {
     publicId: article.publicId,
     title: article.title,
     normalizedUrl: article.normalizedUrl,
@@ -123,6 +113,34 @@ export async function getServerSideProps(
     viewerIsOwner,
     initialPreferences,
   };
+}
+
+export default ReaderArticlePage;
+
+export async function getServerSideProps(
+  context: GetServerSidePropsContext,
+) {
+  const publicId = context.params?.publicId;
+  if (typeof publicId !== "string" || !publicId.trim()) {
+    return { notFound: true };
+  }
+
+  const [article, session] = await Promise.all([
+    loadReaderArticle(publicId),
+    getSession({ req: context.req }),
+  ]);
+  if (!article) {
+    return { notFound: true };
+  }
+
+  const viewerId = await findViewerId(session?.user?.email);
+  await recordOwnedReaderArticleRead({
+    publicId: article.publicId,
+    ownerId: article.userId,
+    viewerId,
+    ingestStatus: article.ingestStatus,
+  });
+  const payload = buildReaderArticlePayload(article, viewerId);
 
   return { props: { article: payload } };
 }

@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma } from "@/koala/generated/prisma/client";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { z } from "zod";
 import { requireTextOpenAiApiKey } from "@/koala/api/next-api";
@@ -78,8 +78,7 @@ type ResolvedBookExplainRequest = ResolvedExplainRequestBase & {
 };
 
 type ResolvedExplainRequest =
-  | ResolvedArticleExplainRequest
-  | ResolvedBookExplainRequest;
+  ResolvedArticleExplainRequest | ResolvedBookExplainRequest;
 
 type CachedReaderHighlight = {
   id: number;

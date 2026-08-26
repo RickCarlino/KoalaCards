@@ -1,6 +1,6 @@
 import { TRPCError, initTRPC } from "@trpc/server";
 import { Session } from "next-auth";
-import { User } from "@prisma/client";
+import { User } from "@/koala/generated/prisma/client";
 import superjson from "superjson";
 
 type Ctx = { session: Session | null; user?: User | null };

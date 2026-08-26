@@ -1,5 +1,4 @@
-import { Prisma } from "@prisma/client";
-import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
+import { Prisma } from "@/koala/generated/prisma/client";
 import { prismaClient } from "@/koala/prisma-client";
 import {
   createDirectLanguageExchangeGuestToken,
@@ -61,7 +60,7 @@ async function createLanguageExchangeLink(userId: string) {
       });
     } catch (error) {
       if (
-        error instanceof PrismaClientKnownRequestError &&
+        error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === "P2002"
       ) {
         const existing =
@@ -114,7 +113,7 @@ export async function regenerateLanguageExchangeLink(userId: string) {
       });
     } catch (error) {
       if (
-        error instanceof PrismaClientKnownRequestError &&
+        error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === "P2002"
       ) {
         continue;

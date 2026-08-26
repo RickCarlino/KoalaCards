@@ -36,10 +36,10 @@ import {
   Title,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { UnwrapPromise } from "@prisma/client/runtime/library";
 import { GetServerSidePropsContext } from "next";
 import { getSession, signOut } from "next-auth/react";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import React, { useState } from "react";
 
 const ONE_DAY = 24 * 60 * 60 * 1000;
@@ -326,9 +326,7 @@ export async function getServerSideProps(
     },
   };
 }
-type Props = UnwrapPromise<
-  ReturnType<typeof getServerSideProps>
->["props"] & {
+type Props = Awaited<ReturnType<typeof getServerSideProps>>["props"] & {
   cardChartData: ChartDataPoint[];
   writingChartData: ChartDataPoint[];
   readerChartData: ChartDataPoint[];
@@ -401,7 +399,7 @@ function SettingsRow({
   children,
 }: SettingsRowProps) {
   return (
-    <Grid align="flex-start" gutter={{ base: "sm", sm: "lg" }}>
+    <Grid align="flex-start" gap={{ base: "sm", sm: "lg" }}>
       <Grid.Col span={{ base: 12, sm: 5 }}>
         <Stack gap={4}>
           <InputLabel
@@ -782,10 +780,6 @@ function LanguageExchangeLinkCard({
     React.useState(languageExchangeUrl);
   const [isRegenerating, setIsRegenerating] = React.useState(false);
 
-  React.useEffect(() => {
-    setCurrentLanguageExchangeUrl(languageExchangeUrl);
-  }, [languageExchangeUrl]);
-
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(currentLanguageExchangeUrl);
@@ -916,13 +910,54 @@ type AccountPanelProps = {
   onSignOut: () => void;
 };
 
+type AccountDisplay = {
+  displayName: string;
+  image: string | undefined;
+  initial: string;
+  joinedAt: string | null;
+  secondaryEmail: string | null;
+};
+
+function resolveAccountDisplay(
+  user: UserProfile | null | undefined,
+): AccountDisplay {
+  if (!user) {
+    return {
+      displayName: "Your account",
+      image: undefined,
+      initial: "U",
+      joinedAt: null,
+      secondaryEmail: null,
+    };
+  }
+
+  const name = user.name || null;
+  const email = user.email || null;
+
+  return {
+    displayName: name || email || "Your account",
+    image: user.image || undefined,
+    initial: resolveAccountInitial(name, email),
+    joinedAt: resolveJoinedAt(user.createdAt),
+    secondaryEmail: name ? email : null,
+  };
+}
+
+function resolveAccountInitial(
+  name: string | null,
+  email: string | null,
+): string {
+  return name?.[0] || email?.[0] || "U";
+}
+
+function resolveJoinedAt(
+  createdAt: UserProfile["createdAt"],
+): string | null {
+  return createdAt ? formatDate(new Date(createdAt)) : null;
+}
+
 function AccountPanel({ user, onSignOut }: AccountPanelProps) {
-  const initial = user?.name?.[0] || user?.email?.[0] || "U";
-  const displayName = user?.name || user?.email || "Your account";
-  const secondaryEmail = user?.name ? user?.email : null;
-  const joinedAt = user?.createdAt
-    ? formatDate(new Date(user.createdAt))
-    : null;
+  const display = resolveAccountDisplay(user);
 
   return (
     <Paper withBorder p="xl" radius="lg">
@@ -933,24 +968,24 @@ function AccountPanel({ user, onSignOut }: AccountPanelProps) {
         gap="lg"
       >
         <Group gap="lg" wrap="nowrap">
-          <Avatar src={user?.image || undefined} radius="xl" size={72}>
-            {initial}
+          <Avatar src={display.image} radius="xl" size={72}>
+            {display.initial}
           </Avatar>
           <Stack gap={6}>
             <Text size="xs" c="dimmed" fw={600}>
               Account
             </Text>
             <Text size="lg" fw={600}>
-              {displayName}
+              {display.displayName}
             </Text>
-            {secondaryEmail && (
+            {display.secondaryEmail && (
               <Text size="sm" c="dimmed">
-                {secondaryEmail}
+                {display.secondaryEmail}
               </Text>
             )}
-            {joinedAt && (
+            {display.joinedAt && (
               <Badge color="pink" variant="light" radius="xl" size="sm">
-                Joined {joinedAt}
+                Joined {display.joinedAt}
               </Badge>
             )}
           </Stack>
@@ -1129,6 +1164,7 @@ export default function UserSettingsPage(props: Props) {
     readerChartData,
     languageExchangeUrl,
   } = props;
+  const router = useRouter();
   const [settings, setSettings] = useState(() => ({
     ...userSettings,
     maxLapses: userSettings.maxLapses ?? 0,
@@ -1179,8 +1215,7 @@ export default function UserSettingsPage(props: Props) {
   };
 
   const handleSignOut = () => {
-    signOut();
-    location.assign("/");
+    void signOut({ redirect: false }).then(() => router.push("/"));
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -1238,7 +1273,7 @@ export default function UserSettingsPage(props: Props) {
 
         <AccountPanel user={settings.user} onSignOut={handleSignOut} />
 
-        <Grid gutter="xl">
+        <Grid gap="xl">
           <Grid.Col span={{ base: 12, md: 7 }}>
             <Stack gap="xl">
               <SectionCard
@@ -1257,10 +1292,11 @@ export default function UserSettingsPage(props: Props) {
                     handleLanguageExchangeAvailableChange
                   }
                   onSubmit={handleSubmit}
-                  isSaving={editUserSettings.isLoading}
+                  isSaving={editUserSettings.isPending}
                 />
               </SectionCard>
               <LanguageExchangeLinkCard
+                key={languageExchangeUrl}
                 languageExchangeUrl={languageExchangeUrl}
               />
             </Stack>

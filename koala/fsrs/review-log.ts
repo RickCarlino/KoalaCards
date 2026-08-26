@@ -1,4 +1,4 @@
-import { Prisma, type Card } from "@prisma/client";
+import { Prisma, type Card } from "@/koala/generated/prisma/client";
 import type { Card as FsrsCard, CardInput, ReviewLog } from "ts-fsrs";
 import {
   FSRS_REVIEW_LOG_CUTOFF,

@@ -16,7 +16,7 @@ export const readerJsonValueSchema: z.ZodType<ReaderJsonValue> = z.lazy(
       z.boolean(),
       z.null(),
       z.array(readerJsonValueSchema),
-      z.record(readerJsonValueSchema),
+      z.record(z.string(), readerJsonValueSchema),
     ]),
 );
 

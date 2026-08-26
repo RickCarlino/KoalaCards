@@ -26,13 +26,15 @@ export function useReaderDashboardControls() {
     { limit: 200 },
     {
       refetchOnWindowFocus: false,
-      refetchInterval: (data) => {
-        const hasActiveIngest = (data?.articles ?? []).some((article) => {
-          return (
-            article.ingestStatus === "pending" ||
-            article.ingestStatus === "in_progress"
-          );
-        });
+      refetchInterval: (query) => {
+        const hasActiveIngest = (query.state.data?.articles ?? []).some(
+          (article) => {
+            return (
+              article.ingestStatus === "pending" ||
+              article.ingestStatus === "in_progress"
+            );
+          },
+        );
 
         if (hasActiveIngest) {
           return 8000;
@@ -217,8 +219,8 @@ export function useReaderDashboardControls() {
     rawText,
     deletingPublicId,
     updatingReadPublicId,
-    isSavingUrl: saveUrlArticle.isLoading,
-    isSavingRaw: saveRawTextArticle.isLoading,
+    isSavingUrl: saveUrlArticle.isPending,
+    isSavingRaw: saveRawTextArticle.isPending,
     allArticles,
     isArticlesLoading: listQuery.isLoading,
     isArticlesRefreshing: listQuery.isFetching,

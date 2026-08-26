@@ -1,5 +1,4 @@
 import { SegmentedControl, Slider, Stack, Text } from "@mantine/core";
-import React from "react";
 import type { ReaderPreferences } from "../contracts";
 import { READER_PREFERENCE_LIMITS } from "../preferences";
 

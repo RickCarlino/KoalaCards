@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma } from "@/koala/generated/prisma/client";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { prismaClient } from "@/koala/prisma-client";
@@ -120,7 +120,7 @@ const deleteReaderBookOutputSchema = z.object({
   status: z.literal("deleted"),
 });
 
-const readerBookSelect = Prisma.validator<Prisma.ReaderBookSelect>()({
+const readerBookSelect = {
   id: true,
   publicId: true,
   fingerprint: true,
@@ -150,7 +150,7 @@ const readerBookSelect = Prisma.validator<Prisma.ReaderBookSelect>()({
   },
   createdAt: true,
   updatedAt: true,
-});
+} satisfies Prisma.ReaderBookSelect;
 
 type ReaderBookRecord = Prisma.ReaderBookGetPayload<{
   select: typeof readerBookSelect;

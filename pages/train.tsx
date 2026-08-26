@@ -11,7 +11,7 @@ import {
   Title,
 } from "@mantine/core";
 import { IconDownload } from "@tabler/icons-react";
-import { QuizResult } from "@prisma/client";
+import { QuizResult } from "@/koala/generated/prisma/client";
 import { GetServerSideProps } from "next/types";
 import { getServersideUser } from "@/koala/get-serverside-user";
 

@@ -6,12 +6,7 @@ export const DIRECT_LANGUAGE_EXCHANGE_LEADER_STORAGE_KEY =
 export type DirectLanguageExchangeCallState = {
   id: number;
   status:
-    | "RINGING"
-    | "ACTIVE"
-    | "ENDED"
-    | "DECLINED"
-    | "CANCELLED"
-    | "EXPIRED";
+    "RINGING" | "ACTIVE" | "ENDED" | "DECLINED" | "CANCELLED" | "EXPIRED";
   createdAt: string;
   acceptedAt: string | null;
   endedAt: string | null;

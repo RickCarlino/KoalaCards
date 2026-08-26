@@ -579,18 +579,7 @@ export function HighlightsHistoryCard({
 
   return (
     <Stack gap="sm">
-      {isLoading && (
-        <Group gap="xs" align="center" role="status" aria-live="polite">
-          <Loader size="xs" color="grape" />
-          <Text
-            size="sm"
-            c="dimmed"
-            style={{ fontFamily: readerBodyFont }}
-          >
-            Loading highlights...
-          </Text>
-        </Group>
-      )}
+      <HighlightsLoading isLoading={isLoading} />
       {historyState.showError ? (
         <Text
           size="sm"
@@ -681,5 +670,20 @@ export function HighlightsHistoryCard({
         </Stack>
       ) : null}
     </Stack>
+  );
+}
+
+function HighlightsLoading({ isLoading }: { isLoading: boolean }) {
+  if (!isLoading) {
+    return null;
+  }
+
+  return (
+    <Group gap="xs" align="center" role="status" aria-live="polite">
+      <Loader size="xs" color="grape" />
+      <Text size="sm" c="dimmed" style={{ fontFamily: readerBodyFont }}>
+        Loading highlights...
+      </Text>
+    </Group>
   );
 }

@@ -1,4 +1,3 @@
-import React from "react";
 import {
   GetServerSidePropsContext,
   InferGetServerSidePropsType,
@@ -6,7 +5,7 @@ import {
 import { prismaClient } from "@/koala/prisma-client";
 import { Container, Table, Title } from "@mantine/core";
 import { useRouter } from "next/router";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "@/koala/generated/prisma/client";
 import {
   fmtShortDate,
   requireAdminRequest,

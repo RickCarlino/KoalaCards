@@ -1,8 +1,5 @@
 export type ReaderIngestStatus =
-  | "pending"
-  | "in_progress"
-  | "ready"
-  | "error";
+  "pending" | "in_progress" | "ready" | "error";
 
 export type InstapaperConnectionStatus = {
   connected: boolean;
