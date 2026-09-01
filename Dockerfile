@@ -47,6 +47,7 @@ COPY --from=builder --chown=nextjs:nextjs /app/public ./public
 COPY --from=builder --chown=nextjs:nextjs /app/.next ./.next
 COPY --from=builder --chown=nextjs:nextjs /app/next.config.mjs ./next.config.mjs
 COPY --from=builder --chown=nextjs:nextjs /app/prisma ./prisma
+COPY --from=builder --chown=nextjs:nextjs /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder --chown=nextjs:nextjs /app/koala ./koala
 COPY --from=builder --chown=nextjs:nextjs /app/tsconfig.json ./tsconfig.json
 COPY --from=builder --chown=nextjs:nextjs /app/package.json ./package.json

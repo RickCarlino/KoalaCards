@@ -195,6 +195,7 @@ model Card {
   reviewLogs          CardReviewLog[]
   reviewLogCoverage   String?
   reviewLogStartedAt  DateTime?
+  lastPassiveReviewAt DateTime? @map("last_passive_review_at")
   importedReaderHighlights ReaderArticleHighlight[] @relation("ImportedHighlightCard")
   importedReaderBookAnnotations ReaderBookAnnotation[] @relation("ImportedBookAnnotationCard")
 
@@ -204,6 +205,7 @@ model Card {
   @@index([userId, createdAt])
   @@index([userId, paused])
   @@index([userId, nextReview])
+  @@index([userId, deckId, lastPassiveReviewAt])
 }
 
 model DeckFsrsConfig {

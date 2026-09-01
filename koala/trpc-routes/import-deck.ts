@@ -20,6 +20,7 @@ type PreparedCardInput = {
   lapses: number;
   repetitions: number;
   lastFailure: number;
+  lastPassiveReviewAt: Date | null;
   deckId: number;
   createdAt?: Date;
 };
@@ -43,6 +44,13 @@ const resolvePaused = (card: DeckExportCard): boolean => {
     return card.paused;
   }
   return card.flagged;
+};
+
+const resolveLastPassiveReviewAt = (card: DeckExportCard): Date | null => {
+  if (!("lastPassiveReviewAt" in card) || !card.lastPassiveReviewAt) {
+    return null;
+  }
+  return parseDate(card.lastPassiveReviewAt) ?? null;
 };
 
 const parseDate = (value: string) => {
@@ -89,6 +97,7 @@ const normalizeCard = async (
     lapses: toNumber(card.lapses, 0),
     repetitions: toNumber(card.repetitions, 0),
     lastFailure: toNumber(card.lastFailure, 0),
+    lastPassiveReviewAt: resolveLastPassiveReviewAt(card),
     deckId,
   };
 
@@ -158,6 +167,7 @@ export const importDeck = procedure.input(importDeckInput).mutation(
           lapses: card.lapses,
           repetitions: card.repetitions,
           lastFailure: card.lastFailure,
+          lastPassiveReviewAt: card.lastPassiveReviewAt,
           ...(card.createdAt ? { createdAt: card.createdAt } : {}),
         },
       });

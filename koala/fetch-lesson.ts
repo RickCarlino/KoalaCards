@@ -8,6 +8,10 @@ import {
 } from "./fsrs/scheduler";
 import { resolveDeckScheduler } from "./fsrs/scheduler-server";
 import { maybeGetCardImageUrl } from "./image";
+import {
+  getPassiveReviewCount,
+  getPassiveReviewEligibility,
+} from "./review/passive-review";
 import { LessonType } from "./shared-types";
 import { generateDefinitionAudio, generateTermAudio } from "./speech";
 
@@ -101,6 +105,31 @@ async function fetchBucket(
   return prismaClient.card.findMany({ where, orderBy, take: limit });
 }
 
+export async function fetchPassiveCards(
+  userId: string,
+  deckId: number,
+  excludedCardIds: number[],
+  limit: number,
+): Promise<LocalCard[]> {
+  if (limit <= 0) {
+    return [];
+  }
+
+  return prismaClient.card.findMany({
+    where: {
+      ...getPassiveReviewEligibility(userId, deckId),
+      ...(excludedCardIds.length > 0
+        ? { id: { notIn: excludedCardIds } }
+        : {}),
+    },
+    orderBy: [
+      { lastPassiveReviewAt: { sort: "asc", nulls: "first" } },
+      { id: "asc" },
+    ],
+    take: limit,
+  });
+}
+
 async function fetchRandomNewCards(
   baseCard: Prisma.CardWhereInput,
   limit: number,
@@ -174,10 +203,13 @@ async function buildQuizPayload(
   scheduler: ResolvedDeckScheduler,
 ) {
   const r = q.repetitions ?? 0;
+  const isPassive = q.quizType === "passive";
   const [definitionAudio, termAudio, imageURL] = await Promise.all([
-    buildQuizAsset(q.id, "definition audio", "", () =>
-      generateDefinitionAudio(q.definition),
-    ),
+    isPassive
+      ? Promise.resolve("")
+      : buildQuizAsset(q.id, "definition audio", "", () =>
+          generateDefinitionAudio(q.definition),
+        ),
     buildQuizAsset(q.id, "term audio", "", () =>
       generateTermAudio({
         card: q as Card,
@@ -296,11 +328,20 @@ export async function getLessons({
   }
 
   const hand = await buildHand(userId, deckId, now, take);
+  const passiveCards = (
+    await fetchPassiveCards(
+      userId,
+      deckId,
+      hand.map((card) => card.id),
+      getPassiveReviewCount(hand.length),
+    )
+  ).map((card) => ({ ...card, quizType: "passive" }));
+  const completeHand = [...hand, ...passiveCards];
   const scheduler = await resolveDeckScheduler({ userId, deckId });
   const quizzes: Awaited<ReturnType<typeof buildQuizPayload>>[] = [];
 
-  for (let i = 0; i < hand.length; i += QUIZ_PAYLOAD_CONCURRENCY) {
-    const batch = hand.slice(i, i + QUIZ_PAYLOAD_CONCURRENCY);
+  for (let i = 0; i < completeHand.length; i += QUIZ_PAYLOAD_CONCURRENCY) {
+    const batch = completeHand.slice(i, i + QUIZ_PAYLOAD_CONCURRENCY);
     quizzes.push(
       ...(await Promise.all(
         batch.map((q) => buildQuizPayload(q, scheduler)),

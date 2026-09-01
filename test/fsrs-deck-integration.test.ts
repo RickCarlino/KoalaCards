@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { Rating } from "ts-fsrs";
 import { prismaClient } from "../koala/prisma-client.ts";
 import { getDueCardsCount } from "../koala/due-cards.ts";
+import { fetchPassiveCards } from "../koala/fetch-lesson.ts";
 import {
   REVIEW_LOG_COVERAGE_COMPLETE,
   REVIEW_LOG_COVERAGE_PARTIAL,
@@ -343,6 +344,7 @@ test("deck export and import preserve aggregate scheduling fields and ensure tar
       difficulty: 6,
       lapses: 7,
       lastFailure: 808,
+      lastPassiveReviewAt: new Date("2026-04-02T00:00:00.000Z"),
     },
   });
   const exportCaller = appRouter.createCaller({
@@ -386,9 +388,166 @@ test("deck export and import preserve aggregate scheduling fields and ensure tar
   assert.equal(importedCard.repetitions, 4);
   assert.equal(importedCard.lapses, 7);
   assert.equal(importedCard.lastFailure, 808);
+  assert.equal(
+    importedCard.lastPassiveReviewAt?.toISOString(),
+    "2026-04-02T00:00:00.000Z",
+  );
   assert.ok(targetConfig);
   assert.equal(targetConfig?.requestedRetention, 0.81);
   assert.equal(importedLogs, 0);
+});
+
+test("passive review completion requires the current deck and an unpaused eligible card", async () => {
+  const user = await createUser();
+  const deck = await createDeck(user.id, `${runId}-passive-current`);
+  const otherDeck = await createDeck(user.id, `${runId}-passive-other`);
+  const activeCard = await createCard({
+    userId: user.id,
+    deckId: deck.id,
+    term: `${runId}-passive-active`,
+    repetitions: 2,
+  });
+  const pausedCard = await createCard({
+    userId: user.id,
+    deckId: deck.id,
+    term: `${runId}-passive-paused`,
+    repetitions: 2,
+  });
+  const ineligibleCard = await createCard({
+    userId: user.id,
+    deckId: deck.id,
+    term: `${runId}-passive-ineligible`,
+    repetitions: 1,
+  });
+  await prismaClient.card.update({
+    where: { id: pausedCard.id },
+    data: { paused: true },
+  });
+  const caller = appRouter.createCaller({
+    session: {} as never,
+    user,
+  });
+
+  await caller.completePassiveReview({
+    cardID: activeCard.id,
+    deckId: deck.id,
+  });
+
+  const completedCard = await prismaClient.card.findUniqueOrThrow({
+    where: { id: activeCard.id },
+  });
+  assert.ok(completedCard.lastPassiveReviewAt);
+  assert.equal(completedCard.repetitions, 2);
+  assert.equal(completedCard.lastReview, 0);
+  assert.equal(
+    await prismaClient.cardReviewLog.count({
+      where: { cardId: activeCard.id },
+    }),
+    0,
+  );
+
+  await assert.rejects(
+    caller.completePassiveReview({
+      cardID: activeCard.id,
+      deckId: otherDeck.id,
+    }),
+    /Passive review card not found/,
+  );
+  await assert.rejects(
+    caller.completePassiveReview({
+      cardID: pausedCard.id,
+      deckId: deck.id,
+    }),
+    /Passive review card not found/,
+  );
+  await assert.rejects(
+    caller.completePassiveReview({
+      cardID: ineligibleCard.id,
+      deckId: deck.id,
+    }),
+    /Passive review card not found/,
+  );
+});
+
+test("passive review selection is deck-scoped, excludes paused and active cards, and orders by oldest review", async () => {
+  const user = await createUser();
+  const deck = await createDeck(user.id, `${runId}-passive-selection`);
+  const otherDeck = await createDeck(
+    user.id,
+    `${runId}-passive-selection-other`,
+  );
+  const neverReviewed = await createCard({
+    userId: user.id,
+    deckId: deck.id,
+    term: `${runId}-passive-never`,
+    repetitions: 2,
+  });
+  const oldest = await createCard({
+    userId: user.id,
+    deckId: deck.id,
+    term: `${runId}-passive-oldest`,
+    repetitions: 2,
+  });
+  const newest = await createCard({
+    userId: user.id,
+    deckId: deck.id,
+    term: `${runId}-passive-newest`,
+    repetitions: 2,
+  });
+  const excluded = await createCard({
+    userId: user.id,
+    deckId: deck.id,
+    term: `${runId}-passive-excluded`,
+    repetitions: 2,
+  });
+  const paused = await createCard({
+    userId: user.id,
+    deckId: deck.id,
+    term: `${runId}-passive-selection-paused`,
+    repetitions: 2,
+  });
+  await createCard({
+    userId: user.id,
+    deckId: deck.id,
+    term: `${runId}-passive-selection-ineligible`,
+    repetitions: 1,
+  });
+  await createCard({
+    userId: user.id,
+    deckId: otherDeck.id,
+    term: `${runId}-passive-selection-other-deck`,
+    repetitions: 2,
+  });
+  await Promise.all([
+    prismaClient.card.update({
+      where: { id: oldest.id },
+      data: {
+        lastPassiveReviewAt: new Date("2026-01-01T00:00:00.000Z"),
+      },
+    }),
+    prismaClient.card.update({
+      where: { id: newest.id },
+      data: {
+        lastPassiveReviewAt: new Date("2026-02-01T00:00:00.000Z"),
+      },
+    }),
+    prismaClient.card.update({
+      where: { id: paused.id },
+      data: { paused: true },
+    }),
+  ]);
+
+  const selected = await fetchPassiveCards(
+    user.id,
+    deck.id,
+    [excluded.id],
+    10,
+  );
+
+  assert.deepEqual(
+    selected.map((card) => card.id),
+    [neverReviewed.id, oldest.id, newest.id],
+  );
 });
 
 test("due counts are deck-scoped for normal and remedial cards", async () => {
