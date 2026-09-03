@@ -185,7 +185,7 @@ type CardReviewProps = {
   onGradingResultCaptured: (
     cardUUID: string,
     result: GradingResult,
-  ) => void;
+  ) => Promise<void>;
   onProvideAudioHandler?: (handler: (blob: Blob) => Promise<void>) => void;
   onResponsePhaseChange?: (phase: ResponsePhase) => void;
 };
@@ -256,7 +256,7 @@ interface UseVoiceGradingOptions {
   onGradingResultCaptured?: (
     cardUUID: string,
     result: GradingResult,
-  ) => void;
+  ) => Promise<void>;
 }
 
 interface UseQuizGradingOptions {
@@ -309,7 +309,10 @@ type ReviewHandlersParams = {
   addContextEvent: (type: string, summary: string) => void;
   skipCard: (cardUUID: string) => void;
   giveUp: (cardUUID: string) => void;
-  captureGradingResult: (cardUUID: string, result: GradingResult) => void;
+  captureGradingResult: (
+    cardUUID: string,
+    result: GradingResult,
+  ) => Promise<void>;
   updateCardFields: (
     cardId: number,
     updates: { term: string; definition: string },
@@ -1497,7 +1500,7 @@ function useVoiceGrading(options: UseVoiceGradingOptions) {
     };
 
     if (onGradingResultCaptured) {
-      onGradingResultCaptured(cardUUID, result);
+      await onGradingResultCaptured(cardUUID, result);
     }
 
     return result;
@@ -1746,7 +1749,8 @@ function updateCard(action: UpdateCardAction, state: State): State {
 }
 
 function useReview(deckId: number) {
-  const repairCardMutation = trpc.editCard.useMutation();
+  const completeRemedialReviewMutation =
+    trpc.completeRemedialReview.useMutation();
   const [state, dispatch] = React.useReducer(reducer, initialState());
   const userSettings = useUserSettings();
 
@@ -1834,9 +1838,8 @@ function useReview(deckId: number) {
     ) => {
       const card = state.cards[cardUUID];
       if (result.isCorrect && card.lessonType === "remedial") {
-        await repairCardMutation.mutateAsync({
-          id: card.cardId,
-          lastFailure: 0,
+        await completeRemedialReviewMutation.mutateAsync({
+          cardID: card.cardId,
         });
       }
       dispatch({
@@ -2041,7 +2044,7 @@ function useReviewHandlers({
   updateCardFields,
 }: ReviewHandlersParams) {
   const handleGradingResultCaptured = React.useCallback(
-    (cardUUID: string, result: GradingResult) => {
+    async (cardUUID: string, result: GradingResult) => {
       const cardForResult = state.cards[cardUUID];
       if (cardForResult) {
         const outcome = result.isCorrect ? "correct" : "incorrect";
@@ -2056,7 +2059,7 @@ function useReviewHandlers({
           `Card: ${cardForResult.term}; Outcome: ${outcome}. ${userSaid} ${feedback}`.trim(),
         );
       }
-      captureGradingResult(cardUUID, result);
+      await captureGradingResult(cardUUID, result);
     },
     [addContextEvent, captureGradingResult, state.cards],
   );

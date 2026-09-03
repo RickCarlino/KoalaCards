@@ -2,6 +2,7 @@ import { router } from "../trpc-procedure";
 import { archiveCard } from "./archive-card";
 import { bulkCreateCards } from "./bulk-create-cards";
 import { completePassiveReview } from "./complete-passive-review";
+import { completeRemedialReview } from "./complete-remedial-review";
 import { createDeck } from "./create-deck";
 import { defineUnknownWords } from "./define-unknown-words";
 import { deleteCard } from "./delete-card";
@@ -55,6 +56,7 @@ import { updateDeck } from "./update-deck";
 export const appRouter = router({
   bulkCreateCards,
   completePassiveReview,
+  completeRemedialReview,
   defineUnknownWords,
   deleteCard,
   deleteDeck,

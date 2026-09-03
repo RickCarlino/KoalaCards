@@ -3,7 +3,10 @@ import assert from "node:assert/strict";
 import { Rating } from "ts-fsrs";
 import { prismaClient } from "../koala/prisma-client.ts";
 import { getDueCardsCount } from "../koala/due-cards.ts";
-import { fetchPassiveCards } from "../koala/fetch-lesson.ts";
+import {
+  fetchPassiveCards,
+  getLessonsDue,
+} from "../koala/fetch-lesson.ts";
 import {
   REVIEW_LOG_COVERAGE_COMPLETE,
   REVIEW_LOG_COVERAGE_PARTIAL,
@@ -584,6 +587,109 @@ test("due counts are deck-scoped for normal and remedial cards", async () => {
 
   assert.equal(await getDueCardsCount(user.id, 100, deckA.id), 2);
   assert.equal(await getDueCardsCount(user.id, 100, deckB.id), 1);
+});
+
+test("remedial success clears a failure without changing a future schedule", async () => {
+  const user = await createUser();
+  const deck = await createDeck(user.id, `${runId}-remedial-future`);
+  const now = Date.now();
+  const nextReview = now + 86_400_000;
+  const card = await createCard({
+    userId: user.id,
+    deckId: deck.id,
+    term: `${runId}-remedial-future-card`,
+    firstReview: now - 1000,
+    lastReview: now - 1000,
+    nextReview,
+    repetitions: 1,
+  });
+  await prismaClient.card.update({
+    where: { id: card.id },
+    data: { lastFailure: now - 1000 },
+  });
+  const caller = appRouter.createCaller({ session: {} as never, user });
+
+  await caller.completeRemedialReview({ cardID: card.id });
+
+  const updated = await prismaClient.card.findUniqueOrThrow({
+    where: { id: card.id },
+  });
+  assert.equal(updated.lastFailure, 0);
+  assert.equal(updated.nextReview, nextReview);
+  assert.equal(updated.repetitions, 1);
+  assert.equal(await getLessonsDue(deck.id), 0);
+  assert.equal(
+    await prismaClient.cardReviewLog.count({ where: { cardId: card.id } }),
+    0,
+  );
+});
+
+test("remedial success satisfies an overdue routine review", async () => {
+  const user = await createUser();
+  const deck = await createDeck(user.id, `${runId}-remedial-overdue`);
+  const now = Date.now();
+  const card = await createCard({
+    userId: user.id,
+    deckId: deck.id,
+    term: `${runId}-remedial-overdue-card`,
+    firstReview: now - 2 * 86_400_000,
+    lastReview: now - 2 * 86_400_000,
+    nextReview: now - 1000,
+    repetitions: 1,
+  });
+  await prismaClient.card.update({
+    where: { id: card.id },
+    data: {
+      difficulty: 5,
+      stability: 1,
+      lapses: 1,
+      lastFailure: now - 2 * 86_400_000,
+    },
+  });
+  const caller = appRouter.createCaller({ session: {} as never, user });
+
+  await caller.completeRemedialReview({ cardID: card.id });
+
+  const updated = await prismaClient.card.findUniqueOrThrow({
+    where: { id: card.id },
+  });
+  const log = await prismaClient.cardReviewLog.findFirstOrThrow({
+    where: { cardId: card.id },
+  });
+  assert.equal(updated.lastFailure, 0);
+  assert.ok(updated.nextReview > now);
+  assert.equal(updated.repetitions, 2);
+  assert.equal(log.rating, Rating.Good);
+  assert.equal(await getLessonsDue(deck.id), 0);
+});
+
+test("remedial completion cannot update another user's card", async () => {
+  const owner = await createUser();
+  const otherUser = await createUser();
+  const deck = await createDeck(owner.id, `${runId}-remedial-owned`);
+  const card = await createCard({
+    userId: owner.id,
+    deckId: deck.id,
+    term: `${runId}-remedial-owned-card`,
+  });
+  await prismaClient.card.update({
+    where: { id: card.id },
+    data: { lastFailure: Date.now() },
+  });
+  const caller = appRouter.createCaller({
+    session: {} as never,
+    user: otherUser,
+  });
+
+  await assert.rejects(
+    () => caller.completeRemedialReview({ cardID: card.id }),
+    /Remedial review card not found/,
+  );
+
+  const unchanged = await prismaClient.card.findUniqueOrThrow({
+    where: { id: card.id },
+  });
+  assert.notEqual(unchanged.lastFailure, 0);
 });
 
 test("deck merge keeps historical logs on source deck and future logs on destination deck", async () => {
