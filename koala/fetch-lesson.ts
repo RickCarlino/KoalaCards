@@ -49,7 +49,7 @@ const TWO_DAYS_MS = ONE_DAY_MS * 2;
 const NEW_CARD_DEFAULT_TARGET = 7;
 const DECK_HAND_HARD_CAP = 50;
 const ROUND_ROBIN_ORDER: Bucket[] = [REMEDIAL, NEW_CARD, ROUTINE];
-const PER_BUCKET_PREFETCH = 45;
+const PER_BUCKET_PREFETCH = DECK_HAND_HARD_CAP;
 const NEW_CARD_WINDOW_SIZE = 1000;
 const QUIZ_PAYLOAD_CONCURRENCY = 4;
 
@@ -333,7 +333,7 @@ export async function getLessons({
       userId,
       deckId,
       hand.map((card) => card.id),
-      getPassiveReviewCount(hand.length),
+      getPassiveReviewCount(hand.length, take),
     )
   ).map((card) => ({ ...card, quizType: "passive" }));
   const completeHand = [...hand, ...passiveCards];

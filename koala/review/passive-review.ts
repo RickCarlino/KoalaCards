@@ -13,8 +13,20 @@ export function getPassiveReviewEligibility(
   } as const;
 }
 
-export function getPassiveReviewCount(normalCardCount: number): number {
-  return Math.floor(Math.max(normalCardCount, 0) * PASSIVE_REVIEW_RATIO);
+export function getPassiveReviewCount(
+  normalCardCount: number,
+  requestedHandSize: number,
+): number {
+  const activeCardCount = Math.max(normalCardCount, 0);
+  if (activeCardCount === 0) {
+    return 0;
+  }
+
+  const proportionalCount = Math.floor(
+    activeCardCount * PASSIVE_REVIEW_RATIO,
+  );
+  const remainingSlots = Math.max(requestedHandSize - activeCardCount, 0);
+  return Math.max(proportionalCount, remainingSlots);
 }
 
 export function interleaveEvenly<T>(

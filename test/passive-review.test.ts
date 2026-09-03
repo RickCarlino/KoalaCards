@@ -18,11 +18,18 @@ test("passive review eligibility is scoped to an active card in the current deck
 });
 
 test("passive review count stays proportional without a cap", () => {
-  assert.equal(getPassiveReviewCount(0), 0);
-  assert.equal(getPassiveReviewCount(3), 0);
-  assert.equal(getPassiveReviewCount(4), 1);
-  assert.equal(getPassiveReviewCount(20), 6);
-  assert.equal(getPassiveReviewCount(100), 30);
+  assert.equal(getPassiveReviewCount(3, 3), 0);
+  assert.equal(getPassiveReviewCount(4, 4), 1);
+  assert.equal(getPassiveReviewCount(20, 20), 6);
+  assert.equal(getPassiveReviewCount(100, 100), 30);
+});
+
+test("passive reviews fill a partial hand but not an empty hand", () => {
+  assert.equal(getPassiveReviewCount(0, 20), 0);
+  assert.equal(getPassiveReviewCount(1, 20), 19);
+  assert.equal(getPassiveReviewCount(17, 20), 5);
+  assert.equal(getPassiveReviewCount(19, 20), 5);
+  assert.equal(getPassiveReviewCount(20, 20), 6);
 });
 
 test("passive reviews are distributed through the normal queue", () => {
