@@ -55,6 +55,38 @@ export function allReaderHighlightsSelected(options: {
   );
 }
 
+export function canImportSelectedReaderHighlights(options: {
+  selectedIds: number[];
+  selectedDeckId: string | null;
+  isImporting: boolean;
+}): boolean {
+  return (
+    options.selectedIds.length > 0 &&
+    options.selectedDeckId !== null &&
+    !options.isImporting
+  );
+}
+
+export function selectedReaderHighlightIdsForImport(options: {
+  selectedIds: number[];
+  importableIds: number[];
+}): number[] {
+  const importableIdSet = new Set(options.importableIds);
+  return Array.from(
+    new Set(options.selectedIds.filter((id) => importableIdSet.has(id))),
+  );
+}
+
+export function removeDeletedReaderOptimisticHighlight<
+  T extends { id: number },
+>(optimisticHighlight: T | null, deletedHighlightId: number): T | null {
+  if (optimisticHighlight?.id === deletedHighlightId) {
+    return null;
+  }
+
+  return optimisticHighlight;
+}
+
 export function mergeReaderHighlightImportStatuses(
   current: Record<number, ReaderHighlightImportStatus>,
   results: ReaderHighlightImportResult[],

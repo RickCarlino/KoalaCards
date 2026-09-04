@@ -6,7 +6,8 @@ const workspaceStyle: React.CSSProperties = {
   minHeight: "calc(100svh - 58px)",
   padding:
     "clamp(10px, 1.5vw, 18px) clamp(10px, 2vw, 24px) clamp(16px, 2.6vw, 30px)",
-  overflowX: "hidden",
+  overflowX: "clip",
+  overflowY: "visible",
 };
 
 function readerWorkspaceColumns(options: {
@@ -42,13 +43,32 @@ function ReaderWorkspaceGrid({
     : "reader-workspace-grid";
 
   return (
-    <Box className={className} style={{ gridTemplateColumns: columns }}>
+    <Box
+      className={className}
+      data-reader-workspace-grid=""
+      style={{ gridTemplateColumns: columns }}
+    >
       {navigation ? (
-        <Box className="reader-workspace-navigation">{navigation}</Box>
+        <Box
+          className="reader-workspace-navigation"
+          data-reader-workspace-navigation=""
+        >
+          {navigation}
+        </Box>
       ) : null}
-      <Box className="reader-workspace-surface">{surface}</Box>
+      <Box
+        className="reader-workspace-surface"
+        data-reader-workspace-surface=""
+      >
+        {surface}
+      </Box>
       {tools ? (
-        <Box className="reader-workspace-tools">{tools}</Box>
+        <Box
+          className="reader-workspace-tools"
+          data-reader-workspace-tools=""
+        >
+          {tools}
+        </Box>
       ) : null}
     </Box>
   );
@@ -64,9 +84,10 @@ export function ReaderWorkspace({
   tools?: React.ReactNode;
 }) {
   return (
-    <Box style={workspaceStyle}>
+    <Box data-reader-workspace="" style={workspaceStyle}>
       <style jsx global>{`
         .reader-workspace-grid {
+          --reader-dock-inset: clamp(10px, 1.5vw, 18px);
           display: grid;
           align-items: start;
           gap: clamp(10px, 1.4vw, 18px);
@@ -75,10 +96,25 @@ export function ReaderWorkspace({
         .reader-workspace-navigation,
         .reader-workspace-tools {
           position: sticky;
-          top: 0;
-          max-height: calc(100svh - 20px);
+          top: var(--reader-dock-inset);
           min-width: 0;
           overflow: hidden;
+        }
+        .reader-workspace-navigation {
+          max-height: calc(
+            100svh - var(--reader-dock-inset) - var(--reader-dock-inset)
+          );
+        }
+        .reader-workspace-tools {
+          display: flex;
+          flex-direction: column;
+          height: calc(
+            100svh - var(--reader-dock-inset) - var(--reader-dock-inset)
+          );
+        }
+        .reader-workspace-tools > * {
+          flex: 1 1 auto;
+          min-height: 0;
         }
         .reader-workspace-surface {
           min-width: 0;

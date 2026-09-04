@@ -22,6 +22,7 @@ import {
 } from "../article-highlight-ranges";
 import {
   clearCompletedReaderSelection,
+  commitCompletedReaderSelection,
   listenForCompletedArticleSelections,
 } from "../article-selection";
 import type {
@@ -339,7 +340,6 @@ export function ReaderArticlePage({
   article: ReaderArticlePageData;
 }) {
   const articleRef = useRef<HTMLElement>(null);
-  const selectionKeyRef = useRef("");
   const preferencesTimeoutRef = useRef<ReturnType<
     typeof setTimeout
   > | null>(null);
@@ -388,22 +388,13 @@ export function ReaderArticlePage({
     const updateSelection = () => {
       const element = articleRef.current;
       const draft = element ? buildArticleSelectionDraft(element) : null;
-      if (draft) {
-        clearCompletedReaderSelection(window.getSelection());
-      }
-      const key = draft
-        ? JSON.stringify([
-            draft.selectedText,
-            draft.contextBefore,
-            draft.contextAfter,
-            draft.occurrenceHint,
-          ])
-        : "";
-      if (key === selectionKeyRef.current) {
-        return;
-      }
-      selectionKeyRef.current = key;
-      controller.selectDraft(draft);
+      commitCompletedReaderSelection({
+        draft,
+        clearSelection: () => {
+          clearCompletedReaderSelection(window.getSelection());
+        },
+        selectDraft: controller.selectDraft,
+      });
     };
 
     const element = articleRef.current;

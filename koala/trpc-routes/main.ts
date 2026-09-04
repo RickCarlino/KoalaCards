@@ -42,14 +42,6 @@ import {
   importReaderHighlightsToDeckRoute,
 } from "./reader-highlights";
 import { updateReaderPreferencesRoute } from "./reader-preferences";
-import {
-  connectReaderInstapaperRoute,
-  disconnectReaderInstapaperRoute,
-  exportReaderArticleToInstapaperRoute,
-  getReaderInstapaperConnectionRoute,
-  importReaderInstapaperUnreadRoute,
-  listReaderInstapaperUnreadRoute,
-} from "./reader-instapaper";
 import { turbine } from "./turbine";
 import { updateDeck } from "./update-deck";
 
@@ -72,22 +64,16 @@ export const appRouter = router({
   gradeWriting,
   editQuizResult,
   createDeck,
-  connectReaderInstapaperRoute,
   deleteReaderArticleRoute,
   deleteReaderBookRoute,
   deleteReaderHighlightRoute,
-  disconnectReaderInstapaperRoute,
   getReaderBookRoute,
   getReaderWorkspaceRoute,
-  exportReaderArticleToInstapaperRoute,
-  getReaderInstapaperConnectionRoute,
   importReaderHighlightsToDeckRoute,
-  importReaderInstapaperUnreadRoute,
   mergeDecks,
   optimizeDeckFsrsRoute,
   importDeck,
   listReaderBooksRoute,
-  listReaderInstapaperUnreadRoute,
   listReaderArticlesRoute,
   parseCards,
   setReaderArticleReadStateRoute,

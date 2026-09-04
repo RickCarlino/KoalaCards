@@ -260,16 +260,6 @@ function bookAvailabilityLabel(
   return { label: "Needs permission", color: "yellow" };
 }
 
-function ReaderShortcuts() {
-  return (
-    <Group gap="sm" wrap="wrap">
-      <Anchor component={Link} href="/reader/instapaper" size="sm">
-        Instapaper
-      </Anchor>
-    </Group>
-  );
-}
-
 type UrlAddFormProps = {
   articleUrl: string;
   isSavingUrl: boolean;
@@ -1258,7 +1248,6 @@ export default function ReaderDashboardPage() {
               onSaveRawTextSubmit={controls.onSaveRawTextSubmit}
               onOpenBook={handleOpenBook}
             />
-            <ReaderShortcuts />
           </Stack>
         </Box>
 

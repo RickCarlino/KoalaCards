@@ -204,8 +204,11 @@ test("highlight occurrence helpers find exact, overlapping, and flexible matches
   ]);
   assert.deepEqual(
     findOccurrenceOffsets("alpha \n beta alpha", "alpha beta"),
-    [],
+    [{ startOffset: 0, endOffset: 12 }],
   );
+  assert.deepEqual(findOccurrenceOffsets("x a+b \n c?d y", "a+b c?d"), [
+    { startOffset: 2, endOffset: 11 },
+  ]);
   assert.deepEqual(findOccurrenceOffsets("alpha beta", ""), []);
 
   assert.deepEqual(buildOccurrenceContexts("one two one", "one", 2), [

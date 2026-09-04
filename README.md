@@ -30,7 +30,6 @@ KoalaCards is a Korean study app that combines spaced repetition cards, speaking
   - and meaning in context.
 - Import highlight results directly into a deck as cards.
 - Mark articles read/unread and reopen EPUBs at saved progress.
-- Instapaper integration can import unread bookmarks into Reader and export processed articles back.
 
 ### Decks And Cards
 - Create cards from:

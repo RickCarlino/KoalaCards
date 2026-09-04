@@ -13,9 +13,12 @@ import {
 } from "../contracts";
 import {
   allReaderHighlightsSelected,
+  canImportSelectedReaderHighlights,
   importableReaderHighlightIds,
   mergeReaderHighlightImportStatuses,
   readerHighlightImportSummaryMessage,
+  removeDeletedReaderOptimisticHighlight,
+  selectedReaderHighlightIdsForImport,
   toggleAllReaderHighlights,
   toggleReaderHighlightSelection,
 } from "../highlight-controller-state";
@@ -89,7 +92,9 @@ export function useReaderHighlightController(options: {
     useState<ReaderOptimisticHighlight | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const requestIdRef = useRef(0);
+  const requestHighlightIdRef = useRef<number | null>(null);
   const optimisticIdRef = useRef(-1);
+  const trpcUtils = trpc.useUtils();
 
   const workspaceQuery = trpc.getReaderWorkspaceRoute.useQuery(
     { resource },
@@ -163,12 +168,17 @@ export function useReaderHighlightController(options: {
     requestIdRef.current = nextReaderRequestId(requestIdRef.current);
     abortRef.current?.abort();
     abortRef.current = null;
+    requestHighlightIdRef.current = null;
     setIsExplaining(false);
     setOptimisticHighlight(null);
   }, []);
 
   const explainDraft = useCallback(
-    async (draft: ReaderSelectionDraft, retry = false) => {
+    async (
+      draft: ReaderSelectionDraft,
+      retry: boolean,
+      requestHighlightId: number | null,
+    ) => {
       const requestId = nextReaderRequestId(requestIdRef.current);
       const controller = new AbortController();
       const isCurrent = () => {
@@ -184,6 +194,7 @@ export function useReaderHighlightController(options: {
       requestIdRef.current = requestId;
       abortRef.current?.abort();
       abortRef.current = controller;
+      requestHighlightIdRef.current = requestHighlightId;
 
       setActivePanel("current");
       setSelectionDraft(draft);
@@ -216,6 +227,7 @@ export function useReaderHighlightController(options: {
               return;
             }
             receivedHighlightId = true;
+            requestHighlightIdRef.current = highlightId;
             setActiveHighlightId(highlightId);
             setOptimisticHighlight({ id: highlightId, draft });
           },
@@ -255,6 +267,7 @@ export function useReaderHighlightController(options: {
         }
         if (abortRef.current === controller) {
           abortRef.current = null;
+          requestHighlightIdRef.current = null;
         }
       }
     },
@@ -274,7 +287,7 @@ export function useReaderHighlightController(options: {
       setAnalysis(null);
       setStreamError("");
       if (shouldAutoExplainSelection(draft.selectedText)) {
-        void explainDraft(draft);
+        void explainDraft(draft, false, null);
       }
     },
     [cancelExplanation, explainDraft],
@@ -312,23 +325,17 @@ export function useReaderHighlightController(options: {
 
   const deleteHighlight = useCallback(
     async (highlightId: number) => {
+      const deletesActiveRequest =
+        requestHighlightIdRef.current === highlightId;
+      if (deletesActiveRequest) {
+        cancelExplanation();
+      }
       setDeletingHighlightId(highlightId);
       try {
         await deleteMutation.mutateAsync({
           resource,
           highlightId,
         });
-        setSelectedHighlightIds((current) => {
-          return current.filter((id) => id !== highlightId);
-        });
-        if (activeHighlightId === highlightId) {
-          setActiveHighlightId(null);
-          setAnalysis(null);
-          setSelectionDraft(null);
-          setRetryDraft(null);
-          setStreamError("");
-        }
-        await workspaceQuery.refetch();
       } catch (error) {
         notifications.show({
           title: "Delete failed",
@@ -338,11 +345,51 @@ export function useReaderHighlightController(options: {
               : "Couldn't delete this highlight.",
           color: "red",
         });
-      } finally {
         setDeletingHighlightId(null);
+        return;
       }
+
+      trpcUtils.getReaderWorkspaceRoute.setData(
+        { resource },
+        (current) => {
+          if (!current) {
+            return current;
+          }
+          return {
+            ...current,
+            highlights: current.highlights.filter(
+              (highlight) => highlight.id !== highlightId,
+            ),
+          };
+        },
+      );
+      setSelectedHighlightIds((current) => {
+        return current.filter((id) => id !== highlightId);
+      });
+      setOptimisticHighlight((current) => {
+        return removeDeletedReaderOptimisticHighlight(
+          current,
+          highlightId,
+        );
+      });
+      if (activeHighlightId === highlightId || deletesActiveRequest) {
+        setActiveHighlightId(null);
+        setAnalysis(null);
+        setSelectionDraft(null);
+        setRetryDraft(null);
+        setStreamError("");
+      }
+      setDeletingHighlightId(null);
+      void workspaceQuery.refetch().catch(() => undefined);
     },
-    [activeHighlightId, deleteMutation, resource, workspaceQuery],
+    [
+      activeHighlightId,
+      cancelExplanation,
+      deleteMutation,
+      resource,
+      trpcUtils.getReaderWorkspaceRoute,
+      workspaceQuery,
+    ],
   );
 
   const importHighlightIds = useCallback(
@@ -368,10 +415,10 @@ export function useReaderHighlightController(options: {
   const importSelected = useCallback(async () => {
     setIsImportingSelected(true);
     try {
-      const ids =
-        selectedHighlightIds.length > 0
-          ? selectedHighlightIds
-          : importableIds;
+      const ids = selectedReaderHighlightIdsForImport({
+        selectedIds: selectedHighlightIds,
+        importableIds,
+      });
       const result = await importHighlightIds(ids);
       if (result) {
         notifications.show({
@@ -432,12 +479,12 @@ export function useReaderHighlightController(options: {
     retryDraft,
     explainCurrent: () => {
       if (selectionDraft) {
-        void explainDraft(selectionDraft);
+        void explainDraft(selectionDraft, false, null);
       }
     },
     retryCurrent: () => {
       if (retryDraft) {
-        void explainDraft(retryDraft, true);
+        void explainDraft(retryDraft, true, activeHighlightId);
       }
     },
     activeHighlight,
@@ -458,10 +505,11 @@ export function useReaderHighlightController(options: {
     deletingHighlightId,
     isImportingSelected,
     isImportingCurrent,
-    canImportSelected:
-      resolvedSelectedDeckId !== null &&
-      importableIds.length > 0 &&
-      !isImportingSelected,
+    canImportSelected: canImportSelectedReaderHighlights({
+      selectedIds: selectedHighlightIds,
+      selectedDeckId: resolvedSelectedDeckId,
+      isImporting: isImportingSelected,
+    }),
     canImportCurrent:
       activeHighlight?.status === "ready" &&
       activeHighlight.importedCardId === null &&

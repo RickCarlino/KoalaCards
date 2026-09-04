@@ -19,7 +19,7 @@ import {
   streamHighlightId,
   trackRequestClosed,
   trimStreamErrorMessage,
-} from "./highlight-stream-helpers";
+} from "@/koala/reader/server/highlight-stream-helpers";
 
 type GeneratedAnalysisCallbacks = {
   createInProgressRecord: () => Promise<number>;

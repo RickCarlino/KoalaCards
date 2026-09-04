@@ -22,11 +22,11 @@ import {
 import {
   runHighlightAnalysisStream,
   streamGeneratedSelectionResponse,
-} from "./highlight-generation-helpers";
+} from "@/koala/reader/server/highlight-generation-helpers";
 import {
   requirePostMethod,
   requireReaderApiUserId,
-} from "./highlight-stream-helpers";
+} from "@/koala/reader/server/highlight-stream-helpers";
 
 const commonBodySchema = baseHighlightStreamBodySchema.extend({
   retry: z.boolean().optional(),

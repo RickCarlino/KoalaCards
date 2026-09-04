@@ -10,6 +10,7 @@ import { scrollToArticleHighlight } from "../koala/reader/article-location.ts";
 import {
   ARTICLE_SELECTION_COMPLETION_EVENTS,
   clearCompletedReaderSelection,
+  commitCompletedReaderSelection,
   listenForCompletedArticleSelections,
 } from "../koala/reader/article-selection.ts";
 import {
@@ -26,8 +27,11 @@ import {
 import { localBookDataStoreNames } from "../koala/reader/epub/local-library.ts";
 import {
   allReaderHighlightsSelected,
+  canImportSelectedReaderHighlights,
   importableReaderHighlightIds,
   readerHighlightImportSummaryMessage,
+  removeDeletedReaderOptimisticHighlight,
+  selectedReaderHighlightIdsForImport,
   toggleAllReaderHighlights,
   toggleReaderHighlightSelection,
 } from "../koala/reader/highlight-controller-state.ts";
@@ -309,6 +313,65 @@ test("reader selection and select-all only include importable highlights", () =>
     }),
     [],
   );
+  assert.deepEqual(
+    selectedReaderHighlightIdsForImport({
+      selectedIds: [],
+      importableIds: [1],
+    }),
+    [],
+  );
+  assert.deepEqual(
+    selectedReaderHighlightIdsForImport({
+      selectedIds: [1, 2, 1],
+      importableIds: [1],
+    }),
+    [1],
+  );
+  assert.equal(
+    canImportSelectedReaderHighlights({
+      selectedIds: [],
+      selectedDeckId: "10",
+      isImporting: false,
+    }),
+    false,
+  );
+  assert.equal(
+    canImportSelectedReaderHighlights({
+      selectedIds: [1],
+      selectedDeckId: "10",
+      isImporting: false,
+    }),
+    true,
+  );
+  assert.equal(
+    canImportSelectedReaderHighlights({
+      selectedIds: [1],
+      selectedDeckId: null,
+      isImporting: false,
+    }),
+    false,
+  );
+  assert.equal(
+    canImportSelectedReaderHighlights({
+      selectedIds: [1],
+      selectedDeckId: "10",
+      isImporting: true,
+    }),
+    false,
+  );
+});
+
+test("deleting a highlight clears only its matching optimistic state", () => {
+  const optimistic = { id: 7, draft: articleDraft() };
+  assert.equal(
+    removeDeletedReaderOptimisticHighlight(optimistic, 7),
+    null,
+  );
+  assert.equal(
+    removeDeletedReaderOptimisticHighlight(optimistic, 8),
+    optimistic,
+  );
+  assert.equal(removeDeletedReaderOptimisticHighlight(null, 7), null);
 });
 
 test("reader imports account for every result and reject ineligible rows", () => {
@@ -500,6 +563,41 @@ test("article selections run only after a completed input gesture", () => {
   assert.equal(clearedSelectionCount, 1);
   cleanup();
   assert.deepEqual(removed, added);
+});
+
+test("the same completed selection can be intentionally selected again", () => {
+  const draft = articleDraft();
+  const selected: ReaderSelectionDraft[] = [];
+  let clearedSelectionCount = 0;
+  const commit = () => {
+    return commitCompletedReaderSelection({
+      draft,
+      clearSelection: () => {
+        clearedSelectionCount += 1;
+      },
+      selectDraft: (nextDraft) => {
+        selected.push(nextDraft);
+      },
+    });
+  };
+
+  assert.equal(commit(), true);
+  assert.equal(commit(), true);
+  assert.deepEqual(selected, [draft, draft]);
+  assert.equal(clearedSelectionCount, 2);
+  assert.equal(
+    commitCompletedReaderSelection({
+      draft: null,
+      clearSelection: () => {
+        clearedSelectionCount += 1;
+      },
+      selectDraft: (nextDraft: ReaderSelectionDraft) => {
+        selected.push(nextDraft);
+      },
+    }),
+    false,
+  );
+  assert.equal(clearedSelectionCount, 2);
 });
 
 test("reader preferences preserve valid legacy values and clamp bad input", async () => {

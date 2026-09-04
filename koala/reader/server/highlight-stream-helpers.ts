@@ -1,5 +1,5 @@
-import type { ReaderHighlightAnalysis } from "@/koala/reader/highlight-explain";
 import type { NextApiRequest, NextApiResponse } from "next";
+import type { ReaderHighlightAnalysis } from "@/koala/reader/highlight-explain";
 import { requireTextPostMethod } from "@/koala/api/next-api";
 import { writeSSE } from "@/koala/api/sse";
 import { requireTextApiUserId } from "@/koala/get-api-user";

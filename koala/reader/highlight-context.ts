@@ -85,9 +85,7 @@ function findWhitespaceFlexibleOffsets(
     return [];
   }
 
-  const pattern = tokens
-    .map((token) => escapeRegExp(token))
-    .join("\\\\s+");
+  const pattern = tokens.map((token) => escapeRegExp(token)).join("\\s+");
   const regex = new RegExp(`(?=(${pattern}))`, "g");
   const offsets: Array<{ startOffset: number; endOffset: number }> = [];
 

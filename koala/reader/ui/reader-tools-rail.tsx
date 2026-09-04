@@ -23,13 +23,12 @@ const toolsRailStyle: React.CSSProperties = {
 };
 
 const toolsContentStyle: React.CSSProperties = {
-  flex: "1 1 auto",
+  flex: "1 1 0",
   minHeight: 0,
-  maxHeight: "calc(100svh - 190px)",
   overflowY: "auto",
   overscrollBehavior: "contain",
   paddingRight: 2,
-  scrollbarWidth: "none",
+  scrollbarGutter: "stable",
 };
 
 function currentReaderSelectionText(
@@ -218,16 +217,6 @@ export function ReaderToolsRail({
 
   return (
     <Box component="aside" style={toolsRailStyle}>
-      <style jsx global>{`
-        .reader-tools-content::-webkit-scrollbar {
-          display: none;
-        }
-        @media (max-width: 840px) {
-          .reader-tools-content {
-            max-height: none !important;
-          }
-        }
-      `}</style>
       <Stack gap="sm" h="100%">
         {deckOptions.length > 0 ? (
           <Select
@@ -262,7 +251,11 @@ export function ReaderToolsRail({
           size="xs"
           color="grape"
         />
-        <Box className="reader-tools-content" style={toolsContentStyle}>
+        <Box
+          className="reader-tools-content"
+          data-reader-tools-scroll=""
+          style={toolsContentStyle}
+        >
           {controller.activePanel === "current" ? (
             <CurrentHighlightPanel controller={controller} />
           ) : null}

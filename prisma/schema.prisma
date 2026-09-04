@@ -54,7 +54,6 @@ model User {
   cardReviewLogs             CardReviewLog[]
   writingSubmissions         WritingSubmission[]         // Added relation to WritingSubmission
   quizResults                QuizResult[]
-  readerInstapaperCredential ReaderInstapaperCredential?
   readerArticles             ReaderArticle[]
   readerArticleHighlights    ReaderArticleHighlight[]
   readerBooks                ReaderBook[]
@@ -333,25 +332,11 @@ enum ReaderHighlightStatus {
   ERROR
 }
 
-model ReaderInstapaperCredential {
-  id                    Int      @id @default(autoincrement())
-  userId                String   @unique
-  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  instapaperUsername    String   @db.VarChar(200)
-  encryptedAccessToken  String   @db.Text
-  encryptedAccessSecret String   @db.Text
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-
-  @@index([userId])
-}
-
 model ReaderArticle {
   id            Int                @id @default(autoincrement())
   userId        String
   user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   publicId      String             @unique @default(cuid())
-  instapaperBookmarkId String?     @db.VarChar(64)
   requestUrl    String?            @db.Text
   normalizedUrl String?            @db.Text
   inputKind     ReaderInputKind    @default(URL)
@@ -373,7 +358,6 @@ model ReaderArticle {
   @@index([userId, readAt])
   @@index([userId, lastReadAt])
   @@index([publicId])
-  @@index([userId, instapaperBookmarkId])
   @@index([ingestStatus, createdAt])
 }
 

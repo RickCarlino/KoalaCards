@@ -27,7 +27,11 @@ import {
   buildSavedArticleHighlightRanges,
   type SavedArticleHighlightForRender,
 } from "../article-highlight-ranges";
-import { clearCompletedReaderSelection } from "../article-selection";
+import {
+  clearCompletedReaderSelection,
+  commitCompletedReaderSelection,
+  listenForCompletedArticleSelections,
+} from "../article-selection";
 import { locatorProgression, type ReaderBookLocator } from "../book";
 import {
   findReaderBookSectionIndex,
@@ -573,7 +577,8 @@ export function ReaderBookPage({
   > | null>(null);
   const preferencesMountedRef = useRef(false);
   const pendingLocatorRef = useRef<ReaderBookLocator | null>(null);
-  const selectionKeyRef = useRef("");
+  const [loadedFrameDocument, setLoadedFrameDocument] =
+    useState<Document | null>(null);
   const [session, setSession] = useState<EpubSession | null>(null);
   const [storedHandle, setStoredHandle] =
     useState<LocalBookHandleRecord | null>(null);
@@ -857,7 +862,6 @@ export function ReaderBookPage({
     const iframe = iframeRef.current;
     if (!iframe || !renderedSection || !locator) {
       controller.selectDraft(null);
-      selectionKeyRef.current = "";
       return;
     }
     const draft = buildBookSelectionDraft({
@@ -865,23 +869,15 @@ export function ReaderBookPage({
       sectionText: renderedSection.text,
       locator,
     });
-    if (draft) {
-      clearCompletedReaderSelection(iframe.contentWindow?.getSelection());
-    }
-    const key = draft
-      ? JSON.stringify([
-          draft.selectedText,
-          draft.contextBefore,
-          draft.contextAfter,
-          draft.occurrenceHint,
-          locator.href,
-        ])
-      : "";
-    if (key === selectionKeyRef.current) {
-      return;
-    }
-    selectionKeyRef.current = key;
-    controller.selectDraft(draft);
+    commitCompletedReaderSelection({
+      draft,
+      clearSelection: () => {
+        clearCompletedReaderSelection(
+          iframe.contentWindow?.getSelection(),
+        );
+      },
+      selectDraft: controller.selectDraft,
+    });
   }, [controller.selectDraft, currentLocator, renderedSection]);
 
   const handleHighlightClick = useCallback(
@@ -913,25 +909,58 @@ export function ReaderBookPage({
     [controller.activateHighlight, controller.highlights, renderedSection],
   );
 
+  useEffect(() => {
+    if (
+      loadState !== "ready" ||
+      !renderedSection ||
+      !loadedFrameDocument ||
+      iframeRef.current?.contentDocument !== loadedFrameDocument
+    ) {
+      return;
+    }
+    const stopListeningForSelection = listenForCompletedArticleSelections(
+      loadedFrameDocument,
+      handleFrameSelection,
+    );
+    loadedFrameDocument.addEventListener("click", handleHighlightClick);
+    loadedFrameDocument.addEventListener(
+      "scroll",
+      scheduleProgressSave,
+      true,
+    );
+
+    return () => {
+      stopListeningForSelection();
+      loadedFrameDocument.removeEventListener(
+        "click",
+        handleHighlightClick,
+      );
+      loadedFrameDocument.removeEventListener(
+        "scroll",
+        scheduleProgressSave,
+        true,
+      );
+    };
+  }, [
+    handleFrameSelection,
+    handleHighlightClick,
+    loadedFrameDocument,
+    loadState,
+    renderedSection,
+    scheduleProgressSave,
+  ]);
+
   const handleIframeLoad = useCallback(() => {
     const document = iframeRef.current?.contentDocument;
     if (!document) {
       return;
     }
-    document.addEventListener("mouseup", handleFrameSelection);
-    document.addEventListener("keyup", handleFrameSelection);
-    document.addEventListener("click", handleHighlightClick);
-    document.addEventListener("scroll", scheduleProgressSave, true);
+    setLoadedFrameDocument(document);
     applySectionHighlights();
     scrollBookFrameToLocator(iframeRef.current, pendingLocatorRef.current);
     pendingLocatorRef.current = null;
     scheduleProgressSave();
-  }, [
-    applySectionHighlights,
-    handleFrameSelection,
-    handleHighlightClick,
-    scheduleProgressSave,
-  ]);
+  }, [applySectionHighlights, scheduleProgressSave]);
 
   useEffect(() => {
     const active = controller.activeHighlight;
@@ -970,7 +999,6 @@ export function ReaderBookPage({
         Math.max(0, Math.min(book.spineJson.length - 1, nextSection)),
       );
       controller.selectDraft(null);
-      selectionKeyRef.current = "";
     },
     [book, controller.selectDraft, saveProgress],
   );

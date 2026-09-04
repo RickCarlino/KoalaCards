@@ -9,6 +9,20 @@ type ArticleSelectionEventTarget = Pick<
   "addEventListener" | "removeEventListener"
 >;
 
+export function commitCompletedReaderSelection<T>(options: {
+  draft: T | null;
+  clearSelection: () => void;
+  selectDraft: (draft: T) => void;
+}): boolean {
+  if (!options.draft) {
+    return false;
+  }
+
+  options.clearSelection();
+  options.selectDraft(options.draft);
+  return true;
+}
+
 export function clearCompletedReaderSelection(
   selection: Pick<Selection, "removeAllRanges"> | null | undefined,
 ): void {
