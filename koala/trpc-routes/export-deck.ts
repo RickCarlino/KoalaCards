@@ -15,7 +15,7 @@ export const exportDeck = procedure
     const { Card: cards } = deck;
 
     return {
-      version: 3,
+      version: 4,
       exportedAt: new Date().toISOString(),
       cards: cards.map(
         ({
@@ -34,6 +34,7 @@ export const exportDeck = procedure
           lapses,
           repetitions,
           lastFailure,
+          lastPassiveReviewAt,
           createdAt,
         }) => ({
           term,
@@ -48,6 +49,7 @@ export const exportDeck = procedure
           lapses,
           repetitions,
           lastFailure,
+          lastPassiveReviewAt: lastPassiveReviewAt?.toISOString() ?? null,
           createdAt: createdAt.toISOString(),
         }),
       ),

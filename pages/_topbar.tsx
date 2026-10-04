@@ -58,51 +58,12 @@ function resolveSectionTitle(pathname: string): string {
 const TopBar = ({ children }: TopBarProps) => {
   const theme = useMantineTheme();
   const router = useRouter();
-  const [pageTitle, setPageTitle] = React.useState("Reading");
   const sectionTitle = resolveSectionTitle(router.pathname);
 
   const isHome = router.pathname === "/";
-  const isReaderArticleRoute = router.pathname === "/reader/[publicId]";
-  const isReaderBookRoute = router.pathname === "/reader/books/[publicId]";
-
-  React.useEffect(() => {
-    if (!isReaderArticleRoute) {
-      return;
-    }
-
-    const updateTitle = () => {
-      const rawTitle = document.title.trim();
-      const cleanedTitle = rawTitle
-        .replace(/\s*(?:·|-|\|)\s*Koala Cards\s*$/i, "")
-        .trim();
-
-      if (cleanedTitle.length > 0) {
-        setPageTitle(cleanedTitle);
-        return;
-      }
-
-      setPageTitle("Reading");
-    };
-
-    updateTitle();
-    const titleElement = document.querySelector("title");
-    if (!titleElement) {
-      return;
-    }
-
-    const observer = new MutationObserver(() => {
-      updateTitle();
-    });
-    observer.observe(titleElement, {
-      childList: true,
-      characterData: true,
-      subtree: true,
-    });
-
-    return () => {
-      observer.disconnect();
-    };
-  }, [isReaderArticleRoute, router.asPath]);
+  const isReaderDocumentRoute =
+    router.pathname === "/reader/[publicId]" ||
+    router.pathname === "/reader/books/[publicId]";
 
   const logo = (
     <Image
@@ -129,53 +90,9 @@ const TopBar = ({ children }: TopBarProps) => {
     </ThemeIcon>
   );
 
-  if (isReaderBookRoute) {
+  if (isReaderDocumentRoute) {
     return (
       <AppShell padding={0}>
-        <AppShell.Main
-          style={{
-            minHeight: "100vh",
-          }}
-        >
-          {children}
-        </AppShell.Main>
-      </AppShell>
-    );
-  }
-
-  if (isReaderArticleRoute) {
-    return (
-      <AppShell
-        header={{ height: { base: 60, md: 70, lg: 80 } }}
-        padding={0}
-      >
-        <AppShell.Header>
-          <Group
-            h="100%"
-            px="md"
-            justify="space-between"
-            wrap="nowrap"
-            gap="sm"
-          >
-            <Link href="/reader" style={{ textDecoration: "none" }}>
-              {homeButton}
-            </Link>
-            <Text
-              fw={700}
-              c={theme.colors.pink[8]}
-              truncate
-              style={{
-                minWidth: 0,
-                flex: "1 1 auto",
-                textAlign: "center",
-              }}
-            >
-              {pageTitle}
-            </Text>
-            <Box w={24} h={24} />
-          </Group>
-        </AppShell.Header>
-
         <AppShell.Main
           style={{
             minHeight: "100vh",

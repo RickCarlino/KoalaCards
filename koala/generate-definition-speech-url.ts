@@ -2,9 +2,9 @@ import OpenAI from "openai";
 import { createHash } from "crypto";
 import { storageProvider } from "./storage";
 import { stripEmojis } from "./utils/emoji";
+import { OPENAI_SPEECH_MODEL } from "./ai-openai-config";
 
 const VOICE = "alloy";
-const MODEL = "gpt-4o-mini-tts";
 const VERSION = "v1";
 const AUDIO_FORMAT = "mp3";
 
@@ -28,7 +28,7 @@ const getClient = () => {
 
 const hashInput = (text: string, filePrefix: string) => {
   const normalized = text.trim();
-  const hashInputValue = `${VERSION}|${filePrefix}|${MODEL}|${VOICE}|${AUDIO_FORMAT}|${normalized}`;
+  const hashInputValue = `${VERSION}|${filePrefix}|${OPENAI_SPEECH_MODEL}|${VOICE}|${AUDIO_FORMAT}|${normalized}`;
   const hash = createHash("md5")
     .update(hashInputValue)
     .digest("base64url");
@@ -53,7 +53,7 @@ export async function generateOpenAISpeechURL(
 
   const openai = getClient();
   const response = await openai.audio.speech.create({
-    model: MODEL,
+    model: OPENAI_SPEECH_MODEL,
     voice: VOICE,
     input: cleanText,
     response_format: AUDIO_FORMAT,

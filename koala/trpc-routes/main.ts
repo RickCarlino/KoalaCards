@@ -1,6 +1,8 @@
 import { router } from "../trpc-procedure";
 import { archiveCard } from "./archive-card";
 import { bulkCreateCards } from "./bulk-create-cards";
+import { completePassiveReview } from "./complete-passive-review";
+import { completeRemedialReview } from "./complete-remedial-review";
 import { createDeck } from "./create-deck";
 import { defineUnknownWords } from "./define-unknown-words";
 import { deleteCard } from "./delete-card";
@@ -21,41 +23,32 @@ import { mergeDecks } from "./merge-decks";
 import { optimizeDeckFsrsRoute } from "./optimize-deck-fsrs";
 import { parseCards } from "./parse-cards";
 import {
-  deleteReaderArticleHighlightRoute,
   deleteReaderArticleRoute,
-  getReaderBookmarkletConfig,
-  importReaderHighlightsToDeckRoute,
-  listReaderArticleHighlightsRoute,
   listReaderArticlesRoute,
-  refreshReaderArticleRoute,
-  rotateReaderBookmarkletKey,
   setReaderArticleReadStateRoute,
   saveReaderArticleRoute,
   saveReaderRawTextRoute,
 } from "./reader";
 import {
-  deleteReaderBookAnnotationRoute,
+  deleteReaderBookRoute,
   getReaderBookRoute,
-  importReaderBookAnnotationsToDeckRoute,
-  listReaderBookAnnotationsRoute,
   listReaderBooksRoute,
-  updateReaderBookPreferencesRoute,
   updateReaderBookProgressRoute,
   upsertReaderBookRoute,
 } from "./reader-books";
 import {
-  connectReaderInstapaperRoute,
-  disconnectReaderInstapaperRoute,
-  exportReaderArticleToInstapaperRoute,
-  getReaderInstapaperConnectionRoute,
-  importReaderInstapaperUnreadRoute,
-  listReaderInstapaperUnreadRoute,
-} from "./reader-instapaper";
+  deleteReaderHighlightRoute,
+  getReaderWorkspaceRoute,
+  importReaderHighlightsToDeckRoute,
+} from "./reader-highlights";
+import { updateReaderPreferencesRoute } from "./reader-preferences";
 import { turbine } from "./turbine";
 import { updateDeck } from "./update-deck";
 
 export const appRouter = router({
   bulkCreateCards,
+  completePassiveReview,
+  completeRemedialReview,
   defineUnknownWords,
   deleteCard,
   deleteDeck,
@@ -71,33 +64,22 @@ export const appRouter = router({
   gradeWriting,
   editQuizResult,
   createDeck,
-  connectReaderInstapaperRoute,
-  deleteReaderArticleHighlightRoute,
   deleteReaderArticleRoute,
-  deleteReaderBookAnnotationRoute,
-  disconnectReaderInstapaperRoute,
-  getReaderBookmarkletConfig,
+  deleteReaderBookRoute,
+  deleteReaderHighlightRoute,
   getReaderBookRoute,
-  exportReaderArticleToInstapaperRoute,
-  getReaderInstapaperConnectionRoute,
-  importReaderBookAnnotationsToDeckRoute,
+  getReaderWorkspaceRoute,
   importReaderHighlightsToDeckRoute,
-  importReaderInstapaperUnreadRoute,
   mergeDecks,
   optimizeDeckFsrsRoute,
   importDeck,
-  listReaderArticleHighlightsRoute,
-  listReaderBookAnnotationsRoute,
   listReaderBooksRoute,
-  listReaderInstapaperUnreadRoute,
   listReaderArticlesRoute,
   parseCards,
-  refreshReaderArticleRoute,
-  rotateReaderBookmarkletKey,
   setReaderArticleReadStateRoute,
   saveReaderArticleRoute,
   saveReaderRawTextRoute,
-  updateReaderBookPreferencesRoute,
+  updateReaderPreferencesRoute,
   updateReaderBookProgressRoute,
   upsertReaderBookRoute,
   archiveCard,

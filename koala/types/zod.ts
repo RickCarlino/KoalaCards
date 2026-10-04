@@ -14,6 +14,7 @@ const Quiz = z.object({
     z.literal("speaking"),
     z.literal("new"),
     z.literal("remedial"),
+    z.literal("passive"),
   ]),
   definitionAudio: z.string(),
   termAudio: z.string(),

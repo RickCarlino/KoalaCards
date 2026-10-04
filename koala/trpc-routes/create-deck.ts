@@ -4,7 +4,7 @@ import { procedure } from "../trpc-procedure";
 import { LANG_CODES, LangCode } from "../shared-types";
 import { TRPCError } from "@trpc/server";
 import { getUserSettings } from "../auth-helpers";
-import { ensureDeckFsrsConfig } from "../fsrs/scheduler";
+import { ensureDeckFsrsConfig } from "../fsrs/scheduler-server";
 
 const inputSchema = z.object({
   name: z.string().min(1).max(100),

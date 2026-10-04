@@ -1,4 +1,4 @@
-import { User } from "@prisma/client";
+import { User } from "@/koala/generated/prisma/client";
 import { getServerSession } from "next-auth";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { prismaClient } from "@/koala/prisma-client";

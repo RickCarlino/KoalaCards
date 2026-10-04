@@ -1,12 +1,4 @@
-import {
-  Box,
-  Container,
-  Grid,
-  Group,
-  Stack,
-  Text,
-  Title,
-} from "@mantine/core";
+import { Box, Container, Group, Stack, Text, Title } from "@mantine/core";
 import React from "react";
 import {
   readerBodyFont,
@@ -133,55 +125,5 @@ export function ReaderPanelHeader({
       </Stack>
       {rightSlot}
     </Group>
-  );
-}
-
-type ReaderSplitWorkspaceProps = {
-  primary: React.ReactNode;
-  secondary?: React.ReactNode;
-  stickySecondary?: boolean;
-  secondaryTopOffset?: string;
-};
-
-export function ReaderSplitWorkspace({
-  primary,
-  secondary,
-  stickySecondary = false,
-  secondaryTopOffset,
-}: ReaderSplitWorkspaceProps) {
-  if (!secondary) {
-    return <Box>{primary}</Box>;
-  }
-
-  const secondaryColumnStyle: React.CSSProperties = {
-    minWidth: 0,
-  };
-  const secondaryContentStyle: React.CSSProperties = {
-    minWidth: 0,
-  };
-
-  if (stickySecondary) {
-    secondaryColumnStyle.position = "sticky";
-    secondaryColumnStyle.top = secondaryTopOffset ?? "86px";
-    secondaryColumnStyle.alignSelf = "start";
-  }
-
-  return (
-    <Grid gutter="clamp(10px, 1.5vw, 18px)" align="flex-start">
-      <Grid.Col span={{ base: 12, md: 7, lg: 8 }}>
-        <Box style={{ minWidth: 0 }}>{primary}</Box>
-      </Grid.Col>
-      <Grid.Col
-        span={{ base: 12, md: 5, lg: 4 }}
-        style={secondaryColumnStyle}
-      >
-        <Stack
-          gap="clamp(10px, 1.2vw, 14px)"
-          style={secondaryContentStyle}
-        >
-          {secondary}
-        </Stack>
-      </Grid.Col>
-    </Grid>
   );
 }

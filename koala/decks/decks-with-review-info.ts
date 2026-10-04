@@ -1,5 +1,5 @@
 import { getLessonsDue } from "../fetch-lesson";
-import { ensureDeckFsrsConfig } from "../fsrs/scheduler";
+import { ensureDeckFsrsConfig } from "../fsrs/scheduler-server";
 import { prismaClient } from "../prisma-client";
 
 export type DeckWithReviewInfo = {

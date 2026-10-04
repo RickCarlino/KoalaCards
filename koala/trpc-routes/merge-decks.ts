@@ -3,7 +3,7 @@ import { prismaClient } from "../prisma-client";
 import { procedure } from "../trpc-procedure";
 import { getUserSettings } from "../auth-helpers";
 import { TRPCError } from "@trpc/server";
-import { ensureDeckFsrsConfig } from "../fsrs/scheduler";
+import { ensureDeckFsrsConfig } from "../fsrs/scheduler-server";
 import { REVIEW_LOG_COVERAGE_PARTIAL } from "../fsrs/constants";
 
 export const mergeDecks = procedure

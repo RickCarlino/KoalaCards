@@ -1,4 +1,4 @@
-import { Card } from "@prisma/client";
+import { Card } from "@/koala/generated/prisma/client";
 import { template } from "radash";
 import { generateSpeechURL } from "./generate-speech-url";
 import { removeParens } from "./quiz-evaluators/evaluator-utils";

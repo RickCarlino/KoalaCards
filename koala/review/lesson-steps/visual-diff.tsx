@@ -43,7 +43,6 @@ export const VisualDiff: React.FC<SentencecorrectionProps> = ({
   const e = stripFinalPunctuation(expected);
   const diff = diffWords(a, e, {
     ignoreCase: true,
-    ignoreWhitespace: true,
   });
 
   return (

@@ -8,7 +8,10 @@ export type ReaderArticleSummary = {
   ingestStatus: "pending" | "in_progress" | "ready" | "error";
   ingestError: string;
   readAt: Date | null;
+  lastReadAt: Date | null;
+  highlightCount: number;
   createdAt: Date;
+  updatedAt: Date;
 };
 
 export type ReaderDashboardStats = {
@@ -17,5 +20,3 @@ export type ReaderDashboardStats = {
   ready: number;
   errored: number;
 };
-
-export type ReaderReadFilter = "unread" | "read" | "all";

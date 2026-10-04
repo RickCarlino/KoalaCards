@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma } from "@/koala/generated/prisma/client";
 import { z } from "zod";
 
 export const DIRECT_LANGUAGE_EXCHANGE_PRESENCE_HEARTBEAT_MS = 10_000;
@@ -16,9 +16,7 @@ const LANGUAGE_EXCHANGE_BASE32_ALPHABET =
   "0123456789abcdefghijklmnopqrstuv";
 
 export type DirectLanguageExchangeAvailabilityStatus =
-  | "available"
-  | "busy"
-  | "offline";
+  "available" | "busy" | "offline";
 
 function normalizeSessionDescriptionSdp(value: string): string {
   const normalized = value.replace(/\r\n|\r|\n/g, "\r\n");

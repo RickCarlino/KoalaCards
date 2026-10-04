@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma } from "@/koala/generated/prisma/client";
 import {
   REVIEW_LOG_COVERAGE_COMPLETE,
   OPTIMIZATION_COOLDOWN_DAYS,
@@ -7,11 +7,11 @@ import {
   OPTIMIZATION_MIN_NEW_COMPLETE_LOGS,
 } from "./constants.ts";
 import {
-  ensureDeckFsrsConfig,
   fsrsParametersJson,
   validateFsrsParameters,
   validateSchedulerFlags,
 } from "./scheduler.ts";
+import { ensureDeckFsrsConfig } from "./scheduler-server.ts";
 import { prismaClient } from "../prisma-client.ts";
 
 type OptimizerClient = Pick<

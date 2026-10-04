@@ -353,7 +353,7 @@ const getPreferredRecorderMimeType = (): string | null => {
 const hasLiveAudioTrack = (stream: MediaStream | null): boolean =>
   Boolean(
     stream?.active &&
-      stream.getAudioTracks().some((track) => track.readyState === "live"),
+    stream.getAudioTracks().some((track) => track.readyState === "live"),
   );
 
 async function transcribeBlob(
@@ -582,7 +582,6 @@ function useSpeechRecorder({
 
   useEffect(() => {
     if (!isRecording) {
-      setRemainingSeconds(MAX_SPEECH_RECORDING_SECONDS);
       return;
     }
 
@@ -1401,7 +1400,7 @@ export default function WritingPracticePage({
   const hasDefinitions = definitions.length > 0;
   const canCreate = hasDefinitions && !definitionsLoading;
   const feedbackItems = feedback?.feedback ?? [];
-  const stepContent: Record<Step, JSX.Element> = {
+  const stepContent: Record<Step, React.JSX.Element> = {
     writing: (
       <WritingStep
         prompt={prompt}

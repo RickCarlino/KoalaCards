@@ -7,7 +7,7 @@ import {
   type Grade,
   type RecordLogItem,
 } from "ts-fsrs";
-import type { Card } from "@prisma/client";
+import type { Card } from "@/koala/generated/prisma/client";
 import {
   buildDefaultFsrsParameters,
   deserializeDeckScheduler,
@@ -45,10 +45,7 @@ export type SchedulingReviewResult = SchedulingData & {
 };
 
 type SchedulingContext =
-  | number
-  | ResolvedDeckScheduler
-  | SerializedDeckScheduler
-  | undefined;
+  number | ResolvedDeckScheduler | SerializedDeckScheduler | undefined;
 
 const gradeOrder: Grade[] = [
   Rating.Again,

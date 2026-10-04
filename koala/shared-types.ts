@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export type LangCode = "ko";
-export type LessonType = "speaking" | "new" | "remedial";
+export type LessonType = "speaking" | "new" | "remedial" | "passive";
 export type QuizResult = "error" | "fail" | "pass";
 
 export const LANG_CODES = z.literal("ko");

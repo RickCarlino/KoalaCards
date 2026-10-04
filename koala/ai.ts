@@ -3,9 +3,11 @@ import {
   openaiGenerateImage,
   openaiGenerateStructuredOutput,
   openaiGenerateText,
+  openaiStreamText,
 } from "./ai-openai";
 import type { CoreMessage, TextModel } from "./ai-types";
 export type { CoreMessage, TextModel } from "./ai-types";
+export { evaluateJev } from "./ai-jev";
 
 export type ImageModel = "imageDefault";
 export type LanguageModelIdentifier = TextModel;
@@ -24,6 +26,9 @@ export type StructuredGenOptions<S extends z.ZodTypeAny> =
 export type LanguageGenFn = (
   options: LanguageGenOptions,
 ) => Promise<string>;
+export type LanguageStreamGenFn = (
+  options: LanguageGenOptions,
+) => AsyncGenerator<string>;
 export type StructuredGenFn = <S extends z.ZodTypeAny>(
   options: StructuredGenOptions<S>,
 ) => Promise<z.infer<S>>;
@@ -35,6 +40,10 @@ export type ImageGenFn = (options: ImageGenOptions) => Promise<string>;
 
 export const generateAIText: LanguageGenFn = async (options) => {
   return await openaiGenerateText(options);
+};
+
+export const streamAIText: LanguageStreamGenFn = (options) => {
+  return openaiStreamText(options);
 };
 
 export const generateStructuredOutput: StructuredGenFn = async (

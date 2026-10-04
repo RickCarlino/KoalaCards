@@ -49,6 +49,57 @@ type ParsedCsvColumns = {
   secondValue: string;
 };
 
+type CreateRouteState = ReturnType<typeof parseCreatePageRoute>;
+
+function applyCreateRouteState(
+  routeState: CreateRouteState,
+  setMode: React.Dispatch<React.SetStateAction<Mode>>,
+  dispatch: React.Dispatch<Parameters<typeof reducer>[1]>,
+) {
+  if (routeState.mode) {
+    setMode(routeState.mode);
+  }
+  if (routeState.selectedDeck) {
+    dispatch({
+      type: "SET_DECK_SELECTION",
+      deckSelection: "existing",
+    });
+    dispatch({
+      type: "SET_DECK_ID",
+      deckId: routeState.selectedDeck.id,
+    });
+    dispatch({
+      type: "SET_DECK_LANG",
+      deckLang: routeState.selectedDeck.langCode as LangCode,
+    });
+    dispatch({
+      type: "SET_DECK_NAME",
+      deckName: routeState.selectedDeck.name,
+    });
+  }
+  if (routeState.words.length > 0) {
+    dispatch({
+      type: "SET_RAW_INPUT",
+      rawInput: routeState.words.join("\n"),
+    });
+  }
+}
+
+function createInitialState(
+  decks: LanguageInputPageProps["decks"],
+): State {
+  const firstDeck = decks[0];
+  return {
+    ...INITIAL_STATE,
+    deckLang:
+      (firstDeck?.langCode as LangCode | undefined) ??
+      INITIAL_STATE.deckLang,
+    deckSelection: firstDeck ? "existing" : "new",
+    deckId: firstDeck?.id,
+    deckName: firstDeck?.name ?? "",
+  };
+}
+
 function handleError(error: unknown) {
   console.error(error);
   notifications.show({
@@ -92,13 +143,11 @@ export default function CreateUnified(props: LanguageInputPageProps) {
   const [separator, setSeparator] = React.useState(",");
   const [mode, setMode] = React.useState<Mode>("vibe");
 
-  const [state, dispatch] = React.useReducer(reducer, {
-    ...INITIAL_STATE,
-    deckLang: (decks?.[0]?.langCode as LangCode) || INITIAL_STATE.deckLang,
-    deckSelection: decks.length ? "existing" : "new",
-    deckId: decks[0]?.id,
-    deckName: decks[0]?.name || "",
-  });
+  const [state, dispatch] = React.useReducer(
+    reducer,
+    decks,
+    createInitialState,
+  );
 
   const parseCards = trpc.parseCards.useMutation();
   const turbine = trpc.turbine.useMutation();
@@ -111,33 +160,10 @@ export default function CreateUnified(props: LanguageInputPageProps) {
     if (!router.isReady) {
       return;
     }
-    if (routeState.mode) {
-      setMode(routeState.mode);
-    }
-    if (routeState.selectedDeck) {
-      dispatch({
-        type: "SET_DECK_SELECTION",
-        deckSelection: "existing",
-      });
-      dispatch({
-        type: "SET_DECK_ID",
-        deckId: routeState.selectedDeck.id,
-      });
-      dispatch({
-        type: "SET_DECK_LANG",
-        deckLang: routeState.selectedDeck.langCode as LangCode,
-      });
-      dispatch({
-        type: "SET_DECK_NAME",
-        deckName: routeState.selectedDeck.name,
-      });
-    }
-    if (routeState.words.length > 0) {
-      dispatch({
-        type: "SET_RAW_INPUT",
-        rawInput: routeState.words.join("\n"),
-      });
-    }
+    const timeoutId = window.setTimeout(() => {
+      applyCreateRouteState(routeState, setMode, dispatch);
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
   }, [routeState, router.isReady]);
 
   const lines = React.useMemo(() => {
@@ -316,7 +342,7 @@ export default function CreateUnified(props: LanguageInputPageProps) {
         Choose a deck, add content, preview live, then save.
       </Text>
 
-      <Grid gutter="lg">
+      <Grid gap="lg">
         <Grid.Col span={{ base: 12, md: 6 }}>
           <DeckSection
             deckOptions={deckOptions}

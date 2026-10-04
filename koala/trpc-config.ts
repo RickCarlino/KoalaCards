@@ -16,12 +16,13 @@ function getBaseUrl() {
 }
 
 export const trpc = createTRPCNext<AppRouter>({
+  transformer: superjson,
   config(_) {
     return {
-      transformer: superjson,
       links: [
         httpLink({
           url: `${getBaseUrl()}/api/trpc`,
+          transformer: superjson,
           async headers() {
             return {};
           },

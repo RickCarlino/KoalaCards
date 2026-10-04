@@ -285,7 +285,7 @@ function SubmissionCard({
           </Text>
         </Box>
 
-        <Collapse in={isExpanded}>
+        <Collapse expanded={isExpanded}>
           <Box id={detailsId}>
             <Divider my="sm" />
             <Stack gap="sm">

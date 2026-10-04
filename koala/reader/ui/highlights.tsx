@@ -13,12 +13,14 @@ import { IconRefresh, IconX } from "@tabler/icons-react";
 import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import type {
+  ReaderHighlight,
+  ReaderHighlightAnalysis,
+  ReaderHighlightImportStatus,
+} from "../contracts";
 import {
   readerBodyFont,
   readerDividerColor,
-  readerFloatingBackgroundColor,
-  readerFloatingBorderColor,
-  readerFloatingShadow,
   readerHeadingColor,
 } from "./theme";
 import {
@@ -30,36 +32,11 @@ import {
   resolveHighlightsVisibility,
 } from "./highlights-state";
 
-export type ReaderHighlightStatus = "in_progress" | "ready" | "error";
-
-export type ReaderHighlightAnalysis = {
-  term: string;
-  definition: string;
-  generalMeaning: string;
-  meaningInContext: string;
-};
-
-export type HighlightImportResultStatus =
-  | "created"
-  | "duplicate"
-  | "already_imported"
-  | "not_ready"
-  | "missing";
-
-export type ReaderArticleHighlight = ReaderHighlightAnalysis & {
-  id: number;
-  selectedText: string;
-  selectedOccurrenceIndex: number;
-  occurrenceCount: number;
-  status: ReaderHighlightStatus;
-  errorMessage: string;
-  contextBefore: string;
-  contextAfter: string;
-  importedCardId: number | null;
-  importedAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-};
+export type {
+  ReaderHighlight,
+  ReaderHighlightAnalysis,
+  ReaderHighlightImportStatus,
+} from "../contracts";
 
 type ExplainSelectionCardProps = {
   isExplaining: boolean;
@@ -76,14 +53,6 @@ type ExplainSelectionCardProps = {
   isAddingToDeck?: boolean;
   fillAvailableHeight?: boolean;
   flowExplanation?: boolean;
-};
-
-type SelectionActionBubbleProps = {
-  isVisible: boolean;
-  top: number;
-  left: number;
-  isExplaining: boolean;
-  onExplain: () => void;
 };
 
 function helperPanelStyle(
@@ -103,12 +72,10 @@ function helperPanelStyle(
 function helperStreamStyle(options: {
   fillAvailableHeight: boolean;
   flowExplanation: boolean;
-  floatingActionsWidth?: number;
 }): React.CSSProperties {
   if (options.flowExplanation) {
     return {
       paddingBottom: 4,
-      paddingRight: options.floatingActionsWidth,
       overflowWrap: "anywhere",
     };
   }
@@ -171,7 +138,6 @@ function renderExplainAnalysis(options: {
   analysis: ReaderHighlightAnalysis | null;
   fillAvailableHeight: boolean;
   flowExplanation: boolean;
-  floatingActionsWidth?: number;
 }): React.ReactNode | null {
   if (!options.analysis || !hasAnalysis(options.analysis)) {
     return null;
@@ -184,7 +150,6 @@ function renderExplainAnalysis(options: {
       style={helperStreamStyle({
         fillAvailableHeight: options.fillAvailableHeight,
         flowExplanation: options.flowExplanation,
-        floatingActionsWidth: options.floatingActionsWidth,
       })}
     >
       <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -310,80 +275,6 @@ function renderDeleteHighlightAction(options: {
   );
 }
 
-function renderFlowExplanation(options: {
-  actions: React.ReactNode | null;
-  explanation: React.ReactNode | null;
-}): React.ReactNode {
-  if (!options.actions && !options.explanation) {
-    return null;
-  }
-
-  if (!options.explanation) {
-    return options.actions;
-  }
-
-  return (
-    <Box style={{ position: "relative", minWidth: 0 }}>
-      {options.actions ? (
-        <Box
-          style={{
-            position: "absolute",
-            top: 0,
-            right: 0,
-            zIndex: 1,
-          }}
-        >
-          {options.actions}
-        </Box>
-      ) : null}
-      {options.explanation}
-    </Box>
-  );
-}
-
-export function SelectionActionBubble({
-  isVisible,
-  top,
-  left,
-  isExplaining,
-  onExplain,
-}: SelectionActionBubbleProps) {
-  if (!isVisible) {
-    return null;
-  }
-
-  return (
-    <Box
-      style={{
-        position: "fixed",
-        top,
-        left,
-        transform: "translate(-50%, calc(-100% - 10px))",
-        zIndex: 500,
-        borderRadius: 999,
-        border: `1px solid ${readerFloatingBorderColor}`,
-        background: readerFloatingBackgroundColor,
-        boxShadow: readerFloatingShadow,
-        padding: 6,
-      }}
-    >
-      <Button
-        size="xs"
-        color="grape"
-        radius="xl"
-        loading={isExplaining}
-        disabled={isExplaining}
-        onMouseDown={(event) => {
-          event.preventDefault();
-        }}
-        onClick={onExplain}
-      >
-        Explain
-      </Button>
-    </Box>
-  );
-}
-
 export function ExplainSelectionCard({
   isExplaining,
   streamError,
@@ -412,15 +303,10 @@ export function ExplainSelectionCard({
     onRetryHighlight,
     isRetryingHighlight,
   });
-  const floatingActionsWidth =
-    flowExplanation && actions !== null
-      ? (onAddToDeck ? 132 : 36) + (onRetryHighlight ? 36 : 0)
-      : 0;
   const explanation = renderExplainAnalysis({
     analysis,
     fillAvailableHeight,
     flowExplanation,
-    floatingActionsWidth,
   });
 
   if (flowExplanation) {
@@ -428,7 +314,8 @@ export function ExplainSelectionCard({
       <Stack gap="sm" style={helperPanelStyle(fillAvailableHeight)}>
         {renderExplainLoading(isExplaining)}
         {renderExplainError(streamError)}
-        {renderFlowExplanation({ actions, explanation })}
+        {actions}
+        {explanation}
       </Stack>
     );
   }
@@ -444,7 +331,7 @@ export function ExplainSelectionCard({
 }
 
 type HighlightsHistoryCardProps = {
-  highlights: ReaderArticleHighlight[];
+  highlights: ReaderHighlight[];
   isLoading: boolean;
   errorMessage: string;
   actions?: React.ReactNode;
@@ -461,19 +348,19 @@ type HighlightsHistoryCardProps = {
   onToggleSelectAll: () => void;
   canSelectAll: boolean;
   allImportableSelected: boolean;
-  importStatusByHighlightId: Record<number, HighlightImportResultStatus>;
+  importStatusByHighlightId: Record<number, ReaderHighlightImportStatus>;
   onDeleteHighlight: (highlightId: number) => void;
-  onOpenHighlight?: (highlight: ReaderArticleHighlight) => void;
+  onOpenHighlight?: (highlight: ReaderHighlight) => void;
 };
 
 type HighlightHistoryRowProps = {
-  highlight: ReaderArticleHighlight;
+  highlight: ReaderHighlight;
   isDeleting: boolean;
   isSelected: boolean;
   onToggleSelected: (next: boolean) => void;
-  importStatus: HighlightImportResultStatus | null;
+  importStatus: ReaderHighlightImportStatus | null;
   onDeleteHighlight: (highlightId: number) => void;
-  onOpenHighlight?: (highlight: ReaderArticleHighlight) => void;
+  onOpenHighlight?: (highlight: ReaderHighlight) => void;
 };
 
 type HighlightHistoryOpenState = {
@@ -487,8 +374,8 @@ type HighlightHistoryOpenState = {
 };
 
 function resolveHighlightHistoryOpenState(options: {
-  highlight: ReaderArticleHighlight;
-  onOpenHighlight?: (highlight: ReaderArticleHighlight) => void;
+  highlight: ReaderHighlight;
+  onOpenHighlight?: (highlight: ReaderHighlight) => void;
 }): HighlightHistoryOpenState {
   if (!options.onOpenHighlight) {
     return { rowProps: {} };
@@ -692,18 +579,7 @@ export function HighlightsHistoryCard({
 
   return (
     <Stack gap="sm">
-      {isLoading && (
-        <Group gap="xs" align="center" role="status" aria-live="polite">
-          <Loader size="xs" color="grape" />
-          <Text
-            size="sm"
-            c="dimmed"
-            style={{ fontFamily: readerBodyFont }}
-          >
-            Loading highlights...
-          </Text>
-        </Group>
-      )}
+      <HighlightsLoading isLoading={isLoading} />
       {historyState.showError ? (
         <Text
           size="sm"
@@ -794,5 +670,20 @@ export function HighlightsHistoryCard({
         </Stack>
       ) : null}
     </Stack>
+  );
+}
+
+function HighlightsLoading({ isLoading }: { isLoading: boolean }) {
+  if (!isLoading) {
+    return null;
+  }
+
+  return (
+    <Group gap="xs" align="center" role="status" aria-live="polite">
+      <Loader size="xs" color="grape" />
+      <Text size="sm" c="dimmed" style={{ fontFamily: readerBodyFont }}>
+        Loading highlights...
+      </Text>
+    </Group>
   );
 }

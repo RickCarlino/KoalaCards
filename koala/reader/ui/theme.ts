@@ -1,10 +1,7 @@
 import type { CSSProperties } from "react";
 
 export type ReaderUiIngestStatus =
-  | "pending"
-  | "in_progress"
-  | "ready"
-  | "error";
+  "pending" | "in_progress" | "ready" | "error";
 
 export const readerDisplayFont = "inherit";
 export const readerBodyFont = "inherit";
@@ -22,9 +19,6 @@ export const readerPanelBorderColor = "#efd3e2";
 export const readerDividerColor = "#efd8e4";
 export const readerSurfaceShadow = "0 1px 3px rgba(0, 0, 0, 0.04)";
 export const readerFrameShadow = "0 2px 6px rgba(0, 0, 0, 0.05)";
-export const readerFloatingBorderColor = "#e8bfd3";
-export const readerFloatingBackgroundColor = "rgba(255, 252, 254, 0.98)";
-export const readerFloatingShadow = "0 12px 26px rgba(162, 93, 125, 0.2)";
 export const readerPageSectionGap = "clamp(12px, 1.8vw, 18px)";
 export const readerPanelGap = "clamp(10px, 1.2vw, 14px)";
 

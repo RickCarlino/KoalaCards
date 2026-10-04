@@ -31,6 +31,10 @@ const deckExportCardSchemaV3 = deckExportCardBase.extend({
   paused: z.boolean(),
 });
 
+const deckExportCardSchemaV4 = deckExportCardSchemaV3.extend({
+  lastPassiveReviewAt: z.string().nullable(),
+});
+
 const deckExportSchemaV1 = z.object({
   version: z.literal(1),
   exportedAt: z.string(),
@@ -49,14 +53,22 @@ const deckExportSchemaV3 = z.object({
   cards: z.array(deckExportCardSchemaV3),
 });
 
+const deckExportSchemaV4 = z.object({
+  version: z.literal(4),
+  exportedAt: z.string(),
+  cards: z.array(deckExportCardSchemaV4),
+});
+
 export const deckExportSchema = z.discriminatedUnion("version", [
   deckExportSchemaV1,
   deckExportSchemaV2,
   deckExportSchemaV3,
+  deckExportSchemaV4,
 ]);
 
 export type DeckExport = z.infer<typeof deckExportSchema>;
 export type DeckExportCard =
   | z.infer<typeof deckExportCardSchemaV1>
   | z.infer<typeof deckExportCardSchemaV2>
-  | z.infer<typeof deckExportCardSchemaV3>;
+  | z.infer<typeof deckExportCardSchemaV3>
+  | z.infer<typeof deckExportCardSchemaV4>;

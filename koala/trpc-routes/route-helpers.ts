@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma } from "@/koala/generated/prisma/client";
 import { TRPCError } from "@trpc/server";
 import { getUserSettings } from "@/koala/auth-helpers";
 import { prismaClient } from "@/koala/prisma-client";

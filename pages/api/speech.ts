@@ -12,6 +12,7 @@ import {
   resolveSpeechContentType,
   resolveSpeechFormat,
 } from "@/koala/api/speech-helpers";
+import { OPENAI_SPEECH_MODEL } from "@/koala/ai-openai-config";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -54,7 +55,6 @@ export default async function handler(
     return res.status(400).json({ error: "Missing 'tl'" });
   }
 
-  const model = "gpt-4o-mini-tts";
   const VOICES = [
     "alloy",
     "echo",
@@ -67,7 +67,7 @@ export default async function handler(
   const chosenFormat = resolveSpeechFormat(format);
 
   const speech = await openai.audio.speech.create({
-    model,
+    model: OPENAI_SPEECH_MODEL,
     voice: draw(VOICES) || VOICES[0],
     input,
     response_format: chosenFormat,

@@ -5,6 +5,10 @@ import type {
 } from "next";
 import { prismaClient } from "@/koala/prisma-client";
 import {
+  combineReaderCounts,
+  combineReaderHighlightActivity,
+} from "@/koala/reader/activity";
+import {
   Button,
   Container,
   Group,
@@ -27,8 +31,9 @@ type OverviewCounts = {
   deckCount: number;
   writingCount: number;
   quizResultCount: number;
-  readerArticleCount: number;
-  readerReadCount: number;
+  readerDocumentCount: number;
+  readerBookCount: number;
+  readerReadArticleCount: number;
   readerHighlightCount: number;
   readerImportedHighlightCount: number;
 };
@@ -48,16 +53,19 @@ type RecentQuiz = {
   isAcceptable: boolean;
 };
 
-type RecentReaderArticle = {
-  id: number;
+type RecentReaderDocument = {
+  key: string;
+  kind: "Article" | "EPUB";
   title: string;
   createdAt: string;
-  readAt: string | null;
+  lastActivityAt: string | null;
 };
 
 type RecentReaderHighlight = {
-  id: number;
-  articleTitle: string;
+  key: string;
+  kind: "Article" | "EPUB";
+  sourceTitle: string;
+  chapterTitle: string;
   selectedText: string;
   createdAt: string;
   importedAt: string | null;
@@ -152,40 +160,45 @@ function mapRecentQuizRows(
   }));
 }
 
-function mapRecentReaderArticleRows(
-  rows: {
+function combineRecentReaderDocuments(options: {
+  articles: {
     id: number;
     title: string;
     createdAt: Date;
     readAt: Date | null;
-  }[],
-): RecentReaderArticle[] {
-  return rows.map((article) => ({
-    id: article.id,
-    title: article.title,
-    createdAt: article.createdAt.toISOString(),
-    readAt: article.readAt ? article.readAt.toISOString() : null,
-  }));
-}
-
-function mapRecentReaderHighlightRows(
-  rows: {
+  }[];
+  books: {
     id: number;
-    selectedText: string;
+    title: string;
     createdAt: Date;
-    importedAt: Date | null;
-    article: { title: string };
-  }[],
-): RecentReaderHighlight[] {
-  return rows.map((highlight) => ({
-    id: highlight.id,
-    articleTitle: highlight.article.title,
-    selectedText: highlight.selectedText,
-    createdAt: highlight.createdAt.toISOString(),
-    importedAt: highlight.importedAt
-      ? highlight.importedAt.toISOString()
-      : null,
+    progress: { lastOpenedAt: Date | null } | null;
+  }[];
+}): RecentReaderDocument[] {
+  const articles = options.articles.map((article) => ({
+    key: `article-${article.id}`,
+    kind: "Article" as const,
+    title: article.title,
+    createdAt: article.createdAt,
+    lastActivityAt: article.readAt,
   }));
+  const books = options.books.map((book) => ({
+    key: `book-${book.id}`,
+    kind: "EPUB" as const,
+    title: book.title,
+    createdAt: book.createdAt,
+    lastActivityAt: book.progress?.lastOpenedAt ?? null,
+  }));
+
+  return [...articles, ...books]
+    .sort((left, right) => {
+      return right.createdAt.getTime() - left.createdAt.getTime();
+    })
+    .slice(0, 10)
+    .map((document) => ({
+      ...document,
+      createdAt: document.createdAt.toISOString(),
+      lastActivityAt: document.lastActivityAt?.toISOString() ?? null,
+    }));
 }
 
 export async function getServerSideProps(
@@ -234,13 +247,18 @@ export async function getServerSideProps(
     writingCount,
     quizResultCount,
     readerArticleCount,
-    readerReadCount,
-    readerHighlightCount,
-    readerImportedHighlightCount,
+    readerBookCount,
+    readerReadArticleCount,
+    readerArticleHighlightCount,
+    readerBookHighlightCount,
+    readerImportedArticleHighlightCount,
+    readerImportedBookHighlightCount,
     recentWritingRows,
     recentQuizRows,
     recentReaderArticleRows,
-    recentReaderHighlightRows,
+    recentReaderBookRows,
+    recentReaderArticleHighlightRows,
+    recentReaderBookHighlightRows,
   ] = await Promise.all([
     prismaClient.card.count({ where: { userId } }),
     prismaClient.card.count({ where: { userId, repetitions: { gt: 0 } } }),
@@ -249,11 +267,16 @@ export async function getServerSideProps(
     prismaClient.writingSubmission.count({ where: { userId } }),
     prismaClient.quizResult.count({ where: { userId } }),
     prismaClient.readerArticle.count({ where: { userId } }),
+    prismaClient.readerBook.count({ where: { userId } }),
     prismaClient.readerArticle.count({
       where: { userId, readAt: { not: null } },
     }),
     prismaClient.readerArticleHighlight.count({ where: { userId } }),
+    prismaClient.readerBookAnnotation.count({ where: { userId } }),
     prismaClient.readerArticleHighlight.count({
+      where: { userId, importedAt: { not: null } },
+    }),
+    prismaClient.readerBookAnnotation.count({
       where: { userId, importedAt: { not: null } },
     }),
     prismaClient.writingSubmission.findMany({
@@ -290,6 +313,21 @@ export async function getServerSideProps(
         readAt: true,
       },
     }),
+    prismaClient.readerBook.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+      select: {
+        id: true,
+        title: true,
+        createdAt: true,
+        progress: {
+          select: {
+            lastOpenedAt: true,
+          },
+        },
+      },
+    }),
     prismaClient.readerArticleHighlight.findMany({
       where: { userId },
       orderBy: { createdAt: "desc" },
@@ -297,6 +335,8 @@ export async function getServerSideProps(
       select: {
         id: true,
         selectedText: true,
+        selectedOccurrenceIndex: true,
+        occurrencesJson: true,
         createdAt: true,
         importedAt: true,
         article: {
@@ -306,8 +346,35 @@ export async function getServerSideProps(
         },
       },
     }),
+    prismaClient.readerBookAnnotation.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+      select: {
+        id: true,
+        quote: true,
+        selectedOccurrenceIndex: true,
+        occurrencesJson: true,
+        chapterTitle: true,
+        createdAt: true,
+        importedAt: true,
+        book: {
+          select: {
+            title: true,
+          },
+        },
+      },
+    }),
   ]);
 
+  const combinedReaderCounts = combineReaderCounts({
+    articleCount: readerArticleCount,
+    bookCount: readerBookCount,
+    articleHighlightCount: readerArticleHighlightCount,
+    bookHighlightCount: readerBookHighlightCount,
+    importedArticleHighlightCount: readerImportedArticleHighlightCount,
+    importedBookHighlightCount: readerImportedBookHighlightCount,
+  });
   const counts: OverviewCounts = {
     cardsTotal,
     cardsStudied,
@@ -315,20 +382,34 @@ export async function getServerSideProps(
     deckCount,
     writingCount,
     quizResultCount,
-    readerArticleCount,
-    readerReadCount,
-    readerHighlightCount,
-    readerImportedHighlightCount,
+    readerDocumentCount: combinedReaderCounts.documentCount,
+    readerBookCount,
+    readerReadArticleCount,
+    readerHighlightCount: combinedReaderCounts.highlightCount,
+    readerImportedHighlightCount:
+      combinedReaderCounts.importedHighlightCount,
   };
 
   const recentWriting = mapRecentWritingRows(recentWritingRows);
   const recentQuiz = mapRecentQuizRows(recentQuizRows);
-  const recentReaderArticles = mapRecentReaderArticleRows(
-    recentReaderArticleRows,
-  );
-  const recentReaderHighlights = mapRecentReaderHighlightRows(
-    recentReaderHighlightRows,
-  );
+  const recentReaderDocuments = combineRecentReaderDocuments({
+    articles: recentReaderArticleRows,
+    books: recentReaderBookRows,
+  });
+  const recentReaderHighlights: RecentReaderHighlight[] =
+    combineReaderHighlightActivity({
+      articles: recentReaderArticleHighlightRows,
+      books: recentReaderBookHighlightRows,
+      limit: 10,
+    }).map((highlight) => ({
+      key: highlight.key,
+      kind: highlight.kind === "article" ? "Article" : "EPUB",
+      sourceTitle: highlight.sourceTitle,
+      chapterTitle: highlight.chapterTitle,
+      selectedText: highlight.selectedText,
+      createdAt: highlight.createdAt.toISOString(),
+      importedAt: highlight.importedAt?.toISOString() ?? null,
+    }));
 
   return {
     props: {
@@ -343,7 +424,7 @@ export async function getServerSideProps(
       counts,
       recentWriting,
       recentQuiz,
-      recentReaderArticles,
+      recentReaderDocuments,
       recentReaderHighlights,
     },
   };
@@ -361,7 +442,7 @@ export default function UserOverviewPage({
   counts,
   recentWriting,
   recentQuiz,
-  recentReaderArticles,
+  recentReaderDocuments,
   recentReaderHighlights,
 }: Props) {
   function onConfirmDelete(e: React.FormEvent<HTMLFormElement>) {
@@ -450,12 +531,15 @@ export default function UserOverviewPage({
                   <td>{counts.quizResultCount}</td>
                 </tr>
                 <tr>
-                  <td>Reader Articles</td>
-                  <td>{counts.readerArticleCount}</td>
+                  <td>Reading Documents</td>
+                  <td>
+                    {counts.readerDocumentCount} ({counts.readerBookCount}{" "}
+                    EPUBs)
+                  </td>
                 </tr>
                 <tr>
                   <td>Read Articles</td>
-                  <td>{counts.readerReadCount}</td>
+                  <td>{counts.readerReadArticleCount}</td>
                 </tr>
                 <tr>
                   <td>Reader Highlights</td>
@@ -529,30 +613,32 @@ export default function UserOverviewPage({
         </Paper>
 
         <Paper withBorder p="md" radius="md">
-          <Title order={4}>Recent Reader Articles</Title>
+          <Title order={4}>Recent Reading Documents</Title>
           <Table striped highlightOnHover mt="sm">
             <thead>
               <tr>
                 <th>Added</th>
+                <th>Type</th>
                 <th>Title</th>
-                <th>Read</th>
+                <th>Last activity</th>
               </tr>
             </thead>
             <tbody>
-              {recentReaderArticles.length === 0 ? (
+              {recentReaderDocuments.length === 0 ? (
                 <tr>
-                  <td colSpan={3}>No reader articles yet</td>
+                  <td colSpan={4}>No reading documents yet</td>
                 </tr>
               ) : (
-                recentReaderArticles.map((article) => (
-                  <tr key={article.id}>
-                    <td>{fmtShort(article.createdAt)}</td>
+                recentReaderDocuments.map((document) => (
+                  <tr key={document.key}>
+                    <td>{fmtShort(document.createdAt)}</td>
+                    <td>{document.kind}</td>
                     <td>
                       <Text size="sm" lineClamp={2} maw={360}>
-                        {article.title}
+                        {document.title}
                       </Text>
                     </td>
-                    <td>{fmtShort(article.readAt)}</td>
+                    <td>{fmtShort(document.lastActivityAt)}</td>
                   </tr>
                 ))
               )}
@@ -566,7 +652,7 @@ export default function UserOverviewPage({
             <thead>
               <tr>
                 <th>Date</th>
-                <th>Article</th>
+                <th>Source</th>
                 <th>Text</th>
                 <th>Imported</th>
               </tr>
@@ -578,11 +664,14 @@ export default function UserOverviewPage({
                 </tr>
               ) : (
                 recentReaderHighlights.map((highlight) => (
-                  <tr key={highlight.id}>
+                  <tr key={highlight.key}>
                     <td>{fmtShort(highlight.createdAt)}</td>
                     <td>
                       <Text size="sm" lineClamp={2} maw={280}>
-                        {highlight.articleTitle}
+                        {highlight.kind}: {highlight.sourceTitle}
+                        {highlight.chapterTitle
+                          ? ` · ${highlight.chapterTitle}`
+                          : ""}
                       </Text>
                     </td>
                     <td>

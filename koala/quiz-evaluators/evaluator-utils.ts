@@ -28,6 +28,27 @@ export function compare(
   return score <= cutoff;
 }
 
+export function compareWithSimilarity(
+  left: string,
+  right: string,
+  minimumSimilarity: number,
+): boolean {
+  const normalizedLeft = strip(left);
+  const normalizedRight = strip(right);
+  const longestLength = Math.max(
+    normalizedLeft.length,
+    normalizedRight.length,
+  );
+
+  if (longestLength === 0) {
+    return normalizedLeft === normalizedRight;
+  }
+
+  const similarity =
+    1 - levenshtein(normalizedLeft, normalizedRight) / longestLength;
+  return similarity >= minimumSimilarity;
+}
+
 function levenshtein(a: string, b: string): number {
   const an = a ? a.length : 0;
   const bn = b ? b.length : 0;

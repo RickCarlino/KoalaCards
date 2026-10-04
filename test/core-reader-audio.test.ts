@@ -24,6 +24,7 @@ import {
   resolveSpeechFormat,
 } from "../koala/api/speech-helpers.ts";
 import {
+  buildKoreanTranscriptionPrompt,
   buildTranscriptionPrompt,
   buildTranscriptionRequest,
   firstParam,
@@ -203,8 +204,11 @@ test("highlight occurrence helpers find exact, overlapping, and flexible matches
   ]);
   assert.deepEqual(
     findOccurrenceOffsets("alpha \n beta alpha", "alpha beta"),
-    [],
+    [{ startOffset: 0, endOffset: 12 }],
   );
+  assert.deepEqual(findOccurrenceOffsets("x a+b \n c?d y", "a+b c?d"), [
+    { startOffset: 2, endOffset: 11 },
+  ]);
   assert.deepEqual(findOccurrenceOffsets("alpha beta", ""), []);
 
   assert.deepEqual(buildOccurrenceContexts("one two one", "one", 2), [
@@ -332,29 +336,43 @@ test("speech helpers compose input and resolve formats", () => {
   assert.equal(resolveSpeechContentType("opus"), "audio/ogg");
 });
 
-test("transcribe helpers normalize headers and prompt text", () => {
+test("transcribe helpers normalize headers and preserve hint prompt text", () => {
   assert.equal(firstParam(["a", "b"]), "a");
   assert.equal(resolveContentType(undefined), "application/octet-stream");
   assert.equal(hasValidAudioContentLength(10, 20), true);
   assert.equal(hasValidAudioContentLength(30, 20), false);
   assert.equal(getAudioFilename("audio/mp4"), "recording.mp4");
   assert.equal(getAudioFilename("audio/webm"), "recording.webm");
+  assert.equal(buildTranscriptionPrompt(""), null);
   assert.equal(
     buildTranscriptionPrompt("단어, 예문"),
     "Might contain words like 단어, 예문",
   );
-  assert.equal(buildTranscriptionPrompt(""), null);
+  assert.equal(
+    buildKoreanTranscriptionPrompt(null),
+    "한국어 음성을 한글로 받아쓰세요. 로마자나 일본어 문자로 바꾸지 마세요.",
+  );
+  assert.equal(
+    buildKoreanTranscriptionPrompt(
+      buildTranscriptionPrompt("단어"),
+    ).includes("Might contain words like 단어"),
+    true,
+  );
   assert.deepEqual(
     buildTranscriptionRequest({
       file: "blob",
       language: "ko",
-      prompt: "Might contain words like 단어",
+      prompt: buildKoreanTranscriptionPrompt(
+        buildTranscriptionPrompt("단어"),
+      ),
     }),
     {
       file: "blob",
-      model: "gpt-4o-mini-transcribe",
+      model: "gpt-4o-transcribe",
       language: "ko",
-      prompt: "Might contain words like 단어",
+      response_format: "json",
+      prompt:
+        "한국어 음성을 한글로 받아쓰세요. 로마자나 일본어 문자로 바꾸지 마세요.\nMight contain words like 단어",
     },
   );
 });

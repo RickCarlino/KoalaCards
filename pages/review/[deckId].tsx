@@ -1,3 +1,4 @@
+import type { SpeakingGrade } from "../../koala/quiz-evaluators/grading-policy";
 import {
   ActionIcon,
   Affix,
@@ -25,7 +26,11 @@ import {
   useMantineTheme,
   type DrawerProps,
 } from "@mantine/core";
-import { useHotkeys, useMediaQuery } from "@mantine/hooks";
+import {
+  useHotkeys,
+  useMediaQuery,
+  type HotkeyItem,
+} from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import {
   IconArchive,
@@ -57,13 +62,24 @@ import { z } from "zod";
 import { canStartNewLessons, getLessonsDue } from "@/koala/fetch-lesson";
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { prismaClient } from "@/koala/prisma-client";
-import { compare } from "@/koala/quiz-evaluators/evaluator-utils";
+import {
+  compare,
+  compareWithSimilarity,
+} from "@/koala/quiz-evaluators/evaluator-utils";
 import {
   buildAssistantEditProposal,
   createAssistantStreamParser,
   EDIT_PLACEHOLDER,
   EXAMPLE_PLACEHOLDER,
 } from "@/koala/review/assistant-parser";
+import {
+  interleaveEvenly,
+  PASSIVE_REVIEW_SIMILARITY,
+} from "@/koala/review/passive-review";
+import {
+  isRecordingAvailable,
+  shouldHandleRecordingHotkey,
+} from "@/koala/review/recording-state";
 import { VisualDiff } from "@/koala/review/lesson-steps/visual-diff";
 import { useUserSettings } from "@/koala/settings-provider";
 import { clampReviewTake } from "@/koala/settings/review-take";
@@ -86,9 +102,11 @@ type QueueType =
   | "newWordOutro"
   | "remedialIntro"
   | "remedialOutro"
-  | "speaking";
+  | "speaking"
+  | "passive";
 
 type ItemType = QueueType;
+type ActiveQueueType = Exclude<QueueType, "passive">;
 
 type QueueItem = {
   cardUUID: string;
@@ -96,7 +114,7 @@ type QueueItem = {
   stepUuid: string;
 };
 
-type Queue = Record<QueueType, QueueItem[]>;
+type Queue = QueueItem[];
 
 type UUID = { uuid: string };
 
@@ -105,6 +123,7 @@ type Quiz = QuizList[number] & UUID;
 type QuizMap = Record<string, Quiz>;
 
 type GradingResult = {
+  grade: SpeakingGrade;
   transcription: string;
   isCorrect: boolean;
   feedback: string;
@@ -158,6 +177,7 @@ type Action =
   | UpdateCardAction;
 
 type CardReviewProps = {
+  deckId: number;
   onProceed: () => void;
   onSkip: (uuid: string) => void;
   onGiveUp: (cardUUID: string) => void;
@@ -167,7 +187,7 @@ type CardReviewProps = {
   onGradingResultCaptured: (
     cardUUID: string,
     result: GradingResult,
-  ) => void;
+  ) => Promise<void>;
   onProvideAudioHandler?: (handler: (blob: Blob) => Promise<void>) => void;
   onResponsePhaseChange?: (phase: ResponsePhase) => void;
 };
@@ -216,6 +236,7 @@ type RecorderControls = {
 interface UseVoiceTranscriptionOptions {
   targetText: string;
   langCode: LangCode;
+  minimumSimilarity?: number;
 }
 
 interface TranscriptionResult {
@@ -237,7 +258,7 @@ interface UseVoiceGradingOptions {
   onGradingResultCaptured?: (
     cardUUID: string,
     result: GradingResult,
-  ) => void;
+  ) => Promise<void>;
 }
 
 interface UseQuizGradingOptions {
@@ -290,7 +311,10 @@ type ReviewHandlersParams = {
   addContextEvent: (type: string, summary: string) => void;
   skipCard: (cardUUID: string) => void;
   giveUp: (cardUUID: string) => void;
-  captureGradingResult: (cardUUID: string, result: GradingResult) => void;
+  captureGradingResult: (
+    cardUUID: string,
+    result: GradingResult,
+  ) => Promise<void>;
   updateCardFields: (
     cardId: number,
     updates: { term: string; definition: string },
@@ -314,6 +338,7 @@ interface FailureViewProps {
 }
 
 interface GradingSuccessProps {
+  userTranscription: string;
   quizData: {
     difficulty: number;
     stability: number;
@@ -388,7 +413,7 @@ type ControlBarMenuProps = {
   onEdit: () => void;
   onArchive: () => void;
   onSkip: () => void;
-  onFail: () => void;
+  onFail?: () => void;
 };
 
 type AssistantRole = "user" | "assistant";
@@ -453,7 +478,7 @@ type AssistantPanelProps = {
   onClear: () => void;
   canClear: boolean;
   isStreaming: boolean;
-  viewportRef: React.RefObject<HTMLDivElement>;
+  viewportRef: React.RefObject<HTMLDivElement | null>;
   onAddSuggestion: (
     suggestion: Suggestion,
     deckId: number,
@@ -472,7 +497,7 @@ type AssistantPanelProps = {
 
 type AssistantMessageListProps = {
   messages: ChatMessage[];
-  viewportRef: React.RefObject<HTMLDivElement>;
+  viewportRef: React.RefObject<HTMLDivElement | null>;
   onAddSuggestion: (
     suggestion: Suggestion,
     deckId: number,
@@ -532,7 +557,7 @@ type ContentChunk =
   | { kind: "text"; value: string }
   | { kind: "placeholder"; placeholder: PlaceholderType };
 
-type MarkdownCodeProps = JSX.IntrinsicElements["code"] &
+type MarkdownCodeProps = React.JSX.IntrinsicElements["code"] &
   ExtraProps & { inline?: boolean };
 
 type AssistantMarkdownProps = {
@@ -582,7 +607,17 @@ const HOTKEYS = {
   CONTINUE: "h",
 };
 
-const EVERY_QUEUE_TYPE: QueueType[] = [
+function getControlBarFailHandler(
+  itemType: ItemType,
+  onFail: () => void,
+): (() => void) | undefined {
+  if (itemType === "passive") {
+    return undefined;
+  }
+  return onFail;
+}
+
+const ACTIVE_QUEUE_TYPES: ActiveQueueType[] = [
   "newWordIntro",
   "remedialIntro",
   "speaking",
@@ -663,6 +698,7 @@ const cardUIs: Record<ItemType, CardUI> = {
   speaking: Speaking,
   remedialIntro: RemedialIntro,
   remedialOutro: RemedialOutro,
+  passive: PassiveReview,
 };
 
 const StudyAssistantContext = React.createContext<
@@ -1087,6 +1123,8 @@ function useMediaRecorder(): RecorderControls {
   const [isRecording, setIsRecording] = React.useState<boolean>(false);
   const [mimeType, setMimeType] = React.useState<string | null>(null);
   const beepArmedRef = React.useRef<boolean>(false);
+  const mountedRef = React.useRef(true);
+  const startPromiseRef = React.useRef<Promise<void> | null>(null);
 
   const preferredMime = React.useMemo(() => {
     const webm = "audio/webm;codecs=opus";
@@ -1107,7 +1145,9 @@ function useMediaRecorder(): RecorderControls {
   }, []);
 
   React.useEffect(() => {
+    mountedRef.current = true;
     return () => {
+      mountedRef.current = false;
       const recorder = recorderRef.current;
       if (recorder && recorder.state !== "inactive") {
         recorder.stop();
@@ -1125,6 +1165,22 @@ function useMediaRecorder(): RecorderControls {
   async function start(startOptions?: {
     playBeep?: boolean;
   }): Promise<void> {
+    if (startPromiseRef.current) {
+      return await startPromiseRef.current;
+    }
+
+    const startPromise = startRecorder(startOptions);
+    startPromiseRef.current = startPromise;
+    try {
+      await startPromise;
+    } finally {
+      startPromiseRef.current = null;
+    }
+  }
+
+  async function startRecorder(startOptions?: {
+    playBeep?: boolean;
+  }): Promise<void> {
     let stream = streamRef.current;
     const hasLiveTrack =
       stream?.active === true &&
@@ -1135,6 +1191,10 @@ function useMediaRecorder(): RecorderControls {
       stream = await navigator.mediaDevices.getUserMedia({
         audio: MICROPHONE_CAPTURE_CONSTRAINTS,
       });
+      if (!mountedRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
       streamRef.current = stream;
     }
 
@@ -1235,8 +1295,11 @@ function useCountdownTimer({
   }, [onTick]);
 
   React.useEffect(() => {
-    setRemainingSeconds(durationSeconds);
-    completedRef.current = false;
+    const timeoutId = window.setTimeout(() => {
+      setRemainingSeconds(durationSeconds);
+      completedRef.current = false;
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
   }, [durationSeconds, resetKey]);
 
   React.useEffect(() => {
@@ -1288,15 +1351,6 @@ function useReviewTimers({
   onResponseTimeout,
   onRecordingTimeout,
 }: UseReviewTimersOptions): TimerDockState {
-  const [recordingStartId, setRecordingStartId] = React.useState(0);
-
-  React.useEffect(() => {
-    if (!isRecording) {
-      return;
-    }
-    setRecordingStartId((prev) => prev + 1);
-  }, [isRecording]);
-
   const isResponseTimeoutEnabled = responseTimeoutSeconds > 0;
   const isResponseReady = responsePhase === "ready";
   const isResponseTimerEligible =
@@ -1337,7 +1391,7 @@ function useReviewTimers({
     durationSeconds: RECORDING_COUNTDOWN_SECONDS,
     isActive: isRecording,
     isPaused: false,
-    resetKey: recordingStartId,
+    resetKey: `${currentStepUuid}:${isRecording}`,
     onComplete: onRecordingTimeout,
   });
 
@@ -1395,14 +1449,21 @@ async function transcribeBlob(
 }
 
 function useVoiceTranscription(options: UseVoiceTranscriptionOptions) {
-  const { targetText, langCode } = options;
+  const { targetText, langCode, minimumSimilarity } = options;
   const transcribe = async (blob: Blob): Promise<TranscriptionResult> => {
     const transcription = await transcribeBlob(blob, langCode, targetText);
 
     const result: TranscriptionResult = { transcription };
 
     if (targetText) {
-      result.isMatch = compare(targetText, transcription);
+      result.isMatch =
+        minimumSimilarity === undefined
+          ? compare(targetText, transcription)
+          : compareWithSimilarity(
+              targetText,
+              transcription,
+              minimumSimilarity,
+            );
     }
 
     return result;
@@ -1428,13 +1489,14 @@ function useVoiceGrading(options: UseVoiceGradingOptions) {
   const gradeAudio = async (blob: Blob): Promise<GradingResult> => {
     const transcription = await transcribeBlob(blob, langCode, targetText);
 
-    const { isCorrect, feedback, quizResultId } =
+    const { grade, isCorrect, feedback, quizResultId } =
       await gradeSpeakingQuiz.mutateAsync({
         userInput: transcription,
         cardID: cardId,
       });
 
     const result = {
+      grade,
       transcription,
       isCorrect,
       feedback,
@@ -1442,7 +1504,7 @@ function useVoiceGrading(options: UseVoiceGradingOptions) {
     };
 
     if (onGradingResultCaptured) {
-      onGradingResultCaptured(cardUUID, result);
+      await onGradingResultCaptured(cardUUID, result);
     }
 
     return result;
@@ -1450,7 +1512,7 @@ function useVoiceGrading(options: UseVoiceGradingOptions) {
 
   return {
     gradeAudio,
-    isLoading: gradeSpeakingQuiz.isLoading,
+    isLoading: gradeSpeakingQuiz.isPending,
     error: gradeSpeakingQuiz.error,
   };
 }
@@ -1486,23 +1548,13 @@ function useQuizGrading({
     gradeWithHard,
     gradeWithGood,
     gradeWithEasy,
-    isLoading: gradeQuiz.isLoading,
+    isLoading: gradeQuiz.isPending,
     error: gradeQuiz.error,
   };
 }
 
-function usePhaseManager<T extends string>(
-  initialPhase: T,
-  currentStepUuid: string,
-  additionalResetStates?: () => void,
-) {
+function usePhaseManager<T extends string>(initialPhase: T) {
   const [phase, setPhase] = React.useState<T>(initialPhase);
-
-  React.useEffect(() => {
-    setPhase(initialPhase);
-    additionalResetStates?.();
-  }, [currentStepUuid]);
-
   return { phase, setPhase };
 }
 
@@ -1532,13 +1584,7 @@ function useGradeHandler({
   return { handleGradeSelect };
 }
 
-const createEmptyQueue = (): Queue => ({
-  newWordIntro: [],
-  remedialIntro: [],
-  speaking: [],
-  newWordOutro: [],
-  remedialOutro: [],
-});
+const createEmptyQueue = (): Queue => [];
 
 const createQueueItem = (
   cardUUID: string,
@@ -1553,15 +1599,9 @@ function removeCardFromQueues(
   cardUUID: string,
   queue: Queue,
 ): { updatedQueue: Queue } {
-  const updatedQueue = { ...queue };
-
-  for (const type of EVERY_QUEUE_TYPE) {
-    updatedQueue[type] = updatedQueue[type].filter(
-      (item) => item.cardUUID !== cardUUID,
-    );
-  }
-
-  return { updatedQueue };
+  return {
+    updatedQueue: queue.filter((item) => item.cardUUID !== cardUUID),
+  };
 }
 
 function skipCard(action: SkipCardAction, state: State): State {
@@ -1576,20 +1616,11 @@ function skipCard(action: SkipCardAction, state: State): State {
 }
 
 function getItemsDue(queue: Queue): number {
-  return EVERY_QUEUE_TYPE.reduce(
-    (acc, type) => acc + queue[type].length,
-    0,
-  );
+  return queue.length;
 }
 
 function nextQueueItem(queue: Queue): QueueItem | undefined {
-  for (const type of EVERY_QUEUE_TYPE) {
-    const item = queue[type][0];
-    if (item) {
-      return item;
-    }
-  }
-  return;
+  return queue[0];
 }
 
 function initialState(): State {
@@ -1606,34 +1637,49 @@ function initialState(): State {
 
 function replaceCards(action: ReplaceCardAction, state: State): State {
   const cards: QuizMap = {};
-  const nextQueue = createEmptyQueue();
+  const activeQueues: Record<ActiveQueueType, QueueItem[]> = {
+    newWordIntro: [],
+    remedialIntro: [],
+    speaking: [],
+    newWordOutro: [],
+    remedialOutro: [],
+  };
+  const passiveQueue: QueueItem[] = [];
 
   for (const item of action.payload) {
     cards[item.uuid] = item;
     switch (item.lessonType) {
       case "new":
-        nextQueue.newWordIntro.push(
+        activeQueues.newWordIntro.push(
           createQueueItem(item.uuid, "newWordIntro"),
         );
-        nextQueue.newWordOutro.push(
+        activeQueues.newWordOutro.push(
           createQueueItem(item.uuid, "newWordOutro"),
         );
         break;
       case "speaking":
-        nextQueue.speaking.push(createQueueItem(item.uuid, "speaking"));
+        activeQueues.speaking.push(createQueueItem(item.uuid, "speaking"));
         break;
       case "remedial":
-        nextQueue.remedialIntro.push(
+        activeQueues.remedialIntro.push(
           createQueueItem(item.uuid, "remedialIntro"),
         );
-        nextQueue.remedialOutro.push(
+        activeQueues.remedialOutro.push(
           createQueueItem(item.uuid, "remedialOutro"),
         );
+        break;
+      case "passive":
+        passiveQueue.push(createQueueItem(item.uuid, "passive"));
         break;
       default:
         throw new Error(`Unknown lesson type: ${item.lessonType}`);
     }
   }
+
+  const activeQueue = ACTIVE_QUEUE_TYPES.flatMap(
+    (type) => activeQueues[type],
+  );
+  const nextQueue = interleaveEvenly(activeQueue, passiveQueue);
 
   return {
     ...state,
@@ -1648,25 +1694,11 @@ function findCardUUIDForStep(
   queue: Queue,
   stepUuid: string,
 ): string | undefined {
-  for (const queueType of EVERY_QUEUE_TYPE) {
-    const item = queue[queueType].find(
-      (queueItem) => queueItem.stepUuid === stepUuid,
-    );
-    if (item) {
-      return item.cardUUID;
-    }
-  }
-  return undefined;
+  return queue.find((item) => item.stepUuid === stepUuid)?.cardUUID;
 }
 
 function removeStepFromQueue(queue: Queue, stepUuid: string): Queue {
-  const updatedQueue = { ...queue };
-  for (const queueType of EVERY_QUEUE_TYPE) {
-    updatedQueue[queueType] = updatedQueue[queueType].filter(
-      (item) => item.stepUuid !== stepUuid,
-    );
-  }
-  return updatedQueue;
+  return queue.filter((item) => item.stepUuid !== stepUuid);
 }
 
 function markCompletedCard(
@@ -1677,9 +1709,7 @@ function markCompletedCard(
   if (!cardUUID) {
     return completedCards;
   }
-  const hasMoreItems = Object.values(queue).some((items) =>
-    items.some((item) => item.cardUUID === cardUUID),
-  );
+  const hasMoreItems = queue.some((item) => item.cardUUID === cardUUID);
   if (hasMoreItems) {
     return completedCards;
   }
@@ -1723,9 +1753,9 @@ function updateCard(action: UpdateCardAction, state: State): State {
 }
 
 function useReview(deckId: number) {
-  const repairCardMutation = trpc.editCard.useMutation();
+  const completeRemedialReviewMutation =
+    trpc.completeRemedialReview.useMutation();
   const [state, dispatch] = React.useReducer(reducer, initialState());
-  const [isFetching, setIsFetching] = React.useState(true);
   const userSettings = useUserSettings();
 
   const urlParams = new URLSearchParams(window.location.search);
@@ -1743,19 +1773,23 @@ function useReview(deckId: number) {
     { take, deckId },
     {
       enabled: false,
-      onSuccess: (fetchedData) => {
-        const withUUID = fetchedData.quizzes.map((q) => ({
-          ...q,
-          uuid: uid(8),
-        }));
-        dispatch({ type: "REPLACE_CARDS", payload: withUUID });
-      },
     },
   );
 
+  React.useEffect(() => {
+    if (!quizzesQuery.data) {
+      return;
+    }
+
+    const withUUID = quizzesQuery.data.quizzes.map((quiz) => ({
+      ...quiz,
+      uuid: uid(8),
+    }));
+    dispatch({ type: "REPLACE_CARDS", payload: withUUID });
+  }, [quizzesQuery.data]);
+
   const fetchQuizzes = () => {
-    setIsFetching(true);
-    quizzesQuery.refetch().finally(() => setIsFetching(false));
+    void quizzesQuery.refetch();
   };
 
   React.useEffect(() => {
@@ -1782,7 +1816,7 @@ function useReview(deckId: number) {
 
   return {
     error,
-    isFetching,
+    isFetching: quizzesQuery.isFetching || !quizzesQuery.data,
     state,
     currentItem: state.currentItem,
     totalDue: getItemsDue(state.queue),
@@ -1808,9 +1842,8 @@ function useReview(deckId: number) {
     ) => {
       const card = state.cards[cardUUID];
       if (result.isCorrect && card.lessonType === "remedial") {
-        await repairCardMutation.mutateAsync({
-          id: card.cardId,
-          lastFailure: 0,
+        await completeRemedialReviewMutation.mutateAsync({
+          cardID: card.cardId,
         });
       }
       dispatch({
@@ -1974,27 +2007,24 @@ function ReviewLayout({
 }
 
 function useReviewLayout(): ReviewLayoutState {
-  const [assistantOpen, setAssistantOpen] = React.useState(false);
+  const [assistantOverride, setAssistantOverride] = React.useState<
+    boolean | null
+  >(null);
   const theme = useMantineTheme();
   const isDesktop =
     useMediaQuery(`(min-width: ${theme.breakpoints.md})`) ?? false;
 
-  React.useEffect(() => {
-    if (isDesktop) {
-      setAssistantOpen(true);
-    }
-  }, [isDesktop]);
-
+  const assistantOpen = assistantOverride ?? isDesktop;
   const contentHeight = "100vh";
   const showDesktopAssistant = isDesktop && assistantOpen;
   const assistantOffset = showDesktopAssistant ? ASSISTANT_PANEL_WIDTH : 0;
 
   const openAssistant = React.useCallback(
-    () => setAssistantOpen(true),
+    () => setAssistantOverride(true),
     [],
   );
   const closeAssistant = React.useCallback(
-    () => setAssistantOpen(false),
+    () => setAssistantOverride(false),
     [],
   );
 
@@ -2018,10 +2048,10 @@ function useReviewHandlers({
   updateCardFields,
 }: ReviewHandlersParams) {
   const handleGradingResultCaptured = React.useCallback(
-    (cardUUID: string, result: GradingResult) => {
+    async (cardUUID: string, result: GradingResult) => {
       const cardForResult = state.cards[cardUUID];
       if (cardForResult) {
-        const outcome = result.isCorrect ? "correct" : "incorrect";
+        const outcome = result.grade.replaceAll("_", " ");
         const userSaid = result.transcription
           ? `User said: ${result.transcription}.`
           : "";
@@ -2033,7 +2063,7 @@ function useReviewHandlers({
           `Card: ${cardForResult.term}; Outcome: ${outcome}. ${userSaid} ${feedback}`.trim(),
         );
       }
-      captureGradingResult(cardUUID, result);
+      await captureGradingResult(cardUUID, result);
     },
     [addContextEvent, captureGradingResult, state.cards],
   );
@@ -2112,6 +2142,8 @@ function useReviewAudio({
       return;
     }
     switch (itemType) {
+      case "passive":
+        return await playAudio(card.termAudio, playbackSpeed);
       case "remedialIntro":
       case "newWordIntro":
         return await playTermThenDefinition(card, playbackSpeed);
@@ -2189,7 +2221,7 @@ function CardImage({
 function FeedbackVote({ resultId, onClick }: FeedbackVoteProps) {
   const mutation = trpc.editQuizResult.useMutation();
   const [selected, setSelected] = React.useState<1 | -1 | null>(null);
-  const isLocked = selected !== null || mutation.isLoading;
+  const isLocked = selected !== null || mutation.isPending;
 
   const vote = (value: 1 | -1) => {
     if (selected !== null) {
@@ -2234,6 +2266,17 @@ function FeedbackVote({ resultId, onClick }: FeedbackVoteProps) {
   );
 }
 
+function ResponseTranscription({ text }: { text: string }) {
+  if (!text.trim()) {
+    return null;
+  }
+  return (
+    <Text ta="center" size="sm" c="dimmed">
+      You said: "{text}"
+    </Text>
+  );
+}
+
 function FailureView({
   imageURL,
   term,
@@ -2252,6 +2295,8 @@ function FailureView({
         {failureText}
       </Text>
 
+      <ResponseTranscription text={userTranscription} />
+
       <Text size="xl" fw={700} ta="center">
         {term}
       </Text>
@@ -2261,10 +2306,6 @@ function FailureView({
       <Button onClick={onContinue} variant="light" color="blue">
         Continue ({HOTKEYS.CONTINUE})
       </Button>
-
-      <Text ta="center" size="sm" c="dimmed">
-        You said: "{userTranscription}"
-      </Text>
 
       {renderFeedbackSection(feedback, quizResultId, onContinue)}
 
@@ -2296,6 +2337,7 @@ function renderFeedbackSection(
 }
 
 function GradingSuccess({
+  userTranscription,
   quizData,
   scheduler,
   onGradeSelect,
@@ -2305,7 +2347,7 @@ function GradingSuccess({
 }: GradingSuccessProps) {
   const gradeOptions = getGradeButtonText(quizData, scheduler);
 
-  const hotkeys: [string, () => void][] = [
+  const hotkeys: HotkeyItem[] = [
     [HOTKEYS.GRADE_AGAIN, () => !isLoading && onGradeSelect(Rating.Again)],
     [HOTKEYS.GRADE_HARD, () => !isLoading && onGradeSelect(Rating.Hard)],
     [HOTKEYS.GRADE_GOOD, () => !isLoading && onGradeSelect(Rating.Good)],
@@ -2317,6 +2359,7 @@ function GradingSuccess({
   return (
     <Stack gap="md" align="center">
       {renderSuccessHeader(feedback, quizResultId)}
+      <ResponseTranscription text={userTranscription} />
       <Text ta="center" size="sm" c="dimmed" mt="md">
         How difficult was this for you?
       </Text>
@@ -2412,6 +2455,7 @@ const IntroCard: React.FC<IntroCardProps> = ({
   currentStepUuid,
   isRemedial = false,
   onProvideAudioHandler,
+  onResponsePhaseChange,
 }) => {
   const { term, definition } = card;
   const [userTranscription, setUserTranscription] =
@@ -2422,11 +2466,15 @@ const IntroCard: React.FC<IntroCardProps> = ({
     langCode: "ko",
   });
 
-  const { phase, setPhase } = usePhaseManager<IntroPhase>(
-    "ready",
-    currentStepUuid,
-    () => setUserTranscription(""),
-  );
+  const { phase, setPhase } = usePhaseManager<IntroPhase>("ready");
+
+  React.useEffect(() => {
+    if (phase === "retry") {
+      onResponsePhaseChange?.("ready");
+      return;
+    }
+    onResponsePhaseChange?.(phase);
+  }, [onResponsePhaseChange, phase]);
 
   const processRecording = async (blob: Blob) => {
     setPhase("processing");
@@ -2485,6 +2533,143 @@ function RemedialIntro(props: CardReviewProps) {
   return <IntroCard {...props} isRemedial={true} />;
 }
 
+type PassiveReviewPhase = "ready" | "processing" | "retry" | "recall";
+
+function PassiveReview({
+  card,
+  currentStepUuid,
+  deckId,
+  onProceed,
+  onProvideAudioHandler,
+  onResponsePhaseChange,
+}: CardReviewProps) {
+  const [phase, setPhase] = React.useState<PassiveReviewPhase>("ready");
+  const [transcription, setTranscription] = React.useState("");
+  const completionStartedRef = React.useRef(false);
+  const completePassiveReview = trpc.completePassiveReview.useMutation();
+  const { transcribe } = useVoiceTranscription({
+    targetText: card.term,
+    langCode: "ko",
+    minimumSimilarity: PASSIVE_REVIEW_SIMILARITY,
+  });
+
+  const processRecording = async (blob: Blob) => {
+    setPhase("processing");
+    try {
+      const result = await transcribe(blob);
+      setTranscription(result.transcription);
+      setPhase(result.isMatch ? "recall" : "retry");
+    } catch {
+      setTranscription("");
+      setPhase("retry");
+    }
+  };
+
+  React.useEffect(() => {
+    onProvideAudioHandler?.(processRecording);
+  }, [currentStepUuid]);
+
+  React.useEffect(() => {
+    if (phase === "recall") {
+      onResponsePhaseChange?.("success");
+      return;
+    }
+    if (phase === "processing") {
+      onResponsePhaseChange?.("processing");
+      return;
+    }
+    onResponsePhaseChange?.("ready");
+  }, [onResponsePhaseChange, phase]);
+
+  const finishReview = async () => {
+    if (completionStartedRef.current) {
+      return;
+    }
+    completionStartedRef.current = true;
+    try {
+      await completePassiveReview.mutateAsync({
+        cardID: card.cardId,
+        deckId,
+      });
+      onProceed();
+    } catch {
+      completionStartedRef.current = false;
+      notifications.show({
+        title: "Could not continue",
+        message: "Try again.",
+        color: "red",
+      });
+    }
+  };
+
+  const finishFromHotkey = () => {
+    if (phase !== "recall" || completionStartedRef.current) {
+      return;
+    }
+    void finishReview();
+  };
+
+  useHotkeys([
+    [HOTKEYS.FAIL, finishFromHotkey],
+    [HOTKEYS.GRADE_EASY, finishFromHotkey],
+  ]);
+
+  return (
+    <Stack align="center" gap="md">
+      <CardImage imageURL={card.imageURL} definition={card.definition} />
+
+      <Text size="xl" fw={700} ta="center">
+        {card.term}
+      </Text>
+
+      {phase === "ready" && (
+        <Text ta="center" c="dimmed">
+          Repeat the phrase.
+        </Text>
+      )}
+
+      {phase === "processing" && (
+        <Loader size="sm" aria-label="Checking recording" />
+      )}
+
+      {phase === "retry" && (
+        <Stack align="center" gap="sm">
+          {transcription && (
+            <VisualDiff expected={card.term} actual={transcription} />
+          )}
+          <Text ta="center" c="dimmed">
+            Try again. ({HOTKEYS.RECORD.toUpperCase()})
+          </Text>
+        </Stack>
+      )}
+
+      {phase === "recall" && (
+        <Stack align="center" gap="md" w="100%" maw={400}>
+          <Text ta="center">{card.definition}</Text>
+          <Text ta="center" fw={500}>
+            Did you remember this?
+          </Text>
+          <Group grow w="100%">
+            <Button
+              onClick={finishReview}
+              disabled={completePassiveReview.isPending}
+              variant="outline"
+            >
+              NO ({HOTKEYS.FAIL.toUpperCase()})
+            </Button>
+            <Button
+              onClick={finishReview}
+              disabled={completePassiveReview.isPending}
+            >
+              YES ({HOTKEYS.GRADE_EASY.toUpperCase()})
+            </Button>
+          </Group>
+        </Stack>
+      )}
+    </Stack>
+  );
+}
+
 const resolveLastReviewMs = (lastReview: Quiz["lastReview"]): number => {
   if (!lastReview) {
     return 0;
@@ -2504,6 +2689,7 @@ const quizPhaseContent = (
   config: QuizConfig,
   card: Quiz,
   feedback: string,
+  userTranscription: string,
   quizResultId: number | null,
   handleGradeSelect: (grade: Grade) => Promise<void>,
   isLoading: boolean,
@@ -2530,6 +2716,7 @@ const quizPhaseContent = (
     ),
     success: (
       <GradingSuccess
+        userTranscription={userTranscription}
         quizData={quizData}
         scheduler={card.scheduler}
         onGradeSelect={handleGradeSelect}
@@ -2581,14 +2768,7 @@ const QuizCard: React.FC<QuizCardProps> = ({
     onSuccess: onProceed,
   });
 
-  const { phase, setPhase } = usePhaseManager<QuizPhase>(
-    "ready",
-    currentStepUuid,
-    () => {
-      setUserTranscription("");
-      setFeedback("");
-    },
-  );
+  const { phase, setPhase } = usePhaseManager<QuizPhase>("ready");
 
   React.useEffect(() => {
     onResponsePhaseChange?.(phase);
@@ -2633,6 +2813,7 @@ const QuizCard: React.FC<QuizCardProps> = ({
       }
     } catch (error) {
       console.error("Grading error:", error);
+      setUserTranscription("");
       setPhase("failure");
       setFeedback("Error occurred during grading.");
     }
@@ -2673,6 +2854,7 @@ const QuizCard: React.FC<QuizCardProps> = ({
     config,
     card,
     feedback,
+    userTranscription,
     quizResultId,
     handleGradeSelect,
     isLoading,
@@ -2751,6 +2933,7 @@ function SuccessView({
   definition,
   onContinue,
   successText,
+  userTranscription,
   quizResultId,
 }: {
   imageURL?: string;
@@ -2758,6 +2941,7 @@ function SuccessView({
   definition: string;
   onContinue: () => void;
   successText?: string;
+  userTranscription: string;
   quizResultId?: number | null;
 }) {
   return (
@@ -2765,6 +2949,7 @@ function SuccessView({
       <CardImage imageURL={imageURL} definition={definition} />
 
       {renderSuccessSection(successText, quizResultId, onContinue)}
+      <ResponseTranscription text={userTranscription} />
 
       <Button onClick={onContinue} variant="light" color="green">
         Continue ({HOTKEYS.CONTINUE})
@@ -2779,6 +2964,76 @@ function SuccessView({
   );
 }
 
+function renderRemedialResult(options: {
+  card: Quiz;
+  gradingResult: GradingResult | null;
+  onProceed: () => void;
+  phase: RemedialOutroPhase;
+}) {
+  const { card, gradingResult, onProceed, phase } = options;
+  if (phase === "failure") {
+    return (
+      <RemedialFailureView
+        card={card}
+        gradingResult={gradingResult}
+        onProceed={onProceed}
+      />
+    );
+  }
+  if (phase === "success") {
+    return (
+      <RemedialSuccessView
+        card={card}
+        gradingResult={gradingResult}
+        onProceed={onProceed}
+      />
+    );
+  }
+  return null;
+}
+
+type RemedialResultViewProps = {
+  card: Quiz;
+  gradingResult: GradingResult | null;
+  onProceed: () => void;
+};
+
+function RemedialFailureView({
+  card,
+  gradingResult,
+  onProceed,
+}: RemedialResultViewProps) {
+  return (
+    <FailureView
+      imageURL={card.imageURL}
+      term={card.term}
+      definition={card.definition}
+      userTranscription={gradingResult?.transcription ?? ""}
+      quizResultId={gradingResult?.quizResultId ?? null}
+      onContinue={onProceed}
+      failureText={gradingResult?.feedback ?? "Not quite right"}
+    />
+  );
+}
+
+function RemedialSuccessView({
+  card,
+  gradingResult,
+  onProceed,
+}: RemedialResultViewProps) {
+  return (
+    <SuccessView
+      imageURL={card.imageURL}
+      term={card.term}
+      definition={card.definition}
+      onContinue={onProceed}
+      successText={gradingResult?.feedback ?? ""}
+      userTranscription={gradingResult?.transcription ?? ""}
+      quizResultId={gradingResult?.quizResultId ?? null}
+    />
+  );
+}
+
 function RemedialOutro({
   card,
   onProceed,
@@ -2787,7 +3042,6 @@ function RemedialOutro({
   onProvideAudioHandler,
   onResponsePhaseChange,
 }: CardReviewProps) {
-  const { term, definition } = card;
   const [gradingResult, setGradingResult] =
     React.useState<GradingResult | null>(null);
   const userSettings = useUserSettings();
@@ -2800,11 +3054,7 @@ function RemedialOutro({
     onGradingResultCaptured,
   });
 
-  const { phase, setPhase } = usePhaseManager<RemedialOutroPhase>(
-    "ready",
-    currentStepUuid,
-    () => setGradingResult(null),
-  );
+  const { phase, setPhase } = usePhaseManager<RemedialOutroPhase>("ready");
 
   React.useEffect(() => {
     onResponsePhaseChange?.(phase);
@@ -2826,7 +3076,8 @@ function RemedialOutro({
       console.error("Grading error:", error);
       setPhase("failure");
       setGradingResult({
-        transcription: "Error occurred during processing.",
+        grade: "incorrect",
+        transcription: "",
         isCorrect: false,
         feedback: "An error occurred while processing your response.",
         quizResultId: null,
@@ -2857,43 +3108,26 @@ function RemedialOutro({
     onProceed();
   };
 
-  if (phase === "failure") {
-    return (
-      <FailureView
-        imageURL={card.imageURL}
-        term={term}
-        definition={definition}
-        userTranscription={gradingResult?.transcription || ""}
-        quizResultId={gradingResult?.quizResultId ?? null}
-        onContinue={onProceed}
-        failureText={gradingResult?.feedback || "Not quite right"}
-      />
-    );
-  }
-
-  if (phase === "success") {
-    return (
-      <SuccessView
-        imageURL={card.imageURL}
-        term={term}
-        definition={definition}
-        onContinue={onProceed}
-        successText={gradingResult?.feedback || ""}
-        quizResultId={gradingResult?.quizResultId ?? null}
-      />
-    );
+  const resultView = renderRemedialResult({
+    card,
+    gradingResult,
+    onProceed,
+    phase,
+  });
+  if (resultView) {
+    return resultView;
   }
 
   return (
     <Stack align="center" gap="md">
-      <CardImage imageURL={card.imageURL} definition={definition} />
+      <CardImage imageURL={card.imageURL} definition={card.definition} />
 
       <Text ta="center" c="orange" fw={500} size="sm">
         Remedial Review
       </Text>
 
       <Text size="xl" fw={700} ta="center">
-        How would you say "{definition}"?
+        How would you say "{card.definition}"?
       </Text>
 
       <Button
@@ -2919,7 +3153,7 @@ const UnknownCard: CardUI = ({ card }) => (
 
 const getRecordLabel = (recordDisabled: boolean, isRecording: boolean) => {
   if (recordDisabled) {
-    return "Recording disabled after success";
+    return "Recording unavailable";
   }
   if (isRecording) {
     return `Stop recording (${HOTKEYS.RECORD})`;
@@ -3116,12 +3350,14 @@ function ControlBarMenu({
         >
           Next card ({HOTKEYS.SKIP.toUpperCase()})
         </Menu.Item>
-        <Menu.Item
-          onClick={onFail}
-          leftSection={<IconLetterF size={16} />}
-        >
-          Fail card ({HOTKEYS.FAIL.toUpperCase()})
-        </Menu.Item>
+        {onFail && (
+          <Menu.Item
+            onClick={onFail}
+            leftSection={<IconLetterF size={16} />}
+          >
+            Fail card ({HOTKEYS.FAIL.toUpperCase()})
+          </Menu.Item>
+        )}
       </Menu.Dropdown>
     </Menu>
   );
@@ -3167,6 +3403,7 @@ const ControlBar: React.FC<ControlBarProps> = (props) => {
     onGiveUp(card.uuid);
   };
   const handleSkipClick = () => onSkip(card.uuid);
+  const onFail = getControlBarFailHandler(itemType, handleFailClick);
 
   return (
     <Stack gap="xs">
@@ -3187,7 +3424,7 @@ const ControlBar: React.FC<ControlBarProps> = (props) => {
             onEdit={openCardEditor}
             onArchive={onArchiveClick}
             onSkip={handleSkipClick}
-            onFail={handleFailClick}
+            onFail={onFail}
           />
         </Group>
 
@@ -3269,26 +3506,31 @@ const CardReview: React.FC<CardReviewWithRecordingProps> = (props) => {
   const userSettings = useUserSettings();
   const isQuizItem = isQuizItemType(itemType);
   const [responsePhase, setResponsePhase] =
-    React.useState<ResponsePhase | null>(null);
+    React.useState<ResponsePhase>("ready");
+  const recordingStartPendingRef = React.useRef(false);
   const isAudioPlaying = useAudioPlaybackState();
+  const recordingAvailable = isRecordingAvailable({
+    explicitlyDisabled: props.disableRecord === true,
+    isAudioPlaying,
+    isRecording,
+    responsePhase,
+  });
+  const recordDisabled = !recordingAvailable;
   const theme = useMantineTheme();
   const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints.sm})`);
 
   const openCardEditor = () =>
     window.open(`/cards/${card.cardId}`, "_blank");
 
-  React.useEffect(() => {
-    if (!isQuizItem) {
-      setResponsePhase(null);
-      return;
-    }
-    setResponsePhase("ready");
-  }, [currentStepUuid, isQuizItem]);
-
   const archiveCardMutation = trpc.archiveCard.useMutation();
   const gradeQuiz = trpc.gradeQuiz.useMutation({
     onSuccess: () => completeItem(currentStepUuid),
   });
+
+  const updateResponsePhase = React.useCallback(
+    (phase: ResponsePhase) => setResponsePhase(phase),
+    [],
+  );
 
   const handleArchive = async () => {
     try {
@@ -3301,23 +3543,33 @@ const CardReview: React.FC<CardReviewWithRecordingProps> = (props) => {
   };
 
   const handleRecordToggle = async () => {
-    if (props.disableRecord) {
-      return;
-    }
     if (!isRecording) {
-      await start().catch(() => {
-        notifications.show({
-          title: "Microphone error",
-          message:
-            "Microphone access failed. On iOS: enable Microphone for Safari or the PWA in Settings.",
-          color: "red",
-        });
+      const canStart = isRecordingAvailable({
+        explicitlyDisabled: props.disableRecord === true,
+        isAudioPlaying,
+        isRecording: false,
+        responsePhase,
       });
+      if (!canStart || recordingStartPendingRef.current) {
+        return;
+      }
+
+      recordingStartPendingRef.current = true;
+      await start()
+        .catch(() => {
+          notifications.show({
+            title: "Microphone error",
+            message:
+              "Microphone access failed. On iOS: enable Microphone for Safari or the PWA in Settings.",
+            color: "red",
+          });
+        })
+        .finally(() => {
+          recordingStartPendingRef.current = false;
+        });
       return;
     }
-    if (isQuizItem) {
-      setResponsePhase("processing");
-    }
+    updateResponsePhase("processing");
     const blob = await stop();
     if (userSettings && Math.random() < userSettings.playbackPercentage) {
       await playBlob(blob, userSettings.playbackSpeed);
@@ -3328,9 +3580,7 @@ const CardReview: React.FC<CardReviewWithRecordingProps> = (props) => {
   };
 
   const handleFail = async () => {
-    if (isQuizItem) {
-      setResponsePhase("processing");
-    }
+    updateResponsePhase("processing");
     await playTermThenDefinition(card, userSettings.playbackSpeed);
     await playTermThenDefinition(card, userSettings.playbackSpeed);
     if (isQuizItem) {
@@ -3368,20 +3618,28 @@ const CardReview: React.FC<CardReviewWithRecordingProps> = (props) => {
     },
   });
 
-  const hotkeys: [string, () => void][] = [
+  const hotkeys: HotkeyItem[] = [
     [HOTKEYS.PLAY, onPlayAudio],
     [HOTKEYS.EDIT, openCardEditor],
     [HOTKEYS.SKIP, () => onSkip(card.uuid)],
     [HOTKEYS.ARCHIVE, handleArchive],
-    [HOTKEYS.FAIL, handleFail],
-    [HOTKEYS.RECORD, handleRecordToggle],
-    [HOTKEYS.CONTINUE, () => completeItem(currentStepUuid)],
+    [
+      HOTKEYS.RECORD,
+      (event) =>
+        shouldHandleRecordingHotkey(event.repeat) && handleRecordToggle(),
+    ],
+    [HOTKEYS.FAIL, () => itemType !== "passive" && void handleFail()],
+    [
+      HOTKEYS.CONTINUE,
+      () => itemType !== "passive" && completeItem(currentStepUuid),
+    ],
   ];
 
   useHotkeys(hotkeys);
 
   const cardProps: CardReviewProps = {
     card,
+    deckId: props.deckId,
     itemType,
     onProceed,
     onSkip,
@@ -3391,7 +3649,7 @@ const CardReview: React.FC<CardReviewWithRecordingProps> = (props) => {
     onProvideAudioHandler: (handler) => {
       onAudioHandlerRef.current = handler;
     },
-    onResponsePhaseChange: isQuizItem ? setResponsePhase : undefined,
+    onResponsePhaseChange: updateResponsePhase,
   };
 
   return (
@@ -3439,8 +3697,8 @@ const CardReview: React.FC<CardReviewWithRecordingProps> = (props) => {
             progress={props.progress}
             cardsRemaining={props.cardsRemaining}
             onOpenAssistant={props.onOpenAssistant}
-            disableRecord={props.disableRecord}
-            onFail={handleFail}
+            disableRecord={recordDisabled}
+            onFail={itemType === "passive" ? undefined : handleFail}
           />
         </Paper>
       </Affix>
@@ -3778,7 +4036,7 @@ function AssistantMessageContent({
     if (proposal) {
       nodes.push(
         <AssistantEditCard
-          key={`msg-${messageIndex}-edit-${proposal.id}`}
+          key={`msg-${messageIndex}-edit-${proposal.id}-${proposal.term}-${proposal.definition}`}
           proposal={proposal}
           onSave={(updates) => onApplyEdit(proposal, updates)}
           onDismiss={() => onDismissEdit(proposal.id)}
@@ -3805,7 +4063,7 @@ function AssistantMessageContent({
   edits.slice(editIdx).forEach((proposal) => {
     nodes.push(
       <AssistantEditCard
-        key={`msg-${messageIndex}-edit-${proposal.id}`}
+        key={`msg-${messageIndex}-edit-${proposal.id}-${proposal.term}-${proposal.definition}`}
         proposal={proposal}
         onSave={(updates) => onApplyEdit(proposal, updates)}
         onDismiss={() => onDismissEdit(proposal.id)}
@@ -3989,11 +4247,6 @@ function AssistantEditCard({
 }: AssistantEditCardProps) {
   const [term, setTerm] = React.useState(proposal.term);
   const [definition, setDefinition] = React.useState(proposal.definition);
-
-  React.useEffect(() => {
-    setTerm(proposal.term);
-    setDefinition(proposal.definition);
-  }, [proposal.definition, proposal.term]);
 
   const hasOriginalTerm =
     proposal.originalTerm && proposal.originalTerm !== proposal.term;
@@ -4516,7 +4769,7 @@ function useAssistantChat({
     clearMessages,
     viewportRef,
     addSuggestion,
-    isAddingSuggestion: bulkCreate.isLoading,
+    isAddingSuggestion: bulkCreate.isPending,
     onApplyEdit: applyEditProposal,
     onDismissEdit: removeEditProposal,
     savingEditId,
@@ -4714,10 +4967,7 @@ function InnerReviewPage({ deckId, decks }: ReviewDeckPageProps) {
   } = useReview(deckId);
   const userSettings = useUserSettings();
   const card = currentItem ? state.cards[currentItem.cardUUID] : undefined;
-  const assistantCardContext = React.useMemo(
-    () => buildAssistantCardContext(card),
-    [card?.cardId, card?.definition, card?.term, card?.uuid],
-  );
+  const assistantCardContext = buildAssistantCardContext(card);
 
   const {
     handleGradingResultCaptured,
@@ -4780,7 +5030,9 @@ function InnerReviewPage({ deckId, decks }: ReviewDeckPageProps) {
       >
         <Box h="100%" mih={0}>
           <CardReview
+            key={currentItem.stepUuid}
             card={card}
+            deckId={deckId}
             itemType={currentItem.itemType}
             onSkip={handleSkipCard}
             onGiveUp={handleGiveUp}
@@ -4802,6 +5054,35 @@ function InnerReviewPage({ deckId, decks }: ReviewDeckPageProps) {
       {!layout.isDesktop && <ReviewAssistantPane {...assistantProps} />}
     </Container>
   );
+}
+
+async function getWritingFirstRedirect(options: {
+  dailyWritingGoal: number;
+  deckId: number;
+  userId: string;
+  writingFirst: boolean;
+}) {
+  if (!options.writingFirst) {
+    return null;
+  }
+  const now = new Date();
+  const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const writingProgress = await prismaClient.writingSubmission.aggregate({
+    _sum: { correctionCharacterCount: true },
+    where: {
+      userId: options.userId,
+      createdAt: { gte: last24Hours },
+    },
+  });
+
+  return resolveWritingPracticeRedirect({
+    writingFirst: options.writingFirst,
+    progress: writingProgress._sum.correctionCharacterCount ?? 0,
+    goal: options.dailyWritingGoal,
+    deckId: options.deckId,
+    buildReviewPath,
+    buildWritingPracticeUrl,
+  });
 }
 
 export const getServerSideProps: GetServerSideProps<
@@ -4844,37 +5125,19 @@ export const getServerSideProps: GetServerSideProps<
     return redirect("/review");
   }
 
-  if (userSettings.writingFirst) {
-    const now = new Date();
-    const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    const writingProgress = await prismaClient.writingSubmission.aggregate(
-      {
-        _sum: { correctionCharacterCount: true },
-        where: {
-          userId: user.id,
-          createdAt: { gte: last24Hours },
-        },
+  const writingRedirect = await getWritingFirstRedirect({
+    dailyWritingGoal: userSettings.dailyWritingGoal,
+    deckId,
+    userId: user.id,
+    writingFirst: userSettings.writingFirst,
+  });
+  if (writingRedirect) {
+    return {
+      redirect: {
+        destination: writingRedirect,
+        permanent: false,
       },
-    );
-
-    const progress = writingProgress._sum.correctionCharacterCount ?? 0;
-    const goal = userSettings.dailyWritingGoal ?? 100;
-    const writingRedirect = resolveWritingPracticeRedirect({
-      writingFirst: userSettings.writingFirst,
-      progress,
-      goal,
-      deckId,
-      buildReviewPath,
-      buildWritingPracticeUrl,
-    });
-    if (writingRedirect) {
-      return {
-        redirect: {
-          destination: writingRedirect,
-          permanent: false,
-        },
-      };
-    }
+    };
   }
 
   const decks = await prismaClient.deck.findMany({

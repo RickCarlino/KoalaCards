@@ -1,4 +1,4 @@
-import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
+import { Prisma } from "@/koala/generated/prisma/client";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { z } from "zod";
 import { directLanguageExchangeSessionDescriptionSchema } from "@/koala/language-exchange-direct";
@@ -69,7 +69,7 @@ export default async function handler(
     });
   } catch (error: unknown) {
     if (
-      error instanceof PrismaClientKnownRequestError &&
+      error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002"
     ) {
       res.status(409).json({

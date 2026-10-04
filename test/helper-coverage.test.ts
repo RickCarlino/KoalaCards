@@ -74,8 +74,9 @@ test("transcribe helpers accept unknown content length and omit empty prompts", 
     }),
     {
       file: "blob",
-      model: "gpt-4o-mini-transcribe",
+      model: "gpt-4o-transcribe",
       language: "ko",
+      response_format: "json",
     },
   );
 });

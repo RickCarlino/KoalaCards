@@ -1,8 +1,8 @@
 import { Rating, type Grade } from "ts-fsrs";
 import { prismaClient } from "../prisma-client.ts";
-import { Card } from "@prisma/client";
+import { Card } from "@/koala/generated/prisma/client";
 import { timeUntil } from "../time-until.ts";
-import { resolveDeckScheduler } from "../fsrs/scheduler.ts";
+import { resolveDeckScheduler } from "../fsrs/scheduler-server.ts";
 import {
   resolveReviewLogCoverage,
   serializeFsrsCard,

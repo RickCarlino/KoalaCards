@@ -17,6 +17,7 @@
 /.pnp
 /build
 /coverage
+/koala/generated/prisma/
 /node_modules
 /out/
 data/
@@ -34,3 +35,4 @@ yarn-debug.log*
 yarn-error.log*
 .vscode
 .codex
+.playwright-cli/

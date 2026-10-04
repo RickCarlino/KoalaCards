@@ -1,7 +1,7 @@
 import { notifications } from "@mantine/notifications";
 import React, { useMemo, useState } from "react";
 import { trpc } from "@/koala/trpc-config";
-import type { ReaderArticleSummary, ReaderReadFilter } from "./types";
+import type { ReaderArticleSummary } from "./types";
 
 function mutationErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message.trim()) {
@@ -11,26 +11,10 @@ function mutationErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
-function articleMatchesReadFilter(
-  article: ReaderArticleSummary,
-  readFilter: ReaderReadFilter,
-): boolean {
-  if (readFilter === "all") {
-    return true;
-  }
-
-  if (readFilter === "read") {
-    return article.readAt !== null;
-  }
-
-  return article.readAt === null;
-}
-
 export function useReaderDashboardControls() {
   const [articleUrl, setArticleUrl] = useState("");
   const [rawTitle, setRawTitle] = useState("");
   const [rawText, setRawText] = useState("");
-  const [readFilter, setReadFilter] = useState<ReaderReadFilter>("unread");
   const [deletingPublicId, setDeletingPublicId] = useState<string | null>(
     null,
   );
@@ -42,13 +26,15 @@ export function useReaderDashboardControls() {
     { limit: 200 },
     {
       refetchOnWindowFocus: false,
-      refetchInterval: (data) => {
-        const hasActiveIngest = (data?.articles ?? []).some((article) => {
-          return (
-            article.ingestStatus === "pending" ||
-            article.ingestStatus === "in_progress"
-          );
-        });
+      refetchInterval: (query) => {
+        const hasActiveIngest = (query.state.data?.articles ?? []).some(
+          (article) => {
+            return (
+              article.ingestStatus === "pending" ||
+              article.ingestStatus === "in_progress"
+            );
+          },
+        );
 
         if (hasActiveIngest) {
           return 8000;
@@ -72,27 +58,13 @@ export function useReaderDashboardControls() {
 
     return mutationErrorMessage(
       listQuery.error,
-      "Couldn't load your Reader library.",
+      "Couldn't load your documents.",
     );
   }, [listQuery.error, listQuery.isError]);
 
   const allArticles = useMemo<ReaderArticleSummary[]>(() => {
     return listQuery.data?.articles ?? [];
   }, [listQuery.data]);
-
-  const articles = useMemo(() => {
-    return allArticles.filter((article) => {
-      return articleMatchesReadFilter(article, readFilter);
-    });
-  }, [allArticles, readFilter]);
-
-  const readArticlesCount = useMemo(() => {
-    return allArticles.filter((article) => article.readAt !== null).length;
-  }, [allArticles]);
-
-  const unreadArticlesCount = useMemo(() => {
-    return allArticles.length - readArticlesCount;
-  }, [allArticles.length, readArticlesCount]);
 
   const handleSaveUrlSubmit = async (
     event: React.FormEvent<HTMLFormElement>,
@@ -150,7 +122,7 @@ export function useReaderDashboardControls() {
       setRawText("");
       notifications.show({
         title: "Added to Reader",
-        message: "Text saved to your library.",
+        message: "Text saved to Reading.",
         color: "green",
       });
       listQuery.refetch();
@@ -166,9 +138,7 @@ export function useReaderDashboardControls() {
   const handleDeleteArticle = async (
     article: ReaderArticleSummary,
   ): Promise<void> => {
-    const shouldDelete = window.confirm(
-      `Delete "${article.title}" from your library?`,
-    );
+    const shouldDelete = window.confirm(`Delete "${article.title}"?`);
 
     if (!shouldDelete) {
       return;
@@ -180,7 +150,7 @@ export function useReaderDashboardControls() {
       await deleteArticle.mutateAsync({ publicId: article.publicId });
       notifications.show({
         title: "Deleted",
-        message: "Article removed from your library.",
+        message: "Article removed.",
         color: "green",
       });
       listQuery.refetch();
@@ -217,7 +187,9 @@ export function useReaderDashboardControls() {
       });
       notifications.show({
         title: markAsRead ? "Marked as read" : "Marked as unread",
-        message: markAsRead ? "Moved to Read." : "Moved back to Unread.",
+        message: markAsRead
+          ? "Article is now read."
+          : "Article is now unread.",
         color: "green",
       });
       listQuery.refetch();
@@ -245,22 +217,17 @@ export function useReaderDashboardControls() {
     articleUrl,
     rawTitle,
     rawText,
-    readFilter,
     deletingPublicId,
     updatingReadPublicId,
-    isSavingUrl: saveUrlArticle.isLoading,
-    isSavingRaw: saveRawTextArticle.isLoading,
-    articles,
-    allArticlesCount: allArticles.length,
-    readArticlesCount,
-    unreadArticlesCount,
+    isSavingUrl: saveUrlArticle.isPending,
+    isSavingRaw: saveRawTextArticle.isPending,
+    allArticles,
     isArticlesLoading: listQuery.isLoading,
     isArticlesRefreshing: listQuery.isFetching,
     listErrorMessage,
     onArticleUrlChange: setArticleUrl,
     onRawTitleChange: setRawTitle,
     onRawTextChange: setRawText,
-    onReadFilterChange: setReadFilter,
     onDeleteArticle: handleDeleteArticle,
     onToggleReadState: handleToggleReadState,
     onSaveUrlSubmit: handleSaveUrlSubmit,
