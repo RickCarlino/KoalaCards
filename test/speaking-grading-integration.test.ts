@@ -101,7 +101,7 @@ function stubProviders(
       String(url),
       "https://api.openai.com/v1/chat/completions",
     );
-    assert.equal(request.model, "gpt-6-astra");
+    assert.equal(request.model, "gpt-6.1-sol");
     assert.equal(request.response_format.type, "json_schema");
     calls.push("openai");
     return Response.json({

@@ -43,7 +43,7 @@ const textModelProfiles: Record<TextModel, TextModelProfile> = {
   },
   interactive: TERRA_LOW_PROFILE,
   grading: {
-    model: "gpt-6-astra",
+    model: "gpt-6.1-sol",
     reasoningEffort: "medium",
     verbosity: "low",
   },
