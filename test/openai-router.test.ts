@@ -33,6 +33,18 @@ test("OpenAI text router preserves quality and latency roles", () => {
   });
 });
 
+test("speaking grading uses GPT-6 Astra without changing other model roles", () => {
+  assert.deepEqual(getOpenAITextProfile("grading"), {
+    model: "gpt-6-astra",
+    reasoningEffort: "medium",
+    verbosity: "low",
+  });
+  assert.equal(
+    buildOpenAITextRequest({ model: "grading", messages }).model,
+    "gpt-6-astra",
+  );
+});
+
 test("OpenAI text requests include the current required model parameters", () => {
   assert.deepEqual(
     buildOpenAITextRequest({

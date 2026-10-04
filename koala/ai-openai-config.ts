@@ -42,6 +42,11 @@ const textModelProfiles: Record<TextModel, TextModelProfile> = {
     reasoningEffort: "medium",
   },
   interactive: TERRA_LOW_PROFILE,
+  grading: {
+    model: "gpt-6-astra",
+    reasoningEffort: "medium",
+    verbosity: "low",
+  },
 };
 
 const imageModels: Record<ImageModelIdentifier, string> = {

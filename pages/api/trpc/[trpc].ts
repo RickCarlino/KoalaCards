@@ -4,6 +4,10 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]";
 import { prismaClient } from "@/koala/prisma-client";
 
+export const config = {
+  api: { bodyParser: { sizeLimit: "10mb" } },
+};
+
 export default trpcNext.createNextApiHandler({
   router: appRouter,
   batching: {

@@ -1,3 +1,4 @@
+import type { SpeakingGrade } from "../../koala/quiz-evaluators/grading-policy";
 import {
   ActionIcon,
   Affix,
@@ -122,6 +123,7 @@ type Quiz = QuizList[number] & UUID;
 type QuizMap = Record<string, Quiz>;
 
 type GradingResult = {
+  grade: SpeakingGrade;
   transcription: string;
   isCorrect: boolean;
   feedback: string;
@@ -336,6 +338,7 @@ interface FailureViewProps {
 }
 
 interface GradingSuccessProps {
+  userTranscription: string;
   quizData: {
     difficulty: number;
     stability: number;
@@ -1486,13 +1489,14 @@ function useVoiceGrading(options: UseVoiceGradingOptions) {
   const gradeAudio = async (blob: Blob): Promise<GradingResult> => {
     const transcription = await transcribeBlob(blob, langCode, targetText);
 
-    const { isCorrect, feedback, quizResultId } =
+    const { grade, isCorrect, feedback, quizResultId } =
       await gradeSpeakingQuiz.mutateAsync({
         userInput: transcription,
         cardID: cardId,
       });
 
     const result = {
+      grade,
       transcription,
       isCorrect,
       feedback,
@@ -2047,7 +2051,7 @@ function useReviewHandlers({
     async (cardUUID: string, result: GradingResult) => {
       const cardForResult = state.cards[cardUUID];
       if (cardForResult) {
-        const outcome = result.isCorrect ? "correct" : "incorrect";
+        const outcome = result.grade.replaceAll("_", " ");
         const userSaid = result.transcription
           ? `User said: ${result.transcription}.`
           : "";
@@ -2262,6 +2266,17 @@ function FeedbackVote({ resultId, onClick }: FeedbackVoteProps) {
   );
 }
 
+function ResponseTranscription({ text }: { text: string }) {
+  if (!text.trim()) {
+    return null;
+  }
+  return (
+    <Text ta="center" size="sm" c="dimmed">
+      You said: "{text}"
+    </Text>
+  );
+}
+
 function FailureView({
   imageURL,
   term,
@@ -2280,6 +2295,8 @@ function FailureView({
         {failureText}
       </Text>
 
+      <ResponseTranscription text={userTranscription} />
+
       <Text size="xl" fw={700} ta="center">
         {term}
       </Text>
@@ -2289,10 +2306,6 @@ function FailureView({
       <Button onClick={onContinue} variant="light" color="blue">
         Continue ({HOTKEYS.CONTINUE})
       </Button>
-
-      <Text ta="center" size="sm" c="dimmed">
-        You said: "{userTranscription}"
-      </Text>
 
       {renderFeedbackSection(feedback, quizResultId, onContinue)}
 
@@ -2324,6 +2337,7 @@ function renderFeedbackSection(
 }
 
 function GradingSuccess({
+  userTranscription,
   quizData,
   scheduler,
   onGradeSelect,
@@ -2345,6 +2359,7 @@ function GradingSuccess({
   return (
     <Stack gap="md" align="center">
       {renderSuccessHeader(feedback, quizResultId)}
+      <ResponseTranscription text={userTranscription} />
       <Text ta="center" size="sm" c="dimmed" mt="md">
         How difficult was this for you?
       </Text>
@@ -2674,6 +2689,7 @@ const quizPhaseContent = (
   config: QuizConfig,
   card: Quiz,
   feedback: string,
+  userTranscription: string,
   quizResultId: number | null,
   handleGradeSelect: (grade: Grade) => Promise<void>,
   isLoading: boolean,
@@ -2700,6 +2716,7 @@ const quizPhaseContent = (
     ),
     success: (
       <GradingSuccess
+        userTranscription={userTranscription}
         quizData={quizData}
         scheduler={card.scheduler}
         onGradeSelect={handleGradeSelect}
@@ -2796,6 +2813,7 @@ const QuizCard: React.FC<QuizCardProps> = ({
       }
     } catch (error) {
       console.error("Grading error:", error);
+      setUserTranscription("");
       setPhase("failure");
       setFeedback("Error occurred during grading.");
     }
@@ -2836,6 +2854,7 @@ const QuizCard: React.FC<QuizCardProps> = ({
     config,
     card,
     feedback,
+    userTranscription,
     quizResultId,
     handleGradeSelect,
     isLoading,
@@ -2914,6 +2933,7 @@ function SuccessView({
   definition,
   onContinue,
   successText,
+  userTranscription,
   quizResultId,
 }: {
   imageURL?: string;
@@ -2921,6 +2941,7 @@ function SuccessView({
   definition: string;
   onContinue: () => void;
   successText?: string;
+  userTranscription: string;
   quizResultId?: number | null;
 }) {
   return (
@@ -2928,6 +2949,7 @@ function SuccessView({
       <CardImage imageURL={imageURL} definition={definition} />
 
       {renderSuccessSection(successText, quizResultId, onContinue)}
+      <ResponseTranscription text={userTranscription} />
 
       <Button onClick={onContinue} variant="light" color="green">
         Continue ({HOTKEYS.CONTINUE})
@@ -3006,6 +3028,7 @@ function RemedialSuccessView({
       definition={card.definition}
       onContinue={onProceed}
       successText={gradingResult?.feedback ?? ""}
+      userTranscription={gradingResult?.transcription ?? ""}
       quizResultId={gradingResult?.quizResultId ?? null}
     />
   );
@@ -3053,7 +3076,8 @@ function RemedialOutro({
       console.error("Grading error:", error);
       setPhase("failure");
       setGradingResult({
-        transcription: "Error occurred during processing.",
+        grade: "incorrect",
+        transcription: "",
         isCorrect: false,
         feedback: "An error occurred while processing your response.",
         quizResultId: null,

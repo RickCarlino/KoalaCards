@@ -285,6 +285,10 @@ model QuizResult {
   acceptableTerm String
   userInput      String
   isAcceptable   Boolean  @default(false)
+  grade          String?
+  gradingSource  String?
+  jevGrade       String?
+  jevConfidence  Float?
   reason         String
   eventType      String   @default("speaking-judgement")
   reviewedAt     DateTime?
