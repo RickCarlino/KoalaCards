@@ -111,7 +111,7 @@ export async function evaluateSpeakingResponse(
     ...evaluation,
     feedback:
       evaluation.grade === "partially_correct"
-        ? `${evaluation.feedback} (very close)`
+        ? `${evaluation.feedback} (slightly off)`
         : evaluation.feedback,
     isCorrect: evaluation.grade !== "incorrect",
     gradingSource: trusted ? "jev" : "openai",

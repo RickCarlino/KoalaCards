@@ -180,7 +180,7 @@ test("JEV partial reaches the actual OpenAI wrapper and final partial counts as 
   assert.deepEqual(calls, ["jev", "openai"]);
   assert.equal(result.grade, "partially_correct");
   assert.equal(result.isCorrect, true);
-  assert.equal(result.feedback, "Use 물을 부은 후. (very close)");
+  assert.equal(result.feedback, "Use 물을 부은 후. (slightly off)");
   const saved = await prismaClient.quizResult.findUniqueOrThrow({
     where: { id: result.quizResultId ?? -1 },
   });

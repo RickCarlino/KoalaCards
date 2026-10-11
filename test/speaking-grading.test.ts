@@ -52,7 +52,10 @@ test("speaking cutoff is 85 percent and only confident correct/give-up skip GPT"
       } else {
         assert.equal(result.grade, "partially_correct");
         assert.equal(result.isCorrect, true);
-        assert.equal(result.feedback, "A small correction. (very close)");
+        assert.equal(
+          result.feedback,
+          "A small correction. (slightly off)",
+        );
       }
     }
   }
