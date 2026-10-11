@@ -1,3 +1,7 @@
+import {
+  articleHighlightActivitySelect,
+  bookHighlightActivitySelect,
+} from "@/koala/reader/activity-select";
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { prismaClient } from "@/koala/prisma-client";
 import { combineReaderHighlightActivity } from "@/koala/reader/activity";
@@ -116,20 +120,7 @@ export const getServerSideProps: GetServerSideProps<
       },
       orderBy: { createdAt: "desc" },
       take: 40,
-      select: {
-        id: true,
-        term: true,
-        selectedText: true,
-        selectedOccurrenceIndex: true,
-        occurrencesJson: true,
-        createdAt: true,
-        importedAt: true,
-        article: {
-          select: {
-            title: true,
-          },
-        },
-      },
+      select: articleHighlightActivitySelect,
     }),
     prismaClient.readerBookAnnotation.findMany({
       where: {
@@ -138,20 +129,7 @@ export const getServerSideProps: GetServerSideProps<
       },
       orderBy: { createdAt: "desc" },
       take: 40,
-      select: {
-        id: true,
-        quote: true,
-        selectedOccurrenceIndex: true,
-        occurrencesJson: true,
-        chapterTitle: true,
-        createdAt: true,
-        importedAt: true,
-        book: {
-          select: {
-            title: true,
-          },
-        },
-      },
+      select: bookHighlightActivitySelect,
     }),
   ]);
 

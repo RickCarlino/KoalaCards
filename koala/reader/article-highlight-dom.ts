@@ -1,8 +1,24 @@
+import type { ReaderHighlight } from "./contracts";
+
 export type ArticleHighlightDomRange = {
   highlightId: number;
   startOffset: number;
   endOffset: number;
 };
+
+export function findClickedReaderHighlight(
+  event: MouseEvent,
+  highlights: ReaderHighlight[],
+): ReaderHighlight | undefined {
+  const target =
+    event.target instanceof Element
+      ? event.target.closest<HTMLElement>(
+          "mark[data-reader-highlight='saved'][data-highlight-id]",
+        )
+      : null;
+  const highlightId = Number(target?.dataset.highlightId);
+  return highlights.find((highlight) => highlight.id === highlightId);
+}
 
 type TextPosition = {
   node: Text;

@@ -9,6 +9,7 @@ import {
 } from "../koala/reader/article.ts";
 import {
   buildOccurrenceContexts,
+  countOverlappingOccurrences,
   findOccurrenceOffsets,
   selectOccurrenceIndex,
   takePromptOccurrences,
@@ -194,6 +195,20 @@ test("selectOccurrenceIndex falls back to a valid hint when scores tie at zero",
     }),
     1,
   );
+});
+
+test("selection occurrence counts use exact overlapping matches", () => {
+  assert.equal(countOverlappingOccurrences("aaaa", "aa"), 3);
+  assert.equal(countOverlappingOccurrences("말 말말", "말"), 3);
+  assert.equal(countOverlappingOccurrences("alpha beta", "alpha beta"), 1);
+  assert.equal(
+    countOverlappingOccurrences("alpha \n beta", "alpha beta"),
+    0,
+  );
+  assert.equal(countOverlappingOccurrences("word", " word "), 0);
+  assert.equal(countOverlappingOccurrences("abc", ""), 0);
+  assert.equal(countOverlappingOccurrences("", "word"), 0);
+  assert.equal(countOverlappingOccurrences("abc", "missing"), 0);
 });
 
 test("highlight occurrence helpers find exact, overlapping, and flexible matches", () => {

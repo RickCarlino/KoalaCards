@@ -14,6 +14,7 @@ import remarkGfm from "remark-gfm";
 import {
   applyRenderedArticleHighlights,
   clearRenderedArticleHighlights,
+  findClickedReaderHighlight,
 } from "../article-highlight-dom";
 import { scrollToArticleHighlight } from "../article-location";
 import {
@@ -30,10 +31,8 @@ import type {
   ReaderPreferences,
   ReaderSelectionDraft,
 } from "../contracts";
-import {
-  DEFAULT_READER_PREFERENCES,
-  resolveReaderPreferences,
-} from "../preferences";
+import { countOverlappingOccurrences } from "../highlight-context";
+import { useReaderPreferences } from "./use-reader-preferences";
 import { trpc } from "@/koala/trpc-config";
 import { ReaderPanel } from "./layout";
 import { ReaderToolsRail } from "./reader-tools-rail";
@@ -116,24 +115,6 @@ function contentLikelyHasCodeBlocks(value: string): boolean {
     value.includes("~~~") ||
     /\n {4}\S/.test(value)
   );
-}
-
-function countOverlappingOccurrences(
-  text: string,
-  phrase: string,
-): number {
-  let count = 0;
-  let cursor = 0;
-  while (phrase && cursor <= text.length - phrase.length) {
-    const next = text.indexOf(phrase, cursor);
-    if (next < 0) {
-      break;
-    }
-    count += 1;
-    cursor = next + 1;
-  }
-
-  return count;
 }
 
 function nodeInsideContainer(container: HTMLElement, node: Node): boolean {
@@ -340,21 +321,14 @@ export function ReaderArticlePage({
   article: ReaderArticlePageData;
 }) {
   const articleRef = useRef<HTMLElement>(null);
-  const preferencesTimeoutRef = useRef<ReturnType<
-    typeof setTimeout
-  > | null>(null);
-  const preferencesMountedRef = useRef(false);
-  const [preferences, setPreferences] = useState(() => {
-    return resolveReaderPreferences(
-      article.initialPreferences ?? DEFAULT_READER_PREFERENCES,
-    );
-  });
+  const [preferences, setPreferences] = useReaderPreferences(
+    article.initialPreferences,
+    article.viewerIsOwner,
+  );
   const [codeLineMode, setCodeLineMode] = useState<"scroll" | "wrap">(
     "scroll",
   );
   const [readAt, setReadAt] = useState(article.readAt);
-  const updatePreferences =
-    trpc.updateReaderPreferencesRoute.useMutation();
   const updateReadState =
     trpc.setReaderArticleReadStateRoute.useMutation();
   const navigateToHighlight = useCallback((highlight: ReaderHighlight) => {
@@ -406,13 +380,7 @@ export function ReaderArticlePage({
   const renderedHighlights = useMemo<
     SavedArticleHighlightForRender[]
   >(() => {
-    const saved = controller.highlights.map((highlight) => ({
-      id: highlight.id,
-      selectedText: highlight.selectedText,
-      selectedOccurrenceIndex: highlight.selectedOccurrenceIndex,
-      contextBefore: highlight.contextBefore,
-      contextAfter: highlight.contextAfter,
-    }));
+    const saved = controller.highlights;
     const optimistic = controller.optimisticHighlight;
     if (!optimistic) {
       return saved;
@@ -449,15 +417,9 @@ export function ReaderArticlePage({
       return;
     }
     const handleHighlightClick = (event: MouseEvent) => {
-      const target =
-        event.target instanceof Element
-          ? event.target.closest<HTMLElement>(
-              "mark[data-reader-highlight='saved'][data-highlight-id]",
-            )
-          : null;
-      const highlightId = Number(target?.dataset.highlightId);
-      const highlight = controller.highlights.find(
-        (item) => item.id === highlightId,
+      const highlight = findClickedReaderHighlight(
+        event,
+        controller.highlights,
       );
       if (!highlight) {
         return;
@@ -473,28 +435,6 @@ export function ReaderArticlePage({
       element.removeEventListener("click", handleHighlightClick);
     };
   }, [controller.activateHighlight, controller.highlights]);
-
-  useEffect(() => {
-    if (!article.viewerIsOwner) {
-      return;
-    }
-    if (!preferencesMountedRef.current) {
-      preferencesMountedRef.current = true;
-      return;
-    }
-    if (preferencesTimeoutRef.current) {
-      clearTimeout(preferencesTimeoutRef.current);
-    }
-    preferencesTimeoutRef.current = setTimeout(() => {
-      updatePreferences.mutate(preferences);
-      preferencesTimeoutRef.current = null;
-    }, 500);
-    return () => {
-      if (preferencesTimeoutRef.current) {
-        clearTimeout(preferencesTimeoutRef.current);
-      }
-    };
-  }, [article.viewerIsOwner, preferences]);
 
   const handleToggleRead = async () => {
     const nextRead = readAt === null;

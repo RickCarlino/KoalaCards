@@ -248,6 +248,21 @@ test("reader DTO mappers preserve format-specific locations", () => {
     occurrenceIndex: 1,
   });
   assert.equal(article.contextBefore, "앞");
+  assert.equal(article.contextAfter, "뒤");
+  assert.equal(article.selectedText, "말");
+  assert.equal(article.selectedOccurrenceIndex, 1);
+  assert.equal(article.occurrenceCount, 2);
+  assert.equal(article.status, "ready");
+  assert.equal(article.term, "말");
+  assert.equal(article.definition, "speech");
+  assert.equal(article.generalMeaning, "speech");
+  assert.equal(article.meaningInContext, "words");
+  assert.equal(article.errorMessage, "");
+  assert.equal(article.importedCardId, null);
+  assert.equal(article.importedAt, null);
+  assert.equal(article.createdAt, createdAt);
+  assert.equal(article.updatedAt, createdAt);
+  assert.equal("occurrencesJson" in article, false);
 
   const book = mapBookReaderHighlight({
     id: 5,
@@ -271,6 +286,12 @@ test("reader DTO mappers preserve format-specific locations", () => {
     updatedAt: createdAt,
   });
   assert.equal(book.location.kind, "book");
+  assert.equal(book.selectedText, "문장");
+  assert.equal(book.status, "error");
+  assert.equal(book.errorMessage, "failed");
+  assert.equal(book.createdAt, createdAt);
+  assert.equal(book.updatedAt, createdAt);
+  assert.equal("locatorJson" in book, false);
   assert.deepEqual(book.location, {
     kind: "book",
     locator: { href: "one.xhtml", totalProgression: 0.25 },

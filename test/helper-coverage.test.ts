@@ -5,6 +5,7 @@ import {
   hasValidAudioContentLength,
 } from "../koala/api/transcribe-helpers.ts";
 import { parseCreatePageRoute } from "../koala/create-page-query.ts";
+import { formatCountdown } from "../koala/format-countdown.ts";
 import {
   resolveGuestCallCompletion,
   resolveGuestCallProgressStatus,
@@ -16,6 +17,22 @@ import {
   clampRequestedRetention,
   resolveRequestedRetention,
 } from "../koala/settings/requested-retention.ts";
+
+test("countdowns round up, clamp at zero, and pad seconds after a minute", () => {
+  const cases = [
+    [-2, "0s"],
+    [0, "0s"],
+    [0.1, "1s"],
+    [59, "59s"],
+    [59.1, "1:00"],
+    [60, "1:00"],
+    [61, "1:01"],
+    [125, "2:05"],
+  ] as const;
+  for (const [seconds, expected] of cases) {
+    assert.equal(formatCountdown(seconds), expected);
+  }
+});
 
 test("requested retention clamps values and defaults invalid input", () => {
   assert.equal(

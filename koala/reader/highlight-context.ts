@@ -71,6 +71,13 @@ function findOverlappingSubstringOffsets(
   return offsets;
 }
 
+export function countOverlappingOccurrences(
+  text: string,
+  phrase: string,
+): number {
+  return findOverlappingSubstringOffsets(text, phrase).length;
+}
+
 function findWhitespaceFlexibleOffsets(
   text: string,
   phrase: string,

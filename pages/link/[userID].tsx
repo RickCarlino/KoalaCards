@@ -1,3 +1,7 @@
+import {
+  articleHighlightActivitySelect,
+  bookHighlightActivitySelect,
+} from "@/koala/reader/activity-select";
 import React from "react";
 import type {
   GetServerSidePropsContext,
@@ -332,38 +336,13 @@ export async function getServerSideProps(
       where: { userId },
       orderBy: { createdAt: "desc" },
       take: 10,
-      select: {
-        id: true,
-        selectedText: true,
-        selectedOccurrenceIndex: true,
-        occurrencesJson: true,
-        createdAt: true,
-        importedAt: true,
-        article: {
-          select: {
-            title: true,
-          },
-        },
-      },
+      select: articleHighlightActivitySelect,
     }),
     prismaClient.readerBookAnnotation.findMany({
       where: { userId },
       orderBy: { createdAt: "desc" },
       take: 10,
-      select: {
-        id: true,
-        quote: true,
-        selectedOccurrenceIndex: true,
-        occurrencesJson: true,
-        chapterTitle: true,
-        createdAt: true,
-        importedAt: true,
-        book: {
-          select: {
-            title: true,
-          },
-        },
-      },
+      select: bookHighlightActivitySelect,
     }),
   ]);
 

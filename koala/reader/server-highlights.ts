@@ -95,16 +95,9 @@ function parseArticleContext(
   };
 }
 
-export function mapArticleReaderHighlight(
-  highlight: ArticleReaderHighlightRecord,
-): ReaderHighlight {
-  const context = parseArticleContext(
-    highlight.occurrencesJson,
-    highlight.selectedOccurrenceIndex,
-  );
+function mapSharedHighlightFields(highlight: ReaderHighlightRecordBase) {
   return {
     id: highlight.id,
-    selectedText: highlight.selectedText,
     selectedOccurrenceIndex: highlight.selectedOccurrenceIndex,
     occurrenceCount: highlight.occurrenceCount,
     status: mapHighlightStatus(highlight.status),
@@ -113,12 +106,25 @@ export function mapArticleReaderHighlight(
     generalMeaning: highlight.generalMeaning,
     meaningInContext: highlight.meaningInContext,
     errorMessage: highlight.errorMessage,
-    contextBefore: context.before,
-    contextAfter: context.after,
     importedCardId: highlight.importedCardId,
     importedAt: highlight.importedAt,
     createdAt: highlight.createdAt,
     updatedAt: highlight.updatedAt,
+  };
+}
+
+export function mapArticleReaderHighlight(
+  highlight: ArticleReaderHighlightRecord,
+): ReaderHighlight {
+  const context = parseArticleContext(
+    highlight.occurrencesJson,
+    highlight.selectedOccurrenceIndex,
+  );
+  return {
+    ...mapSharedHighlightFields(highlight),
+    selectedText: highlight.selectedText,
+    contextBefore: context.before,
+    contextAfter: context.after,
     location: {
       kind: "article",
       occurrenceIndex: highlight.selectedOccurrenceIndex,
@@ -133,22 +139,10 @@ export function mapBookReaderHighlight(
     highlight.locatorJson,
   );
   return {
-    id: highlight.id,
+    ...mapSharedHighlightFields(highlight),
     selectedText: highlight.quote,
-    selectedOccurrenceIndex: highlight.selectedOccurrenceIndex,
-    occurrenceCount: highlight.occurrenceCount,
-    status: mapHighlightStatus(highlight.status),
-    term: highlight.term,
-    definition: highlight.definition,
-    generalMeaning: highlight.generalMeaning,
-    meaningInContext: highlight.meaningInContext,
-    errorMessage: highlight.errorMessage,
     contextBefore: highlight.contextBefore,
     contextAfter: highlight.contextAfter,
-    importedCardId: highlight.importedCardId,
-    importedAt: highlight.importedAt,
-    createdAt: highlight.createdAt,
-    updatedAt: highlight.updatedAt,
     location: {
       kind: "book",
       locator: parsedLocator.success ? parsedLocator.data : { href: "#" },

@@ -1,3 +1,4 @@
+import { formatCountdown } from "@/koala/format-countdown";
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { VisualDiff } from "@/koala/review/lesson-steps/visual-diff";
 import { LangCode } from "@/koala/shared-types";
@@ -273,16 +274,6 @@ const getRecordingTextColor = (isRecording: boolean) => {
     return "red.7";
   }
   return "pink.7";
-};
-
-const formatCountdown = (seconds: number) => {
-  const clamped = Math.max(0, Math.ceil(seconds));
-  const minutes = Math.floor(clamped / 60);
-  const remainder = clamped % 60;
-  if (minutes > 0) {
-    return `${minutes}:${remainder.toString().padStart(2, "0")}`;
-  }
-  return `${clamped}s`;
 };
 
 const getRecordingProgressPercent = (remainingSeconds: number) => {

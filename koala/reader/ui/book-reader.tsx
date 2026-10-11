@@ -22,6 +22,7 @@ import React, {
 import {
   applyRenderedArticleHighlights,
   clearRenderedArticleHighlights,
+  findClickedReaderHighlight,
 } from "../article-highlight-dom";
 import {
   buildSavedArticleHighlightRanges,
@@ -61,10 +62,8 @@ import {
 } from "../epub/parser";
 import { canRelinkReaderBook } from "../epub/relink";
 import type { EpubNavigationItem, EpubSpineItem } from "../epub/types";
-import {
-  DEFAULT_READER_PREFERENCES,
-  resolveReaderPreferences,
-} from "../preferences";
+import { countOverlappingOccurrences } from "../highlight-context";
+import { useReaderPreferences } from "./use-reader-preferences";
 import { trpc } from "@/koala/trpc-config";
 import { ReaderPanel } from "./layout";
 import { ReaderToolsRail } from "./reader-tools-rail";
@@ -163,24 +162,6 @@ function textOffsetBeforeRange(
   preceding.selectNodeContents(container);
   preceding.setEnd(range.startContainer, range.startOffset);
   return preceding.toString().length;
-}
-
-function countOverlappingOccurrences(
-  text: string,
-  phrase: string,
-): number {
-  let count = 0;
-  let cursor = 0;
-  while (phrase && cursor <= text.length - phrase.length) {
-    const next = text.indexOf(phrase, cursor);
-    if (next < 0) {
-      break;
-    }
-    count += 1;
-    cursor = next + 1;
-  }
-
-  return count;
 }
 
 function activeBookSelection(iframe: HTMLIFrameElement): {
@@ -572,10 +553,6 @@ export function ReaderBookPage({
   const progressTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
-  const preferencesTimeoutRef = useRef<ReturnType<
-    typeof setTimeout
-  > | null>(null);
-  const preferencesMountedRef = useRef(false);
   const pendingLocatorRef = useRef<ReaderBookLocator | null>(null);
   const [loadedFrameDocument, setLoadedFrameDocument] =
     useState<Document | null>(null);
@@ -587,11 +564,8 @@ export function ReaderBookPage({
   const [sectionIndex, setSectionIndex] = useState(0);
   const [renderedSection, setRenderedSection] =
     useState<RenderedSection | null>(null);
-  const [preferences, setPreferences] = useState(() => {
-    return resolveReaderPreferences(
-      initialPreferences ?? DEFAULT_READER_PREFERENCES,
-    );
-  });
+  const [preferences, setPreferences] =
+    useReaderPreferences(initialPreferences);
   const [isRelinking, setIsRelinking] = useState(false);
   const bookQuery = trpc.getReaderBookRoute.useQuery(
     { publicId },
@@ -602,8 +576,6 @@ export function ReaderBookPage({
     },
   );
   const updateProgress = trpc.updateReaderBookProgressRoute.useMutation();
-  const updatePreferences =
-    trpc.updateReaderPreferencesRoute.useMutation();
   const book = bookQuery.data?.book as ReaderBookData | undefined;
 
   const jumpToHighlight = useCallback(
@@ -778,25 +750,6 @@ export function ReaderBookPage({
     };
   }, [currentSpineItem, preferences, session]);
 
-  useEffect(() => {
-    if (!preferencesMountedRef.current) {
-      preferencesMountedRef.current = true;
-      return;
-    }
-    if (preferencesTimeoutRef.current) {
-      clearTimeout(preferencesTimeoutRef.current);
-    }
-    preferencesTimeoutRef.current = setTimeout(() => {
-      updatePreferences.mutate(preferences);
-      preferencesTimeoutRef.current = null;
-    }, 500);
-    return () => {
-      if (preferencesTimeoutRef.current) {
-        clearTimeout(preferencesTimeoutRef.current);
-      }
-    };
-  }, [preferences]);
-
   const sectionHighlights = useMemo(() => {
     if (!currentSpineItem) {
       return [];
@@ -816,14 +769,9 @@ export function ReaderBookPage({
       return;
     }
     clearRenderedArticleHighlights(body);
-    const highlights: SavedArticleHighlightForRender[] =
-      sectionHighlights.map((highlight) => ({
-        id: highlight.id,
-        selectedText: highlight.selectedText,
-        selectedOccurrenceIndex: highlight.selectedOccurrenceIndex,
-        contextBefore: highlight.contextBefore,
-        contextAfter: highlight.contextAfter,
-      }));
+    const highlights: SavedArticleHighlightForRender[] = [
+      ...sectionHighlights,
+    ];
     const optimistic = controller.optimisticHighlight;
     if (
       optimistic &&
@@ -882,15 +830,9 @@ export function ReaderBookPage({
 
   const handleHighlightClick = useCallback(
     (event: MouseEvent) => {
-      const target =
-        event.target instanceof Element
-          ? event.target.closest<HTMLElement>(
-              "mark[data-reader-highlight='saved'][data-highlight-id]",
-            )
-          : null;
-      const highlightId = Number(target?.dataset.highlightId);
-      const highlight = controller.highlights.find(
-        (item) => item.id === highlightId,
+      const highlight = findClickedReaderHighlight(
+        event,
+        controller.highlights,
       );
       if (!highlight) {
         return;

@@ -1,3 +1,4 @@
+import { formatCountdown } from "@/koala/format-countdown";
 import type { SpeakingGrade } from "../../koala/quiz-evaluators/grading-policy";
 import {
   ActionIcon,
@@ -469,7 +470,23 @@ type AssistantComposerProps = {
   canClear: boolean;
 };
 
-type AssistantPanelProps = {
+type AssistantMessageActions = {
+  onAddSuggestion: (
+    suggestion: Suggestion,
+    deckId: number,
+  ) => void | Promise<void>;
+  isAdding: boolean;
+  decks: DeckSummary[];
+  currentDeckId: number;
+  onApplyEdit: (
+    proposal: AssistantEditProposal,
+    updates: { term: string; definition: string },
+  ) => void | Promise<void>;
+  onDismissEdit: (proposalId: string) => void;
+  savingEditId: string | null;
+};
+
+type AssistantPanelProps = AssistantMessageActions & {
   messages: ChatMessage[];
   input: string;
   onInputChange: (value: string) => void;
@@ -479,38 +496,12 @@ type AssistantPanelProps = {
   canClear: boolean;
   isStreaming: boolean;
   viewportRef: React.RefObject<HTMLDivElement | null>;
-  onAddSuggestion: (
-    suggestion: Suggestion,
-    deckId: number,
-  ) => void | Promise<void>;
-  isAdding: boolean;
-  decks: DeckSummary[];
-  currentDeckId: number;
   onClose: () => void;
-  onApplyEdit: (
-    proposal: AssistantEditProposal,
-    updates: { term: string; definition: string },
-  ) => void | Promise<void>;
-  onDismissEdit: (proposalId: string) => void;
-  savingEditId: string | null;
 };
 
-type AssistantMessageListProps = {
+type AssistantMessageListProps = AssistantMessageActions & {
   messages: ChatMessage[];
   viewportRef: React.RefObject<HTMLDivElement | null>;
-  onAddSuggestion: (
-    suggestion: Suggestion,
-    deckId: number,
-  ) => void | Promise<void>;
-  isAdding: boolean;
-  decks: DeckSummary[];
-  currentDeckId: number;
-  onApplyEdit: (
-    proposal: AssistantEditProposal,
-    updates: { term: string; definition: string },
-  ) => void | Promise<void>;
-  onDismissEdit: (proposalId: string) => void;
-  savingEditId: string | null;
 };
 
 type MessageTone = "user" | "assistant";
@@ -533,22 +524,9 @@ type AssistantParserResult = {
   edits: CardEditBlock[];
 };
 
-type AssistantMessageContentProps = {
+type AssistantMessageContentProps = AssistantMessageActions & {
   message: ChatMessage;
   messageIndex: number;
-  onAddSuggestion: (
-    suggestion: Suggestion,
-    deckId: number,
-  ) => void | Promise<void>;
-  isAdding: boolean;
-  decks: DeckSummary[];
-  currentDeckId: number;
-  onApplyEdit: (
-    proposal: AssistantEditProposal,
-    updates: { term: string; definition: string },
-  ) => void | Promise<void>;
-  onDismissEdit: (proposalId: string) => void;
-  savingEditId: string | null;
 };
 
 type PlaceholderType = "example" | "edit";
@@ -792,6 +770,27 @@ const stopAudioPlayback = () => {
   notifyAudioPlayback();
 };
 
+const createAudioPlaybackTracker = () => {
+  let playbackTracked = false;
+  const startPlayback = () => {
+    if (playbackTracked) {
+      return;
+    }
+    playbackTracked = true;
+    startAudioPlayback();
+  };
+
+  const stopPlayback = () => {
+    if (!playbackTracked) {
+      return;
+    }
+    playbackTracked = false;
+    stopAudioPlayback();
+  };
+
+  return { startPlayback, stopPlayback };
+};
+
 const subscribeToAudioPlayback = (listener: AudioPlaybackListener) => {
   audioPlaybackListeners.add(listener);
   listener(isAudioPlaying);
@@ -836,7 +835,6 @@ const playSingleAudio = (
     }
 
     let done = false;
-    let playbackTracked = false;
     const { controller } = playbackQueue;
     const audio = new Audio(urlOrDataURI);
     currentAudio = audio;
@@ -849,21 +847,7 @@ const playSingleAudio = (
       audio.playbackRate = 0.6;
     }
 
-    const startPlayback = () => {
-      if (playbackTracked) {
-        return;
-      }
-      playbackTracked = true;
-      startAudioPlayback();
-    };
-
-    const stopPlayback = () => {
-      if (!playbackTracked) {
-        return;
-      }
-      playbackTracked = false;
-      stopAudioPlayback();
-    };
+    const { startPlayback, stopPlayback } = createAudioPlaybackTracker();
 
     const cleanup = () => {
       if (currentAudio === audio) {
@@ -1013,22 +997,7 @@ const playBlob = (blob: Blob, playbackRate?: number): Promise<void> => {
     audio.playbackRate = playbackRate;
   }
 
-  let playbackTracked = false;
-  const startPlayback = () => {
-    if (playbackTracked) {
-      return;
-    }
-    playbackTracked = true;
-    startAudioPlayback();
-  };
-
-  const stopPlayback = () => {
-    if (!playbackTracked) {
-      return;
-    }
-    playbackTracked = false;
-    stopAudioPlayback();
-  };
+  const { startPlayback, stopPlayback } = createAudioPlaybackTracker();
 
   const cleanup = () => {
     audio.pause();
@@ -3161,16 +3130,6 @@ const getRecordLabel = (recordDisabled: boolean, isRecording: boolean) => {
   return `Record a response (${HOTKEYS.RECORD})`;
 };
 
-const formatCountdown = (seconds: number) => {
-  const clamped = Math.max(0, Math.ceil(seconds));
-  const minutes = Math.floor(clamped / 60);
-  const remainder = clamped % 60;
-  if (minutes > 0) {
-    return `${minutes}:${remainder.toString().padStart(2, "0")}`;
-  }
-  return `${clamped}s`;
-};
-
 const getTimerProgressPercent = (
   remainingSeconds: number,
   totalSeconds: number,
@@ -4001,6 +3960,26 @@ function AssistantMessageContent({
   let editIdx = 0;
   const defaultDeckId = resolveDefaultDeckId(decks, currentDeckId);
 
+  const renderSuggestion = (suggestion: Suggestion, key: string) => (
+    <AssistantSuggestionRow
+      key={key}
+      suggestion={suggestion}
+      onAdd={(deckId) => onAddSuggestion(suggestion, deckId)}
+      isLoading={isAdding}
+      decks={decks}
+      defaultDeckId={defaultDeckId}
+    />
+  );
+  const renderEdit = (proposal: AssistantEditProposal) => (
+    <AssistantEditCard
+      key={`msg-${messageIndex}-edit-${proposal.id}-${proposal.term}-${proposal.definition}`}
+      proposal={proposal}
+      onSave={(updates) => onApplyEdit(proposal, updates)}
+      onDismiss={() => onDismissEdit(proposal.id)}
+      isSaving={savingEditId === proposal.id}
+    />
+  );
+
   chunkContent(message.content).forEach((chunk, idx) => {
     if (chunk.kind === "text") {
       const textNode = renderText(
@@ -4018,14 +3997,10 @@ function AssistantMessageContent({
       const suggestion = suggestions[suggestionIdx];
       if (suggestion) {
         nodes.push(
-          <AssistantSuggestionRow
-            key={`msg-${messageIndex}-example-${suggestionIdx}`}
-            suggestion={suggestion}
-            onAdd={(deckId) => onAddSuggestion(suggestion, deckId)}
-            isLoading={isAdding}
-            decks={decks}
-            defaultDeckId={defaultDeckId}
-          />,
+          renderSuggestion(
+            suggestion,
+            `msg-${messageIndex}-example-${suggestionIdx}`,
+          ),
         );
       }
       suggestionIdx += 1;
@@ -4034,42 +4009,19 @@ function AssistantMessageContent({
 
     const proposal = edits[editIdx];
     if (proposal) {
-      nodes.push(
-        <AssistantEditCard
-          key={`msg-${messageIndex}-edit-${proposal.id}-${proposal.term}-${proposal.definition}`}
-          proposal={proposal}
-          onSave={(updates) => onApplyEdit(proposal, updates)}
-          onDismiss={() => onDismissEdit(proposal.id)}
-          isSaving={savingEditId === proposal.id}
-        />,
-      );
+      nodes.push(renderEdit(proposal));
     }
     editIdx += 1;
   });
 
   suggestions.slice(suggestionIdx).forEach((suggestion, idx) => {
     nodes.push(
-      <AssistantSuggestionRow
-        key={`msg-${messageIndex}-fallback-${idx}`}
-        suggestion={suggestion}
-        onAdd={(deckId) => onAddSuggestion(suggestion, deckId)}
-        isLoading={isAdding}
-        decks={decks}
-        defaultDeckId={defaultDeckId}
-      />,
+      renderSuggestion(suggestion, `msg-${messageIndex}-fallback-${idx}`),
     );
   });
 
   edits.slice(editIdx).forEach((proposal) => {
-    nodes.push(
-      <AssistantEditCard
-        key={`msg-${messageIndex}-edit-${proposal.id}-${proposal.term}-${proposal.definition}`}
-        proposal={proposal}
-        onSave={(updates) => onApplyEdit(proposal, updates)}
-        onDismiss={() => onDismissEdit(proposal.id)}
-        isSaving={savingEditId === proposal.id}
-      />,
-    );
+    nodes.push(renderEdit(proposal));
   });
 
   return <Stack gap={6}>{nodes}</Stack>;

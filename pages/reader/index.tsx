@@ -1,4 +1,4 @@
-import { getUserSettingsFromEmail } from "@/koala/auth-helpers";
+import { getReaderEmptyPageProps } from "@/koala/reader/page-auth";
 import {
   isFileSystemAccessSupported,
   listLocalBookAvailability,
@@ -54,7 +54,6 @@ import {
 import { notifications } from "@mantine/notifications";
 import type { GetServerSidePropsContext } from "next";
 import Link from "next/link";
-import { getSession } from "next-auth/react";
 import { useRouter } from "next/router";
 import React, { useEffect, useMemo, useState } from "react";
 
@@ -1287,15 +1286,5 @@ export default function ReaderDashboardPage() {
 export async function getServerSideProps(
   context: GetServerSidePropsContext,
 ) {
-  const session = await getSession({ req: context.req });
-  if (!session?.user?.email) {
-    return { redirect: { destination: "/", permanent: false } };
-  }
-
-  const userSettings = await getUserSettingsFromEmail(session.user.email);
-  if (!userSettings) {
-    return { redirect: { destination: "/", permanent: false } };
-  }
-
-  return { props: {} };
+  return getReaderEmptyPageProps(context);
 }
