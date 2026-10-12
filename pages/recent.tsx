@@ -1,75 +1,19 @@
-import {
-  articleHighlightActivitySelect,
-  bookHighlightActivitySelect,
-} from "@/koala/reader/activity-select";
 import { getServersideUser } from "@/koala/get-serverside-user";
-import { prismaClient } from "@/koala/prisma-client";
-import { combineReaderHighlightActivity } from "@/koala/reader/activity";
+import { getStudyReport, type StudyReport } from "@/koala/study-report";
 import { Container, Stack, Table, Title } from "@mantine/core";
 import { GetServerSideProps } from "next";
 import { useRouter } from "next/router";
 
-const WRITING_SAMPLE_LIMIT = 5;
-const WRONG_OUTCOME_LIMIT = 50;
-const CORRECT_OUTCOME_LIMIT = 10;
-const RECENT_HIGHLIGHT_LIMIT = 10;
-const SPEAKING_EVENT_TYPE = "speaking-judgement";
-const DEFAULT_PROMPT = "Not set.";
-
-type WritingSample = {
-  id: number;
-  prompt: string;
-  submission: string;
-};
-
-type WrongOutcomeRow = {
-  term: string;
-  definition: string;
-  userInput: string;
-  createdAt: string;
-};
-
-type CorrectOutcomeRow = {
-  definition: string;
-  userInput: string;
-  createdAt: string;
-};
-
-type RecentHighlightWord = {
-  key: string;
-  context: string;
-  source: string;
-};
-
-type RecentPageProps = {
-  writingSamples: WritingSample[];
-  wrongOutcomes: WrongOutcomeRow[];
-  correctOutcomes: CorrectOutcomeRow[];
-  recentHighlights: RecentHighlightWord[];
-};
-
-type LatestCardOutcomeRow = {
-  cardId: number;
-  term: string;
-  definition: string;
-  userInput: string;
-  isAcceptable: boolean;
-  createdAt: Date;
-};
+type RecentPageProps = StudyReport;
+type WritingSample = StudyReport["writingSamples"][number];
+type WrongOutcomeRow = StudyReport["wrongOutcomes"][number];
+type CorrectOutcomeRow = StudyReport["correctOutcomes"][number];
+type RecentHighlightWord = StudyReport["recentHighlights"][number];
 
 const hasPrompt = (prompt: string) => {
   const trimmedPrompt = prompt.trim();
-  return Boolean(trimmedPrompt) && trimmedPrompt !== DEFAULT_PROMPT;
+  return Boolean(trimmedPrompt) && trimmedPrompt !== "Not set.";
 };
-
-const toSerializableOutcome = (
-  row: LatestCardOutcomeRow,
-): Omit<WrongOutcomeRow, "createdAt"> & { createdAt: string } => ({
-  term: row.term,
-  definition: row.definition,
-  userInput: row.userInput,
-  createdAt: row.createdAt.toISOString(),
-});
 
 export const getServerSideProps: GetServerSideProps<
   RecentPageProps
@@ -81,106 +25,7 @@ export const getServerSideProps: GetServerSideProps<
     };
   }
 
-  const [
-    writingRows,
-    latestCardOutcomes,
-    articleHighlightRows,
-    bookHighlightRows,
-  ] = await Promise.all([
-    prismaClient.writingSubmission.findMany({
-      where: { userId: dbUser.id },
-      orderBy: { createdAt: "desc" },
-      take: WRITING_SAMPLE_LIMIT,
-      select: {
-        id: true,
-        prompt: true,
-        submission: true,
-      },
-    }),
-    prismaClient.$queryRaw<LatestCardOutcomeRow[]>`
-      SELECT DISTINCT ON (c.id)
-        c.id AS "cardId",
-        c.term AS term,
-        c.definition AS definition,
-        q."userInput" AS "userInput",
-        q."isAcceptable" AS "isAcceptable",
-        q."createdAt" AS "createdAt"
-      FROM "Card" c
-      JOIN "QuizResult" q
-        ON q."userId" = c."userId"
-       AND q."acceptableTerm" = c.term
-      WHERE c."userId" = ${dbUser.id}
-        AND q."eventType" = ${SPEAKING_EVENT_TYPE}
-      ORDER BY c.id, q."createdAt" DESC, q.id DESC
-    `,
-    prismaClient.readerArticleHighlight.findMany({
-      where: {
-        userId: dbUser.id,
-        status: "READY",
-      },
-      orderBy: { createdAt: "desc" },
-      take: 40,
-      select: articleHighlightActivitySelect,
-    }),
-    prismaClient.readerBookAnnotation.findMany({
-      where: {
-        userId: dbUser.id,
-        status: "READY",
-      },
-      orderBy: { createdAt: "desc" },
-      take: 40,
-      select: bookHighlightActivitySelect,
-    }),
-  ]);
-
-  const sortedOutcomes = latestCardOutcomes.sort(
-    (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
-  );
-
-  const wrongOutcomes = sortedOutcomes
-    .filter((row) => !row.isAcceptable)
-    .slice(0, WRONG_OUTCOME_LIMIT)
-    .map(toSerializableOutcome);
-
-  const correctOutcomes = sortedOutcomes
-    .filter((row) => row.isAcceptable)
-    .slice(0, CORRECT_OUTCOME_LIMIT)
-    .map((row) => {
-      const serializable = toSerializableOutcome(row);
-      return {
-        definition: serializable.definition,
-        userInput: serializable.userInput,
-        createdAt: serializable.createdAt,
-      };
-    });
-
-  const writingSamples = writingRows.map((row) => ({
-    id: row.id,
-    prompt: row.prompt,
-    submission: row.submission,
-  }));
-
-  const recentHighlights = combineReaderHighlightActivity({
-    articles: articleHighlightRows,
-    books: bookHighlightRows,
-    limit: RECENT_HIGHLIGHT_LIMIT,
-  }).map((highlight) => ({
-    key: highlight.key,
-    context: highlight.context,
-    source:
-      highlight.kind === "book" && highlight.chapterTitle
-        ? `${highlight.sourceTitle} · ${highlight.chapterTitle}`
-        : highlight.sourceTitle,
-  }));
-
-  return {
-    props: {
-      writingSamples,
-      wrongOutcomes,
-      correctOutcomes,
-      recentHighlights,
-    },
-  };
+  return { props: await getStudyReport(dbUser.id) };
 };
 
 function SectionHeading({ title }: { title: string }) {
