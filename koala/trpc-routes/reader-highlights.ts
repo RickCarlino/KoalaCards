@@ -482,28 +482,35 @@ export const importReaderHighlightsToDeckRoute = procedure
   .output(importReaderHighlightsOutputSchema)
   .mutation(async ({ input, ctx }) => {
     const userId = requireReaderUserId(ctx.user?.id);
-    const resource = await requireOwnedReaderResource({
-      ...input.resource,
-      userId,
-    });
-    const deckId = await requireOwnedReaderDeck({
-      deckId: input.deckId,
-      userId,
-    });
-    const highlightIds = Array.from(new Set(input.highlightIds));
-    const highlights = await loadImportCandidates({
-      resource: input.resource,
-      resourceId: resource.id,
-      highlightIds,
-      userId,
-    });
-
-    return importHighlights({
-      resource: input.resource,
-      resourceId: resource.id,
-      highlights,
-      highlightIds,
-      deckId,
-      userId,
-    });
+    return importReaderHighlightsForUser(userId, input);
   });
+
+export async function importReaderHighlightsForUser(
+  userId: string,
+  input: z.infer<typeof importReaderHighlightsInputSchema>,
+) {
+  const resource = await requireOwnedReaderResource({
+    ...input.resource,
+    userId,
+  });
+  const deckId = await requireOwnedReaderDeck({
+    deckId: input.deckId,
+    userId,
+  });
+  const highlightIds = Array.from(new Set(input.highlightIds));
+  const highlights = await loadImportCandidates({
+    resource: input.resource,
+    resourceId: resource.id,
+    highlightIds,
+    userId,
+  });
+
+  return importHighlights({
+    resource: input.resource,
+    resourceId: resource.id,
+    highlights,
+    highlightIds,
+    deckId,
+    userId,
+  });
+}

@@ -69,7 +69,7 @@ export function McpConnectionCard({ mcpUrl }: { mcpUrl: string | null }) {
     <SectionCard
       title="ChatGPT Connection"
       titleOrder={3}
-      description="Connect ChatGPT to your study report. Anyone with this link can read it."
+      description="Anyone with this link can read your study data and create or edit cards. Keep it private."
     >
       <Stack gap="md">
         <Text size="sm" c="dimmed">

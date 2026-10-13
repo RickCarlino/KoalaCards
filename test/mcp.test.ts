@@ -1,11 +1,6 @@
+import { withMcp } from "./mcp-helpers.ts";
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
-import { createServer } from "node:http";
-import { once } from "node:events";
 import test from "node:test";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import { handleMcpRequest } from "../koala/mcp/http.ts";
 import { studyReportSchema } from "../koala/mcp/study-report-tool.ts";
 import { prismaClient } from "../koala/prisma-client.ts";
 import {
@@ -16,66 +11,7 @@ import { getMcpPath } from "../koala/study-report-link.ts";
 
 test.after(() => prismaClient.$disconnect());
 
-type Fixture = {
-  ownerId: string;
-  otherId: string;
-  token: string;
-  url: URL;
-  connect: (token?: string) => Promise<Client>;
-};
-
-async function withMcp(run: (fixture: Fixture) => Promise<void>) {
-  const [ownerId, otherId] = [randomUUID(), randomUUID()];
-  await prismaClient.user.createMany({
-    data: [ownerId, otherId].map((id) => ({ id })),
-  });
-  const clients: Client[] = [];
-  const http = createServer((req, res) => {
-    const token = new URL(req.url!, "http://localhost").pathname
-      .split("/")
-      .pop();
-    void handleMcpRequest(req, res, token);
-  });
-  try {
-    http.listen(0, "127.0.0.1");
-    await once(http, "listening");
-    const address = http.address();
-    assert.ok(address && typeof address !== "string");
-    const base = `http://127.0.0.1:${address.port}`;
-    const { token } = await saveStudyReportLink(ownerId);
-    const connect = async (linkToken = token) => {
-      const client = new Client({
-        name: "koala-mcp-test",
-        version: "1.0.0",
-      });
-      clients.push(client);
-      await client.connect(
-        new StreamableHTTPClientTransport(
-          new URL(getMcpPath(linkToken), base),
-        ),
-      );
-      return client;
-    };
-    await run({
-      ownerId,
-      otherId,
-      token,
-      url: new URL(getMcpPath(token), base),
-      connect,
-    });
-  } finally {
-    await Promise.all(clients.map((client) => client.close()));
-    await new Promise<void>((resolve, reject) => {
-      http.close((error) => (error ? reject(error) : resolve()));
-      http.closeAllConnections();
-    });
-    await prismaClient.user.deleteMany({
-      where: { id: { in: [ownerId, otherId] } },
-    });
-  }
-}
-
-test("MCP client discovers one read-only tool and receives fresh, isolated study reports", async () => {
+test("MCP client discovers tools and receives fresh, isolated study reports", async () => {
   await withMcp(async ({ ownerId, otherId, connect, token }) => {
     await prismaClient.writingSubmission.createMany({
       data: [ownerId, otherId].map((userId, index) => ({
@@ -95,7 +31,17 @@ test("MCP client discovers one read-only tool and receives fresh, isolated study
     const { tools } = await client.listTools();
     assert.deepEqual(
       tools.map((tool) => tool.name),
-      ["get_study_report"],
+      [
+        "get_study_report",
+        "get_study_overview",
+        "list_quiz_events",
+        "search_study_data",
+        "fetch_study_record",
+        "list_due_cards",
+        "create_cards",
+        "import_highlights",
+        "edit_card",
+      ],
     );
     assert.deepEqual(tools[0].annotations, {
       readOnlyHint: true,
@@ -155,7 +101,7 @@ test("MCP checks revocation on existing clients and accepts regenerated connecti
       /Connection not found/,
     );
     const replacementClient = await connect(replacement.token);
-    assert.equal((await replacementClient.listTools()).tools.length, 1);
+    assert.equal((await replacementClient.listTools()).tools.length, 9);
     await disableStudyReportLink(ownerId);
     await assert.rejects(
       replacementClient.callTool({ name: "get_study_report" }),

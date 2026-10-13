@@ -50,7 +50,11 @@ export function registerStudyReportTool(
         "Read the connected learner's current Koala Cards study report for language coaching. " +
         "Includes recent writing, highlights, and latest correct and incorrect card answers. " +
         "This is a rolling snapshot, not a daily activity log. generatedAt is the time of this fetch; " +
-        "compare record IDs and createdAt timestamps to identify new activity.",
+        "compare record IDs and createdAt timestamps to identify new activity. " +
+        "Use get_study_overview for complete dated totals and study settings. " +
+        "Use list_quiz_events for individual quiz attempts in study-date order, including repeated answers. " +
+        "Use fetch_study_record with writing:<id> to read a writing sample's saved correction, " +
+        "and search_study_data to investigate older answers and related reading.",
       inputSchema: z.object({}).strict(),
       outputSchema: studyReportSchema,
       annotations: {
