@@ -1,8 +1,8 @@
 import { getUserSettingsFromEmail } from "@/koala/auth-helpers";
 import { SectionCard } from "@/koala/components/SectionCard";
-import { StudyReportLinkCard } from "@/koala/components/StudyReportLinkCard";
+import { McpConnectionCard } from "@/koala/components/McpConnectionCard";
 import { getStudyReportLink } from "@/koala/study-report-link-server";
-import { getStudyReportPath } from "@/koala/study-report-link";
+import { getMcpPath } from "@/koala/study-report-link";
 import { getLanguageExchangePublicPath } from "@/koala/language-exchange-direct";
 import { ensureLanguageExchangeLink } from "@/koala/language-exchange-direct-server";
 import { prismaClient } from "@/koala/prisma-client";
@@ -318,9 +318,9 @@ export async function getServerSideProps(
     baseUrlFromRequest(context.req),
   ).toString();
   const studyReportLink = await getStudyReportLink(userId);
-  const studyReportUrl = studyReportLink
+  const mcpUrl = studyReportLink
     ? new URL(
-        getStudyReportPath(studyReportLink.token),
+        getMcpPath(studyReportLink.token),
         baseUrlFromRequest(context.req),
       ).toString()
     : null;
@@ -333,7 +333,7 @@ export async function getServerSideProps(
       writingChartData: writingChartData,
       readerChartData: readerChartData,
       languageExchangeUrl,
-      studyReportUrl,
+      mcpUrl,
     },
   };
 }
@@ -342,7 +342,7 @@ type Props = Awaited<ReturnType<typeof getServerSideProps>>["props"] & {
   writingChartData: ChartDataPoint[];
   readerChartData: ChartDataPoint[];
   languageExchangeUrl: string;
-  studyReportUrl: string | null;
+  mcpUrl: string | null;
 };
 
 type SettingsFormValues = {
@@ -1175,7 +1175,7 @@ export default function UserSettingsPage(props: Props) {
     writingChartData,
     readerChartData,
     languageExchangeUrl,
-    studyReportUrl,
+    mcpUrl,
   } = props;
   const router = useRouter();
   const [settings, setSettings] = useState(() => ({
@@ -1312,10 +1312,7 @@ export default function UserSettingsPage(props: Props) {
                 key={languageExchangeUrl}
                 languageExchangeUrl={languageExchangeUrl}
               />
-              <StudyReportLinkCard
-                key={studyReportUrl}
-                studyReportUrl={studyReportUrl}
-              />
+              <McpConnectionCard key={mcpUrl} mcpUrl={mcpUrl} />
             </Stack>
           </Grid.Col>
 

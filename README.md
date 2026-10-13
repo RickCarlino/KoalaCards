@@ -82,6 +82,41 @@ The compose setup runs app, worker, migrations, and database together. App depen
 - Prisma schema: `prisma/schema.prisma`
 - Before finishing changes, run: `docker compose run app sh /app/tidy.sh`
 
+## ChatGPT Connection
+
+In Koala Settings, copy the **ChatGPT Connection** link. In ChatGPT Plugins,
+choose **Add custom MCP server**, paste the link, select **No authentication**,
+and install the personal plugin. The secret URL itself grants access: keep it
+private. Regenerate or disable it in Koala to revoke access, including existing
+MCP clients. After regenerating, reconnect ChatGPT with the new URL.
+
+The Streamable HTTP endpoint is `/api/mcp/<token>`. It exposes one read-only
+tool, `get_study_report`, with no arguments. Each call returns a fresh rolling
+snapshot of recent writing, card outcomes, and reading highlights. `generatedAt`
+is the fetch time; record IDs and `createdAt` identify new study activity.
+
+For daily coaching, install the plugin in the coaching chat and instruct the
+scheduled task to call `get_study_report` on every run. Verify an unattended run
+returns a new `generatedAt`; a previous chat response is not a retrieval check.
+
+The endpoint validates the token on every request and runs without stored MCP
+sessions, so multiple app instances do not require sticky routing. It reuses
+the existing `StudyReportLink` token storage; the original JSON report URL
+remains available and shares the same revocation controls. No new environment
+variables or migrations are needed.
+
+To add tools, register them in `koala/mcp/server.ts` and keep each tool in its
+own module. Always scope queries to the authenticated user supplied by the
+server, declare accurate annotations and schemas, and test authorization.
+Existing connection links will authorize newly registered tools, so review
+access scope before adding broader data access or write actions.
+
+Protocol and authorization tests use the official MCP client over HTTP:
+
+```sh
+docker compose exec app node --import ./test/register-typescript-loader.mjs --test test/mcp.test.ts
+```
+
 ## License
 
 MIT (`LICENSE`).
