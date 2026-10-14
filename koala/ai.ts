@@ -7,7 +7,6 @@ import {
 } from "./ai-openai";
 import type { CoreMessage, TextModel } from "./ai-types";
 export type { CoreMessage, TextModel } from "./ai-types";
-export { evaluateJev } from "./ai-jev";
 
 export type ImageModel = "imageDefault";
 export type LanguageModelIdentifier = TextModel;

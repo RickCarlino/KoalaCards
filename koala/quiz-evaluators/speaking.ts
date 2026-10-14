@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { evaluateJev, generateStructuredOutput } from "../ai";
+import { generateStructuredOutput } from "../ai";
 import type { CoreMessage } from "../ai-types";
 import {
   gradeCriteria,
@@ -8,13 +8,6 @@ import {
   speakingGradeSchema,
   type SpeakingGradingInput,
 } from "./grading-policy";
-import {
-  buildJevRequest,
-  jevResponseSchema,
-  type JevResponse,
-} from "./jev";
-
-export const CONFIDENCE_CUTTOFF = 0.85;
 
 export const speakingFeedbackSchema = z.object({
   grade: speakingGradeSchema,
@@ -22,19 +15,13 @@ export const speakingFeedbackSchema = z.object({
 });
 
 type SpeakingFeedback = z.infer<typeof speakingFeedbackSchema>;
-type JevJudgment = JevResponse["answers"]["grade"];
 
 export type SpeakingEvaluation = SpeakingFeedback & {
   isCorrect: boolean;
-  gradingSource: "jev" | "openai";
-  jevGrade: JevJudgment["choice"] | null;
-  jevConfidence: number | null;
+  gradingSource: "openai";
 };
 
-type SpeakingGraders = {
-  jev: (input: SpeakingGradingInput) => Promise<unknown>;
-  openai: (input: SpeakingGradingInput) => Promise<unknown>;
-};
+type SpeakingGrader = (input: SpeakingGradingInput) => Promise<unknown>;
 
 export function buildSpeakingMessages(
   input: SpeakingGradingInput,
@@ -54,59 +41,31 @@ export function buildSpeakingMessages(
     },
     {
       role: "user",
-      content: JSON.stringify(buildJevRequest(input, "jev-latest").state),
+      content: JSON.stringify({
+        prompt: input.prompt,
+        possibleAnswer: input.possibleAnswer,
+        response: input.response,
+        ...(input.deckName ? { deckName: input.deckName } : {}),
+        ...(input.deckDescription
+          ? { deckDescription: input.deckDescription }
+          : {}),
+      }),
     },
   ];
 }
 
-const defaultGraders: SpeakingGraders = {
-  jev: (input) =>
-    evaluateJev(buildJevRequest(input, "jev-latest"), {
-      apiKey: process.env.TYPESAFE_API_KEY ?? "",
-    }),
-  openai: (input) =>
-    generateStructuredOutput({
-      model: "grading",
-      messages: buildSpeakingMessages(input),
-      schema: speakingFeedbackSchema,
-    }),
-};
-
-async function tryJev(
-  input: SpeakingGradingInput,
-  grader: SpeakingGraders["jev"],
-): Promise<JevJudgment | null> {
-  try {
-    return jevResponseSchema.parse(await grader(input)).answers.grade;
-  } catch {
-    console.warn("JEV grading unavailable; falling back to OpenAI.");
-    return null;
-  }
-}
-
-function trustedJevFeedback(
-  judgment: JevJudgment | null,
-): SpeakingFeedback | null {
-  if (!judgment || judgment.confidence <= CONFIDENCE_CUTTOFF) {
-    return null;
-  }
-  if (judgment.choice === "correct") {
-    return { grade: "correct", feedback: "Correct!" };
-  }
-  if (judgment.choice === "user_gave_up") {
-    return { grade: "incorrect", feedback: "No answer given." };
-  }
-  return null;
-}
+const defaultGrader: SpeakingGrader = (input) =>
+  generateStructuredOutput({
+    model: "grading",
+    messages: buildSpeakingMessages(input),
+    schema: speakingFeedbackSchema,
+  });
 
 export async function evaluateSpeakingResponse(
   input: SpeakingGradingInput,
-  graders: SpeakingGraders = defaultGraders,
+  grader: SpeakingGrader = defaultGrader,
 ): Promise<SpeakingEvaluation> {
-  const judgment = await tryJev(input, graders.jev);
-  const trusted = trustedJevFeedback(judgment);
-  const evaluation =
-    trusted ?? speakingFeedbackSchema.parse(await graders.openai(input));
+  const evaluation = speakingFeedbackSchema.parse(await grader(input));
   return {
     ...evaluation,
     feedback:
@@ -114,8 +73,6 @@ export async function evaluateSpeakingResponse(
         ? `${evaluation.feedback} (slightly off)`
         : evaluation.feedback,
     isCorrect: evaluation.grade !== "incorrect",
-    gradingSource: trusted ? "jev" : "openai",
-    jevGrade: judgment?.choice ?? null,
-    jevConfidence: judgment?.confidence ?? null,
+    gradingSource: "openai",
   };
 }

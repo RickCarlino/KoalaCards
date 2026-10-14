@@ -62,8 +62,6 @@ export const gradeSpeakingQuiz = procedure
         isAcceptable: evaluation.isCorrect,
         grade: evaluation.grade,
         gradingSource: evaluation.gradingSource,
-        jevGrade: evaluation.jevGrade,
-        jevConfidence: evaluation.jevConfidence,
         reason: evaluation.feedback,
         eventType: "speaking-judgement",
       },
