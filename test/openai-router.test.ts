@@ -6,11 +6,54 @@ import {
   buildOpenAIImageRequest,
   buildOpenAIStreamingTextRequest,
   buildOpenAITextRequest,
+  buildOpenAIChoiceRequest,
+  buildOpenAIResponseRequest,
   getOpenAITextProfile,
 } from "../koala/ai-openai-config.ts";
 import { buildTranscriptionRequest } from "../koala/api/transcribe-helpers.ts";
 
 const messages = [{ role: "user" as const, content: "Test" }];
+
+test("review decisions use the dedicated endpoint contract without generation settings", () => {
+  const options = {
+    input: "untrusted answer",
+    instructions: "Select a bucket",
+    choices: [
+      { value: "correct", description: "Right" },
+      { value: "incorrect", description: "Wrong" },
+    ],
+  };
+  assert.deepEqual(buildOpenAIChoiceRequest(options), {
+    model: "gpt-6-luna",
+    input: options.input,
+    questions: [
+      {
+        type: "choice",
+        name: "classification",
+        instructions: options.instructions,
+        choices: options.choices,
+      },
+    ],
+  });
+});
+
+test("review explanations use Responses settings and do not store provider state", () => {
+  assert.deepEqual(
+    buildOpenAIResponseRequest({
+      model: "explanation",
+      messages,
+      maxTokens: 2500,
+    }),
+    {
+      model: "gpt-6.1-sol",
+      store: false,
+      input: messages,
+      reasoning: { effort: "medium" },
+      text: { verbosity: "low" },
+      max_output_tokens: 2500,
+    },
+  );
+});
 
 test("OpenAI text router preserves quality and latency roles", () => {
   assert.deepEqual(getOpenAITextProfile("fast"), {
@@ -33,14 +76,14 @@ test("OpenAI text router preserves quality and latency roles", () => {
   });
 });
 
-test("speaking grading uses GPT-6.1 Sol without changing other model roles", () => {
-  assert.deepEqual(getOpenAITextProfile("grading"), {
+test("review explanations use GPT-6.1 Sol without changing other model roles", () => {
+  assert.deepEqual(getOpenAITextProfile("explanation"), {
     model: "gpt-6.1-sol",
     reasoningEffort: "medium",
     verbosity: "low",
   });
   assert.equal(
-    buildOpenAITextRequest({ model: "grading", messages }).model,
+    buildOpenAITextRequest({ model: "explanation", messages }).model,
     "gpt-6.1-sol",
   );
 });

@@ -28,10 +28,23 @@ export const editQuizResult = procedure
     }
 
     const { resultId, data } = input;
+    const changesAnswer = [
+      "definition",
+      "acceptableTerm",
+      "userInput",
+      "isAcceptable",
+      "reason",
+      "eventType",
+    ].some((field) => field in data);
 
     const result = await prismaClient.quizResult.updateMany({
       where: { id: resultId, userId },
-      data,
+      data: {
+        ...data,
+        ...(changesAnswer
+          ? { explanation: null, explanationRequestedAt: null }
+          : {}),
+      },
     });
 
     if (result.count !== 1) {

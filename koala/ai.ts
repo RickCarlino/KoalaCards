@@ -4,6 +4,8 @@ import {
   openaiGenerateStructuredOutput,
   openaiGenerateText,
   openaiStreamText,
+  openaiClassifyChoice,
+  openaiGenerateResponseStructuredOutput,
 } from "./ai-openai";
 import type { CoreMessage, TextModel } from "./ai-types";
 export type { CoreMessage, TextModel } from "./ai-types";
@@ -36,6 +38,19 @@ export type ImageGenOptions = {
   prompt: string;
 };
 export type ImageGenFn = (options: ImageGenOptions) => Promise<string>;
+
+export type ChoiceGenOptions = {
+  input: string;
+  instructions: string;
+  choices: { value: string; description: string }[];
+};
+
+export const classifyAIChoice = (options: ChoiceGenOptions) =>
+  openaiClassifyChoice(options);
+
+export const generateResponseStructuredOutput: StructuredGenFn = (
+  options,
+) => openaiGenerateResponseStructuredOutput(options);
 
 export const generateAIText: LanguageGenFn = async (options) => {
   return await openaiGenerateText(options);

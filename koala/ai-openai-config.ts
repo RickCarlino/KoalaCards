@@ -5,10 +5,13 @@ import type {
 import type { SpeechCreateParams } from "openai/resources/audio/speech";
 import type { TranscriptionCreateParamsNonStreaming } from "openai/resources/audio/transcriptions";
 import type { ImageGenerateParamsNonStreaming } from "openai/resources/images";
+import type { DecisionCreateParams } from "openai/resources/decisions";
+import type { ResponseCreateParamsNonStreaming } from "openai/resources/responses/responses";
 import type {
   ImageModelIdentifier,
   LanguageModelIdentifier,
   LanguageGenOptions,
+  ChoiceGenOptions,
 } from "./ai";
 import type { TextModel } from "./ai-types";
 
@@ -42,7 +45,7 @@ const textModelProfiles: Record<TextModel, TextModelProfile> = {
     reasoningEffort: "medium",
   },
   interactive: TERRA_LOW_PROFILE,
-  grading: {
+  explanation: {
     model: "gpt-6.1-sol",
     reasoningEffort: "medium",
     verbosity: "low",
@@ -52,6 +55,47 @@ const textModelProfiles: Record<TextModel, TextModelProfile> = {
 const imageModels: Record<ImageModelIdentifier, string> = {
   imageDefault: "gpt-image-2",
 };
+
+export const OPENAI_DECISION_MODEL = "gpt-6-luna";
+
+export function buildOpenAIChoiceRequest(
+  options: ChoiceGenOptions,
+): DecisionCreateParams {
+  return {
+    model: OPENAI_DECISION_MODEL,
+    input: options.input,
+    questions: [
+      {
+        type: "choice",
+        name: "classification",
+        instructions: options.instructions,
+        choices: options.choices,
+      },
+    ],
+  };
+}
+
+export function buildOpenAIResponseRequest(
+  options: LanguageGenOptions,
+): ResponseCreateParamsNonStreaming {
+  const profile = getOpenAITextProfile(options.model);
+  return {
+    model: profile.model,
+    store: false,
+    input: options.messages.map((message) => ({
+      role: message.role,
+      content:
+        typeof message.content === "string"
+          ? message.content
+          : message.content.map((part) => part.text).join("\n"),
+    })),
+    reasoning: { effort: profile.reasoningEffort },
+    text: { verbosity: profile.verbosity ?? "low" },
+    ...(options.maxTokens !== undefined
+      ? { max_output_tokens: options.maxTokens }
+      : {}),
+  };
+}
 
 export const OPENAI_SPEECH_MODEL =
   "gpt-4o-mini-tts" as const satisfies SpeechCreateParams["model"];

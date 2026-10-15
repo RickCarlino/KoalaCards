@@ -1,5 +1,6 @@
 import { formatCountdown } from "@/koala/format-countdown";
-import type { SpeakingGrade } from "../../koala/quiz-evaluators/grading-policy";
+import type { ReviewGrade } from "../../koala/quiz-evaluators/grade-buckets";
+import { GradeExplanation } from "@/koala/review/grade-explanation";
 import {
   ActionIcon,
   Affix,
@@ -124,7 +125,7 @@ type Quiz = QuizList[number] & UUID;
 type QuizMap = Record<string, Quiz>;
 
 type GradingResult = {
-  grade: SpeakingGrade;
+  grade: ReviewGrade;
   transcription: string;
   isCorrect: boolean;
   feedback: string;
@@ -1344,7 +1345,7 @@ function useReviewTimers({
     durationSeconds: responseTimeoutSeconds,
     isActive: responseCountdownActive,
     isPaused: responsePaused,
-    resetKey: currentStepUuid,
+    resetKey: `${currentStepUuid}:${responsePhase}`,
     onComplete: onResponseTimeout,
     onTick: () => {
       void playBeep({
@@ -1443,6 +1444,15 @@ function useVoiceTranscription(options: UseVoiceTranscriptionOptions) {
     isLoading: false,
     error: null,
   };
+}
+
+function notifyGradingFailure() {
+  notifications.show({
+    title: "Could not grade your answer",
+    message:
+      "Your progress has not changed. Please record your answer again.",
+    color: "red",
+  });
 }
 
 function useVoiceGrading(options: UseVoiceGradingOptions) {
@@ -2261,7 +2271,7 @@ function FailureView({
       <CardImage imageURL={imageURL} definition={definition} />
 
       <Text ta="center" c="red" fw={500} size="lg">
-        {failureText}
+        {feedback || failureText}
       </Text>
 
       <ResponseTranscription text={userTranscription} />
@@ -2276,31 +2286,16 @@ function FailureView({
         Continue ({HOTKEYS.CONTINUE})
       </Button>
 
-      {renderFeedbackSection(feedback, quizResultId, onContinue)}
+      {quizResultId && (
+        <>
+          <GradeExplanation key={quizResultId} resultId={quizResultId} />
+          <FeedbackVote resultId={quizResultId} />
+        </>
+      )}
 
       <Text ta="center" c="dimmed" mt="md">
         We'll review this again later.
       </Text>
-    </Stack>
-  );
-}
-
-function renderFeedbackSection(
-  feedback?: string,
-  quizResultId?: number | null,
-  onContinue?: () => void,
-) {
-  if (!feedback) {
-    return null;
-  }
-  return (
-    <Stack gap={4} align="center">
-      <Text ta="center" c="dimmed">
-        {feedback}
-      </Text>
-      {quizResultId && (
-        <FeedbackVote resultId={quizResultId} onClick={onContinue} />
-      )}
     </Stack>
   );
 }
@@ -2378,7 +2373,12 @@ function renderSuccessHeader(
         <Text ta="center" c="green" fw={500} size="lg">
           {feedback}
         </Text>
-        {quizResultId && <FeedbackVote resultId={quizResultId} />}
+        {quizResultId && (
+          <>
+            <GradeExplanation key={quizResultId} resultId={quizResultId} />
+            <FeedbackVote resultId={quizResultId} />
+          </>
+        )}
       </Stack>
     );
   }
@@ -2783,8 +2783,10 @@ const QuizCard: React.FC<QuizCardProps> = ({
     } catch (error) {
       console.error("Grading error:", error);
       setUserTranscription("");
-      setPhase("failure");
-      setFeedback("Error occurred during grading.");
+      setPhase("ready");
+      setFeedback("");
+      setQuizResultId(null);
+      notifyGradingFailure();
     }
   };
 
@@ -2794,7 +2796,6 @@ const QuizCard: React.FC<QuizCardProps> = ({
 
   const handleFailureContinue = async () => {
     await gradeWithAgain();
-    onProceed();
   };
 
   const handleIDK = async () => {
@@ -2875,7 +2876,6 @@ function Speaking(props: CardReviewProps) {
 function renderSuccessSection(
   successText?: string,
   quizResultId?: number | null,
-  onContinue?: () => void,
 ) {
   if (successText) {
     return (
@@ -2884,7 +2884,10 @@ function renderSuccessSection(
           {successText}
         </Text>
         {quizResultId && (
-          <FeedbackVote resultId={quizResultId} onClick={onContinue} />
+          <>
+            <GradeExplanation key={quizResultId} resultId={quizResultId} />
+            <FeedbackVote resultId={quizResultId} />
+          </>
         )}
       </Stack>
     );
@@ -2917,7 +2920,7 @@ function SuccessView({
     <Stack align="center" gap="md">
       <CardImage imageURL={imageURL} definition={definition} />
 
-      {renderSuccessSection(successText, quizResultId, onContinue)}
+      {renderSuccessSection(successText, quizResultId)}
       <ResponseTranscription text={userTranscription} />
 
       <Button onClick={onContinue} variant="light" color="green">
@@ -3043,14 +3046,9 @@ function RemedialOutro({
       }
     } catch (error) {
       console.error("Grading error:", error);
-      setPhase("failure");
-      setGradingResult({
-        grade: "incorrect",
-        transcription: "",
-        isCorrect: false,
-        feedback: "An error occurred while processing your response.",
-        quizResultId: null,
-      });
+      setPhase("ready");
+      setGradingResult(null);
+      notifyGradingFailure();
     }
   };
 

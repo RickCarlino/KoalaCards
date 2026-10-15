@@ -297,6 +297,11 @@ model QuizResult {
   isAcceptable   Boolean  @default(false)
   grade          String?
   gradingSource  String?
+  gradingModel   String?
+  gradingConfidence Float?
+  gradingContext Json?
+  explanation    String?
+  explanationRequestedAt DateTime?
   jevGrade       String?
   jevConfidence  Float?
   reason         String

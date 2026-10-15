@@ -49,6 +49,9 @@ export const quizSelect = {
   reviewedAt: true,
   errorTag: true,
   gradingSource: true,
+  gradingModel: true,
+  gradingConfidence: true,
+  explanation: true,
   jevGrade: true,
   jevConfidence: true,
 } satisfies Prisma.QuizResultSelect;

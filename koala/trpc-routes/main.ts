@@ -12,6 +12,7 @@ import { editCard } from "./edit-card";
 import { editQuizResult } from "./edit-quiz-results";
 import { editUserSettings } from "./edit-user-settings";
 import { exportDeck } from "./export-deck";
+import { explainQuizResult } from "./explain-quiz-result";
 import { getDailyWritingProgress } from "./get-daily-writing-progress";
 import { getNextQuizzes } from "./get-next-quizzes";
 import { getUserSettings } from "./get-user-settings";
@@ -57,6 +58,7 @@ export const appRouter = router({
   editUserSettings,
   getDailyWritingProgress,
   exportDeck,
+  explainQuizResult,
   getNextQuizzes,
   getUserSettings,
   gradeQuiz,

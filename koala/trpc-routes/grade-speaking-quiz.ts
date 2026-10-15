@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { getUserSettings } from "../auth-helpers";
+import { TRPCError } from "@trpc/server";
 import { prismaClient } from "../prisma-client";
-import { speakingGradeSchema } from "../quiz-evaluators/grading-policy";
+import { reviewGradeSchema } from "../quiz-evaluators/grade-buckets";
 import { evaluateSpeakingResponse } from "../quiz-evaluators/speaking";
 import { procedure } from "../trpc-procedure";
 
@@ -33,18 +33,28 @@ async function getOwnedCardForSpeaking(cardID: number, userID: string) {
 }
 
 export const gradeSpeakingQuiz = procedure
-  .input(z.object({ userInput: z.string(), cardID: z.number() }))
+  .input(
+    z.object({
+      userInput: z.string().trim().min(1).max(2000),
+      cardID: z.number().int().positive(),
+    }),
+  )
   .output(
     z.object({
-      grade: speakingGradeSchema,
+      grade: reviewGradeSchema,
       isCorrect: z.boolean(),
       feedback: z.string(),
       quizResultId: z.number().nullable(),
     }),
   )
   .mutation(async ({ ctx, input }) => {
-    const settings = await getUserSettings(ctx.user?.id);
-    const userId = settings.user.id;
+    const userId = ctx.user?.id;
+    if (!userId) {
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message: "Please log in.",
+      });
+    }
     const card = await getOwnedCardForSpeaking(input.cardID, userId);
     const evaluation = await evaluateSpeakingResponse({
       prompt: card.definition,
@@ -62,6 +72,12 @@ export const gradeSpeakingQuiz = procedure
         isAcceptable: evaluation.isCorrect,
         grade: evaluation.grade,
         gradingSource: evaluation.gradingSource,
+        gradingModel: evaluation.gradingModel,
+        gradingConfidence: evaluation.gradingConfidence,
+        gradingContext: {
+          deckName: card.deckName,
+          deckDescription: card.deckDescription,
+        },
         reason: evaluation.feedback,
         eventType: "speaking-judgement",
       },
