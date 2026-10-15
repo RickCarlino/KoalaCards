@@ -3,17 +3,16 @@ import { useRouter } from "next/router";
 import {
   Button,
   Container,
-  Group,
   Paper,
   Pagination,
   Table,
   Text,
-  Title,
 } from "@mantine/core";
 import { IconDownload } from "@tabler/icons-react";
 import { QuizResult } from "@/koala/generated/prisma/client";
 import { GetServerSideProps } from "next/types";
 import { getServersideUser } from "@/koala/get-serverside-user";
+import { PageHeader } from "@/koala/components/PageHeader";
 
 interface TrainProps {
   data: QuizResult[];
@@ -57,20 +56,27 @@ export default function Train({ data, totalPages, page }: TrainProps) {
   };
 
   return (
-    <Container size="lg" mt="md">
-      <Group justify="space-between" align="center" mb="md">
-        <Title order={2}>Quiz Results</Title>
-        <Button
-          onClick={handleDownload}
-          leftSection={<IconDownload size={16} />}
-        >
-          Download JSON
-        </Button>
-      </Group>
-      <Paper shadow="md" radius="md" withBorder p="md">
-        {data.length === 0 ? NULL_TABLE : table(data)}
+    <Container size="lg" py="xl">
+      <PageHeader
+        title="Quiz results"
+        actions={
+          <Button
+            onClick={handleDownload}
+            leftSection={<IconDownload size={16} />}
+          >
+            Download JSON
+          </Button>
+        }
+      />
+      <Paper radius="md" withBorder p="md">
+        <Table.ScrollContainer minWidth={760} type="native">
+          {data.length === 0 ? NULL_TABLE : table(data)}
+        </Table.ScrollContainer>
       </Paper>
       <Pagination
+        mt="lg"
+        size="sm"
+        siblings={0}
         value={page}
         onChange={onPageChange}
         total={totalPages}
@@ -150,18 +156,15 @@ function table(data: QuizResult[]): React.ReactNode {
             errorTag,
           } = row;
           return (
-            <Table.Tr
-              key={id}
-              style={{
-                color: isAcceptable ? undefined : "orange",
-              }}
-            >
+            <Table.Tr key={id}>
               <Table.Td>{id}</Table.Td>
               <Table.Td>{definition}</Table.Td>
               <Table.Td>{acceptableTerm}</Table.Td>
               <Table.Td>{userInput}</Table.Td>
               <Table.Td>{reason}</Table.Td>
-              <Table.Td>{errorTag ?? ""}</Table.Td>
+              <Table.Td>
+                {errorTag ?? (isAcceptable ? "Correct" : "Incorrect")}
+              </Table.Td>
             </Table.Tr>
           );
         })}

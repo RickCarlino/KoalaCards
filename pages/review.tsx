@@ -7,6 +7,7 @@ import { getServersideUser } from "@/koala/get-serverside-user";
 import { useUserSettings } from "@/koala/settings-provider";
 import { clampReviewTake } from "@/koala/settings/review-take";
 import { trpc } from "@/koala/trpc-config";
+import { PageHeader } from "@/koala/components/PageHeader";
 import {
   ActionIcon,
   Alert,
@@ -68,7 +69,7 @@ function NoDecksMessage() {
               variant="light"
               size="md"
             >
-              Add Cards
+              Add cards
             </Button>
             <Button
               component={Link}
@@ -78,7 +79,7 @@ function NoDecksMessage() {
               variant="light"
               size="md"
             >
-              View Cards
+              View cards
             </Button>
           </Group>
         </Stack>
@@ -114,7 +115,12 @@ function DeckTitleField({
   }
 
   return (
-    <Text fw={600} size="lg" c="gray.8">
+    <Text
+      fw={600}
+      size="lg"
+      c="gray.8"
+      style={{ overflowWrap: "anywhere" }}
+    >
       {deckName}
     </Text>
   );
@@ -228,7 +234,13 @@ function DeckCardHeader({
 
   return (
     <Group align="flex-start" justify="space-between" wrap="wrap">
-      <Group align="flex-start" gap="sm" wrap="nowrap" style={{ flex: 1 }}>
+      <Group
+        align="flex-start"
+        gap="sm"
+        wrap="nowrap"
+        miw={0}
+        style={{ flex: "1 1 180px" }}
+      >
         <Checkbox
           checked={isSelected}
           onChange={onToggleSelected}
@@ -236,7 +248,7 @@ function DeckCardHeader({
           mt={4}
           aria-label={`Select ${deckName}`}
         />
-        <Box style={{ flex: 1 }}>
+        <Box miw={0} style={{ flex: 1 }}>
           <DeckTitleField
             isEditing={isEditing}
             title={title}
@@ -244,7 +256,12 @@ function DeckCardHeader({
             onChange={onTitleChange}
           />
           {showDescription && (
-            <Text size="sm" c="gray.7" mt={4}>
+            <Text
+              size="sm"
+              c="gray.7"
+              mt={4}
+              style={{ overflowWrap: "anywhere" }}
+            >
               {trimmedDescription}
             </Text>
           )}
@@ -454,7 +471,7 @@ function DeckLearningSummary({
       </Text>
       <Group justify="space-between" align="center" gap="xs" wrap="wrap">
         <Group gap="xs">
-          <Badge color="blue" variant="light" radius="md">
+          <Badge color="pink" variant="light" radius="md">
             {deck.eligibleLogCount} eligible
           </Badge>
           <Badge
@@ -511,10 +528,10 @@ function DeckFooter({
         href={`/review/${deckId}?take=${takeCount}`}
         leftSection={<IconStars size={16} />}
         color="pink"
-        variant="light"
+        variant="filled"
         size="sm"
       >
-        Study Cards
+        Study cards
       </Button>
     </Group>
   );
@@ -672,7 +689,7 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
     }, [deck.id, deleteDeckMutation]);
 
     return (
-      <Card withBorder p="sm">
+      <Card withBorder p={{ base: "md", sm: "lg" }} h="100%">
         <Stack gap="sm">
           <DeckCardHeader
             isSelected={isSelected}
@@ -701,19 +718,37 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
               />
             </Stack>
           )}
-          <DeckLearningSummary
-            deck={deck}
-            onOptimize={() =>
-              optimizeDeckMutation.mutate({ deckId: deck.id })
-            }
-            isOptimizing={optimizeDeckMutation.isPending}
-          />
           <DeckFooter
             quizzesDue={deck.quizzesDue}
             newQuizzes={deck.newQuizzes}
             deckId={deck.id}
             takeCount={reviewTakeCount}
           />
+          <Box
+            component="details"
+            open={deck.optimizerStatus === "failed" || undefined}
+            style={{
+              borderTop: "1px solid var(--mantine-color-pastel-1)",
+            }}
+          >
+            <Text
+              component="summary"
+              size="sm"
+              c="pastel.6"
+              py="sm"
+              mih={44}
+              style={{ cursor: "pointer" }}
+            >
+              Review timing
+            </Text>
+            <DeckLearningSummary
+              deck={deck}
+              onOptimize={() =>
+                optimizeDeckMutation.mutate({ deckId: deck.id })
+              }
+              isOptimizing={optimizeDeckMutation.isPending}
+            />
+          </Box>
         </Stack>
       </Card>
     );
@@ -732,37 +767,33 @@ export default function ReviewPage({ decks }: ReviewPageProps) {
   });
 
   return (
-    <Container size="lg" py="md">
-      <Group justify="space-between" align="flex-end" wrap="wrap" mb="lg">
-        <Stack gap="xs">
-          <Title order={2} c="pink.8">
-            Your Decks
-          </Title>
-          <Text size="md" c="gray.7">
-            Pick a deck to begin your session.
-          </Text>
-        </Stack>
-        <Group gap="sm">
-          <Button
-            component={Link}
-            href="/create"
-            leftSection={<IconPlus size={16} />}
-            color="pink"
-            variant="light"
-          >
-            Add Cards
-          </Button>
-          <Button
-            component={Link}
-            href="/cards"
-            leftSection={<IconCards size={16} />}
-            color="pink"
-            variant="light"
-          >
-            View Cards
-          </Button>
-        </Group>
-      </Group>
+    <Container size="lg" py="xl">
+      <PageHeader
+        title="Your decks"
+        description="Pick a deck to begin your session."
+        actions={
+          <>
+            <Button
+              component={Link}
+              href="/create"
+              leftSection={<IconPlus size={16} />}
+              color="pink"
+              variant="default"
+            >
+              Add cards
+            </Button>
+            <Button
+              component={Link}
+              href="/cards"
+              leftSection={<IconCards size={16} />}
+              color="pink"
+              variant="default"
+            >
+              View cards
+            </Button>
+          </>
+        }
+      />
 
       {selectedDeckIds.length >= 2 && (
         <Card withBorder p="sm" mb="md">

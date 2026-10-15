@@ -3,13 +3,15 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   AppShell,
+  ActionIcon,
   Box,
   Group,
+  Menu,
   Text,
   ThemeIcon,
   useMantineTheme,
 } from "@mantine/core";
-import { IconArrowBack } from "@tabler/icons-react";
+import { IconArrowBack, IconMenu2 } from "@tabler/icons-react";
 import { useRouter } from "next/router";
 
 interface TopBarProps {
@@ -55,12 +57,48 @@ function resolveSectionTitle(pathname: string): string {
   return "Koala Cards";
 }
 
+function NavigationMenu({ pathname }: { pathname: string }) {
+  return (
+    <Menu position="bottom-end" width={220}>
+      <Menu.Target>
+        <ActionIcon
+          variant="subtle"
+          color="pink.8"
+          aria-label="Open navigation"
+        >
+          <IconMenu2 size={20} />
+        </ActionIcon>
+      </Menu.Target>
+      <Menu.Dropdown>
+        {Object.entries(exactRouteTitles)
+          .filter(([href]) => href !== "/train" && href !== "/admin")
+          .map(([href, label]) => (
+            <Menu.Item
+              key={href}
+              component={Link}
+              href={href}
+              aria-current={pathname === href ? "page" : undefined}
+              c={pathname === href ? "pink.8" : undefined}
+              mih={44}
+            >
+              {label}
+            </Menu.Item>
+          ))}
+      </Menu.Dropdown>
+    </Menu>
+  );
+}
+
 const TopBar = ({ children }: TopBarProps) => {
   const theme = useMantineTheme();
   const router = useRouter();
   const sectionTitle = resolveSectionTitle(router.pathname);
 
   const isHome = router.pathname === "/";
+  const isReaderRoute =
+    router.pathname === "/reader" ||
+    router.pathname.startsWith("/reader/");
+  const headerHeight = isReaderRoute ? { base: 60, md: 70, lg: 80 } : 64;
   const isReaderDocumentRoute =
     router.pathname === "/reader/[publicId]" ||
     router.pathname === "/reader/books/[publicId]";
@@ -106,15 +144,14 @@ const TopBar = ({ children }: TopBarProps) => {
 
   if (isHome) {
     return (
-      <AppShell
-        header={{ height: { base: 60, md: 70, lg: 80 } }}
-        padding={0}
-      >
+      <AppShell header={{ height: headerHeight }} padding={0}>
         <AppShell.Header>
-          <Group h="100%" px="md" justify="center">
+          <Group h="100%" px="md" justify="space-between">
+            <Box w={44} />
             <Link href="/" style={{ textDecoration: "none" }}>
               {logo}
             </Link>
+            <NavigationMenu pathname={router.pathname} />
           </Group>
         </AppShell.Header>
 
@@ -130,10 +167,7 @@ const TopBar = ({ children }: TopBarProps) => {
   }
 
   return (
-    <AppShell
-      header={{ height: { base: 60, md: 70, lg: 80 } }}
-      padding={0}
-    >
+    <AppShell header={{ height: headerHeight }} padding={0}>
       <AppShell.Header>
         <Group
           h="100%"
@@ -142,9 +176,21 @@ const TopBar = ({ children }: TopBarProps) => {
           wrap="nowrap"
           gap="sm"
         >
-          <Link href="/" style={{ textDecoration: "none" }}>
-            {homeButton}
-          </Link>
+          {isReaderRoute ? (
+            <Link href="/" style={{ textDecoration: "none" }}>
+              {homeButton}
+            </Link>
+          ) : (
+            <ActionIcon
+              component={Link}
+              href="/"
+              variant="subtle"
+              color="pink.8"
+              aria-label="Go home"
+            >
+              <IconArrowBack size={20} />
+            </ActionIcon>
+          )}
           <Text
             fw={700}
             c={theme.colors.pink[8]}
@@ -157,7 +203,11 @@ const TopBar = ({ children }: TopBarProps) => {
           >
             {sectionTitle}
           </Text>
-          <Box w={28} h={28} />
+          {isReaderRoute ? (
+            <Box w={28} h={28} />
+          ) : (
+            <NavigationMenu pathname={router.pathname} />
+          )}
         </Group>
       </AppShell.Header>
 

@@ -5,18 +5,18 @@ import { timeUntil } from "@/koala/time-until";
 import { trpc } from "@/koala/trpc-config";
 import {
   Anchor,
+  Alert,
   Badge,
   Button,
   Checkbox,
   Container,
-  Divider,
   Grid,
   Group,
   Image,
   Paper,
   Stack,
   Text,
-  TextInput,
+  Textarea,
   Title,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
@@ -63,17 +63,15 @@ function Stat({
   icon?: React.ReactNode;
 }) {
   return (
-    <Paper withBorder radius="md" p="md">
-      <Group wrap="nowrap" gap="sm" align="center">
-        {icon}
-        <Stack gap={2} style={{ flex: 1 }}>
-          <Text size="xs" c="dimmed">
-            {label}
-          </Text>
-          <Text fw={600}>{value}</Text>
-        </Stack>
-      </Group>
-    </Paper>
+    <Group wrap="nowrap" gap="sm" align="center" py="xs">
+      {icon}
+      <Stack gap={2} miw={0} style={{ flex: 1 }}>
+        <Text size="xs" c="pastel.6">
+          {label}
+        </Text>
+        <Text fw={600}>{value}</Text>
+      </Stack>
+    </Group>
   );
 }
 
@@ -113,31 +111,37 @@ function CardEditor({ card }: CardPageProps) {
   const updateMutation = trpc.editCard.useMutation();
   const deleteMutation = trpc.deleteCard.useMutation();
 
-  const handleSave = async (values: {
+  const handleSave = (values: {
     term: string;
     definition: string;
     paused: boolean;
   }) => {
-    await updateMutation.mutateAsync({ id: card.id, ...values });
-    router.back();
+    updateMutation.mutate(
+      { id: card.id, ...values },
+      { onSuccess: () => router.back() },
+    );
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!confirm("Delete this card? This cannot be undone.")) {
       return;
     }
-    await deleteMutation.mutateAsync({ id: card.id });
-    router.back();
+    deleteMutation.mutate(
+      { id: card.id },
+      { onSuccess: () => router.back() },
+    );
   };
 
   return (
     <Container size="md" py="xl">
       <Stack gap="lg">
         <Group justify="space-between" align="center">
-          <Stack gap={4}>
-            <Title order={2}>{card.term}</Title>
+          <Stack gap={4} miw={0} style={{ flex: "1 1 240px" }}>
+            <Title order={1} size="h2">
+              Edit card
+            </Title>
             <Group gap="xs">
-              <Text c="dimmed" size="sm">
+              <Text c="pastel.6" size="sm">
                 Deck:
               </Text>
               <DeckLabel deckId={card.deckId} deckName={card.deckName} />
@@ -158,18 +162,22 @@ function CardEditor({ card }: CardPageProps) {
         <Grid gap="md">
           <Grid.Col span={{ base: 12, md: 7 }}>
             <Paper withBorder p="lg" radius="md" shadow="xs">
-              <Title order={4} mb="sm">
-                Edit Card
-              </Title>
               <form onSubmit={form.onSubmit(handleSave)}>
                 <Stack gap="md">
-                  <TextInput
+                  <Textarea
                     label="Term"
+                    lang="ko"
+                    autosize
+                    minRows={2}
+                    maxRows={6}
                     placeholder="Enter the term"
                     {...form.getInputProps("term")}
                   />
-                  <TextInput
+                  <Textarea
                     label="Definition"
+                    autosize
+                    minRows={2}
+                    maxRows={6}
                     placeholder="Enter the definition"
                     {...form.getInputProps("definition")}
                   />
@@ -180,8 +188,22 @@ function CardEditor({ card }: CardPageProps) {
                     })}
                   />
 
+                  {(updateMutation.isError || deleteMutation.isError) && (
+                    <Alert color="red" role="alert">
+                      {updateMutation.isError
+                        ? "Couldn't save the card. Try again."
+                        : "Couldn't delete the card. Try again."}
+                    </Alert>
+                  )}
                   <Group justify="space-between" mt="sm">
-                    <Button type="submit">Save Changes</Button>
+                    <Button
+                      type="submit"
+                      variant="filled"
+                      loading={updateMutation.isPending}
+                      disabled={deleteMutation.isPending}
+                    >
+                      Save changes
+                    </Button>
                     <Group gap="sm">
                       <Button
                         variant="light"
@@ -194,8 +216,10 @@ function CardEditor({ card }: CardPageProps) {
                         variant="outline"
                         color="red"
                         onClick={handleDelete}
+                        loading={deleteMutation.isPending}
+                        disabled={updateMutation.isPending}
                       >
-                        Delete Card
+                        Delete card
                       </Button>
                     </Group>
                   </Group>
@@ -259,11 +283,6 @@ function CardEditor({ card }: CardPageProps) {
                   />
                 </Grid.Col>
               </Grid>
-              <Divider my="md" />
-              <Text size="sm" c="dimmed">
-                Scheduling data uses FSRS-based fields migrated onto the
-                card. Edits are read-only here.
-              </Text>
             </Paper>
           </Grid.Col>
 
@@ -279,7 +298,7 @@ function CardEditor({ card }: CardPageProps) {
                   radius="md"
                 />
               ) : (
-                <Text size="sm" c="dimmed">
+                <Text size="sm" c="pastel.6">
                   No image available for this card.
                 </Text>
               )}
@@ -291,7 +310,7 @@ function CardEditor({ card }: CardPageProps) {
               </Title>
               <Stack gap={6}>
                 <Group gap="xs">
-                  <Text c="dimmed" size="sm">
+                  <Text c="pastel.6" size="sm">
                     Deck:
                   </Text>
                   <DeckLabel
@@ -300,7 +319,7 @@ function CardEditor({ card }: CardPageProps) {
                   />
                 </Group>
                 <Group gap="xs">
-                  <Text c="dimmed" size="sm">
+                  <Text c="pastel.6" size="sm">
                     Language:
                   </Text>
                   <Text size="sm" fw={500}>

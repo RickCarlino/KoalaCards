@@ -3,8 +3,9 @@ import {
   InferGetServerSidePropsType,
 } from "next";
 import { prismaClient } from "@/koala/prisma-client";
-import { Container, Table, Title } from "@mantine/core";
-import { useRouter } from "next/router";
+import { Anchor, Container, Paper, Table } from "@mantine/core";
+import Link from "next/link";
+import { PageHeader } from "@/koala/components/PageHeader";
 import { Prisma } from "@/koala/generated/prisma/client";
 import {
   fmtShortDate,
@@ -89,40 +90,45 @@ function fmtDate(iso: string | null): string {
 }
 
 export default function AdminPage({ userData }: Props) {
-  const router = useRouter();
   return (
-    <Container size="md" mt="xl">
-      <Title order={1} mb="sm">
-        User Report
-      </Title>
-      <Table striped highlightOnHover>
-        <thead>
-          <tr>
-            <th>Email</th>
-            <th>Days Since</th>
-            <th># Cards</th>
-            <th>Studied</th>
-            <th>Admin?</th>
-            <th>Created At</th>
-          </tr>
-        </thead>
-        <tbody>
-          {userData.map((u) => (
-            <tr
-              key={u.id}
-              style={{ cursor: "pointer" }}
-              onClick={() => router.push(`/link/${u.id}`)}
-            >
-              <td>{u.email}</td>
-              <td>{u.daysSinceLastSeen}</td>
-              <td>{u.cardCount}</td>
-              <td>{u.studiedCount}</td>
-              <td>{yesNo(u.isAdmin)}</td>
-              <td>{fmtDate(u.createdAt)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </Table>
+    <Container size="lg" py="xl">
+      <PageHeader title="User report" />
+      <Paper p="md">
+        <Table.ScrollContainer minWidth={720} type="native">
+          <Table striped highlightOnHover>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Email</Table.Th>
+                <Table.Th>Days Since</Table.Th>
+                <Table.Th># Cards</Table.Th>
+                <Table.Th>Studied</Table.Th>
+                <Table.Th>Admin?</Table.Th>
+                <Table.Th>Created At</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {userData.map((u) => (
+                <Table.Tr key={u.id}>
+                  <Table.Td>
+                    <Anchor
+                      component={Link}
+                      href={`/link/${u.id}`}
+                      size="sm"
+                    >
+                      {u.email}
+                    </Anchor>
+                  </Table.Td>
+                  <Table.Td>{u.daysSinceLastSeen}</Table.Td>
+                  <Table.Td>{u.cardCount}</Table.Td>
+                  <Table.Td>{u.studiedCount}</Table.Td>
+                  <Table.Td>{yesNo(u.isAdmin)}</Table.Td>
+                  <Table.Td>{fmtDate(u.createdAt)}</Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        </Table.ScrollContainer>
+      </Paper>
     </Container>
   );
 }

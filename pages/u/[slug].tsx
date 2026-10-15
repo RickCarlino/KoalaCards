@@ -17,6 +17,7 @@ import {
 import { useLanguageExchangeSounds } from "@/koala/language-exchange-sounds";
 import {
   Badge,
+  Box,
   Button,
   Container,
   Group,
@@ -77,99 +78,106 @@ function DirectLanguageExchangeView({
   remoteVideoStream,
 }: DirectLanguageExchangeViewProps) {
   return (
-    <Container size={remoteVideoStream ? "lg" : "sm"} py="xl">
-      <audio ref={remoteAudioRef} autoPlay playsInline hidden />
-      <Stack gap="xl">
-        <Stack gap="sm" align="center">
-          <ThemeIcon color="pink" size={56} radius="xl">
-            <IconLanguage size={28} />
-          </ThemeIcon>
-          <Title order={2} ta="center">
-            한국어 언어 교환
-          </Title>
-          <Text size="sm" c="dimmed" ta="center">
-            준비된 학습자와 바로 대화해 보세요.
-          </Text>
-        </Stack>
-
-        <SectionCard
-          title="현재 상태"
-          description="학습자가 온라인이면 바로 연결됩니다."
-          action={
-            guestCall ? (
-              <Badge color="pink">{callStatusText}</Badge>
-            ) : undefined
-          }
-        >
-          <Stack gap="md">
-            <Text fw={600}>{availabilityText}</Text>
-            {guestCall ? (
-              <Group>
-                <Button
-                  color="red"
-                  leftSection={<IconPhoneOff size={16} />}
-                  onClick={handleEnd}
-                >
-                  통화 종료
-                </Button>
-              </Group>
-            ) : (
-              <Group>
-                <Button
-                  color="pink"
-                  leftSection={<IconPhoneCall size={16} />}
-                  onClick={handleConnect}
-                  loading={connecting}
-                  disabled={!canStartCall}
-                >
-                  연결하기
-                </Button>
-              </Group>
-            )}
-            <Text size="sm" c="dimmed">
-              {guestCall
-                ? "연결되는 동안 이 페이지를 열어 두세요."
-                : "연결할 때 마이크 권한을 요청합니다."}
+    <Box component="main" mih="100svh" bg="pink.0">
+      <Container size={remoteVideoStream ? "lg" : "sm"} py="xl">
+        <audio ref={remoteAudioRef} autoPlay playsInline hidden />
+        <Stack gap="xl">
+          <Stack gap="sm" align="center">
+            <ThemeIcon color="pink" size={56} radius="xl">
+              <IconLanguage size={28} />
+            </ThemeIcon>
+            <Title order={2} ta="center">
+              한국어 언어 교환
+            </Title>
+            <Text size="sm" c="pastel.6" ta="center">
+              준비된 학습자와 바로 대화해 보세요.
             </Text>
           </Stack>
-        </SectionCard>
 
-        {remoteVideoStream ? (
           <SectionCard
-            title="학습 화면"
-            description="학습자가 공유한 화면입니다."
+            title="현재 상태"
+            description="학습자가 온라인이면 바로 연결됩니다."
             action={
-              <Button
-                size="xs"
-                variant="light"
-                onClick={() => void handleExpandVideo()}
-              >
-                크게 보기
-              </Button>
+              guestCall ? (
+                <Badge color="pink">{callStatusText}</Badge>
+              ) : undefined
             }
           >
-            <div ref={remoteVideoContainerRef}>
-              <Paper radius="md" withBorder style={{ overflow: "hidden" }}>
-                <video
-                  ref={remoteVideoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  style={{
-                    aspectRatio: "16 / 9",
-                    background: "#111",
-                    display: "block",
-                    maxHeight: "70vh",
-                    objectFit: "contain",
-                    width: "100%",
-                  }}
-                />
-              </Paper>
-            </div>
+            <Stack gap="md">
+              <Text fw={600}>{availabilityText}</Text>
+              {guestCall ? (
+                <Group>
+                  <Button
+                    color="red"
+                    leftSection={<IconPhoneOff size={16} />}
+                    onClick={handleEnd}
+                  >
+                    통화 종료
+                  </Button>
+                </Group>
+              ) : (
+                <Group>
+                  <Button
+                    color="pink"
+                    variant="filled"
+                    leftSection={<IconPhoneCall size={16} />}
+                    onClick={handleConnect}
+                    loading={connecting}
+                    disabled={!canStartCall}
+                  >
+                    연결하기
+                  </Button>
+                </Group>
+              )}
+              <Text size="sm" c="pastel.6">
+                {guestCall
+                  ? "연결되는 동안 이 페이지를 열어 두세요."
+                  : "연결할 때 마이크 권한을 요청합니다."}
+              </Text>
+            </Stack>
           </SectionCard>
-        ) : null}
-      </Stack>
-    </Container>
+
+          {remoteVideoStream ? (
+            <SectionCard
+              title="학습 화면"
+              description="학습자가 공유한 화면입니다."
+              action={
+                <Button
+                  size="xs"
+                  variant="light"
+                  onClick={() => void handleExpandVideo()}
+                >
+                  크게 보기
+                </Button>
+              }
+            >
+              <div ref={remoteVideoContainerRef}>
+                <Paper
+                  radius="md"
+                  withBorder
+                  style={{ overflow: "hidden" }}
+                >
+                  <video
+                    ref={remoteVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    style={{
+                      aspectRatio: "16 / 9",
+                      background: "#111",
+                      display: "block",
+                      maxHeight: "70vh",
+                      objectFit: "contain",
+                      width: "100%",
+                    }}
+                  />
+                </Paper>
+              </div>
+            </SectionCard>
+          ) : null}
+        </Stack>
+      </Container>
+    </Box>
   );
 }
 

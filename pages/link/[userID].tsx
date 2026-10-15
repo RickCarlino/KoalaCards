@@ -18,6 +18,7 @@ import {
   Group,
   Paper,
   Stack,
+  SimpleGrid,
   Table,
   Text,
   Title,
@@ -435,12 +436,18 @@ export default function UserOverviewPage({
     }
   }
   return (
-    <Container size="lg" mt="xl">
+    <Container size="lg" py="xl">
       <Stack gap="md">
         <Group justify="space-between" align="center">
-          <div>
-            <Title order={2}>User Overview</Title>
-            <Text size="sm" c="dimmed">
+          <div style={{ minWidth: 0 }}>
+            <Title order={1} size="h2">
+              User overview
+            </Title>
+            <Text
+              size="sm"
+              c="pastel.6"
+              style={{ overflowWrap: "anywhere" }}
+            >
               {user.email} {user.name ? `• ${user.name}` : ""}
             </Text>
             {error ? (
@@ -460,210 +467,226 @@ export default function UserOverviewPage({
           </form>
         </Group>
 
-        <Group align="stretch">
+        <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
           <Paper withBorder p="md" radius="md" style={{ flex: 1 }}>
             <Title order={4}>Profile</Title>
-            <Table mt="sm">
-              <tbody>
-                <tr>
-                  <td>Email</td>
-                  <td>{user.email}</td>
-                </tr>
-                <tr>
-                  <td>Created</td>
-                  <td>{fmtShort(user.createdAt)}</td>
-                </tr>
-                <tr>
-                  <td>Last Seen</td>
-                  <td>{fmtShort(user.lastSeen)}</td>
-                </tr>
-              </tbody>
+            <Table mt="sm" style={{ tableLayout: "fixed" }}>
+              <Table.Tbody>
+                <Table.Tr>
+                  <Table.Td>Email</Table.Td>
+                  <Table.Td>{user.email}</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td>Created</Table.Td>
+                  <Table.Td>{fmtShort(user.createdAt)}</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td>Last Seen</Table.Td>
+                  <Table.Td>{fmtShort(user.lastSeen)}</Table.Td>
+                </Table.Tr>
+              </Table.Tbody>
             </Table>
           </Paper>
 
           <Paper withBorder p="md" radius="md" style={{ flex: 1 }}>
             <Title order={4}>Counts</Title>
-            <Table mt="sm">
-              <tbody>
-                <tr>
-                  <td>Cards</td>
-                  <td>{counts.cardsTotal}</td>
-                </tr>
-                <tr>
-                  <td>Studied Cards</td>
-                  <td>{counts.cardsStudied}</td>
-                </tr>
-                <tr>
-                  <td>Paused Cards</td>
-                  <td>{counts.cardsPaused}</td>
-                </tr>
-                <tr>
-                  <td>Decks</td>
-                  <td>{counts.deckCount}</td>
-                </tr>
-                <tr>
-                  <td>Writing Submissions</td>
-                  <td>{counts.writingCount}</td>
-                </tr>
-                <tr>
-                  <td>Quiz Results</td>
-                  <td>{counts.quizResultCount}</td>
-                </tr>
-                <tr>
-                  <td>Reading Documents</td>
-                  <td>
+            <Table mt="sm" style={{ tableLayout: "fixed" }}>
+              <Table.Tbody>
+                <Table.Tr>
+                  <Table.Td>Cards</Table.Td>
+                  <Table.Td>{counts.cardsTotal}</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td>Studied Cards</Table.Td>
+                  <Table.Td>{counts.cardsStudied}</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td>Paused Cards</Table.Td>
+                  <Table.Td>{counts.cardsPaused}</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td>Decks</Table.Td>
+                  <Table.Td>{counts.deckCount}</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td>Writing Submissions</Table.Td>
+                  <Table.Td>{counts.writingCount}</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td>Quiz Results</Table.Td>
+                  <Table.Td>{counts.quizResultCount}</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td>Reading Documents</Table.Td>
+                  <Table.Td>
                     {counts.readerDocumentCount} ({counts.readerBookCount}{" "}
                     EPUBs)
-                  </td>
-                </tr>
-                <tr>
-                  <td>Read Articles</td>
-                  <td>{counts.readerReadArticleCount}</td>
-                </tr>
-                <tr>
-                  <td>Reader Highlights</td>
-                  <td>{counts.readerHighlightCount}</td>
-                </tr>
-                <tr>
-                  <td>Imported Highlights</td>
-                  <td>{counts.readerImportedHighlightCount}</td>
-                </tr>
-              </tbody>
+                  </Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td>Read Articles</Table.Td>
+                  <Table.Td>{counts.readerReadArticleCount}</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td>Reader Highlights</Table.Td>
+                  <Table.Td>{counts.readerHighlightCount}</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td>Imported Highlights</Table.Td>
+                  <Table.Td>
+                    {counts.readerImportedHighlightCount}
+                  </Table.Td>
+                </Table.Tr>
+              </Table.Tbody>
             </Table>
           </Paper>
-        </Group>
+        </SimpleGrid>
 
         <Paper withBorder p="md" radius="md">
           <Title order={4}>Recent Writing</Title>
-          <Table striped highlightOnHover mt="sm">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Prompt</th>
-                <th>Chars</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentWriting.length === 0 ? (
-                <tr>
-                  <td colSpan={3}>No writing yet</td>
-                </tr>
-              ) : (
-                recentWriting.map((w) => (
-                  <tr key={w.id}>
-                    <td>{fmtShort(w.createdAt)}</td>
-                    <td>{w.prompt}</td>
-                    <td>{w.submissionCharacterCount}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </Table>
+          <Table.ScrollContainer minWidth={560} type="native">
+            <Table highlightOnHover mt="sm">
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Date</Table.Th>
+                  <Table.Th>Prompt</Table.Th>
+                  <Table.Th>Chars</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {recentWriting.length === 0 ? (
+                  <Table.Tr>
+                    <Table.Td colSpan={3}>No writing yet</Table.Td>
+                  </Table.Tr>
+                ) : (
+                  recentWriting.map((w) => (
+                    <Table.Tr key={w.id}>
+                      <Table.Td>{fmtShort(w.createdAt)}</Table.Td>
+                      <Table.Td>{w.prompt}</Table.Td>
+                      <Table.Td>{w.submissionCharacterCount}</Table.Td>
+                    </Table.Tr>
+                  ))
+                )}
+              </Table.Tbody>
+            </Table>
+          </Table.ScrollContainer>
         </Paper>
 
         <Paper withBorder p="md" radius="md">
           <Title order={4}>Recent Quiz</Title>
-          <Table striped highlightOnHover mt="sm">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Definition</th>
-                <th>Input</th>
-                <th>Accepted</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentQuiz.length === 0 ? (
-                <tr>
-                  <td colSpan={4}>No quiz results yet</td>
-                </tr>
-              ) : (
-                recentQuiz.map((q) => (
-                  <tr key={q.id}>
-                    <td>{fmtShort(q.createdAt)}</td>
-                    <td>{q.definition}</td>
-                    <td>{q.userInput}</td>
-                    <td>{yesNo(q.isAcceptable)}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </Table>
+          <Table.ScrollContainer minWidth={560} type="native">
+            <Table highlightOnHover mt="sm">
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Date</Table.Th>
+                  <Table.Th>Definition</Table.Th>
+                  <Table.Th>Input</Table.Th>
+                  <Table.Th>Accepted</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {recentQuiz.length === 0 ? (
+                  <Table.Tr>
+                    <Table.Td colSpan={4}>No quiz results yet</Table.Td>
+                  </Table.Tr>
+                ) : (
+                  recentQuiz.map((q) => (
+                    <Table.Tr key={q.id}>
+                      <Table.Td>{fmtShort(q.createdAt)}</Table.Td>
+                      <Table.Td>{q.definition}</Table.Td>
+                      <Table.Td>{q.userInput}</Table.Td>
+                      <Table.Td>{yesNo(q.isAcceptable)}</Table.Td>
+                    </Table.Tr>
+                  ))
+                )}
+              </Table.Tbody>
+            </Table>
+          </Table.ScrollContainer>
         </Paper>
 
         <Paper withBorder p="md" radius="md">
           <Title order={4}>Recent Reading Documents</Title>
-          <Table striped highlightOnHover mt="sm">
-            <thead>
-              <tr>
-                <th>Added</th>
-                <th>Type</th>
-                <th>Title</th>
-                <th>Last activity</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentReaderDocuments.length === 0 ? (
-                <tr>
-                  <td colSpan={4}>No reading documents yet</td>
-                </tr>
-              ) : (
-                recentReaderDocuments.map((document) => (
-                  <tr key={document.key}>
-                    <td>{fmtShort(document.createdAt)}</td>
-                    <td>{document.kind}</td>
-                    <td>
-                      <Text size="sm" lineClamp={2} maw={360}>
-                        {document.title}
-                      </Text>
-                    </td>
-                    <td>{fmtShort(document.lastActivityAt)}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </Table>
+          <Table.ScrollContainer minWidth={560} type="native">
+            <Table highlightOnHover mt="sm">
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Added</Table.Th>
+                  <Table.Th>Type</Table.Th>
+                  <Table.Th>Title</Table.Th>
+                  <Table.Th>Last activity</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {recentReaderDocuments.length === 0 ? (
+                  <Table.Tr>
+                    <Table.Td colSpan={4}>
+                      No reading documents yet
+                    </Table.Td>
+                  </Table.Tr>
+                ) : (
+                  recentReaderDocuments.map((document) => (
+                    <Table.Tr key={document.key}>
+                      <Table.Td>{fmtShort(document.createdAt)}</Table.Td>
+                      <Table.Td>{document.kind}</Table.Td>
+                      <Table.Td>
+                        <Text size="sm" lineClamp={2} maw={360}>
+                          {document.title}
+                        </Text>
+                      </Table.Td>
+                      <Table.Td>
+                        {fmtShort(document.lastActivityAt)}
+                      </Table.Td>
+                    </Table.Tr>
+                  ))
+                )}
+              </Table.Tbody>
+            </Table>
+          </Table.ScrollContainer>
         </Paper>
 
         <Paper withBorder p="md" radius="md">
           <Title order={4}>Recent Reader Highlights</Title>
-          <Table striped highlightOnHover mt="sm">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Source</th>
-                <th>Text</th>
-                <th>Imported</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentReaderHighlights.length === 0 ? (
-                <tr>
-                  <td colSpan={4}>No reader highlights yet</td>
-                </tr>
-              ) : (
-                recentReaderHighlights.map((highlight) => (
-                  <tr key={highlight.key}>
-                    <td>{fmtShort(highlight.createdAt)}</td>
-                    <td>
-                      <Text size="sm" lineClamp={2} maw={280}>
-                        {highlight.kind}: {highlight.sourceTitle}
-                        {highlight.chapterTitle
-                          ? ` · ${highlight.chapterTitle}`
-                          : ""}
-                      </Text>
-                    </td>
-                    <td>
-                      <Text size="sm" lineClamp={2} maw={320}>
-                        {highlight.selectedText}
-                      </Text>
-                    </td>
-                    <td>{fmtShort(highlight.importedAt)}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </Table>
+          <Table.ScrollContainer minWidth={560} type="native">
+            <Table highlightOnHover mt="sm">
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Date</Table.Th>
+                  <Table.Th>Source</Table.Th>
+                  <Table.Th>Text</Table.Th>
+                  <Table.Th>Imported</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {recentReaderHighlights.length === 0 ? (
+                  <Table.Tr>
+                    <Table.Td colSpan={4}>
+                      No reader highlights yet
+                    </Table.Td>
+                  </Table.Tr>
+                ) : (
+                  recentReaderHighlights.map((highlight) => (
+                    <Table.Tr key={highlight.key}>
+                      <Table.Td>{fmtShort(highlight.createdAt)}</Table.Td>
+                      <Table.Td>
+                        <Text size="sm" lineClamp={2} maw={280}>
+                          {highlight.kind}: {highlight.sourceTitle}
+                          {highlight.chapterTitle
+                            ? ` · ${highlight.chapterTitle}`
+                            : ""}
+                        </Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="sm" lineClamp={2} maw={320}>
+                          {highlight.selectedText}
+                        </Text>
+                      </Table.Td>
+                      <Table.Td>{fmtShort(highlight.importedAt)}</Table.Td>
+                    </Table.Tr>
+                  ))
+                )}
+              </Table.Tbody>
+            </Table>
+          </Table.ScrollContainer>
         </Paper>
       </Stack>
     </Container>

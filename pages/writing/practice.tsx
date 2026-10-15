@@ -3,6 +3,7 @@ import { getServersideUser } from "@/koala/get-serverside-user";
 import { VisualDiff } from "@/koala/review/lesson-steps/visual-diff";
 import { LangCode } from "@/koala/shared-types";
 import { trpc } from "@/koala/trpc-config";
+import { PageHeader } from "@/koala/components/PageHeader";
 import {
   ActionIcon,
   Alert,
@@ -201,7 +202,7 @@ const isPracticeMode = (value: string): value is PracticeMode =>
 
 const getEssayPlaceholder = (practiceMode: PracticeMode) => {
   if (practiceMode === "speaking") {
-    return "Your transcript appears here. You can edit it before grading.";
+    return "Your transcript will appear here.";
   }
   return "Write your essay here...";
 };
@@ -215,9 +216,9 @@ const getReviewLoadingLabel = (practiceMode: PracticeMode) => {
 
 const getModeTipText = (practiceMode: PracticeMode) => {
   if (practiceMode === "speaking") {
-    return "Speak naturally in Korean, then edit the transcript before grading if needed.";
+    return "Speak in Korean. You can edit the transcript before getting feedback.";
   }
-  return "Need a word you do not know yet? Wrap it in question marks and Koala will replace it during grading (example: ?apple?를 먹어요).";
+  return "Use ?English? for missing words, e.g. ?apple?를 먹어요.";
 };
 
 const getRecordTooltip = (
@@ -660,7 +661,7 @@ function WritingProgress({
     <Box mb="md">
       <Stack gap="xs" style={{ flexGrow: 1 }}>
         <Group justify="space-between">
-          <Text size="sm" c="dimmed">
+          <Text size="sm" c="pastel.6">
             {currentCount} characters
             {hasGoal ? ` / ${goal} goal` : ""}
           </Text>
@@ -677,8 +678,7 @@ function WritingProgress({
           <Progress
             value={Math.min((currentCount / goal) * 100, 100)}
             size="sm"
-            color="blue"
-            {...(goalReached ? { striped: true, animated: true } : {})}
+            color="pink.8"
           />
         )}
       </Stack>
@@ -701,14 +701,14 @@ function ReviewControl({
     return (
       <Group>
         <Loader size="sm" />
-        <Text c="dimmed">{reviewLoadingLabel}</Text>
+        <Text c="pastel.6">{reviewLoadingLabel}</Text>
       </Group>
     );
   }
 
   return (
-    <Button onClick={onReview} disabled={!canReview}>
-      Get Feedback
+    <Button variant="filled" onClick={onReview} disabled={!canReview}>
+      Get feedback
     </Button>
   );
 }
@@ -776,10 +776,7 @@ function WritingStep({
   };
 
   return (
-    <Paper withBorder shadow="sm" p="md">
-      <Title order={4} mb="xs">
-        Essay Title or Prompt
-      </Title>
+    <Paper withBorder p={{ base: "md", sm: "lg" }}>
       <SegmentedControl
         value={practiceMode}
         onChange={handleModeChange}
@@ -793,7 +790,9 @@ function WritingStep({
         aria-label="Practice mode"
       />
       <Textarea
-        value={prompt}
+        label="Title or prompt"
+        placeholder="Optional"
+        value={prompt === DEFAULT_PROMPT ? "" : prompt}
         onChange={(e) => onPromptChange(e.currentTarget.value)}
         autosize
         minRows={2}
@@ -801,13 +800,18 @@ function WritingStep({
         mb="md"
         disabled={controlState.textInputDisabled}
       />
-      <Text size="sm" c="dimmed" mb="xs">
+      <Text size="sm" c="pastel.6" mb="xs">
         {getModeTipText(practiceMode)}
       </Text>
 
       {practiceMode === "speaking" && (
         <Paper withBorder radius="md" p="sm" mb="md" bg="pink.0">
-          <Group justify="space-between" align="center" wrap="nowrap">
+          <Group
+            justify="space-between"
+            align="center"
+            wrap="wrap"
+            gap="sm"
+          >
             <Group gap="sm" wrap="nowrap">
               <Tooltip label={recordTooltip}>
                 <ActionIcon
@@ -832,7 +836,7 @@ function WritingStep({
                 <Text size="sm" fw={600}>
                   Speaking input
                 </Text>
-                <Text size="xs" c="dimmed">
+                <Text size="xs" c="pastel.6">
                   {speakingStatus}
                 </Text>
               </Stack>
@@ -859,6 +863,7 @@ function WritingStep({
       )}
 
       <Textarea
+        label="Your response"
         placeholder={getEssayPlaceholder(practiceMode)}
         autosize
         minRows={6}
@@ -897,24 +902,35 @@ function ClickableText({
   }
 
   return (
-    <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
+    <Text
+      size="sm"
+      style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}
+    >
       {text.split(/(\s+)/).map((token, index) => {
         if (/\s+/.test(token)) {
           return <span key={index}>{token}</span>;
         }
 
         const normalizedToken = normalizeToken(token);
+        if (!normalizedToken || !/[\p{L}\p{N}]/u.test(normalizedToken)) {
+          return <span key={index}>{token}</span>;
+        }
         const isSelected = Boolean(selectedWords[normalizedToken]);
 
         return (
           <Text
-            component="span"
+            component="button"
+            type="button"
+            aria-pressed={isSelected}
             key={index}
             style={{
               cursor: "pointer",
+              border: 0,
+              font: "inherit",
+              color: "inherit",
               backgroundColor: isSelected
-                ? theme.colors.yellow[2]
-                : undefined,
+                ? theme.colors.pink[1]
+                : "transparent",
               borderRadius: theme.radius.sm,
               padding: "0 2px",
               margin: "0 1px",
@@ -933,7 +949,7 @@ function ClickableText({
 function DefinitionList({ definitions }: { definitions: Definition[] }) {
   return (
     <Stack gap="xs">
-      <Text fw={600}>Word Definitions</Text>
+      <Text fw={600}>Word definitions</Text>
       {alphabetical(definitions, (x) => x.definition).map((d, i) => {
         const showLemma = shouldShowLemma(d);
         return (
@@ -942,7 +958,7 @@ function DefinitionList({ definitions }: { definitions: Definition[] }) {
               {d.word}
             </Text>
             {showLemma && (
-              <Text component="span" c="dimmed" fs="italic">
+              <Text component="span" c="pastel.6" fs="italic">
                 {" "}
                 ({d.lemma})
               </Text>
@@ -971,8 +987,8 @@ function DefinitionsPanel({
           alignItems: "center",
         }}
       >
-        <Loader size="sm" color="blue" />
-        <Text ml="sm" c="dimmed">
+        <Loader size="sm" color="pink" />
+        <Text ml="sm" c="pastel.6">
           Getting definitions...
         </Text>
       </Box>
@@ -1005,15 +1021,15 @@ function FeedbackActions({
   return (
     <Group>
       <Button onClick={onExplain} disabled={!canExplain}>
-        Explain Selected Words ({selectedCount})
+        Explain words ({selectedCount})
       </Button>
       {canCreate && (
         <Button onClick={onCreateCards}>
-          Create Cards from Words ({definitionsCount})
+          Create cards ({definitionsCount})
         </Button>
       )}
       <Button onClick={onWriteMore} variant="outline">
-        Write More
+        Write more
       </Button>
       <Button onClick={onGoToReview} variant="filled">
         {reviewLabel}
@@ -1042,22 +1058,27 @@ function FeedbackStep({
   definitionsError,
 }: FeedbackStepProps) {
   return (
-    <Paper withBorder shadow="sm" p="md" mt="md">
+    <Paper withBorder p={{ base: "md", sm: "lg" }} mt="md">
       <Stack gap="md">
-        <Title order={3}>Feedback (Click unknown words)</Title>
-        <Text fw={600}>Selected Prompt</Text>
+        <Stack gap={4}>
+          <Title order={3}>Feedback</Title>
+          <Text size="sm" c="pastel.6">
+            Select unfamiliar words for definitions.
+          </Text>
+        </Stack>
+        <Text fw={600}>Prompt</Text>
         <ClickableText
           text={prompt}
           selectedWords={selectedWords}
           onToggleWord={onToggleWord}
         />
-        <Text fw={600}>Original Text</Text>
+        <Text fw={600}>Your response</Text>
         <ClickableText
           text={essay}
           selectedWords={selectedWords}
           onToggleWord={onToggleWord}
         />
-        <Text fw={600}>Corrected Text</Text>
+        <Text fw={600}>Corrected response</Text>
         <ClickableText
           text={corrected}
           selectedWords={selectedWords}
@@ -1114,7 +1135,7 @@ export default function WritingPracticePage({
 
     return isSafeReturnTo(returnTo) ? returnTo : null;
   }, [returnTo]);
-  const reviewLabel = safeReturnTo ? "Continue Review" : "Study Cards";
+  const reviewLabel = safeReturnTo ? "Continue review" : "Study cards";
   const reviewTarget = safeReturnTo ?? "/review";
 
   const [currentStep, setCurrentStep] = useState<Step>("writing");
@@ -1387,7 +1408,7 @@ export default function WritingPracticePage({
   ]);
 
   const selectedCount = Object.keys(selectedWords).length;
-  const canExplain = !definitionsLoading;
+  const canExplain = selectedCount > 0 && !definitionsLoading;
   const hasDefinitions = definitions.length > 0;
   const canCreate = hasDefinitions && !definitionsLoading;
   const feedbackItems = feedback?.feedback ?? [];
@@ -1432,18 +1453,20 @@ export default function WritingPracticePage({
   };
 
   return (
-    <Container size="sm" py="md">
-      <Group justify="space-between" align="center" mb="md" wrap="wrap">
-        <Title order={2}>Writing</Title>
-        <Button
-          component={Link}
-          href="/writing"
-          variant="light"
-          color="pink"
-        >
-          Writing History
-        </Button>
-      </Group>
+    <Container size="sm" py="xl">
+      <PageHeader
+        title="Writing"
+        actions={
+          <Button
+            component={Link}
+            href="/writing"
+            variant="default"
+            color="pink"
+          >
+            History
+          </Button>
+        }
+      />
 
       {stepContent[currentStep]}
     </Container>

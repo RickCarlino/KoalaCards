@@ -149,7 +149,7 @@ function QuickActionButtons({ actions }: QuickActionButtonsProps) {
             component={Link}
             href={action.href}
             variant="light"
-            color="pink"
+            h={52}
             justify="flex-start"
             leftSection={<Icon size={16} />}
             fullWidth
@@ -169,18 +169,34 @@ type PrimaryActionPanelProps = {
 function PrimaryActionPanel({ hasAnyCards }: PrimaryActionPanelProps) {
   if (hasAnyCards) {
     return (
-      <Paper withBorder p="lg" radius="md">
+      <Paper withBorder p={{ base: "md", sm: "lg" }} radius="md">
         <Stack gap="sm">
           <Group gap="xs" wrap="nowrap">
             <IconStar size={18} />
-            <Text fw={700}>Continue Studying</Text>
+            <Text fw={600}>Continue studying</Text>
           </Group>
           <Text size="sm" c="gray.7">
-            Jump back into review and keep your deck moving forward.
+            Pick up where you left off.
           </Text>
           <Group>
-            <Button component={Link} href="/review" color="pink">
-              Study Cards
+            <Button
+              component={Link}
+              href="/review"
+              color="pink"
+              variant="filled"
+            >
+              Study cards
+            </Button>
+            <Button component={Link} href="/create" variant="default">
+              Add cards
+            </Button>
+            <Button
+              component={Link}
+              href="/cards"
+              variant="subtle"
+              c="pastel.6"
+            >
+              View cards
             </Button>
           </Group>
         </Stack>
@@ -189,17 +205,22 @@ function PrimaryActionPanel({ hasAnyCards }: PrimaryActionPanelProps) {
   }
 
   return (
-    <Paper withBorder p="lg" radius="md">
+    <Paper withBorder p={{ base: "md", sm: "lg" }} radius="md">
       <Stack gap="sm">
         <Group gap="xs" wrap="nowrap">
           <IconFileText size={18} />
-          <Text fw={700}>Start With Reading</Text>
+          <Text fw={600}>Start with reading</Text>
         </Group>
         <Text size="sm" c="gray.7">
           Save Korean text first, then turn highlights into cards.
         </Text>
         <Group>
-          <Button component={Link} href="/reader" color="pink">
+          <Button
+            component={Link}
+            href="/reader"
+            color="pink"
+            variant="filled"
+          >
             Open Reading
           </Button>
           <Button
@@ -209,7 +230,7 @@ function PrimaryActionPanel({ hasAnyCards }: PrimaryActionPanelProps) {
             color="pink"
             leftSection={<IconSparkles size={14} />}
           >
-            Or create cards directly
+            Create cards
           </Button>
         </Group>
       </Stack>
@@ -219,10 +240,12 @@ function PrimaryActionPanel({ hasAnyCards }: PrimaryActionPanelProps) {
 
 const Index: React.FC<HomePageProps> = ({ hasAnyCards }) => {
   return (
-    <Container size="md" py="xl">
-      <Stack gap="lg">
+    <Container size="sm" py="xl">
+      <Stack gap="xl">
         <Stack gap="xs">
-          <Title order={1}>Koala Cards</Title>
+          <Title order={1} size="h2">
+            Koala Cards
+          </Title>
           <Text size="sm" c="gray.7">
             A focused study tool for cards, writing, and reading.
           </Text>
@@ -231,8 +254,8 @@ const Index: React.FC<HomePageProps> = ({ hasAnyCards }) => {
         <PrimaryActionPanel hasAnyCards={hasAnyCards} />
 
         <Stack gap="xs">
-          <Text size="sm" fw={700}>
-            Quick Actions
+          <Text size="sm" fw={600}>
+            Explore
           </Text>
           <QuickActionButtons actions={quickActions} />
         </Stack>
@@ -240,9 +263,6 @@ const Index: React.FC<HomePageProps> = ({ hasAnyCards }) => {
         <Divider />
 
         <Stack gap={4}>
-          <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
-            More
-          </Text>
           <UtilityLinks links={utilityLinks} />
         </Stack>
       </Stack>

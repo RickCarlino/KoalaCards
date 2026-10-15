@@ -1,6 +1,7 @@
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { prismaClient } from "@/koala/prisma-client";
 import { trpc } from "@/koala/trpc-config";
+import { PageHeader } from "@/koala/components/PageHeader";
 import { DeckExport, deckExportSchema } from "@/koala/types/deck-export";
 import {
   Badge,
@@ -9,9 +10,7 @@ import {
   Group,
   Paper,
   Stack,
-  Table,
   Text,
-  Title,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { IconDownload, IconUpload } from "@tabler/icons-react";
@@ -93,54 +92,48 @@ function DeckActionsTable({
   onImport,
 }: DeckActionsTableProps) {
   return (
-    <Table verticalSpacing="sm" highlightOnHover>
-      <thead>
-        <tr>
-          <th>Deck</th>
-          <th>Cards</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {decks.map((deck) => {
-          const isExporting = exportingDeckId === deck.id;
-          const isImporting = importingDeckId === deck.id;
+    <Stack gap="lg">
+      {decks.map((deck) => {
+        const isExporting = exportingDeckId === deck.id;
+        const isImporting = importingDeckId === deck.id;
 
-          return (
-            <tr key={deck.id}>
-              <td>
-                <Text fw={600}>{deck.name}</Text>
-              </td>
-              <td>
-                <Badge variant="light" color="blue">
-                  {deck.cardCount} cards
-                </Badge>
-              </td>
-              <td>
-                <Group gap="sm">
-                  <Button
-                    leftSection={<IconDownload size={16} />}
-                    variant="light"
-                    onClick={() => onExport(deck)}
-                    loading={isExporting}
-                  >
-                    Export
-                  </Button>
-                  <Button
-                    leftSection={<IconUpload size={16} />}
-                    variant="outline"
-                    onClick={() => onImport(deck.id)}
-                    loading={isImporting}
-                  >
-                    Import
-                  </Button>
-                </Group>
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </Table>
+        return (
+          <Group
+            key={deck.id}
+            justify="space-between"
+            align="center"
+            gap="sm"
+          >
+            <Stack gap={4} miw={0} style={{ flex: "1 1 220px" }}>
+              <Text fw={600} style={{ overflowWrap: "anywhere" }}>
+                {deck.name}
+              </Text>
+              <Badge variant="light" color="pink">
+                {deck.cardCount} cards
+              </Badge>
+            </Stack>
+            <Group gap="sm">
+              <Button
+                leftSection={<IconDownload size={16} />}
+                variant="light"
+                onClick={() => onExport(deck)}
+                loading={isExporting}
+              >
+                Export
+              </Button>
+              <Button
+                leftSection={<IconUpload size={16} />}
+                variant="outline"
+                onClick={() => onImport(deck.id)}
+                loading={isImporting}
+              >
+                Import
+              </Button>
+            </Group>
+          </Group>
+        );
+      })}
+    </Stack>
   );
 }
 
@@ -243,15 +236,12 @@ export default function DeckExportPage({ decks }: Props) {
   };
 
   return (
-    <Container size="lg" py="lg">
-      <Stack gap="md">
-        <Stack gap={4}>
-          <Title order={2}>Import / Export Decks</Title>
-          <Text c="dimmed">
-            Download deck data as JSON or import a previous export into an
-            existing deck.
-          </Text>
-        </Stack>
+    <Container size="md" py="xl">
+      <Stack gap={0}>
+        <PageHeader
+          title="Import / export decks"
+          description="Download a deck or import a previous export into an existing deck."
+        />
 
         <Paper withBorder p="md" radius="md">
           {decks.length === 0 ? (

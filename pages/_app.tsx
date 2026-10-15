@@ -2,6 +2,7 @@ import { UserSettingsProvider } from "@/koala/settings-provider";
 import { trpc } from "@/koala/trpc-config";
 import { MantineProvider } from "@mantine/core";
 import "@mantine/core/styles.css";
+import "@mantine/charts/styles.css";
 import "@mantine/notifications/styles.css";
 import { Notifications } from "@mantine/notifications";
 import { SessionProvider } from "next-auth/react";
@@ -9,7 +10,7 @@ import { AppProps } from "next/app";
 import Head from "next/head";
 import dynamic from "next/dynamic";
 import { Montserrat } from "next/font/google";
-import { buildKoalaTheme } from "@/koala/theme";
+import { buildPageTheme } from "@/koala/app-theme";
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -26,11 +27,27 @@ const DirectLanguageExchangeProviderWithNoSSR = dynamic(
 );
 
 function App(props: AppProps) {
+  const theme = buildPageTheme(
+    montserrat.style.fontFamily,
+    props.router.pathname,
+  );
   if (props.router.pathname === "/auth/email") {
-    return <props.Component {...props.pageProps} />;
+    return (
+      <>
+        <Head>
+          <title>Sign in · Koala Cards</title>
+          <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1"
+          />
+        </Head>
+        <MantineProvider defaultColorScheme="light" theme={theme}>
+          <props.Component {...props.pageProps} />
+        </MantineProvider>
+      </>
+    );
   }
 
-  const theme = buildKoalaTheme(montserrat.style.fontFamily);
   const isPublicReaderArticle =
     props.router.pathname === "/reader/[publicId]";
   const isRecentPage = props.router.pathname === "/recent";

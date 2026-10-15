@@ -1,5 +1,6 @@
 import { getUserSettingsFromEmail } from "@/koala/auth-helpers";
 import { SectionCard } from "@/koala/components/SectionCard";
+import { PageHeader } from "@/koala/components/PageHeader";
 import { McpConnectionCard } from "@/koala/components/McpConnectionCard";
 import { getStudyReportLink } from "@/koala/study-report-link-server";
 import { getMcpPath } from "@/koala/study-report-link";
@@ -22,9 +23,9 @@ import { getLessonMeta } from "@/koala/trpc-routes/get-next-quizzes";
 import { AreaChart } from "@mantine/charts";
 import {
   Avatar,
-  Badge,
   Button,
   Container,
+  Divider,
   Grid,
   Group,
   InputLabel,
@@ -387,7 +388,7 @@ function SettingsGroup({
           {title}
         </Text>
         {description && (
-          <Text size="xs" c="dimmed">
+          <Text size="xs" c="pastel.6">
             {description}
           </Text>
         )}
@@ -423,7 +424,7 @@ function SettingsRow({
             {label}
           </InputLabel>
           {description && (
-            <Text size="xs" c="dimmed">
+            <Text size="xs" c="pastel.6">
               {description}
             </Text>
           )}
@@ -756,10 +757,12 @@ function SettingsForm({
           responseTimeoutSeconds={values.responseTimeoutSeconds}
           onNumberChange={onNumberChange}
         />
+        <Divider color="pink.1" />
         <ChoiceSettingsGroup
           playbackPercentage={values.playbackPercentage}
           onNumberChange={onNumberChange}
         />
+        <Divider color="pink.1" />
         <ToggleSettingsGroup
           writingFirst={values.writingFirst}
           onWritingFirstChange={onWritingFirstChange}
@@ -774,7 +777,12 @@ function SettingsForm({
         />
 
         <Group justify="flex-end">
-          <Button type="submit" loading={isSaving} size="sm">
+          <Button
+            type="submit"
+            variant="filled"
+            loading={isSaving}
+            size="sm"
+          >
             Save settings
           </Button>
         </Group>
@@ -972,49 +980,54 @@ function AccountPanel({ user, onSignOut }: AccountPanelProps) {
   const display = resolveAccountDisplay(user);
 
   return (
-    <Paper withBorder p="xl" radius="lg">
+    <Paper withBorder p={{ base: "md", sm: "lg" }} radius="md">
       <Group
         justify="space-between"
         align="flex-start"
         wrap="wrap"
         gap="lg"
       >
-        <Group gap="lg" wrap="nowrap">
-          <Avatar src={display.image} radius="xl" size={72}>
+        <Group
+          gap="md"
+          wrap="nowrap"
+          miw={0}
+          style={{ flex: "1 1 260px" }}
+        >
+          <Avatar src={display.image} radius="xl" size={56}>
             {display.initial}
           </Avatar>
-          <Stack gap={6}>
-            <Text size="xs" c="dimmed" fw={600}>
+          <Stack gap={6} miw={0} style={{ overflowWrap: "anywhere" }}>
+            <Text size="xs" c="pastel.6" fw={600}>
               Account
             </Text>
             <Text size="lg" fw={600}>
               {display.displayName}
             </Text>
             {display.secondaryEmail && (
-              <Text size="sm" c="dimmed">
+              <Text size="sm" c="pastel.6">
                 {display.secondaryEmail}
               </Text>
             )}
             {display.joinedAt && (
-              <Badge color="pink" variant="light" radius="xl" size="sm">
+              <Text size="xs" c="pastel.6">
                 Joined {display.joinedAt}
-              </Badge>
+              </Text>
             )}
           </Stack>
         </Group>
-        <Stack gap="xs" align="flex-end">
+        <Group gap="xs">
           <Button
             component={Link}
             href="/user/export"
             variant="light"
             size="sm"
           >
-            Import / Export Decks
+            Import / export decks
           </Button>
-          <Button variant="outline" onClick={onSignOut} size="sm">
-            Log Out
+          <Button variant="default" onClick={onSignOut} size="sm">
+            Log out
           </Button>
-        </Stack>
+        </Group>
       </Group>
     </Paper>
   );
@@ -1028,10 +1041,14 @@ type StatRowProps = {
 function StatRow({ label, value }: StatRowProps) {
   return (
     <Group gap="xs" justify="space-between" align="baseline">
-      <Text c="dimmed" size="sm">
+      <Text c="pastel.6" size="sm" style={{ flex: 1 }}>
         {label}
       </Text>
-      <Text fw={600} size="sm">
+      <Text
+        fw={600}
+        size="sm"
+        style={{ fontVariantNumeric: "tabular-nums" }}
+      >
         {value}
       </Text>
     </Group>
@@ -1097,8 +1114,12 @@ function ProgressChart({
           dataKey="date"
           series={[series]}
           curveType="natural"
+          withDots={false}
+          xAxisProps={{
+            minTickGap: 32,
+            tickFormatter: (value: string) => value.slice(5),
+          }}
           yAxisLabel={yAxisLabel}
-          xAxisLabel="Date"
           tooltipProps={{
             content: ({ label, payload }) => (
               <Paper px="md" py="sm" withBorder shadow="md" radius="md">
@@ -1135,7 +1156,7 @@ function ProgressSection({
     <Stack gap="md">
       <Group justify="space-between" align="baseline">
         <Title order={3}>Progress</Title>
-        <Text size="sm" c="dimmed">
+        <Text size="sm" c="pastel.6">
           Last 90 days
         </Text>
       </Group>
@@ -1275,25 +1296,15 @@ export default function UserSettingsPage(props: Props) {
   };
 
   return (
-    <Container size="lg" mt="xl" pb="xl">
+    <Container size="lg" py="xl">
+      <PageHeader title="Settings" />
       <Stack gap="xl">
-        <Stack gap={4}>
-          <Title order={2}>Settings</Title>
-          <Text size="sm" c="dimmed">
-            Update your review pace, writing rules, and audio behavior.
-          </Text>
-        </Stack>
-
         <AccountPanel user={settings.user} onSignOut={handleSignOut} />
 
         <Grid gap="xl">
           <Grid.Col span={{ base: 12, md: 7 }}>
             <Stack gap="xl">
-              <SectionCard
-                title="Preferences"
-                titleOrder={3}
-                description="Review pacing, writing rules, and playback options."
-              >
+              <SectionCard title="Preferences" titleOrder={3}>
                 <SettingsForm
                   values={formValues}
                   onNumberChange={handleNumberChange}

@@ -3883,7 +3883,7 @@ function AssistantMarkdown({ content, style }: AssistantMarkdownProps) {
         <Text
           component="a"
           href={href}
-          c="indigo.7"
+          c="pink.8"
           style={style}
           target="_blank"
           rel="noreferrer"
@@ -3961,7 +3961,7 @@ function AssistantSuggestionRow({
     <Group align="flex-start" gap="xs" wrap="nowrap">
       <ActionIcon
         variant="light"
-        color="indigo"
+        color="pink"
         radius="xl"
         size="md"
         onClick={() => onAdd(selectedDeckId)}
@@ -4019,7 +4019,7 @@ function AssistantEditCard({
             </Text>
           </Stack>
           {proposal.note && (
-            <Badge color="indigo" variant="light">
+            <Badge color="pink" variant="light">
               {proposal.note}
             </Badge>
           )}

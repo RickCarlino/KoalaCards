@@ -282,6 +282,46 @@ export default function RecentPage({
           opacity: 0.85;
         }
 
+        @media screen {
+          .recent-page {
+            min-height: 100svh;
+            background: var(--mantine-color-pink-0);
+          }
+
+          .recent-print-root {
+            padding-top: var(--mantine-spacing-xl);
+            padding-bottom: var(--mantine-spacing-xl);
+          }
+
+          .recent-print-root > .mantine-Stack-root {
+            gap: var(--mantine-spacing-lg);
+          }
+
+          .recent-print-section {
+            padding: var(--mantine-spacing-md);
+            border: 1px solid var(--mantine-color-pink-1);
+            border-radius: var(--mantine-radius-md);
+            background: var(--mantine-color-white);
+          }
+
+          .recent-print-table th,
+          .recent-print-table td {
+            padding: var(--mantine-spacing-xs);
+            font-size: var(--mantine-font-size-sm);
+            line-height: 1.6;
+            overflow-wrap: anywhere;
+          }
+
+          .recent-back-button {
+            min-height: 44px;
+            padding: 0 var(--mantine-spacing-sm);
+            font: inherit;
+            font-size: var(--mantine-font-size-sm);
+            color: var(--mantine-color-pink-8);
+            opacity: 1;
+          }
+        }
+
         @media print {
           @page {
             margin: 10mm;
@@ -311,27 +351,30 @@ export default function RecentPage({
         }
       `}</style>
 
-      <Container size="xl" py="xs" className="recent-print-root">
-        <Stack gap={8}>
-          <button
-            type="button"
-            className="recent-back-button"
-            onClick={handleBack}
-          >
-            ← 뒤로
-          </button>
-          <Title
-            order={3}
-            style={{ letterSpacing: "-0.01em", lineHeight: 1.1 }}
-          >
-            최근 학습 활동
-          </Title>
-          <WritingSamplesSection samples={writingSamples} />
-          <RecentHighlightsSection rows={recentHighlights} />
-          <WrongOutcomesSection rows={wrongOutcomes} />
-          <CorrectOutcomesSection rows={correctOutcomes} />
-        </Stack>
-      </Container>
+      <main className="recent-page">
+        <Container size="xl" py="xs" className="recent-print-root">
+          <Stack gap={8}>
+            <button
+              type="button"
+              className="recent-back-button"
+              onClick={handleBack}
+            >
+              ← 뒤로
+            </button>
+            <Title
+              order={1}
+              size="h3"
+              style={{ letterSpacing: "-0.01em", lineHeight: 1.1 }}
+            >
+              최근 학습 활동
+            </Title>
+            <WritingSamplesSection samples={writingSamples} />
+            <RecentHighlightsSection rows={recentHighlights} />
+            <WrongOutcomesSection rows={wrongOutcomes} />
+            <CorrectOutcomesSection rows={correctOutcomes} />
+          </Stack>
+        </Container>
+      </main>
     </>
   );
 }

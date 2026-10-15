@@ -17,13 +17,13 @@ export function SectionCard({
   children,
 }: SectionCardProps) {
   return (
-    <Paper withBorder p="lg" radius="lg">
+    <Paper withBorder p={{ base: "md", sm: "lg" }} radius="md">
       <Stack gap="md">
         <Group justify="space-between" align="flex-start" wrap="wrap">
-          <Stack gap={4}>
+          <Stack gap={4} miw={0} style={{ flex: "1 1 160px" }}>
             <Title order={titleOrder}>{title}</Title>
             {description && (
-              <Text size="sm" c="dimmed">
+              <Text size="sm" c="pastel.6">
                 {description}
               </Text>
             )}

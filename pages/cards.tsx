@@ -1,6 +1,7 @@
 import { GetServerSideProps } from "next";
 import { CardTable } from "@/koala/card-table";
 import { SectionCard } from "@/koala/components/SectionCard";
+import { PageHeader } from "@/koala/components/PageHeader";
 import { trpc } from "@/koala/trpc-config";
 import {
   Badge,
@@ -8,13 +9,12 @@ import {
   Container,
   Grid,
   Group,
-  ScrollArea,
   Select,
   Stack,
+  Table,
   Text,
   TextInput,
   Checkbox,
-  Title,
 } from "@mantine/core";
 import { prismaClient } from "@/koala/prisma-client";
 import { useRouter } from "next/router";
@@ -250,6 +250,7 @@ type CardsTablePanelProps = {
   onPageChange: (page: number) => void;
   onResetFilters: () => void;
   activeFilters: ActiveFilter[];
+  onDelete: () => void;
 };
 
 function buildDeckOptions(decks: DeckListItem[]): SelectOption[] {
@@ -341,17 +342,15 @@ function ActiveFilters({ filters, onClear }: ActiveFiltersProps) {
 
 function CardsHeader({ totalCount }: CardsHeaderProps) {
   return (
-    <Stack gap="xs">
-      <Group justify="space-between" align="baseline" wrap="wrap">
-        <Title order={2}>Your Cards</Title>
-        <Badge color="pink" variant="light">
-          {formatCountLabel(totalCount, "card")}
-        </Badge>
-      </Group>
-      <Text c="dimmed">
-        Browse, search, and manage your cards. Quick-edit or open details.
-      </Text>
-    </Stack>
+    <PageHeader
+      title="Your cards"
+      description={formatCountLabel(totalCount, "card")}
+      actions={
+        <Button component={Link} href="/create" variant="filled">
+          Add cards
+        </Button>
+      }
+    />
   );
 }
 
@@ -371,14 +370,11 @@ function FiltersPanel({
   onReset,
 }: FiltersPanelProps) {
   return (
-    <SectionCard
-      title="Filters"
-      description="Search across cards and refine the list."
-    >
+    <SectionCard title="Filters">
       <form onSubmit={onSubmit}>
         <Stack gap="lg">
-          <Grid gap="lg">
-            <Grid.Col span={{ base: 12, md: 12, xl: 6 }}>
+          <Grid gap="md">
+            <Grid.Col span={{ base: 12, sm: 6, lg: 4 }}>
               <TextInput
                 label="Search"
                 placeholder="Find by term or definition"
@@ -388,7 +384,7 @@ function FiltersPanel({
                 }
               />
             </Grid.Col>
-            <Grid.Col span={{ base: 12, md: 12, xl: 6 }}>
+            <Grid.Col span={{ base: 12, sm: 6, lg: 4 }}>
               <Select
                 label="Deck"
                 value={selectedDeckId}
@@ -396,7 +392,7 @@ function FiltersPanel({
                 data={deckOptions}
               />
             </Grid.Col>
-            <Grid.Col span={{ base: 12, md: 12, xl: 6 }}>
+            <Grid.Col span={{ base: 6, lg: 2 }}>
               <Select
                 label="Sort by"
                 value={sortBy}
@@ -406,7 +402,7 @@ function FiltersPanel({
                 data={SORT_OPTIONS}
               />
             </Grid.Col>
-            <Grid.Col span={{ base: 12, md: 12, xl: 6 }}>
+            <Grid.Col span={{ base: 6, lg: 2 }}>
               <Select
                 label="Order"
                 value={sortOrder}
@@ -416,7 +412,7 @@ function FiltersPanel({
                 data={ORDER_OPTIONS}
               />
             </Grid.Col>
-            <Grid.Col span={{ base: 12 }}>
+            <Grid.Col span={{ base: 12, sm: 6 }}>
               <Checkbox
                 label="Show paused only"
                 checked={showPaused}
@@ -425,10 +421,12 @@ function FiltersPanel({
                 }
               />
             </Grid.Col>
-            <Grid.Col span={{ base: 12 }}>
+            <Grid.Col span={{ base: 12, sm: 6 }}>
               <Group gap="sm" justify="flex-end">
-                <Button type="submit">Apply</Button>
-                <Button variant="light" type="button" onClick={onReset}>
+                <Button type="submit" variant="filled">
+                  Apply
+                </Button>
+                <Button variant="default" type="button" onClick={onReset}>
                   Reset
                 </Button>
               </Group>
@@ -460,7 +458,7 @@ function MaintenancePanel({
       }
     >
       <Group justify="space-between" align="center" wrap="wrap">
-        <Text size="sm" c="dimmed">
+        <Text size="sm" c="pastel.6">
           This permanently deletes paused cards. Use with care.
         </Text>
       </Group>
@@ -509,7 +507,7 @@ function ResultsSummary({
     totalPages > 1 ? ` · Page ${page} of ${totalPages}` : "";
 
   return (
-    <Text size="sm" c="dimmed">
+    <Text size="sm" c="pastel.6">
       Showing {start}-{end} of {totalCount} cards
       {pageText}
     </Text>
@@ -550,6 +548,7 @@ function CardsTablePanel({
   onPageChange,
   onResetFilters,
   activeFilters,
+  onDelete,
 }: CardsTablePanelProps) {
   const showFilters = activeFilters.length > 0;
   const pagination = (
@@ -578,9 +577,9 @@ function CardsTablePanel({
           totalPages={totalPages}
         />
         <ActiveFilters filters={activeFilters} onClear={onResetFilters} />
-        <ScrollArea type="auto">
-          <CardTable onDelete={() => undefined} cards={cards} />
-        </ScrollArea>
+        <Table.ScrollContainer minWidth={760} type="native">
+          <CardTable onDelete={onDelete} cards={cards} />
+        </Table.ScrollContainer>
         <Group justify="flex-end">{pagination}</Group>
       </Stack>
     </SectionCard>
@@ -666,46 +665,40 @@ function StatefulEdit({
 
   return (
     <Container size="xl" py="xl">
-      <Stack gap="xl">
+      <Stack gap={0}>
         <CardsHeader totalCount={totalCount} />
+        <Stack gap="lg">
+          <FiltersPanel
+            query={query}
+            sortBy={currentSortBy}
+            sortOrder={currentSortOrder}
+            showPaused={showPaused}
+            selectedDeckId={selectedDeckId}
+            deckOptions={buildDeckOptions(decks)}
+            onQueryChange={setQuery}
+            onSortByChange={setCurrentSortBy}
+            onSortOrderChange={setCurrentSortOrder}
+            onShowPausedChange={setShowPaused}
+            onDeckChange={setSelectedDeckId}
+            onSubmit={handleSearch}
+            onReset={handleResetFilters}
+          />
 
-        <Grid gap="xl">
-          <Grid.Col span={{ base: 12, lg: 4 }}>
-            <Stack gap="lg">
-              <FiltersPanel
-                query={query}
-                sortBy={currentSortBy}
-                sortOrder={currentSortOrder}
-                showPaused={showPaused}
-                selectedDeckId={selectedDeckId}
-                deckOptions={buildDeckOptions(decks)}
-                onQueryChange={setQuery}
-                onSortByChange={setCurrentSortBy}
-                onSortOrderChange={setCurrentSortOrder}
-                onShowPausedChange={setShowPaused}
-                onDeckChange={setSelectedDeckId}
-                onSubmit={handleSearch}
-                onReset={handleResetFilters}
-              />
-
-              <MaintenancePanel
-                onDeletePaused={handleDeletePaused}
-                isDeleting={deletePaused.isPending}
-              />
-            </Stack>
-          </Grid.Col>
-          <Grid.Col span={{ base: 12, lg: 8 }}>
-            <CardsTablePanel
-              cards={cards}
-              totalCount={totalCount}
-              page={page}
-              totalPages={totalPages}
-              onPageChange={goToPage}
-              onResetFilters={handleResetFilters}
-              activeFilters={activeFilters}
-            />
-          </Grid.Col>
-        </Grid>
+          <CardsTablePanel
+            cards={cards}
+            totalCount={totalCount}
+            page={page}
+            totalPages={totalPages}
+            onPageChange={goToPage}
+            onResetFilters={handleResetFilters}
+            activeFilters={activeFilters}
+            onDelete={() => void router.replace(router.asPath)}
+          />
+          <MaintenancePanel
+            onDeletePaused={handleDeletePaused}
+            isDeleting={deletePaused.isPending}
+          />
+        </Stack>
       </Stack>
     </Container>
   );

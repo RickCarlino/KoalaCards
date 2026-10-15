@@ -2,6 +2,7 @@ import { ActionIcon, Group, Switch, Table, Text } from "@mantine/core";
 import { IconPencil, IconTrash } from "@tabler/icons-react";
 import { useRouter } from "next/router";
 import React from "react";
+import { notifications } from "@mantine/notifications";
 import { trpc } from "./trpc-config";
 
 type Card = {
@@ -29,18 +30,21 @@ function CardRow({ card, onDelete }: CardRowProps) {
   const router = useRouter();
   const del = trpc.deleteCard.useMutation();
   const edit = trpc.editCard.useMutation();
-  const [color, setColor] = React.useState("red");
-  const disabled = color !== "red";
+  const [deleted, setDeleted] = React.useState(false);
   const deleteCard = () => {
-    setColor("yellow");
-    del.mutateAsync({ id: card.id }).then(
-      () => {
-        setColor("gray");
-        onDelete();
-      },
-      (e) => {
-        console.error(e);
-        setColor("blue");
+    del.mutate(
+      { id: card.id },
+      {
+        onSuccess: () => {
+          setDeleted(true);
+          onDelete();
+        },
+        onError: () => {
+          notifications.show({
+            color: "red",
+            message: "Couldn't delete the card. Try again.",
+          });
+        },
       },
     );
   };
@@ -56,21 +60,17 @@ function CardRow({ card, onDelete }: CardRowProps) {
     } catch (e) {
       console.error(e);
       setPaused((v) => !v);
+      notifications.show({
+        color: "red",
+        message: "Couldn't update the card. Try again.",
+      });
     } finally {
       setToggling(false);
     }
   };
 
-  if (disabled) {
-    return (
-      <tr>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td></td>
-      </tr>
-    );
+  if (deleted) {
+    return null;
   }
 
   const formatDateISO = (iso: string) => iso.slice(0, 10);
@@ -78,50 +78,55 @@ function CardRow({ card, onDelete }: CardRowProps) {
     ms ? new Date(ms).toISOString().slice(0, 10) : "—";
 
   return (
-    <tr>
-      <td>
+    <Table.Tr>
+      <Table.Td>
         <Group gap="xs" align="center">
           <Switch
             checked={paused}
             onChange={togglePaused}
-            disabled={toggling}
+            disabled={toggling || del.isPending}
             size="sm"
+            aria-label={`Pause reviews of ${card.term}`}
           />
         </Group>
-      </td>
-      <td>
-        <Text fw={600}>{card.term}</Text>
-        <Text size="sm" c="dimmed">
+      </Table.Td>
+      <Table.Td miw={200}>
+        <Text fw={500} lang="ko">
+          {card.term}
+        </Text>
+        <Text size="sm" c="pastel.6">
           {card.definition}
         </Text>
-      </td>
-      <td>{card.repetitions}</td>
-      <td>{card.lapses}</td>
-      <td>{formatEpoch(card.nextReview)}</td>
-      <td>{formatDateISO(card.createdAt)}</td>
-      <td>
+      </Table.Td>
+      <Table.Td>{card.repetitions}</Table.Td>
+      <Table.Td>{card.lapses}</Table.Td>
+      <Table.Td>{formatEpoch(card.nextReview)}</Table.Td>
+      <Table.Td>{formatDateISO(card.createdAt)}</Table.Td>
+      <Table.Td>
         <Group gap="xs" wrap="nowrap">
           <ActionIcon
             onClick={() => router.push(`/cards/${card.id}`)}
-            variant="light"
+            variant="subtle"
             size="lg"
             aria-label="Edit card"
+            disabled={toggling || del.isPending}
           >
             <IconPencil stroke={1.5} />
           </ActionIcon>
           <ActionIcon
-            disabled={disabled}
-            color={color}
+            loading={del.isPending}
+            disabled={toggling}
+            color="red.8"
             onClick={deleteCard}
-            variant="outline"
+            variant="subtle"
             size="lg"
             aria-label="Delete card"
           >
             <IconTrash stroke={1.5} />
           </ActionIcon>
         </Group>
-      </td>
-    </tr>
+      </Table.Td>
+    </Table.Tr>
   );
 }
 
@@ -134,25 +139,24 @@ export const CardTable: React.FC<CardTableProps> = ({
       highlightOnHover
       horizontalSpacing="md"
       verticalSpacing="sm"
-      striped
-      stripedColor="pink.0"
+      styles={{ th: { whiteSpace: "nowrap" } }}
     >
-      <thead>
-        <tr>
-          <th>Paused</th>
-          <th>Card</th>
-          <th>Reps</th>
-          <th>Lapses</th>
-          <th>Next Review</th>
-          <th>Created</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
+      <Table.Thead>
+        <Table.Tr>
+          <Table.Th>Paused</Table.Th>
+          <Table.Th>Card</Table.Th>
+          <Table.Th>Reps</Table.Th>
+          <Table.Th>Lapses</Table.Th>
+          <Table.Th>Next Review</Table.Th>
+          <Table.Th>Created</Table.Th>
+          <Table.Th>Actions</Table.Th>
+        </Table.Tr>
+      </Table.Thead>
+      <Table.Tbody>
         {cards.map((card) => (
           <CardRow card={card as Card} onDelete={onDelete} key={card.id} />
         ))}
-      </tbody>
+      </Table.Tbody>
     </Table>
   );
 };

@@ -1,6 +1,7 @@
 import { getServersideUser } from "@/koala/get-serverside-user";
 import { prismaClient } from "@/koala/prisma-client";
 import { VisualDiff } from "@/koala/review/lesson-steps/visual-diff";
+import { PageHeader } from "@/koala/components/PageHeader";
 import {
   ActionIcon,
   Box,
@@ -186,19 +187,19 @@ function FiltersPanel({
             placeholder="Prompt, submission, or correction"
             value={query}
             onChange={(e) => onQueryChange(e.currentTarget.value)}
-            style={{ flex: 1, minWidth: 240 }}
+            style={{ flex: "1 1 240px", minWidth: 0 }}
           />
           <Select
             label="Deck"
             value={selectedDeckId}
             onChange={onDeckChange}
             data={deckOptions}
-            style={{ minWidth: 220 }}
+            style={{ flex: "1 1 200px", minWidth: 0 }}
           />
           <Group ml="auto">
             <Button
               leftSection={<IconFilter size={16} />}
-              variant="light"
+              variant="filled"
               onClick={onApply}
             >
               Apply
@@ -207,10 +208,12 @@ function FiltersPanel({
         </Group>
         {showPagination && (
           <Group justify="space-between" align="center">
-            <Text size="xs" c="dimmed">
+            <Text size="xs" c="pastel.6">
               Page {currentPage} of {totalPages}
             </Text>
             <Pagination
+              size="sm"
+              siblings={0}
               total={totalPages}
               value={currentPage}
               onChange={onPageChange}
@@ -244,7 +247,7 @@ function SubmissionCard({
   );
 
   return (
-    <Card withBorder p="sm">
+    <Card withBorder p={{ base: "md", sm: "lg" }}>
       <Stack gap="sm">
         <Group justify="space-between" align="center" wrap="wrap">
           <Stack gap={2}>
@@ -255,7 +258,7 @@ function SubmissionCard({
           <Group gap="xs">
             <Button
               size="xs"
-              color="pink"
+              variant="subtle"
               onClick={onToggle}
               rightSection={toggleIcon}
               aria-expanded={isExpanded}
@@ -266,7 +269,7 @@ function SubmissionCard({
             <Tooltip label="Delete submission">
               <ActionIcon
                 color="red"
-                variant="light"
+                variant="subtle"
                 onClick={onDelete}
                 aria-label="Delete submission"
               >
@@ -277,7 +280,7 @@ function SubmissionCard({
         </Group>
 
         <Box>
-          <Text size="xs" c="dimmed" fw={600}>
+          <Text size="xs" c="pastel.6" fw={600}>
             Prompt
           </Text>
           <Text size="sm" c="gray.8">
@@ -290,25 +293,39 @@ function SubmissionCard({
             <Divider my="sm" />
             <Stack gap="sm">
               <Stack gap={4}>
-                <Text size="xs" c="dimmed" fw={600}>
+                <Text size="xs" c="pastel.6" fw={600}>
                   Your submission
                 </Text>
-                <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
+                <Text
+                  size="sm"
+                  lang="ko"
+                  style={{
+                    whiteSpace: "pre-wrap",
+                    overflowWrap: "anywhere",
+                  }}
+                >
                   {submission.submission}
                 </Text>
               </Stack>
 
               <Stack gap={4}>
-                <Text size="xs" c="dimmed" fw={600}>
+                <Text size="xs" c="pastel.6" fw={600}>
                   Corrected text
                 </Text>
-                <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
+                <Text
+                  size="sm"
+                  lang="ko"
+                  style={{
+                    whiteSpace: "pre-wrap",
+                    overflowWrap: "anywhere",
+                  }}
+                >
                   {submission.correction}
                 </Text>
               </Stack>
 
               <Stack gap={4}>
-                <Text size="xs" c="dimmed" fw={600}>
+                <Text size="xs" c="pastel.6" fw={600}>
                   Changes
                 </Text>
                 <VisualDiff
@@ -352,7 +369,7 @@ function EmptyState({ hasFilters }: EmptyStateProps) {
           color="pink"
           variant="light"
         >
-          Start Writing
+          Start writing
         </Button>
       </Stack>
     </Card>
@@ -377,6 +394,8 @@ function PaginationRow({
   return (
     <Group justify="center" mt="lg">
       <Pagination
+        size="sm"
+        siblings={0}
         total={totalPages}
         value={currentPage}
         onChange={onPageChange}
@@ -443,31 +462,22 @@ export default function WritingHistoryPage({
   const hasFilters = query.trim().length > 0 || selectedDeckId.length > 0;
 
   return (
-    <Container size="md" py="md">
-      <Group
-        justify="space-between"
-        align="flex-start"
-        wrap="wrap"
-        mb="md"
-      >
-        <Stack gap={2}>
-          <Title order={2} c="pink.8">
-            Writing History
-          </Title>
-          <Text size="sm" c="gray.7">
-            Review feedback from your writing practice.
-          </Text>
-        </Stack>
-        <Button
-          component={Link}
-          href="/writing/practice"
-          leftSection={<IconPencil size={16} />}
-          color="pink"
-          variant="light"
-        >
-          New Writing Session
-        </Button>
-      </Group>
+    <Container size="md" py="xl">
+      <PageHeader
+        title="Writing history"
+        description="Review feedback from your writing practice."
+        actions={
+          <Button
+            component={Link}
+            href="/writing/practice"
+            leftSection={<IconPencil size={16} />}
+            color="pink"
+            variant="filled"
+          >
+            Start writing
+          </Button>
+        }
+      />
 
       <FiltersPanel
         query={query}

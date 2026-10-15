@@ -37,6 +37,7 @@ import { GetServerSideProps } from "next";
 import { useRouter } from "next/router";
 import React from "react";
 import { parseCreatePageRoute } from "@/koala/create-page-query";
+import { PageHeader } from "@/koala/components/PageHeader";
 
 type Mode = "vibe" | "wordlist" | "csv";
 
@@ -328,19 +329,22 @@ export default function CreateUnified(props: LanguageInputPageProps) {
       : Boolean(state.deckName.trim()));
 
   return (
-    <Container size="lg" py="lg" style={{ position: "relative" }}>
+    <Container
+      size="lg"
+      py="xl"
+      style={{ position: "relative" }}
+      aria-busy={loading}
+    >
       {loading && (
         <Overlay blur={2} opacity={0.6} color="#fff" zIndex={9999}>
           <Loader size="lg" variant="dots" />
         </Overlay>
       )}
 
-      <Title order={1} mb="sm">
-        Create Cards
-      </Title>
-      <Text c="dimmed" mb="lg">
-        Choose a deck, add content, preview live, then save.
-      </Text>
+      <PageHeader
+        title="Create cards"
+        description="Choose a deck, add content, and review your cards before saving."
+      />
 
       <Grid gap="lg">
         <Grid.Col span={{ base: 12, md: 6 }}>
@@ -542,18 +546,20 @@ function ContentSection(props: ContentSectionProps) {
 
   return (
     <Paper withBorder p="md" radius="md">
-      <Group justify="space-between" mb="xs">
+      <Stack gap="sm" mb="md">
         <Title order={4}>Content</Title>
         <SegmentedControl
+          fullWidth
+          aria-label="Content format"
           value={props.mode}
           onChange={(val) => props.onModeChange(val as Mode)}
           data={[
-            { label: "Free Form", value: "vibe" },
+            { label: "Free form", value: "vibe" },
             { label: "Word list", value: "wordlist" },
             { label: "CSV/Text", value: "csv" },
           ]}
         />
-      </Group>
+      </Stack>
       {body}
     </Paper>
   );
@@ -637,8 +643,7 @@ function VibeContent(props: {
       setRawInput={setRawInput}
     >
       <Text size="sm" c={themeColors.gray[7]} style={{ flex: 1 }}>
-        What cards shall we create? Example: "Please make 25 {deckLangName}{" "}
-        example sentences about food."
+        Describe the {deckLangName} cards you want to practice.
       </Text>
     </GeneratedTextContent>
   );
@@ -655,7 +660,7 @@ function WordlistContent(props: {
     <GeneratedTextContent
       actionLabel="Enrich"
       buttonAction={onEnrich}
-      placeholder={`hola\nadiós\npor favor`}
+      placeholder={`안녕하세요\n고마워요\n괜찮아요`}
       rawInput={rawInput}
       setRawInput={setRawInput}
     >
@@ -685,17 +690,26 @@ function GeneratedTextContent(props: {
 
   return (
     <>
-      <Group justify="space-between" align="flex-start" mb="xs" gap="sm">
+      <Text component="div" mb="sm">
         {children}
-        <Button onClick={buttonAction}>{actionLabel}</Button>
-      </Group>
+      </Text>
       <Textarea
+        aria-label="Card content"
         minRows={6}
         autosize
         placeholder={placeholder}
         value={rawInput}
         onChange={(event) => setRawInput(event.currentTarget.value)}
       />
+      <Group justify="flex-end" mt="md">
+        <Button
+          variant="filled"
+          onClick={buttonAction}
+          disabled={!rawInput.trim()}
+        >
+          {actionLabel}
+        </Button>
+      </Group>
     </>
   );
 }
@@ -740,14 +754,15 @@ function CsvContent(props: {
           placeholder=","
           value={separator}
           onChange={(e) => setSeparator(e.currentTarget.value)}
-          style={{ maxWidth: 200 }}
+          w={100}
         />
         <Button onClick={onParse}>Parse</Button>
       </Group>
       <Textarea
+        aria-label="CSV content"
         minRows={6}
         autosize
-        placeholder={`hola, hello\nadiós, goodbye`}
+        placeholder={`안녕하세요, hello\n고마워요, thank you`}
         value={rawInput}
         onChange={(e) => setRawInput(e.currentTarget.value)}
       />
@@ -763,27 +778,27 @@ function CsvPreview(props: {
 }) {
   const { rows } = props;
   return (
-    <Table withColumnBorders striped mt="xs">
-      <thead>
-        <tr>
-          <th>Term</th>
-          <th>Definition</th>
-        </tr>
-      </thead>
-      <tbody>
+    <Table withTableBorder mt="xs" style={{ tableLayout: "fixed" }}>
+      <Table.Thead>
+        <Table.Tr>
+          <Table.Th>Term</Table.Th>
+          <Table.Th>Definition</Table.Th>
+        </Table.Tr>
+      </Table.Thead>
+      <Table.Tbody>
         {rows.map((row, i) => (
-          <tr key={i}>
-            <td>
+          <Table.Tr key={i}>
+            <Table.Td>
               {row.term || <em style={{ color: "gray" }}>No term</em>}
-            </td>
-            <td>
+            </Table.Td>
+            <Table.Td>
               {row.definition || (
                 <em style={{ color: "gray" }}>No definition</em>
               )}
-            </td>
-          </tr>
+            </Table.Td>
+          </Table.Tr>
         ))}
-      </tbody>
+      </Table.Tbody>
     </Table>
   );
 }
@@ -806,16 +821,18 @@ function PreviewSection(props: PreviewSectionProps) {
     <Paper withBorder p="md" radius="md" style={previewPaperStyle}>
       <Group justify="space-between" mb="md">
         <Title order={4}>Preview</Title>
-        <Button onClick={onSave} disabled={!canSave}>
+        <Button variant="filled" onClick={onSave} disabled={!canSave}>
           Save {processedCards.length ? `(${processedCards.length})` : ""}
         </Button>
       </Group>
       {processedCards.length === 0 ? (
-        <Text c="dimmed">No cards yet. Generate or parse to preview.</Text>
+        <Text size="sm" c="pastel.6" py="xl" ta="center">
+          Your cards will appear here.
+        </Text>
       ) : (
         <Stack gap={0}>
           {processedCards.map((card, index) => (
-            <div key={`${card.term}-${index}`} style={previewCardStyle}>
+            <div key={index} style={previewCardStyle}>
               <Tooltip label="Remove">
                 <ActionIcon
                   aria-label={`Remove card ${index + 1}`}
@@ -857,12 +874,12 @@ const previewPaperStyle: React.CSSProperties = {
 
 const previewCardStyle: React.CSSProperties = {
   position: "relative",
-  borderTop: "1px solid var(--mantine-color-pink-1)",
-  padding: "12px 40px 12px 8px",
+  borderTop: "1px solid var(--mantine-color-pastel-1)",
+  padding: "16px 48px 16px 0",
 };
 
 const previewDeleteButtonStyle: React.CSSProperties = {
   position: "absolute",
   top: 10,
-  right: 4,
+  right: 0,
 };
