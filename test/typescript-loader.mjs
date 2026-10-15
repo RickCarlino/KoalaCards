@@ -93,7 +93,7 @@ export async function load(url, context, nextLoad) {
     fileName,
     compilerOptions: {
       esModuleInterop: true,
-      jsx: ts.JsxEmit.React,
+      jsx: ts.JsxEmit.ReactJSX,
       module: ts.ModuleKind.ES2022,
       moduleResolution: ts.ModuleResolutionKind.NodeJs,
       resolveJsonModule: true,

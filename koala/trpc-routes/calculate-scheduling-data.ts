@@ -187,14 +187,7 @@ export function getGradeButtonText(
   context?: SchedulingContext,
 ): [Grade, string][] {
   const now = Date.now();
-  const SCALE: Record<Grade, string> = {
-    [Rating.Again]: "😵",
-    [Rating.Hard]: "😐",
-    [Rating.Good]: "😊",
-    [Rating.Easy]: "😎",
-  };
   return gradeOrder.map((grade) => {
-    const emoji = SCALE[grade];
     const { nextReview } = calculateSchedulingData(
       quiz,
       grade,
@@ -202,33 +195,30 @@ export function getGradeButtonText(
       context,
     );
     if (!nextReview) {
-      return [grade, "❓SOON"];
+      return [grade, "Soon"];
     }
     const diff = nextReview - now;
     const minutes = Math.floor(diff / (60 * 1000));
     if (minutes < 5) {
-      return [grade, emoji + " Very Soon"];
+      return [grade, "Very soon"];
     }
     if (minutes < 60) {
       const val = Math.floor(minutes);
-      return [grade, `${emoji}${val} minute${val === 1 ? "" : "s"}`];
+      return [grade, `${val} minute${val === 1 ? "" : "s"}`];
     }
 
     if (minutes < 24 * 60) {
       const val = Math.floor(minutes / 60);
-      return [
-        grade,
-        `${emoji}${Math.floor(minutes / 60)} hour${val === 1 ? "" : "s"}`,
-      ];
+      return [grade, `${val} hour${val === 1 ? "" : "s"}`];
     }
 
     if (minutes < 30 * 24 * 60) {
       const val = Math.floor(minutes / (24 * 60));
-      return [grade, `${emoji}${val} day${val === 1 ? "" : "s"}`];
+      return [grade, `${val} day${val === 1 ? "" : "s"}`];
     }
 
     const val = Math.floor(minutes / (30 * 24 * 60));
-    return [grade, `${emoji}${val} month${val === 1 ? "" : "s"}`];
+    return [grade, `${val} month${val === 1 ? "" : "s"}`];
   });
 }
 

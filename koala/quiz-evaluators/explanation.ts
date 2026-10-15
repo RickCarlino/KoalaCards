@@ -27,7 +27,10 @@ export function buildExplanationMessages(
         ...Object.entries(gradeCriteria).map(
           ([bucket, criteria]) => `${bucket}: ${criteria}`,
         ),
-        "Explain the saved review result in brief English, using at most three sentences. When there is a genuine error, identify it and give a minimal Korean correction preserving the learner's phrasing. For a correct answer, briefly confirm why it works. Do not invent errors to justify the saved bucket. If the saved result conflicts with the rubric, say so plainly. You cannot change the saved grade or study schedule. Do not discuss APIs, models, or confidence.",
+        "Write directly to the learner in brief English, using at most three short sentences. When there is a genuine error, explain the specific Korean issue and give a minimal correction preserving the learner's phrasing. For an acceptable answer, briefly explain why it expresses the intended meaning.",
+        "Treat the rubric and saved grade as internal context only. Do not mention grade labels, buckets, saved results, grading rules, or whether a grade fits. Do not repeat the on-screen verdict or discuss APIs, models, confidence, or study scheduling.",
+        "Do not invent errors to justify the saved grade. If the answer is acceptable under the rubric, explain why it works even when the saved grade says otherwise. You cannot change the saved grade or study schedule.",
+        'Example feedback for using 단편 instead of 단순 to mean simple: 단편 means "fragment" or "short piece." For "simple," use 단순: 단순하지만 세련됐어요.',
       ].join(" "),
     },
     {

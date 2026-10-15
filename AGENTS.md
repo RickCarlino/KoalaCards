@@ -31,7 +31,6 @@ Keep page concerns in `pages/` and reusable/business logic in `koala/`.
 - For toggles, describe the user-visible rule in plain language.
 - Match nearby UI copy length and tone before writing new text.
 - Never talk about implementation details on user-facing UIs.
-- Any time you update user-facing text, load the copy-clarity skill guidance.
 
 ## Testing Guidelines
 - Keep test coverage high

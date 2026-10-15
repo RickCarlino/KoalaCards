@@ -2,6 +2,10 @@ import { formatCountdown } from "@/koala/format-countdown";
 import type { ReviewGrade } from "../../koala/quiz-evaluators/grade-buckets";
 import { GradeExplanation } from "@/koala/review/grade-explanation";
 import {
+  ReviewResult,
+  ReviewRatingButtons,
+} from "@/koala/review/review-result";
+import {
   ActionIcon,
   Affix,
   Anchor,
@@ -13,6 +17,7 @@ import {
   Flex,
   Group,
   Image,
+  Kbd,
   Loader,
   Menu,
   Paper,
@@ -47,8 +52,6 @@ import {
   IconPlayerStopFilled,
   IconPlus,
   IconSend,
-  IconThumbDown,
-  IconThumbUp,
   IconX,
 } from "@tabler/icons-react";
 import { Rating, type Grade } from "ts-fsrs";
@@ -216,11 +219,6 @@ type PlaybackQueue = {
   controller: AbortController;
 };
 
-type SpeechRequestBody = {
-  tl: string;
-  format: "mp3";
-};
-
 type BeepOptions = {
   durationMs?: number;
   frequencyHz?: number;
@@ -323,11 +321,6 @@ type ReviewHandlersParams = {
   ) => void;
 };
 
-type FeedbackVoteProps = {
-  resultId: number;
-  onClick?: () => void;
-};
-
 interface FailureViewProps {
   imageURL?: string;
   term: string;
@@ -337,9 +330,11 @@ interface FailureViewProps {
   quizResultId?: number | null;
   onContinue: () => void;
   failureText?: string;
+  isLoading?: boolean;
 }
 
 interface GradingSuccessProps {
+  definition: string;
   userTranscription: string;
   quizData: {
     difficulty: number;
@@ -370,7 +365,6 @@ type QuizType = "speaking" | "newWordOutro" | "remedialOutro";
 
 type QuizConfig = {
   headerText?: string;
-  headerColor?: "blue" | "orange";
   promptText: (definition: string) => string;
   instructionText: string;
   failureText: string;
@@ -604,22 +598,6 @@ const ACTIVE_QUEUE_TYPES: ActiveQueueType[] = [
   "remedialOutro",
 ];
 
-const SPEECH_FORMAT: SpeechRequestBody["format"] = "mp3";
-
-const gradeColors = {
-  [Rating.Again]: "red",
-  [Rating.Hard]: "orange",
-  [Rating.Good]: "green",
-  [Rating.Easy]: "blue",
-} satisfies Record<Grade, string>;
-
-const gradeLabels = {
-  [Rating.Again]: "AGAIN",
-  [Rating.Hard]: "HARD",
-  [Rating.Good]: "GOOD",
-  [Rating.Easy]: "EASY",
-} satisfies Record<Grade, string>;
-
 const gradeHotkeys = {
   [Rating.Again]: HOTKEYS.GRADE_AGAIN,
   [Rating.Hard]: HOTKEYS.GRADE_HARD,
@@ -630,7 +608,6 @@ const gradeHotkeys = {
 const quizConfigs: Record<QuizType, QuizConfig> = {
   speaking: {
     headerText: "Speaking Quiz",
-    headerColor: "blue",
     promptText: (definition: string) =>
       `Say "${definition}" in the target language`,
     instructionText:
@@ -646,7 +623,6 @@ const quizConfigs: Record<QuizType, QuizConfig> = {
   },
   remedialOutro: {
     headerText: "Remedial Review",
-    headerColor: "orange",
     promptText: (definition: string) =>
       `How would you say "${definition}"?`,
     instructionText:
@@ -937,58 +913,6 @@ const playTermThenDefinition = async (
     }
     await playAudio(source, playbackSpeed, activeQueueId);
   }
-};
-
-const requestSpeechBlob = async (text: string): Promise<Blob> => {
-  const response = await fetch("/api/speech", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      tl: text,
-      format: SPEECH_FORMAT,
-    } satisfies SpeechRequestBody),
-  });
-
-  if (!response.ok) {
-    const message = await response.text();
-    throw new Error(
-      message || `Speech request failed (${response.status})`,
-    );
-  }
-
-  return await response.blob();
-};
-
-const playSpeechText = async (
-  text: string,
-  playbackSpeed?: number,
-  queueId?: number,
-): Promise<void> => {
-  const trimmed = text.trim();
-  if (!trimmed) {
-    return;
-  }
-
-  const blob = await requestSpeechBlob(trimmed);
-  const url = URL.createObjectURL(blob);
-  const activeQueueId =
-    typeof queueId === "number" ? queueId : resetPlaybackQueue();
-
-  try {
-    await playAudio(url, playbackSpeed, activeQueueId);
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-};
-
-const playTermThenDefinitionWithFeedback = async (
-  card: Pick<Quiz, "termAudio" | "definitionAudio">,
-  feedbackText: string,
-  playbackSpeed?: number,
-): Promise<void> => {
-  const queueId = resetPlaybackQueue();
-  await playTermThenDefinition(card, playbackSpeed, queueId);
-  await playSpeechText(feedbackText, playbackSpeed, queueId);
 };
 
 const playBlob = (blob: Blob, playbackRate?: number): Promise<void> => {
@@ -2197,65 +2121,6 @@ function CardImage({
   );
 }
 
-function FeedbackVote({ resultId, onClick }: FeedbackVoteProps) {
-  const mutation = trpc.editQuizResult.useMutation();
-  const [selected, setSelected] = React.useState<1 | -1 | null>(null);
-  const isLocked = selected !== null || mutation.isPending;
-
-  const vote = (value: 1 | -1) => {
-    if (selected !== null) {
-      return;
-    }
-    setSelected(value);
-    onClick?.();
-    void mutation.mutateAsync({
-      resultId,
-      data: { helpfulness: value },
-    });
-  };
-
-  return (
-    <Group gap="xs" justify="center">
-      <Text size="sm" c="dimmed">
-        Was this helpful?
-      </Text>
-      <Tooltip label="Yes" openDelay={200}>
-        <ActionIcon
-          variant={selected === 1 ? "filled" : "default"}
-          color="green"
-          onClick={() => vote(1)}
-          disabled={isLocked}
-          aria-label="Thumbs up"
-        >
-          <IconThumbUp size={16} />
-        </ActionIcon>
-      </Tooltip>
-      <Tooltip label="No" openDelay={200}>
-        <ActionIcon
-          variant={selected === -1 ? "filled" : "default"}
-          color="red"
-          onClick={() => vote(-1)}
-          disabled={isLocked}
-          aria-label="Thumbs down"
-        >
-          <IconThumbDown size={16} />
-        </ActionIcon>
-      </Tooltip>
-    </Group>
-  );
-}
-
-function ResponseTranscription({ text }: { text: string }) {
-  if (!text.trim()) {
-    return null;
-  }
-  return (
-    <Text ta="center" size="sm" c="dimmed">
-      You said: "{text}"
-    </Text>
-  );
-}
-
 function FailureView({
   imageURL,
   term,
@@ -2265,42 +2130,31 @@ function FailureView({
   quizResultId,
   onContinue,
   failureText = "Not quite right",
+  isLoading,
 }: FailureViewProps) {
   return (
-    <Stack align="center" gap="md">
+    <Stack align="center" gap="lg" w="100%" maw={520} mx="auto">
       <CardImage imageURL={imageURL} definition={definition} />
-
-      <Text ta="center" c="red" fw={500} size="lg">
-        {feedback || failureText}
-      </Text>
-
-      <ResponseTranscription text={userTranscription} />
-
-      <Text size="xl" fw={700} ta="center">
-        {term}
-      </Text>
-
-      <Text ta="center">{definition}</Text>
-
-      <Button onClick={onContinue} variant="light" color="blue">
-        Continue ({HOTKEYS.CONTINUE})
-      </Button>
-
-      {quizResultId && (
-        <>
-          <GradeExplanation key={quizResultId} resultId={quizResultId} />
-          <FeedbackVote resultId={quizResultId} />
-        </>
-      )}
-
-      <Text ta="center" c="dimmed" mt="md">
-        We'll review this again later.
-      </Text>
+      <ReviewResult
+        isCorrect={false}
+        feedback={feedback || failureText}
+        definition={definition}
+        transcription={userTranscription}
+        answer={term}
+        explanation={
+          quizResultId ? (
+            <GradeExplanation key={quizResultId} resultId={quizResultId} />
+          ) : null
+        }
+      >
+        <ReviewContinue onContinue={onContinue} isLoading={isLoading} />
+      </ReviewResult>
     </Stack>
   );
 }
 
 function GradingSuccess({
+  definition,
   userTranscription,
   quizData,
   scheduler,
@@ -2321,71 +2175,55 @@ function GradingSuccess({
   useHotkeys(hotkeys);
 
   return (
-    <Stack gap="md" align="center">
-      {renderSuccessHeader(feedback, quizResultId)}
-      <ResponseTranscription text={userTranscription} />
-      <Text ta="center" size="sm" c="dimmed" mt="md">
-        How difficult was this for you?
-      </Text>
-      <Stack gap="sm" w="100%" maw={400}>
-        {gradeOptions.map(([grade, timeText]) => {
-          const label = gradeLabels[grade];
-          const hotkey = gradeHotkeys[grade];
-
-          return (
-            <Button
-              key={grade}
-              onClick={() => onGradeSelect(grade)}
-              color={gradeColors[grade]}
-              variant="outline"
-              size="md"
-              fullWidth
-              disabled={isLoading}
-              justify="space-between"
-              h={48}
-              px="md"
-              rightSection={
-                <Text span fz="sm" opacity={0.8}>
-                  {timeText}
-                </Text>
-              }
-            >
-              <Text span fw={600}>
-                {label} ({hotkey})
-              </Text>
-            </Button>
-          );
-        })}
-      </Stack>
-    </Stack>
+    <ReviewResult
+      isCorrect
+      feedback={
+        feedback && !feedback.toLowerCase().includes("exact match")
+          ? feedback
+          : "Correct"
+      }
+      definition={definition}
+      transcription={userTranscription}
+      explanation={
+        quizResultId ? (
+          <GradeExplanation key={quizResultId} resultId={quizResultId} />
+        ) : null
+      }
+    >
+      <ReviewRatingButtons
+        options={gradeOptions}
+        hotkeys={gradeHotkeys}
+        isLoading={isLoading}
+        onSelect={onGradeSelect}
+      />
+    </ReviewResult>
   );
 }
 
-function renderSuccessHeader(
-  feedback?: string,
-  quizResultId?: number | null,
-) {
-  const hasFeedback =
-    feedback && !feedback.toLowerCase().includes("exact match");
-  if (hasFeedback) {
-    return (
-      <Stack gap={4} align="center">
-        <Text ta="center" c="green" fw={500} size="lg">
-          {feedback}
-        </Text>
-        {quizResultId && (
-          <>
-            <GradeExplanation key={quizResultId} resultId={quizResultId} />
-            <FeedbackVote resultId={quizResultId} />
-          </>
-        )}
-      </Stack>
-    );
-  }
+function ReviewContinue({
+  onContinue,
+  isLoading,
+}: {
+  onContinue: () => void;
+  isLoading?: boolean;
+}) {
   return (
-    <Text ta="center" c="green" fw={500} size="lg">
-      Correct!
-    </Text>
+    <Button
+      onClick={onContinue}
+      loading={isLoading}
+      variant="filled"
+      color="pink.8"
+      h={44}
+      radius="sm"
+      aria-keyshortcuts={HOTKEYS.CONTINUE}
+      rightSection={
+        <Kbd size="xs" aria-hidden>
+          {HOTKEYS.CONTINUE.toUpperCase()}
+        </Kbd>
+      }
+    >
+      Continue
+    </Button>
   );
 }
 
@@ -2685,6 +2523,7 @@ const quizPhaseContent = (
     ),
     success: (
       <GradingSuccess
+        definition={card.definition}
         userTranscription={userTranscription}
         quizData={quizData}
         scheduler={card.scheduler}
@@ -2756,15 +2595,13 @@ const QuizCard: React.FC<QuizCardProps> = ({
       return;
     }
     if (phase === "failure") {
-      void playTermThenDefinitionWithFeedback(
-        card,
-        feedback,
-        userSettings.playbackSpeed,
-      ).catch((error) => {
-        console.error("Failed to play correction audio:", error);
-      });
+      void playTermThenDefinition(card, userSettings.playbackSpeed).catch(
+        (error) => {
+          console.error("Failed to play correction audio:", error);
+        },
+      );
     }
-  }, [phase, card, feedback, userSettings.playbackSpeed]);
+  }, [phase, card, userSettings.playbackSpeed]);
 
   const processRecording = async (blob: Blob) => {
     setPhase("processing");
@@ -2815,6 +2652,7 @@ const QuizCard: React.FC<QuizCardProps> = ({
         quizResultId={quizResultId}
         onContinue={handleFailureContinue}
         failureText={config.failureText}
+        isLoading={isLoading}
       />
     );
   }
@@ -2836,11 +2674,11 @@ const QuizCard: React.FC<QuizCardProps> = ({
     </Text>
   );
   return (
-    <Stack align="center" gap="md">
+    <Stack align="stretch" gap="lg" w="100%" maw={520} mx="auto">
       <CardImage imageURL={card.imageURL} definition={definition} />
 
       {config.headerText && (
-        <Text ta="center" c={config.headerColor} fw={500} size="sm">
+        <Text c="pastel.6" fw={500} size="xs">
           {config.headerText}
         </Text>
       )}
@@ -2855,6 +2693,7 @@ const QuizCard: React.FC<QuizCardProps> = ({
           fullWidth
           size="md"
           maw={400}
+          mx="auto"
         >
           I don't know ({HOTKEYS.FAIL})
         </Button>
@@ -2871,32 +2710,6 @@ function NewWordOutro(props: CardReviewProps) {
 
 function Speaking(props: CardReviewProps) {
   return <QuizCard {...props} quizType="speaking" />;
-}
-
-function renderSuccessSection(
-  successText?: string,
-  quizResultId?: number | null,
-) {
-  if (successText) {
-    return (
-      <Stack gap={4} align="center">
-        <Text ta="center" c="green" fw={500} size="lg">
-          {successText}
-        </Text>
-        {quizResultId && (
-          <>
-            <GradeExplanation key={quizResultId} resultId={quizResultId} />
-            <FeedbackVote resultId={quizResultId} />
-          </>
-        )}
-      </Stack>
-    );
-  }
-  return (
-    <Text ta="center" c="green" fw={500} size="lg">
-      Well done!
-    </Text>
-  );
 }
 
 function SuccessView({
@@ -2917,21 +2730,22 @@ function SuccessView({
   quizResultId?: number | null;
 }) {
   return (
-    <Stack align="center" gap="md">
+    <Stack align="center" gap="lg" w="100%" maw={520} mx="auto">
       <CardImage imageURL={imageURL} definition={definition} />
-
-      {renderSuccessSection(successText, quizResultId)}
-      <ResponseTranscription text={userTranscription} />
-
-      <Button onClick={onContinue} variant="light" color="green">
-        Continue ({HOTKEYS.CONTINUE})
-      </Button>
-
-      <Text size="xl" fw={700} ta="center">
-        {term}
-      </Text>
-
-      <Text ta="center">{definition}</Text>
+      <ReviewResult
+        isCorrect
+        feedback={successText || "Correct"}
+        definition={definition}
+        transcription={userTranscription}
+        answer={term !== userTranscription ? term : undefined}
+        explanation={
+          quizResultId ? (
+            <GradeExplanation key={quizResultId} resultId={quizResultId} />
+          ) : null
+        }
+      >
+        <ReviewContinue onContinue={onContinue} />
+      </ReviewResult>
     </Stack>
   );
 }
@@ -3055,19 +2869,6 @@ function RemedialOutro({
   React.useEffect(() => {
     onProvideAudioHandler?.(processRecording);
   }, [currentStepUuid]);
-
-  const feedbackText = gradingResult?.feedback?.trim() ?? "";
-
-  React.useEffect(() => {
-    if (phase !== "failure" || !feedbackText) {
-      return;
-    }
-    void playSpeechText(feedbackText, userSettings.playbackSpeed).catch(
-      (error) => {
-        console.error("Failed to play correction audio:", error);
-      },
-    );
-  }, [feedbackText, phase, userSettings.playbackSpeed]);
 
   const handleIDK = async () => {
     await playTermThenDefinition(card, userSettings.playbackSpeed);
@@ -3610,7 +3411,7 @@ const CardReview: React.FC<CardReviewWithRecordingProps> = (props) => {
   };
 
   return (
-    <Box h="100%" mih="100%" pos="relative" pb={80}>
+    <Box mih="100%" pos="relative" pb={80}>
       <Box
         pos="absolute"
         style={{
