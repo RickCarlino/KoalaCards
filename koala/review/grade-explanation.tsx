@@ -31,12 +31,16 @@ export function GradeExplanationContent({
   children: ReactNode;
 }) {
   return (
-    <Stack gap="xs" align="stretch" w="100%">
+    <>
       {explanation ? (
         <Stack
           gap="sm"
           pl="md"
-          style={{ borderLeft: "2px solid var(--mantine-color-pastel-2)" }}
+          miw={0}
+          style={{
+            gridColumn: "1 / -1",
+            borderLeft: "2px solid var(--mantine-color-pastel-2)",
+          }}
         >
           <Text
             size="sm"
@@ -50,13 +54,12 @@ export function GradeExplanationContent({
         </Stack>
       ) : (
         <Button
-          variant="subtle"
-          color="gray.7"
-          c="pastel.6"
+          variant="outline"
+          color="pink.8"
           size="sm"
           h={44}
           px="sm"
-          style={{ alignSelf: "flex-start" }}
+          style={{ gridColumn: 2, gridRow: 1, alignSelf: "center" }}
           loading={isPending}
           aria-busy={isPending}
           onClick={onExplain}
@@ -65,11 +68,16 @@ export function GradeExplanationContent({
         </Button>
       )}
       {error && (
-        <Text c="red.8" size="sm" role="alert">
+        <Text
+          c="red.8"
+          size="sm"
+          role="alert"
+          style={{ gridColumn: "1 / -1", overflowWrap: "anywhere" }}
+        >
           {error}
         </Text>
       )}
-    </Stack>
+    </>
   );
 }
 

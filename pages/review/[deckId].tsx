@@ -334,6 +334,7 @@ interface FailureViewProps {
 }
 
 interface GradingSuccessProps {
+  term: string;
   definition: string;
   userTranscription: string;
   quizData: {
@@ -2154,6 +2155,7 @@ function FailureView({
 }
 
 function GradingSuccess({
+  term,
   definition,
   userTranscription,
   quizData,
@@ -2184,6 +2186,7 @@ function GradingSuccess({
       }
       definition={definition}
       transcription={userTranscription}
+      answer={term}
       explanation={
         quizResultId ? (
           <GradeExplanation key={quizResultId} resultId={quizResultId} />
@@ -2523,6 +2526,7 @@ const quizPhaseContent = (
     ),
     success: (
       <GradingSuccess
+        term={card.term}
         definition={card.definition}
         userTranscription={userTranscription}
         quizData={quizData}
@@ -2737,7 +2741,7 @@ function SuccessView({
         feedback={successText || "Correct"}
         definition={definition}
         transcription={userTranscription}
-        answer={term !== userTranscription ? term : undefined}
+        answer={term}
         explanation={
           quizResultId ? (
             <GradeExplanation key={quizResultId} resultId={quizResultId} />

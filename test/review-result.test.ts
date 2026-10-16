@@ -85,7 +85,7 @@ test("failed feedback remains retryable and only saved votes lock the controls",
   }
 });
 
-test("review results preserve the prompt, learner answer, and optional correction", () => {
+test("review results show the expected answer after correct and incorrect responses", () => {
   for (const isCorrect of [true, false]) {
     const html = render(
       createElement(ReviewResult, {
@@ -93,13 +93,16 @@ test("review results preserve the prompt, learner answer, and optional correctio
         feedback: isCorrect ? "Correct" : "Slightly incorrect",
         definition: "Simple but sophisticated",
         transcription: "단편하지만 세련됐어요",
-        answer: isCorrect ? undefined : "단순하지만 세련됐어요",
+        answer: "단순하지만 세련됐어요",
         children: createElement("button", null, "Continue"),
       }),
     );
     assert.match(html, /Simple but sophisticated/);
     assert.match(html, /단편하지만 세련됐어요/);
-    assert.equal(html.includes("One possible answer"), !isCorrect);
+    assert.match(html, /단순하지만 세련됐어요/);
+    assert.ok(
+      html.indexOf("Your answer") < html.indexOf("Expected answer"),
+    );
     assert.match(html, /role="status"/);
   }
 });

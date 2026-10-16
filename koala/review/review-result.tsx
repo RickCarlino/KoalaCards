@@ -25,20 +25,35 @@ export function ReviewResult({
   feedback: string;
   definition: string;
   transcription: string;
-  answer?: string;
+  answer: string;
   explanation?: ReactNode;
   children: ReactNode;
 }) {
   const StatusIcon = isCorrect ? IconCircleCheck : IconCircleX;
   return (
-    <Stack gap="lg" w="100%" maw={520} miw={0}>
-      <Group gap="xs" c={isCorrect ? "green.8" : "red.8"} role="status">
-        <StatusIcon size={22} aria-hidden />
+    <Box
+      display="grid"
+      w="100%"
+      maw={520}
+      miw={0}
+      style={{
+        gridTemplateColumns: "minmax(0, 1fr) auto",
+        columnGap: "var(--mantine-spacing-sm)",
+        rowGap: "var(--mantine-spacing-lg)",
+      }}
+    >
+      <Group
+        gap="xs"
+        wrap="nowrap"
+        c={isCorrect ? "green.8" : "red.8"}
+        role="status"
+      >
+        <StatusIcon size={22} aria-hidden style={{ flexShrink: 0 }} />
         <Text fw={600} c="pastel.7">
           {feedback}
         </Text>
       </Group>
-      <Stack gap="md">
+      <Stack gap="md" miw={0} style={{ gridColumn: "1 / -1" }}>
         <Text size="sm" c="pastel.6" style={{ overflowWrap: "anywhere" }}>
           {definition}
         </Text>
@@ -60,7 +75,7 @@ export function ReviewResult({
         {answer && (
           <Stack gap={4}>
             <Text size="xs" c="pastel.6">
-              One possible answer
+              Expected answer
             </Text>
             <Text
               fz="xl"
@@ -74,9 +89,11 @@ export function ReviewResult({
         )}
       </Stack>
       {explanation}
-      <Divider color="pastel.2" />
-      {children}
-    </Stack>
+      <Divider color="pastel.2" style={{ gridColumn: "1 / -1" }} />
+      <Box miw={0} style={{ gridColumn: "1 / -1" }}>
+        {children}
+      </Box>
+    </Box>
   );
 }
 
